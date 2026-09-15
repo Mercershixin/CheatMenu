@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 00:06 sha 41007e3c bytes 201295'):format('2026-09-16 00:06','41007e3c',201295))
+print(('[CheatMenu] build 2026-09-16 00:17 sha 72274100 bytes 201653'):format('2026-09-16 00:17','72274100',201653))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -8,7 +8,7 @@ Conns={},Threads={},Unloaded=false,
 T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,Invisible=false,DeepHide=false,
-FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
+LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,FreeCam=false,
 AntiAFK=true,AutoBonus=false,
 RemoteSpy=false,
@@ -41,7 +41,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="f40c5c439f"
+SYS.BuildVer="8149579aec"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3611,6 +3611,7 @@ local PHRASE_TABLE={
 ["click to buy"]="点击购买",["max value"]="最大值",["best value"]="最值",
 }
 local function lookupLocal(text)
+if SYS.T_.LocalPhrase==false then return nil end
 if type(text)~="string" then return nil end
 local k=(text:gsub("^%s+","")):gsub("%s+$","")
 k=k:lower()
@@ -4884,6 +4885,8 @@ UI.Btn(p,"🗑️ 清空缓存",CY.red,function()
 Trans.clearCache()
 if statL then statL.Text="已缓存 0 条" end
 end)
+UI.Switch(p,"📖 本地短语表 (train→训练 这类常见词离线直译)","LocalPhrase")
+UI.Tip(p,"「清空缓存」只清已缓存的译文 + 删除缓存文件, 不动这个内置短语表。\n关掉这个开关 = 完全依赖翻译模型, 模型没开就一个都不翻。",CY.sub)
 UI.Div(p)
 UI.Label(p,"🔌 本地模型状态",CY.cyan)
 local stL=UI.Label(p,"本地模型: ⚪ 检测中...",CY.sub)
