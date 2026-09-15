@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 01:11 sha 80fe5fbe bytes 202083'):format('2026-09-16 01:11','80fe5fbe',202083))
+print(('[CheatMenu] build 2026-09-16 01:27 sha 72433f65 bytes 202298'):format('2026-09-16 01:27','72433f65',202298))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -39,6 +39,7 @@ AutoUpdateCheck=true,
 C_={
 FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="BodyVelocity",
+JumpMult=2,
 MouseTPMode="Raycast",AutoTPDist=5,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 DeepHideDepth=120,
@@ -54,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="9a96f6cca5"
+SYS.BuildVer="fc5ab82ecf"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -659,7 +660,7 @@ if JumpOrig==nil then
 JumpOrig=h.JumpPower or 50
 JHOrig=(h.JumpHeight and h.JumpHeight>0) and h.JumpHeight or nil
 end
-local mult=tonumber(SYS.C_.JumpPower) or 2
+local mult=tonumber(SYS.C_.JumpMult) or 2
 P(function()
 h.UseJumpPower=true
 h.JumpPower=JumpOrig*mult
@@ -4693,6 +4694,11 @@ UI.Div(p)
 UI.Switch(p,"穿墙 (Noclip)","Noclip",SYS.SetNoclip)
 UI.Switch(p,"无限跳跃","InfiniteJump",SYS.SetInfiniteJump)
 UI.Switch(p,"⤴ 超级跳跃 (跳得更高)","JumpBoost",SYS.SetJumpBoost)
+UI.Slider(p,"跳跃高度倍率",1,10,0.5,function() return SYS.C_.JumpMult end,
+function(v)
+SYS.C_.JumpMult=v
+if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
+end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
