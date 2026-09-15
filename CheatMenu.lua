@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-15 22:16 sha 7b99bf23 bytes 197359'):format('2026-09-15 22:16','7b99bf23',197359))
+print(('[CheatMenu] build 2026-09-15 22:34 sha 9f364179 bytes 202186'):format('2026-09-15 22:34','9f364179',202186))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -19,6 +19,9 @@ CB_Aim=false,CB_Silent=false,CB_Fire=false,
 CB_PauseMove=false,CB_Sticky=false,CB_Predict=false,CB_Team=true,CB_Wall=false,
 CB_FovCircle=false,CB_HL=false,CB_Dist=false,CB_TgtStrict=false,
 CB_SnapFire=false,
+CB_OnlyAlive=true,
+ESPBox=false,
+AutoUpdateCheck=true,
 },
 C_={
 FlySpeed=3,FlyMode="BodyVelocity",
@@ -33,10 +36,14 @@ CB_FireDelay=0.06,CB_HpThr=0,CB_Priority=5,CB_SilentMode=4,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
 CB_SnapDelay=0.05,
+CB_SnapMinGap=0.25,CB_SnapMaxAngle=60,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
+SYS.BuildVer="af66a2c82d"
+SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
+SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
 local Players,RS,UIS,WS,CAS,LT,Stats,TweenService,VIM,VirtualUser,RStorage,CS,HS
 do
@@ -1265,7 +1272,7 @@ end
 function SYS.disableAntiAFK()
 if AFKConn then AFKConn:Disconnect() AFKConn=nil end
 end
-local HL,LB={},{}
+local HL,LB,HB={},{},{}
 local ESPParent,ESPPMsg=nil,nil
 local function espParent()
 if ESPParent then return ESPParent end
@@ -1281,7 +1288,8 @@ end
 function SYS.ClearESP()
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
-HL,LB={},{}
+for _,b in pairs(HB) do if b then b:Destroy() end end
+HL,LB,HB={},{},{}
 end
 function SYS.ESPTick()
 if not (SYS.T_.ESP or SYS.T_.ESPNameTag) then
@@ -1305,10 +1313,35 @@ end
 end
 end
 if SYS.T_.ESP then
-for p,bx in pairs(HL) do if not act[p] or bx.Adornee~=act[p] then bx:Destroy() HL[p]=nil end end
-local par=espParent()
+for p,h in pairs(HL) do
+if not act[p] or h.Adornee~=act[p] then
+P(function() h:Destroy() end) HL[p]=nil
+end
+end
 for p,c in pairs(act) do
-local bx=HL[p]
+local h=HL[p]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=c
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.FillTransparency=0.5
+h.OutlineTransparency=0
+h.Parent=c
+HL[p]=h
+elseif h.Parent~=c then
+P(function() h.Parent=c end)
+end
+local team=p.Team and LP.Team and p.Team==LP.Team
+h.FillColor   = team and Color3.fromRGB(0,255,160) or Color3.fromRGB(255,40,90)
+h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,0,60)
+end
+if SYS.T_.ESPBox then
+local par=espParent()
+for p,bx in pairs(HB) do
+if not act[p] or bx.Adornee~=act[p] then bx:Destroy() HB[p]=nil end
+end
+for p,c in pairs(act) do
+local bx=HB[p]
 if not bx then
 bx=Instance.new("BoxHandleAdornment")
 local sz=Vector3.new(4,6,4)
@@ -1316,23 +1349,25 @@ pcall(function()
 local e=c:GetExtentsSize()
 if e then sz=e+Vector3.new(0.6,0.3,0.6) end
 end)
-bx.Size=sz
-bx.Adornee=c
-bx.AlwaysOnTop=true
-bx.ZIndex=6 bx.Transparency=0.45
+bx.Size=sz bx.Adornee=c bx.AlwaysOnTop=true
+bx.ZIndex=6 bx.Transparency=0.55
 bx.Parent=par
-HL[p]=bx
+HB[p]=bx
 end
 local team=p.Team and LP.Team and p.Team==LP.Team
 bx.Color3=team and Color3.fromRGB(0,255,200) or Color3.fromRGB(255,50,120)
 end
-if not SYS._ESPBoxLogged then
-SYS._ESPBoxLogged=true
-print(("[ESP] 透视框 = BoxHandleAdornment · 本帧 %d 个 · 容器=%s")
-:format(#act,tostring(ESPPMsg or "?")))
+elseif next(HB) then
+for _,b in pairs(HB) do b:Destroy() end HB={}
 end
-elseif next(HL) then
-for _,h in pairs(HL) do h:Destroy() end HL={}
+if not SYS._ESPLogged then
+SYS._ESPLogged=true
+print(("[ESP] 人物高亮=Highlight %d 个 · 方框=%s · 高亮挂点=角色模型")
+:format(#act, SYS.T_.ESPBox and "开" or "关"))
+end
+else
+if next(HL) then for _,h in pairs(HL) do h:Destroy() end HL={} end
+if next(HB) then for _,b in pairs(HB) do b:Destroy() end HB={} end
 end
 if SYS.T_.ESPNameTag then
 for p,l in pairs(LB) do
@@ -2503,6 +2538,7 @@ local ok,st=pcall(function() return h:GetState() end)
 if ok and st==Enum.HumanoidStateType.Dead then return false end
 return true
 end
+if SYS.T_.CB_OnlyAlive then return false end
 return bodyOf(ch)~=nil
 end
 local function partOf(pl,mode)
@@ -3033,6 +3069,22 @@ if cf0 and pos and (pos-cf0.Position).Magnitude>0.01 then
 snapCF=cf0
 cam.CFrame=CFrame.lookAt(cf0.Position,pos)
 local root=bodyOf(SYS.LP.Character)
+local nowS=os.clock()
+if nowS-(CB.LastSnapWrite or 0)<(SYS.C_.CB_SnapMinGap or 0.25) then
+CB.SnapSkip=(CB.SnapSkip or 0)+1
+root=nil
+elseif root then
+local wantCF=CFrame.lookAt(root.Position,pos)
+local dot=math.clamp(root.CFrame.LookVector:Dot(wantCF.LookVector),-1,1)
+local ang=math.deg(math.acos(dot))
+if ang>(SYS.C_.CB_SnapMaxAngle or 60) then
+CB.SnapBig=(CB.SnapBig or 0)+1
+root=nil
+else
+CB.LastSnapWrite=nowS
+CB.SnapWrite=(CB.SnapWrite or 0)+1
+end
+end
 if root and (pos-root.Position).Magnitude>0.01 then
 snapRoot=root
 snapRootCF=root.CFrame
@@ -3277,13 +3329,13 @@ CB.Say("已关闭全部战斗功能",SYS.CY.red)
 end
 function CB.QuickMode()
 SYS.T_.CB_Aim=false SYS.T_.CB_Fire=true SYS.T_.CB_Silent=false
-SYS.T_.CB_SnapFire=true SYS.T_.CB_Predict=true SYS.T_.CB_Sticky=true
-SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.02
+SYS.T_.CB_SnapFire=false SYS.T_.CB_Predict=true SYS.T_.CB_Sticky=true
+SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.08
 SYS.C_.CB_AimPart=1 SYS.C_.CB_Priority=5
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
-CB.Say("⚡ 极速模式已开启: 快照秒锁 + 秒开枪 + 预测 + 锁头",SYS.CY.green)
+CB.Say("⚡ 极速模式已开启: 秒锁 + 预测 + 锁头 + 锁保持(快照瞄准未开, 防踢)",SYS.CY.green)
 print("[Combat] ⚡ 极速模式已开启: 快照秒锁(开枪瞬间转枪口对准目标, 移动中也准) + 秒开枪(0.02s) + 预测 + 锁头 + 准星指向")
 end
 function CB.TestOnce()
@@ -3403,6 +3455,9 @@ add(("指定目标: %s (模式=%s 严格=%s)")
 add(("开关: 瞄准=%s 静默=%s 开火=%s 移动保护=%s 锁保持=%s")
 :format(tostring(SYS.T_.CB_Aim), tostring(SYS.T_.CB_Silent),
 tostring(SYS.T_.CB_Fire), tostring(SYS.T_.CB_PauseMove), tostring(SYS.T_.CB_Sticky)))
+add(("快照限流: 角色写入 %d / 跳过(太快) %d / 跳过(角度过大) %d   [间隔>=%.2fs, 单次<=%.0f°]")
+:format(CB.SnapWrite or 0,CB.SnapSkip or 0,CB.SnapBig or 0,
+SYS.C_.CB_SnapMinGap or 0.25,SYS.C_.CB_SnapMaxAngle or 60))
 add(("参数: FOV=%s 最大距离=%s 部位=%s 静默hook=%s")
 :format(tostring(SYS.C_.CB_Fov), tostring(SYS.C_.CB_MaxDist),
 tostring(SYS.C_.CB_AimPart), tostring(CB.HookOK)))
@@ -4485,10 +4540,18 @@ btn.Text=tostring(get() or opts[1]) btn.TextColor3=CY.accent
 btn.Font=Enum.Font.GothamMedium btn.TextSize=13
 btn.AutoButtonColor=false btn.BorderSizePixel=0 btn.Parent=row
 UI.Round(btn,8) UI.Stroke(btn,CY.accent,1,0.55)
-local idx=1
-for i,o in ipairs(opts) do if o==get() then idx=i break end end
+local lastClick=0
+local function curIdx()
+local c=get()
+for i,o in ipairs(opts) do if o==c then return i end end
+return 1
+end
 T(btn.MouseButton1Click:Connect(function()
-idx=idx%#opts+1 local v=opts[idx]
+local now=os.clock()
+if now-lastClick<0.25 then return end
+lastClick=now
+local i=curIdx()
+local v=opts[i%#opts+1]
 btn.Text=v set(v) QueueSave()
 tw(btn,0.12,{TextColor3=CY.green})
 task.delay(0.18,function() P(function() tw(btn,0.2,{TextColor3=CY.accent}) end) end)
@@ -4624,6 +4687,10 @@ end)
 UI.Switch(p,"玩家名字","ESPNameTag",function(on)
 if not on and not SYS.T_.ESP then SYS.ClearESP() end
 end)
+UI.Switch(p,"⬛ 透视方框(附加, 不吃高亮配额)","ESPBox",function(on)
+if not on and not SYS.T_.ESP then SYS.ClearESP() end
+end)
+UI.Tip(p,"透视主体 = 人物高亮(把整个人染色描边, 穿墙可见)。\n若某些局高亮被引擎配额挤掉(整局都看不到), 打开上面的方框当备用。")
 UI.Div(p)
 UI.Switch(p,"全亮 (FullBright)","FullBright",SYS.SetFullBright)
 UI.Switch(p,"自由视角","FreeCam",function(on)
@@ -5059,8 +5126,17 @@ end)
 UI.Slider(p,"快照稳定延迟 (秒 · 射不准就调大)",0.00,0.20,0.01,
 function() return SYS.C_.CB_SnapDelay end,
 function(v) SYS.C_.CB_SnapDelay=v end,"%.2f")
+UI.Slider(p,"快照最小间隔 (秒 · 调小=转得勤但更容易被踢)",0.10,1.00,0.05,
+function() return SYS.C_.CB_SnapMinGap end,
+function(v) SYS.C_.CB_SnapMinGap=v end,"%.2f")
+UI.Slider(p,"快照单次最大转角 (度 · 调小=转得更碎更安全)",15,180,5,
+function() return SYS.C_.CB_SnapMaxAngle end,
+function(v) SYS.C_.CB_SnapMaxAngle=v end,"%.0f")
+UI.Tip(p,"⚠ 快照瞄准会被踢的原因: 它对【角色】直写 CFrame, 开火越快写得越密。\n上面两个限流把角色转向压到 每秒<=4 次、每次<=60°, 相机仍然是瞬锁。\n若还被踢: 直接关掉快照瞄准 —— 本游戏是服务端判定, 用「静默瞄准(工作区射线)」通常更稳。",CY.red)
 UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
 UI.Switch(p,"🧲 锁定保持 (不来回换目标)","CB_Sticky")
+UI.Switch(p,"💀 只锁活人 (必须有血量且 >0)","CB_OnlyAlive")
+UI.Tip(p,"关掉「只锁活人」= 允许锁定没有 Humanoid 的角色(某些游戏尸体没有 Humanoid, 关掉就会锁尸体)。",CY.yellow)
 UI.Switch(p,"📐 预测瞄准 (算目标移动提前量)","CB_Predict")
 UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
 function() return SYS.C_.CB_PredictTime end,
@@ -5087,16 +5163,6 @@ function(v) SYS.C_.CB_FireDelay=v end,"%.2f")
 UI.Slider(p,"仅目标血量低于此值才开火 (0=不限)",0,100,5,
 function() return SYS.C_.CB_HpThr end,
 function(v) SYS.C_.CB_HpThr=v end,"%.0f")
-UI.Div(p)
-UI.Section(p,"显示提示",CY.yellow)
-UI.Cycle(p,"⭕ FOV 圆环显示",{"一直显示","仅菜单打开时","不显示"},
-function() return ({"一直显示","仅菜单打开时","不显示"})[SYS.C_.CB_RingMode or 2] end,
-function(v)
-SYS.C_.CB_RingMode=(v=="一直显示") and 1 or ((v=="仅菜单打开时") and 2 or 3)
-SYS.Combat.Start()
-end)
-UI.Switch(p,"🟥 目标高亮框","CB_HL",function(on) if on then SYS.Combat.Start() end end)
-UI.Switch(p,"📏 距离 / 名字标签","CB_Dist",function(on) if on then SYS.Combat.Start() end end)
 UI.Div(p)
 UI.Section(p,"筛选与策略",CY.purple)
 UI.Switch(p,"🛡 不打队友","CB_Team")
@@ -5201,7 +5267,9 @@ pcall(function() SYS.RemoteSpy.clear() end)
 SYS.Notify("🧹 抓包记录已清空",CY.sub)
 end)
 UI.Div(p)
-UI.Btn(p,"卸载脚本",CY.red,function() P(SYS.UnloadAll) end)
+UI.Switch(p,"🔁 启动时自动检查更新","AutoUpdateCheck")
+UI.Btn(p,"⬆️ 检查更新并热重载",CY.green,function() P(function() SYS.CheckUpdate(false) end) end)
+UI.Tip(p,"热重载 = 先保存当前配置(含所有开关) -> 卸载旧实例 -> 拉取新版 -> 加载。\n新实例启动时会自动按配置把开关开回来, 所以你会看到功能自己恢复。")
 end
 local function GetGuiParent()
 local parent=PG
@@ -5645,6 +5713,48 @@ GENV.CheatLoaded=nil GENV.CheatUnload=nil GENV.CheatUnloaded=true
 end
 print("✅ 已卸载")
 end
+function SYS.CheckUpdate(silent)
+if SYS.UpdateBusy then return end
+if not SYS.BuildVerURL or SYS.BuildVerURL=="" or SYS.BuildVerURL:find("{{",1,true) then
+if not silent then SYS.Notify("ℹ️ 当前是本地开发版, 没有配置更新地址",SYS.CY.sub) end
+return
+end
+SYS.UpdateBusy=true
+local remote=P(function() return game:HttpGet(SYS.BuildVerURL) end)
+if type(remote)~="string" then
+SYS.UpdateBusy=false
+if not silent then SYS.Notify("❌ 检查更新失败: 取版本号失败(网络?)",SYS.CY.red) end
+return
+end
+local rv=remote:gsub("%s","")
+local mine=tostring(SYS.BuildVer or ""):gsub("%s","")
+if rv=="" or rv==mine then
+SYS.UpdateBusy=false
+if not silent then SYS.Notify(("✅ 已是最新版 (%s)"):format(tostring(SYS.BuildVer)),SYS.CY.green) end
+print(("[CheatMenu] 更新检查: 已是最新版 %s"):format(tostring(SYS.BuildVer)))
+return
+end
+print(("[CheatMenu] 发现新版本 %s -> %s, 开始热重载"):format(tostring(SYS.BuildVer),tostring(rv)))
+SYS.Notify("⬆️ 发现新版本, 正在热重载…",SYS.CY.yellow)
+local src=P(function() return game:HttpGet(SYS.BuildURL) end)
+if type(src)~="string" or #src<1000 then
+SYS.UpdateBusy=false
+SYS.Notify("❌ 更新失败: 新版源码下载异常(保留当前版本)",SYS.CY.red)
+return
+end
+local chunk,cerr=(loadstring or load)(src,"@CheatMenu_update")
+if type(chunk)~="function" then
+SYS.UpdateBusy=false
+SYS.Notify("❌ 更新失败: 新版编译不过, 已保留当前版本",SYS.CY.red)
+warn("[CheatMenu] 新版编译失败: "..tostring(cerr))
+return
+end
+P(SYS.SaveConfig)
+P(SYS.UnloadAll)
+local ok,err=P(chunk)
+if not ok then warn("[CheatMenu] 更新后执行新版失败: "..tostring(err)) end
+SYS.UpdateBusy=false
+end
 do
 local pls=Players:GetPlayers()
 for i=1,#pls do SYS.TrackCollide(pls[i]) end
@@ -5667,6 +5777,10 @@ for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
 print("[CheatMenu] ✅ 已根据配置激活开关")
+if SYS.T_.AutoUpdateCheck then
+task.wait(1.0)
+P(function() SYS.CheckUpdate(true) end)
+end
 end)
 end
 GENV.CheatMenuExtras={
