@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-15 22:49 sha ff79681f bytes 202341'):format('2026-09-15 22:49','ff79681f',202341))
+print(('[CheatMenu] build 2026-09-15 23:55 sha 6e1daace bytes 201485'):format('2026-09-15 23:55','6e1daace',201485))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -16,7 +16,7 @@ AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,TransUIButtons=false,TransBatch=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
-CB_PauseMove=false,CB_Sticky=false,CB_Predict=false,CB_Team=true,CB_Wall=false,
+CB_PauseMove=false,CB_Sticky=false,CB_Predict=false,CB_Team=true,CB_Wall=true,
 CB_FovCircle=false,CB_HL=false,CB_Dist=false,CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
@@ -32,16 +32,16 @@ DeepHideDepth=120,
 AutoTrainSec=5,RebirthCheck=3,GymMode="Teleport (Safe)",
 SellMinCPS=100000,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,
-CB_FireDelay=0.06,CB_HpThr=0,CB_Priority=5,CB_SilentMode=4,
+CB_FireDelay=0.035,CB_HpThr=0,CB_Priority=5,CB_SilentMode=4,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
-CB_SnapDelay=0.05,
-CB_SnapMinGap=0.25,CB_SnapMaxAngle=60,
+CB_SnapDelay=0.03,
+CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="7598a0fa62"
+SYS.BuildVer="c058566ff1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -1335,35 +1335,9 @@ local team=p.Team and LP.Team and p.Team==LP.Team
 h.FillColor   = team and Color3.fromRGB(0,255,160) or Color3.fromRGB(255,40,90)
 h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,0,60)
 end
-if SYS.T_.ESPBox then
-local par=espParent()
-for p,bx in pairs(HB) do
-if not act[p] or bx.Adornee~=act[p] then bx:Destroy() HB[p]=nil end
-end
-for p,c in pairs(act) do
-local bx=HB[p]
-if not bx then
-bx=Instance.new("BoxHandleAdornment")
-local sz=Vector3.new(4,6,4)
-pcall(function()
-local e=c:GetExtentsSize()
-if e then sz=e+Vector3.new(0.6,0.3,0.6) end
-end)
-bx.Size=sz bx.Adornee=c bx.AlwaysOnTop=true
-bx.ZIndex=6 bx.Transparency=0.55
-bx.Parent=par
-HB[p]=bx
-end
-local team=p.Team and LP.Team and p.Team==LP.Team
-bx.Color3=team and Color3.fromRGB(0,255,200) or Color3.fromRGB(255,50,120)
-end
-elseif next(HB) then
-for _,b in pairs(HB) do b:Destroy() end HB={}
-end
 if not SYS._ESPLogged then
 SYS._ESPLogged=true
-print(("[ESP] 人物高亮=Highlight %d 个 · 方框=%s · 高亮挂点=角色模型")
-:format(#act, SYS.T_.ESPBox and "开" or "关"))
+print(("[ESP] 人物高亮=Highlight %d 个 · 挂点=角色模型"):format(#act))
 end
 else
 if next(HL) then for _,h in pairs(HL) do h:Destroy() end HL={} end
@@ -2486,6 +2460,65 @@ CB.AutoRotateOff=false
 CB.AutoRotateSaved=true
 local HUMC=setmetatable({},{__mode="k"})
 local BODYC=setmetatable({},{__mode="k"})
+CB.DeadAt={}
+CB.DeadTTL=8
+CB.DeathHooked={}
+CB.EnemyHolder=nil
+local function hookDeathEvents()
+local _,rp=P(function() return game:GetService("ReplicatedStorage") end)
+if not rp then return end
+local function sub(inst,label,mode)
+if not inst then return end
+P(function()
+if not inst.OnClientEvent then return end
+T(inst.OnClientEvent:Connect(function(a,...)
+local names={}
+local function take(v)
+if type(v)=="string" then names[#names+1]=v return end
+if type(v)=="table" and type(v.Name)=="string" then names[#names+1]=v.Name return end
+local ok,nm=pcall(function() return v.Name end)
+if ok and type(nm)=="string" then names[#names+1]=nm end
+end
+take(a)
+local rest={...}
+for i=1,#rest do take(rest[i]) end
+for i=1,#names do
+local nm=names[i]
+if mode=="die" then
+CB.DeadAt[nm]=os.clock()
+if CB.Target and CB.Target.Name==nm then CB.Target=nil CB.TargetPart=nil end
+else
+CB.DeadAt[nm]=nil
+end
+end
+end))
+CB.DeathHooked[#CB.DeathHooked+1]=label
+end)
+end
+local R=rp:FindFirstChild("Remote")
+local GS=R and R:FindFirstChild("GameService")
+local ES=R and R:FindFirstChild("EntityService")
+local AN=R and R:FindFirstChild("Any")
+sub(GS and GS:FindFirstChild("Killed"), "GameService.Killed", "die")
+sub(ES and ES:FindFirstChild("Died"),   "EntityService.Died",  "die")
+sub(AN and AN:FindFirstChild("TouchDead"), "Any.TouchDead",    "die")
+sub(AN and AN:FindFirstChild("Suicide"),   "Any.Suicide",      "die")
+sub(GS and GS:FindFirstChild("Respawn"), "GameService.Respawn", "alive")
+sub(GS and GS:FindFirstChild("Revive"),  "GameService.Revive",  "alive")
+sub(ES and ES:FindFirstChild("Spawned"), "EntityService.Spawned", "alive")
+end
+function CB.GameSaysEnemy(pl)
+local hh=CB.EnemyHolder
+if not (hh and hh.Parent) then
+local _,hl=P(function() return WS:FindFirstChild("Highlight") end)
+local _,en=P(function() return hl and hl:FindFirstChild("Enemy") end)
+local _,h2=P(function() return en and en:FindFirstChild("HighlightHolder") end)
+hh=h2
+CB.EnemyHolder=hh
+end
+if not (hh and hh.Parent) then return nil end
+return hh:FindFirstChild(pl.Name)~=nil
+end
 local function humOf(pl)
 local ch=pl and pl.Character
 if not ch or ch.Parent==nil then return nil end
@@ -2493,7 +2526,10 @@ local h=ch:FindFirstChildOfClass("Humanoid")
 if h then return h end
 local c=HUMC[ch]
 if c==false then return nil end
-if c~=nil then return c end
+if c~=nil then
+if c.Parent==nil then HUMC[ch]=nil return nil end
+return c
+end
 local kids=ch:GetChildren()
 local n=#kids
 if n>40 then n=40 end
@@ -2512,10 +2548,13 @@ if not ch or ch.Parent==nil then return nil end
 local b=ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("UpperTorso")
 or ch:FindFirstChild("Torso") or ch:FindFirstChild("Head")
 if b then return b end
-if ch.PrimaryPart then return ch.PrimaryPart end
+if ch.PrimaryPart and ch.PrimaryPart.Parent then return ch.PrimaryPart end
 local c=BODYC[ch]
 if c==false then return nil end
-if c~=nil then return c end
+if c~=nil then
+if c.Parent==nil then BODYC[ch]=nil return nil end
+return c
+end
 local kids=ch:GetChildren()
 local n=#kids
 if n>40 then n=40 end
@@ -2538,6 +2577,12 @@ local ok,st=pcall(function() return h:GetState() end)
 if ok and st==Enum.HumanoidStateType.Dead then return false end
 return true
 end
+local dt=CB.DeadAt[pl.Name]
+if dt then
+if (os.clock()-dt)<(CB.DeadTTL or 8) then return false end
+CB.DeadAt[pl.Name]=nil
+end
+if CB.GameSaysEnemy and CB.GameSaysEnemy(pl) then return true end
 if SYS.T_.CB_OnlyAlive then return false end
 return bodyOf(ch)~=nil
 end
@@ -2580,10 +2625,6 @@ CB.SelfHealAt=0
 local function isEnemyEx(pl,ignoreTeam,ignoreFF)
 if not pl or pl==SYS.LP then return false end
 if not alive(pl) then return false end
-if not ignoreFF then
-local ch=pl.Character
-if ch and ch:FindFirstChildOfClass("ForceField") then return false end
-end
 if not ignoreTeam and SYS.T_.CB_Team and SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then
 return false
 end
@@ -2593,9 +2634,14 @@ local function isEnemy(pl) return isEnemyEx(pl,CB.NoTeamFilter,CB.NoFFFilter) en
 function CB.RejectReason(pl)
 if not pl then return "nil" end
 if pl==SYS.LP then return "是自己" end
-if not alive(pl) then return "已死亡/无角色" end
+if not alive(pl) then
 local ch=pl.Character
-if ch and ch:FindFirstChildOfClass("ForceField") then return "有无敌盾(ForceField) [可被自动忽略]" end
+local h=ch and ch:FindFirstChildOfClass("Humanoid")
+return ("已死亡/无角色 (角色=%s Humanoid=%s Health=%s)"):format(
+tostring(ch~=nil), tostring(h~=nil), tostring(h and h.Health))
+end
+local ch=pl.Character
+if ch and ch:FindFirstChildOfClass("ForceField") then return "有无敌盾(ForceField) [打不掉血 → 最后才选]" end
 if SYS.T_.CB_Team and SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then
 return "与我同队("..tostring(pl.Team and pl.Team.Name)..") [可被自动忽略]"
 end
@@ -2615,10 +2661,6 @@ if SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then teamc=teamc+1 end
 end
 end
 if others==0 then return end
-if (not CB.NoFFFilter) and ffc>=others then
-CB.NoFFFilter=true
-CB.Say(("⚠ 全服 %d 个目标都带着无敌盾 -> 该过滤在本局无区分意义, 已自动忽略"):format(others),SYS.CY.yellow)
-end
 if (not CB.NoTeamFilter) and SYS.T_.CB_Team and teamc>=others then
 CB.NoTeamFilter=true
 CB.Say(("⚠ 全服 %d 个目标都与我同队 -> 该游戏不用队伍区分敌我, 「不打队友」本局已自动忽略"):format(others),SYS.CY.yellow)
@@ -2787,6 +2829,8 @@ end
 sc=aiming and -1e6 or dd
 elseif prio==4 then sc=dd
 else sc=d end
+local chp=pl.Character
+if chp and chp:FindFirstChildOfClass("ForceField") then sc=sc+1e7 end
 if inFov then
 if sc<bestScore then bestScore=sc best=pl bestPart=p end
 elseif d<bestScoreOut then
@@ -3132,87 +3176,6 @@ end
 end)
 end
 end
-local function ensureOverlay()
-if CB.Overlay and CB.Overlay.Parent then return end
-local sg=Instance.new("ScreenGui")
-sg.Name="CheatMenuCombat" sg.ResetOnSpawn=false sg.IgnoreGuiInset=true
-sg.DisplayOrder=997 sg.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-local par=SYS.PG
-P(function()
-if gethui then local h=gethui() if h then par=h return end end
-if SYS.CoreGui then par=SYS.CoreGui end
-end)
-P(function() sg.Parent=par end)
-if not sg.Parent then sg.Parent=SYS.PG end
-CB.Overlay=sg
-local ring=Instance.new("Frame")
-ring.BackgroundTransparency=1 ring.BorderSizePixel=0 ring.Visible=false
-ring.Parent=sg
-local rc=Instance.new("UICorner") rc.CornerRadius=UDim.new(0,100) rc.Parent=ring
-local rs=Instance.new("UIStroke")
-rs.Color=SYS.CY.accent rs.Thickness=1.5 rs.Transparency=0.45
-rs.ApplyStrokeMode=Enum.ApplyStrokeMode.Border rs.Parent=ring
-CB.Ring=ring
-local dl=Instance.new("TextLabel")
-dl.BackgroundTransparency=1 dl.TextColor3=SYS.CY.yellow
-dl.Font=Enum.Font.Code dl.TextSize=12 dl.Text=""
-dl.TextStrokeTransparency=0.4 dl.Visible=false
-dl.Parent=sg
-CB.DistL=dl
-end
-local function hudTick()
-local menuOpen=(SYS.ScreenGui and SYS.ScreenGui.Enabled) and true or false
-local rm=SYS.C_.CB_RingMode or 1
-local showRing=SYS.T_.CB_FovCircle and (rm==1 or (rm==2 and menuOpen))
-local wantHL  =SYS.T_.CB_HL
-local wantDist=SYS.T_.CB_Dist
-if showRing or wantHL or wantDist then
-ensureOverlay()
-end
-if CB.Ring then
-CB.Ring.Visible=showRing
-if showRing then
-local r=SYS.C_.CB_Fov or 180
-CB.Ring.Size=UDim2.new(0,r*2,0,r*2)
-CB.Ring.Position=UDim2.new(0.5,-r,0.5,-r)
-local c=CB.Ring:FindFirstChildOfClass("UICorner")
-if c then c.CornerRadius=UDim.new(0,r) end
-end
-end
-local hlTarget=(wantHL and CB.Target and CB.Target.Character) or nil
-if hlTarget then
-if not CB.HL or CB.HL.Adornee~=hlTarget then
-if CB.HL then P(function() CB.HL:Destroy() end) end
-local h=Instance.new("Highlight")
-h.FillColor=SYS.CY.red h.FillTransparency=0.65
-h.OutlineColor=SYS.CY.red h.OutlineTransparency=0
-h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
-h.Adornee=hlTarget h.Parent=hlTarget
-CB.HL=h
-end
-elseif CB.HL then
-P(function() CB.HL:Destroy() end)
-CB.HL=nil
-end
-if CB.DistL then
-local cam=SYS.Cam
-local myRoot=bodyOf(SYS.LP.Character)
-if wantDist and CB.Target and CB.TargetPart and cam and myRoot then
-local sp,on=cam:WorldToViewportPoint(CB.TargetPart.Position)
-if on and sp.Z>0 then
-local d=math.floor((CB.TargetPart.Position-myRoot.Position).Magnitude)
-CB.DistL.Visible=true
-CB.DistL.Text=("[%s] %dm"):format(CB.Target.Name,d)
-CB.DistL.Size=UDim2.fromOffset(140,16)
-CB.DistL.Position=UDim2.fromOffset(sp.X-70,sp.Y-34)
-else
-CB.DistL.Visible=false
-end
-elseif CB.DistL.Visible then
-CB.DistL.Visible=false
-end
-end
-end
 local MOVING={[Enum.KeyCode.W]=true,[Enum.KeyCode.A]=true,[Enum.KeyCode.S]=true,[Enum.KeyCode.D]=true}
 local moveHeld={}
 T(UIS.InputBegan:Connect(function(inp)
@@ -3227,16 +3190,14 @@ return UIS:IsKeyDown(Enum.KeyCode.W) or UIS:IsKeyDown(Enum.KeyCode.A)
 or UIS:IsKeyDown(Enum.KeyCode.S) or UIS:IsKeyDown(Enum.KeyCode.D)
 end
 CB.MovingNow=movingNow
-local SCAN_DT=1/20
-local HUD_DT =1/12
-local accScan,accHud=0,0
-CB.ScanHz=20
+local SCAN_DT=1/30
+local accScan=0
+CB.ScanHz=30
 CB.Stat={scan=0,hud=0,aim=0}
 local function tickBody(dt)
 dt=tonumber(dt) or 0.016
 if dt>0.5 then dt=0.5 end
 local anyOn=SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
-or SYS.T_.CB_HL or SYS.T_.CB_Dist or SYS.T_.CB_FovCircle
 if not anyOn then
 CB.Target=nil CB.TargetPart=nil
 return
@@ -3250,17 +3211,14 @@ local saved=CB.Target
 local t,p=pickTarget()
 CB.Target=t CB.TargetPart=p
 if t~=saved then CB.LockedAt=os.clock() end
+if not (SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_SnapFire) then fireTick() end
+end
+if SYS.T_.CB_Fire and (SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_SnapFire) then
 fireTick()
-if SYS.T_.CB_Silent and not CB.HookOK then CB.InstallHook() end
+CB.Stat.hud=CB.Stat.hud+1
 end
 aimTick()
 CB.Stat.aim=CB.Stat.aim+1
-accHud=accHud+dt
-if accHud>=HUD_DT then
-accHud=0
-CB.Stat.hud=CB.Stat.hud+1
-hudTick()
-end
 end
 local CBERR=0
 local function tick(dt)
@@ -3282,7 +3240,7 @@ CB.Stop()
 end
 end
 function CB.ResetClock()
-accScan=0 accHud=0 CBERR=0
+accScan=0 CBERR=0
 CB.Stat.scan=0 CB.Stat.hud=0 CB.Stat.aim=0
 end
 function CB.Start()
@@ -3328,15 +3286,16 @@ SYS.T_.CB_FovCircle=false SYS.T_.CB_HL=false SYS.T_.CB_Dist=false
 CB.Say("已关闭全部战斗功能",SYS.CY.red)
 end
 function CB.QuickMode()
-SYS.T_.CB_Aim=false SYS.T_.CB_Fire=true SYS.T_.CB_Silent=false
-SYS.T_.CB_SnapFire=false SYS.T_.CB_Predict=true SYS.T_.CB_Sticky=true
-SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.08
-SYS.C_.CB_AimPart=1 SYS.C_.CB_Priority=5
+SYS.T_.CB_Aim=true SYS.T_.CB_Fire=true
+SYS.T_.CB_SnapFire=false SYS.T_.CB_Silent=false
+SYS.T_.CB_Predict=true SYS.T_.CB_Sticky=true
+SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.04
+SYS.C_.CB_AimPart=1
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
-CB.Say("⚡ 极速模式已开启: 秒锁 + 预测 + 锁头 + 锁保持(快照瞄准未开, 防踢)",SYS.CY.green)
-print("[Combat] ⚡ 极速模式已开启: 快照秒锁(开枪瞬间转枪口对准目标, 移动中也准) + 秒开枪(0.02s) + 预测 + 锁头 + 准星指向")
+CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 锁定保持",SYS.CY.green)
+print("[Combat] ⚡ 一键开战: 自动瞄准 + 自动开火 0.04s + 预测 + 锁头 + 锁定保持 (没动你的优先级设置)")
 end
 function CB.TestOnce()
 local L={}
@@ -3403,7 +3362,7 @@ local function add(s) L[#L+1]=s end
 add("========== CheatMenu 战斗诊断 ==========")
 add(("循环运行: %s   回退模式: %s   tick错误计数: %d")
 :format(tostring(CB.RenderBound), tostring(CB.UsingFallback), CBERR))
-add(("调用频率(选人/瞄准/显示): %d / %d / %d 次")
+add(("调用频率(选人/瞄准/开火判定): %d / %d / %d 次")
 :format(CB.Stat.scan, CB.Stat.aim, CB.Stat.hud))
 add(("相机: %s   CameraType=%s")
 :format(SYS.Cam and "有" or "无", SYS.Cam and tostring(SYS.Cam.CameraType) or "-"))
@@ -3471,9 +3430,16 @@ if SYS.T_.CB_Silent and CB.HookStat.cam==0 and CB.HookStat.mouse==0 and CB.HookS
 add("   ⚠ 静默装了但游戏从没调用被 hook 的函数 -> 追踪/穿墙不会生效")
 add("     打一枪再看; 若仍全 0 = 服务端判定命中, 客户端做不到, 只能自动瞄准")
 else
-if CB.HookStat.ray>0 then add("   ✓ 游戏用 Workspace 射线判定 -> 散射/偏移已绕过(精准命中)") end
-if CB.HookStat.cam>0 then add("   ✓ 游戏用相机射线 -> 静默对该路径生效") end
-if CB.HookStat.mouse>0 then add("   ✓ 游戏读鼠标 UnitRay -> 静默对该路径生效") end
+do
+local hn=#(CB.DeathHooked or {})
+local hh=CB.EnemyHolder
+add(("权威信号: 死亡事件订阅=%d 个%s | 游戏敌人容器=%s")
+:format(hn, hn>0 and "" or "(这局没有这些事件, 只能靠血量判活)",
+(hh and hh.Parent) and ("有, "..tostring(#(hh:GetChildren())).." 个敌人") or "无"))
+end
+if CB.HookStat.ray>0 then add("   ✓ 游戏用 Workspace 射线判定(服务端判定的游戏就是这一类)") end
+if CB.HookStat.cam>0 then add("   · 游戏用相机射线") end
+if CB.HookStat.mouse>0 then add("   · 游戏读鼠标 UnitRay") end
 end
 end
 add(("tick 错误计数: %d %s")
@@ -3498,15 +3464,39 @@ end
 end))
 T(RS.Heartbeat:Connect(function()
 if SYS.Unloaded then return end
-if (SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
-or SYS.T_.CB_HL or SYS.T_.CB_Dist or SYS.T_.CB_FovCircle) then
+if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire then
 CB.Start()
 else
 CB.Stop()
 end
 end))
-if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
-or SYS.T_.CB_HL or SYS.T_.CB_Dist or SYS.T_.CB_FovCircle then
+function CB.MigrateV72()
+if SYS.T_.CB_Silent then
+SYS.T_.CB_Silent=false
+print("[Combat] v74 迁移: 静默瞄准已删除 -> 已关闭")
+end
+if SYS.T_.CB_SnapFire then
+SYS.T_.CB_SnapFire=false
+print("[Combat] v77 迁移: 快照瞄准已删除 -> 已关闭")
+end
+if SYS.T_.CB_Wall==false then
+SYS.T_.CB_Wall=true
+print("[Combat] v75 迁移: 已打开「只打视野内」(穿墙/追踪已随静默瞄准删除)")
+end
+if SYS.T_.CB_OnlyAlive==false then
+SYS.T_.CB_OnlyAlive=true
+print("[Combat] v72 迁移: 已强制打开「只锁活人」(无 Humanoid 的模型不算活人, 治锁尸体)")
+end
+if (SYS.C_.CB_SnapMaxAngle or 60)==60 then SYS.C_.CB_SnapMaxAngle=360 end
+if (SYS.C_.CB_SnapMinGap or 0.25)==0.25 then SYS.C_.CB_SnapMinGap=0.08 end
+if (SYS.C_.CB_SnapDelay or 0.05)==0.05 then SYS.C_.CB_SnapDelay=0.03 end
+if (SYS.C_.CB_FireDelay or 0.06)==0.06 then SYS.C_.CB_FireDelay=0.035 end
+print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向后延迟=%.2f 开火间隔=%.3f")
+:format(SYS.C_.CB_SnapMinGap,SYS.C_.CB_SnapDelay,SYS.C_.CB_FireDelay))
+end
+P(CB.MigrateV72)
+P(hookDeathEvents)
+if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire then
 CB.Start()
 end
 print("[CheatMenu] 战斗模块已加载 (菜单战斗页: 一键开战/停战 + 各开关 · 按 V 切换指定目标)")
@@ -4687,10 +4677,7 @@ end)
 UI.Switch(p,"玩家名字","ESPNameTag",function(on)
 if not on and not SYS.T_.ESP then SYS.ClearESP() end
 end)
-UI.Switch(p,"⬛ 透视方框(附加, 不吃高亮配额)","ESPBox",function(on)
-if not on and not SYS.T_.ESP then SYS.ClearESP() end
-end)
-UI.Tip(p,"透视主体 = 人物高亮(把整个人染色描边, 穿墙可见)。\n若某些局高亮被引擎配额挤掉(整局都看不到), 打开上面的方框当备用。")
+UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。")
 UI.Div(p)
 UI.Switch(p,"全亮 (FullBright)","FullBright",SYS.SetFullBright)
 UI.Switch(p,"自由视角","FreeCam",function(on)
@@ -5052,27 +5039,75 @@ RebuildSaved()
 end
 UI.Pages["战斗"]=function(p)
 local AUTO_TXT="自动 · 按优先级挑"
-local card,inner=UI.Card(p,190)
+local card,inner=UI.Card(p,175)
 local _,targetV=UI.Stat(inner,"当前目标","—")
 local _,wantV=UI.Stat(inner,"指定目标","自动")
 local _,lockV=UI.Stat(inner,"锁定状态","未锁定")
-local _,hookV=UI.Stat(inner,"静默瞄准","未安装")
+local _,aimV=UI.Stat(inner,"瞄准方式","关闭")
 local _,distV=UI.Stat(inner,"距离","—")
-local _,perfV=UI.Stat(inner,"循环频率(选人/显示)","—")
-UI.Btn(p,"⚡ 极速模式 · 秒锁秒开枪(移动中也准)",CY.green,function()
+local _,perfV=UI.Stat(inner,"循环频率(选人/开火)","—")
+UI.Section(p,"一键 · 开战 / 停战",CY.green)
+UI.Btn(p,"⚡ 一键开战 (秒锁秒开枪 · 移动中也准)",CY.green,function()
 if SYS.Combat and SYS.Combat.QuickMode then SYS.Combat.QuickMode() end
 end)
-UI.Tip(p,"极速模式 = 快照瞄准(开枪瞬间转枪口对准目标,移动中也准) + 自动开火(0.02s) + 预测 + 锁头 + 准星指向。\n静默瞄准对本游戏无效(服务端判定), 极速模式已自动关掉它。",CY.yellow)
-UI.Btn(p,"🛑 一键停止战斗",CY.red,function()
+UI.Btn(p,"🛑 一键停战 (关掉全部开关 + 恢复视角与控制)",CY.red,function()
 if SYS.Combat then
 P(SYS.Combat.DisableAll)
 P(SYS.Combat.Stop)
 end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-SYS.Combat.Say("已停止并关闭所有战斗开关",SYS.CY.red)
+P(SYS.ResetCam)
+P(SYS.EnablePlayerControls)
+SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
+UI.Tip(p,"「一键开战」= 瞄准方式切到【快照瞄准】+ 自动开火 0.035 秒 + 锁头 + 预测 + 锁定保持。\n点完直接打就行, 下面的东西都不用调。",CY.green)
 UI.Div(p)
-UI.Section(p,"目标选择 · Target",CY.green)
+UI.Section(p,"瞄准 · 三种方式一次只能开一种",CY.accent)
+local AIM_OFF   ="关闭"
+local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
+UI.Cycle(p,"瞄准方式",{AIM_OFF,AIM_AUTO},
+function()
+if SYS.T_.CB_Aim then return AIM_AUTO end
+return AIM_OFF
+end,
+function(v)
+SYS.T_.CB_Aim     =(v==AIM_AUTO)
+SYS.T_.CB_SnapFire=false
+SYS.T_.CB_Silent=false
+if SYS.Combat then
+SYS.Combat.Start()
+SYS.Combat.Say("瞄准方式 -> "..v,SYS.CY.accent)
+end
+end)
+UI.Tip(p,"「自动瞄准」= 每帧把准星转到目标身上。移动中被相机带偏就打开「移动时暂停瞄准」。\n背身锁得快不快看下面的「跟随速度」(调大更快)。",CY.yellow)
+UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
+function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
+function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
+UI.Switch(p,"📐 预测瞄准 (算目标移动的提前量)","CB_Predict")
+UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
+function() return SYS.C_.CB_PredictTime end,
+function(v) SYS.C_.CB_PredictTime=v end,"%.2f")
+UI.Slider(p,"跟随速度 (自动瞄准跟得多紧)",0.05,1,0.05,
+function() return SYS.C_.CB_Smooth end,
+function(v) SYS.C_.CB_Smooth=v end,"%.2f")
+UI.Slider(p,"索敌范围 (屏幕像素半径 · 越小越只锁正前方)",40,600,10,
+function() return SYS.C_.CB_Fov end,
+function(v) SYS.C_.CB_Fov=v end,"%.0f")
+UI.Slider(p,"最大距离",50,2000,50,
+function() return SYS.C_.CB_MaxDist end,
+function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
+UI.Div(p)
+UI.Section(p,"开火 · Triggerbot",CY.red)
+UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
+UI.Slider(p,"开火间隔 (秒 · 调小=更快)",0.02,0.50,0.005,
+function() return SYS.C_.CB_FireDelay end,
+function(v) SYS.C_.CB_FireDelay=v end,"%.3f")
+UI.Slider(p,"只打血量低于此值的目标 (0=不限)",0,100,5,
+function() return SYS.C_.CB_HpThr end,
+function(v) SYS.C_.CB_HpThr=v end,"%.0f")
+UI.Tip(p,"「自动开火」要看得见目标才开枪: 开了快照/静默/自动瞄准时直接用锁定目标;\n什么都没开时要求准星真压在敌人身上(纯扳机模式)。",CY.sub)
+UI.Div(p)
+UI.Section(p,"打谁 · 选人规则",CY.purple)
 UI.Dropdown(p,"指定目标(点开选择)", function()
 local L={AUTO_TXT}
 local names={}
@@ -5096,109 +5131,48 @@ function(v)
 if (not v) or v==AUTO_TXT then
 SYS.Combat.ClearTarget()
 print("[Combat] 选人方式 -> 自动")
+SYS.Combat.Say("指定目标已清除, 回到自动选人",SYS.CY.sub)
 else
 local got=SYS.Combat.LockTarget(v)
-print(got and ("[Combat] 指定目标 -> "..got) or "[Combat] 指定失败")
+SYS.Combat.Say(got and ("指定目标 -> "..got) or "指定失败",got and SYS.CY.green or SYS.CY.red)
 end
 SYS.Combat.Start()
 end)
-UI.Btn(p,"🎯 锁定当前目标",CY.green,function()
+UI.Btn(p,"🎯 锁定此刻正在打的目标",CY.green,function()
 local n=SYS.Combat.LockTarget()
 if n then SYS.Combat.Say("已锁定目标: "..n,SYS.CY.green)
-else SYS.Combat.Say("当前没有目标可锁(点「输出战斗诊断」能看到被什么挡住了)",SYS.CY.red) end
+else SYS.Combat.Say("当前没有目标可锁(点「输出战斗诊断」能看到被什么挡住)",SYS.CY.red) end
 end)
-UI.Btn(p,"🔄 循环切换指定目标 (热键 V)",CY.accent,function()
+UI.Btn(p,"🔄 换下一个目标 (热键 V)",CY.accent,function()
 local n=SYS.Combat.CycleTarget(1)
-print(n and ("[Combat] 指定目标 -> "..n) or "[Combat] 附近没有可选目标")
+SYS.Combat.Say(n and ("已切到: "..n) or "附近没有可选目标",n and SYS.CY.green or SYS.CY.red)
 end)
 UI.Switch(p,"🚫 只打指定目标 (他不在就不动手)","CB_TgtStrict")
-UI.Tip(p,"「锁定当前目标」锁此刻正在打的; 「循环切换」在活着的敌人间轮换。\n指定目标死亡或退出后默认回到自动; 热键 V 可直接换人, 不用开菜单。",CY.green)
 UI.Div(p)
-UI.Section(p,"瞄准 · Aimbot",CY.accent)
-UI.Switch(p,"🎯 自动瞄准 · 把准星转到目标","CB_Aim",function(on) if on then SYS.Combat.Start() end end)
-UI.Switch(p,"👻 静默瞄准 · 只改射击判定射线","CB_Silent",function(on)
-SYS.Combat.Start()
-if on then SYS.Combat.InstallHook() end
-end)
-UI.Switch(p,"📸 快照瞄准 · 开枪瞬间秒锁再秒切回(视角几乎不动)","CB_SnapFire",function(on)
-if on then SYS.Combat.Start() end
-end)
-UI.Slider(p,"快照稳定延迟 (秒 · 射不准就调大)",0.00,0.20,0.01,
-function() return SYS.C_.CB_SnapDelay end,
-function(v) SYS.C_.CB_SnapDelay=v end,"%.2f")
-UI.Slider(p,"快照最小间隔 (秒 · 调小=转得勤但更容易被踢)",0.10,1.00,0.05,
-function() return SYS.C_.CB_SnapMinGap end,
-function(v) SYS.C_.CB_SnapMinGap=v end,"%.2f")
-UI.Slider(p,"快照单次最大转角 (度 · 调小=转得更碎更安全)",15,180,5,
-function() return SYS.C_.CB_SnapMaxAngle end,
-function(v) SYS.C_.CB_SnapMaxAngle=v end,"%.0f")
-UI.Tip(p,"⚠ 快照瞄准会被踢的原因: 它对【角色】直写 CFrame, 开火越快写得越密。\n上面两个限流把角色转向压到 每秒<=4 次、每次<=60°, 相机仍然是瞬锁。\n若还被踢: 直接关掉快照瞄准 —— 本游戏是服务端判定, 用「静默瞄准(工作区射线)」通常更稳。",CY.red)
-UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
-UI.Switch(p,"🧲 锁定保持 (不来回换目标)","CB_Sticky")
-UI.Switch(p,"💀 只锁活人 (必须有血量且 >0)","CB_OnlyAlive")
-UI.Tip(p,"关掉「只锁活人」= 允许锁定没有 Humanoid 的角色(某些游戏尸体没有 Humanoid, 关掉就会锁尸体)。",CY.yellow)
-UI.Switch(p,"📐 预测瞄准 (算目标移动提前量)","CB_Predict")
-UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
-function() return SYS.C_.CB_PredictTime end,
-function(v) SYS.C_.CB_PredictTime=v end,"%.2f")
-UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
-function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
-function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
-UI.Slider(p,"跟随速度 (越大越跟手)",0.05,1,0.05,
-function() return SYS.C_.CB_Smooth end,
-function(v) SYS.C_.CB_Smooth=v end,"%.2f")
-UI.Slider(p,"视场 FOV (像素半径)",40,600,10,
-function() return SYS.C_.CB_Fov end,
-function(v) SYS.C_.CB_Fov=v end,"%.0f")
-UI.Slider(p,"最大距离",50,2000,50,
-function() return SYS.C_.CB_MaxDist end,
-function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
-UI.Tip(p,"「自动瞄准」开着就持续索敌+转视角(用上面的开关控制)。\n瞄准会把相机转向目标 —— 若角色被相机带偏, 打开「移动时暂停瞄准」。")
-UI.Div(p)
-UI.Section(p,"开火 · Triggerbot",CY.red)
-UI.Switch(p,"🔫 自动开火 · 准星压在敌人身上自动点","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
-UI.Slider(p,"开火最小间隔(秒)",0.02,0.5,0.01,
-function() return SYS.C_.CB_FireDelay end,
-function(v) SYS.C_.CB_FireDelay=v end,"%.2f")
-UI.Slider(p,"仅目标血量低于此值才开火 (0=不限)",0,100,5,
-function() return SYS.C_.CB_HpThr end,
-function(v) SYS.C_.CB_HpThr=v end,"%.0f")
-UI.Div(p)
-UI.Section(p,"筛选与策略",CY.purple)
-UI.Switch(p,"🛡 不打队友","CB_Team")
-UI.Switch(p,"🧱 只打视野内 (隔墙不打)","CB_Wall")
-UI.Tip(p,"⚠ 关掉此开关 = 子弹【穿墙+追踪】生效(命中判定直接穿透墙打目标)。",CY.yellow)
-UI.Cycle(p,"目标优先级 (选人方式=自动时生效)",{"准星指向(压谁锁谁)","最近","血量最低","正在瞄准我","屏幕最靠中"},
+UI.Section(p,"选人偏好",CY.purple)
+UI.Cycle(p,"优先级 (选人方式=自动时生效)",{"准星指向(压谁锁谁)","最近","血量最低","正在瞄准我","屏幕最靠中"},
 function() return ({"准星指向(压谁锁谁)","最近","血量最低","正在瞄准我","屏幕最靠中"})[SYS.C_.CB_Priority or 5] end,
 function(v)
 local m={["准星指向(压谁锁谁)"]=5,["最近"]=1,["血量最低"]=2,["正在瞄准我"]=3,["屏幕最靠中"]=4}
 SYS.C_.CB_Priority = m[v] or 5
 end)
-UI.Cycle(p,"静默模式",{"相机射线","鼠标射线","工作区射线(命中)","全部"},
-function() return ({"相机射线","鼠标射线","工作区射线(命中)","全部"})[SYS.C_.CB_SilentMode or 4] end,
-function(v)
-local m={["相机射线"]=1,["鼠标射线"]=2,["工作区射线(命中)"]=3,["全部"]=4}
-SYS.C_.CB_SilentMode = m[v] or 4
-end)
-UI.Tip(p,"静默瞄准 = 把命中判定的射线换成直指目标(等效追踪+穿墙+无视散射偏移)。\n「工作区射线」是最底层的命中判定, 覆盖最广; 默认「全部」。\n只在游戏用【客户端】判定命中时有效; 服务端判定的游戏请用自动瞄准。",CY.yellow)
+UI.Switch(p,"🧲 锁定保持 (不来回换目标)","CB_Sticky")
+UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
+UI.Switch(p,"🛡 不打队友","CB_Team")
+UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
+UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
+UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
+UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是「不穿墙」)。\n背身/360° 转身照样锁得到 —— 判定按实时相机走, 只要你和目标之间没有墙。\n关掉 = 隔墙的人也选(会对着墙开枪, 基本没用)。",CY.yellow)
+UI.Tip(p,"带「无敌盾」(ForceField/刚重生无敌)的人打不掉血, 所以脚本会把他们排到最后 ——\n只要还有别人可打就不打他们; 全服都有盾时才轮到他们。",CY.sub)
 UI.Div(p)
-UI.Section(p,"应急与诊断",CY.red)
-UI.Btn(p,"🛑 紧急停止战斗 · 恢复视角与移动",CY.red,function()
-if SYS.Combat then
-P(SYS.Combat.DisableAll)
-P(SYS.Combat.Stop)
-end
-P(SYS.ResetCam)
-P(SYS.EnablePlayerControls)
-SYS.Combat.Say("已紧急停止战斗, 相机与角色控制已恢复",SYS.CY.red)
-end)
-UI.Btn(p,"▶ 立即测试一次瞄准 / 开火(看控制台)",CY.green,function()
+UI.Section(p,"诊断",CY.sub)
+UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
 if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
 end)
 UI.Btn(p,"📋 输出战斗诊断到控制台",CY.accent,function()
 if SYS.Combat and SYS.Combat.Diag then SYS.Combat.Diag() end
 end)
-UI.Tip(p,"功能不生效就先点「立即测试一次」: 它会把 选没选到目标 / 相机有没有转 /\n静默 hook 装没装上 / 准星在不在敌人身上 逐条打出来, 一眼看出卡在哪一步。",CY.red)
+UI.Tip(p,"不生效就先点「立即测试一次」: 它逐条打出 选没选到目标 / 相机转没转 /\nhook 装没装 / 准星在不在敌人身上 —— 一眼看出卡在哪一步。",CY.red)
 task.spawn(function()
 local lastScan,lastHud=0,0
 while card.Parent do
@@ -5223,8 +5197,11 @@ wantV.TextColor3=CY.sub
 end
 lockV.Text=cb.Target and "已锁定" or "未锁定"
 lockV.TextColor3=cb.Target and CY.green or CY.sub
-hookV.Text=cb.HookOK and "已安装" or (SYS.T_.CB_Silent and "不可用" or "未安装")
-hookV.TextColor3=cb.HookOK and CY.green or (SYS.T_.CB_Silent and CY.red or CY.sub)
+if SYS.T_.CB_Aim then
+aimV.Text="自动瞄准" aimV.TextColor3=CY.green
+else
+aimV.Text="关闭" aimV.TextColor3=CY.sub
+end
 local root=(cb.BodyOf and cb.BodyOf(SYS.LP.Character)) or nil
 distV.Text=(cb.TargetPart and root)
 and ("%.0f m"):format((cb.TargetPart.Position-root.Position).Magnitude) or "—"
@@ -5285,6 +5262,20 @@ print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
 local sg=Instance.new("ScreenGui")
 sg.Name="CheatMenuV52" sg.ResetOnSpawn=false sg.IgnoreGuiInset=true
+P(function()
+local roots={SYS.PG,SYS.CoreGui}
+if gethui then local h=gethui() if h then roots[#roots+1]=h end end
+local killed=0
+for i=1,#roots do
+local r=roots[i]
+if r then
+for _,c in ipairs(r:GetChildren()) do
+if c~=sg and c.Name=="CheatMenuV52" then c:Destroy() killed=killed+1 end
+end
+end
+end
+if killed>0 then print(("[CheatMenu] 清掉了 %d 个残留的旧菜单"):format(killed)) end
+end)
 sg.ZIndexBehavior=Enum.ZIndexBehavior.Sibling sg.DisplayOrder=999
 local okP=pcall(function() sg.Parent=GetGuiParent() end)
 if not okP then sg.Parent=PG end
@@ -5335,7 +5326,9 @@ logoS.ApplyStrokeMode=Enum.ApplyStrokeMode.Border logoS.Parent=logo
 local verTag=Instance.new("TextLabel")
 verTag.Size=UDim2.new(0,90,0,18) verTag.Position=UDim2.new(0,168,0.5,-9)
 verTag.BackgroundColor3=CY.accent verTag.BackgroundTransparency=0.75
-verTag.Text="v68 · BATTLE" verTag.TextColor3=CY.accent
+local _bv=tostring(SYS.BuildVer or "?")
+verTag.Text=("BATTLE · %s"):format(#_bv>22 and _bv:sub(1,22) or _bv)
+verTag.TextColor3=CY.accent
 verTag.Font=Enum.Font.GothamBold verTag.TextSize=10 verTag.Parent=top
 UI.Round(verTag,9)
 local statBox=Instance.new("Frame")
@@ -5724,7 +5717,7 @@ if not silent then SYS.Notify("ℹ️ 当前执行器没有 HttpGet, 跳过更�
 return
 end
 SYS.UpdateBusy=true
-local remote=P(function() return game:HttpGet(SYS.BuildVerURL) end)
+local _,remote=P(function() return game:HttpGet(SYS.BuildVerURL) end)
 if type(remote)~="string" then
 SYS.UpdateBusy=false
 if not silent then SYS.Notify("❌ 检查更新失败: 取版本号失败(网络?)",SYS.CY.red) end
@@ -5740,7 +5733,7 @@ return
 end
 print(("[CheatMenu] 发现新版本 %s -> %s, 开始热重载"):format(tostring(SYS.BuildVer),tostring(rv)))
 SYS.Notify("⬆️ 发现新版本, 正在热重载…",SYS.CY.yellow)
-local src=P(function() return game:HttpGet(SYS.BuildURL) end)
+local _,src=P(function() return game:HttpGet(SYS.BuildURL) end)
 if type(src)~="string" or #src<1000 then
 SYS.UpdateBusy=false
 SYS.Notify("❌ 更新失败: 新版源码下载异常(保留当前版本)",SYS.CY.red)
@@ -5794,6 +5787,7 @@ sellLow=function() SYS.sellLowCPSTools() end,
 fire=function(name,...) return Fire(name,...) end,
 teleport=function(pos) return SYS.TPTo(pos) end,
 }
-print("[CheatMenu] ===== 加载完成 v68 =====")
+print(("[CheatMenu] ===== 加载完成 · 版本 %s ====="):format(tostring(SYS.BuildVer)))
+print("[CheatMenu] (local-开头=本地版 / 10 位十六进制=仓库网络版)")
 print("[CheatMenu] 热键: G 打开/关闭 | T 传送到鼠标")
 print("[CheatMenu] 中文/中文标点/硬保护词 全部跳过翻译")
