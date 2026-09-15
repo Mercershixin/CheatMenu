@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 01:53 sha 6ea92f31 bytes 204077'):format('2026-09-16 01:53','6ea92f31',204077))
+print(('[CheatMenu] build 2026-09-16 01:59 sha dab650c4 bytes 204149'):format('2026-09-16 01:59','dab650c4',204149))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.1"
+SYS.BuildVer="1.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -846,6 +846,7 @@ if r then deepHideApply(r) end
 end)
 T(DeepHideCharConn)
 else
+if not (DeepHideAnchor or DeepHideFloor) then DeepHideCF=nil return end
 local ch=LP.Character
 local root=ch and ch:FindFirstChild("HumanoidRootPart")
 if root then
