@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 00:17 sha 72274100 bytes 201653'):format('2026-09-16 00:17','72274100',201653))
+print(('[CheatMenu] build 2026-09-16 00:22 sha 2c670aa9 bytes 201368'):format('2026-09-16 00:22','2c670aa9',201368))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -41,7 +41,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="8149579aec"
+SYS.BuildVer="b3f31a7377"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -4913,15 +4913,6 @@ end
 end)
 end)
 UI.Div(p)
-UI.Btn(p,"🔎 导出翻译对照表(看谁把哪句翻成了什么)",CY.accent,function()
-task.spawn(function()
-local n=0
-pcall(function() n=Trans.dumpPairs() end)
-P(function()
-SYS.Notify(("🔎 已导出 %d 条对照到控制台(原文 -> 译文)"):format(n),CY.cyan)
-end)
-end)
-end)
 UI.Btn(p,"↩️ 恢复聊天翻译原文",CY.purple,function()
 local r=Trans.restoreSource("chat")
 P(function()
