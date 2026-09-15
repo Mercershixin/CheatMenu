@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 02:30 sha dab650c4 bytes 204149'):format('2026-09-16 02:30','dab650c4',204149))
+print(('[CheatMenu] build 2026-09-16 02:38 sha 23b8f240 bytes 204207'):format('2026-09-16 02:38','23b8f240',204207))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.2"
+SYS.BuildVer="1.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -5045,6 +5045,7 @@ UI.Label(p,"玩家列表")
 local plList=Instance.new("Frame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
 plList.BackgroundTransparency=0.3 plList.BorderSizePixel=0 plList.Parent=p
+plList.ClipsDescendants=true
 UI.Round(plList,8) UI.Stroke(plList,CY.line,1,0.85)
 local lay=Instance.new("UIListLayout") lay.Padding=UDim.new(0,4) lay.Parent=plList
 local pad=Instance.new("UIPadding")
@@ -5071,6 +5072,7 @@ UI.Label(p,"已保存位置 (点行里的「自动」按钮才会循环传送, �
 local svList=Instance.new("Frame")
 svList.Size=UDim2.new(1,0,0,140) svList.BackgroundColor3=CY.card
 svList.BackgroundTransparency=0.3 svList.BorderSizePixel=0 svList.Parent=p
+svList.ClipsDescendants=true
 UI.Round(svList,8) UI.Stroke(svList,CY.line,1,0.85)
 local svLay=Instance.new("UIListLayout") svLay.Padding=UDim.new(0,4) svLay.Parent=svList
 local svPad=Instance.new("UIPadding")
