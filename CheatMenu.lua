@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 01:43 sha 44b76ca3 bytes 203776'):format('2026-09-16 01:43','44b76ca3',203776))
+print(('[CheatMenu] build 2026-09-16 01:53 sha 6ea92f31 bytes 204077'):format('2026-09-16 01:53','6ea92f31',204077))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.0"
+SYS.BuildVer="1.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -865,11 +865,22 @@ if hit and hit.Position then ty=hit.Position.Y end
 end)
 if type(ty)~="number" then ty=DeepHideY end
 local rot=(root.CFrame-root.CFrame.Position)
+task.spawn(function()
+local from,to=pos.Y,ty+3
+local step=8
+local steps=math.max(1,math.ceil((to-from)/step))
+for i=1,steps do
+if not root.Parent then return end
+local y=from+(to-from)*i/steps
 pcall(function()
-root.CFrame=CFrame.new(pos.X,ty+3,pos.Z)*rot
+root.CFrame=CFrame.new(pos.X,y,pos.Z)*rot
 root.AssemblyLinearVelocity=Vector3.zero
 end)
-print(("[DeepHide] 已在原地浮回地面 (X=%.0f Z=%.0f Y=%.0f)"):format(pos.X,pos.Z,ty+3))
+if i<steps then task.wait(0.1) end
+end
+end)
+print(("[DeepHide] 渐进浮回地面中 (X=%.0f Z=%.0f  %.0f -> %.0f, 约 %.1f 秒)")
+:format(pos.X,pos.Z,pos.Y,ty+3,math.max(0,math.ceil((ty+3-pos.Y)/8))*0.1))
 end
 DeepHideCF=nil
 if DeepHideAnchor then DeepHideAnchor:Destroy() DeepHideAnchor=nil end
