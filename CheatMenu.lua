@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-15 22:34 sha 9f364179 bytes 202186'):format('2026-09-15 22:34','9f364179',202186))
+print(('[CheatMenu] build 2026-09-15 22:37 sha ff79681f bytes 202341'):format('2026-09-15 22:37','ff79681f',202341))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -41,7 +41,7 @@ CB_SnapMinGap=0.25,CB_SnapMaxAngle=60,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="af66a2c82d"
+SYS.BuildVer="7598a0fa62"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -5717,6 +5717,10 @@ function SYS.CheckUpdate(silent)
 if SYS.UpdateBusy then return end
 if not SYS.BuildVerURL or SYS.BuildVerURL=="" or SYS.BuildVerURL:find("{{",1,true) then
 if not silent then SYS.Notify("ℹ️ 当前是本地开发版, 没有配置更新地址",SYS.CY.sub) end
+return
+end
+if type(game.HttpGet)~="function" then
+if not silent then SYS.Notify("ℹ️ 当前执行器没有 HttpGet, 跳过更新检查",SYS.CY.sub) end
 return
 end
 SYS.UpdateBusy=true
