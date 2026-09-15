@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 01:27 sha 72433f65 bytes 202298'):format('2026-09-16 01:27','72433f65',202298))
+print(('[CheatMenu] build 2026-09-16 01:43 sha 44b76ca3 bytes 203776'):format('2026-09-16 01:43','44b76ca3',203776))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -26,7 +26,7 @@ ESP=false,ESPNameTag=false,FreeCam=false,
 AntiAFK=true,AutoBonus=false,
 RemoteSpy=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
-TransChat=false,TransUI=false,TransUIButtons=false,TransBatch=false,
+TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
 CB_PauseMove=false,CB_Predict=false,CB_Team=true,CB_Wall=true,
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="fc5ab82ecf"
+SYS.BuildVer="1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -2399,10 +2399,16 @@ local _,_,root=GC() if not root then return end
 local ray=SYS.Cam:ScreenPointToRay(mouse.X,mouse.Y)
 if SYS.C_.MouseTPMode=="Infinite" then
 local ty=root.Position.Y
-local dy=ray.Direction.Y
-if math.abs(dy)<0.001 then dy=(dy<0 and -0.001 or 0.001) end
-local t=math.clamp((ty-ray.Origin.Y)/dy,-2000,2000)
-local tp=ray.Origin+ray.Direction*t
+local d=ray.Direction
+local tp
+if d.Y<=-0.001 then
+local t=math.clamp((ty-ray.Origin.Y)/d.Y,0,2000)
+tp=ray.Origin+d*t
+else
+local hz=Vector3.new(d.X,0,d.Z)
+if hz.Magnitude<1e-4 then hz=root.CFrame.LookVector end
+tp=root.Position+hz.Unit*500
+end
 SYS.TPTo(Vector3.new(tp.X,ty+2,tp.Z))
 else
 local pa=RaycastParams.new()
@@ -2412,6 +2418,10 @@ end)
 pa.FilterType=(okFT and ft) or Enum.RaycastFilterType.Blacklist
 pa.FilterDescendantsInstances={LP.Character}
 local r=WS:Raycast(ray.Origin,ray.Direction*10000,pa)
+if r and (r.Position-root.Position):Dot(ray.Direction)<0 then r=nil end
+if not r then
+r=WS:Raycast(root.Position+Vector3.new(0,2,0),ray.Direction*10000,pa)
+end
 if r then SYS.TPTo(r.Position+Vector3.new(0,2,0)) end
 end
 end
@@ -3665,11 +3675,33 @@ end
 Trans.markOutput=markOutput
 local function alreadyOurs(s) return type(s)=="string" and Trans.Outputs[s]==true end
 Trans.alreadyOurs=alreadyOurs
+local PlayerNames={} local PlayerNameCount=-1
+local function refreshPlayerNames()
+local cnt=0
+pcall(function()
+for _,p in ipairs(game:GetService("Players"):GetPlayers()) do
+cnt=cnt+1
+PlayerNames[p.Name:lower()]=true
+PlayerNames[p.DisplayName:lower()]=true
+end
+end)
+PlayerNameCount=cnt
+end
+pcall(function()
+game:GetService("Players").PlayerAdded:Connect(function() task.defer(refreshPlayerNames) end)
+end)
+local function isPlayerName(s)
+if PlayerNameCount<0 or #game:GetService("Players"):GetPlayers()~=PlayerNameCount then
+refreshPlayerNames()
+end
+return PlayerNames[s:lower()]==true
+end
 function Trans.shouldTranslate(s,isChat)
 if type(s)~="string" then return false end
 if alreadyOurs(s) then return false end
 s=(s:gsub("^%s+","")):gsub("%s+$","")
 if s=="" or #s<2 then return false end
+if isPlayerName(s) then return false end
 if hasChinese(s) then return false end
 if not hasForeign(s) then return false end
 if s:match("^https?://%S+$") or s:match("^www%.%S+$") then return false end
@@ -3870,6 +3902,7 @@ end
 if not netFail then Trans.Stats.fail=Trans.Stats.fail+1 end
 return nil
 end
+local Inflight={}
 function Trans.request(text,prio,cb)
 if Trans.Unloaded or type(text)~="string" or text=="" then
 if cb then pcall(cb,nil) end return
@@ -3883,9 +3916,18 @@ Trans.Stats.hit=Trans.Stats.hit+1
 if cb then pcall(cb,hit) end
 return
 end
+local key=normalizeKey(text)
+local q=Inflight[key]
+if q then
+if cb then q[#q+1]=cb end
+return
+end
+Inflight[key]={}
 task.spawn(function()
 local r=Trans.translate(text,prio)
+local q2=Inflight[key] Inflight[key]=nil
 if cb then pcall(cb,r) end
+if q2 then for _,f in ipairs(q2) do pcall(f,r) end end
 end)
 end
 Trans.Trans2Orig={}
@@ -3949,6 +3991,13 @@ Trans.applyLabel=function(job,res) end
 Trans.PromptFields={"ActionText","ObjectText"}
 local function processPrompt(p)
 if not p or not p.Parent or Trans.Unloaded or not Trans.UIScanActive then return end
+if p:GetAttribute("__TransHook")~=true then
+pcall(function()
+p:SetAttribute("__TransHook",true)
+p:GetPropertyChangedSignal("ActionText"):Connect(function() task.defer(processPrompt,p) end)
+p:GetPropertyChangedSignal("ObjectText"):Connect(function() task.defer(processPrompt,p) end)
+end)
+end
 for _,f in ipairs(Trans.PromptFields) do
 local ok,t=pcall(function() return p[f] end)
 if ok and type(t)=="string" and t~="" then
@@ -3979,6 +4028,16 @@ p=p.Parent
 end
 return false
 end
+local function isOfficialTopbar(o)
+local p=o
+for _=1,12 do
+if not p then break end
+local nm=p.Name
+if type(nm)=="string" and nm:lower():find("topbar",1,true) then return true end
+p=p.Parent
+end
+return false
+end
 local function inWorld(c)
 local p=c and c.Parent
 local d=0
@@ -3998,7 +4057,7 @@ for i=1,#ds do
 local o=ds[i]
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
-if not isOwnUI(o) then
+if not isOwnUI(o) and not isOfficialTopbar(o) then
 Trans.processLabel(o,"ui")
 count=count+1
 end
@@ -4016,7 +4075,7 @@ function Trans.worldNode(o)
 if not o then return end
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
-if not isOwnUI(o) then Trans.processLabel(o,"ui") end
+if not isOwnUI(o) and not isOfficialTopbar(o) then Trans.processLabel(o,"ui") end
 elseif cls=="ProximityPrompt" then
 processPrompt(o)
 end
@@ -4847,9 +4906,6 @@ end)
 UI.Switch(p,"🖼️ 界面翻译","TransUI",function(on)
 if on then Trans.startUIScan() else Trans.stopUIScan() end
 end)
-UI.Switch(p,"🔘 界面按钮文字也翻译(默认关)","TransUIButtons",function(on)
-task.spawn(function() if Trans.forceRescan then pcall(Trans.forceRescan) end end)
-end)
 UI.Btn(p,"🔍 立即强制全屏扫描翻译",CY.cyan,function()
 task.spawn(function()
 print("[Trans] 手动触发全屏扫描...")
@@ -5343,7 +5399,8 @@ verTag.Size=UDim2.new(0,90,0,18) verTag.Position=UDim2.new(0,168,0.5,-9)
 verTag.BackgroundColor3=CY.accent verTag.BackgroundTransparency=0.75
 local _bv=tostring(SYS.BuildVer or "?")
 local _short
-if _bv:sub(1,6)=="local-" then _short="本 ".._bv:sub(-4)
+if _bv:match("^%d+%.%d+$") then _short="v".._bv
+elseif _bv:sub(1,6)=="local-" then _short="本 ".._bv:sub(-4)
 else _short="#".._bv:sub(1,6) end
 verTag.Text="BATTLE · ".._short
 verTag.TextColor3=CY.accent
