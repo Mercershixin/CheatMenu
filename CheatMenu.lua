@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-15 23:55 sha 6e1daace bytes 201485'):format('2026-09-15 23:55','6e1daace',201485))
+print(('[CheatMenu] build 2026-09-16 00:06 sha 41007e3c bytes 201295'):format('2026-09-16 00:06','41007e3c',201295))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -41,7 +41,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="c058566ff1"
+SYS.BuildVer="f40c5c439f"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3337,18 +3337,12 @@ if SYS.T_.CB_Fire then
 local on=crosshairOnEnemy()
 add(("自动开火: 开 -> 准星压在敌人身上=%s %s")
 :format(tostring(on),
-on and "" or "—— 准星没压在敌人身上就不会开火; 想要无视准星请改开快照瞄准/静默瞄准"))
+on and "" or "—— 瞄准关着时要求准星真压在敌人身上; 想无视准星就打开「自动瞄准」"))
 else
 add("自动开火: 关")
 end
-if SYS.T_.CB_SnapFire then
-add("快照瞄准: 开 -> 开枪瞬间转相机+枪口朝向指向目标(移动中也准), 视角几乎不动")
-if SYS.T_.CB_Aim then
-add("          ⚠ 自动瞄准和快照瞄准都开着 -> 快照优先, 自动瞄准会暂停转相机")
-end
-else
-add("快照瞄准: 关 —— 服务端判定游戏要「移动中射准」请开这个(静默对服务端判定无效)")
-end
+add("瞄准方式: "..(SYS.T_.CB_Aim and "自动瞄准(每帧把准星转到目标)" or "关闭")
+.."   (静默瞄准 / 快照瞄准 已删除)")
 add(("tick 错误计数: %d %s")
 :format(CBERR, (CBERR>0 and (", 最后一条: "..tostring(CB.LASTERR)) or "")))
 CB.Say(("测试: 可选敌人 %d · 选人 %s · tick错误 %d"):format(#list,t and t.Name or "无",CBERR),SYS.CY.cyan)
@@ -4699,7 +4693,7 @@ if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
 end,"%.0f")
 UI.Tip(p,"⚠ 透明隐身=本地(别人看得到你); 藏地下=【真的把你传送进地下】(位置是服务器同步的, 无法只骗别人不骗自己)。\n"
 .."· 能真实走动(水平速度不再被清零 + 脚下有块客户端隐形地板, 不会一直自由落体)。\n"
-.."· 枪械/近战命中在客户端判定 -> 静默/快照瞄准照样能打中(不受深度影响)。\n"
+.."· 枪械/近战命中在客户端判定 -> 不受深度影响(能不能打中还取决于游戏是客户端还是服务端判定)。\n"
 .."· 商店/NPC/偷取这类【按距离判定】的交互够不到 -> 把深度调到 10~20 格才有机会够到。\n"
 .."· 关闭时会【在原地浮回地面】, 不会把你弹回开启时的位置。\n"
 .."· 高风险: 服务器可能做位置校验把你拉回/踢掉。",CY.yellow)
@@ -5060,9 +5054,9 @@ P(SYS.ResetCam)
 P(SYS.EnablePlayerControls)
 SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
-UI.Tip(p,"「一键开战」= 瞄准方式切到【快照瞄准】+ 自动开火 0.035 秒 + 锁头 + 预测 + 锁定保持。\n点完直接打就行, 下面的东西都不用调。",CY.green)
+UI.Tip(p,"「一键开战」= 瞄准方式切到【自动瞄准】+ 自动开火 0.04 秒 + 锁头 + 预测 + 锁定保持。\n点完直接打就行, 下面的东西都不用调。",CY.green)
 UI.Div(p)
-UI.Section(p,"瞄准 · 三种方式一次只能开一种",CY.accent)
+UI.Section(p,"瞄准 · 关闭 / 自动瞄准",CY.accent)
 local AIM_OFF   ="关闭"
 local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
 UI.Cycle(p,"瞄准方式",{AIM_OFF,AIM_AUTO},
@@ -5105,7 +5099,7 @@ function(v) SYS.C_.CB_FireDelay=v end,"%.3f")
 UI.Slider(p,"只打血量低于此值的目标 (0=不限)",0,100,5,
 function() return SYS.C_.CB_HpThr end,
 function(v) SYS.C_.CB_HpThr=v end,"%.0f")
-UI.Tip(p,"「自动开火」要看得见目标才开枪: 开了快照/静默/自动瞄准时直接用锁定目标;\n什么都没开时要求准星真压在敌人身上(纯扳机模式)。",CY.sub)
+UI.Tip(p,"「自动开火」要看得见目标才开枪: 开着自动瞄准时直接用锁定目标;\n瞄准关着时要求准星真压在敌人身上(纯扳机模式)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"打谁 · 选人规则",CY.purple)
 UI.Dropdown(p,"指定目标(点开选择)", function()
@@ -5327,7 +5321,10 @@ local verTag=Instance.new("TextLabel")
 verTag.Size=UDim2.new(0,90,0,18) verTag.Position=UDim2.new(0,168,0.5,-9)
 verTag.BackgroundColor3=CY.accent verTag.BackgroundTransparency=0.75
 local _bv=tostring(SYS.BuildVer or "?")
-verTag.Text=("BATTLE · %s"):format(#_bv>22 and _bv:sub(1,22) or _bv)
+local _short
+if _bv:sub(1,6)=="local-" then _short="本 ".._bv:sub(-4)
+else _short="#".._bv:sub(1,6) end
+verTag.Text="BATTLE · ".._short
 verTag.TextColor3=CY.accent
 verTag.Font=Enum.Font.GothamBold verTag.TextSize=10 verTag.Parent=top
 UI.Round(verTag,9)
