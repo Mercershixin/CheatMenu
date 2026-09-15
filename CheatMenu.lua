@@ -1,8 +1,21 @@
-print(('[CheatMenu] build 2026-09-16 01:01 sha 8b6fe868 bytes 201880'):format('2026-09-16 01:01','8b6fe868',201880))
+print(('[CheatMenu] build 2026-09-16 01:11 sha 80fe5fbe bytes 202083'):format('2026-09-16 01:11','80fe5fbe',202083))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 if GENV.CheatLoaded and type(GENV.CheatUnload)=="function" then pcall(GENV.CheatUnload) end
+pcall(function()
+local lp=game:GetService("Players").LocalPlayer
+local roots={lp and lp.PlayerGui, game:GetService("CoreGui")}
+if gethui then local h=gethui() if h then roots[#roots+1]=h end end
+for i=1,#roots do
+local r=roots[i]
+if r then
+for _,c in ipairs(r:GetChildren()) do
+if c.Name=="CheatMenuV52" then c:Destroy() end
+end
+end
+end
+end)
 local SYS={
 Conns={},Threads={},Unloaded=false,
 T_={
@@ -41,7 +54,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="58de335378"
+SYS.BuildVer="9a96f6cca5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -440,7 +453,7 @@ task.wait(5)
 if Spy.Active then P(scanAll,RStorage) P(scanAll,WS) end
 end
 end))
-SYS.Notify("🕵️ RemoteSpy 已开启: 正在记录收发(点「导出抓包汇总」看结果)",SYS.CY.cyan)
+SYS.Notify("🕵️ RemoteSpy 已开启: 正在记录收发(结果在 real 控制台看)",SYS.CY.cyan)
 print("[Spy] 已开启 · namecall hook="..tostring(Spy.HookOK)
 .." · 已知 RemoteEvent 监听="..tostring((function() local n=0 for _ in pairs(Spy.REConn) do n=n+1 end return n end)()))
 return true
@@ -674,10 +687,17 @@ if on then
 LT.Brightness=2 LT.ClockTime=12
 LT.Ambient=Color3.new(1,1,1) LT.OutdoorAmbient=Color3.new(1,1,1)
 LT.FogEnd=1e5 LT.FogColor=Color3.new(1,1,1)
+LT.GlobalShadows=false
+SYS.OrigFX={}
+for _,e in ipairs(LT:GetChildren()) do
+if e:IsA("PostEffect") then SYS.OrigFX[e]=e.Enabled e.Enabled=false end
+end
 else
 LT.Brightness=SYS.Orig.Brightness LT.ClockTime=SYS.Orig.ClockTime
 LT.Ambient=SYS.Orig.Ambient LT.OutdoorAmbient=SYS.Orig.OutdoorAmbient
 LT.FogEnd=SYS.Orig.FogEnd LT.FogColor=SYS.Orig.FogColor
+LT.GlobalShadows=true
+if SYS.OrigFX then for e,en in pairs(SYS.OrigFX) do e.Enabled=en end SYS.OrigFX=nil end
 end
 end
 local InvisConn
@@ -937,7 +957,7 @@ table.sort(found)
 print(("[Remote] ===== 全方位扫描: 网络 RemoteEvent %d + RemoteFunction %d | 本地 BindableEvent %d + BindableFunction %d | 交互 ProximityPrompt %d + ClickDetector %d =====")
 :format(counts.RE,counts.RF,counts.BE,counts.BF,counts.PP,counts.CD))
 for i,r in ipairs(found) do print("  ["..i.."] "..r) end
-print("[Remote] 把清单发来 -> 分析哪些能伪造(刷收益/免费传送/小游戏作弊/搞怪)")
+print("[Remote] 扫描完成, 清单在上面")
 SYS.Notify(("扫描完成: 网络 %d · 本地 %d · 交互 %d (看控制台)")
 :format(counts.RE+counts.RF,counts.BE+counts.BF,counts.PP+counts.CD),SYS.CY.cyan)
 return found
@@ -1411,8 +1431,8 @@ FYaw=math.atan2(-look.X,-look.Z)
 FPitch=math.asin(math.clamp(look.Y,-1,1))
 SYS.Cam.CameraType=Enum.CameraType.Scriptable
 SYS.Cam.CameraSubject=nil
-UIS.MouseBehavior=Enum.MouseBehavior.Default
-UIS.MouseIconEnabled=true
+UIS.MouseBehavior=Enum.MouseBehavior.LockCenter
+UIS.MouseIconEnabled=false
 P(SYS.DisablePlayerControls)
 Freeze()
 FKC=task.spawn(function()
@@ -1428,8 +1448,8 @@ FLM=nil
 FConn=RS.RenderStepped:Connect(function(dt)
 if not SYS.FreeCamActive or not SYS.Cam then return end
 P(function()
-if UIS.MouseBehavior~=Enum.MouseBehavior.Default then UIS.MouseBehavior=Enum.MouseBehavior.Default end
-if not UIS.MouseIconEnabled then UIS.MouseIconEnabled=true end
+if UIS.MouseBehavior~=Enum.MouseBehavior.LockCenter then UIS.MouseBehavior=Enum.MouseBehavior.LockCenter end
+if UIS.MouseIconEnabled then UIS.MouseIconEnabled=false end
 end)
 local rot=CFrame.Angles(0,FYaw,0)*CFrame.Angles(FPitch,0,0)
 local cf=CFrame.new(FPos)*rot
@@ -2390,7 +2410,7 @@ return Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
 end)
 pa.FilterType=(okFT and ft) or Enum.RaycastFilterType.Blacklist
 pa.FilterDescendantsInstances={LP.Character}
-local r=WS:Raycast(ray.Origin,ray.Direction*1000,pa)
+local r=WS:Raycast(ray.Origin,ray.Direction*10000,pa)
 if r then SYS.TPTo(r.Position+Vector3.new(0,2,0)) end
 end
 end
@@ -4946,7 +4966,7 @@ function(v) SYS.C_.TPMethod=v end)
 UI.Cycle(p,"鼠标传送模式",{"Raycast","Infinite"},
 function() return SYS.C_.MouseTPMode end,
 function(v) SYS.C_.MouseTPMode=v end)
-UI.Slider(p,"自动传送距离",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
+UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
 UI.Label(p,"玩家列表")
 local plList=Instance.new("Frame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
@@ -5225,15 +5245,6 @@ SYS.DumpRemotes()
 end)
 UI.Switch(p,"🕵️ RemoteSpy 抓包(记录所有 remote 收发)","RemoteSpy",function(on)
 if SYS.SetRemoteSpy then SYS.SetRemoteSpy(on) end
-end)
-UI.Btn(p,"📤 导出抓包汇总(按 remote 归类字段)",CY.cyan,function()
-local n=0
-pcall(function() n=SYS.RemoteSpy.dump(true) end)
-SYS.Notify(("📤 已导出 %d 个 remote 的字段组合到控制台"):format(n),CY.cyan)
-end)
-UI.Btn(p,"🧹 清空抓包记录",CY.sub,function()
-pcall(function() SYS.RemoteSpy.clear() end)
-SYS.Notify("🧹 抓包记录已清空",CY.sub)
 end)
 UI.Div(p)
 UI.Switch(p,"🔁 启动时自动检查更新","AutoUpdateCheck")
