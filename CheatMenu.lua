@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 12:50 sha f06eb3f0 bytes 200670'):format('2026-09-16 12:50','f06eb3f0',200670))
+print(('[CheatMenu] build 2026-09-16 13:28 sha 3250fb0d bytes 200741'):format('2026-09-16 13:28','3250fb0d',200741))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.8"
+SYS.BuildVer="1.9"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3649,13 +3649,17 @@ end
 prot("{{[^{}]-}}")
 prot("{[^{}]-}")
 prot("%%[-+0-9%.]*[sdifgxXoc]")
+prot("%%%w+%%")
 prot("</?[%a!][^>]*>")
+prot("%[%/?%w+[^%]]*%]")
 prot("`[^`]+`")
 prot("%*%*[^%*]+%*%*")
+prot("%$%w+%$")
 prot("%$[%d%.,]+")
 prot("#%x%x%x%x%x%x")
+prot("[@#&!]%w+")
 prot("%d+%.?%d*%%")
-prot("%[%w+%]")
+prot("\\.")
 return s,tok,n
 end
 Trans.maskSpecials=maskSpecials
