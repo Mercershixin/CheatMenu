@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 18:26 sha a6bed1cd bytes 207023'):format('2026-09-16 18:26','a6bed1cd',207023))
+print(('[CheatMenu] build 2026-09-17 01:54 sha 55c9ee4b bytes 215078'):format('2026-09-17 01:54','55c9ee4b',215078))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -51,11 +51,12 @@ CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
 CB_SnapDelay=0.03,
 CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
+Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="2.6"
+SYS.BuildVer="2.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -102,6 +103,12 @@ SYS.PhysicsStep=RS.PreSimulation or RS.Heartbeat
 T_(WS:GetPropertyChangedSignal("CurrentCamera"):Connect(function() SYS.Cam=WS.CurrentCamera end))
 end
 local T=SYS.T local TT=SYS.TT local P=SYS.P local DS=SYS.DisconnectSafe
+function SYS.KeyCodeOf(name)
+if type(name)~="string" or name=="" then return nil end
+local ok,k=pcall(function() return Enum.KeyCode[name] end)
+if ok and k~=nil and typeof(k)=="EnumItem" then return k end
+return nil
+end
 do
 local CFG="CheatMenuV491_Config.json"
 local HAS_FS=(type(writefile)=="function" and type(readfile)=="function" and type(isfile)=="function")
@@ -129,6 +136,71 @@ end
 writefile(CFG,json)
 end
 end)
+end
+local PROF_PREFIX="CheatMenu_Profile_"
+local function profFile(name)
+local s=tostring(name or ""):gsub("[%c%s]","")
+if s=="" then return nil end
+return PROF_PREFIX..s..".json"
+end
+local function profCollect()
+local d={}
+for k,v in pairs(SYS.C_) do
+if k~="CB_TargetName" and k~="CB_TargetMode" then
+local tv=type(v)
+if tv=="number" or tv=="string" or tv=="boolean" then d[k]=v end
+end
+end
+return d
+end
+function SYS.SaveProfile(name)
+if not HAS_FS or not HS then SYS.Notify("执行器不支持写文件",SYS.CY.red) return false end
+local f=profFile(name)
+if not f then SYS.Notify("配置名不能为空",SYS.CY.yellow) return false end
+local ok=P(function() writefile(f,HS:JSONEncode(profCollect())) end)
+SYS.Notify(ok and ("已保存配置: "..tostring(name)) or "保存失败", ok and SYS.CY.green or SYS.CY.red)
+return ok
+end
+function SYS.LoadProfile(name)
+if not HAS_FS or not HS then SYS.Notify("执行器不支持读文件",SYS.CY.red) return false end
+local f=profFile(name)
+if not f or not isfile(f) then SYS.Notify("找不到配置: "..tostring(name),SYS.CY.red) return false end
+local ok=P(function()
+local d=HS:JSONDecode(readfile(f))
+if type(d)~="table" then return end
+for k,v in pairs(d) do
+if SYS.C_[k]~=nil and type(v)==type(SYS.C_[k]) then SYS.C_[k]=v end
+end
+end)
+if ok then
+SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
+for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
+SYS.Notify("已加载配置: "..tostring(name),SYS.CY.green)
+else
+SYS.Notify("配置读取失败(文件损坏?)",SYS.CY.red)
+end
+return ok
+end
+function SYS.DeleteProfile(name)
+if not HAS_FS then return false end
+local f=profFile(name)
+if not f then return false end
+if type(delfile)~="function" then SYS.Notify("执行器没有 delfile, 删不了",SYS.CY.yellow) return false end
+local ok=P(function() if isfile(f) then delfile(f) end end)
+SYS.Notify(ok and ("已删除配置: "..tostring(name)) or "删除失败", ok and SYS.CY.green or SYS.CY.red)
+return ok
+end
+function SYS.ListProfiles()
+local out={}
+if not HAS_FS or type(listfiles)~="function" then return out end
+P(function()
+for _,f in ipairs(listfiles(".")) do
+local nm=tostring(f):match("^"..PROF_PREFIX.."(.+)%.json$")
+if nm then out[#out+1]=nm end
+end
+end)
+table.sort(out)
+return out
 end
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
@@ -2511,11 +2583,23 @@ CB.DeadAt={}
 CB.DeadTTL=8
 CB.DeathHooked={}
 CB.EnemyHolder=nil
-local function hookDeathEvents()
+local function hookDeathEvents(attempt)
+attempt=attempt or 0
 local _,rp=P(function() return game:GetService("ReplicatedStorage") end)
 if not rp then return end
+local R=rp:FindFirstChild("Remote")
+if not R then
+if attempt<40 then
+SYS.TT(task.delay(2,function() P(hookDeathEvents,attempt+1) end))
+else
+warn("[CheatMenu] 80 秒内没等到 ReplicatedStorage.Remote -> 死亡事件没订上(会退化回 Humanoid 判断)")
+end
+return
+end
+CB.DeathHookedSet=CB.DeathHookedSet or {}
 local function sub(inst,label,mode)
 if not inst then return end
+if CB.DeathHookedSet[label] then return end
 P(function()
 if not inst.OnClientEvent then return end
 T(inst.OnClientEvent:Connect(function(a,...)
@@ -2539,20 +2623,24 @@ CB.DeadAt[nm]=nil
 end
 end
 end))
+CB.DeathHookedSet[label]=true
 CB.DeathHooked[#CB.DeathHooked+1]=label
 end)
 end
-local R=rp:FindFirstChild("Remote")
-local GS=R and R:FindFirstChild("GameService")
-local ES=R and R:FindFirstChild("EntityService")
-local AN=R and R:FindFirstChild("Any")
-sub(GS and GS:FindFirstChild("Killed"), "GameService.Killed", "die")
-sub(ES and ES:FindFirstChild("Died"),   "EntityService.Died",  "die")
-sub(AN and AN:FindFirstChild("TouchDead"), "Any.TouchDead",    "die")
-sub(AN and AN:FindFirstChild("Suicide"),   "Any.Suicide",      "die")
-sub(GS and GS:FindFirstChild("Respawn"), "GameService.Respawn", "alive")
-sub(GS and GS:FindFirstChild("Revive"),  "GameService.Revive",  "alive")
-sub(ES and ES:FindFirstChild("Spawned"), "EntityService.Spawned", "alive")
+local GS=R:FindFirstChild("GameService")
+local ES=R:FindFirstChild("EntityService")
+local AN=R:FindFirstChild("Any")
+local function C(par,nm) return par and par:FindFirstChild(nm) or nil end
+sub(C(GS,"Killed"), "GameService.Killed", "die")
+sub(C(ES,"Died"),   "EntityService.Died",  "die")
+sub(C(AN,"TouchDead"), "Any.TouchDead",    "die")
+sub(C(AN,"Suicide"),   "Any.Suicide",      "die")
+sub(C(GS,"Respawn"), "GameService.Respawn", "alive")
+sub(C(GS,"Revive"),  "GameService.Revive",  "alive")
+sub(C(ES,"Spawned"), "EntityService.Spawned", "alive")
+if #CB.DeathHooked==0 and attempt<40 then
+SYS.TT(task.delay(2,function() P(hookDeathEvents,attempt+1) end))
+end
 end
 function CB.GameSaysEnemy(pl)
 local hh=CB.EnemyHolder
@@ -3245,7 +3333,7 @@ return txt
 end
 T(UIS.InputBegan:Connect(function(inp)
 if SYS.Unloaded then return end
-if inp.KeyCode==Enum.KeyCode.V then
+if inp.KeyCode==(SYS.KeyCodeOf(SYS.C_.Key_CycleTarget) or Enum.KeyCode.V) then
 local ok,r=P(function() return CB.CycleTarget(1) end)
 print((ok and r) and ("[Combat] 指定目标 -> "..r) or "[Combat] 附近没有可选目标")
 end
@@ -3283,7 +3371,7 @@ print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向�
 :format(SYS.C_.CB_SnapMinGap,SYS.C_.CB_SnapDelay,SYS.C_.CB_FireDelay))
 end
 P(CB.MigrateV72)
-P(hookDeathEvents)
+P(hookDeathEvents,0)
 if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire then
 CB.Start()
 end
@@ -4610,6 +4698,28 @@ UI.Hover(row,CY.card2,CY.card)
 SYS.BtnRefs[#SYS.BtnRefs+1]=refresh
 return row
 end
+function UI.Input(parent,label,placeholder,get,set)
+local row=Instance.new("Frame")
+row.Size=UDim2.new(1,0,0,44) row.BackgroundColor3=CY.card
+row.BackgroundTransparency=0.18 row.BorderSizePixel=0 row.Parent=parent
+UI.Round(row,10) UI.Stroke(row,CY.line,1,0.75)
+local lb=Instance.new("TextLabel")
+lb.Size=UDim2.new(0.42,0,1,0) lb.Position=UDim2.new(0,14,0,0)
+lb.BackgroundTransparency=1 lb.Text=label lb.TextColor3=CY.text
+lb.Font=Enum.Font.GothamMedium lb.TextSize=13
+lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
+local tb=Instance.new("TextBox")
+tb.Size=UDim2.new(0.58,-22,1,-14) tb.Position=UDim2.new(0.42,8,0.5,-7)
+tb.BackgroundColor3=CY.panel tb.BackgroundTransparency=0.1
+tb.TextColor3=CY.text tb.PlaceholderColor3=CY.sub
+tb.PlaceholderText=placeholder or ""
+tb.Text=tostring(get() or "") tb.Font=Enum.Font.Code tb.TextSize=13
+tb.TextScaled=false tb.ClearTextOnFocus=false tb.BorderSizePixel=0 tb.Parent=row
+UI.Round(tb,8) UI.Stroke(tb,CY.accent,1,0.6)
+T(tb.FocusLost:Connect(function(enter) if enter then P(set,tb.Text) end end))
+UI.Hover(row,CY.card2,CY.card)
+return row,tb
+end
 function UI.Cycle(parent,label,opts,get,set)
 if not parent then return end
 local row=Instance.new("Frame")
@@ -5300,6 +5410,49 @@ UI.Label(p,"配置",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
 UI.Tip(p,"开关改动会自动保存, 下次加载脚本时自动生效(无需手动操作)。",CY.sub)
 UI.Div(p)
+UI.Section(p,"配置管理 · 多套存档",CY.purple)
+local profName=""
+UI.Input(p,"配置名","如 战斗档 / 挂机档",function() return profName end,function(v) profName=v or "" end)
+UI.Btn(p,"💾 保存当前配置到该名字",CY.green,function()
+if SYS.SaveProfile(profName) then
+for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
+end
+end)
+UI.Btn(p,"📂 加载该名字的配置",CY.cyan,function() SYS.LoadProfile(profName) end)
+UI.Btn(p,"🗑 删除该名字的配置",CY.red,function()
+if SYS.DeleteProfile(profName) then
+for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
+end
+end)
+local profL=UI.Label(p,"",CY.sub)
+local function refreshProfiles()
+if not profL or not profL.Parent then return end
+local list=SYS.ListProfiles()
+profL.Text=("已有配置(%d): %s"):format(#list, #list>0 and table.concat(list,"  ") or "(无)")
+end
+refreshProfiles()
+SYS.BtnRefs[#SYS.BtnRefs+1]=refreshProfiles
+UI.Tip(p,"保存 = 把当前所有参数存成一份档; 加载 = 立刻套用那份档并刷新界面。\n自动配置(开机自动生效的那份)不受影响。",CY.sub)
+UI.Div(p)
+UI.Section(p,"热键设置 · 点一下再按新键",CY.cyan)
+local function keyRow(label,field)
+local b=UI.Btn(p,label.."  ["..tostring(SYS.C_[field] or "?").."]",CY.card,function()
+SYS.KeyPickTarget=field
+SYS.Notify("请按下一个键来绑定「"..label.."」",SYS.CY.yellow)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end)
+SYS.BtnRefs[#SYS.BtnRefs+1]=function()
+if b and b.Parent then
+local cur=(SYS.KeyPickTarget==field) and "[等待按键...]" or tostring(SYS.C_[field] or "?")
+b.Text=label.."  ["..cur.."]"
+end
+end
+end
+keyRow("打开/关闭菜单","Key_Menu")
+keyRow("循环切换指定目标","Key_CycleTarget")
+keyRow("鼠标传送到准星","Key_Teleport")
+UI.Tip(p,"点按钮 -> 提示「等待按键」-> 按你要的键就绑好了。\n(右Shift 始终能开菜单, 作为备用键)",CY.sub)
+UI.Div(p)
 UI.Btn(p,"自杀",CY.red,function()
 if SYS.T_.GodMode then return end
 local c=LP.Character
@@ -5464,6 +5617,20 @@ ind.Size=UDim2.new(0,3,0,22) ind.Position=UDim2.new(0,0,0,15)
 ind.BackgroundColor3=CY.accent ind.BorderSizePixel=0 ind.Visible=false
 ind.Parent=side UI.Round(ind,2)
 UI.NeonGrad(ind)
+SYS.SearchText=""
+SYS.ActiveTabName=nil
+local searchBox=Instance.new("TextBox")
+searchBox.Size=UDim2.new(1,-16,0,32) searchBox.Position=UDim2.new(0,8,1,-40)
+searchBox.BackgroundColor3=CY.card searchBox.BackgroundTransparency=0.15
+searchBox.TextColor3=CY.text searchBox.PlaceholderColor3=CY.sub
+searchBox.PlaceholderText="搜索本页..."
+searchBox.Text="" searchBox.Font=Enum.Font.GothamMedium searchBox.TextSize=12
+searchBox.ClearTextOnFocus=false searchBox.BorderSizePixel=0 searchBox.Parent=side
+UI.Round(searchBox,8) UI.Stroke(searchBox,CY.line,1,0.7)
+T(searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+SYS.SearchText=searchBox.Text
+P(SYS.ApplySearch,searchBox.Text)
+end))
 local content=Instance.new("Frame")
 content.Size=UDim2.new(1,-196,1,-78) content.Position=UDim2.new(0,182,0,68)
 content.BackgroundTransparency=1 content.Parent=main
@@ -5490,6 +5657,7 @@ SYS.EnsurePage=ensurePage
 local function ShowTab(name)
 if SYS.CloseActiveDropdown then pcall(SYS.CloseActiveDropdown) end
 ensurePage(name)
+SYS.ActiveTabName=name
 for n,pg in pairs(Pages) do pg.Visible=(n==name) end
 local idx=1
 for i,t in ipairs(tabList) do
@@ -5503,8 +5671,38 @@ UI.Tween(t.text,0.16,{TextColor3=act and CY.text or CY.sub})
 end
 ind.Visible=true
 UI.Tween(ind,0.18,{Position=UDim2.new(0,0,0,15+(idx-1)*46)})
+if SYS.SearchText and SYS.SearchText~="" then P(SYS.ApplySearch,SYS.SearchText) end
 end
 SYS.ShowTab=ShowTab
+local function nodeText(node)
+local parts={}
+local function walk(o)
+local cls=o.ClassName
+if cls=="TextLabel" or cls=="TextButton" or cls=="TextBox" then
+parts[#parts+1]=o.Text or ""
+end
+for _,c in ipairs(o:GetChildren()) do walk(c) end
+end
+walk(node)
+return table.concat(parts," "):lower()
+end
+function SYS.ApplySearch(q)
+local name=SYS.ActiveTabName
+local pg=name and Pages[name]
+if not pg then return end
+q=tostring(q or ""):lower():gsub("^%s+",""):gsub("%s+$","")
+for _,c in ipairs(pg:GetChildren()) do
+if c:IsA("GuiObject") then
+if c:GetAttribute("_sv")==nil then pcall(function() c:SetAttribute("_sv",c.Visible) end) end
+local orig=c:GetAttribute("_sv")
+if q=="" then
+c.Visible=(orig~=false)
+else
+c.Visible=(nodeText(c):find(q,1,true)~=nil) and (orig~=false)
+end
+end
+end
+end
 for i,def in ipairs(UI.Defs) do
 local b=Instance.new("TextButton")
 b.Size=UDim2.new(1,-16,0,40) b.Position=UDim2.new(0,8,0,7+(i-1)*46)
@@ -5741,16 +5939,32 @@ return Enum.ContextActionResult.Pass
 end
 if Handle() then return Enum.ContextActionResult.Sink end
 return Enum.ContextActionResult.Pass
-end,false,10000,Enum.KeyCode.G)
+end,false,10000,(SYS.KeyCodeOf(SYS.C_.Key_Menu) or Enum.KeyCode.G))
 end)
 end
 T(UIS.InputBegan:Connect(function(input,gp)
 if SYS.Unloaded then return end
-if input.KeyCode==Enum.KeyCode.G or input.KeyCode==Enum.KeyCode.RightShift then
+if SYS.KeyPickTarget then
+local foc=false
+pcall(function() foc=UIS:GetFocusedTextBox()~=nil end)
+if foc then return end
+local k=input.KeyCode
+if k==Enum.KeyCode.Unknown then return end
+SYS.C_[SYS.KeyPickTarget]=k.Name
+SYS.Notify(("已绑定: %s -> %s"):format(tostring(SYS.KeyPickTarget),k.Name),SYS.CY.green)
+SYS.KeyPickTarget=nil
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+return
+end
+if input.KeyCode==(SYS.KeyCodeOf(SYS.C_.Key_Menu) or Enum.KeyCode.G)
+or input.KeyCode==Enum.KeyCode.RightShift then
 Handle() return
 end
 if gp then return end
-if SYS.T_.TPEnabled and input.KeyCode==Enum.KeyCode.T then SYS.TPToMouse() return end
+if SYS.T_.TPEnabled
+and input.KeyCode==(SYS.KeyCodeOf(SYS.C_.Key_Teleport) or Enum.KeyCode.T) then
+SYS.TPToMouse() return
+end
 end))
 end
 function SYS.PanicHide()
