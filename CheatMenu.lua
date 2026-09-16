@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 12:20 sha 4edb2c52 bytes 197198'):format('2026-09-16 12:20','4edb2c52',197198))
+print(('[CheatMenu] build 2026-09-16 12:34 sha a18f0b8b bytes 197815'):format('2026-09-16 12:34','a18f0b8b',197815))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.6"
+SYS.BuildVer="1.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3295,31 +3295,51 @@ Keep numbers, currency symbols ($), emoji and player names unchanged.
 If the text is already ZH or contains CJK characters, output it unchanged.]]
 local NON_ASCII="[\128-\255]"
 local utf8codes=(type(utf8)=="table" and type(utf8.codes)=="function") and utf8.codes or nil
-local function hasChinese(s)
-if type(s)~="string" or s=="" then return false end
-if not s:find(NON_ASCII) then return false end
+local function scanScript(s)
+local han,kana,hangul=false,false,false
+if type(s)~="string" or s=="" then return han,kana,hangul end
 if utf8codes then
 local ok,iter,state,init=pcall(utf8codes,s)
 if ok and type(iter)=="function" then
-local ok2,found=pcall(function()
+local ok2=pcall(function()
 for _,cp in iter,state,init do
-if (cp>=0x4E00 and cp<=0x9FFF) or (cp>=0x3400 and cp<=0x4DBF)
-or (cp>=0xF900 and cp<=0xFAFF) or (cp>=0x3040 and cp<=0x30FF)
-or (cp>=0xAC00 and cp<=0xD7AF) then return true end
+if cp>=0x4E00 and cp<=0x9FFF then han=true
+elseif cp>=0x3400 and cp<=0x4DBF then han=true
+elseif cp>=0xF900 and cp<=0xFAFF then han=true
+elseif cp>=0x3040 and cp<=0x30FF then kana=true
+elseif cp>=0xAC00 and cp<=0xD7AF then hangul=true
 end
-return false
+end
 end)
-if ok2 then return found end
+if ok2 then return han,kana,hangul end
 end
 end
 local i=1
 while true do
 local b=s:byte(i)
 if not b then break end
-if b>=0xE4 and b<=0xE9 then return true end
+if b>=0xE4 and b<=0xE9 then han=true
+elseif b==0xE3 then
+local b2=s:byte(i+1)
+if b2 then
+if b2>=0x81 and b2<=0x83 then kana=true
+elseif b2>=0x90 and b2<=0xBF then han=true end
+end
+elseif b>=0xEA and b<=0xED then hangul=true
+end
 i=i+1
 end
-return false
+return han,kana,hangul
+end
+local function hasChinese(s)
+if type(s)~="string" or s=="" then return false end
+if not s:find(NON_ASCII) then return false end
+local han,kana,hangul=scanScript(s)
+return han and not kana and not hangul
+end
+local function hasKanaOrHangul(s)
+local _,kana,hangul=scanScript(s)
+return kana or hangul
 end
 local function hasForeign(s)
 if type(s)~="string" or s=="" then return false end
@@ -3338,6 +3358,7 @@ end
 return false
 end
 Trans.hasChinese=hasChinese
+Trans.hasKanaOrHangul=hasKanaOrHangul
 local function stripRich(s)
 if type(s)~="string" then return s end
 return (s:gsub("<[^>]*>",""))
@@ -3441,7 +3462,7 @@ if isPlayerName(s) then return false end
 if hasChinese(s) then return false end
 if not hasForeign(s) then return false end
 if s:match("^https?://%S+$") or s:match("^www%.%S+$") then return false end
-if not s:find("[%w]") then return false end
+if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
 return true
 end
 Trans.Verdict={}
