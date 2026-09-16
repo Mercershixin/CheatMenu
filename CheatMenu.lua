@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 15:40 sha b6fcc9af bytes 206168'):format('2026-09-16 15:40','b6fcc9af',206168))
+print(('[CheatMenu] build 2026-09-16 17:49 sha 713de223 bytes 206478'):format('2026-09-16 17:49','713de223',206478))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.5"
+SYS.BuildVer="2.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -2615,20 +2615,21 @@ end
 local function alive(pl)
 local ch=pl and pl.Character
 if not ch or ch.Parent==nil then return false end
-local h=humOf(pl)
-if h then
-if h.Health<=0 then return false end
-local ok,st=pcall(function() return h:GetState() end)
-if ok and st==Enum.HumanoidStateType.Dead then return false end
-return true
-end
 local dt=CB.DeadAt[pl.Name]
 if dt then
 if (os.clock()-dt)<(CB.DeadTTL or 8) then return false end
 CB.DeadAt[pl.Name]=nil
 end
-if CB.GameSaysEnemy and CB.GameSaysEnemy(pl) then return true end
+local h=humOf(pl)
+if h then
+if h.Health<=0 then return false end
+local ok,st=pcall(function() return h:GetState() end)
+if ok and (st==Enum.HumanoidStateType.Dead or st==Enum.HumanoidStateType.Physics) then return false end
+if SYS.T_.CB_OnlyAlive and h.PlatformStand==true then return false end
+return true
+end
 if SYS.T_.CB_OnlyAlive then return false end
+if CB.GameSaysEnemy and CB.GameSaysEnemy(pl) then return true end
 return bodyOf(ch)~=nil
 end
 local function partOf(pl,mode)
@@ -2717,7 +2718,7 @@ local function clearShot(part)
 if not SYS.T_.CB_Wall then return true end
 local now=os.clock()
 local c=SHOT_CACHE[part]
-if c and now-c.t<0.25 then return c.ok end
+if c and now-c.t<0.1 then return c.ok end
 local cam=SYS.Cam
 if not cam then return true end
 local cf=cam.CFrame
@@ -2888,9 +2889,21 @@ end
 return best
 end
 for i=1,#chain do
-if chain[i]~="crosshair" then
-local c=pickBy(cands,chain[i])
+local key=chain[i]
+if key~="crosshair" then
+local pass={}
+for j=1,#cands do
+local c=cands[j]
+if key=="aiming" then
+if c.s.aiming==0 then pass[#pass+1]=c end
+else
+pass[#pass+1]=c
+end
+end
+if #pass>0 then
+local c=pickBy(pass,(key=="aiming") and "near" or key)
 if c then return c.pl,c.p end
+end
 end
 end
 if #cands==0 then P(CB.SelfHealFilters) end
