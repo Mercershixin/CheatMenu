@@ -2,7 +2,12 @@
 local URLS = {
 	"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+	"https://fastly.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+	"https://gcore.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+	"https://raw.githack.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://raw.gitmirror.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+	"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+	"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 }
 local function fetch()
 	local last = "?"
