@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 10:59 sha 30dab9ea bytes 195148'):format('2026-09-16 10:59','30dab9ea',195148))
+print(('[CheatMenu] build 2026-09-16 12:20 sha 4edb2c52 bytes 197198'):format('2026-09-16 12:20','4edb2c52',197198))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.5"
+SYS.BuildVer="1.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3567,11 +3567,40 @@ task.spawn(function() pcall(Trans.forceRescan) end)
 return true
 end
 Trans.clearCacheSimple=function() Cache={} Trans.cacheCount=0 saveNow() end
+local function maskSpecials(s)
+if type(s)~="string" or s=="" then return s,{},0 end
+local tok={} local n=0
+local function prot(pat)
+s=s:gsub(pat,function(m) n=n+1 tok[n]=m return "▮"..n.."▮" end)
+end
+prot("{{[^{}]-}}")
+prot("{[^{}]-}")
+prot("%%[-+0-9%.]*[sdifgxXoc]")
+prot("</?[%a!][^>]*>")
+prot("`[^`]+`")
+prot("%*%*[^%*]+%*%*")
+prot("%$[%d%.,]+")
+prot("#%x%x%x%x%x%x")
+prot("%d+%.?%d*%%")
+prot("%[%w+%]")
+return s,tok,n
+end
+Trans.maskSpecials=maskSpecials
+local function unmask(s,tok,n)
+if type(s)~="string" then return s end
+if tok and n and n>0 then
+s=s:gsub("▮%s*(%d+)%s*▮",function(d) local i=tonumber(d) return (i and tok[i]) or "" end)
+end
+s=s:gsub("▮[^▮]*▮",""):gsub("▮","")
+return s
+end
+Trans.unmask=unmask
 local function rawRequest(body,system,temp,maxTok)
 if type(request)~="function" then return nil,true end
+local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
 model=MODEL,
-messages={ {role="system",content=system}, {role="user",content=body} },
+messages={ {role="system",content=system}, {role="user",content=masked} },
 temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or 512, stream=false,
 })
 local ok,res=pcall(function()
@@ -3592,6 +3621,7 @@ local c=type(ch)=="table" and ch[1]
 local m=c and c.message
 local v=m and m.content
 if type(v)~="string" then return nil,false end
+v=unmask(v,tok,tokN)
 v=(v:gsub("^%s+","")):gsub("%s+$","")
 if v=="" then return nil,false end
 return v,false
@@ -3637,6 +3667,33 @@ end
 end
 if not netFail then Trans.Stats.fail=Trans.Stats.fail+1 end
 return nil
+end
+Trans.LANG_PROMPT={en="English",zh="Chinese",ja="Japanese",ko="Korean",th="Thai",ru="Russian",ar="Arabic"}
+Trans.RvCache={} local RvN=0
+function Trans.promptFor(code)
+local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
+return ("You are a translation engine. Translate the user's text into %s.\n"
+.."Rules: output ONLY the translation, no explanation, no quotes, no extra words.\n"
+.."Keep numbers, currency ($), emoji, placeholders and player names unchanged."):format(name)
+end
+function Trans.translateTo(text,code)
+if Trans.Unloaded or type(text)~="string" then return nil end
+text=(text:gsub("^%s+","")):gsub("%s+$","")
+if text=="" then return nil end
+local c=code or "en"
+if c=="zh" then return text end
+if type(request)~="function" or not HS then return nil end
+local key=c.."\1"..normalizeKey(text)
+local hit=Trans.RvCache[key]
+if hit then return hit end
+local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or 512)
+if not res then return nil end
+res=(res:gsub("^%s+","")):gsub("%s+$","")
+if res=="" or res==text then return nil end
+Trans.RvCache[key]=res
+RvN=RvN+1
+if RvN>2000 then Trans.RvCache={} RvN=0 end
+return res
 end
 local Inflight={}
 function Trans.request(text,prio,cb)
@@ -3932,7 +3989,10 @@ markOutput(hit)
 return p
 end
 Trans.request(plain,1,function(res)
-if res and res~="" then markOutput(res) end
+if res and res~="" then
+markOutput(res)
+task.defer(function() if Trans.ChatActive and not Trans.Unloaded then pcall(Trans.scanChatOnce) end end)
+end
 end)
 return base
 end
@@ -4026,7 +4086,7 @@ local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then return false end
 local slots=tonumber(d.total_slots) or 8
 local ctx=tonumber(d.default_generation_settings and d.default_generation_settings.n_ctx) or 512
-Trans.maxTok=math.max(128,math.min(1024,ctx-360))
+Trans.maxTok=math.max(96,math.min(768,ctx-200))
 print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx")
 :format(slots,ctx))
 return true
@@ -4052,8 +4112,8 @@ if not text or text:gsub("%s","")=="" then return false,"空" end
 text=(text:gsub("^%s+","")):gsub("%s+$","")
 local target=Trans.SendLang or "en"
 local final=text
-if target~="zh" and not hasChinese(text) then
-local r=Trans.translate(text,1)
+if target~="zh" and hasChinese(text) then
+local r=Trans.translateTo(text,target)
 if r then final=r end
 end
 return Trans.sendToChat(final)
