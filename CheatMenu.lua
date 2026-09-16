@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 02:39 sha 554a4fa8 bytes 215646'):format('2026-09-17 02:39','554a4fa8',215646))
+print(('[CheatMenu] build 2026-09-17 02:58 sha cdf98e96 bytes 215895'):format('2026-09-17 02:58','cdf98e96',215895))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -33,6 +33,7 @@ CB_PauseMove=false,CB_Predict=false,CB_Team=true,CB_Wall=true,
 CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
+CB_SkipFF=true,
 ESPBox=false,
 AutoUpdateCheck=true,
 },
@@ -56,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="2.9"
+SYS.BuildVer="2.10"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -2961,7 +2962,9 @@ if isEnemy(pl) then
 local p=partOf(pl,mode)
 if p then
 local d=(p.Position-camPos).Magnitude
-if d<=maxD and clearShot(p) then
+local _chf=pl.Character
+local _hasFF=(_chf and _chf:FindFirstChildOfClass("ForceField"))~=nil
+if (not (SYS.T_.CB_SkipFF and _hasFF)) and d<=maxD and clearShot(p) then
 local sp,on=cam:WorldToViewportPoint(p.Position)
 local inView=on and sp.Z>0
 local dd=inView and math.sqrt((sp.X-cx)^2+(sp.Y-cy)^2) or 1e7
@@ -5376,7 +5379,8 @@ UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
 UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
 UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
 UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是「不穿墙」)。\n背身/360° 转身照样锁得到 —— 判定按实时相机走, 只要你和目标之间没有墙。\n关掉 = 隔墙的人也选(会对着墙开枪, 基本没用)。",CY.yellow)
-UI.Tip(p,"带「无敌盾」(ForceField/刚重生无敌)的人打不掉血, 所以脚本会把他们排到最后 ——\n只要还有别人可打就不打他们; 全服都有盾时才轮到他们。",CY.sub)
+UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF')
+UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"诊断",CY.sub)
 UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
