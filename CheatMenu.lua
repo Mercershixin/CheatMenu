@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 12:34 sha a18f0b8b bytes 197815'):format('2026-09-16 12:34','a18f0b8b',197815))
+print(('[CheatMenu] build 2026-09-16 12:50 sha f06eb3f0 bytes 200670'):format('2026-09-16 12:50','f06eb3f0',200670))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.7"
+SYS.BuildVer="1.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3386,6 +3386,45 @@ if not i then return s end
 return s:sub(1, i-1) .. tostring(to) .. s:sub(j+1)
 end
 Trans.plainReplace=plainReplace
+local function isHanCp(cp)
+return (cp>=0x4E00 and cp<=0x9FFF) or (cp>=0x3400 and cp<=0x4DBF) or (cp>=0xF900 and cp<=0xFAFF)
+end
+local function splitSegments(s)
+local segs={}
+if type(s)~="string" or s=="" then return segs end
+if utf8codes then
+local ok,iter,state,init=pcall(utf8codes,s)
+if ok and type(iter)=="function" then
+local ok2=pcall(function()
+local buf="" local bufHan=nil
+for _,cp in iter,state,init do
+local isHan=isHanCp(cp)
+local ch=utf8.char(cp)
+if bufHan==nil then bufHan=isHan buf=ch
+elseif isHan==bufHan then buf=buf..ch
+else segs[#segs+1]={text=buf,han=bufHan} buf=ch bufHan=isHan end
+end
+if buf~="" then segs[#segs+1]={text=buf,han=bufHan} end
+end)
+if ok2 and #segs>0 then return segs end
+end
+end
+local n=#s local i=1
+while i<=n do
+local b=s:byte(i)
+local isHan=(b~=nil and b>=0xE4 and b<=0xE9)
+local j=i
+if isHan then
+while j<=n do local bj=s:byte(j) if bj and bj>=0xE4 and bj<=0xE9 then j=j+3 else break end end
+else
+while j<=n do local bj=s:byte(j) if bj and bj>=0xE4 and bj<=0xE9 then break end j=j+1 end
+end
+segs[#segs+1]={text=s:sub(i,j-1),han=isHan}
+i=j
+end
+return segs
+end
+Trans.splitSegments=splitSegments
 local WORD_TABLE={
 ["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
 ["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
@@ -3475,7 +3514,20 @@ v={}
 local plain=stripRich(raw)
 local core=select(2,splitPrefix(plain))
 if core~="" then plain=stripRich(core) end
-if plain=="" or not Trans.shouldTranslate(plain,isChat) then
+if plain=="" then
+v.skip=true
+elseif hasChinese(plain) then
+local segs=splitSegments(plain)
+local hasF=false
+for _,seg in ipairs(segs) do
+if not seg.han and Trans.shouldTranslate(seg.text,isChat) then hasF=true break end
+end
+if hasF then
+v.mixed=true v.segs=segs v.plain=plain v.nk=normalizeKey(plain)
+else
+v.skip=true
+end
+elseif not Trans.shouldTranslate(plain,isChat) then
 v.skip=true
 else
 v.plain=plain
@@ -3774,6 +3826,58 @@ end)
 end
 return ok
 end
+function Trans.processMixed(obj,field,cur,v,isChat)
+if not obj or not obj.Parent or Trans.Unloaded then return end
+local targets={}
+for _,seg in ipairs(v.segs) do
+if not seg.han and Trans.shouldTranslate(seg.text,isChat) then
+targets[#targets+1]=seg.text
+end
+end
+if #targets==0 then return end
+local results={}
+local pending=#targets
+local flushed=false
+local function flush()
+if flushed or pending>0 then return end
+flushed=true
+if not obj or not obj.Parent or Trans.Unloaded then return end
+local ok,now=pcall(function() return obj[field] end)
+if not ok or now~=cur then return end
+local newText=cur
+local changed=false
+for _,frag in ipairs(targets) do
+local r=results[frag]
+if r and r~="" and r~=frag then
+newText=plainReplace(newText,frag,r)
+changed=true
+end
+end
+if changed and newText~=cur then
+if writeProp(obj,field,cur,newText) then
+Trans.Stats.hit=Trans.Stats.hit+1
+remember(cur,newText,v.plain,stripRich(newText))
+end
+end
+end
+for _,frag in ipairs(targets) do
+local f=frag
+local hit=Cache[f] or Cache[normalizeKey(f)] or lookupLocal(f)
+if hit and hit~="" and hit~=f then
+results[f]=hit
+pending=pending-1
+elseif Trans.reqOn(isChat) then
+Trans.request(f,isChat and 1 or 3,function(res)
+results[f]=res
+pending=pending-1
+flush()
+end)
+else
+pending=pending-1
+end
+end
+flush()
+end
 function Trans.processLabel(obj,source)
 if not obj or not obj.Parent or Trans.Unloaded then return end
 local ok,cur=pcall(function() return obj.Text end)
@@ -3781,6 +3885,10 @@ if not ok or type(cur)~="string" or cur=="" then return end
 local isChat=(source=="chat")
 local v=verdictOf(cur,isChat)
 if v.skip then return end
+if v.mixed then
+Trans.processMixed(obj,"Text",cur,v,isChat)
+return
+end
 local plain=v.plain
 local hit=Cache[plain] or Cache[v.nk] or v.loc
 if hit and hit~="" and hit~=plain then
@@ -3815,7 +3923,9 @@ for _,f in ipairs(Trans.PromptFields) do
 local ok,t=pcall(function() return p[f] end)
 if ok and type(t)=="string" and t~="" then
 local v=verdictOf(t,false)
-if not v.skip then
+if v.mixed then
+Trans.processMixed(p,f,t,v,false)
+elseif not v.skip then
 local plain=v.plain
 local hit=Cache[plain] or Cache[v.nk] or v.loc
 if hit and hit~="" and hit~=plain then
