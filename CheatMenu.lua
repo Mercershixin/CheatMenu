@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 02:23 sha 33a09db6 bytes 215078'):format('2026-09-17 02:23','33a09db6',215078))
+print(('[CheatMenu] build 2026-09-17 02:34 sha 554a4fa8 bytes 215646'):format('2026-09-17 02:34','554a4fa8',215646))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -56,7 +56,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="2.8"
+SYS.BuildVer="2.9"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -157,7 +157,12 @@ function SYS.SaveProfile(name)
 if not HAS_FS or not HS then SYS.Notify("执行器不支持写文件",SYS.CY.red) return false end
 local f=profFile(name)
 if not f then SYS.Notify("配置名不能为空",SYS.CY.yellow) return false end
-local ok=P(function() writefile(f,HS:JSONEncode(profCollect())) end)
+local ok=P(function()
+local d=profCollect()
+d.__T_={}
+for k,v in pairs(SYS.T_) do if type(v)=="boolean" then d.__T_[k]=v end end
+writefile(f,HS:JSONEncode(d))
+end)
 SYS.Notify(ok and ("已保存配置: "..tostring(name)) or "保存失败", ok and SYS.CY.green or SYS.CY.red)
 return ok
 end
@@ -171,11 +176,24 @@ if type(d)~="table" then return end
 for k,v in pairs(d) do
 if SYS.C_[k]~=nil and type(v)==type(SYS.C_[k]) then SYS.C_[k]=v end
 end
+for k,v in pairs(d.__T_ or {}) do
+if SYS.T_[k]~=nil and type(v)=="boolean" then SYS.T_[k]=v end
+end
 end)
 if ok then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
+if SYS.EnsurePage then
+for _,def in ipairs(UI.Defs or {}) do P(SYS.EnsurePage,def.name) end
+end
+for key,fn in pairs(SYS.SwitchOnChange or {}) do
+if SYS.T_[key]==false then P(fn,false) end
+end
+for key,fn in pairs(SYS.SwitchOnChange or {}) do
+if SYS.T_[key]==true then P(fn,true) end
+end
+if SYS.T_.AntiAFK then P(SYS.enableAntiAFK) end
 for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
-SYS.Notify("已加载配置: "..tostring(name),SYS.CY.green)
+SYS.Notify("已加载配置: "..tostring(name).."（含开关）",SYS.CY.green)
 else
 SYS.Notify("配置读取失败(文件损坏?)",SYS.CY.red)
 end
@@ -5432,7 +5450,7 @@ profL.Text=("已有配置(%d): %s"):format(#list, #list>0 and table.concat(list,
 end
 refreshProfiles()
 SYS.BtnRefs[#SYS.BtnRefs+1]=refreshProfiles
-UI.Tip(p,"保存 = 把当前所有参数存成一份档; 加载 = 立刻套用那份档并刷新界面。\n自动配置(开机自动生效的那份)不受影响。",CY.sub)
+UI.Tip(p,"保存 = 把当前【参数 + 开关状态】存成一份档; 加载 = 立刻套用(含自动开启对应功能)。\n自动配置(开机自动生效的那份)不受影响。",CY.sub)
 UI.Div(p)
 UI.Section(p,"热键设置 · 点一下再按新键",CY.cyan)
 local function keyRow(label,field)
