@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 13:51 sha 39f9fdf5 bytes 206208'):format('2026-09-16 13:51','39f9fdf5',206208))
+print(('[CheatMenu] build 2026-09-16 13:57 sha e953cfe5 bytes 205831'):format('2026-09-16 13:57','e953cfe5',205831))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.0"
+SYS.BuildVer="2.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3426,19 +3426,19 @@ return segs
 end
 Trans.splitSegments=splitSegments
 local WORD_TABLE={
-["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="转生",
-["reborn"]="转生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
+["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
+["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
 ["energy"]="能量",["coin"]="金币",["coins"]="金币",["gem"]="宝石",["gems"]="宝石",
 ["rare"]="稀有",["legendary"]="传说级",["epic"]="史诗",["mythic"]="神话级",["common"]="普通",
 ["speed"]="速度",["luck"]="幸运",["exp"]="经验",["level"]="等级",["quest"]="任务",
 ["shop"]="商店",["inventory"]="背包",["trade"]="交易",["raid"]="团本",["dungeon"]="副本",
-["respawn"]="复活",["spawn"]="出生点",["equip"]="装备",["buy"]="购买",["sell"]="出售",
+["respawn"]="重生",["spawn"]="出生点",["equip"]="装备",["buy"]="购买",["sell"]="出售",
 ["upgrade"]="升级",["craft"]="制作",["stats"]="属性",["skill"]="技能",["attack"]="攻击",
-["defense"]="防御",["health"]="血量",["gold"]="金币",["cash"]="现金",["pet"]="宠物",
+["defense"]="防御",["health"]="生命值",["gold"]="金币",["cash"]="现金",["pet"]="宠物",
 ["pets"]="宠物",["hatch"]="孵化",["evolve"]="进化",["weapon"]="武器",["armor"]="护甲",
 ["lol"]="哈哈",["gg"]="打得漂亮",["wp"]="打得漂亮",["ty"]="谢谢",["thx"]="谢谢",
 ["nice"]="不错",["afk"]="挂机",["brb"]="马上回来",["omg"]="天啊",["help"]="救命",
-["index"]="索引",["store"]="商店",["rebirths"]="转生",["settings"]="设置",
+["index"]="索引",["store"]="商店",["rebirths"]="重生",["settings"]="设置",
 ["acceleration"]="加速度",["achievement"]="成就",["aim"]="瞄准",["align"]="对齐",
 ["alliance"]="联盟",["amplitude"]="振幅",["anchor"]="锚点",["angle"]="角度",
 ["angularvelocity"]="角速度",["area"]="面积",["avatar"]="虚拟形象",["axis"]="轴",
@@ -3455,7 +3455,7 @@ local WORD_TABLE={
 ["cylinder"]="圆柱",["debuff"]="减益",["defeat"]="失败",["degree"]="度",
 ["density"]="密度",["depth"]="深度",["deselect"]="取消选择",["developer"]="开发者",
 ["dialogue"]="对话",["diameter"]="直径",["discount"]="折扣",["distance"]="距离",
-["dodge"]="闪避",["drag"]="拖动",["drop"]="掉落",["effect"]="效果",
+["dodge"]="闪避",["drag"]="拖动",["drop"]="丢弃",["effect"]="效果",
 ["elasticity"]="弹性",["equipped"]="已装备",["error"]="错误",["euler"]="欧拉",
 ["event"]="活动",["experience"]="体验",["expired"]="已过期",["explosion"]="爆炸",
 ["failed"]="失败",["featured"]="精选",["floatvalue"]="浮点",["folder"]="文件夹",
@@ -3468,7 +3468,7 @@ local WORD_TABLE={
 ["jump"]="跳跃",["keyboard"]="键盘",["language"]="语言",["leaderboard"]="排行榜",
 ["leave"]="离开",["length"]="长度",["lhello"]="你好",["lift"]="升力",
 ["limited"]="限定",["loading"]="加载中",["lobby"]="大厅",["locked"]="已锁定",
-["lore"]="传说",["maintenance"]="维护",["mana"]="蓝量",["map"]="地图",
+["lore"]="传说",["maintenance"]="维护",["mana"]="法力",["map"]="地图",
 ["massless"]="无质量",["material"]="材质",["matrix"]="矩阵",["mesh"]="网格",
 ["mission"]="任务",["mobile"]="移动端",["model"]="模型",["momentum"]="动量",
 ["mouse"]="鼠标",["move"]="移动",["music"]="音乐",["mute"]="静音",
@@ -3498,11 +3498,7 @@ local WORD_TABLE={
 ["value"]="值",["vector"]="向量",["velocity"]="速度",["verified"]="已认证",
 ["vibration"]="振动",["victory"]="胜利",["vip"]="贵宾",["volume"]="音量",
 ["walk"]="行走",["wavelength"]="波长",["wedge"]="楔形",["width"]="宽度",
-["work"]="工作",["yes"]="是",    ["zoom"]="缩放",
-["hp"]="血量",["mp"]="蓝量",["xp"]="经验",["crit"]="暴击",["nerf"]="削弱",
-["loot"]="掉落物",["gacha"]="抽卡",["pity"]="保底",["pull"]="抽",["banner"]="卡池",
-["skin"]="皮肤",["emote"]="表情",["squad"]="小队",["noob"]="萌新",["pro"]="大神",
-["headshot"]="爆头",["killstreak"]="连杀",["fire"]="开火",["revive"]="复活",["shield"]="护盾",
+["work"]="工作",["yes"]="是",["zoom"]="缩放",
 }
 local PHRASE_TABLE={
 ["good game"]="打得漂亮",["well played"]="打得好",["nice shot"]="好枪法",
