@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 17:49 sha 713de223 bytes 206478'):format('2026-09-16 17:49','713de223',206478))
+print(('[CheatMenu] build 2026-09-16 18:18 sha a6bed1cd bytes 207023'):format('2026-09-16 18:18','a6bed1cd',207023))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -53,7 +53,7 @@ CB_SnapDelay=0.03,
 CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
-ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
+ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
 SYS.BuildVer="2.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1469,10 +1469,12 @@ end))
 FLM=nil
 FConn=RS.RenderStepped:Connect(function(dt)
 if not SYS.FreeCamActive or not SYS.Cam then return end
+if not SYS.MenuOpen then
 P(function()
 if UIS.MouseBehavior~=Enum.MouseBehavior.LockCenter then UIS.MouseBehavior=Enum.MouseBehavior.LockCenter end
 if UIS.MouseIconEnabled then UIS.MouseIconEnabled=false end
 end)
+end
 local rot=CFrame.Angles(0,FYaw,0)*CFrame.Angles(FPitch,0,0)
 local cf=CFrame.new(FPos)*rot
 local dir=Vector3.zero
@@ -5567,6 +5569,8 @@ end))
 T(closeBtn.MouseButton1Click:Connect(function() SYS.ToggleMenu() end))
 ShowTab("战斗")
 sg.Enabled=true SYS.MenuOpen=true
+SYS.MenuPrevMouseBehav=UIS.MouseBehavior
+SYS.MenuPrevMouseIcon=UIS.MouseIconEnabled
 UIS.MouseBehavior=Enum.MouseBehavior.Default
 UIS.MouseIconEnabled=true
 if not (SYS.MenuGuard and SYS.MenuGuard.Connected) then
@@ -5601,6 +5605,8 @@ end
 SYS.MenuOpen=not (SYS.ScreenGui.Enabled==true)
 SYS.ScreenGui.Enabled=SYS.MenuOpen
 if SYS.MenuOpen then
+SYS.MenuPrevMouseBehav=UIS.MouseBehavior
+SYS.MenuPrevMouseIcon=UIS.MouseIconEnabled
 UIS.MouseBehavior=Enum.MouseBehavior.Default
 UIS.MouseIconEnabled=true
 if not (SYS.MenuGuard and SYS.MenuGuard.Connected) then
@@ -5616,10 +5622,19 @@ if okG and gconn then SYS.MenuGuard=T(gconn) end
 end
 else
 if SYS.MenuGuard then P(function() SYS.MenuGuard:Disconnect() end) SYS.MenuGuard=nil end
-if not SYS.FreeCamActive then
+if SYS.FreeCamActive then
+UIS.MouseBehavior=Enum.MouseBehavior.LockCenter
+UIS.MouseIconEnabled=false
+else
+local pb,pi=SYS.MenuPrevMouseBehav,SYS.MenuPrevMouseIcon
+if pb~=nil then UIS.MouseBehavior=pb end
+if pi~=nil then UIS.MouseIconEnabled=pi end
+if pb==nil and pi==nil then
 UIS.MouseBehavior=SYS.Orig.MouseBehav
 UIS.MouseIconEnabled=SYS.Orig.MouseIcon
 end
+end
+SYS.MenuPrevMouseBehav=nil SYS.MenuPrevMouseIcon=nil
 end
 end
 do
