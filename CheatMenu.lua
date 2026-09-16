@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 13:57 sha e953cfe5 bytes 205831'):format('2026-09-16 13:57','e953cfe5',205831))
+print(('[CheatMenu] build 2026-09-16 14:10 sha 98c46c35 bytes 205846'):format('2026-09-16 14:10','98c46c35',205846))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.1"
+SYS.BuildVer="2.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3712,6 +3712,7 @@ prot("%%[-+0-9%.]*[sdifgxXoc]")
 prot("%%%w+%%")
 prot("</?[%a!][^>]*>")
 prot("%[%/?%w+[^%]]*%]")
+prot("%[%*%]")
 prot("`[^`]+`")
 prot("%*%*[^%*]+%*%*")
 prot("%$%w+%$")
