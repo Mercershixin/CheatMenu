@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 14:56 sha 640a2faa bytes 205944'):format('2026-09-16 14:56','640a2faa',205944))
+print(('[CheatMenu] build 2026-09-16 15:12 sha 827fae56 bytes 205698'):format('2026-09-16 15:12','827fae56',205698))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.3"
+SYS.BuildVer="2.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3430,9 +3430,9 @@ local WORD_TABLE={
 ["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
 ["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
 ["energy"]="能量",["coin"]="金币",["coins"]="金币",["gem"]="宝石",["gems"]="宝石",
-["rare"]="稀有",["legendary"]="传说级",["epic"]="史诗",["mythic"]="神话级",["common"]="普通",
+["rare"]="稀有",["epic"]="史诗",["common"]="普通",
 ["speed"]="速度",["luck"]="幸运",["exp"]="经验",["level"]="等级",["quest"]="任务",
-["shop"]="商店",["inventory"]="背包",["trade"]="交易",["raid"]="团本",["dungeon"]="副本",
+["shop"]="商店",["trade"]="交易",
 ["respawn"]="重生",["spawn"]="出生点",["equip"]="装备",["buy"]="购买",["sell"]="出售",
 ["upgrade"]="升级",["craft"]="制作",["stats"]="属性",["skill"]="技能",["attack"]="攻击",
 ["defense"]="防御",["health"]="生命值",["gold"]="金币",["cash"]="现金",["pet"]="宠物",
@@ -3444,25 +3444,25 @@ local WORD_TABLE={
 ["alliance"]="联盟",["amplitude"]="振幅",["anchor"]="锚点",["angle"]="角度",
 ["angularvelocity"]="角速度",["area"]="面积",["avatar"]="形象",["axis"]="轴",
 ["back"]="返回",["badge"]="徽章",["beam"]="光束",["block"]="屏蔽",
-["boolvalue"]="布尔值",["branch"]="分支",["buff"]="增益",["bundle"]="礼包",
+["boolvalue"]="布尔值",["branch"]="分支",["bundle"]="礼包",
 ["buoyancy"]="浮力",["camera"]="相机",["cancel"]="取消",["cancollide"]="可碰撞",
 ["canquery"]="可查询",["cantouch"]="可触摸",["character"]="角色",["chat"]="聊天",
-["checkpoint"]="检查点",["circumference"]="周长",["claim"]="领取",["clan"]="氏族",
+["checkpoint"]="检查点",["circumference"]="周长",["claim"]="领取",
 ["click"]="点击",["close"]="关闭",["codex"]="图鉴",["collision"]="碰撞",
 ["color"]="颜色",["colorsequence"]="颜色序列",["community"]="社区",["complete"]="完成",
 ["cone"]="圆锥",["configuration"]="配置",["confirm"]="确认",["connecting"]="连接中",
 ["controller"]="手柄",["controls"]="控制",["cooldown"]="冷却",["crate"]="宝箱",
-["creator"]="创作者",["critical"]="暴击",["crouch"]="蹲下",["cube"]="立方体",
-["cylinder"]="圆柱",["debuff"]="减益",["defeat"]="失败",["degree"]="度",
+["creator"]="创作者",["crouch"]="蹲下",["cube"]="立方体",
+["cylinder"]="圆柱",["defeat"]="失败",["degree"]="度",
 ["density"]="密度",["depth"]="深度",["deselect"]="取消选择",["developer"]="开发者",
 ["dialogue"]="对话",["diameter"]="直径",["discount"]="折扣",["distance"]="距离",
-["dodge"]="闪避",["drag"]="拖动",["drop"]="丢弃",["effect"]="效果",
+["drag"]="拖动",["drop"]="丢弃",["effect"]="效果",
 ["elasticity"]="弹性",["equipped"]="已装备",["error"]="错误",["euler"]="欧拉",
 ["event"]="活动",["experience"]="体验",["expired"]="已过期",["explosion"]="爆炸",
 ["failed"]="失败",["featured"]="精选",["floatvalue"]="浮点",["folder"]="文件夹",
 ["force"]="力",["fps"]="帧率",["free"]="免费",["frequency"]="频率",
 ["friction"]="摩擦",["friends"]="好友",["gradient"]="渐变",["graphics"]="图形",
-["gravity"]="重力",["grid"]="网格",["guild"]="公会",["heal"]="治疗",
+["gravity"]="重力",["grid"]="网格",["heal"]="治疗",
 ["heat"]="热量",["height"]="高度",["hitbox"]="命中框",["hot"]="热门",
 ["hover"]="悬停",["humanoid"]="人形",["hurtbox"]="受击框",["impulse"]="冲量",
 ["incomplete"]="未完成",["inertia"]="惯性",["intvalue"]="整数",["join"]="加入",
@@ -3477,7 +3477,7 @@ local WORD_TABLE={
 ["notifications"]="通知",["numberrange"]="数字范围",["numbersequence"]="数字序列",["numbervalue"]="数字值",
 ["objective"]="目标",["objectvalue"]="对象值",["official"]="官方",["ok"]="好的",
 ["open"]="打开",["option"]="选项",["orientation"]="方向",["owned"]="已拥有",
-["pan"]="平移",["parry"]="招架",["particle"]="粒子",["party"]="队伍",
+["pan"]="平移",["particle"]="粒子",["party"]="队伍",
 ["pc"]="电脑",["phase"]="相位",["ping"]="延迟",["place"]="场所",
 ["plane"]="平面",["play"]="开始",["popular"]="流行",["position"]="位置",
 ["premium"]="高级",["pressure"]="压力",["privacy"]="隐私",["progress"]="进度",
