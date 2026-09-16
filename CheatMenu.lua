@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 02:06 sha 55c9ee4b bytes 215078'):format('2026-09-17 02:06','55c9ee4b',215078))
+print(('[CheatMenu] build 2026-09-17 02:23 sha 33a09db6 bytes 215078'):format('2026-09-17 02:23','33a09db6',215078))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -56,7 +56,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="2.7"
+SYS.BuildVer="2.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -4206,7 +4206,7 @@ P(Trans.forceRescan)
 if uiLoop then task.cancel(uiLoop) uiLoop=nil end
 uiLoop=task.spawn(function()
 while Trans.UIScanActive and not Trans.Unloaded do
-task.wait(1.0)
+task.wait(0.5)
 if Trans.UIScanActive then
 local before=Trans.Stats.hit+Trans.Stats.replaced
 local n=0
@@ -4215,7 +4215,7 @@ if SYS.CoreGui then n=scanRoot(SYS.CoreGui,n) end
 pcall(function() if gethui then n=scanRoot(gethui(),n) end end)
 if n==0 and before==Trans.Stats.hit+Trans.Stats.replaced then
 Trans.Stats.sweepSkip=Trans.Stats.sweepSkip+1
-task.wait(2)
+task.wait(1)
 end
 Trans._w=(Trans._w or 0)+1
 if Trans._w%10==0 then pcall(function() scanRoot(WS,0) end) end
