@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 15:12 sha 827fae56 bytes 205698'):format('2026-09-16 15:12','827fae56',205698))
+print(('[CheatMenu] build 2026-09-16 15:40 sha b6fcc9af bytes 206168'):format('2026-09-16 15:40','b6fcc9af',206168))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.4"
+SYS.BuildVer="2.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3293,6 +3293,7 @@ local SYS_PROMPT=[[You are a translation engine. Translate the user's text into 
 Rules: output ONLY the translation, no explanation, no quotes, no extra words.
 Keep numbers, currency symbols ($), emoji and player names unchanged.
 Use natural, colloquial, native-sounding Chinese — plain and direct, no stiff or literary wording.
+Translate game currency words: Coins->金币, Gold->金币, Gems->宝石, Cash->现金 (keep Robux as-is).
 If the text is already ZH or contains CJK characters, output it unchanged.]]
 local NON_ASCII="[\128-\255]"
 local utf8codes=(type(utf8)=="table" and type(utf8.codes)=="function") and utf8.codes or nil
@@ -3429,7 +3430,7 @@ Trans.splitSegments=splitSegments
 local WORD_TABLE={
 ["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
 ["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
-["energy"]="能量",["coin"]="金币",["coins"]="金币",["gem"]="宝石",["gems"]="宝石",
+["energy"]="能量",["coin"]="金币",["coins"]="金币",["gem"]="宝石",["gems"]="宝石",["robux"]="Robux",
 ["rare"]="稀有",["epic"]="史诗",["common"]="普通",
 ["speed"]="速度",["luck"]="幸运",["exp"]="经验",["level"]="等级",["quest"]="任务",
 ["shop"]="商店",["trade"]="交易",
@@ -3509,6 +3510,13 @@ local PHRASE_TABLE={
 local function lookupLocal(text)
 if SYS.T_.LocalPhrase==false then return nil end
 if type(text)~="string" then return nil end
+local _raw=text:gsub("^%s+","")
+_raw=_raw:gsub("%s+$","")
+local _num,_rest = _raw:match("^(%d[%d%.,eE%+%-%w]*)[%s]+(%a+)$")
+if _num and _rest then
+local _rv = WORD_TABLE[_rest:lower()] or PHRASE_TABLE[_rest:lower()]
+if _rv then return _num .. " " .. _rv end
+end
 local k=(text:gsub("^%s+","")):gsub("%s+$","")
 k=k:lower()
 k=(k:gsub("[%p]+$",""))
@@ -3721,6 +3729,9 @@ prot("%$[%d%.,]+")
 prot("#%x%x%x%x%x%x")
 prot("[@#&!]%w+")
 prot("%d+%.?%d*%%")
+prot("%d+%.?%d*[eE][+-]?%d+")
+prot("%d+%.?%d*[QSODNVT]%l")
+prot("%d+%.?%d*[KMBT]")
 prot("\\.")
 return s,tok,n
 end
