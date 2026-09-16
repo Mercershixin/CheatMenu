@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 10:28 sha 7d3a0da3 bytes 195011'):format('2026-09-16 10:28','7d3a0da3',195011))
+print(('[CheatMenu] build 2026-09-16 10:59 sha 30dab9ea bytes 195148'):format('2026-09-16 10:59','30dab9ea',195148))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.4"
+SYS.BuildVer="1.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -515,8 +515,10 @@ function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
 local spd=SYS.Orig.WalkSpeed*SYS.C_.SpeedMult
+if SYS.C_.SpeedMode=="WalkSpeed" then
 if SYS.C_.SpeedMult~=lastSM then hum.WalkSpeed=spd lastSM=SYS.C_.SpeedMult end
-if SYS.C_.SpeedMode=="WalkSpeed" then return end
+return
+end
 if not SpeedBV or SpeedBV.Parent~=root then
 if SpeedBV then SpeedBV:Destroy() end
 SpeedBV=Instance.new("BodyVelocity")
@@ -902,7 +904,7 @@ root.CFrame=CFrame.new(root.Position.X,hy,root.Position.Z)
 root.AssemblyLinearVelocity=Vector3.zero
 end)
 if DeepHideFloor and DeepHideFloor.Parent then
-DeepHideFloor.CFrame=CFrame.new(root.Position.X,hy-4,root.Position.Z)
+DeepHideFloor.CFrame=CFrame.new(root.Position.X,DeepHideFeetY(root)-2,root.Position.Z)
 end
 print(("[DeepHide] 深度已调整: %.0f 格 (Y=%.0f)"):format(DeepHideY-hy,hy))
 end
@@ -1376,7 +1378,8 @@ h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,0,60)
 end
 if not SYS._ESPLogged then
 SYS._ESPLogged=true
-print(("[ESP] 人物高亮=Highlight %d 个 · 挂点=角色模型"):format(#act))
+local _espN=0 for _ in pairs(act) do _espN=_espN+1 end
+print(("[ESP] 人物高亮=Highlight %d 个 · 挂点=角色模型"):format(_espN))
 end
 else
 if next(HL) then for _,h in pairs(HL) do h:Destroy() end HL={} end
@@ -3923,7 +3926,9 @@ local hit=Cache[plain] or Cache[normalizeKey(plain)] or lookupLocal(plain)
 if hit then
 Trans.Stats.hit=Trans.Stats.hit+1
 local p=Instance.new("TextChatMessageProperties")
-p.Text=hit markOutput(hit)
+p.Text=hit
+if msg and msg.PrefixText then p.PrefixText=msg.PrefixText end
+markOutput(hit)
 return p
 end
 Trans.request(plain,1,function(res)
@@ -4055,6 +4060,7 @@ return Trans.sendToChat(final)
 end
 function Trans.refreshLocalStatus() end
 function Trans.Unload()
+Trans.Unloaded=true
 pcall(Trans.stopUIScan)
 pcall(Trans.stopChatListener)
 pcall(Trans.saveCache)
@@ -5462,7 +5468,6 @@ end
 function SYS.UnloadAll()
 if SYS.Unloaded then return end
 SYS.Unloaded=true
-SYS.Unloading=true
 for k in pairs(SYS.T_) do SYS.T_[k]=false end
 P(SYS.SaveConfig)
 P(SYS.SetGod,false) P(SYS.SetNoFall,false) P(SYS.SetJumpBoost,false)
