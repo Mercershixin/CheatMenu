@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 14:10 sha 98c46c35 bytes 205846'):format('2026-09-16 14:10','98c46c35',205846))
+print(('[CheatMenu] build 2026-09-16 14:56 sha 640a2faa bytes 205944'):format('2026-09-16 14:56','640a2faa',205944))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="2.2"
+SYS.BuildVer="2.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3292,6 +3292,7 @@ local MODEL="hymt2-7b"
 local SYS_PROMPT=[[You are a translation engine. Translate the user's text into ZH.
 Rules: output ONLY the translation, no explanation, no quotes, no extra words.
 Keep numbers, currency symbols ($), emoji and player names unchanged.
+Use natural, colloquial, native-sounding Chinese — plain and direct, no stiff or literary wording.
 If the text is already ZH or contains CJK characters, output it unchanged.]]
 local NON_ASCII="[\128-\255]"
 local utf8codes=(type(utf8)=="table" and type(utf8.codes)=="function") and utf8.codes or nil
@@ -3441,7 +3442,7 @@ local WORD_TABLE={
 ["index"]="索引",["store"]="商店",["rebirths"]="重生",["settings"]="设置",
 ["acceleration"]="加速度",["achievement"]="成就",["aim"]="瞄准",["align"]="对齐",
 ["alliance"]="联盟",["amplitude"]="振幅",["anchor"]="锚点",["angle"]="角度",
-["angularvelocity"]="角速度",["area"]="面积",["avatar"]="虚拟形象",["axis"]="轴",
+["angularvelocity"]="角速度",["area"]="面积",["avatar"]="形象",["axis"]="轴",
 ["back"]="返回",["badge"]="徽章",["beam"]="光束",["block"]="屏蔽",
 ["boolvalue"]="布尔值",["branch"]="分支",["buff"]="增益",["bundle"]="礼包",
 ["buoyancy"]="浮力",["camera"]="相机",["cancel"]="取消",["cancollide"]="可碰撞",
@@ -3472,9 +3473,9 @@ local WORD_TABLE={
 ["massless"]="无质量",["material"]="材质",["matrix"]="矩阵",["mesh"]="网格",
 ["mission"]="任务",["mobile"]="移动端",["model"]="模型",["momentum"]="动量",
 ["mouse"]="鼠标",["move"]="移动",["music"]="音乐",["mute"]="静音",
-["narration"]="旁白",["new"]="新",["next"]="下一步",["no"]="否",
+["narration"]="旁白",["new"]="新",["next"]="下一步",["no"]="不",
 ["notifications"]="通知",["numberrange"]="数字范围",["numbersequence"]="数字序列",["numbervalue"]="数字值",
-["objective"]="目标",["objectvalue"]="对象值",["official"]="官方",["ok"]="好",
+["objective"]="目标",["objectvalue"]="对象值",["official"]="官方",["ok"]="好的",
 ["open"]="打开",["option"]="选项",["orientation"]="方向",["owned"]="已拥有",
 ["pan"]="平移",["parry"]="招架",["particle"]="粒子",["party"]="队伍",
 ["pc"]="电脑",["phase"]="相位",["ping"]="延迟",["place"]="场所",
