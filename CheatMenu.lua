@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-16 02:38 sha 23b8f240 bytes 204207'):format('2026-09-16 02:38','23b8f240',204207))
+print(('[CheatMenu] build 2026-09-16 10:28 sha 7d3a0da3 bytes 195011'):format('2026-09-16 10:28','7d3a0da3',195011))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -30,7 +30,7 @@ TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
 CB_PauseMove=false,CB_Predict=false,CB_Team=true,CB_Wall=true,
-CB_FovCircle=false,CB_HL=false,CB_Dist=false,CB_TgtStrict=false,
+CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
 ESPBox=false,
@@ -55,7 +55,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,
 }
-SYS.BuildVer="1.3"
+SYS.BuildVer="1.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -483,7 +483,7 @@ if UIS:IsKeyDown(Enum.KeyCode.Space) then d+=Vector3.yAxis end
 if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then d-=Vector3.yAxis end
 return d
 end
-function SYS.FlyTick()
+function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
 if not gravZero then WS.Gravity=0 gravZero=true end
@@ -507,7 +507,7 @@ local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
 FlyBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
 else
 local d=GetInputDir(cam.CFrame)
-if d.Magnitude>0 then root.CFrame+=d.Unit*SYS.Orig.WalkSpeed*SYS.C_.FlySpeed*0.05 end
+if d.Magnitude>0 then root.CFrame+=d.Unit*SYS.Orig.WalkSpeed*SYS.C_.FlySpeed*(dt or 1/240) end
 end
 end
 local lastSM=-1
@@ -1003,7 +1003,13 @@ NCByPlayer[p]=conn
 end
 T(Players.PlayerRemoving:Connect(function(p)
 local conn=NCByPlayer[p]
-if conn then pcall(function() conn:Disconnect() end) NCByPlayer[p]=nil end
+if conn then
+pcall(function() conn:Disconnect() end)
+NCByPlayer[p]=nil
+for i,c in ipairs(NCConns) do
+if c==conn then table.remove(NCConns,i) break end
+end
+end
 NCCache[p]=nil
 end))
 function SYS.RefreshNC(on)
@@ -2252,7 +2258,6 @@ end
 function SYS.StopGym()
 if GymThread then task.cancel(GymThread) GymThread = nil end
 end
-local BonusCache=setmetatable({},{__mode="k"})
 local TrainingBonusButtonClicks = setmetatable({}, {__mode = "k"})
 local function GuiVis(o)
 if not o or not o:IsA("GuiObject") or not o.Visible then return false end
@@ -2489,18 +2494,12 @@ CB.HookOK=false
 CB.HookStat={cam=0,mouse=0,ray=0}
 CB.inOwnRay=false
 CB.RenderBound=false
-CB.Overlay=nil
-CB.Ring=nil
-CB.DistL=nil
-CB.HL=nil
 CB.Moving=false
 CB.KeyAcc=0
 CB.FallbackConn=nil
 CB.UsingFallback=false
 CB.LastFire=0
 CB.RenderName="CheatMenuCombat"
-CB.AutoRotateOff=false
-CB.AutoRotateSaved=true
 local HUMC=setmetatable({},{__mode="k"})
 local BODYC=setmetatable({},{__mode="k"})
 CB.DeadAt={}
@@ -2917,209 +2916,7 @@ root.CFrame = (spd>=1) and rwant or root.CFrame:Lerp(rwant,math.clamp(spd,0.02,1
 end
 end
 end
-local rawRayNew = Ray.new
-local function fakeRay()
-if not SYS.T_.CB_Silent or not CB.TargetPart then return nil end
-if SYS.T_.CB_Wall and not clearShot(CB.TargetPart) then return nil end
-local cam=SYS.Cam
-if not cam then return nil end
-local cf=cam.CFrame
-if not cf then return nil end
-local d=(leadPos() or CB.TargetPart.Position)-cf.Position
-if d.Magnitude<0.01 then return nil end
-return rawRayNew(cf.Position,d.Unit*5000)
-end
-local hookDepth=0
-local HOOK_DEPTH_MAX=8
-function CB.InstallHook()
-if CB.HookOK then return true end
-if type(hookfunction)~="function" and type(hookmetamethod)~="function" then
-return false
-end
-local mode=SYS.C_.CB_SilentMode or 4
-local n=0
-if mode==1 or mode==4 then
-pcall(function()
-local mt=getrawmetatable(SYS.Cam)
-if mt then
-if type(mt.ScreenPointToRay)=="function" then
-local orig=mt.ScreenPointToRay
-local ret=hookfunction(mt.ScreenPointToRay,function(self,x,y,...)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return nil end
-CB.HookStat.cam=CB.HookStat.cam+1
-local r=fakeRay()
-if r then hookDepth=hookDepth-1 return r end
-local res=orig and orig(self,x,y,...) or nil
-hookDepth=hookDepth-1
-return res
-end)
-if type(ret)=="function" then orig=ret end
-n=n+1
-end
-if type(mt.ViewportPointToRay)=="function" then
-local orig2=mt.ViewportPointToRay
-local ret2=hookfunction(mt.ViewportPointToRay,function(self,x,y,...)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return nil end
-CB.HookStat.cam=CB.HookStat.cam+1
-local r=fakeRay()
-if r then hookDepth=hookDepth-1 return r end
-local res=orig2 and orig2(self,x,y,...) or nil
-hookDepth=hookDepth-1
-return res
-end)
-if type(ret2)=="function" then orig2=ret2 end
-n=n+1
-end
-end
-end)
-end
-if mode==2 or mode==4 then
-pcall(function()
-local m=SYS.LP:GetMouse()
-if not m or type(hookmetamethod)~="function" then return end
-local mmt=getrawmetatable(m)
-if type(mmt and mmt.__index)=="function" then
-local orig3=mmt.__index
-local ret3=hookmetamethod(m,"__index",function(self,k)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return nil end
-local r=nil
-if k=="UnitRay" then
-CB.HookStat.mouse=CB.HookStat.mouse+1
-r=fakeRay()
-end
-if r then hookDepth=hookDepth-1 return r end
-local res=orig3 and orig3(self,k) or nil
-hookDepth=hookDepth-1
-return res
-end)
-if type(ret3)=="function" then orig3=ret3 end
-n=n+1
-end
-end)
-end
-if mode==3 or mode==4 then
-pcall(function()
-if type(WS.FindPartOnRay)=="function" then
-local orig4=WS.FindPartOnRay
-local ret4=hookfunction(orig4,function(self,ray,ignore)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return nil end
-if CB.inOwnRay then
-hookDepth=hookDepth-1
-return orig4(self,ray,ignore)
-end
-CB.HookStat.ray=CB.HookStat.ray+1
-if SYS.T_.CB_Silent and CB.TargetPart and not SYS.T_.CB_Wall then
-hookDepth=hookDepth-1
-return CB.TargetPart
-end
-local r=fakeRay()
-hookDepth=hookDepth-1
-if r then return orig4(self,r,ignore) end
-return orig4(self,ray,ignore)
-end)
-if type(ret4)=="function" then orig4=ret4 end
-n=n+1
-end
-if type(WS.FindPartOnRayWithIgnoreList)=="function" then
-local orig6=WS.FindPartOnRayWithIgnoreList
-local ret6=hookfunction(orig6,function(self,ray,ignore,terrainCellsAreCubes)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return orig6(self,ray,ignore,terrainCellsAreCubes) end
-if CB.inOwnRay then hookDepth=hookDepth-1 return orig6(self,ray,ignore,terrainCellsAreCubes) end
-CB.HookStat.ray=CB.HookStat.ray+1
-if SYS.T_.CB_Silent and CB.TargetPart and not SYS.T_.CB_Wall then
-hookDepth=hookDepth-1
-return CB.TargetPart
-end
-local r=fakeRay()
-hookDepth=hookDepth-1
-if r then return orig6(self,r,ignore,terrainCellsAreCubes) end
-return orig6(self,ray,ignore,terrainCellsAreCubes)
-end)
-if type(ret6)=="function" then orig6=ret6 end
-n=n+1
-end
-if type(WS.FindPartOnRayWithWhitelist)=="function" then
-local orig7=WS.FindPartOnRayWithWhitelist
-local ret7=hookfunction(orig7,function(self,ray,whitelist,ignoreWater)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return orig7(self,ray,whitelist,ignoreWater) end
-if CB.inOwnRay then hookDepth=hookDepth-1 return orig7(self,ray,whitelist,ignoreWater) end
-CB.HookStat.ray=CB.HookStat.ray+1
-if SYS.T_.CB_Silent and CB.TargetPart and not SYS.T_.CB_Wall then
-hookDepth=hookDepth-1
-return CB.TargetPart
-end
-local r=fakeRay()
-hookDepth=hookDepth-1
-if r then return orig7(self,r,whitelist,ignoreWater) end
-return orig7(self,ray,whitelist,ignoreWater)
-end)
-if type(ret7)=="function" then orig7=ret7 end
-n=n+1
-end
-if type(rawRayNew)=="function" then
-local ret8=hookfunction(rawRayNew,function(origin,direction)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return rawRayNew(origin,direction) end
-if CB.inOwnRay then hookDepth=hookDepth-1 return rawRayNew(origin,direction) end
-CB.HookStat.ray=CB.HookStat.ray+1
-local r=fakeRay()
-hookDepth=hookDepth-1
-if r then return r end
-return rawRayNew(origin,direction)
-end)
-if type(ret8)=="function" then rawRayNew=ret8 end
-n=n+1
-end
-if type(WS.Raycast)=="function" then
-local orig5=WS.Raycast
-local ret5=hookfunction(orig5,function(self,origin,direction,params)
-hookDepth=hookDepth+1
-if hookDepth>HOOK_DEPTH_MAX then hookDepth=hookDepth-1 return nil end
-if CB.inOwnRay then
-hookDepth=hookDepth-1
-return orig5(self,origin,direction,params)
-end
-CB.HookStat.ray=CB.HookStat.ray+1
-if SYS.T_.CB_Silent and CB.TargetPart and not SYS.T_.CB_Wall then
-hookDepth=hookDepth-1
-local dirU=direction and direction.Unit or Vector3.zero
-if dirU.Magnitude<0.01 then return orig5(self,origin,direction,params) end
-local maxD=SYS.C_.CB_MaxDist or 1200
-local cur=origin
-local tgt=CB.Target
-for _pen=1,4 do
-local res=orig5(self,cur,dirU*maxD,params)
-if not res then return nil end
-local inst=res.Instance
-if inst==CB.TargetPart or (tgt and inst and playerFromPart(inst)==tgt) then
-return res
-end
-local dd=res.Distance or 0
-cur=cur+dirU*(dd+0.5)
-end
-return orig5(self,origin,direction,params)
-end
-local r=fakeRay()
-hookDepth=hookDepth-1
-if r then return orig5(self,r.Origin,r.Direction,params) end
-return orig5(self,origin,direction,params)
-end)
-if type(ret5)=="function" then orig5=ret5 end
-n=n+1
-end
-end)
-end
-CB.HookOK=n>0
-print(CB.HookOK and ("[Combat] 静默瞄准已安装 ("..n.." 处 hook)")
-or "[Combat] 静默瞄准不可用(执行器不支持 hook), 已降级为仅自动瞄准")
-return CB.HookOK
-end
+function CB.InstallHook() CB.HookOK=false return false end
 local function crosshairOnEnemy()
 local cam=SYS.Cam
 if not cam then return false end
@@ -3153,78 +2950,15 @@ end
 CB.LastFire=now
 local cam=SYS.Cam
 if not cam then return end
-local snapCF=nil
-local snapRoot=nil
-local snapRootCF=nil
-if SYS.T_.CB_SnapFire and CB.TargetPart then
-local cf0=cam.CFrame
-local pos=leadPos()
-if cf0 and pos and (pos-cf0.Position).Magnitude>0.01 then
-snapCF=cf0
-cam.CFrame=CFrame.lookAt(cf0.Position,pos)
-local root=bodyOf(SYS.LP.Character)
-local nowS=os.clock()
-if nowS-(CB.LastSnapWrite or 0)<(SYS.C_.CB_SnapMinGap or 0.25) then
-CB.SnapSkip=(CB.SnapSkip or 0)+1
-root=nil
-elseif root then
-local wantCF=CFrame.lookAt(root.Position,pos)
-local dot=math.clamp(root.CFrame.LookVector:Dot(wantCF.LookVector),-1,1)
-local ang=math.deg(math.acos(dot))
-if ang>(SYS.C_.CB_SnapMaxAngle or 60) then
-CB.SnapBig=(CB.SnapBig or 0)+1
-root=nil
-else
-CB.LastSnapWrite=nowS
-CB.SnapWrite=(CB.SnapWrite or 0)+1
-end
-end
-if root and (pos-root.Position).Magnitude>0.01 then
-snapRoot=root
-snapRootCF=root.CFrame
-local h=humOf(SYS.LP)
-if h and not CB.AutoRotateOff then
-CB.AutoRotateSaved=h.AutoRotate
-CB.AutoRotateOff=true
-h.AutoRotate=false
-end
-P(function() root.CFrame=CFrame.lookAt(root.Position,pos) end)
-end
-end
-end
 local vp=cam.ViewportSize
 local x,y=math.floor(vp.X/2),math.floor(vp.Y/2)
-local snapDelay = (snapCF and (SYS.C_.CB_SnapDelay or 0.05)) or 0
 local function doFire()
 P(function() VIM:SendMouseButtonEvent(x,y,0,true,game,0) end)
 task.delay(0.02,function()
 P(function() VIM:SendMouseButtonEvent(x,y,0,false,game,0) end)
 end)
 end
-if snapDelay>0 then
-task.delay(snapDelay, doFire)
-else
 doFire()
-end
-if snapCF then
-CB.SnapGen=(CB.SnapGen or 0)+1
-local myGen=CB.SnapGen
-task.delay(snapDelay+0.1,function()
-if myGen==CB.SnapGen and not SYS.Unloaded and SYS.T_.CB_SnapFire then
-if SYS.Cam then SYS.Cam.CFrame=snapCF end
-if snapRoot then
-P(function()
-snapRoot.CFrame=snapRootCF
-if CB.AutoRotateOff then
-local h=humOf(SYS.LP)
-if h then h.AutoRotate=CB.AutoRotateSaved end
-CB.AutoRotateOff=false
-end
-end)
-end
-end
-end)
-end
 end
 local MOVING={[Enum.KeyCode.W]=true,[Enum.KeyCode.A]=true,[Enum.KeyCode.S]=true,[Enum.KeyCode.D]=true}
 local moveHeld={}
@@ -3320,19 +3054,10 @@ CB.FallbackConn=nil
 end
 CB.UsingFallback=false
 CB.Target=nil CB.TargetPart=nil CB.Moving=false
-if CB.AutoRotateOff then
-local h=humOf(SYS.LP)
-if h then h.AutoRotate=CB.AutoRotateSaved end
-CB.AutoRotateOff=false
-end
 CB.ResetClock()
-if CB.HL then P(function() CB.HL:Destroy() end) CB.HL=nil end
-if CB.Overlay then P(function() CB.Overlay:Destroy() end) end
-CB.Overlay=nil CB.Ring=nil CB.DistL=nil
 end
 function CB.DisableAll()
 SYS.T_.CB_Aim=false SYS.T_.CB_Silent=false SYS.T_.CB_Fire=false
-SYS.T_.CB_FovCircle=false SYS.T_.CB_HL=false SYS.T_.CB_Dist=false
 CB.Say("已关闭全部战斗功能",SYS.CY.red)
 end
 function CB.QuickMode()
@@ -3555,19 +3280,9 @@ for _,l in ipairs(Trans.LANGS) do if l.code==c then return l.name end end
 return c
 end
 Trans.SendLang="en"
-Trans.SRCLANG="auto"
 Trans.CacheMax=20000
-Trans.BatchOn=false
-Trans.BusyMax=8
-Trans.ParallelHTTP=true
-Trans.InFlight=0
-Trans.PendingCount=0
-Trans.SessionCompleted=0
-Trans.TotalCompleted=0
 Trans.cacheCount=0
-Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0,
-batchItems=0,retry=0,degrade=0}
-Trans.InputMax=600
+Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0}
 local HOST="http://127.0.0.1:8080"
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
@@ -3607,7 +3322,6 @@ local function hasForeign(s)
 if type(s)~="string" or s=="" then return false end
 if s:find("[A-Za-z]") then return true end
 if not s:find(NON_ASCII) then return false end
-local b1=0xE0 b1=b1
 local i=1
 while true do
 local b=s:byte(i)
@@ -3641,6 +3355,13 @@ text=(text:gsub("<[^>]*>",""))
 return ((text:gsub("^%s+","")):gsub("%s+$","")):lower()
 end
 Trans.normalizeKey=normalizeKey
+local function plainReplace(s, from, to)
+if type(s)~="string" or type(from)~="string" or from=="" then return s end
+local i, j = s:find(from, 1, true)
+if not i then return s end
+return s:sub(1, i-1) .. tostring(to) .. s:sub(j+1)
+end
+Trans.plainReplace=plainReplace
 local WORD_TABLE={
 ["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
 ["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
@@ -3854,7 +3575,7 @@ local ok,res=pcall(function()
 return request({
 Url=HOST.."/v1/chat/completions", Method="POST",
 Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
-Body=payload,
+Body=payload, Timeout=30,
 })
 end)
 if not ok or type(res)~="table" or not res.Body then
@@ -3982,7 +3703,7 @@ if v.skip then return end
 local plain=v.plain
 local hit=Cache[plain] or Cache[v.nk] or v.loc
 if hit and hit~="" and hit~=plain then
-local newText=(plain==cur) and hit or (cur:gsub(plain,hit,1))
+local newText=(plain==cur) and hit or plainReplace(cur,plain,hit)
 if writeProp(obj,"Text",cur,newText) then
 Trans.Stats.hit=Trans.Stats.hit+1
 remember(cur,newText,plain,hit)
@@ -3995,11 +3716,10 @@ if not res or res=="" then return end
 if not obj or not obj.Parent or Trans.Unloaded then return end
 local now=obj.Text
 if now~=cur then return end
-local newText=(plain==cur) and res or (cur:gsub(plain,res,1))
+local newText=(plain==cur) and res or plainReplace(cur,plain,res)
 if writeProp(obj,"Text",cur,newText) then remember(cur,newText,plain,res) end
 end)
 end
-Trans.applyLabel=function(job,res) end
 Trans.PromptFields={"ActionText","ObjectText"}
 local function processPrompt(p)
 if not p or not p.Parent or Trans.Unloaded or not Trans.UIScanActive then return end
@@ -4231,7 +3951,6 @@ end)
 Trans.restoreSource("chat")
 print("[Trans] 聊天翻译已停止")
 end
-function Trans.restoreChannels() return 0 end
 local function restoreIn(root)
 if not root then return 0 end
 local ok,ds=pcall(function() return root:GetDescendants() end)
@@ -4247,7 +3966,7 @@ local _,core=splitPrefix(cur)
 local p=stripRich(core)
 local orig=Trans.Trans2Orig[p]
 if orig and orig~="" then
-local nt=(p==cur) and orig or cur:gsub(p,orig,1)
+local nt=(p==cur) and orig or plainReplace(cur,p,orig)
 if pcall(function() o.Text=nt end) then n=n+1 end
 end
 end
@@ -4289,29 +4008,24 @@ return n
 end
 function Trans.checkLocal()
 local ok,res=pcall(function()
-return request({Url=HOST.."/health",Method="GET"})
+return request({Url=HOST.."/health",Method="GET",Timeout=10})
 end)
 if ok and type(res)=="table" and res.StatusCode==200 then return "online" end
 return "offline"
 end
 function Trans.probeServer()
-local ok,res=pcall(function() return request({Url=HOST.."/props",Method="GET",
+local ok,res=pcall(function() return request({Url=HOST.."/props",Method="GET",Timeout=10,
 Headers={["Authorization"]="Bearer "..KEY}}) end)
 if not ok or type(res)~="table" or not res.Body then return false end
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then return false end
 local slots=tonumber(d.total_slots) or 8
 local ctx=tonumber(d.default_generation_settings and d.default_generation_settings.n_ctx) or 512
-Trans.BusyMax=math.max(1,math.min(32,slots))
 Trans.maxTok=math.max(128,math.min(1024,ctx-360))
-Trans.InputMax=math.max(200,math.min(1500,(ctx-360)*2))
-print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx -> 并发 %d, 输入上限 %d")
-:format(slots,ctx,Trans.BusyMax,Trans.InputMax))
+print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx")
+:format(slots,ctx))
 return true
 end
-function Trans.warmupSlots() return true end
-function Trans.selfCheckParallel() Trans.ParallelHTTP=true return true end
-function Trans.adaptTick() return end
 function Trans.sendToChat(text)
 if not text or text=="" then return false,"空" end
 local ok,TCS=pcall(function() return game:GetService("TextChatService") end)
@@ -4841,9 +4555,7 @@ UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawA
 UI.Div(p)
 UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
 UI.Switch(p,"自动售卖 (每5秒)","AutoSell")
-UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled",function(on)
-if SYS.AFK_Sell then SYS.AFK_Sell.ThresholdEnabled=on end
-end)
+UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
 local row=Instance.new("Frame")
 row.Size=UDim2.new(1,0,0,42) row.BackgroundColor3=CY.card
 row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
@@ -4959,7 +4671,7 @@ end)
 UI.Div(p)
 UI.Label(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or "TransCache.json"),CY.cyan)
 local statL=UI.Label(p,("已缓存 %d 条"):format(Trans.cacheCount or 0),CY.green)
-local statConcurrent = UI.Label(p, "并发 0/16 | 队列 0 | 完成 0 | 命中 0 | 本地 0 | 批量 0 | 重试 0 | 降级 0 | 失败 0 | 跳过扫 0 | 均 0ms", CY.cyan)
+local statConcurrent = UI.Label(p, "命中 0 | 本地 0 | 失败 0 | 跳过扫 0 | 均 0ms", CY.cyan)
 task.spawn(function()
 while not SYS.Unloaded do
 task.wait(0.5)
@@ -4967,12 +4679,9 @@ if statL and statL.Parent then statL.Text=("已缓存 %d 条"):format(Trans.cach
 if statConcurrent and statConcurrent.Parent then
 local st=Trans.Stats or {}
 local avg=(st.latN and st.latN>0) and (st.lat/st.latN) or 0
-local warn=(Trans.ParallelHTTP==false) and "  ⚠️HTTP阻塞" or ""
-statConcurrent.Text = ("并发 %d/%d | 队列 %d | 完成 %d | 命中 %d | 本地 %d | 批量 %d | 重试 %d | 降级 %d | 失败 %d | 跳过扫 %d | 均 %.0fms"):format(
-Trans.InFlight or 0, Trans.BusyMax or 16, Trans.PendingCount or 0, Trans.SessionCompleted or 0,
-st.hit or 0, st.loc or 0, st.batchItems or 0, st.retry or 0, st.degrade or 0, st.fail or 0,
-st.sweepSkip or 0, avg
-)..warn
+statConcurrent.Text = ("命中 %d | 本地 %d | 失败 %d | 跳过扫 %d | 均 %.0fms"):format(
+st.hit or 0, st.loc or 0, st.fail or 0, st.sweepSkip or 0, avg
+)
 end
 end
 end)
@@ -5004,7 +4713,6 @@ task.spawn(function()
 if Trans.probeServer then
 local pok=Trans.probeServer()
 print(pok and "[Trans] ✅ 探测成功" or "[Trans] ❌ 探测失败(服务器没开?)")
-if pok and Trans.warmupSlots then pcall(Trans.warmupSlots,true) end
 end
 end)
 end)
