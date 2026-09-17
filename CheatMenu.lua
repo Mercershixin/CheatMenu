@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 14:48 sha 79788663 bytes 222134'):format('2026-09-17 14:48','79788663',222134))
+print(('[CheatMenu] build 2026-09-17 14:59 sha b0c31cc6 bytes 223253'):format('2026-09-17 14:59','b0c31cc6',223253))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.3"
+SYS.BuildVer="3.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -5584,6 +5584,32 @@ if CoreGui then parent=CoreGui end
 end)
 return parent
 end
+function SYS.SafeParentGui(gui)
+if not gui then return "nil" end
+P(function() if protect_gui then protect_gui(gui) end end)
+P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
+local ok1=pcall(function() if gethui then gui.Parent=gethui() end end)
+if ok1 and gui.Parent then return "gethui" end
+local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
+if ok2 and gui.Parent then return "CoreGui" end
+P(function() gui.Parent=SYS.PG end)
+return "PlayerGui"
+end
+function SYS.TryAntiKick()
+if SYS.KickHooked then return "已启用" end
+if type(hookfunction)~="function" then return "不可用(执行器没提供 hookfunction)" end
+local ok=pcall(function()
+local lp=SYS.LP
+if not lp then return end
+local orig=hookfunction(lp.Kick,function() return nil end)
+SYS.KickOrig=orig SYS.KickHooked=true
+end)
+if ok and SYS.KickHooked then
+print("[CheatMenu] 防踢已启用(只拦本地 Kick; 服务端踢人拦不住)")
+return "已启用"
+end
+return "不可用"
+end
 local function CreateMenu()
 print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
@@ -5904,7 +5930,7 @@ local fg=Instance.new("ScreenGui")
 fg.Name="CheatMenuFloat" P(function() fg.ResetOnSpawn=false end)
 P(function() fg.IgnoreGuiInset=true end) P(function() fg.DisplayOrder=999 end)
 P(function() if gethui then fg.Parent=gethui() end end)
-if not fg.Parent then fg.Parent=SYS.PG end
+SYS.SafeParentGui(fg)
 local fb=Instance.new("TextButton")
 fb.Size=UDim2.new(0,58,0,58) fb.Position=UDim2.new(1,-76,0,96)
 fb.BackgroundColor3=CY.accent fb.BackgroundTransparency=0.12
@@ -5932,6 +5958,10 @@ end
 end))
 end) end
 ShowTab("战斗")
+P(function()
+local where=SYS.SafeParentGui(sg)
+print("[CheatMenu] 菜单挂载: "..tostring(where).." · 防踢: "..tostring(SYS.TryAntiKick()))
+end)
 sg.Enabled=true SYS.MenuOpen=true
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
 SYS.MenuPrevMouseIcon=UIS.MouseIconEnabled
