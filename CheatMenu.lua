@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 02:58 sha cdf98e96 bytes 215895'):format('2026-09-17 02:58','cdf98e96',215895))
+print(('[CheatMenu] build 2026-09-17 10:17 sha d073bdef bytes 216754'):format('2026-09-17 10:17','d073bdef',216754))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="2.10"
+SYS.BuildVer="3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -5551,14 +5551,35 @@ local accentBar=Instance.new("Frame")
 accentBar.Size=UDim2.new(1,0,0,4) accentBar.BackgroundColor3=Color3.new(1,1,1)
 accentBar.BorderSizePixel=0 accentBar.ZIndex=100 accentBar.Parent=main
 UI.NeonGrad(accentBar)
+local DEV={touch=false,anyTouch=false,vds="Medium",small=false}
+pcall(function()
+DEV.anyTouch=UIS.TouchEnabled==true
+DEV.touch=(UIS.TouchEnabled==true) and (UIS.MouseEnabled~=true)
+local ok,v=pcall(function() return UIS.ViewportDisplaySize end)
+if ok and v~=nil then DEV.vds=(tostring(v):gsub("Enum.ViewportDisplaySize.","")) end
+DEV.small=(DEV.vds=="Small") or DEV.touch
+end)
+SYS.Device=DEV
+print(("[CheatMenu] 设备: 触屏=%s 纯触屏=%s 视口档=%s 小屏适配=%s")
+:format(tostring(DEV.anyTouch),tostring(DEV.touch),DEV.vds,tostring(DEV.small)))
 local scale=Instance.new("UIScale") scale.Parent=main
 local function ApplyScale()
 P(function()
 local cam=WS.CurrentCamera
 local vp=cam and cam.ViewportSize or Vector2.new(1280,720)
 if vp.X<10 or vp.Y<10 then vp=Vector2.new(1280,720) end
-local fit=math.min((vp.X-40)/W,(vp.Y-40)/H,1)
-scale.Scale=math.max(0.55,math.min(fit,1))
+local pad=DEV.small and 28 or 40
+pcall(function()
+local gs=game:GetService("GuiService")
+if gs then
+local ok1,i1,i2=pcall(function() return gs:GetGuiInset() end)
+if ok1 and i1 then pad=pad+(i1.Y or 0)+(i2 and i2.Y or 0) end
+end
+end)
+local fit=math.min((vp.X-pad*2)/W,(vp.Y-pad*2)/H)
+local lo=DEV.small and 0.75 or 0.55
+local hi=DEV.small and 1.25 or 1
+scale.Scale=math.max(lo,math.min(fit,hi))
 end)
 end
 ApplyScale()
