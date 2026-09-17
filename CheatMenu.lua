@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 00:46 sha d5e26abc bytes 241973'):format('2026-09-18 00:46','d5e26abc',241973))
+print(('[CheatMenu] build 2026-09-18 00:59 sha e5e8dc77 bytes 242792'):format('2026-09-18 00:59','e5e8dc77',242792))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -61,7 +61,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.10.1"
+SYS.BuildVer="3.10.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3105,6 +3105,9 @@ local st=attr("State")
 if type(st)=="string" and st=="Dead" then return false end
 local hp=attr("Health")
 if type(hp)=="number" and hp<=0 then return false end
+if type(st)=="string" and st~="Dead" and st~="" and type(hp)=="number" and hp>0 then
+if CB.DeadAt[pl.Name] then CB.DeadAt[pl.Name]=nil CB.DeadCh[pl.Name]=nil end
+end
 local dt=CB.DeadAt[pl.Name]
 if dt then
 local dc=CB.DeadCh[pl.Name]
@@ -3207,8 +3210,19 @@ if pl==SYS.LP then return "是自己" end
 if not alive(pl) then
 local ch=pl.Character
 local h=ch and ch:FindFirstChildOfClass("Humanoid")
-return ("已死亡/无角色 (角色=%s Humanoid=%s Health=%s)"):format(
-tostring(ch~=nil), tostring(h~=nil), tostring(h and h.Health))
+local function a(k)
+local ok,v=pcall(function() return pl:GetAttribute(k) end)
+return ok and v or nil
+end
+local st=a("State") local hp=a("Health") local dt=CB.DeadAt[pl.Name]
+local reason
+if type(st)=="string" and st=="Dead" then reason="Attribute @State==Dead" end
+if not reason and type(hp)=="number" and hp<=0 then reason="Attribute @Health<=0" end
+if not reason and dt then reason="死亡事件 DeadAt 仍生效(收到过 Killed/Died 信号)" end
+if not reason then reason="Humanoid 判定(Health="..tostring(h and h.Health).." 或状态异常)" end
+return ("已死亡/无角色 [%s] (角色=%s Humanoid=%s H.Health=%s @State=%s @Health=%s)"):format(
+reason, tostring(ch~=nil), tostring(h~=nil), tostring(h and h.Health),
+tostring(st), tostring(hp))
 end
 if hasShield(pl) then return "有无敌盾(ForceField) [打不掉血 → 最后才选]" end
 if SYS.T_.CB_Team and SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then
@@ -4995,7 +5009,7 @@ card2=Color3.fromRGB(38,45,70), sub=Color3.fromRGB(148,156,180),
 text=Color3.fromRGB(236,241,253), line=Color3.fromRGB(52,60,82),
 cyan=Color3.fromRGB(56,180,255), green=Color3.fromRGB(64,214,138),
 red=Color3.fromRGB(255,84,104), yellow=Color3.fromRGB(255,198,86),
-purple=Color3.fromRGB(170,120,255),
+orange=Color3.fromRGB(255,150,60), purple=Color3.fromRGB(170,120,255),
 accent=Color3.fromRGB(56,180,255), accent2=Color3.fromRGB(170,120,255),
 dark=Color3.fromRGB(6,8,14),
 glow=Color3.fromRGB(80,200,255),
