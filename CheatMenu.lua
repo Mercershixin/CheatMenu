@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 13:46 sha d1472667 bytes 217380'):format('2026-09-17 13:46','d1472667',217380))
+print(('[CheatMenu] build 2026-09-17 14:39 sha 79788663 bytes 222134'):format('2026-09-17 14:39','79788663',222134))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -38,7 +38,7 @@ ESPBox=false,
 AutoUpdateCheck=true,
 },
 C_={
-FlySpeed=3,FlyMode="BodyVelocity",
+FlySpeed=3,FlyMode="Align",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="BodyVelocity",
 JumpMult=2,
 MouseTPMode="Raycast",AutoTPDist=5,
@@ -574,31 +574,77 @@ if UIS:IsKeyDown(Enum.KeyCode.Space) then d+=Vector3.yAxis end
 if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then d-=Vector3.yAxis end
 return d
 end
+local function FlyParts()
+return SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign
+end
+function SYS.FlyTeardown()
+local a,v,al=FlyParts()
+if v  then P(function() v:Destroy()  end) end
+if al then P(function() al:Destroy() end) end
+if a  then P(function() a:Destroy()  end) end
+SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=nil,nil,nil
+end
+local function FlyEnsure(root)
+local a,v,al=FlyParts()
+if a and a.Parent==root and v and v.Parent==root and al and al.Parent==root then return true end
+SYS.FlyTeardown()
+a=Instance.new("Attachment") a.Name="CM_FlyAtt" a.Parent=root
+v=Instance.new("LinearVelocity") v.Name="CM_FlyVel" v.Attachment0=a
+v.MaxForce=math.huge
+P(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
+v.VectorVelocity=Vector3.zero v.Parent=root
+al=Instance.new("AlignOrientation") al.Name="CM_FlyAlign" al.Attachment0=a
+P(function() al.Mode=Enum.OrientationAlignmentMode.OneAttachment end)
+al.MaxTorque=math.huge al.Responsiveness=200 al.RigidityEnabled=false
+al.Parent=root
+SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=a,v,al
+return true
+end
+local function FlyHoldStates(on)
+local _,hum=GC() if not hum then return end
+if on then
+P(function()
+hum:SetStateEnabled(Enum.HumanoidStateType.Running,false)
+hum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
+end)
+SYS._FlyStateHeld=true
+elseif SYS._FlyStateHeld then
+P(function()
+hum:SetStateEnabled(Enum.HumanoidStateType.Running,true)
+hum:ChangeState(Enum.HumanoidStateType.Freefall)
+end)
+SYS._FlyStateHeld=false
+end
+end
+function SYS.FlyReleaseStates() FlyHoldStates(false) end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
-local _,_,root=GC() if not root then return end
-if not gravZero then WS.Gravity=0 gravZero=true end
-local cam=WS.CurrentCamera if not cam then return end
-if SYS.C_.FlyMode=="BodyVelocity" then
+local _,hum,root=GC() if not root then return end
+local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
+local mode=tostring(SYS.C_.FlyMode or "Align")
+local d=GetInputDir(cam.CFrame)
+local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
+if mode=="CFrame" then
+if d.Magnitude>0 then root.CFrame+=d.Unit*spd*(dt or 1/240) end
+return
+end
+FlyHoldStates(true)
+if mode=="BodyVelocity" then
 if not FlyBV or FlyBV.Parent~=root then
 if FlyBV then FlyBV:Destroy() end
 FlyBV=Instance.new("BodyVelocity")
 FlyBV.MaxForce=Vector3.new(1e9,1e9,1e9) FlyBV.Parent=root
 end
-if not FlyGyro or FlyGyro.Parent~=root then
-if FlyGyro then FlyGyro:Destroy() end
-FlyGyro=Instance.new("BodyGyro")
-FlyGyro.MaxTorque=Vector3.new(1e9,1e9,1e9)
-FlyGyro.P=1e5 FlyGyro.D=1000 FlyGyro.Parent=root
-end
-local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
-if f.Magnitude>0.1 then FlyGyro.CFrame=CFrame.lookAt(root.Position,root.Position+f.Unit) end
-local d=GetInputDir(cam.CFrame)
-local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
 FlyBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
-else
-local d=GetInputDir(cam.CFrame)
-if d.Magnitude>0 then root.CFrame+=d.Unit*SYS.Orig.WalkSpeed*SYS.C_.FlySpeed*(dt or 1/240) end
+return
+end
+if not FlyEnsure(root) then return end
+local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
+if f.Magnitude>0.1 and SYS._FlyAlign then
+SYS._FlyAlign.CFrame=CFrame.lookAt(root.Position,root.Position+f.Unit)
+end
+if SYS._FlyVel then
+SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
 end
 end
 local lastSM=-1
@@ -634,6 +680,9 @@ end
 function SYS.CleanFly()
 if FlyBV then FlyBV:Destroy() FlyBV=nil end
 if FlyGyro then FlyGyro:Destroy() FlyGyro=nil end
+if SYS.FlyTeardown then P(SYS.FlyTeardown) end
+if SYS.FlyReleaseStates then P(SYS.FlyReleaseStates) end
+SYS._FlyStateHeld=false
 if gravZero then WS.Gravity=SYS.Orig.Gravity gravZero=false end
 end
 function SYS.CleanSpeed()
@@ -2495,14 +2544,32 @@ do
 local Spawn=Vector3.new(0,10,0)
 local Rec=false
 local autoIn={} local autoCool={} local acc=0
+local function tpStepChain(root,from,dir,total,n)
+local i=0
+local function one()
+if not root or not root.Parent then return end
+i=i+1
+if i>=n then root.CFrame=CFrame.new(from+dir*total) return end
+root.CFrame=CFrame.new(from+dir*(total*i/n))
+task.delay(0,one)
+end
+one()
+end
 function SYS.TPTo(pos)
-local _,_,root=GC() if not root then return false end
-if SYS.C_.TPMethod=="CFrame" then
+local _,hum,root=GC() if not root then return false end
+if SYS.C_.TPMethod~="CFrame" then
+if hum then P(function() hum:MoveTo(pos) end) end
+return true
+end
+local STEP=SYS.C_.TPMaxStep or 60
+local from=root.Position
+local d=pos-from
+local dist=d.Magnitude
+if dist<=STEP or dist<=0 then
 root.CFrame=CFrame.new(pos)
 task.delay(0.05,function() if root.Parent then root.CFrame=CFrame.new(pos) end end)
 else
-local _,hum=GC()
-if hum then pcall(function() hum:MoveTo(pos) end) end
+tpStepChain(root,from,d.Unit,dist,math.ceil(dist/STEP))
 end
 return true
 end
@@ -3856,6 +3923,7 @@ prot("%d+%.?%d*%%")
 prot("%d+%.?%d*[eE][+-]?%d+")
 prot("%d+%.?%d*[QSODNVT]%l")
 prot("%d+%.?%d*[KMBT]")
+prot("%d+%.?%d*%u%l?%u?%l?%u?%l?")
 prot("\\.")
 return s,tok,n
 end
@@ -4883,9 +4951,10 @@ if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 end)
 UI.Slider(p,"飞行速度倍率",0,20,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
-UI.Cycle(p,"飞行模式",{"BodyVelocity","CFrame"},
+UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
+UI.Tip(p,"★ 默认「Align」= 官方推荐的 LinearVelocity + AlignOrientation, 也最不容易被服务器拉回。\n「BodyVelocity」= 老执行器(已弃用), 兼容用。\n「CFrame」= 逐帧瞬移, **会被服务端位置校验拉回**, 不推荐。\n另外: 新版本开飞行时不再把世界重力清零(那正是被拉回的经典原因), 只对角色自身抵消重力。",CY.yellow)
 UI.Div(p)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
 if not on then SYS.CleanSpeed() end
@@ -5578,9 +5647,11 @@ if ok1 and i1 then pad=pad+(i1.Y or 0)+(i2 and i2.Y or 0) end
 end
 end)
 local fit=math.min((vp.X-pad*2)/W,(vp.Y-pad*2)/H)
-local lo=DEV.small and 0.75 or 0.55
-local hi=DEV.small and 1.25 or 1
-scale.Scale=math.max(lo,math.min(fit,hi))
+local hi=1
+local lo=0.30
+local sc=math.min(fit,hi)
+if sc<lo then sc=lo end
+scale.Scale=sc
 end)
 end
 ApplyScale()
@@ -5794,21 +5865,72 @@ foot.Text="G/右Shift 开关菜单    ·    V 切换指定目标"
 foot.TextColor3=CY.sub foot.Font=Enum.Font.GothamMedium foot.TextSize=11
 foot.TextXAlignment=Enum.TextXAlignment.Left foot.Parent=main
 local drg,dS,fS=false,nil,nil
+local function isGrab(i) return i.UserInputType==Enum.UserInputType.MouseButton1
+or i.UserInputType==Enum.UserInputType.Touch end
+local function isMove(i) return i.UserInputType==Enum.UserInputType.MouseMovement
+or i.UserInputType==Enum.UserInputType.Touch end
 T(top.InputBegan:Connect(function(input)
-if input.UserInputType==Enum.UserInputType.MouseButton1 then
-drg=true dS=input.Position fS=main.Position
-end
+if isGrab(input) then drg=true dS=input.Position fS=main.Position end
 end))
 T(UIS.InputChanged:Connect(function(input)
-if drg and input.UserInputType==Enum.UserInputType.MouseMovement then
+if drg and isMove(input) then
 local d=input.Position-dS
 main.Position=UDim2.new(fS.X.Scale,fS.X.Offset+d.X,fS.Y.Scale,fS.Y.Offset+d.Y)
 end
 end))
 T(UIS.InputEnded:Connect(function(input)
-if input.UserInputType==Enum.UserInputType.MouseButton1 then drg=false end
+if isGrab(input) then drg=false end
 end))
+local collapseBtn=Instance.new("TextButton")
+collapseBtn.Size=UDim2.new(0,34,0,34) collapseBtn.Position=UDim2.new(1,-96,0.5,-17)
+collapseBtn.BackgroundColor3=CY.panel collapseBtn.BackgroundTransparency=0.25
+collapseBtn.Text="▬" collapseBtn.TextSize=18 collapseBtn.TextColor3=CY.text
+collapseBtn.Font=Enum.Font.GothamBold collapseBtn.BorderSizePixel=0
+collapseBtn.Parent=top
+P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=collapseBtn end)
+function SYS.SetMenuCollapsed(v)
+SYS.Collapsed=v and true or false
+for _,c in ipairs(main:GetChildren()) do
+if c~=top and c:IsA("GuiObject") then P(function() c.Visible=not SYS.Collapsed end) end
+end
+main.Size=UDim2.new(0,W,0,SYS.Collapsed and 62 or H)
+collapseBtn.Text=SYS.Collapsed and "▣" or "▬"
+ApplyScale()
+end
+T(collapseBtn.MouseButton1Click:Connect(function() SYS.SetMenuCollapsed(not SYS.Collapsed) end))
 T(closeBtn.MouseButton1Click:Connect(function() SYS.ToggleMenu() end))
+if not SYS.FloatGui then P(function()
+local fg=Instance.new("ScreenGui")
+fg.Name="CheatMenuFloat" P(function() fg.ResetOnSpawn=false end)
+P(function() fg.IgnoreGuiInset=true end) P(function() fg.DisplayOrder=999 end)
+P(function() if gethui then fg.Parent=gethui() end end)
+if not fg.Parent then fg.Parent=SYS.PG end
+local fb=Instance.new("TextButton")
+fb.Size=UDim2.new(0,58,0,58) fb.Position=UDim2.new(1,-76,0,96)
+fb.BackgroundColor3=CY.accent fb.BackgroundTransparency=0.12
+fb.Text="☰" fb.TextSize=28 fb.TextColor3=CY.text
+fb.Font=Enum.Font.GothamBold fb.BorderSizePixel=0 fb.AutoButtonColor=true
+fb.Parent=fg
+P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=fb end)
+SYS.FloatGui=fg SYS.FloatBtn=fb
+local fd,fs,fp,moved=false,nil,nil,false
+T(fb.InputBegan:Connect(function(i)
+if isGrab(i) then fd=true fs=i.Position fp=fb.Position moved=false end
+end))
+T(UIS.InputChanged:Connect(function(i)
+if fd and isMove(i) then
+local d=i.Position-fs
+if d.Magnitude>8 then moved=true end
+fb.Position=UDim2.new(fp.X.Scale,fp.X.Offset+d.X,fp.Y.Scale,fp.Y.Offset+d.Y)
+end
+end))
+T(UIS.InputEnded:Connect(function(i)
+if isGrab(i) then
+if fd and not moved then P(SYS.ToggleMenu) end
+fd=false
+end
+end))
+end) end
 ShowTab("战斗")
 sg.Enabled=true SYS.MenuOpen=true
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
