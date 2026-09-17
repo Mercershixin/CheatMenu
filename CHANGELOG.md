@@ -5,6 +5,30 @@
 
 ---
 
+## v3.10.1 · 2026-09-17
+
+### 🩸 战斗判定改用「权威 Attribute 数据」（修活人被误判死亡的真根因）
+
+用户贴的「物品栏来源诊断」实锤：这个游戏的**血量 / 状态 / 队伍 / 护盾 / 换弹信号全在 Player 的 Attribute 里，不在 Humanoid / Team 上**。之前一直用 `Humanoid.Health`、`Humanoid:GetState()`、`Player.Team` 判定，导致：
+
+- **满血活人被误判成已死亡**（`Humanoid.Health` 不可信，游戏把真血量放在 `@Health`），索敌全空。
+- **队伍判断失效**（`Player.Team` 是 nil，队伍其实在 `@Team`，如 `Team3`），队友过滤失效。
+
+本版全部改读 Attribute 权威值（Humanoid/Team 只作兼容别的游戏的回退）：
+
+| 判据 | 旧（不可信） | 新（权威） |
+|---|---|---|
+| 生死 | `Humanoid.Health` / `GetState()` | `@State=="Dead"` + `@Health<=0` |
+| 护盾 | `ForceField` | `@Shield` / `@TempShield > 0` |
+| 队伍 | `Player.Team` | `@Team`（`Team1`/`Team3`） |
+| 换弹降权 | 手上有没有 `Tool` | `@combatPaused`（换弹/受控/无法攻击）+ 手上 Tool 双信号 |
+
+### 🎯 索敌威胁度升级（换弹降权用权威信号）
+
+"正在瞄我的人"里，**能立刻开枪的（`@combatPaused≠true` 且手持武器）最优先**；正在换弹/受控/收枪的降权。优先级链：正在瞄我且能开枪 → 正在瞄我但换弹/收枪 → 我指定的目标 → 最近的 → 屏幕中心。
+
+---
+
 ## v3.10.0 · 2026-09-17
 
 ### 🎯 战斗模块大改（索敌更聪明 + 修"活人被误判死亡"）
