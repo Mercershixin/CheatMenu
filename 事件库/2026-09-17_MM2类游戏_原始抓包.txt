@@ -1,0 +1,181 @@
+23:58:12 -- [CheatMenu] build 2026-09-17 23:23 sha 91609dbc bytes 247646
+23:58:12 -- [CheatMenu] ===== v68 加载开始 =====
+23:58:12 -- [Combat] v72 参数: 单次转角上限=360° 最小间隔=0.65 转向后延迟=0.20 开火间隔=0.020
+23:58:12 -- [CheatMenu] 战斗模块已加载 (菜单战斗页: 一键开战/停战 + 各开关 · 按 V 切换指定目标)
+23:58:12 -- [Trans] 已加载 1 条缓存(主文件)
+23:58:12 -- [Trans] ✅ 翻译模块 v70(重写版) 已加载, 缓存=1 条
+23:58:13 -- [CheatMenu] CreateMenu 开始
+23:58:13 -- [CheatMenu] ScreenGui 父级:	CoreGui.RobloxGui
+23:58:13 -- [CheatMenu] 设备: 触屏=false 纯触屏=false 视口档=Medium 小屏适配=false
+23:58:13 -- [CheatMenu] 页面 战斗 OK
+23:58:13 -- [CheatMenu] 防踢已启用(只拦本地 Kick; 服务端踢人拦不住)
+23:58:13 -- [CheatMenu] 菜单挂载: gethui · 防踢: 已启用
+23:58:13 -- [CheatMenu] ✅ UI 创建完成
+23:58:13 -- [CheatMenu] CreateMenu 成功
+23:58:13 -- [CheatMenu] ===== 加载完成 · 版本 3.9.1 =====
+23:58:13 -- [CheatMenu] (local-开头=本地版 / 10 位十六进制=仓库网络版)
+23:58:13 -- [CheatMenu] 热键: G 打开/关闭 | T 传送到鼠标
+23:58:13 -- [CheatMenu] 中文/中文标点/硬保护词 全部跳过翻译
+23:58:14 -- [CheatMenu] 页面 翻译 OK
+23:58:14 -- [CheatMenu] ✅ 已根据配置激活开关
+23:58:14 -- [CheatMenu] 页面 传送 OK
+23:58:15 -- [CheatMenu] 更新检查: 已是最新版 3.9.1
+23:58:15 -- [CheatMenu] 页面 设置 OK
+23:58:18 -- [Remote] ===== 全方位扫描: 网络 RemoteEvent 119 + RemoteFunction 0 | 本地 BindableEvent 2 + BindableFunction 9 | 交互 ProximityPrompt 26 + ClickDetector 4 =====
+23:58:18 --   [1] BindableEvent  CoreGui.RobloxGui.SendNotificationInfo
+23:58:18 --   [2] BindableEvent  ReplicatedStorage.OnPlayerReadyEvent
+23:58:18 --   [3] BindableFunction  Workspace.Characters.Kitkaa_16.AnimateOriginal.PlayEmote
+23:58:18 --   [4] BindableFunction  Workspace.Characters.Logiebear2552.AnimateOriginal.PlayEmote
+23:58:18 --   [5] BindableFunction  Workspace.Characters.crs4796.AnimateOriginal.PlayEmote
+23:58:18 --   [6] BindableFunction  Workspace.Characters.dinodude28081.AnimateOriginal.PlayEmote
+23:58:18 --   [7] BindableFunction  Workspace.Characters.izliy.AnimateOriginal.PlayEmote
+23:58:18 --   [8] BindableFunction  Workspace.Characters.kris.AnimateOriginal.PlayEmote
+23:58:18 --   [9] BindableFunction  Workspace.Characters.rayyez.AnimateOriginal.PlayEmote
+23:58:18 --   [10] BindableFunction  Workspace.Characters.冬雪蓬.Animate.PlayEmote
+23:58:18 --   [11] BindableFunction  Workspace.Characters.冬雪蓬.AnimateOriginal.PlayEmote
+23:58:18 --   [12] ClickDetector  ReplicatedStorage.Client.Modules.Misc.RatCatchersClient.ClickDetector
+23:58:18 --   [13] ClickDetector  Workspace.Entities.MapModel.Rat.Part.ClickDetector
+23:58:18 --   [14] ClickDetector  Workspace.Entities.MapModel.Rat.RatBody.ClickDetector
+23:58:18 --   [15] ProximityPrompt  Workspace.Entities.MapModel.SecretBookshelf1.PromptPoint.ProximityPrompt
+23:58:18 --   [16] ProximityPrompt  Workspace.Entities.MapModel.SecretBookshelf2.PromptPoint.ProximityPrompt
+23:58:18 --   [17] ProximityPrompt  Workspace.Entities.MapModel.TeleportWardrobe1.PromptPoint.ProximityPrompt
+23:58:18 --   [18] ProximityPrompt  Workspace.Entities.MapModel.TeleportWardrobe2.PromptPoint.ProximityPrompt
+23:58:18 --   [19] ProximityPrompt  Workspace.Lobby.BBQ.CookPoint.ProximityPrompt
+23:58:18 --   [20] ProximityPrompt  Workspace.Lobby.BuddhaPrompt.ProximityPrompt
+23:58:18 --   [21] ProximityPrompt  Workspace.Lobby.CollectorsPodium.1.Top.Attachment.ProximityPrompt
+23:58:18 --   [22] ProximityPrompt  Workspace.Lobby.CollectorsPodium.3.Top.Attachment.ProximityPrompt
+23:58:18 --   [23] ProximityPrompt  Workspace.Lobby.Elevators.Elevator1.ButtonTo1.ProximityPrompt
+23:58:18 --   [24] ProximityPrompt  Workspace.Lobby.Elevators.Elevator1.ButtonTo2.ProximityPrompt
+23:58:18 --   [25] ProximityPrompt  Workspace.Lobby.Elevators.Elevator2.ButtonTo1.ProximityPrompt
+23:58:18 --   [26] ProximityPrompt  Workspace.Lobby.Elevators.Elevator2.ButtonTo2.ProximityPrompt
+23:58:18 --   [27] ProximityPrompt  Workspace.Lobby.MadPodium.1.Top.Attachment.ProximityPrompt
+23:58:18 --   [28] ProximityPrompt  Workspace.Lobby.MadPodium.2.Top.Attachment.ProximityPrompt
+23:58:18 --   [29] ProximityPrompt  Workspace.Lobby.MapParts.Display.KatanaDisplay.InfoPart.ProximityPrompt
+23:58:18 --   [30] ProximityPrompt  Workspace.Lobby.MapParts.Display.SilencedDisplay.InfoPart.ProximityPrompt
+23:58:18 --   [31] ProximityPrompt  Workspace.Lobby.MapParts.Display.ValentinesDisplay.InfoPart.ProximityPrompt
+23:58:18 --   [32] ProximityPrompt  Workspace.Lobby.MiscInfoParts.InfoPart.ProximityPrompt
+23:58:18 --   [33] ProximityPrompt  Workspace.Lobby.NewMadItemPosters.1.Screen.Attachment.ProximityPrompt
+23:58:18 --   [34] ProximityPrompt  Workspace.Lobby.NewMadItemPosters.2.Screen.Attachment.ProximityPrompt
+23:58:18 --   [35] ProximityPrompt  Workspace.Lobby.NewMadItemPosters.3.Screen.Attachment.ProximityPrompt
+23:58:18 --   [36] ProximityPrompt  Workspace.Lobby.PollBooth.PromptPart.ProximityPrompt
+23:58:18 --   [37] ProximityPrompt  Workspace.Lobby.SocialRewardsChest.PromptPart.ProximityPrompt
+23:58:18 --   [38] RemoteEvent  ReplicatedStorage.GameAnalyticsError
+23:58:18 --   [39] RemoteEvent  ReplicatedStorage.GameAnalyticsRemoteConfigs
+23:58:18 --   [40] RemoteEvent  ReplicatedStorage.PostieReceived
+23:58:18 --   [41] RemoteEvent  ReplicatedStorage.PostieSent
+23:58:18 --   [42] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.AMOGUS
+23:58:18 --   [43] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BadgeAwarded
+23:58:18 --   [44] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BouncyBalls
+23:58:18 --   [45] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BoxBuy
+23:58:18 --   [46] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BuyEventItem
+23:58:18 --   [47] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BuyGamepass
+23:58:18 --   [48] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.BuyProduct
+23:58:18 --   [49] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterReset
+23:58:18 --   [50] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_ApplyForceToCharacter
+23:58:18 --   [51] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_CharacterGrounded
+23:58:18 --   [52] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_CharacterWaterStateChange
+23:58:18 --   [53] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_DestroyCharacter
+23:58:18 --   [54] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_LookAngle
+23:58:18 --   [55] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CharacterService_TeleportCharacter
+23:58:18 --   [56] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CommandItemsReceived
+23:58:18 --   [57] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CommandOutput
+23:58:18 --   [58] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CommandText
+23:58:18 --   [59] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CraftAnnounce
+23:58:18 --   [60] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CraftEvent
+23:58:18 --   [61] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.CraftItems
+23:58:18 --   [62] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.DailyRewardReceived
+23:58:18 --   [63] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.DamageDenyInform
+23:58:18 --   [64] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.DeathEffects_ClearAll
+23:58:18 --   [65] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.DeathEffects_ClearPersisting
+23:58:18 --   [66] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Delete
+23:58:18 --   [67] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.DiscordRequestUpdate
+23:58:18 --   [68] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Equip
+23:58:18 --   [69] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.EquipProgress
+23:58:18 --   [70] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.EventItemAnnounce
+23:58:18 --   [71] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.EventRefundConfirm
+23:58:18 --   [72] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendBoxBuy
+23:58:18 --   [73] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendOnAutoWindowShow
+23:58:18 --   [74] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendRewardReceived
+23:58:18 --   [75] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendRewardReceivedBox
+23:58:18 --   [76] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendTokensReceived
+23:58:18 --   [77] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.FriendUIOpened
+23:58:18 --   [78] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.GamepassPurchased
+23:58:18 --   [79] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.GetServerData
+23:58:18 --   [80] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.GlobalEmote
+23:58:18 --   [81] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.HighlightEmote
+23:58:18 --   [82] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.HighlightMobileButtons
+23:58:18 --   [83] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.InventoryViewResponse
+23:58:18 --   [84] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.ItemBuyEvent
+23:58:18 --   [85] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.KnifePowerTeleportEffect
+23:58:18 --   [86] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.LatencyService_Ping
+23:58:18 --   [87] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.LatencyService_SendServerTime
+23:58:18 --   [88] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.MadworkCombat_CombatEvent
+23:58:18 --   [89] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.MadworkCombat_CombatUpdate
+23:58:18 --   [90] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.MilestoneRewardReceived
+23:58:18 --   [91] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.OrbAnnounce
+23:58:18 --   [92] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.OrbPickupApproved
+23:58:18 --   [93] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.OrbPickupRequest
+23:58:18 --   [94] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.OrbWipe
+23:58:18 --   [95] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PetMineAction
+23:58:18 --   [96] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PickGameTeam
+23:58:18 --   [97] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PickupLimitReached
+23:58:18 --   [98] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PollResponse
+23:58:18 --   [99] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PreSpawnDarken
+23:58:18 --   [100] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PreloadComplete
+23:58:18 --   [101] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.ProductPurchased
+23:58:18 --   [102] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.PurchasePromptEnded
+23:58:18 --   [103] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RatCatch
+23:58:18 --   [104] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Refunds
+23:58:18 --   [105] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaArrayInsert
+23:58:18 --   [106] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaArrayRemove
+23:58:18 --   [107] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaArraySet
+23:58:18 --   [108] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaCreate
+23:58:18 --   [109] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaDestroy
+23:58:18 --   [110] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaRequestData
+23:58:18 --   [111] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaSetParent
+23:58:18 --   [112] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaSetValue
+23:58:18 --   [113] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaSetValues
+23:58:18 --   [114] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaSignal
+23:58:18 --   [115] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Replica_ReplicaWrite
+23:58:18 --   [116] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestBuy
+23:58:18 --   [117] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestDailyReward
+23:58:18 --   [118] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestEmote
+23:58:18 --   [119] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestFriendReward
+23:58:18 --   [120] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestGear
+23:58:18 --   [121] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestInventoryView
+23:58:18 --   [122] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestItems
+23:58:18 --   [123] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestMilestoneReward
+23:58:18 --   [124] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RequestTrade
+23:58:18 --   [125] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RouletteAnnounce
+23:58:18 --   [126] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RouletteClaimConfirm
+23:58:18 --   [127] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.RouletteEvent
+23:58:18 --   [128] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SendCommand
+23:58:18 --   [129] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.ServerWindowOpened
+23:58:18 --   [130] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SetAbilityHotkey
+23:58:18 --   [131] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SetLastSeenUpdateId
+23:58:18 --   [132] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SetSetting
+23:58:18 --   [133] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SocialRewardsCheck
+23:58:18 --   [134] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SocialRewardsClaim
+23:58:18 --   [135] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SocialRewardsClaimSuccess
+23:58:18 --   [136] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SocialRewardsError
+23:58:18 --   [137] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SocialRewardsScreenOpened
+23:58:18 --   [138] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.SplitStack
+23:58:18 --   [139] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Stack
+23:58:18 --   [140] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.StackOperationSuccess
+23:58:18 --   [141] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.StarterPackWindowOpened
+23:58:18 --   [142] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.StartingNow
+23:58:18 --   [143] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.StopEmote
+23:58:18 --   [144] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.TeleportToGameMode
+23:58:18 --   [145] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.TeleportToJobId
+23:58:18 --   [146] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.TeleportToServer
+23:58:18 --   [147] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Unequip
+23:58:18 --   [148] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UnequipProgress
+23:58:18 --   [149] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.Unstack
+23:58:18 --   [150] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UpdateFriendship
+23:58:18 --   [151] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UpdateMobileButtons
+23:58:18 --   [152] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UpdateTradeHighlights
+23:58:18 --   [153] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UpdateUserInputDevice
+23:58:18 --   [154] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UseMurdererAbility
+23:58:18 --   [155] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UserStreamService_UserStream
+23:58:18 --   [156] RemoteEvent  ReplicatedStorage.Shared.Remote.RemoteEvents.UserStreamService_UserStream.LookEnabled
+23:58:18 -- [Remote] 扫描完成, 清单在上面
