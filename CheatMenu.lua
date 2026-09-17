@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 10:17 sha d073bdef bytes 216754'):format('2026-09-17 10:17','d073bdef',216754))
+print(('[CheatMenu] build 2026-09-17 10:58 sha eb4202e0 bytes 216854'):format('2026-09-17 10:58','eb4202e0',216854))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.0"
+SYS.BuildVer="3.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -2912,7 +2912,7 @@ CB.Say("指定目标 → "..list[at].Name,SYS.CY.yellow)
 return list[at].Name
 end
 local CB_CHAINS={
-[1]={"aiming","near","center"},
+[1]={"near","aiming","center"},
 [2]={"near","center"},
 [3]={"crosshair","near","center"},
 [4]={"lowhp","near","center"},
@@ -5366,13 +5366,13 @@ end)
 UI.Switch(p,"🚫 只打指定目标 (他不在就不动手)","CB_TgtStrict")
 UI.Div(p)
 UI.Section(p,"选人偏好",CY.purple)
-UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"攻击我的→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
-function() return ({"攻击我的→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
+UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"最近→攻击我的→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
+function() return ({"最近→攻击我的→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
 function(v)
-local m={["攻击我的→最近→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
+local m={["最近→攻击我的→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
 SYS.C_.CB_PrioMode = m[v] or 1
 end)
-UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n默认「攻击我的→最近→屏幕中心」: 先打正在打你的人, 其次最近的, 最后屏幕中间那个。",CY.sub)
+UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定目标」永远最先(战斗页设了指定目标就一直打他, 与这里无关)。\n默认「最近→攻击我的→屏幕中心」: 先打最近的, 其次正在打你的人, 最后屏幕中间那个。",CY.sub)
 UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
 UI.Switch(p,"🛡 不打队友","CB_Team")
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
