@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 15:18 sha 225d1142 bytes 226386'):format('2026-09-17 15:18','225d1142',226386))
+print(('[CheatMenu] build 2026-09-17 15:37 sha 2bf596b2 bytes 227890'):format('2026-09-17 15:37','2bf596b2',227890))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -40,7 +40,7 @@ AutoUpdateCheck=true,
 },
 C_={
 FlySpeed=3,FlyMode="Align",
-SpeedMult=2,TPMethod="CFrame",SpeedMode="BodyVelocity",
+SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
 MouseTPMode="Raycast",AutoTPDist=5,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
@@ -58,7 +58,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.5"
+SYS.BuildVer="3.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -562,6 +562,7 @@ end
 end
 do
 local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
+local SpeedAtt,SpeedLV=false,false
 local InfiniteJumpConn=nil
 local noclipThread=nil
 SYS.NoclipConns={}
@@ -657,6 +658,7 @@ if SYS.C_.SpeedMode=="WalkSpeed" then
 if SYS.C_.SpeedMult~=lastSM then hum.WalkSpeed=spd lastSM=SYS.C_.SpeedMult end
 return
 end
+if SYS.C_.SpeedMode=="BodyVelocity" then
 if not SpeedBV or SpeedBV.Parent~=root then
 if SpeedBV then SpeedBV:Destroy() end
 SpeedBV=Instance.new("BodyVelocity")
@@ -668,15 +670,34 @@ SpeedGyro=Instance.new("BodyGyro")
 SpeedGyro.MaxTorque=Vector3.new(1e9,1e9,1e9)
 SpeedGyro.P=1e5 SpeedGyro.D=1000 SpeedGyro.Parent=root
 end
-local cam=WS.CurrentCamera if not cam then return end
+local c0=WS.CurrentCamera if not c0 or not c0.CFrame then return end
+local f0=c0.CFrame.LookVector*Vector3.new(1,0,1)
+if f0.Magnitude>0.1 then SpeedGyro.CFrame=CFrame.lookAt(root.Position,root.Position+f0.Unit) end
+local d0=Vector3.zero
+if UIS:IsKeyDown(Enum.KeyCode.W) then d0+=f0 end
+if UIS:IsKeyDown(Enum.KeyCode.S) then d0-=f0 end
+if UIS:IsKeyDown(Enum.KeyCode.A) then d0-=c0.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then d0+=c0.CFrame.RightVector end
+SpeedBV.Velocity=d0.Magnitude>0 and d0.Unit*spd or Vector3.zero
+return
+end
+if not (SpeedAtt and SpeedAtt.Parent==root) or not (SpeedLV and SpeedLV.Parent==root) then
+if SpeedLV then SpeedLV:Destroy() SpeedLV=nil end
+if SpeedAtt then SpeedAtt:Destroy() SpeedAtt=nil end
+SpeedAtt=Instance.new("Attachment") SpeedAtt.Name="CM_SpdAtt" SpeedAtt.Parent=root
+SpeedLV=Instance.new("LinearVelocity") SpeedLV.Name="CM_SpdVel" SpeedLV.Attachment0=SpeedAtt
+SpeedLV.MaxForce=math.huge
+P(function() SpeedLV.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
+SpeedLV.VectorVelocity=Vector3.zero SpeedLV.Parent=root
+end
+local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
 local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
-if f.Magnitude>0.1 then SpeedGyro.CFrame=CFrame.lookAt(root.Position,root.Position+f.Unit) end
 local d=Vector3.zero
 if UIS:IsKeyDown(Enum.KeyCode.W) then d+=f end
 if UIS:IsKeyDown(Enum.KeyCode.S) then d-=f end
 if UIS:IsKeyDown(Enum.KeyCode.A) then d-=cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then d+=cam.CFrame.RightVector end
-SpeedBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+SpeedLV.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
 end
 function SYS.CleanFly()
 if FlyBV then FlyBV:Destroy() FlyBV=nil end
@@ -689,6 +710,8 @@ end
 function SYS.CleanSpeed()
 if SpeedBV then SpeedBV:Destroy() SpeedBV=nil end
 if SpeedGyro then SpeedGyro:Destroy() SpeedGyro=nil end
+if SpeedLV then SpeedLV:Destroy() SpeedLV=nil end
+if SpeedAtt then SpeedAtt:Destroy() SpeedAtt=nil end
 lastSM=-1
 local _,hum=GC() if hum then hum.WalkSpeed=SYS.Orig.WalkSpeed end
 end
@@ -5037,9 +5060,10 @@ if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 end)
 UI.Slider(p,"移动速度倍率",0,20,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
-UI.Cycle(p,"加速模式",{"BodyVelocity","WalkSpeed"},
+UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode end,
 function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
+UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
 UI.Div(p)
 UI.Switch(p,"穿墙 (Noclip)","Noclip",SYS.SetNoclip)
 UI.Switch(p,"🛡 反陷阱免伤 (地图道具/生物/陷阱都免)","TrapImmune",SYS.SetTrapImmune)
