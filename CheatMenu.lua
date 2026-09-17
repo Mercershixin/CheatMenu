@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 01:37 sha 637e77eb bytes 243552'):format('2026-09-18 01:37','637e77eb',243552))
+print(('[CheatMenu] build 2026-09-18 03:05 sha b0905957 bytes 244036'):format('2026-09-18 03:05','b0905957',244036))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -61,7 +61,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.10.3"
+SYS.BuildVer="4.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3954,10 +3954,16 @@ local MODEL="hymt2-7b"
 local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
 Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.
 Preserve the original line breaks and the original number of lines.
-Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.
-Keep numbers, currency symbols ($), emoji, URLs and player names unchanged.
+Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears.
+Keep numbers, emoji, URLs and player names unchanged.
 Use natural, colloquial, native-sounding Chinese — plain and direct, no stiff or literary wording.
-Translate game currency words: Coins->金币, Gold->金币, Gems->宝石, Cash->现金 (keep Robux as-is).
+Translate game terms CONSISTENTLY (same English term -> the same Chinese term every time):
+Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, Level->等级, HP->生命, MP->法力,
+Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
+Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
+Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
+Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
+Currency symbols (\$, €, ¥) must ALWAYS be kept EXACTLY as-is, even standing alone: write "1,500 $", NEVER write "美元"/"欧元"/"人民币". The word Robux is kept as-is too.
 If the text is already ZH or contains CJK characters, output it unchanged.]]
 local NON_ASCII="[\128-\255]"
 local utf8codes=(type(utf8)=="table" and type(utf8.codes)=="function") and utf8.codes or nil
