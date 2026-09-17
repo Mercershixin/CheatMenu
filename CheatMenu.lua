@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 23:23 sha 91609dbc bytes 247646'):format('2026-09-17 23:23','91609dbc',247646))
+print(('[CheatMenu] build 2026-09-18 00:38 sha 2e11ba72 bytes 240982'):format('2026-09-18 00:38','2e11ba72',240982))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -24,7 +24,6 @@ GodMode=false,NoFall=false,Invisible=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
-RemoteSpy=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
@@ -42,10 +41,12 @@ C_={
 FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
-MouseTPMode="Raycast",AutoTPDist=5,
+MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 ESPNameH=0,
 DeepHideDepth=120,
+DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
+ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,
@@ -60,7 +61,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.9.1"
+SYS.BuildVer="3.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -141,89 +142,6 @@ end
 writefile(CFG,json)
 end
 end)
-end
-local PROF_PREFIX="CheatMenu_Profile_"
-local function profFile(name)
-local s=tostring(name or ""):gsub("[%c%s]","")
-if s=="" then return nil end
-return PROF_PREFIX..s..".json"
-end
-local function profCollect()
-local d={}
-for k,v in pairs(SYS.C_) do
-if k~="CB_TargetName" and k~="CB_TargetMode" then
-local tv=type(v)
-if tv=="number" or tv=="string" or tv=="boolean" then d[k]=v end
-end
-end
-return d
-end
-function SYS.SaveProfile(name)
-if not HAS_FS or not HS then SYS.Notify("执行器不支持写文件",SYS.CY.red) return false end
-local f=profFile(name)
-if not f then SYS.Notify("配置名不能为空",SYS.CY.yellow) return false end
-local ok=P(function()
-local d=profCollect()
-d.__T_={}
-for k,v in pairs(SYS.T_) do if type(v)=="boolean" then d.__T_[k]=v end end
-writefile(f,HS:JSONEncode(d))
-end)
-SYS.Notify(ok and ("已保存配置: "..tostring(name)) or "保存失败", ok and SYS.CY.green or SYS.CY.red)
-return ok
-end
-function SYS.LoadProfile(name)
-if not HAS_FS or not HS then SYS.Notify("执行器不支持读文件",SYS.CY.red) return false end
-local f=profFile(name)
-if not f or not isfile(f) then SYS.Notify("找不到配置: "..tostring(name),SYS.CY.red) return false end
-local ok=P(function()
-local d=HS:JSONDecode(readfile(f))
-if type(d)~="table" then return end
-for k,v in pairs(d) do
-if SYS.C_[k]~=nil and type(v)==type(SYS.C_[k]) then SYS.C_[k]=v end
-end
-for k,v in pairs(d.__T_ or {}) do
-if SYS.T_[k]~=nil and type(v)=="boolean" then SYS.T_[k]=v end
-end
-end)
-if ok then
-SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
-if SYS.EnsurePage and SYS.UI then
-for _,def in ipairs(SYS.UI.Defs or {}) do P(SYS.EnsurePage,def.name) end
-end
-for key,fn in pairs(SYS.SwitchOnChange or {}) do
-if SYS.T_[key]==false then P(fn,false) end
-end
-for key,fn in pairs(SYS.SwitchOnChange or {}) do
-if SYS.T_[key]==true then P(fn,true) end
-end
-if SYS.T_.AntiAFK then P(SYS.enableAntiAFK) end
-for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
-SYS.Notify("已加载配置: "..tostring(name).."（含开关）",SYS.CY.green)
-else
-SYS.Notify("配置读取失败(文件损坏?)",SYS.CY.red)
-end
-return ok
-end
-function SYS.DeleteProfile(name)
-if not HAS_FS then return false end
-local f=profFile(name)
-if not f then return false end
-if type(delfile)~="function" then SYS.Notify("执行器没有 delfile, 删不了",SYS.CY.yellow) return false end
-local ok=P(function() if isfile(f) then delfile(f) end end)
-SYS.Notify(ok and ("已删除配置: "..tostring(name)) or "删除失败", ok and SYS.CY.green or SYS.CY.red)
-return ok
-end
-function SYS.ListProfiles()
-local out={}
-if not HAS_FS or type(listfiles)~="function" then return out end
-P(function()
-for _,f in ipairs(listfiles(".")) do
-local nm=tostring(f):match("^"..PROF_PREFIX.."(.+)%.json$")
-if nm then out[#out+1]=nm end
-end
-end)
-table.sort(out)
-return out
 end
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
@@ -410,6 +328,49 @@ SYS.Cam.CameraSubject=nil
 SYS.Cam.CFrame=CFrame.new(Vector3.new(0,10,0),Vector3.zero)
 end
 end
+local ForceCamOrig=nil
+local ForceCamConn=nil
+function SYS.SetForceCam(mode)
+mode=mode or SYS.C_.ForceCam or "off"
+if not ForceCamOrig then
+local cm,zd=nil,nil
+pcall(function() cm=LP.CameraMode end)
+pcall(function() zd=LP.CameraMaxZoomDistance end)
+ForceCamOrig={mode=cm,zoom=zd}
+end
+if ForceCamConn then DS(ForceCamConn) ForceCamConn=nil end
+if mode=="off" then
+if ForceCamOrig then
+pcall(function()
+if ForceCamOrig.mode then LP.CameraMode=ForceCamOrig.mode end
+if ForceCamOrig.zoom then LP.CameraMaxZoomDistance=ForceCamOrig.zoom end
+end)
+end
+ForceCamOrig=nil
+return
+end
+if mode=="first" then
+pcall(function() LP.CameraMode=Enum.CameraMode.LockFirstPerson end)
+elseif mode=="third" then
+pcall(function()
+LP.CameraMode=Enum.CameraMode.Classic
+LP.CameraMaxZoomDistance=math.max(LP.CameraMaxZoomDistance or 12, 20)
+end)
+end
+ForceCamConn=SYS.TT(task.spawn(function()
+while (SYS.C_.ForceCam~="off") and not SYS.Unloaded do
+if SYS.C_.ForceCam=="first" then
+pcall(function() LP.CameraMode=Enum.CameraMode.LockFirstPerson end)
+elseif SYS.C_.ForceCam=="third" then
+pcall(function()
+LP.CameraMode=Enum.CameraMode.Classic
+if LP.CameraMaxZoomDistance<20 then LP.CameraMaxZoomDistance=20 end
+end)
+end
+task.wait(0.5)
+end
+end))
+end
 local FreeCtrl=nil
 function SYS.DisablePlayerControls()
 if FreeCtrl then P(function() FreeCtrl:Disable() end) return true end
@@ -483,180 +444,6 @@ T(r.OnClientEvent:Connect(cb))
 end
 end
 local Fire=SYS.Fire local OnRemote=SYS.OnRemote
-do
-local Spy={Active=false,Count=0,Max=500,Sig={},SigN=0,SigMax=400,
-Conns={},REConn={},RFWrapped={},HookOK=false,InHook=false,RL=0}
-SYS.RemoteSpy=Spy
-local function short(v)
-local tv=type(v)
-if tv=="string" then
-local s=v
-if #s>90 then s=s:sub(1,90).."…" end
-return string.format("%q",s)
-elseif tv=="number" or tv=="boolean" then return tostring(v)
-elseif tv=="nil" then return "nil"
-elseif tv=="table" then
-local ok,isI=pcall(function() return typeof(v)=="Instance" end)
-if ok and isI then return "<"..tostring(v.ClassName).." "..tostring(v.Name)..">" end
-local n=0 for _ in pairs(v) do n=n+1 end
-return "{table "..n.." 项}"
-elseif tv=="userdata" then
-local ok,s=pcall(function() return tostring(v) end)
-return (ok and s) and s or "<userdata>"
-end
-return "<"..tv..">"
-end
-local function describe(a)
-local an=(type(a)=="table" and (a.n or #a)) or 0
-local n=math.min(an,6)
-local t={}
-for i=1,n do t[#t+1]=short(a[i]) end
-if an>n then t[#t+1]="…+"..(an-n) end
-return table.concat(t,", "), an
-end
-function Spy.push(dir,name,args)
-if not Spy.Active then return end
-local now=os.clock()
-if now-Spy.RL<0.02 then return end
-Spy.RL=now
-local sig=describe(args)
-Spy.Count=Spy.Count+1
-Spy.Log=Spy.Log or {}
-Spy.Log[Spy.Count]={dir=dir,name=name,args=sig}
-if Spy.Count>Spy.Max then table.remove(Spy.Log,1) Spy.Count=Spy.Count-1 end
-local key=dir.." "..name
-local e=Spy.Sig[key]
-if not e then
-if Spy.SigN>=Spy.SigMax then return end
-e={c=0,args={}} Spy.Sig[key]=e Spy.SigN=Spy.SigN+1
-end
-e.c=e.c+1
-e.args[sig]=(e.args[sig] or 0)+1
-end
-function Spy.clear()
-Spy.Count=0 Spy.Log={} Spy.Sig={} Spy.SigN=0
-print("[Spy] 记录已清空")
-end
-function Spy.dump(verbose)
-local keys={}
-for k in pairs(Spy.Sig) do keys[#keys+1]=k end
-table.sort(keys)
-print("========== RemoteSpy 抓包汇总 ==========")
-print(("[统计] 记录 %d 条 · 不同 remote %d 个 · namecall hook=%s")
-:format(Spy.Count,#keys,tostring(Spy.HookOK)))
-for _,k in ipairs(keys) do
-local e=Spy.Sig[k]
-print(("[%s] 共 %d 次"):format(k,e.c))
-local sigs={}
-for s,c in pairs(e.args) do sigs[#sigs+1]=s..("   (x%d)"):format(c) end
-table.sort(sigs)
-for i=1,math.min(#sigs,8) do print("     "..sigs[i]) end
-if #sigs>8 then print(("     …还有 %d 种参数组合"):format(#sigs-8)) end
-end
-if verbose and Spy.Log then
-print("---------- 最近 50 条原始记录 ----------")
-for i=math.max(1,Spy.Count-49),Spy.Count do
-local r=Spy.Log[i]
-if r then print(("%s %s( %s )"):format(r.dir,r.name,r.args)) end
-end
-end
-print("========== 把这段发我, 就能按字段把汉化映射做全 ==========")
-return #keys
-end
-local function hookIncoming(o)
-if o:IsA("RemoteEvent") then
-if Spy.REConn[o] then return end
-local ok,c=pcall(function()
-return o.OnClientEvent:Connect(function(...)
-if not Spy.Active then return end
-local a=table.pack(...)
-pcall(function() Spy.push("收",tostring(o.Name),a) end)
-end)
-end)
-if ok and c then Spy.REConn[o]=c end
-elseif o:IsA("RemoteFunction") then
-if Spy.RFWrapped[o] then return end
-pcall(function()
-local old=o.OnClientInvoke
-if type(old)=="function" then
-Spy.RFWrapped[o]=true
-o.OnClientInvoke=function(...)
-local a=table.pack(...)
-if Spy.Active then
-pcall(function() Spy.push("收(RF)",tostring(o.Name),a) end)
-end
-return old(...)
-end
-end
-end)
-end
-end
-local function scanAll(root)
-if not root then return end
-local ok,ds=pcall(function() return root:GetDescendants() end)
-if not ok or type(ds)~="table" then return end
-for i=1,#ds do
-local o=ds[i]
-local c=o.ClassName
-if c=="RemoteEvent" or c=="RemoteFunction" then P(hookIncoming,o) end
-end
-end
-Spy.scanAll=scanAll
-function SYS.SetRemoteSpy(on)
-if on then
-if Spy.Active then return true end
-Spy.Log={} Spy.Sig={} Spy.SigN=0 Spy.Count=0
-Spy.Active=true
-if type(hookmetamethod)=="function" and type(getnamecallmethod)=="function" then
-pcall(function()
-local orig
-orig=hookmetamethod(game,"__namecall",function(self,...)
-if not Spy.Active or Spy.InHook then return orig(self,...) end
-local m=getnamecallmethod()
-if m=="FireServer" or m=="InvokeServer" then
-Spy.InHook=true
-local a=table.pack(...)
-local nm=(self and self.Name) or "?"
-Spy.InHook=false
-pcall(function() Spy.push("发("..m..")",tostring(nm),a) end)
-end
-return orig(self,...)
-end)
-if type(orig)=="function" then Spy.HookOK=true end
-end)
-end
-P(scanAll,RStorage) P(scanAll,WS)
-if RStorage then
-local ok,c=pcall(function()
-return RStorage.DescendantAdded:Connect(function(o)
-local c2=o.ClassName
-if c2=="RemoteEvent" or c2=="RemoteFunction" then
-task.defer(function() if o.Parent then P(hookIncoming,o) end end)
-end
-end)
-end)
-if ok and c then table.insert(Spy.Conns,c) end
-end
-table.insert(Spy.Conns,task.spawn(function()
-while Spy.Active and not SYS.Unloaded do
-task.wait(5)
-if Spy.Active then P(scanAll,RStorage) P(scanAll,WS) end
-end
-end))
-SYS.Notify("🕵️ RemoteSpy 已开启: 正在记录收发(结果在 real 控制台看)",SYS.CY.cyan)
-print("[Spy] 已开启 · namecall hook="..tostring(Spy.HookOK)
-.." · 已知 RemoteEvent 监听="..tostring((function() local n=0 for _ in pairs(Spy.REConn) do n=n+1 end return n end)()))
-return true
-else
-Spy.Active=false
-for o,c in pairs(Spy.REConn) do pcall(function() c:Disconnect() end) Spy.REConn[o]=nil end
-for _,c in ipairs(Spy.Conns) do P(DS,c) end
-Spy.Conns={}
-SYS.Notify("🕵️ RemoteSpy 已停止(收包监听已断开; namecall hook 无法卸载, 但已不再记录)",SYS.CY.sub)
-return false
-end
-end
-end
 do
 local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
 local SpeedAtt,SpeedLV=false,false
@@ -742,6 +529,7 @@ local mode=tostring(SYS.C_.FlyMode or "Align")
 local d=GetInputDir(cam.CFrame)
 local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
 if mode=="CFrame" then
+FlyHoldStates(true)
 if d.Magnitude>0 then root.CFrame+=d.Unit*spd*(dt or 1/240) end
 return
 end
@@ -780,7 +568,8 @@ if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
 local spd=SYS.Orig.WalkSpeed*SYS.C_.SpeedMult
 if SYS.C_.SpeedMode=="WalkSpeed" then
-if SYS.C_.SpeedMult~=lastSM then hum.WalkSpeed=spd lastSM=SYS.C_.SpeedMult end
+if math.abs(hum.WalkSpeed-spd)>spd*0.01 then hum.WalkSpeed=spd end
+lastSM=SYS.C_.SpeedMult
 return
 end
 if SYS.C_.SpeedMode=="BodyVelocity" then
@@ -1198,6 +987,14 @@ if maxD>=5 and d>maxD then d=maxD end
 end
 return d
 end
+local function deepHideTarget(root)
+local depth=deepHideDepthNow()
+local sign=(tostring(SYS.C_.DeepHideMode or "down")=="up") and 1 or -1
+local ty=DeepHideY + sign*depth
+local ox=tonumber(SYS.C_.DeepHideOffX) or 0
+local oz=tonumber(SYS.C_.DeepHideOffZ) or 0
+return Vector3.new(root.Position.X+ox, ty, root.Position.Z+oz)
+end
 local function deepHideApply(root)
 if DeepHideAnchor then DeepHideAnchor:Destroy() end
 local a=Instance.new("Part")
@@ -1208,14 +1005,14 @@ a.CFrame=CFrame.new(root.Position)
 a.Parent=WS
 DeepHideAnchor=a
 DeepHideY=root.Position.Y
-local hy=DeepHideY-deepHideDepthNow()
-root.CFrame=CFrame.new(root.Position.X,hy,root.Position.Z)
+local tp=deepHideTarget(root)
+root.CFrame=CFrame.new(tp.X,tp.Y,tp.Z)
 pcall(function() root.AssemblyLinearVelocity=Vector3.zero end)
 if DeepHideFloor then DeepHideFloor:Destroy() DeepHideFloor=nil end
 local fl=Instance.new("Part")
 fl.Name="DH_Floor" fl.Size=Vector3.new(400,2,400) fl.Transparency=1
 fl.Anchored=true fl.CanCollide=true fl.CanQuery=false fl.CanTouch=false
-fl.CFrame=CFrame.new(root.Position.X,DeepHideFeetY(root)-2,root.Position.Z)
+fl.CFrame=CFrame.new(tp.X,DeepHideFeetY(root)-2,tp.Z)
 fl.Parent=WS
 DeepHideFloor=fl
 local cam=WS and WS.CurrentCamera
@@ -1242,18 +1039,24 @@ end
 DH_ACC=DH_ACC+(tonumber(dt) or 1/60)
 if r and DH_ACC>=1/30 then
 DH_ACC=0
-local hy=DeepHideY-deepHideDepthNow()
+local tp=deepHideTarget(r)
+local hy=tp.Y
+local sign=(tostring(SYS.C_.DeepHideMode or "down")=="up") and 1 or -1
 local p=r.Position
-local snapDown=(p.Y<hy-60)
+local outOfRange = (sign<0) and (p.Y<hy-60) or (p.Y>hy+60)
 pcall(function()
-if snapDown then
+if outOfRange then
 r.CFrame=CFrame.new(p.X,hy,p.Z)
 else
 local v=r.AssemblyLinearVelocity
-if p.Y>hy+4 then
+if (sign<0) and p.Y>hy+4 then
 r.AssemblyLinearVelocity=Vector3.new(v.X,-60,v.Z)
-elseif v.Y<-1 then
+elseif (sign>0) and p.Y<hy-4 then
+r.AssemblyLinearVelocity=Vector3.new(v.X,60,v.Z)
+elseif (sign<0) and v.Y<-1 then
 r.AssemblyLinearVelocity=Vector3.new(v.X,-1,v.Z)
+elseif (sign>0) and v.Y>1 then
+r.AssemblyLinearVelocity=Vector3.new(v.X,1,v.Z)
 end
 end
 end)
@@ -1313,15 +1116,16 @@ if not SYS.T_.DeepHide then return end
 local ch=LP.Character
 local root=ch and ch:FindFirstChild("HumanoidRootPart")
 if not root then return end
-local hy=DeepHideY-deepHideDepthNow()
+local tp=deepHideTarget(root)
 pcall(function()
-root.CFrame=CFrame.new(root.Position.X,hy,root.Position.Z)
+root.CFrame=CFrame.new(tp.X,tp.Y,tp.Z)
 root.AssemblyLinearVelocity=Vector3.zero
 end)
 if DeepHideFloor and DeepHideFloor.Parent then
-DeepHideFloor.CFrame=CFrame.new(root.Position.X,DeepHideFeetY(root)-2,root.Position.Z)
+DeepHideFloor.CFrame=CFrame.new(tp.X,DeepHideFeetY(root)-2,tp.Z)
 end
-print(("[DeepHide] 深度已调整: %.0f 格 (Y=%.0f)"):format(DeepHideY-hy,hy))
+print(("[DeepHide] 藏身位置已调整: 方向=%s Y=%.0f 偏移(%.0f, %.0f)")
+:format(tostring(SYS.C_.DeepHideMode or "down"),tp.Y,tp.X-root.Position.X,tp.Z-root.Position.Z))
 end
 function SYS.Rejoin()
 pcall(function()
@@ -1783,8 +1587,8 @@ elseif h.Parent~=c then
 P(function() h.Parent=c end)
 end
 local team=p.Team and LP.Team and p.Team==LP.Team
-h.FillColor   = team and Color3.fromRGB(0,255,160) or Color3.fromRGB(255,40,90)
-h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,0,60)
+h.FillColor   = team and Color3.fromRGB(0,255,160) or Color3.fromRGB(255,200,40)
+h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,150,0)
 end
 if not SYS._ESPLogged then
 SYS._ESPLogged=true
@@ -2011,13 +1815,10 @@ end
 FHum={}
 end
 function SYS.RestoreMouse()
-local b,i=SYS.MenuPrevMouseBehav,SYS.MenuPrevMouseIcon
-if b==nil then b=SYS.FCPrevBehav end
-if i==nil then i=SYS.FCPrevIcon end
-if b==nil then b=SYS.Orig.MouseBehav end
-if i==nil then i=true end
-if b~=nil then UIS.MouseBehavior=b end
-if i~=nil then UIS.MouseIconEnabled=i end
+UIS.MouseBehavior=Enum.MouseBehavior.Default
+UIS.MouseIconEnabled=true
+SYS.MenuPrevMouseBehav=nil SYS.MenuPrevMouseIcon=nil
+SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 function SYS.StartFreeCam()
 if SYS.FreeCamActive or not SYS.Cam then return end
@@ -2102,57 +1903,20 @@ end
 SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 end
-function SYS.DiagInv()
-local out={}
-local function dump(o,tag)
-if not o then return end
-local ok,ks=pcall(function() return o:GetChildren() end)
-if ok and type(ks)=="table" then
-for i=1,#ks do
-local c=ks[i]
-local extra=""
-local okv,v=pcall(function() return c.Value end)
-if okv and (type(v)=="string" or type(v)=="number") then extra=" = "..tostring(v) end
-out[#out+1]=("  %s%s  [%s]%s"):format(tag,c.Name,c.ClassName,extra)
-end
-end
-local oka,at=false,nil
-if type(o.GetAttributes)=="function" then
-oka,at=pcall(function() return o:GetAttributes() end)
-end
-if oka and type(at)=="table" then
-for k,v in pairs(at) do
-out[#out+1]=("  %s@%s = %s"):format(tag,tostring(k),tostring(v))
-end
-end
-end
-for _,p in ipairs(Players:GetPlayers()) do
-if p~=SYS.LP then
-out[#out+1]="== "..p.Name.." =="
-dump(p,"玩家/")
-dump(p.Character,"角色/")
-end
-end
-if #out==0 then out[1]="(场上没有其他玩家)" end
-local s=table.concat(out,"\n")
-print("[CheatMenu][物品栏来源诊断]\n"..s)
-SYS.Notify("物品栏来源诊断已输出到控制台(F9)",SYS.CY.cyan)
-return s
-end
 do
 local line=nil
-local function tracerOrigin(cf)
+local function tracerOrigin()
 local ch=SYS.LP and SYS.LP.Character
-if ch then
-local m=ch:FindFirstChild("Muzzle") or ch:FindFirstChild("GunMuzzle")
-if m and m.Position and (m.Position-cf.Position).Magnitude<60 then return m.Position end
-local tool=ch:FindFirstChildOfClass("Tool")
-if tool then
-local hm=tool:FindFirstChild("Handle")
-if hm and hm.Position then return hm.Position end
+if not ch then return nil,nil end
+local root=ch:FindFirstChild("HumanoidRootPart")
+local hd=ch:FindFirstChild("Head")
+local eye
+if hd then eye=hd.Position
+elseif root then eye=root.Position+Vector3.new(0,1.5,0)
 end
-end
-return cf.Position
+local dir
+if root then dir=root.CFrame.LookVector end
+return eye,dir
 end
 function SYS.TracerHide()
 if line then P(function() line:Destroy() end) line=nil end
@@ -2162,14 +1926,11 @@ if not SYS.T_.Tracer then
 if line then SYS.TracerHide() end
 return
 end
-local cam=SYS.Cam
-if not cam then return end
-local cf=cam.CFrame
-if not cf then return end
-local o=tracerOrigin(cf)
+local o,dir=tracerOrigin()
+if not o or not dir then return end
 local tp=SYS.Combat and SYS.Combat.TargetPart
 local endP
-if tp and tp.Position then endP=tp.Position else endP=o+cf.LookVector*200 end
+if tp and tp.Position then endP=tp.Position else endP=o+dir*200 end
 local d=endP-o
 local len=d.Magnitude
 if len<2 then return end
@@ -3078,15 +2839,18 @@ end
 do
 local Spawn=Vector3.new(0,10,0)
 local Rec=false
-local autoIn={} local autoCool={} local acc=0
+local autoIn={} local autoCool={}
 local function tpStepChain(root,from,dir,total,n)
 local i=0
 local function one()
 if not root or not root.Parent then return end
 i=i+1
-if i>=n then root.CFrame=CFrame.new(from+dir*total) return end
-root.CFrame=CFrame.new(from+dir*(total*i/n))
-task.delay(0,one)
+local target = (i>=n) and (from+dir*total) or (from+dir*(total*i/n))
+root.CFrame=CFrame.new(target)
+task.delay(i>=n and 0.05 or 0.02,function()
+if root.Parent then root.CFrame=CFrame.new(target) end
+end)
+if i<n then task.delay(0.02,one) end
 end
 one()
 end
@@ -3096,7 +2860,7 @@ if SYS.C_.TPMethod~="CFrame" then
 if hum then P(function() hum:MoveTo(pos) end) end
 return true
 end
-local STEP=SYS.C_.TPMaxStep or 60
+local STEP=SYS.C_.TPMaxStep or 300
 local from=root.Position
 local d=pos-from
 local dist=d.Magnitude
@@ -3104,7 +2868,7 @@ if dist<=STEP or dist<=0 then
 root.CFrame=CFrame.new(pos)
 task.delay(0.05,function() if root.Parent then root.CFrame=CFrame.new(pos) end end)
 else
-tpStepChain(root,from,d.Unit,dist,math.ceil(dist/STEP))
+tpStepChain(root,from,d.Unit,dist,4)
 end
 return true
 end
@@ -3161,7 +2925,6 @@ end
 if best then SYS.TPToPlayer(best) end
 end
 function SYS.AutoTPTick()
-acc+=1 if acc<3 then return end acc=0
 local _,_,root=GC() if not root then return end
 local now=tick()
 for i,s in ipairs(SYS.SavedPos) do
@@ -3169,7 +2932,7 @@ if s.autoTP then
 local dist=(root.Position-s.position).Magnitude
 if dist>SYS.C_.AutoTPDist then
 local was=autoIn[i] local cool=autoCool[i] or 0
-if was~=false or now-cool>2 then
+if was~=false or now-cool>0.5 then
 P(SYS.TPTo,s.position+Vector3.new(0,2,0))
 autoCool[i]=now
 end
@@ -3232,8 +2995,14 @@ end
 take(a)
 local rest={...}
 for i=1,#rest do take(rest[i]) end
+local valid={}
 for i=1,#names do
 local nm=names[i]
+if Players and Players:FindFirstChild(nm) then valid[#valid+1]=nm end
+end
+if #valid>1 then valid={} end
+for i=1,#valid do
+local nm=valid[i]
 if mode=="die" then
 CB.DeadAt[nm]=os.clock()
 local _dp=Players and Players:FindFirstChild(nm)
@@ -3638,10 +3407,13 @@ end
 local h=humOf(pl)
 local hp=h and (h.Health or 1e9) or 1e9
 local ff=_sh
+local armed=false
+local ch2=pl.Character
+if ch2 then armed=(ch2:FindFirstChildOfClass("Tool"))~=nil end
 cands[#cands+1]={
 pl=pl,p=p,d=d,
 s={aiming=(aiming and 0 or 1),near=d,center=dd,lowhp=hp},
-ff=ff,
+ff=ff,armed=armed,
 }
 end
 end
@@ -3687,8 +3459,16 @@ pass[#pass+1]=c
 end
 end
 if #pass>0 then
-local c=pickBy(pass,(key=="aiming") and "near" or key)
+if key=="aiming" then
+local c=pickBy(pass,"near")
+for j=1,#pass do
+if pass[j].armed then return pass[j].pl,pass[j].p end
+end
 if c then return c.pl,c.p end
+else
+local c=pickBy(pass,key)
+if c then return c.pl,c.p end
+end
 end
 end
 end
@@ -3742,10 +3522,14 @@ local canFire
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
+if (SYS.C_.CB_Smooth or 0.25)>=1 then
+canFire=true
+else
 local sp,on=cam:WorldToViewportPoint(ap)
 if not (on and sp.Z>0) then return end
-local tol=(vp.Y or 1080)*0.05
+local tol=(vp.Y or 1080)*0.06
 canFire=((sp.X-vp.X/2)^2+(sp.Y-vp.Y/2)^2)<=tol*tol
+end
 else
 canFire = crosshairOnEnemy()
 end
@@ -5655,16 +5439,35 @@ UI.Pages["功能"]=function(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
+UI.Cycle(p,"藏身方向",{"地下","天上"},
+function() return SYS.C_.DeepHideMode=="up" and "天上" or "地下" end,
+function(v)
+SYS.C_.DeepHideMode=(v=="天上") and "up" or "down"
+if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
+end)
 UI.Slider(p,"藏地下隐身深度 (格 · 小=能交互 / 大=藏得深)",5,300,5,
 function() return SYS.C_.DeepHideDepth end,
 function(v)
 SYS.C_.DeepHideDepth=v
 if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
 end,"%.0f")
+UI.Slider(p,"左右偏移 (格 · 正=右 负=左)",-100,100,1,
+function() return SYS.C_.DeepHideOffX end,
+function(v)
+SYS.C_.DeepHideOffX=v
+if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
+end,"%.0f")
+UI.Slider(p,"前后偏移 (格 · 正=前 负=后)",-100,100,1,
+function() return SYS.C_.DeepHideOffZ end,
+function(v)
+SYS.C_.DeepHideOffZ=v
+if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
+end,"%.0f")
 UI.Tip(p,"⚠ 透明隐身=本地(别人看得到你); 藏地下=【真的把你传送进地下】(位置是服务器同步的, 无法只骗别人不骗自己)。\n"
 .."· 能真实走动(水平速度不再被清零 + 脚下有块客户端隐形地板, 不会一直自由落体)。\n"
 .."· 枪械/近战命中在客户端判定 -> 不受深度影响(能不能打中还取决于游戏是客户端还是服务端判定)。\n"
 .."· 商店/NPC/偷取这类【按距离判定】的交互够不到 -> 把深度调到 10~20 格才有机会够到。\n"
+.."· 藏天上 = 把你抬到头顶高处(相机仍留地面); 偏移 = 开启时往旁边挪一点(左/右/前/后)。\n"
 .."· 关闭时会【在原地浮回地面】, 不会把你弹回开启时的位置。\n"
 .."· 高风险: 服务器可能做位置校验把你拉回/踢掉。",CY.yellow)
 UI.Switch(p,"穿透玩家","NoCollide",function(on) SYS.RefreshNC(on) end)
@@ -5911,17 +5714,30 @@ local pad=Instance.new("UIPadding")
 pad.PaddingTop=UDim.new(0,6) pad.PaddingLeft=UDim.new(0,6)
 pad.PaddingRight=UDim.new(0,6) pad.Parent=plList
 local function Ref()
-for _,c in ipairs(plList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+for _,c in ipairs(plList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
 for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=LP then
-local b=Instance.new("TextButton")
-b.Size=UDim2.new(1,-12,0,28) b.BackgroundColor3=CY.panel
-b.BackgroundTransparency=0.3 b.TextColor3=CY.text
-b.Text=pl.Name b.Font=Enum.Font.GothamMedium
-b.TextSize=13 b.AutoButtonColor=false b.BorderSizePixel=0
-b.Parent=plList UI.Round(b,6)
-b.MouseButton1Click:Connect(function() P(SYS.TPToPlayer,pl) end)
-b.MouseButton2Click:Connect(function() P(SYS.Spectate,pl) end)
+local row=Instance.new("Frame")
+row.Size=UDim2.new(1,-12,0,28) row.BackgroundColor3=CY.panel
+row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=plList
+UI.Round(row,6)
+local nm=Instance.new("TextLabel")
+nm.Size=UDim2.new(1,-120,1,0) nm.Position=UDim2.new(0,4,0,0)
+nm.BackgroundTransparency=1 nm.TextColor3=CY.text nm.Text=pl.Name
+nm.Font=Enum.Font.GothamMedium nm.TextSize=13 nm.TextXAlignment=Enum.TextXAlignment.Left
+nm.Parent=row
+local tb=Instance.new("TextButton")
+tb.Size=UDim2.new(0,56,1,0) tb.Position=UDim2.new(1,-116,0,0)
+tb.BackgroundColor3=CY.cyan tb.BackgroundTransparency=0.3 tb.TextColor3=CY.text
+tb.Text="传送" tb.Font=Enum.Font.GothamBold tb.TextSize=11
+tb.BorderSizePixel=0 tb.Parent=row UI.Round(tb,4)
+tb.MouseButton1Click:Connect(function() P(SYS.TPToPlayer,pl) end)
+local sb=Instance.new("TextButton")
+sb.Size=UDim2.new(0,56,1,0) sb.Position=UDim2.new(1,-56,0,0)
+sb.BackgroundColor3=CY.orange sb.BackgroundTransparency=0.3 sb.TextColor3=CY.text
+sb.Text="观战" sb.Font=Enum.Font.GothamBold sb.TextSize=11
+sb.BorderSizePixel=0 sb.Parent=row UI.Round(sb,4)
+sb.MouseButton1Click:Connect(function() P(SYS.Spectate,pl) end)
 end
 end
 end
@@ -6121,10 +5937,6 @@ end)
 UI.Btn(p,"📋 输出战斗诊断到控制台",CY.accent,function()
 if SYS.Combat and SYS.Combat.Diag then SYS.Combat.Diag() end
 end)
-UI.Btn(p,"🎒 物品栏来源诊断 (别人的装备/槽位能读到什么)",CY.accent,function()
-P(SYS.DiagInv)
-end)
-UI.Tip(p,"「物品栏来源诊断」会把场上其他玩家【角色/玩家身上所有可读项(子节点 + 属性)】打到控制台。\nRoblox 不复制别人的背包, 所以: 只列出「手上的 Tool」= 做不了 1-0 槽位透视;\n如果列出 StringValue/ObjectValue/属性形式的槽位数据 = 可以做, 把结果发我就能按真实字段接上。")
 UI.Tip(p,"不生效就先点「立即测试一次」: 它逐条打出 选没选到目标 / 相机转没转 /\nhook 装没装 / 准星在不在敌人身上 —— 一眼看出卡在哪一步。",CY.red)
 task.spawn(function()
 local lastScan,lastHud=0,0
@@ -6168,30 +5980,6 @@ UI.Label(p,"配置",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
 UI.Tip(p,"开关改动会自动保存, 下次加载脚本时自动生效(无需手动操作)。",CY.sub)
 UI.Div(p)
-UI.Section(p,"配置管理 · 多套存档",CY.purple)
-local profName=""
-UI.Input(p,"配置名","如 战斗档 / 挂机档",function() return profName end,function(v) profName=v or "" end)
-UI.Btn(p,"💾 保存当前配置到该名字",CY.green,function()
-if SYS.SaveProfile(profName) then
-for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
-end
-end)
-UI.Btn(p,"📂 加载该名字的配置",CY.cyan,function() SYS.LoadProfile(profName) end)
-UI.Btn(p,"🗑 删除该名字的配置",CY.red,function()
-if SYS.DeleteProfile(profName) then
-for _,fn in ipairs(SYS.BtnRefs or {}) do P(fn) end
-end
-end)
-local profL=UI.Label(p,"",CY.sub)
-local function refreshProfiles()
-if not profL or not profL.Parent then return end
-local list=SYS.ListProfiles()
-profL.Text=("已有配置(%d): %s"):format(#list, #list>0 and table.concat(list,"  ") or "(无)")
-end
-refreshProfiles()
-SYS.BtnRefs[#SYS.BtnRefs+1]=refreshProfiles
-UI.Tip(p,"保存 = 把当前【参数 + 开关状态】存成一份档; 加载 = 立刻套用(含自动开启对应功能)。\n自动配置(开机自动生效的那份)不受影响。",CY.sub)
-UI.Div(p)
 UI.Section(p,"热键设置 · 点一下再按新键",CY.cyan)
 local function keyRow(label,field)
 local b=UI.Btn(p,label.."  ["..tostring(SYS.C_[field] or "?").."]",CY.card,function()
@@ -6220,15 +6008,22 @@ if h then h.Health=0 end
 end
 end)
 UI.Btn(p,"重置相机",CY.cyan,SYS.ResetCam)
+UI.Cycle(p,"强制视角",{"关","第一人称","第三人称"},
+function()
+local m=SYS.C_.ForceCam or "off"
+return (m=="first") and "第一人称" or ((m=="third") and "第三人称" or "关")
+end,
+function(v)
+SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "third" or "off")
+if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
+end)
+UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
 end)
 UI.Btn(p,"🔍 扫描游戏 Remote(只看有哪些)",CY.cyan,function()
 SYS.DumpRemotes()
-end)
-UI.Switch(p,"🕵️ RemoteSpy 抓包(记录所有 remote 收发)","RemoteSpy",function(on)
-if SYS.SetRemoteSpy then SYS.SetRemoteSpy(on) end
 end)
 UI.Div(p)
 UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
@@ -6845,7 +6640,6 @@ P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
-P(function() if SYS.RemoteSpy and SYS.RemoteSpy.Active then SYS.SetRemoteSpy(false) end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
 P(function() if SYS.SetNoclip then SYS.SetNoclip(false) end end)
 for _,c in ipairs(SYS.NoclipConns or {}) do DS(c) end SYS.NoclipConns={}
@@ -6865,6 +6659,7 @@ P(function()
 SYS.RestoreMouse()
 end)
 P(SYS.ResetCam)
+P(function() if SYS.SetForceCam then SYS.SetForceCam("off") end end)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 if GENV.CheatUnload==SYS.UnloadAll then
