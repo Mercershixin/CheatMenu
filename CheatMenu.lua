@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 11:11 sha 063fc734 bytes 216854'):format('2026-09-17 11:11','063fc734',216854))
+print(('[CheatMenu] build 2026-09-17 13:46 sha d1472667 bytes 217380'):format('2026-09-17 13:46','d1472667',217380))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.2"
+SYS.BuildVer="3.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -5495,7 +5495,8 @@ UI.Switch(p,"🕵️ RemoteSpy 抓包(记录所有 remote 收发)","RemoteSpy",f
 if SYS.SetRemoteSpy then SYS.SetRemoteSpy(on) end
 end)
 UI.Div(p)
-UI.Switch(p,"🔁 启动时自动检查更新","AutoUpdateCheck")
+UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
+UI.Tip(p,"★ 每次启动都会检查一次新版本；检查到就会弹消息告诉你【新版本号】。\n本开关只决定「要不要自动升级」：开着=直接热重载到新版；关掉=只提示不升级，想升级再点上面的按钮。",CY.sub)
 UI.Btn(p,"⬆️ 检查更新并热重载",CY.green,function() P(function() SYS.CheckUpdate(false) end) end)
 UI.Tip(p,"热重载 = 先保存当前配置(含所有开关) -> 卸载旧实例 -> 拉取新版 -> 加载。\n新实例启动时会自动按配置把开关开回来, 所以你会看到功能自己恢复。")
 UI.Div(p)
@@ -6061,7 +6062,7 @@ GENV.CheatLoaded=nil GENV.CheatUnload=nil GENV.CheatUnloaded=true
 end
 print("✅ 已卸载")
 end
-function SYS.CheckUpdate(silent)
+function SYS.CheckUpdate(silent,notifyOnly)
 if SYS.UpdateBusy then return end
 if not SYS.BuildVerURL or SYS.BuildVerURL=="" or SYS.BuildVerURL:find("{{",1,true) then
 if not silent then SYS.Notify("ℹ️ 当前是本地开发版, 没有配置更新地址",SYS.CY.sub) end
@@ -6086,8 +6087,14 @@ if not silent then SYS.Notify(("✅ 已是最新版 (%s)"):format(tostring(SYS.B
 print(("[CheatMenu] 更新检查: 已是最新版 %s"):format(tostring(SYS.BuildVer)))
 return
 end
-print(("[CheatMenu] 发现新版本 %s -> %s, 开始热重载"):format(tostring(SYS.BuildVer),tostring(rv)))
-SYS.Notify("⬆️ 发现新版本, 正在热重载…",SYS.CY.yellow)
+local msg=("🆕 发现新版本 %s → %s"):format(tostring(SYS.BuildVer),tostring(rv))
+print(("[CheatMenu] "..msg.."  (%s)"):format(notifyOnly and "仅提示, 未自动更新" or "开始热重载"))
+if notifyOnly then
+SYS.UpdateBusy=false
+SYS.Notify(msg.."\n已跳过自动更新 —— 想升级就点设置页的「⬆️ 检查更新并热重载」",SYS.CY.yellow)
+return
+end
+SYS.Notify(msg.." 正在热重载…",SYS.CY.yellow)
 local _,src=P(function() return game:HttpGet(SYS.BuildURL) end)
 if type(src)~="string" or #src<1000 then
 SYS.UpdateBusy=false
@@ -6129,10 +6136,8 @@ for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
 print("[CheatMenu] ✅ 已根据配置激活开关")
-if SYS.T_.AutoUpdateCheck then
 task.wait(1.0)
-P(function() SYS.CheckUpdate(true) end)
-end
+P(function() SYS.CheckUpdate(true, not SYS.T_.AutoUpdateCheck) end)
 end)
 end
 GENV.CheatMenuExtras={
