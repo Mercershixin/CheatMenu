@@ -5,6 +5,64 @@
 
 ---
 
+## v3.7.2 · 2026-09-17
+
+### 🧹 历史遗留死代码清理（**无功能变化**）
+
+一次"全面体检 + 清扫"：把长期迭代里**已经没人调用、却一直留在文件里**的死开关 / 死配置 / 死函数 /
+死字段全部删掉，并顺手修掉两处**会误导阅读**的命名问题。**本版不新增、也不改变任何功能**，纯粹卸包袱。
+
+- 源码：**372619 → 367817 字节**（−4.8 KB / −1.3%）；**7626 → 7516 行**（−110 行）
+- 发布版：**228949 字节 / 6416 行**
+- 行为等价：七步门禁 **11/11 全过**；整脚本仿真 **237 通过 / 0 失败**；v69 探针 **273 / 0**
+
+#### 删掉的东西（每一处都先经"零读取"扫描确认，改前断言原文）
+
+| 类别 | 具体 |
+|---|---|
+| 死开关 | `ESPBox`（v71 透视方框的遗留附加项；透视主体早已是人物高亮 Highlight） |
+| 死配置项 | `GymMode`、`CB_Priority`、`CB_SilentMode`（旧版单选框/静默模式；选人早已改由**优先链**决定） |
+| 死函数 | `SYS.Spectate` / `SYS.StopSpectate`（观战）、`espParent`（+其局部 `ESPParent`/`ESPPMsg`）、`SYS.PanicHide`（紧急隐藏，**没有任何按键或按钮绑定它**）、`inWorld` |
+| 死字段 | `SYS.KickOrig`、`SYS.Device`、`SYS.FloatBtn`、`GENV.CheatMenuExtras`、`GENV.CheatUnloaded` |
+| 只写不读的状态位 | 战斗：`CB.LockedAt` / `inOwnRay` / `KeyAcc` / `IsEnemyBase` / `MovingNow` / `ScanHz` / `ERR`；翻译：`Trans.CacheMax` / `cachePath` / `cacheDirty`(+`markCacheDirty`) / `saveCacheNow` / `clearCacheSimple` |
+| 残留局部变量 | `an` / `hum` / `maxR` / `cbStroke` / `DeepHideCF`(4 处) / `FLM`(3 处) |
+| 命名隐患 | 战斗渲染循环 `local function tick(dt)` → 改名 `cbRenderTick`。原来它会**遮蔽 Roblox 全局 `tick`**，而同一文件另一处的 `tick()` 调的其实是全局函数 —— 读代码极易搞错 |
+
+#### ⚠️ 差点误删的一个（值得记一笔）
+
+`CB.BodyOf` 险些被当成死成员删掉。原因：它在本文件里**字面只出现 1 次**（就是赋值那行），
+而真正的使用处写的是**别名**：
+
+```lua
+local cb = SYS.Combat          -- 这里起了别名
+...
+local root = (cb.BodyOf and cb.BodyOf(SYS.LP.Character)) or nil   -- 用别名读的
+```
+
+字面搜 `CB.BodyOf` 当然找不到 `cb.BodyOf`。
+**处置**：恢复该行并在旁边加注释标注；同时给扫描工具加 **namespace 别名解析**
+（`local X = SYS.Combat` 这类别名会一并计入引用），从工具层面堵死"别名读取被误判成死代码"这一类坑。
+
+#### 🧪 仿真台新增：老档案兼容用例（第 ⑥ 段 · 3 条断言）
+
+本版**删掉了 3 个配置键**（`GymMode`/`CB_Priority`/`CB_SilentMode`）和 1 个开关（`ESPBox`），
+于是用户机器上**旧版本存下的 `CheatMenuV491_Config.json` 里必然还带着这些陌生键**。必须确认升级后：
+
+1. 读档**不会复活**这些已删除的键（靠 `SYS.C_[k]~=nil` 守卫丢弃）；
+2. 有效键照常恢复；
+3. **整段不抛错**（不能被 `P()` 的 pcall 悄悄吞掉 —— 上上版那个"加载配置没生效"就是这个死法）。
+
+> 踩的坑：造"老文件"**必须用仿真台的 `HS:JSONEncode` 生成**，手写 JSON 字面量会被桩的假解码器
+> 变成 nil，用例就"空过"了（假通过比不测更危险）。
+
+#### 🧰 静态检查同步
+
+- `check.py` 第 8 段回归锁跟着改：`DeepHideCF` 锁改为"**不得出现**"；设备检测锁由原来钉 `SYS.Device=DEV`
+  改为钉 `DEV.small` + `ViewportDisplaySize`（只写不读的字段删了，本地表 `DEV` 保留）。
+- 词法作用域检查（`check_globals.py`）：新增未声明名字 **0**。
+
+---
+
 ## v3.7.1 · 2026-09-17
 
 ### 🐞 修复：「📂 加载配置」其实一次都没生效过
