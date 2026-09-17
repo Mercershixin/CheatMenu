@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 00:59 sha e5e8dc77 bytes 242792'):format('2026-09-18 00:59','e5e8dc77',242792))
+print(('[CheatMenu] build 2026-09-18 01:18 sha 637e77eb bytes 243552'):format('2026-09-18 01:18','637e77eb',243552))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -61,7 +61,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.10.2"
+SYS.BuildVer="3.10.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -530,7 +530,14 @@ local d=GetInputDir(cam.CFrame)
 local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
 if mode=="CFrame" then
 FlyHoldStates(true)
-if d.Magnitude>0 then root.CFrame+=d.Unit*spd*(dt or 1/240) end
+if not FlyEnsure(root) then
+SYS._FlyDegraded=true
+FlyBodyDrive(root,d,spd)
+return
+end
+if SYS._FlyVel then
+SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+end
 return
 end
 FlyHoldStates(true)
@@ -1536,6 +1543,25 @@ local HL,LB,HB={},{},{}
 local LBL={}
 local HI={}
 local LW,LWL={},{}
+local ESP_WALL_CACHE=setmetatable({},{__mode="k"})
+local function espWall(part)
+if not part then return false end
+local cam=SYS.Cam if not cam or not cam.CFrame then return false end
+local now=os.clock()
+local c=ESP_WALL_CACHE[part]
+if c and now-c.t<0.2 then return c.ok end
+local o=cam.CFrame.Position
+local d=part.Position-o
+local ok=false
+if d.Magnitude>1 then
+local _,hit=P(function()
+return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
+end)
+ok=not (hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)))
+end
+ESP_WALL_CACHE[part]={t=now,ok=ok}
+return ok
+end
 function SYS.ClearESP()
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
@@ -1586,9 +1612,20 @@ HL[p]=h
 elseif h.Parent~=c then
 P(function() h.Parent=c end)
 end
-local team=p.Team and LP.Team and p.Team==LP.Team
-h.FillColor   = team and Color3.fromRGB(0,255,160) or Color3.fromRGB(255,200,40)
-h.OutlineColor= team and Color3.fromRGB(0,180,120) or Color3.fromRGB(255,150,0)
+local team=false
+local function ateam(pp)
+local ok,v=pcall(function() return pp:GetAttribute("Team") end)
+if ok and type(v)=="string" and v~="" then return v end
+return pp.Team and pp.Team.Name or nil
+end
+local mt=ateam(LP) local pt=ateam(p)
+team=(mt and pt and mt==pt)
+local wall=espWall(tagPart(c) or c.PrimaryPart)
+local fillT=wall and 0.75 or 0.35
+h.FillTransparency=fillT
+h.FillColor   = team and Color3.fromRGB(0,255,90)  or Color3.fromRGB(255,40,50)
+h.OutlineColor= team and Color3.fromRGB(0,210,70)  or Color3.fromRGB(255,20,30)
+h.OutlineTransparency=0
 end
 if not SYS._ESPLogged then
 SYS._ESPLogged=true
@@ -1737,52 +1774,44 @@ for _,h in pairs(HI) do P(function() h:Destroy() end) end HI={}
 end
 if SYS.T_.ESPWeapon then
 for p,c in pairs(act) do
-local names={}
+local wpn=nil
 local ok1,ks=pcall(function() return c:GetChildren() end)
 if ok1 and type(ks)=="table" then
 for i=1,#ks do
-if ks[i].ClassName=="Tool" and ks[i].Name~="" then
-names[#names+1]=ks[i].Name
+if ks[i].ClassName=="Tool" and ks[i].Name~="" then wpn=ks[i].Name break end
 end
 end
-end
-local ok2,ps=pcall(function() return p:GetChildren() end)
-if ok2 and type(ps)=="table" then
-for i=1,#ps do
-local o=ps[i]
-local cl=o.ClassName
-if cl=="StringValue" or cl=="ObjectValue" or cl=="NumberValue" then
-local ln=string.lower(o.Name)
-if ln:find("weapon",1,true) or ln:find("item",1,true)
-or ln:find("slot",1,true) or ln:find("gun",1,true) then
-local okv,v=pcall(function() return o.Value end)
-if okv and type(v)=="string" and v~="" then names[#names+1]=v
-elseif okv and type(v)=="number" and v>0 then names[#names+1]=o.Name end
+if not wpn then
+local bp=p.Backpack
+if bp then
+local ok2,bs=pcall(function() return bp:GetChildren() end)
+if ok2 and type(bs)=="table" then
+for i=1,#bs do
+if bs[i].ClassName=="Tool" and bs[i].Name~="" then wpn=bs[i].Name break end
 end
 end
 end
 end
-local txt=table.concat(names,"  |  ")
 local lw=LW[p]
-if txt=="" then
+if not wpn then
 if lw then P(function() lw:Destroy() end) LW[p]=nil LWL[p]=nil end
 else
 local hd=tagPart(c)
 if hd then
 if not lw then
 lw=Instance.new("BillboardGui")
-lw.Size=UDim2.new(0,240,0,28) lw.Adornee=hd lw.AlwaysOnTop=true
-lw.StudsOffsetWorldSpace=Vector3.new(0,-2.6,0)
+lw.Size=UDim2.new(0,240,0,26) lw.Adornee=hd lw.AlwaysOnTop=true
+lw.StudsOffsetWorldSpace=Vector3.new(0,1.6,0)
 lw.Parent=hd
 local t=Instance.new("TextLabel")
 t.Size=UDim2.fromScale(1,1) t.BackgroundTransparency=1
-t.TextColor3=Color3.fromRGB(255,225,130) t.TextScaled=true
-t.Font=Enum.Font.Code t.TextStrokeTransparency=0.4 t.Parent=lw
+t.TextColor3=Color3.fromRGB(255,90,90) t.TextScaled=true
+t.Font=Enum.Font.GothamBold t.TextStrokeTransparency=0.2 t.Parent=lw
 LWL[p]=t
 LW[p]=lw
 end
 local tl=LWL[p]
-if tl then tl.Text=txt end
+if tl then tl.Text="🔫 "..wpn end
 end
 end
 end
@@ -5461,7 +5490,7 @@ end)
 UI.Switch(p,"掉落物透视","ESPItem",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon then SYS.ClearESP() end
 end)
-UI.Switch(p,"手持武器透视","ESPWeapon",function(on)
+UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
 UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
