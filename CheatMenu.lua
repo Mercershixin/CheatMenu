@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 23:16 sha a0ef4cf6 bytes 247508'):format('2026-09-17 23:16','a0ef4cf6',247508))
+print(('[CheatMenu] build 2026-09-17 23:23 sha 91609dbc bytes 247646'):format('2026-09-17 23:23','91609dbc',247646))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -60,7 +60,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.9.0"
+SYS.BuildVer="3.9.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3259,6 +3259,8 @@ sub(C(AN,"Suicide"),   "Any.Suicide",      "die")
 sub(C(GS,"Respawn"), "GameService.Respawn", "alive")
 sub(C(GS,"Revive"),  "GameService.Revive",  "alive")
 sub(C(ES,"Spawned"), "EntityService.Spawned", "alive")
+local GC_=GS and GS:FindFirstChild("GameClient") or nil
+sub(GC_ and GC_:FindFirstChild("Killed"), "GameService.GameClient.Killed", "die")
 if #CB.DeathHooked==0 and attempt<40 then
 SYS.TT(task.delay(2,function() P(hookDeathEvents,attempt+1) end))
 end
