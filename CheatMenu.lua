@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 17:23 sha d050d2c7 bytes 232228'):format('2026-09-17 17:23','d050d2c7',232228))
+print(('[CheatMenu] build 2026-09-17 18:52 sha 2b982542 bytes 229133'):format('2026-09-17 18:52','2b982542',229133))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -35,7 +35,6 @@ CB_SnapFire=false,
 CB_OnlyAlive=true,
 CB_SkipFF=true,
 TrapImmune=false,
-ESPBox=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
 },
@@ -46,10 +45,10 @@ JumpMult=2,
 MouseTPMode="Raycast",AutoTPDist=5,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 DeepHideDepth=120,
-AutoTrainSec=5,RebirthCheck=3,GymMode="Teleport (Safe)",
+AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,
-CB_FireDelay=0.035,CB_HpThr=0,CB_Priority=5,CB_PrioMode=1,CB_SilentMode=4,
+CB_FireDelay=0.035,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
 CB_SnapDelay=0.03,
@@ -59,7 +58,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.7.1"
+SYS.BuildVer="3.7.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -518,7 +517,7 @@ if not Spy.Active then return end
 local now=os.clock()
 if now-Spy.RL<0.02 then return end
 Spy.RL=now
-local sig,an=describe(args)
+local sig=describe(args)
 Spy.Count=Spy.Count+1
 Spy.Log=Spy.Log or {}
 Spy.Log[Spy.Count]={dir=dir,name=name,args=sig}
@@ -717,7 +716,7 @@ end
 function SYS.FlyReleaseStates() FlyHoldStates(false) end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
-local _,hum,root=GC() if not root then return end
+local _,_,root=GC() if not root then return end
 local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
 local mode=tostring(SYS.C_.FlyMode or "Align")
 local d=GetInputDir(cam.CFrame)
@@ -1081,7 +1080,7 @@ else
 InvisSaved=setmetatable({},{__mode="k"})
 end
 end
-local DeepHideConn, DeepHideCharConn, DeepHideCF, DeepHideAnchor, DeepHideY = nil, nil, nil, nil, 0
+local DeepHideConn, DeepHideCharConn, DeepHideAnchor, DeepHideY = nil, nil, nil, 0
 local DeepHideFloor=nil
 local DH_ACC=0
 local function DeepHideFeetY(root)
@@ -1115,7 +1114,6 @@ a.CanCollide=false a.CanQuery=false a.CanTouch=false
 a.CFrame=CFrame.new(root.Position)
 a.Parent=WS
 DeepHideAnchor=a
-DeepHideCF=root.CFrame
 DeepHideY=root.Position.Y
 local hy=DeepHideY-deepHideDepthNow()
 root.CFrame=CFrame.new(root.Position.X,hy,root.Position.Z)
@@ -1183,7 +1181,7 @@ if r then deepHideApply(r) end
 end)
 T(DeepHideCharConn)
 else
-if not (DeepHideAnchor or DeepHideFloor) then DeepHideCF=nil return end
+if not (DeepHideAnchor or DeepHideFloor) then return end
 local ch=LP.Character
 local root=ch and ch:FindFirstChild("HumanoidRootPart")
 if root then
@@ -1220,7 +1218,6 @@ end)
 print(("[DeepHide] 渐进浮回地面中 (X=%.0f Z=%.0f  %.0f -> %.0f, 约 %.1f 秒)")
 :format(pos.X,pos.Z,pos.Y,ty+3,math.max(0,math.ceil((ty+3-pos.Y)/8))*0.1))
 end
-DeepHideCF=nil
 if DeepHideAnchor then DeepHideAnchor:Destroy() DeepHideAnchor=nil end
 if DeepHideFloor then DeepHideFloor:Destroy() DeepHideFloor=nil end
 local cc=WS and WS.CurrentCamera
@@ -1242,24 +1239,6 @@ if DeepHideFloor and DeepHideFloor.Parent then
 DeepHideFloor.CFrame=CFrame.new(root.Position.X,DeepHideFeetY(root)-2,root.Position.Z)
 end
 print(("[DeepHide] 深度已调整: %.0f 格 (Y=%.0f)"):format(DeepHideY-hy,hy))
-end
-local SpectateConn=nil
-function SYS.Spectate(pl)
-local hum=pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
-local cam=SYS.Cam
-if not hum or not cam then SYS.Notify("观战失败: 目标无角色",SYS.CY.red) return end
-if SpectateConn then SpectateConn:Disconnect() SpectateConn=nil end
-cam.CameraSubject=hum cam.CameraType=Enum.CameraType.Custom
-SpectateConn=RS.RenderStepped:Connect(function()
-local h2=pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
-if not h2 then SYS.StopSpectate() return end
-cam.CameraSubject=h2
-end)
-SYS.Notify("👁 已观战 "..pl.Name,SYS.CY.cyan)
-end
-function SYS.StopSpectate()
-if SpectateConn then SpectateConn:Disconnect() SpectateConn=nil end
-P(SYS.ResetCam)
 end
 function SYS.Rejoin()
 pcall(function()
@@ -1649,18 +1628,6 @@ function SYS.disableAntiAFK()
 if AFKConn then AFKConn:Disconnect() AFKConn=nil end
 end
 local HL,LB,HB={},{},{}
-local ESPParent,ESPPMsg=nil,nil
-local function espParent()
-if ESPParent then return ESPParent end
-local par=SYS.CoreGui or SYS.PG
-pcall(function()
-if gethui then local h=gethui() if h then par=h end end
-if get_hui then local h=get_hui() if h then par=h end end
-end)
-ESPParent=par or SYS.PG
-pcall(function() ESPPMsg=ESPParent and tostring(ESPParent.Name) or "?" end)
-return ESPParent
-end
 function SYS.ClearESP()
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
@@ -1757,7 +1724,6 @@ end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
 local FHum={}
-local FLM=nil
 local function Freeze()
 local _,h=GC() if not h then return end
 if next(FHum)==nil then
@@ -1801,7 +1767,6 @@ local s=SYS.C_.FreeCamSens*0.01
 FYaw=FYaw-input.Delta.X*s
 FPitch=math.clamp(FPitch-input.Delta.Y*s,-math.pi/2+0.01,math.pi/2-0.01)
 end))
-FLM=nil
 FConn=RS.RenderStepped:Connect(function(dt)
 if not SYS.FreeCamActive or not SYS.Cam then return end
 if not SYS.MenuOpen then
@@ -1833,7 +1798,6 @@ SYS.FreeCamActive=false
 if FConn then FConn:Disconnect() FConn=nil end
 if FMC then FMC:Disconnect() FMC=nil end
 if FKC then DS(FKC) FKC=nil end
-FLM=nil
 P(SYS.EnablePlayerControls)
 Unfreeze()
 if SYS.Cam then
@@ -2847,13 +2811,10 @@ SYS.Combat={}
 local CB=SYS.Combat
 CB.Target=nil
 CB.TargetPart=nil
-CB.LockedAt=0
 CB.HookOK=false
 CB.HookStat={cam=0,mouse=0,ray=0}
-CB.inOwnRay=false
 CB.RenderBound=false
 CB.Moving=false
-CB.KeyAcc=0
 CB.FallbackConn=nil
 CB.UsingFallback=false
 CB.LastFire=0
@@ -3083,7 +3044,6 @@ CB.NoTeamFilter=true
 CB.Say(("⚠ 全服 %d 个目标都与我同队 -> 该游戏不用队伍区分敌我, 「不打队友」本局已自动忽略"):format(others),SYS.CY.yellow)
 end
 end
-CB.IsEnemyBase=isEnemyEx
 local SHOT_CACHE=setmetatable({},{__mode="k"})
 local function clearShot(part)
 if not SYS.T_.CB_Wall then return true end
@@ -3097,11 +3057,9 @@ if not cf then return true end
 local o=cf.Position
 local d=part.Position-o
 if d.Magnitude<1 then return true end
-CB.inOwnRay=true
 local _,hit=P(function()
 return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
 end)
-CB.inOwnRay=false
 local ok=(hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)))
 SHOT_CACHE[part]={t=now,ok=ok}
 return ok
@@ -3151,7 +3109,6 @@ else n=CB.Target and CB.Target.Name end
 if not n or n=="" then return nil end
 SYS.C_.CB_TargetName=n
 SYS.C_.CB_TargetMode=2
-CB.LockedAt=os.clock()
 return n
 end
 function CB.ClearTarget()
@@ -3169,7 +3126,6 @@ dir=dir or 1
 at=(at==0) and 1 or (((at-1+dir)%n)+1)
 SYS.C_.CB_TargetName=list[at].Name
 SYS.C_.CB_TargetMode=2
-CB.LockedAt=os.clock()
 CB.Say("指定目标 → "..list[at].Name,SYS.CY.yellow)
 return list[at].Name
 end
@@ -3201,11 +3157,9 @@ SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
 end
 end
 if chain[1]=="crosshair" then
-CB.inOwnRay=true
 local okH,hit=P(function()
 return WS:FindPartOnRay(Ray.new(camPos,cf0.LookVector*(maxD+50)),SYS.LP.Character)
 end)
-CB.inOwnRay=false
 if okH and hit then
 local hp=playerFromPart(hit)
 if hp and isEnemy(hp) then
@@ -3216,7 +3170,6 @@ end
 end
 local vp=cam.ViewportSize
 local cx,cy=vp.X/2,vp.Y/2
-local maxR=SYS.C_.CB_Fov or 180
 local myRoot=bodyOf(SYS.LP.Character)
 local cands={}
 for _,pl in ipairs(Players:GetPlayers()) do
@@ -3312,11 +3265,9 @@ if not cam then return false end
 local cf=cam.CFrame
 if not cf then return false end
 local dist=SYS.C_.CB_MaxDist or 1200
-CB.inOwnRay=true
 local _,part=P(function()
 return WS:FindPartOnRay(Ray.new(cf.Position,cf.LookVector*(dist+50)),SYS.LP.Character)
 end)
-CB.inOwnRay=false
 return isEnemy(playerFromPart(part))
 end
 local function fireTick()
@@ -3362,10 +3313,8 @@ if next(moveHeld)~=nil then return true end
 return UIS:IsKeyDown(Enum.KeyCode.W) or UIS:IsKeyDown(Enum.KeyCode.A)
 or UIS:IsKeyDown(Enum.KeyCode.S) or UIS:IsKeyDown(Enum.KeyCode.D)
 end
-CB.MovingNow=movingNow
 local SCAN_DT=1/30
 local accScan=0
-CB.ScanHz=30
 CB.Stat={scan=0,hud=0,aim=0}
 local function tickBody(dt)
 dt=tonumber(dt) or 0.016
@@ -3380,10 +3329,8 @@ if accScan>=SCAN_DT then
 accScan=0
 CB.Stat.scan=CB.Stat.scan+1
 CB.Moving = SYS.T_.CB_PauseMove and movingNow() or false
-local saved=CB.Target
 local t,p=pickTarget()
 CB.Target=t CB.TargetPart=p
-if t~=saved then CB.LockedAt=os.clock() end
 if not (SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_SnapFire) then fireTick() end
 end
 if SYS.T_.CB_Fire and (SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_SnapFire) then
@@ -3394,7 +3341,7 @@ aimTick()
 CB.Stat.aim=CB.Stat.aim+1
 end
 local CBERR=0
-local function tick(dt)
+local function cbRenderTick(dt)
 if SYS.Unloaded then return end
 local ok,err=P(tickBody,dt)
 if ok then
@@ -3402,7 +3349,6 @@ CBERR=0
 return
 end
 CBERR=CBERR+1
-CB.ERR=CBERR
 CB.LASTERR=tostring(err)
 if CBERR<=5 or CBERR%60==0 then
 warn(("[Combat] tick 出错(第 %d 次): %s"):format(CBERR,tostring(err)))
@@ -3421,12 +3367,12 @@ if CB.RenderBound or SYS.Unloaded then return end
 CB.ResetClock()
 P(function() RS:UnbindFromRenderStep(CB.RenderName) end)
 local ok=P(function()
-RS:BindToRenderStep(CB.RenderName,Enum.RenderPriority.Camera.Value+1,tick)
+RS:BindToRenderStep(CB.RenderName,Enum.RenderPriority.Camera.Value+1,cbRenderTick)
 return true
 end)
 CB.UsingFallback=false
 if not ok then
-CB.FallbackConn=RS.RenderStepped:Connect(function(dt) tick(dt) end)
+CB.FallbackConn=RS.RenderStepped:Connect(function(dt) cbRenderTick(dt) end)
 CB.UsingFallback=true
 warn("[Combat] 这台执行器不支持 BindToRenderStep, 已退回 RenderStepped(功能不变, 略费性能)")
 end
@@ -3669,7 +3615,6 @@ for _,l in ipairs(Trans.LANGS) do if l.code==c then return l.name end end
 return c
 end
 Trans.SendLang="en"
-Trans.CacheMax=20000
 Trans.cacheCount=0
 Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0}
 local HOST="http://127.0.0.1:8080"
@@ -3999,17 +3944,6 @@ local MODEL_TAG="hymt2-7b-v70"
 local CFG="TransCache.json"
 local HAS_FS=(type(writefile)=="function" and type(readfile)=="function" and type(isfile)=="function")
 Trans.CACHE_FILE=CFG
-local function cachePath()
-local base=""
-pcall(function()
-if type(getworkspace)=="function" then base=getworkspace().."/"
-elseif type(getWorkingDir)=="function" then base=getWorkingDir().."/" end
-end)
-return base..CFG
-end
-Trans.cachePath=cachePath
-local cacheDirty=false
-function Trans.markCacheDirty() cacheDirty=true end
 local function saveNow()
 if not HAS_FS or not HS then return false end
 local data={["__model__"]=MODEL_TAG}
@@ -4028,7 +3962,6 @@ else
 if isfile and isfile(p) then pcall(function() writefile(p..".bak",readfile(p)) end) end
 pcall(function() writefile(p,json) end)
 end
-cacheDirty=false
 return true
 end
 function Trans.saveCache()
@@ -4036,7 +3969,6 @@ if Trans.Unloaded then return false end
 local ok,r=pcall(saveNow)
 return ok and r
 end
-Trans.saveCacheNow=Trans.saveCache
 local pendingSave=false
 function Trans.queueCacheSave()
 if pendingSave or not HAS_FS then return end
@@ -4094,7 +4026,6 @@ print("[Trans] 缓存已重置(内存+磁盘)")
 task.spawn(function() pcall(Trans.forceRescan) end)
 return true
 end
-Trans.clearCacheSimple=function() Cache={} Trans.cacheCount=0 saveNow() end
 local function maskSpecials(s)
 if type(s)~="string" or s=="" then return s,{},0 end
 local tok={} local n=0
@@ -4181,7 +4112,7 @@ local fixed=lookupLocal(text)
 if fixed then
 Cache[text]=fixed Cache[normalizeKey(text)]=fixed
 Trans.Stats.hit=Trans.Stats.hit+1 Trans.Stats.loc=Trans.Stats.loc+1
-Trans.markCacheDirty() Trans.queueCacheSave() markOutput(fixed)
+Trans.queueCacheSave() markOutput(fixed)
 return fixed
 end
 local nk=normalizeKey(text)
@@ -4197,7 +4128,7 @@ Cache[text]=v Cache[nk]=v
 Trans.cacheCount=Trans.cacheCount+1
 Trans.Stats.lat=Trans.Stats.lat+(os.clock()-t0)
 Trans.Stats.latN=Trans.Stats.latN+1
-Trans.markCacheDirty() Trans.queueCacheSave()
+Trans.queueCacheSave()
 markOutput(v)
 return v
 end
@@ -4422,16 +4353,6 @@ if not p then break end
 local nm=p.Name
 if type(nm)=="string" and nm:lower():find("topbar",1,true) then return true end
 p=p.Parent
-end
-return false
-end
-local function inWorld(c)
-local p=c and c.Parent
-local d=0
-while p and d<5 do
-local cls=p.ClassName
-if cls=="BillboardGui" or cls=="SurfaceGui" then return true end
-p=p.Parent d=d+1
 end
 return false
 end
@@ -5801,8 +5722,8 @@ if type(hookfunction)~="function" then return "不可用(执行器没提供 hook
 local ok=pcall(function()
 local lp=SYS.LP
 if not lp then return end
-local orig=hookfunction(lp.Kick,function() return nil end)
-SYS.KickOrig=orig SYS.KickHooked=true
+hookfunction(lp.Kick,function() return nil end)
+SYS.KickHooked=true
 end)
 if ok and SYS.KickHooked then
 print("[CheatMenu] 防踢已启用(只拦本地 Kick; 服务端踢人拦不住)")
@@ -5855,7 +5776,6 @@ local ok,v=pcall(function() return UIS.ViewportDisplaySize end)
 if ok and v~=nil then DEV.vds=(tostring(v):gsub("Enum.ViewportDisplaySize.","")) end
 DEV.small=(DEV.vds=="Small") or DEV.touch
 end)
-SYS.Device=DEV
 print(("[CheatMenu] 设备: 触屏=%s 纯触屏=%s 视口档=%s 小屏适配=%s")
 :format(tostring(DEV.anyTouch),tostring(DEV.touch),DEV.vds,tostring(DEV.small)))
 local scale=Instance.new("UIScale") scale.Parent=main
@@ -5938,7 +5858,7 @@ closeBtn.TextColor3=CY.sub closeBtn.Text="✕"
 closeBtn.Font=Enum.Font.GothamBold closeBtn.TextSize=16
 closeBtn.AutoButtonColor=false closeBtn.BorderSizePixel=0 closeBtn.Parent=top
 UI.Round(closeBtn,10)
-local cbStroke=UI.Stroke(closeBtn,CY.red,1,0.72)
+UI.Stroke(closeBtn,CY.red,1,0.72)
 T(closeBtn.MouseEnter:Connect(function()
 UI.Tween(closeBtn,0.12,{BackgroundColor3=CY.red,BackgroundTransparency=0.45})
 UI.Tween(closeBtn,0.12,{TextColor3=Color3.new(1,1,1)})
@@ -6138,7 +6058,7 @@ fb.Text="☰" fb.TextSize=28 fb.TextColor3=CY.text
 fb.Font=Enum.Font.GothamBold fb.BorderSizePixel=0 fb.AutoButtonColor=true
 fb.Parent=fg
 P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=fb end)
-SYS.FloatGui=fg SYS.FloatBtn=fb
+SYS.FloatGui=fg
 local fd,fs,fp,moved=false,nil,nil,false
 T(fb.InputBegan:Connect(function(i)
 if isGrab(i) then fd=true fs=i.Position fp=fb.Position moved=false end
@@ -6363,14 +6283,6 @@ SYS.TPToMouse() return
 end
 end))
 end
-function SYS.PanicHide()
-if SYS.ScreenGui then SYS.ScreenGui.Enabled=false end
-SYS.MenuOpen=false
-P(SYS.ClearESP)
-P(SYS.StopFreeCam)
-if SYS.Combat then P(SYS.Combat.Stop) end
-print("[CheatMenu] 🚨 已紧急隐藏 (按 G 重新打开菜单)")
-end
 function SYS.UnloadAll()
 if SYS.Unloaded then return end
 SYS.Unloaded=true
@@ -6378,7 +6290,6 @@ for k in pairs(SYS.T_) do SYS.T_[k]=false end
 P(SYS.SaveConfig)
 P(SYS.SetGod,false) P(SYS.SetNoFall,false) P(SYS.SetJumpBoost,false)
 P(SYS.SetInvisible,false) P(SYS.SetDeepHide,false)
-P(function() if SYS.StopSpectate then SYS.StopSpectate() end end)
 P(SYS.CleanFly) P(SYS.CleanSpeed)
 P(SYS.SetInfiniteJump,false)
 P(function() WS.Gravity=SYS.Orig.Gravity end)
@@ -6410,7 +6321,7 @@ P(SYS.ResetCam)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 if GENV.CheatUnload==SYS.UnloadAll then
-GENV.CheatLoaded=nil GENV.CheatUnload=nil GENV.CheatUnloaded=true
+GENV.CheatLoaded=nil GENV.CheatUnload=nil
 end
 GENV.CheatBootDone=nil
 GENV.CheatUpdateNote=nil
@@ -6480,7 +6391,6 @@ SYS.ScreenGui=nil SYS.MenuOpen=false
 else
 print("[CheatMenu] CreateMenu 成功")
 end
-GENV.CheatUnloaded=false
 GENV.CheatLoaded=true
 GENV.CheatUnload=SYS.UnloadAll
 task.spawn(function()
@@ -6500,13 +6410,6 @@ task.wait(1.0)
 P(function() SYS.CheckUpdate(true, not SYS.T_.AutoUpdateCheck) end)
 end)
 end
-GENV.CheatMenuExtras={
-withdrawAll=function(n) SYS.withdrawAllBrainrots(n or 30) end,
-collectCash=function(n) SYS.collectAllCash(n or 30) end,
-sellLow=function() SYS.sellLowCPSTools() end,
-fire=function(name,...) return Fire(name,...) end,
-teleport=function(pos) return SYS.TPTo(pos) end,
-}
 print(("[CheatMenu] ===== 加载完成 · 版本 %s ====="):format(tostring(SYS.BuildVer)))
 print("[CheatMenu] (local-开头=本地版 / 10 位十六进制=仓库网络版)")
 print("[CheatMenu] 热键: G 打开/关闭 | T 传送到鼠标")
