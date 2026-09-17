@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 20:09 sha f0410bf9 bytes 230746'):format('2026-09-17 20:09','f0410bf9',230746))
+print(('[CheatMenu] build 2026-09-17 23:16 sha a0ef4cf6 bytes 247508'):format('2026-09-17 23:16','a0ef4cf6',247508))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -22,7 +22,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,Invisible=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,FreeCam=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 RemoteSpy=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
@@ -39,11 +39,12 @@ AutoUpdateCheck=true,
 BootUpdateCheck=true,
 },
 C_={
-FlySpeed=3,FlyMode="Align",
+FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
 MouseTPMode="Raycast",AutoTPDist=5,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
+ESPNameH=0,
 DeepHideDepth=120,
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
@@ -57,8 +58,9 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
+FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.8.1"
+SYS.BuildVer="3.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -660,6 +662,7 @@ local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
 local SpeedAtt,SpeedLV=false,false
 local InfiniteJumpConn=nil
 local noclipThread=nil
+local NoclipAtt,NoclipVel=false,false
 SYS.NoclipConns={}
 local function GetInputDir(camCF)
 local d=Vector3.zero local f=camCF.LookVector*Vector3.new(1,0,1)
@@ -685,15 +688,24 @@ local function FlyEnsure(root)
 local a,v,al=FlyParts()
 if a and a.Parent==root and v and v.Parent==root and al and al.Parent==root then return true end
 SYS.FlyTeardown()
+local okF=pcall(function()
 a=Instance.new("Attachment") a.Name="CM_FlyAtt" a.Parent=root
 v=Instance.new("LinearVelocity") v.Name="CM_FlyVel" v.Attachment0=a
 v.MaxForce=math.huge
-P(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
+pcall(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
 v.VectorVelocity=Vector3.zero v.Parent=root
 al=Instance.new("AlignOrientation") al.Name="CM_FlyAlign" al.Attachment0=a
-P(function() al.Mode=Enum.OrientationAlignmentMode.OneAttachment end)
+pcall(function() al.Mode=Enum.OrientationAlignmentMode.OneAttachment end)
 al.MaxTorque=math.huge al.Responsiveness=200 al.RigidityEnabled=false
 al.Parent=root
+end)
+if (not okF) or (not v) or (not al) then
+if v  then pcall(function() v:Destroy()  end) end
+if al then pcall(function() al:Destroy() end) end
+if a  then pcall(function() a:Destroy()  end) end
+SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=nil,nil,nil
+return false
+end
 SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=a,v,al
 return true
 end
@@ -714,6 +726,14 @@ SYS._FlyStateHeld=false
 end
 end
 function SYS.FlyReleaseStates() FlyHoldStates(false) end
+local function FlyBodyDrive(root,d,spd)
+if not FlyBV or FlyBV.Parent~=root then
+if FlyBV then FlyBV:Destroy() end
+FlyBV=Instance.new("BodyVelocity")
+FlyBV.MaxForce=Vector3.new(1e9,1e9,1e9) FlyBV.Parent=root
+end
+FlyBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
@@ -726,16 +746,16 @@ if d.Magnitude>0 then root.CFrame+=d.Unit*spd*(dt or 1/240) end
 return
 end
 FlyHoldStates(true)
-if mode=="BodyVelocity" then
-if not FlyBV or FlyBV.Parent~=root then
-if FlyBV then FlyBV:Destroy() end
-FlyBV=Instance.new("BodyVelocity")
-FlyBV.MaxForce=Vector3.new(1e9,1e9,1e9) FlyBV.Parent=root
-end
-FlyBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+if mode=="BodyVelocity" or SYS._FlyDegraded then
+FlyBodyDrive(root,d,spd)
 return
 end
-if not FlyEnsure(root) then return end
+if not FlyEnsure(root) then
+SYS._FlyDegraded=true
+SYS.Notify("⚠ 这台执行器不支持 LinearVelocity/AlignOrientation, 飞行已自动降级为 BodyVelocity",SYS.CY.yellow)
+FlyBodyDrive(root,d,spd)
+return
+end
 local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
 if f.Magnitude>0.1 and SYS._FlyAlign then
 SYS._FlyAlign.CFrame=CFrame.lookAt(root.Position,root.Position+f.Unit)
@@ -745,6 +765,16 @@ SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
 end
 end
 local lastSM=-1
+local function expectSpeed()
+local base=SYS.Orig.WalkSpeed or 16
+if SYS.T_.Speed then return base*(SYS.C_.SpeedMult or 1) end
+return base
+end
+local function wantWalkSpeed()
+local base=SYS.Orig.WalkSpeed or 16
+if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return base*(SYS.C_.SpeedMult or 1) end
+return base
+end
 function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
@@ -800,6 +830,7 @@ if FlyGyro then FlyGyro:Destroy() FlyGyro=nil end
 if SYS.FlyTeardown then P(SYS.FlyTeardown) end
 if SYS.FlyReleaseStates then P(SYS.FlyReleaseStates) end
 SYS._FlyStateHeld=false
+SYS._FlyDegraded=false
 if gravZero then WS.Gravity=SYS.Orig.Gravity gravZero=false end
 end
 function SYS.CleanSpeed()
@@ -820,6 +851,8 @@ function SYS.SetNoclip(on)
 for _,c in ipairs(SYS.NoclipConns) do DS(c) end
 SYS.NoclipConns={}
 if noclipThread then task.cancel(noclipThread) noclipThread=nil end
+if NoclipVel then NoclipVel:Destroy() NoclipVel=nil end
+if NoclipAtt then NoclipAtt:Destroy() NoclipAtt=nil end
 if not on then
 local ch=LP.Character if ch then SYS.ApplyNoclip(ch,false) end
 return
@@ -835,8 +868,38 @@ if c then
 for _,p in ipairs(c:GetDescendants()) do
 if p:IsA("BasePart") and p.CanCollide then p.CanCollide=false end
 end
+local root=c:FindFirstChild("HumanoidRootPart")
+local cam=WS and WS.CurrentCamera
+if root and cam and cam.CFrame then
+local d=GetInputDir(cam.CFrame)
+if d.Magnitude>0.1 then
+if not NoclipVel or NoclipVel.Parent~=root then
+if NoclipVel then NoclipVel:Destroy() end
+if NoclipAtt then NoclipAtt:Destroy() end
+local okA,att=pcall(function()
+local a=Instance.new("Attachment") a.Name="CM_NoclipAtt" a.Parent=root
+return a
+end)
+local okV,vel=pcall(function()
+local v=Instance.new("LinearVelocity") v.Name="CM_NoclipVel"
+v.Attachment0=att v.MaxForce=math.huge
+v.VectorVelocity=Vector3.zero v.Parent=root
+return v
+end)
+if okA and att and okV and vel then
+NoclipAtt=att NoclipVel=vel
 end
-task.wait(0.3)
+end
+if NoclipVel then
+local ws=SYS.Orig.WalkSpeed or 16
+NoclipVel.VectorVelocity=d.Unit*ws
+end
+elseif NoclipVel then
+NoclipVel.VectorVelocity=Vector3.zero
+end
+end
+end
+task.wait(0.15)
 end
 end)
 end
@@ -860,6 +923,22 @@ function SYS.CleanTrapGuard()
 TrapOn=false
 if TrapConns then for _,c in ipairs(TrapConns) do DS(c) end end
 TrapConns=nil SYS.TrapHit=false
+P(SYS.TrapIgnore)
+end
+local TrapIgnored=false
+function SYS.TrapIgnore(on)
+if on and TrapIgnored then return end
+if (not on) and (not TrapIgnored) then return end
+local ch=LP and LP.Character
+if ch then
+for _,p in ipairs(ch:GetDescendants()) do
+if p:IsA("BasePart") then
+p.CanTouch=not on
+p.CanQuery=not on
+end
+end
+end
+TrapIgnored=on and true or false
 end
 function SYS.SetTrapImmune(on)
 SYS.CleanTrapGuard()
@@ -873,7 +952,7 @@ table.insert(TrapConns,hrp.Touched:Connect(function(hit)
 if not (TrapOn and SYS.T_.TrapImmune) then return end
 local v=hrp.AssemblyLinearVelocity
 local hv=Vector3.new(v.X,0,v.Z).Magnitude
-local ws=(SYS.Orig.WalkSpeed or 16)
+local ws=expectSpeed()
 local hitV=0
 P(function() hitV=hit.AssemblyLinearVelocity.Magnitude end)
 if hv>ws*TRAP_SPD or hitV>ws*TRAP_SPD then
@@ -883,15 +962,25 @@ end
 end))
 end
 hookChar(LP.Character)
-table.insert(TrapConns,LP.CharacterAdded:Connect(function(c) hookChar(c) end))
-TrapConns[#TrapConns+1]=RS.RenderStepped:Connect(function()
+table.insert(TrapConns,LP.CharacterAdded:Connect(function(c)
+hookChar(c)
+if TrapIgnored then P(function() SYS.TrapIgnore(true) end) end
+end))
+TrapConns[#TrapConns+1]=RS.RenderStepped:Connect(function(dt)
 if SYS.Unloaded or not TrapOn or not SYS.T_.TrapImmune then return end
 P(function()
 local ch,hum,hrp=GC()
 if not ch or not hum or not hrp then return end
-local ws=(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 1)
+if not (SYS.T_.Fly or SYS.T_.Speed or SYS.FreeCamActive) then
+local vv=hrp.AssemblyLinearVelocity
+if Vector3.new(vv.X,0,vv.Z).Magnitude>expectSpeed()*TRAP_SPD then
+if not SYS.TrapHit then SYS.TrapAnchor=hrp.Position end
+SYS.TrapHit=os.clock()
+end
+end
 if hum.Health>0 and hum.Health<hum.MaxHealth then hum.Health=hum.MaxHealth end
-if hum.WalkSpeed<ws*0.9 then hum.WalkSpeed=ws end
+local want=wantWalkSpeed()
+if hum.WalkSpeed<want*0.9 then hum.WalkSpeed=want end
 if not SYS.T_.GodMode then
 local ok,st=pcall(function() return hum:GetState() end)
 if (ok and st==Enum.HumanoidStateType.Physics) or hum.PlatformStand==true then
@@ -915,8 +1004,10 @@ local hz=Vector3.new(d.X,0,d.Z)
 local hzm=hz.Magnitude
 if hzm>TRAP_BACK then
 local dir=hz.Unit
-local np=hrp.Position-dir*math.min(hzm,TRAP_MAXSTEP)
-hrp.CFrame=CFrame.new(Vector3.new(np.X,hrp.Position.Y,np.Z))
+local cap=math.min(TRAP_MAXSTEP, math.max(0.5, expectSpeed()*(dt or 1/60)*1.5))
+local np=hrp.Position-dir*math.min(hzm,cap)
+local rot=hrp.CFrame-hrp.CFrame.Position
+hrp.CFrame=CFrame.new(Vector3.new(np.X,np.Y,np.Z))*rot
 end
 end
 elseif hit then
@@ -925,7 +1016,8 @@ end
 end)
 end)
 for i=1,#TrapConns do T(TrapConns[i]) end
-print("[CheatMenu] 反陷阱免伤: 已开启(免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
+P(function() SYS.TrapIgnore(true) end)
+print("[CheatMenu] 反陷阱免伤: 已开启(无视触发 + 免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
 end
 end
 do
@@ -1202,22 +1294,12 @@ if hit and hit.Position then ty=hit.Position.Y end
 end)
 if type(ty)~="number" then ty=DeepHideY end
 local rot=(root.CFrame-root.CFrame.Position)
-task.spawn(function()
-local from,to=pos.Y,ty+3
-local step=8
-local steps=math.max(1,math.ceil((to-from)/step))
-for i=1,steps do
-if not root.Parent then return end
-local y=from+(to-from)*i/steps
 pcall(function()
-root.CFrame=CFrame.new(pos.X,y,pos.Z)*rot
+root.CFrame=CFrame.new(pos.X,ty+3,pos.Z)*rot
 root.AssemblyLinearVelocity=Vector3.zero
 end)
-if i<steps then task.wait(0.1) end
-end
-end)
-print(("[DeepHide] 渐进浮回地面中 (X=%.0f Z=%.0f  %.0f -> %.0f, 约 %.1f 秒)")
-:format(pos.X,pos.Z,pos.Y,ty+3,math.max(0,math.ceil((ty+3-pos.Y)/8))*0.1))
+print(("[DeepHide] 单帧浮回地面 (X=%.0f Z=%.0f  %.0f -> %.0f)")
+:format(pos.X,pos.Z,pos.Y,ty+3))
 end
 if DeepHideAnchor then DeepHideAnchor:Destroy() DeepHideAnchor=nil end
 if DeepHideFloor then DeepHideFloor:Destroy() DeepHideFloor=nil end
@@ -1248,6 +1330,24 @@ if TS and TS.Teleport and game.PlaceId then
 TS:Teleport(game.PlaceId)
 end
 end)
+end
+local SpectateConn=nil
+function SYS.Spectate(pl)
+local hum=pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
+local cam=SYS.Cam
+if not hum or not cam then SYS.Notify("观战失败: 目标无角色",SYS.CY.red) return end
+if SpectateConn then DS(SpectateConn) SpectateConn=nil end
+cam.CameraSubject=hum cam.CameraType=Enum.CameraType.Custom
+SpectateConn=T(RS.RenderStepped:Connect(function()
+local h2=pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
+if not h2 then SYS.StopSpectate() return end
+cam.CameraSubject=h2
+end))
+SYS.Notify("👁 已观战 "..pl.Name,SYS.CY.cyan)
+end
+function SYS.StopSpectate()
+if SpectateConn then DS(SpectateConn) SpectateConn=nil end
+P(SYS.ResetCam)
 end
 function SYS.DumpRemotes()
 local counts={RE=0,RF=0,BE=0,BF=0,PP=0,CD=0}
@@ -1629,15 +1729,22 @@ function SYS.disableAntiAFK()
 if AFKConn then AFKConn:Disconnect() AFKConn=nil end
 end
 local HL,LB,HB={},{},{}
+local LBL={}
+local HI={}
+local LW,LWL={},{}
 function SYS.ClearESP()
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
 for _,b in pairs(HB) do if b then b:Destroy() end end
-HL,LB,HB={},{},{}
+for _,h in pairs(HI) do if h then h:Destroy() end end
+for _,l in pairs(LW) do if l then l:Destroy() end end
+HL,LB,HB,LBL={},{},{},{}
+HI={}
+LW,LWL={},{}
 end
 function SYS.ESPTick()
-if not (SYS.T_.ESP or SYS.T_.ESPNameTag) then
-if next(HL) or next(LB) then SYS.ClearESP() end
+if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon) then
+if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
 return
 end
 local function tagPart(c)
@@ -1650,7 +1757,7 @@ local act={}
 for _,p in ipairs(Players:GetPlayers()) do
 if p~=LP then
 local c=p.Character
-if c and c:FindFirstChild("HumanoidRootPart") then
+if c and tagPart(c) then
 local h=c:FindFirstChildOfClass("Humanoid")
 if not h or h.Health>0 then act[p]=c end
 end
@@ -1691,35 +1798,192 @@ end
 if SYS.T_.ESPNameTag then
 for p,l in pairs(LB) do
 local c=act[p] local hd=c and tagPart(c)
-if not hd or l.Adornee~=hd then l:Destroy() LB[p]=nil end
+if not hd or l.Adornee~=hd then l:Destroy() LB[p]=nil LBL[p]=nil end
 end
 for p,c in pairs(act) do
 local hd=tagPart(c)
 if hd then
+local off=SYS.C_.ESPNameH or 0
+local okBB,bcf,bsz=pcall(function() local a,b=c:GetBoundingBox() return a,b end)
+if okBB and bcf and bsz then
+off=off+(bcf.Position.Y+bsz.Y*0.5-hd.Position.Y)+1.1
+else
+off=off+3.2
+end
 local l=LB[p]
 if not l then
 l=Instance.new("BillboardGui")
 l.Size=UDim2.new(0,240,0,36) l.Adornee=hd l.AlwaysOnTop=true
-l.StudsOffsetWorldSpace=Vector3.new(0,3.2,0) l.Parent=hd
+l.StudsOffsetWorldSpace=Vector3.new(0,off,0) l.Parent=hd
 local t=Instance.new("TextLabel")
 t.Size=UDim2.fromScale(1,1) t.BackgroundTransparency=1
 t.TextColor3=Color3.new(1,1,1) t.TextScaled=true
 t.Font=Enum.Font.Code t.TextStrokeTransparency=0.4 t.Parent=l
-l.TextLabel=t
+LBL[p]=t
 LB[p]=l
+else
+l.StudsOffsetWorldSpace=Vector3.new(0,off,0)
 end
 local hh=c:FindFirstChildOfClass("Humanoid")
 local hp=hh and math.floor(hh.Health+0.5) or 0
 local mx=hh and math.floor(hh.MaxHealth+0.5) or 0
-local tl=LB[p].TextLabel
+local tl=LBL[p] or (LB[p] and LB[p]:FindFirstChildOfClass("TextLabel"))
+if tl then
 tl.Text=(p.DisplayName or p.Name).."  "..hp.."/"..mx
 if mx>0 and hp<=mx*0.3 then tl.TextColor3=Color3.fromRGB(255,80,80)
 elseif mx>0 and hp<=mx*0.6 then tl.TextColor3=Color3.fromRGB(255,190,80)
 else tl.TextColor3=Color3.new(1,1,1) end
 end
 end
+end
 elseif next(LB) then
-for _,l in pairs(LB) do l:Destroy() end LB={}
+for _,l in pairs(LB) do l:Destroy() end LB={} LBL={}
+end
+if SYS.T_.ESPItem then
+local t0=os.clock()
+local actI={}
+local maxI=SYS.C_.PerfCull or 300
+local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+local function nameLike(nm)
+if type(nm)~="string" or nm=="" then return false end
+local s=nm:lower()
+return s:find("drop",1,true)~=nil or s:find("loot",1,true)~=nil or s:find("item",1,true)~=nil
+or s:find("pickup",1,true)~=nil or s:find("coin",1,true)~=nil or s:find("crate",1,true)~=nil
+or s:find("supply",1,true)~=nil or s:find("chest",1,true)~=nil or s:find("weapon",1,true)~=nil
+end
+local function isPartClass(cn)
+return cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="TrussPart" or cn=="Tool"
+end
+local function lookDroppable(o)
+local ok1,c1=pcall(function() return o:GetChildren() end)
+if not ok1 or type(c1)~="table" then return false end
+local n=#c1
+if n>16 then n=16 end
+for i=1,n do
+local cn=c1[i].ClassName
+if cn=="ProximityPrompt" or cn=="ClickDetector" or cn=="BillboardGui" then return true end
+end
+return false
+end
+local function take(o)
+if not o or not o.Parent then return end
+local cn=o.ClassName
+if cn=="Model" or isPartClass(cn) then
+if nameLike(o.Name) or lookDroppable(o) then actI[o]=true end
+end
+end
+local function scanOne(cont)
+local ok,ks=pcall(function() return cont:GetChildren() end)
+if not ok or type(ks)~="table" then return end
+for i=1,#ks do
+local o=ks[i]
+local cn=o.ClassName
+if cn=="Folder" then
+if nameLike(o.Name) then
+local ok2,ks2=pcall(function() return o:GetChildren() end)
+if ok2 and type(ks2)=="table" then
+local m=#ks2
+if m>200 then m=200 end
+for j=1,m do take(ks2[j]) end
+end
+end
+else
+take(o)
+end
+if i%120==0 and (os.clock()-t0)>0.004 then return end
+end
+end
+scanOne(WS)
+local chars={}
+for _,pl in ipairs(Players:GetPlayers()) do
+local c=pl.Character
+if c then chars[#chars+1]=c end
+end
+for o in pairs(actI) do
+local bad=false
+for i=1,#chars do if o:IsDescendantOf(chars[i]) then bad=true break end end
+if not bad and camPos then
+local okP,pos=pcall(function() return o:GetPivot().Position end)
+if not okP then local okP2,p2=pcall(function() return o.Position end) if okP2 then pos=p2 end end
+if pos and (pos-camPos).Magnitude>maxI then bad=true end
+end
+if bad then actI[o]=nil end
+end
+for o,h in pairs(HI) do
+if not actI[o] or not o.Parent then P(function() h:Destroy() end) HI[o]=nil end
+end
+for o in pairs(actI) do
+local h=HI[o]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=o
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.FillTransparency=0.5
+h.OutlineTransparency=0
+h.FillColor=Color3.fromRGB(255,200,40)
+h.OutlineColor=Color3.fromRGB(255,150,0)
+P(function() h.Parent=o end)
+HI[o]=h
+elseif h.Parent~=o then
+P(function() h.Parent=o end)
+end
+end
+elseif next(HI) then
+for _,h in pairs(HI) do P(function() h:Destroy() end) end HI={}
+end
+if SYS.T_.ESPWeapon then
+for p,c in pairs(act) do
+local names={}
+local ok1,ks=pcall(function() return c:GetChildren() end)
+if ok1 and type(ks)=="table" then
+for i=1,#ks do
+if ks[i].ClassName=="Tool" and ks[i].Name~="" then
+names[#names+1]=ks[i].Name
+end
+end
+end
+local ok2,ps=pcall(function() return p:GetChildren() end)
+if ok2 and type(ps)=="table" then
+for i=1,#ps do
+local o=ps[i]
+local cl=o.ClassName
+if cl=="StringValue" or cl=="ObjectValue" or cl=="NumberValue" then
+local ln=string.lower(o.Name)
+if ln:find("weapon",1,true) or ln:find("item",1,true)
+or ln:find("slot",1,true) or ln:find("gun",1,true) then
+local okv,v=pcall(function() return o.Value end)
+if okv and type(v)=="string" and v~="" then names[#names+1]=v
+elseif okv and type(v)=="number" and v>0 then names[#names+1]=o.Name end
+end
+end
+end
+end
+local txt=table.concat(names,"  |  ")
+local lw=LW[p]
+if txt=="" then
+if lw then P(function() lw:Destroy() end) LW[p]=nil LWL[p]=nil end
+else
+local hd=tagPart(c)
+if hd then
+if not lw then
+lw=Instance.new("BillboardGui")
+lw.Size=UDim2.new(0,240,0,28) lw.Adornee=hd lw.AlwaysOnTop=true
+lw.StudsOffsetWorldSpace=Vector3.new(0,-2.6,0)
+lw.Parent=hd
+local t=Instance.new("TextLabel")
+t.Size=UDim2.fromScale(1,1) t.BackgroundTransparency=1
+t.TextColor3=Color3.fromRGB(255,225,130) t.TextScaled=true
+t.Font=Enum.Font.Code t.TextStrokeTransparency=0.4 t.Parent=lw
+LWL[p]=t
+LW[p]=lw
+end
+local tl=LWL[p]
+if tl then tl.Text=txt end
+end
+end
+end
+elseif next(LW) then
+for _,l in pairs(LW) do P(function() l:Destroy() end) end LW={} LWL={}
 end
 end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
@@ -1746,6 +2010,15 @@ end)
 end
 FHum={}
 end
+function SYS.RestoreMouse()
+local b,i=SYS.MenuPrevMouseBehav,SYS.MenuPrevMouseIcon
+if b==nil then b=SYS.FCPrevBehav end
+if i==nil then i=SYS.FCPrevIcon end
+if b==nil then b=SYS.Orig.MouseBehav end
+if i==nil then i=true end
+if b~=nil then UIS.MouseBehavior=b end
+if i~=nil then UIS.MouseIconEnabled=i end
+end
 function SYS.StartFreeCam()
 if SYS.FreeCamActive or not SYS.Cam then return end
 SYS.FreeCamActive=true
@@ -1755,6 +2028,13 @@ FYaw=math.atan2(-look.X,-look.Z)
 FPitch=math.asin(math.clamp(look.Y,-1,1))
 SYS.Cam.CameraType=Enum.CameraType.Scriptable
 SYS.Cam.CameraSubject=nil
+if SYS.MenuOpen and SYS.MenuPrevMouseBehav~=nil then
+SYS.FCPrevBehav=SYS.MenuPrevMouseBehav
+SYS.FCPrevIcon=SYS.MenuPrevMouseIcon
+else
+SYS.FCPrevBehav=UIS.MouseBehavior
+SYS.FCPrevIcon=UIS.MouseIconEnabled
+end
 UIS.MouseBehavior=Enum.MouseBehavior.LockCenter
 UIS.MouseIconEnabled=false
 P(SYS.DisablePlayerControls)
@@ -1814,10 +2094,105 @@ SYS.Cam.CFrame=CFrame.new(cp,root.Position+Vector3.new(0,1.5,0))
 end
 end
 if not SYS.MenuOpen then
-UIS.MouseBehavior=SYS.Orig.MouseBehav
-UIS.MouseIconEnabled=SYS.Orig.MouseIcon
+SYS.RestoreMouse()
+else
+if SYS.FCPrevBehav~=nil then SYS.MenuPrevMouseBehav=SYS.FCPrevBehav end
+if SYS.FCPrevIcon~=nil then SYS.MenuPrevMouseIcon=SYS.FCPrevIcon end
+end
+SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 end
+function SYS.DiagInv()
+local out={}
+local function dump(o,tag)
+if not o then return end
+local ok,ks=pcall(function() return o:GetChildren() end)
+if ok and type(ks)=="table" then
+for i=1,#ks do
+local c=ks[i]
+local extra=""
+local okv,v=pcall(function() return c.Value end)
+if okv and (type(v)=="string" or type(v)=="number") then extra=" = "..tostring(v) end
+out[#out+1]=("  %s%s  [%s]%s"):format(tag,c.Name,c.ClassName,extra)
+end
+end
+local oka,at=false,nil
+if type(o.GetAttributes)=="function" then
+oka,at=pcall(function() return o:GetAttributes() end)
+end
+if oka and type(at)=="table" then
+for k,v in pairs(at) do
+out[#out+1]=("  %s@%s = %s"):format(tag,tostring(k),tostring(v))
+end
+end
+end
+for _,p in ipairs(Players:GetPlayers()) do
+if p~=SYS.LP then
+out[#out+1]="== "..p.Name.." =="
+dump(p,"玩家/")
+dump(p.Character,"角色/")
+end
+end
+if #out==0 then out[1]="(场上没有其他玩家)" end
+local s=table.concat(out,"\n")
+print("[CheatMenu][物品栏来源诊断]\n"..s)
+SYS.Notify("物品栏来源诊断已输出到控制台(F9)",SYS.CY.cyan)
+return s
+end
+do
+local line=nil
+local function tracerOrigin(cf)
+local ch=SYS.LP and SYS.LP.Character
+if ch then
+local m=ch:FindFirstChild("Muzzle") or ch:FindFirstChild("GunMuzzle")
+if m and m.Position and (m.Position-cf.Position).Magnitude<60 then return m.Position end
+local tool=ch:FindFirstChildOfClass("Tool")
+if tool then
+local hm=tool:FindFirstChild("Handle")
+if hm and hm.Position then return hm.Position end
+end
+end
+return cf.Position
+end
+function SYS.TracerHide()
+if line then P(function() line:Destroy() end) line=nil end
+end
+function SYS.TracerTick()
+if not SYS.T_.Tracer then
+if line then SYS.TracerHide() end
+return
+end
+local cam=SYS.Cam
+if not cam then return end
+local cf=cam.CFrame
+if not cf then return end
+local o=tracerOrigin(cf)
+local tp=SYS.Combat and SYS.Combat.TargetPart
+local endP
+if tp and tp.Position then endP=tp.Position else endP=o+cf.LookVector*200 end
+local d=endP-o
+local len=d.Magnitude
+if len<2 then return end
+if not line then
+local ok,pt=P(function()
+local q=Instance.new("Part")
+q.Anchored=true q.CanCollide=false q.CastShadow=false
+q.CanQuery=false q.CanTouch=false
+q.Material=Enum.Material.Neon q.Transparency=0.4
+q.Color=Color3.fromRGB(140,255,170)
+q.Archivable=false
+q.Parent=WS
+return q
+end)
+if not ok or not pt then return end
+line=pt
+end
+P(function()
+line.Size=Vector3.new(0.07,0.07,len)
+line.CFrame=CFrame.lookAt(o+d*0.5,endP)
+end)
+end
+T(RS.RenderStepped:Connect(function() P(SYS.TracerTick) end))
 end
 do
 local CPS={
@@ -2823,6 +3198,7 @@ CB.RenderName="CheatMenuCombat"
 local HUMC=setmetatable({},{__mode="k"})
 local BODYC=setmetatable({},{__mode="k"})
 CB.DeadAt={}
+CB.DeadCh={}
 CB.DeadTTL=8
 CB.DeathHooked={}
 CB.EnemyHolder=nil
@@ -2860,9 +3236,11 @@ for i=1,#names do
 local nm=names[i]
 if mode=="die" then
 CB.DeadAt[nm]=os.clock()
+local _dp=Players and Players:FindFirstChild(nm)
+CB.DeadCh[nm]=_dp and _dp.Character or nil
 if CB.Target and CB.Target.Name==nm then CB.Target=nil CB.TargetPart=nil end
 else
-CB.DeadAt[nm]=nil
+CB.DeadAt[nm]=nil CB.DeadCh[nm]=nil
 end
 end
 end))
@@ -2950,8 +3328,24 @@ local ch=pl and pl.Character
 if not ch or ch.Parent==nil then return false end
 local dt=CB.DeadAt[pl.Name]
 if dt then
-if (os.clock()-dt)<(CB.DeadTTL or 8) then return false end
+local dc=CB.DeadCh[pl.Name]
+if dc==ch then
+local h0=humOf(pl)
+local st0
+if h0 then local ok0,s0=pcall(function() return h0:GetState() end) if ok0 then st0=s0 end end
+if (os.clock()-dt)>=(CB.DeadTTL or 8) and h0 and h0.Health>0
+and st0~=Enum.HumanoidStateType.Dead and st0~=Enum.HumanoidStateType.Physics then
+CB.DeadAt[pl.Name]=nil CB.DeadCh[pl.Name]=nil
+else
+return false
+end
+elseif dc~=nil then
+CB.DeadAt[pl.Name]=nil CB.DeadCh[pl.Name]=nil
+elseif (os.clock()-dt)>=(CB.DeadTTL or 8) then
 CB.DeadAt[pl.Name]=nil
+else
+return false
+end
 end
 local h=humOf(pl)
 if h then
@@ -2964,6 +3358,10 @@ end
 if SYS.T_.CB_OnlyAlive then return false end
 if CB.GameSaysEnemy and CB.GameSaysEnemy(pl) then return true end
 return bodyOf(ch)~=nil
+end
+local function hasShield(pl)
+local ch=pl and pl.Character
+return (ch and ch:FindFirstChildOfClass("ForceField"))~=nil
 end
 local function partOf(pl,mode)
 local ch=pl and pl.Character
@@ -3019,8 +3417,7 @@ local h=ch and ch:FindFirstChildOfClass("Humanoid")
 return ("已死亡/无角色 (角色=%s Humanoid=%s Health=%s)"):format(
 tostring(ch~=nil), tostring(h~=nil), tostring(h and h.Health))
 end
-local ch=pl.Character
-if ch and ch:FindFirstChildOfClass("ForceField") then return "有无敌盾(ForceField) [打不掉血 → 最后才选]" end
+if hasShield(pl) then return "有无敌盾(ForceField) [打不掉血 → 最后才选]" end
 if SYS.T_.CB_Team and SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then
 return "与我同队("..tostring(pl.Team and pl.Team.Name)..") [可被自动忽略]"
 end
@@ -3034,8 +3431,7 @@ local others,ffc,teamc=0,0,0
 for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=SYS.LP and alive(pl) then
 others=others+1
-local ch=pl.Character
-if ch and ch:FindFirstChildOfClass("ForceField") then ffc=ffc+1 end
+if hasShield(pl) then ffc=ffc+1 end
 if SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then teamc=teamc+1 end
 end
 end
@@ -3065,10 +3461,44 @@ local ok=(hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)))
 SHOT_CACHE[part]={t=now,ok=ok}
 return ok
 end
+local SCALP_CACHE=setmetatable({},{__mode="k"})
+local function sightOK(part,o,q)
+local d=q-o
+if d.Magnitude<1 then return true end
+local _,hit=P(function()
+return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
+end)
+local par=part.Parent
+return hit==nil or (par and hit:IsDescendantOf(par))
+end
+local function visPoint(part)
+local c=part.Position
+local cam=SYS.Cam
+local o=cam and cam.CFrame and cam.CFrame.Position
+if not o then return c end
+if sightOK(part,o,c) then return c end
+local now=os.clock()
+local cc=SCALP_CACHE[part]
+if cc and now-cc.t<0.12 then return cc.p end
+local sz=part.Size
+local cands={
+c+Vector3.new(0,sz.Y*0.45,0),
+c+Vector3.new(sz.X*0.45,0,0),
+c-Vector3.new(sz.X*0.45,0,0),
+c+Vector3.new(0,0,sz.Z*0.45),
+c-Vector3.new(0,0,sz.Z*0.45),
+}
+local use=c
+for i=1,#cands do
+if sightOK(part,o,cands[i]) then use=cands[i] break end
+end
+SCALP_CACHE[part]={t=now,p=use}
+return use
+end
 local function leadPos()
 local p=CB.TargetPart
 if not p then return nil end
-local pos=p.Position
+local pos=visPoint(p)
 if not SYS.T_.CB_Predict then return pos end
 local t=SYS.C_.CB_PredictTime or 0.14
 local v=p.AssemblyLinearVelocity
@@ -3150,7 +3580,7 @@ end
 local function specResolve(mode)
 if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
-if pl and isEnemy(pl) then
+if pl and isEnemy(pl) and not (SYS.T_.CB_SkipFF and hasShield(pl)) then
 local p=partOf(pl,mode)
 if p and (not SYS.T_.CB_Wall or clearShot(p)) then return pl,p end
 end
@@ -3190,9 +3620,8 @@ if isEnemy(pl) then
 local p=partOf(pl,mode)
 if p then
 local d=(p.Position-camPos).Magnitude
-local _chf=pl.Character
-local _hasFF=(_chf and _chf:FindFirstChildOfClass("ForceField"))~=nil
-if (not (SYS.T_.CB_SkipFF and _hasFF)) and d<=maxD and clearShot(p) then
+local _sh=hasShield(pl)
+if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD and clearShot(p) then
 local sp,on=cam:WorldToViewportPoint(p.Position)
 local inView=on and sp.Z>0
 local dd=inView and math.sqrt((sp.X-cx)^2+(sp.Y-cy)^2) or 1e7
@@ -3206,8 +3635,7 @@ end
 end
 local h=humOf(pl)
 local hp=h and (h.Health or 1e9) or 1e9
-local chp=pl.Character
-local ff=(chp and chp:FindFirstChildOfClass("ForceField"))~=nil
+local ff=_sh
 cands[#cands+1]={
 pl=pl,p=p,d=d,
 s={aiming=(aiming and 0 or 1),near=d,center=dd,lowhp=hp},
@@ -3240,7 +3668,7 @@ return WS:FindPartOnRay(Ray.new(camPos,cf0.LookVector*(maxD+50)),SYS.LP.Characte
 end)
 if okH and hit then
 local hp=playerFromPart(hit)
-if hp and isEnemy(hp) then
+if hp and isEnemy(hp) and not (SYS.T_.CB_SkipFF and hasShield(hp)) then
 local pp=partOf(hp,mode)
 if pp and (not SYS.T_.CB_Wall or clearShot(pp)) then return hp,pp end
 end
@@ -3305,9 +3733,17 @@ if not SYS.T_.CB_Fire then return end
 if SYS.MenuOpen then return end
 local now=os.clock()
 if now-CB.LastFire<(SYS.C_.CB_FireDelay or 0.06) then return end
+local cam=SYS.Cam
+if not cam then return end
+local vp=cam.ViewportSize
 local canFire
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire then
-canFire = CB.TargetPart~=nil
+local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
+if not ap then return end
+local sp,on=cam:WorldToViewportPoint(ap)
+if not (on and sp.Z>0) then return end
+local tol=(vp.Y or 1080)*0.05
+canFire=((sp.X-vp.X/2)^2+(sp.Y-vp.Y/2)^2)<=tol*tol
 else
 canFire = crosshairOnEnemy()
 end
@@ -3318,9 +3754,6 @@ local h=CB.Target and humOf(CB.Target)
 if not h or h.Health>thr then return end
 end
 CB.LastFire=now
-local cam=SYS.Cam
-if not cam then return end
-local vp=cam.ViewportSize
 local x,y=math.floor(vp.X/2),math.floor(vp.Y/2)
 local function doFire()
 P(function() VIM:SendMouseButtonEvent(x,y,0,true,game,0) end)
@@ -3349,6 +3782,14 @@ CB.Stat={scan=0,hud=0,aim=0}
 local function tickBody(dt)
 dt=tonumber(dt) or 0.016
 if dt>0.5 then dt=0.5 end
+local me=humOf(SYS.LP)
+if me and (me.Health or 1)<=0 then
+local okS,st=pcall(function() return me:GetState() end)
+if okS and (st==Enum.HumanoidStateType.Dead or st==Enum.HumanoidStateType.Physics) then
+CB.Target=nil CB.TargetPart=nil
+return
+end
+end
 local anyOn=SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
 if not anyOn then
 CB.Target=nil CB.TargetPart=nil
@@ -3652,9 +4093,11 @@ Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replac
 local HOST="http://127.0.0.1:8080"
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
-local SYS_PROMPT=[[You are a translation engine. Translate the user's text into ZH.
-Rules: output ONLY the translation, no explanation, no quotes, no extra words.
-Keep numbers, currency symbols ($), emoji and player names unchanged.
+local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
+Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.
+Preserve the original line breaks and the original number of lines.
+Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.
+Keep numbers, currency symbols ($), emoji, URLs and player names unchanged.
 Use natural, colloquial, native-sounding Chinese — plain and direct, no stiff or literary wording.
 Translate game currency words: Coins->金币, Gold->金币, Gems->宝石, Cash->现金 (keep Robux as-is).
 If the text is already ZH or contains CJK characters, output it unchanged.]]
@@ -3903,7 +4346,8 @@ end
 Trans.markOutput=markOutput
 local function alreadyOurs(s) return type(s)=="string" and Trans.Outputs[s]==true end
 Trans.alreadyOurs=alreadyOurs
-local PlayerNames={} local PlayerNameCount=-1
+local PlayerNames={} local PlayerNameCount=-1 local PlayerDirty=true local PlayerCheckN=0
+local PLAYER_CHECK_EVERY=64
 local function refreshPlayerNames()
 local cnt=0
 pcall(function()
@@ -3913,14 +4357,21 @@ PlayerNames[p.Name:lower()]=true
 PlayerNames[p.DisplayName:lower()]=true
 end
 end)
-PlayerNameCount=cnt
+PlayerNameCount=cnt PlayerDirty=false
 end
 pcall(function()
-T(game:GetService("Players").PlayerAdded:Connect(function() task.defer(refreshPlayerNames) end))
+T(game:GetService("Players").PlayerAdded:Connect(function() PlayerDirty=true task.defer(refreshPlayerNames) end))
+T(game:GetService("Players").PlayerRemoving:Connect(function() PlayerDirty=true task.defer(refreshPlayerNames) end))
 end)
 local function isPlayerName(s)
-if PlayerNameCount<0 or #game:GetService("Players"):GetPlayers()~=PlayerNameCount then
+if PlayerNameCount<0 or PlayerDirty then
 refreshPlayerNames()
+else
+PlayerCheckN=PlayerCheckN+1
+if PlayerCheckN>=PLAYER_CHECK_EVERY then
+PlayerCheckN=0
+if #game:GetService("Players"):GetPlayers()~=PlayerNameCount then refreshPlayerNames() end
+end
 end
 return PlayerNames[s:lower()]==true
 end
@@ -3971,6 +4422,45 @@ Trans.Verdict[key]=v VerdictN=VerdictN+1
 return v
 end
 Trans.verdictOf=verdictOf
+Trans.Fail={}
+Trans.FailN=0
+local FAIL_BASE,FAIL_CAP,FAIL_MAXN=3,300,4000
+local function failCool(key)
+local f=Trans.Fail[key]
+if not f then return 0 end
+local c=FAIL_BASE*2^(f.n-1)
+return c>FAIL_CAP and FAIL_CAP or c
+end
+local function inCool(key)
+local f=Trans.Fail[key]
+if not f then return false end
+return (os.clock()-f.t)<failCool(key)
+end
+Trans.inCool=inCool
+local function markFail(key)
+if not key or key=="" then return end
+local f=Trans.Fail[key]
+if f then f.n=f.n+1 f.t=os.clock() return end
+Trans.FailN=Trans.FailN+1
+if Trans.FailN>FAIL_MAXN then
+local dead={} local now=os.clock()
+for k,g in pairs(Trans.Fail) do if (now-g.t)>=failCool(k) then dead[#dead+1]=k end end
+for i=1,#dead do Trans.Fail[dead[i]]=nil end
+Trans.FailN=0
+end
+Trans.Fail[key]={n=1,t=os.clock()}
+end
+local function clearFail(key) if key and Trans.Fail[key] then Trans.Fail[key]=nil end end
+Trans.clearFail=clearFail
+Trans.clearAllFails=function() Trans.Fail={} Trans.FailN=0 end
+local NetStreak,NetGateUntil=0,0
+local function netGateOn() return os.clock()<NetGateUntil end
+local function noteNetFail()
+NetStreak=NetStreak+1
+if NetStreak>=3 then NetGateUntil=os.clock()+4 end
+end
+local function noteNetOk() NetStreak=0 NetGateUntil=0 end
+Trans.netGateOn=netGateOn
 local Cache={}
 local MODEL_TAG="hymt2-7b-v70"
 local CFG="TransCache.json"
@@ -4046,6 +4536,7 @@ end
 function Trans.clearCache()
 Cache={} Trans.cacheCount=0 Trans.Verdict={} VerdictN=0
 Trans.Trans2Orig={} Trans.Outputs={} Trans.OutputsN=0
+Trans.clearAllFails()
 pcall(function()
 if type(delfile)=="function" then
 for _,suf in ipairs({"",".bak",".tmp"}) do
@@ -4112,10 +4603,16 @@ Body=payload, Timeout=30,
 end)
 if not ok or type(res)~="table" or not res.Body then
 Trans.Stats.netfail=Trans.Stats.netfail+1
+noteNetFail()
 return nil,true
 end
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
-if not okd or type(d)~="table" then Trans.Stats.netfail=Trans.Stats.netfail+1 return nil,true end
+if not okd or type(d)~="table" then
+Trans.Stats.netfail=Trans.Stats.netfail+1
+noteNetFail()
+return nil,true
+end
+noteNetOk()
 local ch=d.choices
 local c=type(ch)=="table" and ch[1]
 local m=c and c.message
@@ -4151,6 +4648,7 @@ local nk=normalizeKey(text)
 if Cache[text] then Trans.Stats.hit=Trans.Stats.hit+1 return Cache[text] end
 if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return Cache[nk] end
 if type(request)~="function" or not HS then return nil end
+if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
 local res,netFail=rawRequest(text,SYS_PROMPT,0.1,Trans.maxTok or 512)
 if res then
@@ -4161,10 +4659,12 @@ Trans.cacheCount=Trans.cacheCount+1
 Trans.Stats.lat=Trans.Stats.lat+(os.clock()-t0)
 Trans.Stats.latN=Trans.Stats.latN+1
 Trans.queueCacheSave()
+clearFail(nk)
 markOutput(v)
 return v
 end
 end
+markFail(nk)
 if not netFail then Trans.Stats.fail=Trans.Stats.fail+1 end
 return nil
 end
@@ -4172,9 +4672,11 @@ Trans.LANG_PROMPT={en="English",zh="Chinese",ja="Japanese",ko="Korean",th="Thai"
 Trans.RvCache={} local RvN=0
 function Trans.promptFor(code)
 local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
-return ("You are a translation engine. Translate the user's text into %s.\n"
-.."Rules: output ONLY the translation, no explanation, no quotes, no extra words.\n"
-.."Keep numbers, currency ($), emoji, placeholders and player names unchanged."):format(name)
+return ("You are a game-UI translation engine. Translate the user's text into %s.\n"
+.."Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.\n"
+.."Preserve the original line breaks and the original number of lines.\n"
+.."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
+.."Keep numbers, currency ($), emoji, URLs, placeholders and player names unchanged."):format(name)
 end
 function Trans.translateTo(text,code)
 if Trans.Unloaded or type(text)~="string" then return nil end
@@ -4203,13 +4705,18 @@ end
 if alreadyOurs(text) or not Trans.shouldTranslate(text,false) then
 if cb then pcall(cb,nil) end return
 end
-local hit=Cache[text] or Cache[normalizeKey(text)] or lookupLocal(text)
+local nk=normalizeKey(text)
+local hit=Cache[text] or Cache[nk] or lookupLocal(text)
 if hit then
 Trans.Stats.hit=Trans.Stats.hit+1
 if cb then pcall(cb,hit) end
 return
 end
-local key=normalizeKey(text)
+local key=nk
+if inCool(key) or netGateOn() then
+if cb then pcall(cb,nil) end
+return
+end
 local q=Inflight[key]
 if q then
 if cb then q[#q+1]=cb end
@@ -4372,19 +4879,11 @@ end
 end
 end
 end
-local function isOwnUI(o)
+local function uiBlocked(o)
 local p=o
-for _=1,10 do
+for d=1,12 do
 if not p then break end
-if p==SYS.ScreenGui then return true end
-p=p.Parent
-end
-return false
-end
-local function isOfficialTopbar(o)
-local p=o
-for _=1,12 do
-if not p then break end
+if d<=10 and p==SYS.ScreenGui then return true end
 local nm=p.Name
 if type(nm)=="string" and nm:lower():find("topbar",1,true) then return true end
 p=p.Parent
@@ -4400,7 +4899,7 @@ for i=1,#ds do
 local o=ds[i]
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
-if not isOwnUI(o) and not isOfficialTopbar(o) then
+if not uiBlocked(o) then
 Trans.processLabel(o,"ui")
 count=count+1
 end
@@ -4418,13 +4917,14 @@ function Trans.worldNode(o)
 if not o then return end
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
-if not isOwnUI(o) and not isOfficialTopbar(o) then Trans.processLabel(o,"ui") end
+if not uiBlocked(o) then Trans.processLabel(o,"ui") end
 elseif cls=="ProximityPrompt" then
 processPrompt(o)
 end
 end
 function Trans.forceRescan()
 Trans.Verdict={} VerdictN=0
+Trans.clearAllFails()
 local n=0
 n=scanRoot(SYS.PG,n)
 if SYS.CoreGui then n=scanRoot(SYS.CoreGui,n) end
@@ -4463,12 +4963,6 @@ end
 end
 end)
 Trans.UIconns=Trans.UIconns or {}
-table.insert(Trans.UIconns,task.spawn(function()
-while Trans.UIScanActive and not Trans.Unloaded do
-task.wait(20)
-if Trans.UIScanActive then pcall(function() scanRoot(WS,0) end) end
-end
-end))
 print("[Trans] 界面翻译已启动 (PlayerGui/CoreGui/gethui + 世界3D + ProximityPrompt)")
 end
 function Trans.stopUIScan()
@@ -5130,12 +5624,23 @@ end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
-if not on and not SYS.T_.ESPNameTag then SYS.ClearESP() end
+if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
 UI.Switch(p,"玩家名字","ESPNameTag",function(on)
-if not on and not SYS.T_.ESP then SYS.ClearESP() end
+if not on and not SYS.T_.ESP and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
-UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。")
+UI.Switch(p,"掉落物透视","ESPItem",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon then SYS.ClearESP() end
+end)
+UI.Switch(p,"手持武器透视","ESPWeapon",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
+end)
+UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
+function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
+UI.Switch(p,"子弹射线 (只画线, 不改弹道)","Tracer",function(on)
+if not on then P(SYS.TracerHide) end
+end)
+UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮、金色 —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
 UI.Div(p)
 UI.Switch(p,"全亮 (FullBright)","FullBright",SYS.SetFullBright)
 UI.Switch(p,"自由视角","FreeCam",function(on)
@@ -5372,6 +5877,7 @@ UI.Pages["传送"]=function(p)
 UI.Switch(p,"允许鼠标传送 (T)","TPEnabled")
 UI.Btn(p,"传送到鼠标位置",CY.cyan,SYS.TPToMouse)
 UI.Btn(p,"传送到最近玩家",CY.cyan,SYS.TPToNearest)
+UI.Btn(p,"停止观战 (回自己视角)",CY.orange,SYS.StopSpectate)
 UI.Btn(p,"回到主城",CY.green,function() SYS.TPTo(SYS.GetDefSpawn()) end)
 UI.Btn(p,"保存当前坐标",CY.purple,function()
 local _,_,root=GC()
@@ -5413,6 +5919,7 @@ b.Text=pl.Name b.Font=Enum.Font.GothamMedium
 b.TextSize=13 b.AutoButtonColor=false b.BorderSizePixel=0
 b.Parent=plList UI.Round(b,6)
 b.MouseButton1Click:Connect(function() P(SYS.TPToPlayer,pl) end)
+b.MouseButton2Click:Connect(function() P(SYS.Spectate,pl) end)
 end
 end
 end
@@ -5612,6 +6119,10 @@ end)
 UI.Btn(p,"📋 输出战斗诊断到控制台",CY.accent,function()
 if SYS.Combat and SYS.Combat.Diag then SYS.Combat.Diag() end
 end)
+UI.Btn(p,"🎒 物品栏来源诊断 (别人的装备/槽位能读到什么)",CY.accent,function()
+P(SYS.DiagInv)
+end)
+UI.Tip(p,"「物品栏来源诊断」会把场上其他玩家【角色/玩家身上所有可读项(子节点 + 属性)】打到控制台。\nRoblox 不复制别人的背包, 所以: 只列出「手上的 Tool」= 做不了 1-0 槽位透视;\n如果列出 StringValue/ObjectValue/属性形式的槽位数据 = 可以做, 把结果发我就能按真实字段接上。")
 UI.Tip(p,"不生效就先点「立即测试一次」: 它逐条打出 选没选到目标 / 相机转没转 /\nhook 装没装 / 准星在不在敌人身上 —— 一眼看出卡在哪一步。",CY.red)
 task.spawn(function()
 local lastScan,lastHud=0,0
@@ -6175,15 +6686,10 @@ if SYS.FreeCamActive then
 UIS.MouseBehavior=Enum.MouseBehavior.LockCenter
 UIS.MouseIconEnabled=false
 else
-local pb,pi=SYS.MenuPrevMouseBehav,SYS.MenuPrevMouseIcon
-if pb~=nil then UIS.MouseBehavior=pb end
-if pi~=nil then UIS.MouseIconEnabled=pi end
-if pb==nil and pi==nil then
-UIS.MouseBehavior=SYS.Orig.MouseBehav
-UIS.MouseIconEnabled=SYS.Orig.MouseIcon
-end
+SYS.RestoreMouse()
 end
 SYS.MenuPrevMouseBehav=nil SYS.MenuPrevMouseIcon=nil
+SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 end
 do
@@ -6281,7 +6787,8 @@ warn("[CheatMenu] 菜单没有切换成功 —— 可能这个键被游戏/其�
 end
 return true
 end
-if CAS then
+local function bindMenuKey()
+if not CAS then return end
 pcall(function()
 CAS:UnbindAction(MENU_ACTION)
 CAS:BindActionAtPriority(MENU_ACTION,function(_,state)
@@ -6293,6 +6800,8 @@ return Enum.ContextActionResult.Pass
 end,false,10000,(SYS.KeyCodeOf(SYS.C_.Key_Menu) or Enum.KeyCode.G))
 end)
 end
+SYS.RebindMenuKey=bindMenuKey
+bindMenuKey()
 T(UIS.InputBegan:Connect(function(input,gp)
 if SYS.Unloaded then return end
 if SYS.KeyPickTarget then
@@ -6304,6 +6813,7 @@ if k==Enum.KeyCode.Unknown then return end
 SYS.C_[SYS.KeyPickTarget]=k.Name
 SYS.Notify(("已绑定: %s -> %s"):format(tostring(SYS.KeyPickTarget),k.Name),SYS.CY.green)
 SYS.KeyPickTarget=nil
+P(SYS.RebindMenuKey)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 return
 end
@@ -6330,7 +6840,7 @@ P(SYS.SetInfiniteJump,false)
 P(function() WS.Gravity=SYS.Orig.Gravity end)
 P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
-P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.disableAntiAFK)
+P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.RemoteSpy and SYS.RemoteSpy.Active then SYS.SetRemoteSpy(false) end end)
@@ -6350,8 +6860,7 @@ for _,c in ipairs(SYS.Conns) do DS(c) end SYS.Conns={}
 for _,c in ipairs(SYS.NCConns or {}) do DS(c) end SYS.NCConns={}
 for _,co in ipairs(SYS.Threads) do DS(co) end SYS.Threads={}
 P(function()
-UIS.MouseBehavior=SYS.Orig.MouseBehav
-UIS.MouseIconEnabled=SYS.Orig.MouseIcon
+SYS.RestoreMouse()
 end)
 P(SYS.ResetCam)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
