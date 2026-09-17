@@ -5,6 +5,26 @@
 
 ---
 
+## v3.10.2 · 2026-09-18
+
+### 🩸 再修「活人被误判死亡」（第二处根因）
+
+2.txt 诊断实锤：`wswyx12345` 满血站着（`@Health=100 @State=Stand`、`Humanoid.Health=100`）却被判死。根因是**死亡事件（`GameService.Killed` 等）在交易大厅/回合切换时误发或参数误标**，把活人名字写进 `DeadAt`，而他的角色实例没换 → 8 秒 TTL 内被无条件判死。
+
+修复：**Attribute 给出明确的「活着」证据（`@State` 是活跃状态且 `@Health>0`）时，直接清掉 `DeadAt` 误标**——实时权威数据高于历史死亡信号。
+
+同时把诊断输出精确到判据（到底是 `@State==Dead` / `@Health<=0` / `DeadAt` / `Humanoid` 哪条判死的），下次再有问题一眼定位。
+
+### 🐛 修「传送页构建失败」
+
+日志报错 `Unable to assign property BackgroundColor3. Color3 expected, got nil`——根因是观战按钮用了 `CY.orange`，但颜色表里根本没定义这个字段。已补上 `orange` 颜色。
+
+### 📦 事件库补充
+
+归档了完整 Remote 清单（287 RemoteEvent + 146 RemoteFunction，比上次 119 个更全），含 `CombatService.Action`（战斗动作权威入口）、`BackpackService.TryEquip/TryUnequip`（装备切换）等战斗相关信号。
+
+---
+
 ## v3.10.1 · 2026-09-17
 
 ### 🩸 战斗判定改用「权威 Attribute 数据」（修活人被误判死亡的真根因）
