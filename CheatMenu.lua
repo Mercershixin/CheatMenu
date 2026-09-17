@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 18:52 sha 2b982542 bytes 229133'):format('2026-09-17 18:52','2b982542',229133))
+print(('[CheatMenu] build 2026-09-17 19:18 sha 0dcf98f6 bytes 230431'):format('2026-09-17 19:18','0dcf98f6',230431))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -58,7 +58,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.7.2"
+SYS.BuildVer="3.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3130,12 +3130,32 @@ CB.Say("指定目标 → "..list[at].Name,SYS.CY.yellow)
 return list[at].Name
 end
 local CB_CHAINS={
-[1]={"near","aiming","center"},
+[1]={"aiming","near","center"},
 [2]={"near","center"},
 [3]={"crosshair","near","center"},
 [4]={"lowhp","near","center"},
 [5]={"center","near"},
 }
+local function chainOrder(chain)
+local slot=(chain[1]=="aiming") and 2 or 1
+local o={}
+for i=1,#chain do
+if i==slot then o[#o+1]="specified" end
+o[#o+1]=chain[i]
+end
+if slot>#chain then o[#o+1]="specified" end
+return o
+end
+local CHAIN_NM={aiming="正在瞄我的",near="最近的",center="屏幕中心",crosshair="准星指向",lowhp="血量最低",specified="我指定的"}
+function CB.ChainOrderNames()
+local ch=CB_CHAINS[SYS.C_.CB_PrioMode or 1] or CB_CHAINS[1]
+local o=chainOrder(ch)
+local t={}
+for i=1,#o do t[#t+1]=CHAIN_NM[o[i]] or o[i] end
+local s=table.concat(t," → ")
+if SYS.T_.CB_TgtStrict then s=s.."    ★「只打指定目标」开着: 实际只打指定的那个人, 整条链不参与" end
+return s
+end
 local function pickTarget()
 local cam=SYS.Cam
 if not cam then return nil,nil end
@@ -3145,28 +3165,20 @@ if not cf0 then return nil,nil end
 local camPos=cf0.Position
 local maxD=SYS.C_.CB_MaxDist or 1200
 local chain=CB_CHAINS[SYS.C_.CB_PrioMode or 1] or CB_CHAINS[1]
-if CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2 then
+local function specResolve()
+if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
 if pl and isEnemy(pl) then
 local p=partOf(pl,mode)
 if p and (not SYS.T_.CB_Wall or clearShot(p)) then return pl,p end
 end
-if SYS.T_.CB_TgtStrict then return nil,nil end
 if (not pl) or (not alive(pl)) then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
 end
+return nil
 end
-if chain[1]=="crosshair" then
-local okH,hit=P(function()
-return WS:FindPartOnRay(Ray.new(camPos,cf0.LookVector*(maxD+50)),SYS.LP.Character)
-end)
-if okH and hit then
-local hp=playerFromPart(hit)
-if hp and isEnemy(hp) then
-local pp=partOf(hp,mode)
-if pp and (not SYS.T_.CB_Wall or clearShot(pp)) then return hp,pp end
-end
-end
+if SYS.T_.CB_TgtStrict and CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2 then
+return specResolve()
 end
 local vp=cam.ViewportSize
 local cx,cy=vp.X/2,vp.Y/2
@@ -3204,6 +3216,7 @@ end
 end
 end
 end
+local order=chainOrder(chain)
 local function pickBy(list,key)
 local best=nil local bestk
 for i=1,#list do
@@ -3214,9 +3227,25 @@ if not best or k0<bestk then best=c bestk=k0 end
 end
 return best
 end
-for i=1,#chain do
-local key=chain[i]
-if key~="crosshair" then
+for i=1,#order do
+local key=order[i]
+if key=="specified" then
+local a,b=specResolve()
+if a then return a,b end
+elseif key=="crosshair" then
+if chain[1]=="crosshair" then
+local okH,hit=P(function()
+return WS:FindPartOnRay(Ray.new(camPos,cf0.LookVector*(maxD+50)),SYS.LP.Character)
+end)
+if okH and hit then
+local hp=playerFromPart(hit)
+if hp and isEnemy(hp) then
+local pp=partOf(hp,mode)
+if pp and (not SYS.T_.CB_Wall or clearShot(pp)) then return hp,pp end
+end
+end
+end
+else
 local pass={}
 for j=1,#cands do
 local c=cands[j]
@@ -3405,7 +3434,7 @@ SYS.C_.CB_AimPart=1
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
-CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 优先链(最近→攻击我的→屏幕中心)",SYS.CY.green)
+CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 优先链(正在瞄我的→指定→最近→屏幕中心)",SYS.CY.green)
 print("[Combat] ⚡ 一键开战: 自动瞄准 + 自动开火 0.04s + 预测 + 锁头 + 优先链 1")
 end
 function CB.TestOnce()
@@ -3516,6 +3545,8 @@ add(("当前目标: %s   瞄准部位: %s")
 CB.TargetPart and tostring(CB.TargetPart.Name) or "无"))
 add(("指定目标: %s (模式=%s 严格=%s)")
 :format(tostring(CB.TargetName()), tostring(SYS.C_.CB_TargetMode), tostring(SYS.T_.CB_TgtStrict)))
+local _,chts=P(CB.ChainOrderNames)
+add(("选人顺序: %s"):format(tostring(chts or "?")))
 add(("开关: 瞄准=%s 静默=%s 开火=%s 移动保护=%s")
 :format(tostring(SYS.T_.CB_Aim), tostring(SYS.T_.CB_Silent),
 tostring(SYS.T_.CB_Fire), tostring(SYS.T_.CB_PauseMove)))
@@ -5462,7 +5493,7 @@ P(SYS.ResetCam)
 P(SYS.EnablePlayerControls)
 SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
-UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(最近→攻击我的→屏幕中心)。\n点完直接打就行。",CY.green)
+UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(正在瞄我的→指定→最近→屏幕中心)。\n点完直接打就行。",CY.green)
 UI.Div(p)
 UI.Section(p,"瞄准 · 关闭 / 自动瞄准",CY.accent)
 local AIM_OFF   ="关闭"
@@ -5554,13 +5585,13 @@ end)
 UI.Switch(p,"🚫 只打指定目标 (他不在就不动手)","CB_TgtStrict")
 UI.Div(p)
 UI.Section(p,"选人偏好",CY.purple)
-UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"最近→攻击我的→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
-function() return ({"最近→攻击我的→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
+UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
+function() return ({"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
 function(v)
-local m={["最近→攻击我的→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
+local m={["正在瞄我的→指定→最近→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
 SYS.C_.CB_PrioMode = m[v] or 1
 end)
-UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定目标」永远最先(战斗页设了指定目标就一直打他, 与这里无关)。\n默认「最近→攻击我的→屏幕中心」: 先打最近的, 其次正在打你的人, 最后屏幕中间那个。",CY.sub)
+UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定」= 你在战斗页指定的那个人。默认链里它排第 2 —— 有人正瞄着你时先打他, 没人瞄你才轮到指定目标。\n★ 打开「只打指定目标」后, 指定目标仍【绝对最优先】(整条链都不参与)。\n默认「正在瞄我的→指定→最近→屏幕中心」: 先打正瞄着你的人, 其次你指定的, 再次最近的, 最后屏幕中间那个。",CY.sub)
 UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
 UI.Switch(p,"🛡 不打队友","CB_Team")
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
