@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 14:59 sha b0c31cc6 bytes 223253'):format('2026-09-17 14:59','b0c31cc6',223253))
+print(('[CheatMenu] build 2026-09-17 15:18 sha 225d1142 bytes 226386'):format('2026-09-17 15:18','225d1142',226386))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -34,6 +34,7 @@ CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
 CB_SkipFF=true,
+TrapImmune=false,
 ESPBox=false,
 AutoUpdateCheck=true,
 },
@@ -57,7 +58,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.4"
+SYS.BuildVer="3.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -731,6 +732,81 @@ if h and h.Health>0 then
 pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
 end
 end)
+end
+local TrapConns,TrapOn=nil,false
+local TRAP_WIN  = 0.45
+local TRAP_SPD  = 1.6
+local TRAP_BACK = 1.2
+local TRAP_MAXSTEP = 40
+function SYS.CleanTrapGuard()
+TrapOn=false
+if TrapConns then for _,c in ipairs(TrapConns) do DS(c) end end
+TrapConns=nil SYS.TrapHit=false
+end
+function SYS.SetTrapImmune(on)
+SYS.CleanTrapGuard()
+if not on then return end
+TrapConns={} TrapOn=true
+local function hookChar(ch)
+if not ch then return end
+local hrp=ch:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+table.insert(TrapConns,hrp.Touched:Connect(function(hit)
+if not (TrapOn and SYS.T_.TrapImmune) then return end
+local v=hrp.AssemblyLinearVelocity
+local hv=Vector3.new(v.X,0,v.Z).Magnitude
+local ws=(SYS.Orig.WalkSpeed or 16)
+local hitV=0
+P(function() hitV=hit.AssemblyLinearVelocity.Magnitude end)
+if hv>ws*TRAP_SPD or hitV>ws*TRAP_SPD then
+SYS.TrapHit=os.clock()
+SYS.TrapAnchor=hrp.Position
+end
+end))
+end
+hookChar(LP.Character)
+table.insert(TrapConns,LP.CharacterAdded:Connect(function(c) hookChar(c) end))
+TrapConns[#TrapConns+1]=RS.RenderStepped:Connect(function()
+if SYS.Unloaded or not TrapOn or not SYS.T_.TrapImmune then return end
+P(function()
+local ch,hum,hrp=GC()
+if not ch or not hum or not hrp then return end
+local ws=(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 1)
+if hum.Health>0 and hum.Health<hum.MaxHealth then hum.Health=hum.MaxHealth end
+if hum.WalkSpeed<ws*0.9 then hum.WalkSpeed=ws end
+if not SYS.T_.GodMode then
+local ok,st=pcall(function() return hum:GetState() end)
+if (ok and st==Enum.HumanoidStateType.Physics) or hum.PlatformStand==true then
+P(function() hum.PlatformStand=false hum:ChangeState(Enum.HumanoidStateType.Running) end)
+end
+end
+if hum.Sit then P(function() hum.Sit=false end) end
+for _,d in ipairs(ch:GetDescendants()) do
+if d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("Motor6D") then
+if d.Part0~=hrp and d.Part1~=hrp then DS(d) end
+end
+end
+local hit=SYS.TrapHit
+if hit and (os.clock()-hit)<TRAP_WIN then
+local v=hrp.AssemblyLinearVelocity
+hrp.AssemblyLinearVelocity=Vector3.new(0,v.Y,0)
+local a=SYS.TrapAnchor
+if a then
+local d=hrp.Position-a
+local hz=Vector3.new(d.X,0,d.Z)
+local hzm=hz.Magnitude
+if hzm>TRAP_BACK then
+local dir=hz.Unit
+local np=hrp.Position-dir*math.min(hzm,TRAP_MAXSTEP)
+hrp.CFrame=CFrame.new(Vector3.new(np.X,hrp.Position.Y,np.Z))
+end
+end
+elseif hit then
+SYS.TrapHit=false
+end
+end)
+end)
+print("[CheatMenu] 反陷阱免伤: 已开启(免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
 end
 end
 do
@@ -4966,6 +5042,8 @@ function() return SYS.C_.SpeedMode end,
 function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
 UI.Div(p)
 UI.Switch(p,"穿墙 (Noclip)","Noclip",SYS.SetNoclip)
+UI.Switch(p,"🛡 反陷阱免伤 (地图道具/生物/陷阱都免)","TrapImmune",SYS.SetTrapImmune)
+UI.Tip(p,"★ 完全豁免: 被撞/被弹开/被推走的位移 · 定身(走不动) · 布娃娃倒地 · 被坐骑锁住 · 被焊接钉住 · 客户端结算的伤害(掉血立刻补回)。\n★ 免不了: 服务端结算的伤害 —— 服务端是权威, 它扣的血客户端改不动。\n★ 滚石: 被撞后【水平速度清零 + 被拉走就渐进压回撞击点】, 所以不弹开、不被压着推走。\n★ 与「上帝模式」同开时会互相让位(不抢同一个状态)。",CY.yellow)
 UI.Switch(p,"无限跳跃","InfiniteJump",SYS.SetInfiniteJump)
 UI.Switch(p,"⤴ 超级跳跃 (跳得更高)","JumpBoost",SYS.SetJumpBoost)
 UI.Slider(p,"跳跃高度倍率",1,10,0.5,function() return SYS.C_.JumpMult end,
