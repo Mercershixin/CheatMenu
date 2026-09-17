@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 19:32 sha 360742b2 bytes 230443'):format('2026-09-17 19:32','360742b2',230443))
+print(('[CheatMenu] build 2026-09-17 20:09 sha f0410bf9 bytes 230746'):format('2026-09-17 20:09','f0410bf9',230746))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -58,7 +58,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.8.0"
+SYS.BuildVer="3.8.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -924,6 +924,7 @@ SYS.TrapHit=false
 end
 end)
 end)
+for i=1,#TrapConns do T(TrapConns[i]) end
 print("[CheatMenu] 反陷阱免伤: 已开启(免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
 end
 end
@@ -3915,7 +3916,7 @@ end)
 PlayerNameCount=cnt
 end
 pcall(function()
-game:GetService("Players").PlayerAdded:Connect(function() task.defer(refreshPlayerNames) end)
+T(game:GetService("Players").PlayerAdded:Connect(function() task.defer(refreshPlayerNames) end))
 end)
 local function isPlayerName(s)
 if PlayerNameCount<0 or #game:GetService("Players"):GetPlayers()~=PlayerNameCount then
@@ -4336,13 +4337,16 @@ if writeProp(obj,"Text",cur,newText) then remember(cur,newText,plain,res) end
 end)
 end
 Trans.PromptFields={"ActionText","ObjectText"}
+local PromptHooked=setmetatable({},{__mode="k"})
 local function processPrompt(p)
 if not p or not p.Parent or Trans.Unloaded or not Trans.UIScanActive then return end
-if p:GetAttribute("__TransHook")~=true then
+if not PromptHooked[p] then
 pcall(function()
-p:SetAttribute("__TransHook",true)
-p:GetPropertyChangedSignal("ActionText"):Connect(function() task.defer(processPrompt,p) end)
-p:GetPropertyChangedSignal("ObjectText"):Connect(function() task.defer(processPrompt,p) end)
+local okA,ca=pcall(function() return p:GetPropertyChangedSignal("ActionText"):Connect(function() task.defer(processPrompt,p) end) end)
+local okB,cb2=pcall(function() return p:GetPropertyChangedSignal("ObjectText"):Connect(function() task.defer(processPrompt,p) end) end)
+if okA and ca then T(ca) end
+if okB and cb2 then T(cb2) end
+if okA and okB then PromptHooked[p]=true end
 end)
 end
 for _,f in ipairs(Trans.PromptFields) do
@@ -6328,6 +6332,7 @@ P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.disableAntiAFK)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
+P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.RemoteSpy and SYS.RemoteSpy.Active then SYS.SetRemoteSpy(false) end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
 P(function() if SYS.SetNoclip then SYS.SetNoclip(false) end end)
