@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 19:18 sha 0dcf98f6 bytes 230431'):format('2026-09-17 19:18','0dcf98f6',230431))
+print(('[CheatMenu] build 2026-09-17 19:32 sha 360742b2 bytes 230443'):format('2026-09-17 19:32','360742b2',230443))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -3146,6 +3146,18 @@ end
 if slot>#chain then o[#o+1]="specified" end
 return o
 end
+local function specResolve(mode)
+if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
+local pl=Players:FindFirstChild(CB.TargetName())
+if pl and isEnemy(pl) then
+local p=partOf(pl,mode)
+if p and (not SYS.T_.CB_Wall or clearShot(p)) then return pl,p end
+end
+if (not pl) or (not alive(pl)) then
+SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
+end
+return nil
+end
 local CHAIN_NM={aiming="正在瞄我的",near="最近的",center="屏幕中心",crosshair="准星指向",lowhp="血量最低",specified="我指定的"}
 function CB.ChainOrderNames()
 local ch=CB_CHAINS[SYS.C_.CB_PrioMode or 1] or CB_CHAINS[1]
@@ -3165,20 +3177,8 @@ if not cf0 then return nil,nil end
 local camPos=cf0.Position
 local maxD=SYS.C_.CB_MaxDist or 1200
 local chain=CB_CHAINS[SYS.C_.CB_PrioMode or 1] or CB_CHAINS[1]
-local function specResolve()
-if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
-local pl=Players:FindFirstChild(CB.TargetName())
-if pl and isEnemy(pl) then
-local p=partOf(pl,mode)
-if p and (not SYS.T_.CB_Wall or clearShot(p)) then return pl,p end
-end
-if (not pl) or (not alive(pl)) then
-SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
-end
-return nil
-end
 if SYS.T_.CB_TgtStrict and CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2 then
-return specResolve()
+return specResolve(mode)
 end
 local vp=cam.ViewportSize
 local cx,cy=vp.X/2,vp.Y/2
@@ -3230,7 +3230,7 @@ end
 for i=1,#order do
 local key=order[i]
 if key=="specified" then
-local a,b=specResolve()
+local a,b=specResolve(mode)
 if a then return a,b end
 elseif key=="crosshair" then
 if chain[1]=="crosshair" then
