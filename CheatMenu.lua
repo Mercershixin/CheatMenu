@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 16:34 sha 72aa616f bytes 232213'):format('2026-09-17 16:34','72aa616f',232213))
+print(('[CheatMenu] build 2026-09-17 17:23 sha d050d2c7 bytes 232228'):format('2026-09-17 17:23','d050d2c7',232228))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -59,7 +59,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.7.0"
+SYS.BuildVer="3.7.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -186,8 +186,8 @@ end
 end)
 if ok then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
-if SYS.EnsurePage then
-for _,def in ipairs(UI.Defs or {}) do P(SYS.EnsurePage,def.name) end
+if SYS.EnsurePage and SYS.UI then
+for _,def in ipairs(SYS.UI.Defs or {}) do P(SYS.EnsurePage,def.name) end
 end
 for key,fn in pairs(SYS.SwitchOnChange or {}) do
 if SYS.T_[key]==false then P(fn,false) end
