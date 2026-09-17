@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 00:38 sha 2e11ba72 bytes 240982'):format('2026-09-18 00:38','2e11ba72',240982))
+print(('[CheatMenu] build 2026-09-18 00:46 sha d5e26abc bytes 241973'):format('2026-09-18 00:46','d5e26abc',241973))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -61,7 +61,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="3.10.0"
+SYS.BuildVer="3.10.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3097,6 +3097,14 @@ end
 local function alive(pl)
 local ch=pl and pl.Character
 if not ch or ch.Parent==nil then return false end
+local function attr(k)
+local ok,v=pcall(function() return pl:GetAttribute(k) end)
+return ok and v or nil
+end
+local st=attr("State")
+if type(st)=="string" and st=="Dead" then return false end
+local hp=attr("Health")
+if type(hp)=="number" and hp<=0 then return false end
 local dt=CB.DeadAt[pl.Name]
 if dt then
 local dc=CB.DeadCh[pl.Name]
@@ -3121,8 +3129,8 @@ end
 local h=humOf(pl)
 if h then
 if h.Health<=0 then return false end
-local ok,st=pcall(function() return h:GetState() end)
-if ok and (st==Enum.HumanoidStateType.Dead or st==Enum.HumanoidStateType.Physics) then return false end
+local ok,st2=pcall(function() return h:GetState() end)
+if ok and (st2==Enum.HumanoidStateType.Dead or st2==Enum.HumanoidStateType.Physics) then return false end
 if SYS.T_.CB_OnlyAlive and h.PlatformStand==true then return false end
 return true
 end
@@ -3132,6 +3140,14 @@ return bodyOf(ch)~=nil
 end
 local function hasShield(pl)
 local ch=pl and pl.Character
+local function attr(k)
+local ok,v=pcall(function() return pl:GetAttribute(k) end)
+return ok and v or nil
+end
+local sh=attr("Shield")
+if type(sh)=="number" and sh>0 then return true end
+local tsh=attr("TempShield")
+if type(tsh)=="number" and tsh>0 then return true end
 return (ch and ch:FindFirstChildOfClass("ForceField"))~=nil
 end
 local function partOf(pl,mode)
@@ -3173,8 +3189,14 @@ CB.SelfHealAt=0
 local function isEnemyEx(pl,ignoreTeam,ignoreFF)
 if not pl or pl==SYS.LP then return false end
 if not alive(pl) then return false end
-if not ignoreTeam and SYS.T_.CB_Team and SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then
-return false
+if not ignoreTeam and SYS.T_.CB_Team then
+local function ateam(p)
+local ok,v=pcall(function() return p:GetAttribute("Team") end)
+if ok and type(v)=="string" and v~="" then return v end
+return p.Team and p.Team.Name or nil
+end
+local mt=ateam(SYS.LP) local pt=ateam(pl)
+if mt and pt and mt==pt then return false end
 end
 return true
 end
@@ -3406,14 +3428,21 @@ end
 end
 local h=humOf(pl)
 local hp=h and (h.Health or 1e9) or 1e9
+local function aattr(k)
+local ok,v=pcall(function() return pl:GetAttribute(k) end)
+return ok and v or nil
+end
+local ahp=aattr("Health")
+if type(ahp)=="number" then hp=ahp end
 local ff=_sh
-local armed=false
 local ch2=pl.Character
-if ch2 then armed=(ch2:FindFirstChildOfClass("Tool"))~=nil end
+local hasTool=ch2 and (ch2:FindFirstChildOfClass("Tool"))~=nil
+local paused=aattr("combatPaused")
+local canAttack = not (paused==true) and hasTool
 cands[#cands+1]={
 pl=pl,p=p,d=d,
 s={aiming=(aiming and 0 or 1),near=d,center=dd,lowhp=hp},
-ff=ff,armed=armed,
+ff=ff,armed=canAttack,
 }
 end
 end
