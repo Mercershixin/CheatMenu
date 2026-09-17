@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 01:18 sha 637e77eb bytes 243552'):format('2026-09-18 01:18','637e77eb',243552))
+print(('[CheatMenu] build 2026-09-18 01:37 sha 637e77eb bytes 243552'):format('2026-09-18 01:37','637e77eb',243552))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
