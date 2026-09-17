@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 10:58 sha eb4202e0 bytes 216854'):format('2026-09-17 10:58','eb4202e0',216854))
+print(('[CheatMenu] build 2026-09-17 11:11 sha 063fc734 bytes 216854'):format('2026-09-17 11:11','063fc734',216854))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.1"
+SYS.BuildVer="3.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 GENV.__SYS=SYS
@@ -3197,7 +3197,7 @@ SYS.C_.CB_AimPart=1
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
-CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 优先链(攻击我的→最近→屏幕中心)",SYS.CY.green)
+CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 优先链(最近→攻击我的→屏幕中心)",SYS.CY.green)
 print("[Combat] ⚡ 一键开战: 自动瞄准 + 自动开火 0.04s + 预测 + 锁头 + 优先链 1")
 end
 function CB.TestOnce()
@@ -5274,7 +5274,7 @@ P(SYS.ResetCam)
 P(SYS.EnablePlayerControls)
 SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
-UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(攻击我的→最近→屏幕中心)。\n点完直接打就行。",CY.green)
+UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(最近→攻击我的→屏幕中心)。\n点完直接打就行。",CY.green)
 UI.Div(p)
 UI.Section(p,"瞄准 · 关闭 / 自动瞄准",CY.accent)
 local AIM_OFF   ="关闭"
