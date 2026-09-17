@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-17 15:37 sha 2bf596b2 bytes 227890'):format('2026-09-17 15:37','2bf596b2',227890))
+print(('[CheatMenu] build 2026-09-17 16:34 sha 72aa616f bytes 232213'):format('2026-09-17 16:34','72aa616f',232213))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -37,6 +37,7 @@ CB_SkipFF=true,
 TrapImmune=false,
 ESPBox=false,
 AutoUpdateCheck=true,
+BootUpdateCheck=true,
 },
 C_={
 FlySpeed=3,FlyMode="Align",
@@ -58,9 +59,10 @@ Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 }
-SYS.BuildVer="3.6"
+SYS.BuildVer="3.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
+SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 GENV.__SYS=SYS
 local Players,RS,UIS,WS,CAS,LT,Stats,TweenService,VIM,VirtualUser,RStorage,CS,HS
 do
@@ -270,6 +272,100 @@ return SYS.TT(co)
 end
 end
 local QueueSave=SYS.QueueSave
+function SYS.BootUpdateCheck()
+if GENV.CheatBootDone then return false end
+GENV.CheatBootDone=true
+if SYS.T_.BootUpdateCheck==false then return false end
+if type(game.HttpGet)~="function" then return false end
+local base=tostring(SYS.BuildURL or "")
+if base=="" or base:find("{{",1,true) then base=tostring(SYS.FallbackRepo or "") end
+local user,repo,branch=base:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/([^/]+)")
+local VER,SRC
+if user then
+VER={
+("https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch),
+("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch),
+("https://cdn.jsdelivr.net/gh/%s/%s@%s/version.txt"):format(user,repo,branch),
+}
+SRC={
+("https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch),
+("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch),
+("https://cdn.jsdelivr.net/gh/%s/%s@%s/CheatMenu.lua"):format(user,repo,branch),
+}
+else
+VER={tostring(SYS.BuildVerURL or "")} SRC={base}
+end
+local function isVer(v)
+return v:match("^%d+%.%d+$")~=nil or v:match("^%d+%.%d+%.%d+$")~=nil
+end
+local rv=""
+for i=1,#VER do
+local u=VER[i]
+if u~="" and not u:find("{{",1,true) then
+local ok,body=pcall(game.HttpGet,game,u)
+if ok and type(body)=="string" then
+local flat=body:gsub("%s","")
+local v=flat:sub(1,16)
+if isVer(v) then rv=v break end
+end
+end
+end
+if rv=="" then return false end
+local mine=tostring(SYS.BuildVer or ""):gsub("%s","")
+if rv==mine then return false end
+local function score(v)
+local a,b,c=v:match("^(%d+)%.(%d+)%.(%d+)$")
+if a then return tonumber(a)*1000000+tonumber(b)*1000+tonumber(c) end
+local a2,b2=v:match("^(%d+)%.(%d+)$")
+if a2 then return tonumber(a2)*1000000+tonumber(b2)*1000 end
+return nil
+end
+local rn,mn=score(rv),score(mine)
+if not rn or not mn then return false end
+if rn<=mn then return false end
+print(("[CheatMenu] 加载时更新检查: 发现新脚本 %s -> %s, 改用新版启动"):format(mine,rv))
+local function get(urls,minlen)
+for i=1,#urls do
+local u=urls[i]
+if u~="" and not u:find("{{",1,true) then
+local ok,body=pcall(game.HttpGet,game,u)
+if ok and type(body)=="string" and #body>=minlen and not body:find("404: Not Found",1,true) then return body end
+end
+end
+return nil
+end
+local src=get(SRC,1000)
+if type(src)~="string" then print("[CheatMenu] ⚠️ 新版源码没拉到, 继续用当前版本") return false end
+local chunk,cerr=(loadstring or load)(src,"@CheatMenu_boot")
+if type(chunk)~="function" then print("[CheatMenu] ⚠️ 新版编译不过: "..tostring(cerr)) return false end
+GENV.CheatUpdateNote=("🆕 已更新 %s → %s"):format(mine,rv)
+local ok,err=pcall(chunk)
+if not ok then
+GENV.CheatUpdateNote=nil
+print("[CheatMenu] ⚠️ 新版启动失败, 回到当前版本: "..tostring(err))
+return false
+end
+P(function()
+if type(writefile)~="function" or type(readfile)~="function" or type(isfile)~="function" then return end
+local name="CheatMenu.lua"
+local ws=nil
+if type(getworkspace)=="function" then
+local kok,p=pcall(getworkspace)
+if kok and type(p)=="string" and p~="" then ws=(p:gsub("[/\\]+$","")) end
+end
+local path=(ws and (ws.."/"..name)) or name
+if not isfile(path) then return end
+local old=readfile(path)
+if type(old)=="string" and #old>1000 then writefile(path..".bak",old) end
+writefile(path,src)
+print("[CheatMenu] 已把新版写回本机: "..path)
+end)
+return true
+end
+do
+local _,booted=P(SYS.BootUpdateCheck)
+if booted then return end
+end
 do
 local cChar,cHum,cRoot=nil,nil,nil
 local charConns={}
@@ -5670,6 +5766,8 @@ UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
 UI.Tip(p,"★ 每次启动都会检查一次新版本；检查到就会弹消息告诉你【新版本号】。\n本开关只决定「要不要自动升级」：开着=直接热重载到新版；关掉=只提示不升级，想升级再点上面的按钮。",CY.sub)
 UI.Btn(p,"⬆️ 检查更新并热重载",CY.green,function() P(function() SYS.CheckUpdate(false) end) end)
 UI.Tip(p,"热重载 = 先保存当前配置(含所有开关) -> 卸载旧实例 -> 拉取新版 -> 加载。\n新实例启动时会自动按配置把开关开回来, 所以你会看到功能自己恢复。")
+UI.Switch(p,"🚀 重新加载时先检查新版本","BootUpdateCheck")
+UI.Tip(p,"★ 管的是【刚加载的那一瞬间】: 退出游戏 / 卸载脚本后重新注入时, 先看一眼仓库有没有新脚本。\n有 -> 直接用新版启动(启动后会弹「已更新 x → y」); 没有 -> 正常打开。\n好处: 你永远不会先看到旧版界面再被换掉。检查在界面建立之前完成, 取不到版本号(离线 / 执行器没有 HttpGet)就照常打开, 绝不挡路。",CY.sub)
 UI.Div(p)
 UI.Btn(p,"🗑️ 卸载脚本 (干净退出)",CY.red,function()
 SYS.Notify("正在卸载...",CY.red)
@@ -6314,6 +6412,8 @@ SYS.ScreenGui=nil SYS.MenuOpen=false
 if GENV.CheatUnload==SYS.UnloadAll then
 GENV.CheatLoaded=nil GENV.CheatUnload=nil GENV.CheatUnloaded=true
 end
+GENV.CheatBootDone=nil
+GENV.CheatUpdateNote=nil
 print("✅ 已卸载")
 end
 function SYS.CheckUpdate(silent,notifyOnly)
@@ -6390,6 +6490,12 @@ for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
 print("[CheatMenu] ✅ 已根据配置激活开关")
+if GENV.CheatUpdateNote then
+local note=GENV.CheatUpdateNote
+GENV.CheatUpdateNote=nil
+SYS.Notify(note,SYS.CY.green)
+print("[CheatMenu] "..note)
+end
 task.wait(1.0)
 P(function() SYS.CheckUpdate(true, not SYS.T_.AutoUpdateCheck) end)
 end)
