@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 20:18 sha f9ec74ea bytes 279442'):format('2026-09-18 20:18','f9ec74ea',279442))
+print(('[CheatMenu] build 2026-09-18 21:09 sha b843ca27 bytes 283093'):format('2026-09-18 21:09','b843ca27',283093))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.4.2"
+SYS.BuildVer="5.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4660,8 +4660,21 @@ if hasChinese(s) then return false end
 if not hasForeign(s) then return false end
 if s:match("^https?://%S+$") or s:match("^www%.%S+$") then return false end
 if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
+if Trans.IsEmoticon(s) then return false end
+if Trans.KeepWords[s:lower()] then return false end
 return true
 end
+local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
+Trans.IsEmoticon=function(v)
+if type(v)~="string" then return false end
+local t=v:lower():gsub("%s+","")
+if t=="" or #t>12 then return false end
+for w in EMOTICONS:gmatch("[^|]+") do if t==w then return true end end
+return false
+end
+local KEEPW="og|secret|mythic|legendary|epic|rare|uncommon|common|divine|celestial|exclusive|limited|godly|ultra|special|unique|hidden|ancient|eternal|transcendent|op"
+Trans.KeepWords={}
+for w in KEEPW:gmatch("[^|]+") do Trans.KeepWords[w]=true end
 Trans.Verdict={}
 local VerdictN=0
 local function verdictOf(raw,isChat)
@@ -5087,8 +5100,57 @@ end
 end
 flush()
 end
+function Trans.isIgnored(obj)
+if not obj then return false end
+local o=obj
+for _=1,4 do
+if not o then break end
+local ok,n=pcall(function() return o.Name end)
+if ok and type(n)=="string" and Trans.IgnoreObjects[n] then return true end
+local okp,p=pcall(function() return o.Parent end)
+o=okp and p or nil
+end
+return false
+end
+local TextHooked=setmetatable({},{__mode="k"})
+local TextRetry=setmetatable({},{__mode="k"})
+local TextLastAt=setmetatable({},{__mode="k"})
+local TextHookedN=0
+local TEXT_HOOK_MAX=1500
+local TEXT_RETRY_MAX=5
+local TEXT_GAP=0.1
+local function onTextChanged(obj)
+if Trans.Unloaded or not Trans.UIScanActive then return end
+local now=os.clock()
+local last=TextLastAt[obj]
+if last and now-last<TEXT_GAP then return end
+TextLastAt[obj]=now
+local n=(TextRetry[obj] or 0)+1
+TextRetry[obj]=n
+if n>TEXT_RETRY_MAX then return end
+task.defer(function()
+if Trans.Unloaded or not Trans.UIScanActive then return end
+P(Trans.processLabel,obj,"ui")
+end)
+end
+function Trans.HookText(obj)
+if not obj then return false end
+if TextHooked[obj] then return true end
+if TextHookedN>=TEXT_HOOK_MAX then return false end
+local ok,conn=pcall(function()
+return obj:GetPropertyChangedSignal("Text"):Connect(function() onTextChanged(obj) end)
+end)
+if ok and conn then
+T(conn)
+TextHooked[obj]=true
+TextHookedN=TextHookedN+1
+return true
+end
+return false
+end
 function Trans.processLabel(obj,source)
 if not obj or not obj.Parent or Trans.Unloaded then return end
+if Trans.isIgnored(obj) then return end
 local ok,cur=pcall(function() return obj.Text end)
 if not ok or type(cur)~="string" or cur=="" then return end
 local isChat=(source=="chat")
@@ -5122,6 +5184,7 @@ Trans.PromptFields={"ActionText","ObjectText"}
 local PromptHooked=setmetatable({},{__mode="k"})
 local function processPrompt(p)
 if not p or not p.Parent or Trans.Unloaded or not Trans.UIScanActive then return end
+if Trans.isIgnored(p) then return end
 if not PromptHooked[p] then
 pcall(function()
 local okA,ca=pcall(function() return p:GetPropertyChangedSignal("ActionText"):Connect(function() task.defer(processPrompt,p) end) end)
@@ -5175,6 +5238,7 @@ local o=ds[i]
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
 if not uiBlocked(o) then
+P(Trans.HookText,o)
 Trans.processLabel(o,"ui")
 count=count+1
 end
@@ -5192,7 +5256,7 @@ function Trans.worldNode(o)
 if not o then return end
 local cls=o.ClassName
 if cls=="TextLabel" or cls=="TextButton" then
-if not uiBlocked(o) then Trans.processLabel(o,"ui") end
+if not uiBlocked(o) then P(Trans.HookText,o) Trans.processLabel(o,"ui") end
 elseif cls=="ProximityPrompt" then
 processPrompt(o)
 end
@@ -7534,6 +7598,10 @@ SYS.MenuPrevMouseBehav=nil SYS.MenuPrevMouseIcon=nil
 SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 end
+local IGNORE_LIST="A_Timer|ActualPower|All|Amount|AreaName|B_Timer|BossName|BrainrotChance|BrainrotName|Brainrots|C_Timer|Cancel|Cash|Chance|ChanceLabel|Charging|ClaimButton|ClickRegion|Close|CoinLabel|Console|ConsoleModifierLabel|Count|CountLabel|CP/s|CPS|CPSLabel|CurrencyLabel|Day|DebounceFrame|Description|Discount|DiscountedPrice|DiscountLabel|DisplayName|EventTitle|Exp|Favorite|Favorites|Field|FreeSpinLabel|FriendsLabel|Gift|GiftButton|GiftingTo|GuideLabel|Header|Header1|Header2|Header3|HereText|IconLabel|Info|InfoLabel|InfoText|ItemName|KickPower|Label|LabelContent|Level|LevelLabel|Limited|LockedText|Lucky Blocks|Lvl|Message|Mobile|Mutation|MutationChance|MutationLabel|Name|NameLabel|New|Next|NoPlayers|Now|Odds|One|OP|OreName|Owned|PC|Percentage|Pity|PlayerName|Plus|Plus1|Plus2|Points|PowerLabel|Prevoius|Price|PriceLabel|Progress|ProgressBar|Rarity|RarityLabel|Reached|RebirthLevel|RefreshLabel|RewardLabel|RobuxLabel|S_Timer|SelectedLabel|SlotNum|SpinsLabel|StatusLabel|Stock|StockUpdateLabel|SubHeader|Suggest|SunHeader|TaskLabel|TextButton|TextLabel|Three|Tier|TimeLabel|TimeLeft|Timer|TimerLabel|TItle|Title|TitleDown|TitleLabel|TitleUp|TotalLuckLabel|TradeLimit|Two|Txt|Txt1|Txt2|Txt3|Type|Typed|UnlockedLabel|UnlockLabel|Value|ValueLabel|WeatherName|WeightLabel|WorldName"
+Trans.IgnoreObjects={}
+for w in IGNORE_LIST:gmatch("[^|]+") do Trans.IgnoreObjects[w]=true end
+print("[Trans] 忽略控件表已装载: "..tostring(#IGNORE_LIST).." 字符")
 do
 local fps,fT=0,os.clock()
 T(RS.Heartbeat:Connect(function()
