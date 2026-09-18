@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 03:12 sha b0905957 bytes 244036'):format('2026-09-18 03:12','b0905957',244036))
+print(('[CheatMenu] build 2026-09-18 11:37 sha cd7f1ba2 bytes 258042'):format('2026-09-18 11:37','cd7f1ba2',258042))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -28,11 +28,12 @@ AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
-CB_PauseMove=false,CB_Predict=false,CB_Team=true,CB_Wall=true,
+CB_PauseMove=false,CB_Predict=false,CB_Team=false,CB_Wall=true,
 CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
 CB_SkipFF=true,
+CB_Melee=false,
 TrapImmune=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
@@ -49,7 +50,7 @@ DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
-CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,
+CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
 CB_FireDelay=0.035,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
@@ -61,7 +62,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.0.0"
+SYS.BuildVer="4.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -405,34 +406,64 @@ if pk then NetRoot=pk:WaitForChild("Network",15) end
 end
 end)
 end)
-function SYS.REvent(n)
+local RRemoteCache={}
+local function findRemote(n,wantCls)
+if typeof(n)=="Instance" and n:IsA(wantCls) then return n end
+if type(n)~="string" or n=="" then return nil end
+local ck=wantCls.."|"..n
+local hit=RRemoteCache[ck] if hit and hit.Parent then return hit end
 if not RStorage then return nil end
+local function ok2(inst) return inst and inst:IsA(wantCls) and inst or nil end
+local rel=RStorage:FindFirstChild("Remote")
+if rel then
+local seg={}
+for s in tostring(n):gmatch("[^%.]+") do seg[#seg+1]=s end
+local cur=rel
+for i=1,#seg do
+local nx=cur and cur:FindFirstChild(seg[i])
+if i<#seg then cur=nx else
+local r2=ok2(nx)
+if r2 then RRemoteCache[ck]=r2 return r2 end
+end
+end
+local function dig(root,d)
+if d>3 then return nil end
+for _,c in ipairs(root:GetChildren()) do
+if c.Name==n then local r3=ok2(c) if r3 then return r3 end end
+if c:IsA("Folder") or c:IsA("Configuration") then
+local r4=dig(c,d+1) if r4 then return r4 end
+end
+end
+return nil
+end
+local r5=dig(rel,1)
+if r5 then RRemoteCache[ck]=r5 return r5 end
+end
 if not NetRoot then
 pcall(function()
 local sh=RStorage:FindFirstChild("Shared")
 local pk=sh and sh:FindFirstChild("Packages")
 NetRoot=pk and pk:FindFirstChild("Network")
 end)
-if not NetRoot then return nil end
 end
-local r=NetRoot:FindFirstChild("rev_"..n)
-if r and r:IsA("RemoteEvent") then return r end
+if NetRoot then
+local pre=(wantCls=="RemoteEvent") and "rev_" or "ref_"
+local r6=ok2(NetRoot:FindFirstChild(pre..n))
+if r6 then RRemoteCache[ck]=r6 return r6 end
+local r7=ok2(NetRoot:FindFirstChild(pre..tostring(n):gsub("%.","_")))
+if r7 then RRemoteCache[ck]=r7 return r7 end
+end
 return nil
 end
-function SYS.RFunction(n)
-if not RStorage then return nil end
-if not NetRoot then
-pcall(function()
-local sh=RStorage:FindFirstChild("Shared")
-local pk=sh and sh:FindFirstChild("Packages")
-NetRoot=pk and pk:FindFirstChild("Network")
-end)
-if not NetRoot then return nil end
+function SYS.REvent(n) return findRemote(n,"RemoteEvent") end
+function SYS.RFunction(n) return findRemote(n,"RemoteFunction") end
+function SYS.Invoke(n,...)
+local r=SYS.RFunction(n) if not r then return false,nil end
+local a=table.pack(...)
+local ok,res=P(function() return r:InvokeServer(table.unpack(a,1,a.n)) end)
+return ok,res
 end
-local r=NetRoot:FindFirstChild("ref_"..n)
-if r and r:IsA("RemoteFunction") then return r end
-return nil
-end
+function SYS.REventU(n) return findRemote(n,"UnreliableRemoteEvent") end
 function SYS.Fire(n,...)
 local r=SYS.REvent(n) if not r then return false end
 local a=table.pack(...)
@@ -3218,17 +3249,34 @@ end
 CB.NoTeamFilter=false
 CB.NoFFFilter=false
 CB.SelfHealAt=0
-local function isEnemyEx(pl,ignoreTeam,ignoreFF)
-if not pl or pl==SYS.LP then return false end
-if not alive(pl) then return false end
-if not ignoreTeam and SYS.T_.CB_Team then
-local function ateam(p)
+function CB.TeamKey(p)
+if not p then return nil end
 local ok,v=pcall(function() return p:GetAttribute("Team") end)
 if ok and type(v)=="string" and v~="" then return v end
 return p.Team and p.Team.Name or nil
 end
-local mt=ateam(SYS.LP) local pt=ateam(pl)
-if mt and pt and mt==pt then return false end
+function CB.TeamKeyUseful()
+local now=os.clock()
+if CB._tkAt and (now-CB._tkAt)<1 then return CB._tkVal==true end
+CB._tkAt=now
+local first,second=nil,false
+local function feed(k)
+if k==nil then return end
+if first==nil then first=k elseif k~=first then second=true end
+end
+feed(CB.TeamKey(SYS.LP))
+local _,pok=P(function()
+for _,pl in ipairs(Players:GetPlayers()) do feed(CB.TeamKey(pl)) end
+end)
+CB._tkVal=(pok and second)==true
+return CB._tkVal
+end
+local function isEnemyEx(pl,ignoreTeam,ignoreFF)
+if not pl or pl==SYS.LP then return false end
+if not alive(pl) then return false end
+if not ignoreTeam and SYS.T_.CB_Team then
+local mt=CB.TeamKey(SYS.LP) local pt=CB.TeamKey(pl)
+if mt and pt and mt==pt and CB.TeamKeyUseful() then return false end
 end
 return true
 end
@@ -3268,7 +3316,10 @@ for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=SYS.LP and alive(pl) then
 others=others+1
 if hasShield(pl) then ffc=ffc+1 end
-if SYS.LP.Team and pl.Team and SYS.LP.Team==pl.Team then teamc=teamc+1 end
+do
+local a=CB.TeamKey(SYS.LP) local b=CB.TeamKey(pl)
+if a and b and a==b then teamc=teamc+1 end
+end
 end
 end
 if others==0 then return end
@@ -3288,12 +3339,30 @@ if not cam then return true end
 local cf=cam.CFrame
 if not cf then return true end
 local o=cf.Position
-local d=part.Position-o
-if d.Magnitude<1 then return true end
+local pts={part.Position}
+local sz=part.Size
+if sz then
+local fx,fy,fz=sz.X*0.45,sz.Y*0.45,sz.Z*0.45
+local c=part.Position
+pts[#pts+1]=c+Vector3.new(0,fy,0)
+pts[#pts+1]=c+Vector3.new(fx,0,0)
+pts[#pts+1]=c+Vector3.new(-fx,0,0)
+pts[#pts+1]=c+Vector3.new(0,0,fz)
+pts[#pts+1]=c+Vector3.new(0,0,-fz)
+pts[#pts+1]=c+Vector3.new(fx,fy,0)
+pts[#pts+1]=c+Vector3.new(-fx,fy,0)
+pts[#pts+1]=c+Vector3.new(0,fy,fz)
+pts[#pts+1]=c+Vector3.new(0,fy,-fz)
+end
+local ok=false
+for i=1,#pts do
+local d=pts[i]-o
+if d.Magnitude<1 then ok=true break end
 local _,hit=P(function()
 return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
 end)
-local ok=(hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)))
+if hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)) then ok=true break end
+end
 SHOT_CACHE[part]={t=now,ok=ok}
 return ok
 end
@@ -3668,6 +3737,7 @@ CB.Stat.hud=CB.Stat.hud+1
 end
 aimTick()
 CB.Stat.aim=CB.Stat.aim+1
+if CB.meleeTick then CB.meleeTick() end
 end
 local CBERR=0
 local function cbRenderTick(dt)
@@ -3690,6 +3760,25 @@ end
 function CB.ResetClock()
 accScan=0 CBERR=0
 CB.Stat.scan=0 CB.Stat.hud=0 CB.Stat.aim=0
+end
+function CB.meleeTick()
+if not SYS.T_.CB_Melee then return end
+local p=CB.TargetPart
+if not p then return end
+local root=bodyOf(SYS.LP.Character)
+if not root then return end
+local d=(p.Position-root.Position).Magnitude
+if d>(SYS.C_.CB_MeleeDist or 9) then return end
+local now=os.clock()
+if now-(CB.LastMelee or 0)<(SYS.C_.CB_MeleeGap or 0.35) then return end
+CB.LastMelee=now
+P(function()
+if SYS.VIM and SYS.VIM.SendKeyEvent then
+SYS.VIM:SendKeyEvent(true,Enum.KeyCode.F,false,game)
+SYS.VIM:SendKeyEvent(false,Enum.KeyCode.F,false,game)
+end
+end)
+CB.Stat.melee=(CB.Stat.melee or 0)+1
 end
 function CB.Start()
 if CB.RenderBound or SYS.Unloaded then return end
@@ -5453,6 +5542,7 @@ end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},
 {name="挂机",icon="★"},{name="翻译",icon="🌐"},{name="传送",icon="➲"},{name="设置",icon="⚙"},
+{name="实验室",icon="🔬"},
 }
 UI.Pages["移动"]=function(p)
 UI.Switch(p,"飞行 (Fly)","Fly",function(on)
@@ -5756,6 +5846,258 @@ end)
 end)
 UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSource("ui") end)
 end
+do
+local LAB={Hooks={}, Log={}, MaxLog=200}
+SYS.Lab=LAB
+local function has(n) return type(_G[n])=="function" end
+LAB.Caps=function()
+return {
+getgc   = has("getgc") or has("getGC"),
+hookfn  = has("hookfunction") or has("hookfunc") or has("replaceclosure") or has("replacefunc"),
+restore = has("restorefunction") or has("restorefunc") or has("restoreclosure"),
+scripts = has("getscripts") or has("getrunningscripts"),
+modules = has("getloadedmodules"),
+}
+end
+local function gcApi() if type(getgc)=="function" then return getgc end if type(_G.getGC)=="function" then return getGC end return nil end
+local function hookApi()
+if type(hookfunction)=="function" then return hookfunction end
+if type(_G.hookfunc)=="function" then return hookfunc end
+if type(_G.replaceclosure)=="function" then return replaceclosure end
+if type(_G.replacefunc)=="function" then return replacefunc end
+return nil
+end
+local function restoreApi()
+if type(restorefunction)=="function" then return restorefunction end
+if type(_G.restorefunc)=="function" then return restorefunc end
+if type(_G.restoreclosure)=="function" then return restoreclosure end
+return nil
+end
+local function ownerOf(f)
+local ok,s=P(function()
+if type(getfenv)=="function" then
+local e=select(2,pcall(getfenv,f))
+return e and e.script or nil
+end
+return nil
+end)
+return ok and s or nil
+end
+local function nameOf(f)
+local ok,n=P(function()
+if type(getinfo)=="function" then return getinfo(f).name end
+if type(debug)=="table" and type(debug.getinfo)=="function" then return debug.getinfo(f).name end
+return nil
+end)
+return ok and n or nil
+end
+function LAB.ScanGC()
+local g=gcApi()
+if not g then SYS.Notify("这台执行器没有 getgc",SYS.CY.yellow) return nil end
+local fns,tbls,byScript={},{},{}
+local ok,err=P(function()
+for _,v in pairs(g(true)) do
+if type(v)=="function" then
+fns[#fns+1]=v
+local own=ownerOf(v)
+if own then
+local k=own.Name or tostring(own)
+byScript[k]=byScript[k] or {n=0}
+byScript[k].n=byScript[k].n+1
+end
+elseif type(v)=="table" then tbls[#tbls+1]=v end
+end
+end)
+if not ok then SYS.Notify("getgc 遍历失败: "..tostring(err):sub(1,60),SYS.CY.red) return nil end
+local rows={}
+for k,v in pairs(byScript) do rows[#rows+1]=("  %-42s %d 个函数"):format(k:sub(1,42),v.n) end
+table.sort(rows)
+local out={("========== GC 扫描 =========="),
+("函数 %d 个 | 表 %d 个"):format(#fns,#tbls),
+"按归属脚本分组(前 25):"}
+for i=1,math.min(#rows,25) do out[#out+1]=rows[i] end
+out[#out+1]="(归属拿不到 = C/引擎侧或匿名函数, hook 不了)"
+LAB.LastFns=fns
+print(table.concat(out,"\n"))
+SYS.Notify(("GC 扫描完成: %d 函数 / %d 表"):format(#fns,#tbls),SYS.CY.green)
+return {fns=#fns,tbls=#tbls}
+end
+local KEY={"damage","hit","hurt","fire","shoot","aim","kill","die","death","health","attack","weapon","bullet"}
+function LAB.ListHookable()
+local fns=LAB.LastFns
+if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return end
+local hits={}
+for i=1,#fns do
+local f=fns[i] local nm=nameOf(f)
+if type(nm)=="string" and #nm>1 and #nm<40 then
+local low=nm:lower()
+for _,k in ipairs(KEY) do
+if low:find(k,1,true) then
+local own=ownerOf(f)
+hits[#hits+1]=("  %-30s  脚本=%s"):format(nm:sub(1,30),own and (own.Name or "?") or "-")
+break
+end
+end
+end
+end
+table.sort(hits)
+local out={("========== 名字可疑的函数(可能可 hook) =========="),
+("命中 %d 个 (关键词: damage/hit/fire/aim/kill/health ...)"):format(#hits)}
+for i=1,math.min(#hits,40) do out[#out+1]=hits[i] end
+out[#out+1]="这些只是【候选】—— 想观察哪个, 用 ④ 按名字包一层(只记录, 不改返回值)"
+print(table.concat(out,"\n"))
+SYS.Notify(("找到 %d 个候选函数"):format(#hits),SYS.CY.green)
+end
+function LAB.ListScripts()
+local out={"========== 已加载脚本 / 模块 =========="}
+local n=0
+P(function()
+if type(getscripts)=="function" then
+for _,s in ipairs(getscripts()) do
+n=n+1
+if n<=40 then
+local ok,nm=pcall(function() return s:GetFullName() end)
+out[#out+1]=("  S %-68s"):format(tostring(ok and nm or s):sub(1,68))
+end
+end
+out[#out+1]=("脚本共 %d 个(只列前 40)"):format(n)
+else
+out[#out+1]="  这台执行器没有 getscripts"
+end
+if type(getloadedmodules)=="function" then
+local m=0
+for _,s in ipairs(getloadedmodules()) do
+m=m+1
+if m<=20 then
+local ok,nm=pcall(function() return s:GetFullName() end)
+out[#out+1]=("  M %-68s"):format(tostring(ok and nm or s):sub(1,68))
+end
+end
+out[#out+1]=("已加载模块 %d 个(只列前 20)"):format(m)
+end
+end)
+print(table.concat(out,"\n"))
+SYS.Notify("脚本清单已输出到控制台",SYS.CY.green)
+end
+function LAB.Watch(name,limit)
+if type(name)~="string" or name=="" then SYS.Notify("先填函数名",SYS.CY.yellow) return false end
+local hf=hookApi()
+if not hf then SYS.Notify("这台执行器没有 hookfunction",SYS.CY.yellow) return false end
+local fns=LAB.LastFns
+if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return false end
+local target
+for i=1,#fns do if nameOf(fns[i])==name then target=fns[i] break end end
+if not target then SYS.Notify("没找到函数: "..name,SYS.CY.yellow) return false end
+if LAB.Hooks[name] then SYS.Notify("已经在观察 "..name,SYS.CY.yellow) return true end
+limit=tonumber(limit) or 50
+local cnt=0
+local ok,old=P(function()
+return hf(target,function(...)
+cnt=cnt+1
+if cnt<=limit then
+local a=table.pack(...)
+local parts={}
+for i=1,math.min(a.n,4) do
+local v=a[i]
+parts[#parts+1]=(type(v)=="Instance") and ("Instance:"..tostring(v.Name)) or tostring(v)
+end
+LAB.Log[#LAB.Log+1]=("  [%s] #%d (%d 参) %s"):format(name,cnt,a.n,table.concat(parts,", "):sub(1,90))
+if #LAB.Log>LAB.MaxLog then table.remove(LAB.Log,1) end
+end
+return target(...)
+end)
+end)
+if not ok then SYS.Notify("hook 失败(局部/匿名函数 hook 不了): "..tostring(old):sub(1,50),SYS.CY.red) return false end
+LAB.Hooks[name]=old
+SYS.Notify("正在观察 "..name.." (最多记录 "..limit.." 次)",SYS.CY.green)
+return true
+end
+function LAB.Unwatch(name)
+local old=LAB.Hooks[name]
+if not old then return false end
+local rf=restoreApi()
+local hf=hookApi()
+local ok=P(function()
+if rf then rf(old)
+elseif hf then hf(old,old) end
+end)
+LAB.Hooks[name]=nil
+SYS.Notify("已停止观察 "..name,ok and SYS.CY.green or SYS.CY.red)
+return ok
+end
+function LAB.UnwatchAll()
+local ks={} for k in pairs(LAB.Hooks) do ks[#ks+1]=k end
+for _,k in ipairs(ks) do LAB.Unwatch(k) end
+return #ks
+end
+function LAB.DumpLog()
+local out={"========== 调用记录 (最近 "..#LAB.Log.." 条) =========="}
+for i=math.max(1,#LAB.Log-60),#LAB.Log do out[#out+1]=LAB.Log[i] end
+if #LAB.Log==0 then out[#out+1]="  (还没有记录 —— 先在 ④ 里填函数名开始观察)" end
+print(table.concat(out,"\n"))
+SYS.Notify("调用记录已输出",SYS.CY.green)
+end
+function LAB.WhoCalls(name)
+local fns=LAB.LastFns
+if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return end
+local target
+for i=1,#fns do if nameOf(fns[i])==name then target=fns[i] break end end
+if not target then SYS.Notify("没找到函数: "..tostring(name),SYS.CY.yellow) return end
+local info=function(lv)
+local ok,r=P(function()
+if type(getinfo)=="function" then return getinfo(lv) end
+if type(debug)=="table" and type(debug.getinfo)=="function" then return debug.getinfo(lv) end
+return nil
+end)
+return ok and r or nil
+end
+local _,res=P(function() return target() end)
+local me=info(1) local caller=info(2) local up=info(3)
+local out={"========== 调用链探测: "..tostring(name).." ==========",
+("  本帧   : %s"):format(me and (me.name or me.short_src or "?") or "?"),
+("  调用者 : %s"):format(caller and (caller.name or caller.short_src or "?") or "? (顶层/匿名)"),
+("  再上层 : %s"):format(up and (up.name or up.short_src or "?") or "?"),
+("  返回值 : %s"):format(tostring(res):sub(1,80)),
+"  ^ 这就是 pcall + immediate caller: 能看出「谁在调这个函数」"}
+print(table.concat(out,"\n"))
+SYS.Notify("调用链已输出到控制台",SYS.CY.green)
+end
+end
+UI.Pages["实验室"]=function(p)
+UI.Label(p,"🔬 实验室 · 执行器高级 API 实验",CY.purple)
+UI.Tip(p,"只读 / 可撤销的实验工具: 研究 getgc(true) 遍历、hookfunction 包一层观察、pcall+caller 调用链。\n★ 只做观察, 不改游戏逻辑, 不碰反检测 —— 全部只影响你自己的客户端。",CY.sub)
+local caps=(SYS.Lab and SYS.Lab.Caps) and SYS.Lab.Caps() or {}
+local function yn(v) return v and "✓" or "✗" end
+UI.Label(p,("执行器能力: getgc=%s  hook=%s  restore=%s  getscripts=%s  modules=%s")
+:format(yn(caps.getgc),yn(caps.hookfn),yn(caps.restore),yn(caps.scripts),yn(caps.modules)),
+(caps.getgc and caps.hookfn) and CY.green or CY.yellow)
+UI.Tip(p,"如果 hook 那里是 ✗, 说明这台执行器不支持, 后面的④⑥用不了(③①②仍可用)。",CY.sub)
+UI.Div(p)
+UI.Section(p,"A · 只读扫描",CY.cyan)
+UI.Btn(p,"① GC 扫描(函数/表 数量 + 按归属脚本分组)",CY.cyan,function() P(function() SYS.Lab.ScanGC() end) end)
+UI.Btn(p,"② 列出可疑函数(名字含 damage/fire/aim/kill…)",CY.cyan,function() P(function() SYS.Lab.ListHookable() end) end)
+UI.Btn(p,"③ 已加载脚本 / 模块清单",CY.cyan,function() P(function() SYS.Lab.ListScripts() end) end)
+UI.Tip(p,"①②③ 结果都打到【控制台】(F9), 不弹窗, 方便你复制。",CY.sub)
+UI.Div(p)
+UI.Section(p,"B · 函数观察(hook 一层, 只记录不改行为)",CY.green)
+local watchName=""
+UI.Input(p,"函数名","如 damage / TakeDamage",function() return watchName end,function(v) watchName=v or "" end)
+UI.Btn(p,"④ 开始观察这个函数",CY.green,function() P(function() SYS.Lab.Watch(watchName) end) end)
+UI.Btn(p,"⑤ 输出调用记录(最近 60 条)",CY.cyan,function() P(function() SYS.Lab.DumpLog() end) end)
+UI.Btn(p,"⑥ 调用链探测: 谁在调它(pcall+caller)",CY.purple,function() P(function() SYS.Lab.WhoCalls(watchName) end) end)
+UI.Btn(p,"⛔ 停止观察并还原全部 hook",CY.red,function()
+local n=SYS.Lab.UnwatchAll()
+SYS.Notify(("已还原 %d 个函数"):format(n or 0),SYS.CY.green)
+end)
+local hookL=UI.Label(p,"当前观察: (无)",CY.sub)
+SYS.BtnRefs[#SYS.BtnRefs+1]=function()
+if not hookL or not hookL.Parent then return end
+local ks={} for k in pairs(SYS.Lab.Hooks or {}) do ks[#ks+1]=k end
+hookL.Text=("当前观察(%d): %s"):format(#ks, #ks>0 and table.concat(ks,"  ") or "(无)")
+hookL.TextColor3=(#ks>0) and CY.green or CY.sub
+end
+UI.Tip(p,"原理: hookfunction(原函数, 我的函数) 会返回【旧函数】; 我的函数里记录参数后\n调用旧函数并把它的返回值原样返回 —— 所以游戏行为完全不变, 只是多了一层记录。\n不能 hook 局部函数/匿名函数(Luau 也常把函数 inline 掉), 那些会 hook 失败。",CY.sub)
+end
 UI.Pages["传送"]=function(p)
 UI.Switch(p,"允许鼠标传送 (T)","TPEnabled")
 UI.Btn(p,"传送到鼠标位置",CY.cyan,SYS.TPToMouse)
@@ -6000,7 +6342,10 @@ SYS.C_.CB_PrioMode = m[v] or 1
 end)
 UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定」= 你在战斗页指定的那个人。默认链里它排第 2 —— 有人正瞄着你时先打他, 没人瞄你才轮到指定目标。\n★ 打开「只打指定目标」后, 指定目标仍【绝对最优先】(整条链都不参与)。\n默认「正在瞄我的→指定→最近→屏幕中心」: 先打正瞄着你的人, 其次你指定的, 再次最近的, 最后屏幕中间那个。",CY.sub)
 UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
-UI.Switch(p,"🛡 不打队友","CB_Team")
+UI.Switch(p,"🛡 不打队友 (混战/自建房请关掉)","CB_Team")
+UI.Switch(p,"🔪 近距离补刀 (贴脸自动按 F)","CB_Melee")
+UI.Slider(p,"补刀距离(格)",3,25,1,function() return SYS.C_.CB_MeleeDist end,function(v) SYS.C_.CB_MeleeDist=v end,"%.0f")
+UI.Tip(p,"和敌人贴脸时枪常打不中(准星/弹道问题), 开着这个会自动按 F 用近战收掉。\n只对【已锁定的目标】且在设定距离内才按, 不影响中远距离枪战。",CY.sub)
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
 UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
 UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
