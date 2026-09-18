@@ -9,10 +9,15 @@ local URLS = {
 	"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 }
+-- ★ v5.2.1 防缓存: raw / jsDelivr 对【分支 @main】都有 CDN 缓存(raw≈5分钟, jsDelivr≈12小时),
+--   不处理的话重跑加载器拿到的还是【旧文件】-> 用户看到的现象就是"更新不了 / 还是旧版"。
+--   加一个【运行时时间戳】查询参数: CDN 会把 query 算进缓存键 -> 每次请求都是新内容。
+--   (raw / jsDelivr / ghproxy / ghfast 都忽略未知 query, 不影响下载。)
+local TS = "?t=" .. tostring(os.time())
 local function fetch()
 	local last = "?"
 	for i, u in ipairs(URLS) do
-		local ok, body = pcall(game.HttpGet, game, u)
+		local ok, body = pcall(game.HttpGet, game, u .. TS)
 		if ok and type(body) == "string" and #body > 5000 then
 			if body:sub(1, 9) ~= "<!DOCTYPE" and not body:find("404: Not Found", 1, true) then
 				return body, u
