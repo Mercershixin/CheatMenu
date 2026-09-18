@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 23:24 sha db8d81e4 bytes 297882'):format('2026-09-18 23:24','db8d81e4',297882))
+print(('[CheatMenu] build 2026-09-18 23:34 sha d995d68d bytes 298049'):format('2026-09-18 23:34','d995d68d',298049))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.1.1"
+SYS.BuildVer="6.1.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1926,20 +1926,29 @@ local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
-"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper"}
+"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet","obstacle"}
 P(function()
 for _,o in ipairs(WS:GetDescendants()) do
 local cn=o.ClassName
 local ok=false
 if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
 if o:FindFirstChildOfClass("HingeConstraint") or o:FindFirstChildOfClass("Motor6D") then ok=true end
-if not ok and type(o.Name)=="string" and o.Name~="" then
-local nm=o.Name:lower()
+if not ok then
+local anc=o
+for _=1,4 do
+if not anc then break end
+local raw=anc.Name
+if type(raw)=="string" and raw~="" then
+local nm=raw:lower()
 for _,kw in ipairs(KW) do if nm:find(kw,1,true) then ok=true break end end
 if not ok then
-local raw=o.Name
 if raw:find("门") or raw:find("陷阱") or raw:find("机关") or raw:find("刺")
-or raw:find("熔岩") or raw:find("伤害") or raw:find("危险") then ok=true end
+or raw:find("熔岩") or raw:find("伤害") or raw:find("危险")
+or raw:find("关卡") or raw:find("考验") then ok=true end
+end
+end
+if ok then break end
+anc=anc.Parent
 end
 end
 end
