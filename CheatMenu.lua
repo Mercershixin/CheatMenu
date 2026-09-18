@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 21:55 sha 2be859a0 bytes 288629'):format('2026-09-18 21:55','2be859a0',288629))
+print(('[CheatMenu] build 2026-09-18 22:16 sha f6909a35 bytes 290331'):format('2026-09-18 22:16','f6909a35',290331))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.7.2"
+SYS.BuildVer="5.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -490,6 +490,25 @@ T(r.OnClientEvent:Connect(cb))
 end
 end
 local Fire=SYS.Fire local OnRemote=SYS.OnRemote
+function SYS.HealSelf()
+local ok=SYS.Fire("Heal")
+SYS.Notify(ok and "🩹 已发送回血请求 (EntityService.Heal)" or "回血失败: 没找到 EntityService.Heal(换图/改版了?)",
+ok and SYS.CY.green or SYS.CY.yellow)
+return ok
+end
+function SYS.ReviveSelf()
+local ok=SYS.Fire("Revive")
+if not ok then ok=SYS.Fire("Respawn") end
+SYS.Notify(ok and "✨ 已发送复活请求 (GameService.Revive)" or "复活失败: 没找到 Revive/Respawn",
+ok and SYS.CY.green or SYS.CY.yellow)
+return ok
+end
+function SYS.RespawnSelf()
+local ok=SYS.Fire("Respawn")
+SYS.Notify(ok and "♻ 已发送重生请求 (GameService.Respawn)" or "重生失败: 没找到 Respawn",
+ok and SYS.CY.green or SYS.CY.yellow)
+return ok
+end
 do
 local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
 local SpeedAtt,SpeedLV=false,false
@@ -1819,6 +1838,13 @@ else
 for _,ch in ipairs(o:GetChildren()) do if hasI(ch) then ok=true break end end
 end
 end
+end
+if not ok and type(o.Name)=="string" and o.Name~="" then
+local nm=o.Name:lower()
+for _,kw in ipairs({"chest","crate","locker","cabinet","vault","safe","coffer","stash"}) do
+if nm:find(kw,1,true) then ok=true break end
+end
+if not ok and (o.Name:find("宝箱") or o.Name:find("箱子") or o.Name:find("柜") or o.Name:find("箱")) then ok=true end
 end
 if ok and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and cn~="Folder" and o) or o:FindFirstChildWhichIsA("BasePart")
@@ -7157,6 +7183,10 @@ SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "thi
 if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
 end)
 UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
+UI.Btn(p,"🩹 回血 (走游戏自己的 remote)",CY.green,function() P(SYS.HealSelf) end)
+UI.Btn(p,"✨ 复活 (走游戏自己的 remote)",CY.green,function() P(SYS.ReviveSelf) end)
+UI.Btn(p,"♻ 重生 (Respawn)",CY.cyan,function() P(SYS.RespawnSelf) end)
+UI.Tip(p,"这三条都是【发游戏自己的 remote】—— 所以是服务端认可的真实生效, 不是客户端自欺(客户端改血会被服务端覆盖)。\n源: 事件库确认 EntityService.Heal / GameService.Revive / GameService.Respawn 存在。\n⚠️ 参数形式清单里没记, 先按无参发; 若某条没反应, 告诉我, 我按实际参数补。",CY.sub)
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
