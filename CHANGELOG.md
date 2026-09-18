@@ -1,3 +1,20 @@
+## 6.2.0 · 2026-09-18
+
+### 🎮 新增独立页面「MachineParty」（用户要求：页面名用游戏名）
+> 依据你的综合扫描：这游戏的小游戏是 **DuckHunt / RightOfWay / Blindout / CrushHour / BumperMadness**，
+> 场景区域是 `Workspace.duck hunt` / `Chisel Gauntlet` / `Lobby.MPStation_*` / `MPPadHost_*`。
+
+**页面内容**：
+1. **`🎮 小游戏区域透视`**（新开关 `ESP_Mini`）：把自己或**最多 3 层祖先**名字命中
+   `duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost`
+   的东西**统一点亮（亮黄绿）**；开启时打印 `[ESP] 小游戏区域透视: 找到 N 个候选`。扫描同样节流。
+2. **`📋 列出小游戏脚本 & 场景`**：逐条打 `PlayerScripts.MachineParty*` 是否存在 + 场景区域是否存在。
+3. **`🔍 探测小游戏里的可交互物`**：把 `chisel/duck/gauntlet` 相关里的 `ClickDetector` / `ProximityPrompt`
+   数量与 `Remote` 全名打到控制台 —— **这是做自动化的依据**。
+4. **「自动 / 辅助」区**：明确写着**自动化功能等你给玩法后再说**，不瞎做。
+
+---
+
 ## 6.1.4 · 2026-09-18
 
 ### ✂️ 「门/陷阱」透视顺带标出【切割类】（品红）
