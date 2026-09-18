@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 16:51 sha a6c77979 bytes 269724'):format('2026-09-18 16:51','a6c77979',269724))
+print(('[CheatMenu] build 2026-09-18 17:58 sha cc9c69af bytes 268602'):format('2026-09-18 17:58','cc9c69af',268602))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
-CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,SafeGui=false,CB_MeleeDist=9,CB_MeleeGap=0.35,
+CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
 CB_FireDelay=0.035,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.8.0"
+SYS.BuildVer="4.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6790,20 +6790,6 @@ SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
 end)
 UI.Div(p)
-UI.Btn(p,"🫥 深度隐藏菜单: 开/关 (当前: 见下)",CY.purple,function()
-SYS.C_.SafeGui=not SYS.C_.SafeGui
-SYS.Notify(("深度隐藏已%s —— 重新加载脚本后生效")
-:format(SYS.C_.SafeGui and "开启(位置可能偏)" or "关闭(正常居中)"),
-SYS.C_.SafeGui and SYS.CY.yellow or SYS.CY.green)
-end)
-local hideL=UI.Label(p,"深度隐藏: 关闭(菜单挂 CoreGui · 居中正常)",CY.green)
-SYS.BtnRefs[#SYS.BtnRefs+1]=function()
-if not hideL or not hideL.Parent then return end
-local on=SYS.C_.SafeGui and true or false
-hideL.Text=("深度隐藏: %s"):format(on and "开启(挂隐藏容器 · 位置可能偏)" or "关闭(菜单挂 CoreGui · 居中正常)")
-hideL.TextColor3=on and CY.yellow or CY.green
-end
-UI.Tip(p,"开着 = 菜单挂到执行器的隐藏容器(游戏本地反作弊更难扫到), 但【有些执行器那个容器不是全屏】-> 菜单会跑到角落或被压小(手机实测过)。\n默认关闭 = 挂 CoreGui(全屏、位置正常, 也比 PlayerGui 隐蔽)。★手机版建议保持关闭。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
 UI.Tip(p,"★ 每次启动都会检查一次新版本；检查到就会弹消息告诉你【新版本号】。\n本开关只决定「要不要自动升级」：开着=直接热重载到新版；关掉=只提示不升级，想升级再点上面的按钮。",CY.sub)
@@ -6831,10 +6817,6 @@ function SYS.SafeParentGui(gui)
 if not gui then return "nil" end
 P(function() if protect_gui then protect_gui(gui) end end)
 P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
-if SYS.C_.SafeGui then
-local ok1=pcall(function() if gethui then gui.Parent=gethui() end end)
-if ok1 and gui.Parent then return "gethui(深度隐藏: 位置可能偏)" end
-end
 local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
 if ok2 and gui.Parent then return "CoreGui" end
 P(function() gui.Parent=SYS.PG end)
@@ -6937,6 +6919,7 @@ end
 end
 local top=Instance.new("Frame")
 top.Size=UDim2.new(1,0,0,62) top.BackgroundTransparency=1 top.Parent=main
+top.Active=true
 local logo=Instance.new("TextLabel")
 logo.Size=UDim2.new(0,220,1,0) logo.Position=UDim2.new(0,24,0,0)
 logo.BackgroundTransparency=1 logo.Text="CHEATMENU"
@@ -7450,6 +7433,8 @@ P(SYS.ResetCam)
 P(function() if SYS.SetForceCam then SYS.SetForceCam("off") end end)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
+P(function() if SYS.FloatGui then SYS.FloatGui:Destroy() end end)
+SYS.FloatGui=nil SYS.FloatBtn=nil
 if GENV.CheatUnload==SYS.UnloadAll then
 GENV.CheatLoaded=nil GENV.CheatUnload=nil
 end
