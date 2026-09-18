@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 00:33 sha 4e850d50 bytes 313466'):format('2026-09-19 00:33','4e850d50',313466))
+print(('[CheatMenu] build 2026-09-19 00:41 sha bd6b9964 bytes 315751'):format('2026-09-19 00:41','bd6b9964',315751))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.4.0"
+SYS.BuildVer="6.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2130,7 +2130,14 @@ local hp=hh and math.floor(hh.Health+0.5) or 0
 local mx=hh and math.floor(hh.MaxHealth+0.5) or 0
 local tl=LBL[p] or (LB[p] and LB[p]:FindFirstChildOfClass("TextLabel"))
 if tl then
-tl.Text=(p.DisplayName or p.Name).."  "..hp.."/"..mx
+local _dist=""
+P(function()
+local me=LP.Character
+local mr=me and me:FindFirstChild("HumanoidRootPart")
+local tp2=tagPart(c) or c.PrimaryPart
+if mr and tp2 and tp2.Position then _dist=("  %d格"):format((tp2.Position-mr.Position).Magnitude) end
+end)
+tl.Text=(p.DisplayName or p.Name).."  "..hp.."/"..mx.._dist
 if mx>0 and hp<=mx*0.3 then tl.TextColor3=Color3.fromRGB(255,80,80)
 elseif mx>0 and hp<=mx*0.6 then tl.TextColor3=Color3.fromRGB(255,190,80)
 else tl.TextColor3=Color3.new(1,1,1) end
@@ -7422,7 +7429,6 @@ P(function() f=getfenv()[n] end)
 if f==nil then P(function() f=_G[n] end) end
 print(("  %-22s %s"):format(n, type(f)=="function" and "✓ 有" or "✗ 没有"))
 end
-print(("  身份 identity: %s"):format(tostring(P(function() return "ok" end) and "见综合扫描 G 层")))
 print("===================================")
 end)
 end)
@@ -7743,6 +7749,48 @@ UI.Btn(p,"🩹 回血 (走游戏自己的 remote)",CY.green,function() P(SYS.Hea
 UI.Btn(p,"✨ 复活 (走游戏自己的 remote)",CY.green,function() P(SYS.ReviveSelf) end)
 UI.Btn(p,"♻ 重生 (Respawn)",CY.cyan,function() P(SYS.RespawnSelf) end)
 UI.Tip(p,"这三条都是【发游戏自己的 remote】—— 所以是服务端认可的真实生效, 不是客户端自欺(客户端改血会被服务端覆盖)。\n源: 事件库确认 EntityService.Heal / GameService.Revive / GameService.Respawn 存在。\n⚠️ 参数形式清单里没记, 先按无参发; 若某条没反应, 告诉我, 我按实际参数补。",CY.sub)
+function SYS.ExportConfig()
+P(function()
+local parts={}
+for k,v in pairs(SYS.C_ or {}) do parts[#parts+1]=("%s=%s"):format(k,tostring(v)) end
+table.sort(parts)
+local str="CheatMenuCfg|"..table.concat(parts,";")
+if setclipboard then setclipboard(str) SYS.Notify("📤 配置已复制到剪贴板",SYS.CY.green)
+else print(str) SYS.Notify("📤 已打到控制台(这台没有 setclipboard)",SYS.CY.yellow) end
+end)
+end
+function SYS.ImportConfig(str)
+P(function()
+if type(str)~="string" or not str:find("CheatMenuCfg|",1,true) then
+SYS.Notify("📥 配置串不合法(缺少 CheatMenuCfg| 前缀)",SYS.CY.red) return
+end
+local body=str:sub(select(2,str:find("CheatMenuCfg|",1,true))+#"CheatMenuCfg|")
+local n=0
+for pair in body:gmatch("[^;]+") do
+local k,v=pair:match("^([^=]+)=(.*)$")
+if k and k~="" and SYS.C_[k]~=nil then
+local num=tonumber(v)
+if num~=nil then SYS.C_[k]=num
+elseif v=="true" then SYS.C_[k]=true
+elseif v=="false" then SYS.C_[k]=false
+else SYS.C_[k]=v end
+n=n+1
+end
+end
+P(SYS.SaveConfig)
+SYS.Notify(("📥 已导入 %d 项(切页/重载菜单后生效)"):format(n),SYS.CY.green)
+end)
+end
+UI.Btn(p,"📤 导出全部配置到剪贴板",CY.cyan,function() P(SYS.ExportConfig) end)
+UI.Btn(p,"📥 从剪贴板导入配置 (只认已知项)",CY.purple,function()
+P(function()
+local str=nil
+if getclipboard then P(function() str=getclipboard() end) end
+if not str then SYS.Notify("这台没有 getclipboard —— 请用「导出」把串发我, 我手动帮你回填",SYS.CY.yellow) return end
+P(SYS.ImportConfig,str)
+end)
+end)
+UI.Tip(p,"导出 = 把你当前所有设置拼成一行放剪贴板(方便备份/换号); 导入 = 校验前缀后只回填【已声明】的键,\n陌生键一律丢弃(和我们配置加载的规矩一致, 不会写脏配置)。",CY.sub)
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
@@ -8473,6 +8521,11 @@ P(function() WS.Gravity=SYS.Orig.Gravity end)
 P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
+P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
+P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
+P(function() SYS._ciOn=false end)
+P(function() if SYS.SetFootstep then SYS.SetFootstep(false) end end)
+P(function() if SYS.SetInstantPrompt then SYS.SetInstantPrompt(false) end end)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
