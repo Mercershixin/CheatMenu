@@ -153,7 +153,7 @@
 - 保留 `-b 4096 -ub 1024 --cache-reuse 256 -sps 0.2`（大 batch + prompt 前缀缓存复用）。
 
 ### 工程
-- **源码文件名跟版本号走**：`CheatMenu_v68.lua` → **`CheatMenu-<版本>.lua`**（本版 = `CheatMenu-4.5.0.lua`）。
+- **源码文件名跟版本号走**：`CheatMenu_v68.lua` → **`CheatMenu-<版本>.lua`**（本版 = `CheatMenu-4.6.0.lua`）。
   新增 `rename_version.py`：升版时一键改文件名并更新所有脚本引用。
 - **README 补「本地测试 / 模拟方法」章节**（给智能体接手用）：`verify_all.py` 一条命令 7 步门禁、
   仿真台原理、桩的保真度坑（JSONDecode 假解析 / os.clock 真时钟 / 必须走真实触发链路）都写清了。
