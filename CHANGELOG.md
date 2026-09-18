@@ -1,3 +1,24 @@
+## 6.4.0 · 2026-09-19
+
+### 🧩 融合 ChronixHub 第二批（6 项，全部纯客户端 / 可逆）
+
+| 新功能 | 开关/按钮 | 作用 | 来自 |
+|---|---|---|---|
+| **假人纳入 NPC 透视** | （并入 `ESP_NPC`）| 原来只认"带 `Humanoid`"的模型；游戏里的**假人/木桩**常常是**没有 Humanoid 的 R6/R15 骨架** → 现在"有 `Head`+`HumanoidRootPart`"的也算 → **假人也点亮**（橙色）| `AH_FakeNPCHighlighter` |
+| **🕳 防掉虚空** | `AntiVoid` | 每 0.5s 记住"站在地面的最后位置"；掉到 `Y<-50` 就拉回原位 | `AntiVoid` |
+| **🦅 空中走** | `AirWalk` | 站住时把 **Y 速度钉住** ≈ 悬停（**用速度不用 CFrame**，避免被判定瞬移）| `AirWalk` |
+| **🧪 执行器能力自检** | 按钮 | 一次列出 **39 个常见执行器函数**这台有没有（`getconnections` / `fireclickdetector` / `hookfunction` …）—— 以后写功能先看它能支持什么 | `UNCAndWUNCGet` |
+| **📊 F3 调试屏** | `F3Debug` | 屏幕左上角常驻：**FPS / Ping / 坐标 / Workspace 实例数 / 角色数 / 玩家数** | `F3DebugScreen` |
+| **🧹 客户端清理组** | 2 个按钮 | ① 清明显是特效残留的 `debris` 部件 ② 删**名字可疑**（ad/promo/notice/公告）的游戏 GUI | `MovingPartCleaner` / `GuiDeleter` / `Deletermodule` |
+
+- 位置：**设置页 →「工具 / 调试 (融合自 ChronixHub)」**；三个开关**默认关**，关闭即清理/还原。
+- **没做**（表里标 ⚠️ 的）：只借鉴不搬 —— `ConfigModule`、`TranslationModule`（我们更强）、
+  `GraphicsEnhancer`/`LowQualityMode`、`ChatControl`、`SpectatorModule`（你删过观战）、
+  `SnapTurn`/`SnapReverse`（易被判异常）、`AimBotModule`（只对比参数）、`GlassQuickMenu`（**不换 UI 库**）。
+- **刻意不做**（撞边界）：`AntiKick`/`AntiTeleport`/`AntiFling` 系列 · `FlingModule` · `SilentAim`/`SR_SlientAura` · `ControlNPC` 等。
+
+---
+
 ## 6.3.0 · 2026-09-19
 
 ### 🧩 融合 ChronixHub 第一批（3 个，都按我们的规矩重写：`P()`/`T()`/节流/可逆）
