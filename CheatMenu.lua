@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:31 sha 99b9cba2 bytes 278272'):format('2026-09-18 19:31','99b9cba2',278272))
+print(('[CheatMenu] build 2026-09-18 19:40 sha 2cea9305 bytes 277490'):format('2026-09-18 19:40','2cea9305',277490))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -41,6 +41,7 @@ CB_SnapFire=false,
 CB_OnlyAlive=true,
 CB_SkipFF=true,
 CB_Melee=false,
+CB_MeleeAll=false,
 TrapImmune=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
@@ -69,7 +70,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.2.2"
+SYS.BuildVer="5.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3854,12 +3855,29 @@ function CB.ResetClock()
 accScan=0 CBERR=0
 CB.Stat.scan=0 CB.Stat.hud=0 CB.Stat.aim=0
 end
+local function meleeCandidate(root)
+local MD=SYS.C_.CB_MeleeDist or 9
+if not SYS.T_.CB_MeleeAll then return CB.TargetPart end
+local best,bestD=nil,MD
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=SYS.LP and isEnemyEx(pl) then
+local ch=pl.Character
+local hrp=ch and ch:FindFirstChild("HumanoidRootPart")
+local hum=ch and ch:FindFirstChildOfClass("Humanoid")
+if hrp and hum and hum.Health>0 then
+local dd=(hrp.Position-root.Position).Magnitude
+if dd<=bestD then bestD=dd best=hrp end
+end
+end
+end
+return best
+end
 function CB.meleeTick()
 if not SYS.T_.CB_Melee then return end
-local p=CB.TargetPart
-if not p then return end
 local root=bodyOf(SYS.LP.Character)
 if not root then return end
+local p=meleeCandidate(root)
+if not p then return end
 local d=(p.Position-root.Position).Magnitude
 local MD=SYS.C_.CB_MeleeDist or 9
 if d>MD then
@@ -6851,6 +6869,8 @@ UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再
 UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
 UI.Switch(p,"🛡 不打队友 (混战/自建房请关掉)","CB_Team")
 UI.Switch(p,"🔪 近距离补刀 (贴脸自动按 F)","CB_Melee")
+UI.Switch(p,"🔪 补刀也打非目标 (附近所有敌人, 取最近的)","CB_MeleeAll")
+UI.Tip(p,"关(默认) = 只补【当前锁定的目标】。\n开 = 附近【任意敌人】贴脸都会补一刀(取最近的那个)。\n敌我判定和索敌同一套规则(队伍 / 队友免伤开关都生效)。",CY.sub)
 UI.Slider(p,"补刀距离(格)",3,25,1,function() return SYS.C_.CB_MeleeDist end,function(v) SYS.C_.CB_MeleeDist=v end,"%.0f")
 UI.Tip(p,"和敌人贴脸时枪常打不中(准星/弹道问题), 开着这个会自动按 F 用近战收掉。\n只对【已锁定的目标】且在设定距离内才按, 不影响中远距离枪战。",CY.sub)
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
@@ -7000,6 +7020,7 @@ print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
 local sg=Instance.new("ScreenGui")
 sg.Name="CheatMenuV52" sg.ResetOnSpawn=false sg.IgnoreGuiInset=true
+P(function() sg.ScreenInsets=Enum.ScreenInsets.None end)
 P(function()
 local roots={SYS.PG,SYS.CoreGui}
 if gethui then local h=gethui() if h then roots[#roots+1]=h end end
@@ -7064,14 +7085,6 @@ local lo=0.30
 local sc=math.min(fit,hi)
 if sc<lo then sc=lo end
 scale.Scale=sc
-if not SYS._UserMoved then
-P(function()
-main.AnchorPoint=Vector2.new(0.5,0.5)
-main.Position=UDim2.new(0.5,0,0.5,0)
-end)
-end
-SYS.MenuScale=sc
-if SYS.MenuPlacementCheck then P(SYS.MenuPlacementCheck,"ApplyScale") end
 end)
 end
 ApplyScale()
@@ -7338,44 +7351,6 @@ P(ApplyScale)
 SYS.Notify("⊙ 菜单已回到正中间",SYS.CY.green)
 end
 T(centerBtn.MouseButton1Click:Connect(function() P(SYS.CenterMenu) end))
-function SYS.MenuPlacementCheck(tag)
-if SYS._PlaceChecking then return end
-SYS._PlaceChecking=true
-local okAll=pcall(function()
-local cam=WS.CurrentCamera
-local vp=cam and cam.ViewportSize
-if not (vp and vp.X>10 and vp.Y>10) then return end
-local sc=tonumber(SYS.MenuScale) or 1
-if sc<=0 then sc=1 end
-local sz
-P(function() sz=main.AbsoluteSize end)
-if not sz or sz.X<=0 or sz.Y<=0 then sz=Vector2.new(W*sc,H*sc) end
-local wx=(vp.X-sz.X)*0.5
-local wy=(vp.Y-sz.Y)*0.5
-local gx,gy=0,0
-P(function() local ap=main.AbsolutePosition gx=ap.X gy=ap.Y end)
-local dx,dy=math.abs(gx-wx),math.abs(gy-wy)
-SYS.PlaceDbg=("父容器=%s 视口=%.0fx%.0f 缩放=%.2f 期望=(%.0f,%.0f) 实际=(%.0f,%.0f)")
-:format(tostring(sg.Parent and (sg.Parent.Name or "?") or "nil"),vp.X,vp.Y,sc,wx,wy,gx,gy)
-print("[CheatMenu] 位置自检("..tostring(tag or "-").."): "..SYS.PlaceDbg)
-if (dx>8 or dy>8) and not SYS._ParentSwitched then
-SYS._ParentSwitched=true
-P(function() if SYS.ScreenGui then SYS.ScreenGui.Parent=SYS.PG end end)
-P(function()
-main.AnchorPoint=Vector2.new(0.5,0.5)
-main.Position=UDim2.new(0.5,0,0.5,0)
-end)
-P(ApplyScale)
-print("[CheatMenu] ↳ 父容器不是全屏 -> 已退回 PlayerGui 并重新居中")
-end
-end)
-SYS._PlaceChecking=false
-return okAll
-end
-P(SYS.MenuPlacementCheck,"建完菜单")
-task.delay(0.5,function() P(SYS.MenuPlacementCheck,"0.5s") end)
-task.delay(1.5,function() P(SYS.MenuPlacementCheck,"1.5s") end)
-task.delay(3.0,function() P(SYS.MenuPlacementCheck,"3s") end)
 function SYS.SetMenuCollapsed(v)
 SYS.Collapsed=v and true or false
 for _,c in ipairs(main:GetChildren()) do
