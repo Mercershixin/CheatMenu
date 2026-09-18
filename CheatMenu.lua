@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 00:51 sha bd6b9964 bytes 315751'):format('2026-09-19 00:51','bd6b9964',315751))
+print(('[CheatMenu] build 2026-09-19 01:42 sha 0eecf657 bytes 324117'):format('2026-09-19 01:42','0eecf657',324117))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -42,6 +42,8 @@ CB_OnlyAlive=true,
 CB_SkipFF=true,
 CB_Melee=false,
 TrapImmune=false,
+LockSpeed=false,LockJump=false,LockGravity=false,
+PathKey=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
 },
@@ -49,6 +51,7 @@ C_={
 FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
+Gravity=196.2,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 ESPNameH=0,
@@ -69,7 +72,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.5.0"
+SYS.BuildVer="6.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -793,6 +796,108 @@ if h and h.Health>0 then
 pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
 end
 end)
+end
+local LOCK_EPS=0.35
+local function lockOrigJump(hum)
+if SYS.Orig.JumpPower==nil then
+local ok1,jp=pcall(function() return hum.JumpPower end)
+SYS.Orig.JumpPower=(ok1 and tonumber(jp)) or 50
+local ok2,jh=pcall(function() return hum.JumpHeight end)
+SYS.Orig.JumpHeight=(ok2 and tonumber(jh)) or nil
+end
+end
+function SYS.LockTick()
+local _,hum,root=GC()
+if hum and root then
+if SYS.T_.LockSpeed then
+local base=SYS.Orig.WalkSpeed or 16
+local want=base
+if SYS.T_.Speed then want=base*(SYS.C_.SpeedMult or 1) end
+if math.abs((hum.WalkSpeed or 0)-want)>LOCK_EPS then hum.WalkSpeed=want end
+end
+if SYS.T_.LockJump then
+lockOrigJump(hum)
+local jm=SYS.C_.JumpMult or 1
+if SYS.Orig.JumpPower then
+local wp=SYS.Orig.JumpPower*jm
+if math.abs((hum.JumpPower or 0)-wp)>LOCK_EPS then P(function() hum.JumpPower=wp end) end
+end
+if SYS.Orig.JumpHeight then
+local wh=SYS.Orig.JumpHeight*jm
+if math.abs((hum.JumpHeight or 0)-wh)>LOCK_EPS then P(function() hum.JumpHeight=wh end) end
+end
+end
+end
+if SYS.T_.LockGravity then
+local g=tonumber(SYS.C_.Gravity)
+if g and g>=0 and math.abs((WS.Gravity or 196.2)-g)>0.05 then P(function() WS.Gravity=g end) end
+end
+end
+function SYS.SetLocks()
+SYS.SetLoop("Locks",
+(SYS.T_.LockSpeed or SYS.T_.LockJump or SYS.T_.LockGravity) and true or false,
+SYS.PhysicsStep,SYS.LockTick)
+end
+local PathKeyConn=nil
+local NUM_NAME={One=1,Two=2,Three=3,Four=4,Five=5,Six=6,Seven=7,Eight=8,Nine=9}
+function SYS.SetPathKey(on)
+if PathKeyConn then DS(PathKeyConn) PathKeyConn=nil end
+if not on then return end
+PathKeyConn=UIS.InputBegan:Connect(function(input,gp)
+if gp or not SYS.T_.PathKey then return end
+if not (UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl)) then return end
+local nm=tostring(input.KeyCode):match("KeyCode%.(%w+)$")
+if not nm then return end
+local idx=NUM_NAME[nm] or NUM_NAME[(nm:gsub("^Keypad",""))]
+if not idx then return end
+local s=SYS.SavedPos[idx]
+if not s then
+P(function()
+SYS.Notify(("📍 没有第 %d 个保存点 (当前共 %d 个)"):format(idx,#SYS.SavedPos),SYS.CY.sub)
+end)
+return
+end
+P(function() SYS.TPTo(s.position+Vector3.new(0,2,0)) end)
+end)
+end
+function SYS.FetchServers()
+if type(game.HttpGet)~="function" then return nil,"这台执行器没有 HttpGet" end
+if not game.PlaceId then return nil,"读不到 PlaceId" end
+local ok,body=pcall(function()
+return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"):format(game.PlaceId))
+end)
+if not ok or type(body)~="string" or body=="" then return nil,"拉列表失败(网络不通 / 执行器限制)" end
+local list
+P(function()
+local hs=game:GetService("HttpService")
+local d=hs and hs:JSONDecode(body)
+if d and type(d.data)=="table" then list=d.data end
+end)
+if type(list)~="table" then return nil,"列表解析失败(接口字段变了?)" end
+local out={}
+for _,v in ipairs(list) do
+if type(v)=="table" and type(v.id)=="string" then
+out[#out+1]={id=v.id,playing=tonumber(v.playing) or 0,
+max=tonumber(v.maxPlayers) or 0,cur=(v.id==game.JobId)}
+end
+end
+return out,nil
+end
+function SYS.JoinServer(jobId)
+if type(jobId)~="string" or jobId=="" then return false end
+local TS=game:GetService("TeleportService")
+if not (TS and TS.TeleportToPlaceInstance and game.PlaceId) then
+SYS.Notify("跳服不可用(拿不到 TeleportService)",SYS.CY.red) return false
+end
+local url=tostring(SYS.BuildURL or "")
+if url:sub(1,4)=="http" and type(queue_on_teleport)=="function" then
+P(function() queue_on_teleport(('loadstring(game:HttpGet("%s"))()'):format(url)) end)
+else
+SYS.Notify("⚠️ 本地版没有网络地址 -> 跳过去后【脚本不会自动回来】, 要重新执行一次加载器。",SYS.CY.yellow)
+end
+SYS.Notify("🚀 正在加入所选服务器...",SYS.CY.cyan)
+task.delay(0.5,function() P(function() TS:TeleportToPlaceInstance(game.PlaceId,jobId,LP) end) end)
+return true
 end
 local TrapConns,TrapOn=nil,false
 local TRAP_WIN  = 0.45
@@ -6332,6 +6437,13 @@ function(v)
 SYS.C_.JumpMult=v
 if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
 end,"x%.1f")
+UI.Div(p)
+UI.Switch(p,"🔒 锁定移速 (被改回去就抢回来)","LockSpeed",SYS.SetLocks)
+UI.Switch(p,"🔒 锁定跳跃 (跳跃力/高度都锁)","LockJump",SYS.SetLocks)
+UI.Switch(p,"🔒 锁定世界重力","LockGravity",SYS.SetLocks)
+UI.Slider(p,"世界重力",0,500,5,function() return SYS.C_.Gravity or 196.2 end,
+function(v) SYS.C_.Gravity=v if SYS.T_.LockGravity then P(function() WS.Gravity=v end) end end,"%.0f")
+UI.Tip(p,"「锁定」= 持续把数值抢回来。很多游戏的脚本每帧把移速/跳跃改回默认值, 于是「滑块拖了过一会儿自己变回去」 —— 开锁就稳住。\n★ 锁移速的目标会跟着上面的「移动速度倍率」走(开着加速时锁的是加速后的值), 两者不打架。\n★ 世界重力 196 = 原版; 调大更沉(掉得快), 调小更飘(跳得远)。\n★ 只写你自己和本地 Workspace, 卸载时自动还原(重力随已有逻辑恢复原值)。",CY.sub)
 end
 UI.Pages["视觉"]=function(p)
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
@@ -7132,6 +7244,71 @@ UI.Cycle(p,"鼠标传送模式",{"Raycast","Infinite"},
 function() return SYS.C_.MouseTPMode end,
 function(v) SYS.C_.MouseTPMode=v end)
 UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
+UI.Switch(p,"⌨ Ctrl+数字 直达保存点","PathKey",SYS.SetPathKey)
+UI.Tip(p,"按住 Ctrl 再按数字键 1~9 -> 直接传送到下面「已保存位置」里对应的那一条(主键盘/小键盘都认)。\n只对前 9 个生效; 那一条还不存在时会在屏幕上提示。默认关(避免误触)。",CY.sub)
+UI.Label(p,"服务器列表 (同游戏的其它房间)",CY.sub)
+local svrList=Instance.new("ScrollingFrame")
+svrList.Size=UDim2.new(1,0,0,132) svrList.BackgroundColor3=CY.card
+svrList.BackgroundTransparency=0.3 svrList.BorderSizePixel=0 svrList.Parent=p
+svrList.ClipsDescendants=true
+P(function() svrList.CanvasSize=UDim2.new(0,0,0,0) svrList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
+P(function() svrList.ScrollBarThickness=6 svrList.ScrollBarImageColor3=CY.accent end)
+P(function() svrList.ScrollingDirection=Enum.ScrollingDirection.Y end)
+P(function() svrList.ElasticBehavior=Enum.ElasticBehavior.Never end)
+UI.Round(svrList,8) UI.Stroke(svrList,CY.line,1,0.85)
+local svrLay=Instance.new("UIListLayout") svrLay.Padding=UDim.new(0,4) svrLay.Parent=svrList
+local svrPad=Instance.new("UIPadding")
+svrPad.PaddingTop=UDim.new(0,6) svrPad.PaddingLeft=UDim.new(0,6)
+svrPad.PaddingRight=UDim.new(0,6) svrPad.Parent=svrList
+local function ClearSvr()
+for _,c in ipairs(svrList:GetChildren()) do
+if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end
+end
+end
+local function svrHint(txt,col)
+ClearSvr()
+local h=Instance.new("TextLabel")
+h.Size=UDim2.new(1,-12,0,26) h.BackgroundTransparency=1
+h.Text=txt h.TextColor3=col or CY.sub h.Font=Enum.Font.GothamMedium h.TextSize=12
+h.TextXAlignment=Enum.TextXAlignment.Left h.Parent=svrList
+end
+svrHint("点下面「刷新」拉取列表")
+local function RenderServers(arr)
+ClearSvr()
+for _,s in ipairs(arr) do
+local r=Instance.new("Frame")
+r.Size=UDim2.new(1,-12,0,28) r.BackgroundColor3=CY.panel
+r.BackgroundTransparency=0.3 r.BorderSizePixel=0 r.Parent=svrList
+UI.Round(r,6)
+local nm=Instance.new("TextLabel")
+nm.Size=UDim2.new(1,-90,1,0) nm.Position=UDim2.new(0,6,0,0)
+nm.BackgroundTransparency=1 nm.TextColor3=CY.text
+nm.Text=("%d/%d 人%s"):format(s.playing,s.max,s.cur and "   ← 当前房间" or "")
+nm.Font=Enum.Font.GothamMedium nm.TextSize=12
+nm.TextXAlignment=Enum.TextXAlignment.Left nm.Parent=r
+local jb=Instance.new("TextButton")
+jb.Size=UDim2.new(0,64,1,0) jb.Position=UDim2.new(1,-70,0,0)
+jb.BackgroundColor3=s.cur and CY.sub or CY.green
+jb.BackgroundTransparency=0.3 jb.TextColor3=CY.text
+jb.Text=s.cur and "当前" or "加入"
+jb.Font=Enum.Font.GothamBold jb.TextSize=11
+jb.BorderSizePixel=0 jb.Parent=r UI.Round(jb,4)
+if not s.cur then
+jb.MouseButton1Click:Connect(function() P(SYS.JoinServer,s.id) end)
+end
+end
+end
+UI.Btn(p,"🔄 刷新服务器列表",CY.cyan,function()
+svrHint("⏳ 正在拉取...",CY.yellow)
+task.spawn(function()
+local arr,err=SYS.FetchServers()
+if not arr then svrHint("❌ "..tostring(err),CY.red) return end
+if #arr==0 then svrHint("没有拿到服务器(接口返回空)",CY.yellow) return end
+table.sort(arr,function(a,b) return a.playing>b.playing end)
+RenderServers(arr)
+end)
+end)
+UI.Tip(p,"只读官方接口拉取【同游戏的其它房间】, 按人数从多到少排, 点「加入」换过去。\n★ 列表里没有可靠的延迟字段(Roblox 接口不给) —— 想按延迟挑请用「自动找低延迟服务器」。\n★ 本地版跳过去后脚本不会自动回来, 要重新执行一次加载器(网络版会自动重注入)。",CY.sub)
 UI.Label(p,"玩家列表")
 local plList=Instance.new("ScrollingFrame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
@@ -8517,6 +8694,7 @@ P(SYS.SetGod,false) P(SYS.SetNoFall,false) P(SYS.SetJumpBoost,false)
 P(SYS.SetDeepHide,false)
 P(SYS.CleanFly) P(SYS.CleanSpeed)
 P(SYS.SetInfiniteJump,false)
+P(SYS.SetPathKey,false)
 P(function() WS.Gravity=SYS.Orig.Gravity end)
 P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
