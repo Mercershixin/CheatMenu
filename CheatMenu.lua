@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 23:55 sha df6c27a4 bytes 301530'):format('2026-09-18 23:55','df6c27a4',301530))
+print(('[CheatMenu] build 2026-09-19 00:03 sha 64e7ab3b bytes 303028'):format('2026-09-19 00:03','64e7ab3b',303028))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.2.0"
+SYS.BuildVer="6.2.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1768,9 +1768,13 @@ P(function() h.Parent=c end)
 end
 local team=false
 local function ateam(pp)
-local ok,v=pcall(function() return pp:GetAttribute("Team") end)
-if ok and type(v)=="string" and v~="" then return v end
-return pp.Team and pp.Team.Name or nil
+for _,k in ipairs({"Team","MPTeam","MPTeamId","team","MPFaction","MPSide"}) do
+local ok,v=pcall(function() return pp:GetAttribute(k) end)
+if ok and v~=nil and tostring(v)~="" then return tostring(v) end
+end
+local ok2,nm=pcall(function() return pp.Team and pp.Team.Name end)
+if ok2 and nm and nm~="" then return nm end
+return nil
 end
 local mt=ateam(LP) local pt=ateam(p)
 team=(mt and pt and mt==pt)
@@ -7398,6 +7402,35 @@ print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
 print("=======================================")
 end)
 end)
+UI.Section(p,"敌我 / 队伍",CY.yellow)
+UI.Btn(p,"👥 敌我诊断 (打出每个玩家的队伍信号, 打到控制台)",CY.yellow,function()
+P(function()
+print("========== 敌我 / 队伍 诊断 ==========")
+print(("[1] 本机 Player.Team = %s"):format(tostring(SYS.LP and SYS.LP.Team and SYS.LP.Team.Name)))
+for _,pl in ipairs(Players:GetPlayers()) do
+local ap={}
+if type(pl.GetAttributes)=="function" then
+local ok,t=pcall(function() return pl:GetAttributes() end)
+if ok and type(t)=="table" then
+for k,v in pairs(t) do
+local lk=tostring(k):lower()
+if lk:find("team") or lk:find("side") or lk:find("role") or lk:find("faction")
+or lk:find("cell") or lk:find("group") or lk:find("party") then
+ap[#ap+1]=k.."="..tostring(v)
+end
+end
+end
+end
+table.sort(ap)
+print(("  %-22s Team=%-8s 可疑属性: %s"):format(
+pl.Name, tostring(pl.Team and pl.Team.Name),
+#ap>0 and table.concat(ap,", ") or "(无 team/side/role/cell 类属性)"))
+end
+print("  ↑ 把这几行发我, 我按真实字段接进透视的颜色判定")
+print("====================================")
+end)
+end)
+UI.Tip(p,"透视现在是: 队友=绿 / 敌人=红 / 幽灵(MPGhost)=紫。若所有人都红, 说明【队伍信号没读到】——\n点上面这个按钮把结果发我即可(这游戏的队伍字段名必须按实际数据接, 不能猜)。",CY.sub)
 UI.Section(p,"自动 / 辅助",CY.accent)
 UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
