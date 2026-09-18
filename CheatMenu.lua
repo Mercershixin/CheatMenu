@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 03:42 sha e59e5313 bytes 407281'):format('2026-09-19 03:42','e59e5313',407281))
+print(('[CheatMenu] build 2026-09-19 05:00 sha 1e39e073 bytes 407258'):format('2026-09-19 05:00','1e39e073',407258))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -96,11 +96,10 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.8.0"
+SYS.BuildVer="6.8.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
-GENV[SYS.GK.sys]=SYS
 local function _rands(n)
 local hex="0123456789abcdef" local t={}
 for i=1,n do local k=math.random(1,16) t[i]=hex:sub(k,k) end
@@ -122,7 +121,7 @@ OldCfg = "CheatMenuV491_Config.json",
 OldCache="TransCache.json",
 OldDiag="CheatMenu_Diag.txt",
 }
-SYS.GK={ loaded="RblxSessionA", unload="RblxSessionB", boot="RblxSessionC", note="RblxSessionD", sys="RblxSessionE" }
+SYS.GK={ loaded="RblxSessionA", unload="RblxSessionB", boot="RblxSessionC", note="RblxSessionD" }
 local function _gv(...)
 for i=1,select("#",...) do
 local k=select(i,...)
@@ -131,6 +130,7 @@ end
 return nil
 end
 SYS.GV=_gv
+GENV.__SYS=SYS
 local Players,RS,UIS,WS,CAS,LT,Stats,TweenService,VIM,VirtualUser,RStorage,CS,HS
 do
 local function G(n) local ok,s=pcall(function() return game:GetService(n) end) return ok and s or nil end
@@ -7070,7 +7070,8 @@ if not c.ok then return false,"这台执行器没有 hookmetamethod/newcclosure"
 if Prot.Hooks.kick then return true end
 local ok,err=pcall(function()
 if c.hmm and c.gnm then
-local h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
+local h
+h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
 if checkcaller and checkcaller() then return h(self,...) end
 local m=getnamecallmethod()
 if m then
@@ -7123,8 +7124,9 @@ for i=1,#names do
 local n=names[i]
 local f=TS[n]
 if type(f)=="function" then
-local ok2,old=pcall(function()
-return hookfunction(f,newcclosure(function(...)
+local old
+local ok2=pcall(function()
+old=hookfunction(f,newcclosure(function(...)
 if checkcaller and checkcaller() then return old(...) end
 Prot.Blocked=Prot.Blocked+1
 Prot.LastFrom=callerName()
@@ -7157,7 +7159,8 @@ local c=Prot.Caps()
 if not c.hmm then return false,"这台执行器没有 hookmetamethod" end
 if Prot.Hooks.hide then return true end
 local ok,err=pcall(function()
-local h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
+local h
+h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
 if checkcaller and checkcaller() then return h(self,...) end
 local m=getnamecallmethod()
 if m then
@@ -7214,7 +7217,8 @@ local c=Prot.Caps()
 if not c.hmm or not c.gnm then return false,"这台执行器没有 hookmetamethod/getnamecallmethod" end
 if Ray.Hooked then return true end
 local ok,err=pcall(function()
-local h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
+local h
+h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
 local m=getnamecallmethod()
 if m and self==WS then
 local lm=string.lower(tostring(m))
@@ -7703,7 +7707,6 @@ do
 local AC={} SYS.AC=AC
 local LEG_LOADED="Cheat".."Loaded"
 local LEG_UNLOAD="Cheat".."Unload"
-local LEG_SYS="__".."SYS"
 local LEG_BOOT="Cheat".."BootDone"
 local LEG_NOTE="Cheat".."UpdateNote"
 AC.Results={}
@@ -7782,7 +7785,7 @@ if type(getgenv)~="function" then return true,"这台执行器没有 getgenv(该
 local ok,g=pcall(getgenv)
 if not ok or type(g)~="table" then return true,"getgenv 不可用" end
 local bad={}
-local legacy={LEG_LOADED,LEG_UNLOAD,LEG_SYS,LEG_BOOT,LEG_NOTE}
+local legacy={LEG_LOADED,LEG_UNLOAD,LEG_BOOT,LEG_NOTE}
 for i=1,#legacy do if g[legacy[i]]~=nil then bad[#bad+1]=legacy[i] end end
 for k in pairs(g) do
 if type(k)=="string" then
@@ -7919,7 +7922,7 @@ if ok then SYS.T_.Prot_AntiAdmin=true done[#done+1]="CoreGui 枚举隐藏已开"
 else done[#done+1]="枚举隐藏失败: "..tostring(err) end
 end
 local cleared={}
-local legacy={LEG_LOADED,LEG_UNLOAD,LEG_SYS,LEG_BOOT,LEG_NOTE}
+local legacy={LEG_LOADED,LEG_UNLOAD,LEG_BOOT,LEG_NOTE}
 for i=1,#legacy do
 if GENV[legacy[i]]~=nil then
 pcall(function() GENV[legacy[i]]=nil end)
@@ -10282,7 +10285,7 @@ if gethui then local h=gethui() if h then roots[#roots+1]=h end end
 local killed=0
 for i=1,#roots do
 local r=roots[i]
-if r then
+if r and type(r.GetChildren)=="function" then
 for _,c in ipairs(r:GetChildren()) do
 if c~=sg and c.Name=="CheatMenuV52" then c:Destroy() killed=killed+1 end
 end
