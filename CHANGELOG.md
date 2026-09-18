@@ -1,3 +1,13 @@
+## 6.1.3 · 2026-09-18
+
+### 🗑 删除「MachineParty 状态 HUD」（用户要求）
+- 删除内容：设置页那个 `🧩 MachineParty 状态 HUD` 开关 + 它的 Tip + 整个 HUD 实现
+  （`SYS.SetMPHud` / 那个 ScreenGui+TextLabel / 0.5s 刷新循环）+ `T_` 里的 `MP_Hud` 声明。
+- **无残留**：`MP_Hud` / `SetMPHud` / `CheatMenuMPHud` / `MPHudLabel` / `mpAttr(` 全部清零（已逐项核对）。
+- 保留的 MachineParty 相关功能不受影响：**`MPGhost` 幽灵紫标** ✓、可交互透视的 `MPBuy_*` 关键词 ✓。
+
+---
+
 ## 6.1.2 · 2026-09-18
 
 ### 🚪 门/陷阱透视：改成「连祖先一起看」（修"陷阱门没显示"的根因）
