@@ -72,6 +72,52 @@
    同理：**不擅自新增功能、不擅自改默认值**，只做用户明确要的那件事。
 
 
+## 🔄 本地与远程同步 / 🩺 一键诊断 / 发版（★ 接手必读）
+
+### 1. 同步本地仓库与远程（先做这个，再动代码）
+```bash
+cd dist/repo            # ★ 仓库在这里，不在工作区根目录
+G="git -c http.proxy= -c https.proxy= -c core.autocrlf=false"   # 清掉本机死代理
+$G fetch origin main    # ★ 必须先 fetch
+$G reset --hard FETCH_HEAD
+```
+- **绝对不要 `git reset --hard origin/main`** —— 沙箱写不进 `refs/remotes/origin/*`，用 `FETCH_HEAD`。
+- **`fetch` 失败时千万别接着 `reset`**（会把工作区退回旧版，踩过）。
+- 同步后确认：`version.txt` 与 `CHANGELOG.md` 顶部版本号**一致**。
+- 仓库里只放 4 个发行文件 + `README.md` + `事件库/`；**源码（带注释）只在本地**，文件名跟版本号走
+  （`CheatMenu-<版本>.lua`，升版用 `.workbuddy/build/rename_version.py` 改名）。
+
+### 2. 遇到"UI 位置 / 拖动 / 显示不对"——先要诊断，不要猜
+设置页 → **诊断** → **`🩺 一键诊断`**。它会一键把全部事实扫出来：
+控制台 + 写 `CheatMenu_Diag.txt`（能写文件时）。内容含：
+视口 · GuiInset · `ScreenGui`（父级 / 尺寸 / `ScreenInsets` / `IgnoreGuiInset`）· 菜单**实际位置与尺寸** ·
+**居中校验（期望 vs 实际）** · 锚点 · `UIScale`（含挂在谁身上）· 拖动把手（类 / `Active` / 尺寸）·
+**★ 标题栏命中测试**（`PlayerGui:GetGuiObjectsAtPosition` 取标题栏正中的**最上层对象**）。
+
+**规矩**：
+- 让用户点这个按钮、把输出发过来 —— **不要让用户自己观察、记录、截图**。
+- **别加"自动纠正位置"的逻辑**。加过一次（`MenuPlacementCheck`），判据有误差 → 它主动把菜单挪走
+  → **越修越歪**（用户日志 `545,150` → `130,-182`），最后整块删掉。**宁可只提供"用户主动点一下"的入口。**
+- **不要让功能依赖"某个控件能不能收到输入"**（会被 z 序 / `Active` / 遮挡 / 执行器差异搞掉）——
+  拖动的正确做法是 **`UserInputService.InputBegan` 全局监听 + 自己算矩形命中**（见 `CheatMenu` 里的 `inRect`）。
+- 桩环境里给属性/方法**先判存在再调**；用 `pcall` 硬吞会变成"被 pcall 吞掉的错误"，**门禁会拒绝发行**。
+
+### 3. 发版（一条链走完，别拆）
+```bash
+python .workbuddy/build/verify_all.py            # 门禁(7 步)；改完必跑一次
+python .workbuddy/build/local_sync.py --full     # 建本地版 + 装执行器脚本
+python .workbuddy/build/push_now.py              # 推 4 文件(CheatMenu/version/loader/CHANGELOG)
+python .workbuddy/build/push_docs.py             # ★ 推 README.md 与 事件库/(不在上面那 4 个里！)
+```
+- **修 bug 要加 `--patch`**（默认是"功能版"次+1，不加会把 bug 修复发成功能版）。
+- **想固定版本号**：把目标号写进 `.workbuddy/build/VERSION`，并把**当前源码 sha1** 写进 `VERSION.sha`
+  —— 这样 `version_for()` 认为"源码没变"直接返回该号。⚠️ **源码一改就要重新钉一次。**
+- **加载器由 `publish.py` 生成**（`LOADER_TMPL`），**不要手改 `dist/repo/loader.lua`**（会被覆盖）。
+- **下载源全部带防缓存参数 `?t=<时间戳>`**（raw / jsDelivr 对分支有 CDN 缓存，不防就是"更新不了"）。
+  因此**任何按 URL 精确匹配的桩/探针，比对前都要先去掉查询串**（`gsub("%?.*$","")`）。
+
+---
+
 ## 构建 / 推送（本地流程，仓库里看不到脚本）
 
 - 构建产物在本地 `dist/repo/`，通过 GitHub Contents API 推（脚本 `.workbuddy/build/push_now.py`）。
