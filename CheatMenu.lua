@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 22:16 sha f6909a35 bytes 290331'):format('2026-09-18 22:16','f6909a35',290331))
+print(('[CheatMenu] build 2026-09-18 22:27 sha bc735fab bytes 290606'):format('2026-09-18 22:27','bc735fab',290606))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,MenuMouse=true,PickDist=1200,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.8.0"
+SYS.BuildVer="5.8.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1820,7 +1820,7 @@ if (SYS._pickN%25==1 and (not SYS._pickAt or _now-SYS._pickAt>1)) or not SYS._pi
 SYS._pickAt=_now
 local list={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
-local MAXD=600
+local MAXD=tonumber(SYS.C_.PickDist) or 1200
 P(function()
 for _,o in ipairs(WS:GetDescendants()) do
 local cn=o.ClassName
@@ -1841,7 +1841,8 @@ end
 end
 if not ok and type(o.Name)=="string" and o.Name~="" then
 local nm=o.Name:lower()
-for _,kw in ipairs({"chest","crate","locker","cabinet","vault","safe","coffer","stash"}) do
+for _,kw in ipairs({"chest","crate","locker","cabinet","vault","safe","coffer","stash",
+"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem"}) do
 if nm:find(kw,1,true) then ok=true break end
 end
 if not ok and (o.Name:find("宝箱") or o.Name:find("箱子") or o.Name:find("柜") or o.Name:find("箱")) then ok=true end
@@ -6128,6 +6129,7 @@ UI.Switch(p,"🖐 可交互道具透视 (点击/按E/能拿的东西, 青色)","
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
+UI.Slider(p,"🖐 可交互道具探测距离 (格)",200,5000,100,function() return SYS.C_.PickDist or 1200 end,function(v) SYS.C_.PickDist=v end,"%.0f")
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
 UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
