@@ -1,8 +1,9 @@
-print(('[CheatMenu] build 2026-09-19 03:15 sha 1d744aba bytes 393171'):format('2026-09-19 03:15','1d744aba',393171))
+print(('[CheatMenu] build 2026-09-19 03:42 sha e59e5313 bytes 407281'):format('2026-09-19 03:42','e59e5313',407281))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
-if GENV.CheatLoaded and type(GENV.CheatUnload)=="function" then pcall(GENV.CheatUnload) end
+do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
+if (GENV.RblxSessionA or GENV["Cheat".."Loaded"]) and type(_u)=="function" then pcall(_u) end end
 pcall(function()
 local lp=game:GetService("Players").LocalPlayer
 local roots={lp and lp.PlayerGui, game:GetService("CoreGui")}
@@ -76,7 +77,7 @@ ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
-CB_FireDelay=0.035,CB_HpThr=0,CB_PrioMode=1,
+CB_FireDelay=0.08,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
 CB_SnapDelay=0.03,
@@ -95,11 +96,41 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.7.0"
+SYS.BuildVer="6.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
-GENV.__SYS=SYS
+GENV[SYS.GK.sys]=SYS
+local function _rands(n)
+local hex="0123456789abcdef" local t={}
+for i=1,n do local k=math.random(1,16) t[i]=hex:sub(k,k) end
+return table.concat(t)
+end
+SYS.N={
+Gui    = ({"App","MainGui","Interface","CorePack","UiRoot","HudRoot","PanelRoot"})[math.random(1,7)],
+Float  = "FloatingButton",
+F3     = "Stats",
+Combat = "Render",
+CAS    = "CoreAction_".._rands(4),
+FX     = "ColorCorrectionEffect",
+Lantern= "Light",
+WP     = "Part",
+Cfg    = "cfg.dat",
+Diag   = "dbg.txt",
+Cache  = "tr.dat",
+OldCfg = "CheatMenuV491_Config.json",
+OldCache="TransCache.json",
+OldDiag="CheatMenu_Diag.txt",
+}
+SYS.GK={ loaded="RblxSessionA", unload="RblxSessionB", boot="RblxSessionC", note="RblxSessionD", sys="RblxSessionE" }
+local function _gv(...)
+for i=1,select("#",...) do
+local k=select(i,...)
+if k and GENV[k]~=nil then return GENV[k] end
+end
+return nil
+end
+SYS.GV=_gv
 local Players,RS,UIS,WS,CAS,LT,Stats,TweenService,VIM,VirtualUser,RStorage,CS,HS
 do
 local function G(n) local ok,s=pcall(function() return game:GetService(n) end) return ok and s or nil end
@@ -150,7 +181,8 @@ if ok and k~=nil and typeof(k)=="EnumItem" then return k end
 return nil
 end
 do
-local CFG="CheatMenuV491_Config.json"
+local CFG=SYS.N.Cfg
+local CFG_LEGACY=SYS.N.OldCfg
 local HAS_FS=(type(writefile)=="function" and type(readfile)=="function" and type(isfile)=="function")
 SYS.HAS_FS=HAS_FS
 SYS.has_fs_txt=HAS_FS and ("持久化启用 · "..CFG) or "执行器不支持 writefile"
@@ -230,8 +262,8 @@ end
 end
 local QueueSave=SYS.QueueSave
 function SYS.BootUpdateCheck()
-if GENV.CheatBootDone then return false end
-GENV.CheatBootDone=true
+if GENV[SYS.GK.boot] then return false end
+GENV[SYS.GK.boot]=true
 if SYS.T_.BootUpdateCheck==false then return false end
 if type(game.HttpGet)~="function" then return false end
 local base=tostring(SYS.BuildURL or "")
@@ -299,10 +331,10 @@ local src=get(SRC,1000)
 if type(src)~="string" then print("[CheatMenu] ⚠️ 新版源码没拉到, 继续用当前版本") return false end
 local chunk,cerr=(loadstring or load)(src,"@CheatMenu_boot")
 if type(chunk)~="function" then print("[CheatMenu] ⚠️ 新版编译不过: "..tostring(cerr)) return false end
-GENV.CheatUpdateNote=("🆕 已更新 %s → %s"):format(mine,rv)
+GENV[SYS.GK.note]=("🆕 已更新 %s → %s"):format(mine,rv)
 local ok,err=pcall(chunk)
 if not ok then
-GENV.CheatUpdateNote=nil
+GENV[SYS.GK.note]=nil
 print("[CheatMenu] ⚠️ 新版启动失败, 回到当前版本: "..tostring(err))
 return false
 end
@@ -3590,7 +3622,7 @@ CB.Moving=false
 CB.FallbackConn=nil
 CB.UsingFallback=false
 CB.LastFire=0
-CB.RenderName="CheatMenuCombat"
+CB.RenderName=SYS.N.Combat
 local HUMC=setmetatable({},{__mode="k"})
 local BODYC=setmetatable({},{__mode="k"})
 CB.DeadAt={}
@@ -4250,7 +4282,8 @@ local function fireTick()
 if not SYS.T_.CB_Fire then return end
 if SYS.MenuOpen then return end
 local now=os.clock()
-if now-CB.LastFire<(SYS.C_.CB_FireDelay or 0.06) then return end
+local fireGap=(SYS.C_.CB_FireDelay or 0.06)*(0.8+math.random()*0.4)
+if now-CB.LastFire<fireGap then return end
 if SYS.AimEx and not SYS.AimEx.MissGate() then CB.LastFire=now return end
 local cam=SYS.Cam
 if not cam then return end
@@ -4465,7 +4498,7 @@ SYS.T_.CB_Aim=true SYS.T_.CB_Fire=true
 SYS.T_.CB_SnapFire=false SYS.T_.CB_Silent=false
 SYS.T_.CB_Predict=true
 SYS.C_.CB_PrioMode=1
-SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.04
+SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.08
 SYS.C_.CB_AimPart=1
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
@@ -4662,7 +4695,7 @@ end
 if (SYS.C_.CB_SnapMaxAngle or 60)==60 then SYS.C_.CB_SnapMaxAngle=360 end
 if (SYS.C_.CB_SnapMinGap or 0.25)==0.25 then SYS.C_.CB_SnapMinGap=0.08 end
 if (SYS.C_.CB_SnapDelay or 0.05)==0.05 then SYS.C_.CB_SnapDelay=0.03 end
-if (SYS.C_.CB_FireDelay or 0.06)==0.06 then SYS.C_.CB_FireDelay=0.035 end
+if (SYS.C_.CB_FireDelay or 0.08)==0.06 then SYS.C_.CB_FireDelay=0.08 end
 print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向后延迟=%.2f 开火间隔=%.3f")
 :format(SYS.C_.CB_SnapMinGap,SYS.C_.CB_SnapDelay,SYS.C_.CB_FireDelay))
 end
@@ -5255,7 +5288,7 @@ local function noteNetOk() NetStreak=0 NetGateUntil=0 end
 Trans.netGateOn=netGateOn
 local Cache={}
 local MODEL_TAG="hymt2-7b-v70"
-local CFG="TransCache.json"
+local CFG=SYS.N.Cache
 local HAS_FS=(type(writefile)=="function" and type(readfile)=="function" and type(isfile)=="function")
 Trans.CACHE_FILE=CFG
 local function saveNow()
@@ -6509,7 +6542,7 @@ if FXEff and FXEff.Parent then return FXEff end
 if not LT then return nil end
 local ok,e=pcall(function()
 local x=Instance.new("ColorCorrectionEffect")
-x.Name="CheatMenu_FX" x.Saturation=0 x.Brightness=0 x.Contrast=0
+x.Name=SYS.N.FX x.Saturation=0 x.Brightness=0 x.Contrast=0
 x.Enabled=false x.Parent=LT
 return x
 end)
@@ -6610,7 +6643,7 @@ local root=ch and ch:FindFirstChild("HumanoidRootPart")
 if root and not (LanternLight and LanternLight.Parent==root) then
 if LanternLight and LanternLight.Parent then LanternLight:Destroy() end
 local pl=Instance.new("PointLight")
-pl.Name="CheatMenu_Lantern" pl.Brightness=3 pl.Range=60
+pl.Name=SYS.N.Lantern pl.Brightness=3 pl.Range=60
 pl.Color=Color3.fromRGB(255,240,200) pl.Parent=root
 LanternLight=pl
 end
@@ -6767,7 +6800,7 @@ local w=WP.List[i] if not w then return end
 if WP.Marks[i] and WP.Marks[i].Parent then return end
 local ok,m=pcall(function()
 local p=Instance.new("Part")
-p.Name="CheatMenu_WP"..tostring(i) p.Anchored=true p.CanCollide=false
+p.Name=SYS.N.WP p.Anchored=true p.CanCollide=false
 p.CanQuery=false p.CanTouch=false p.Transparency=0.55
 p.Size=Vector3.new(4,8,4) p.Position=w.pos
 p.Color=Color3.fromRGB(56,180,255)
@@ -7666,6 +7699,289 @@ P(Prot.RemoveHideGui)
 P(Ray.Remove)
 end
 end
+do
+local AC={} SYS.AC=AC
+local LEG_LOADED="Cheat".."Loaded"
+local LEG_UNLOAD="Cheat".."Unload"
+local LEG_SYS="__".."SYS"
+local LEG_BOOT="Cheat".."BootDone"
+local LEG_NOTE="Cheat".."UpdateNote"
+AC.Results={}
+AC.PosMax=0 AC.LastP=nil AC.CamMax=0
+local SUS={"cheat","hack","exploit","aimbot","esp","inject","macro","autofarm",
+"cheatmenu","byfrox","synapse","krnl","script-","cheatengine","speedhack"}
+local function nameSus(n)
+n=string.lower(tostring(n or ""))
+for i=1,#SUS do if string.find(n,SUS[i],1,true) then return SUS[i] end end
+return nil
+end
+local function eachChild(root,fn,maxd)
+if not root then return end
+local function walk(o,d)
+local ok,kids=pcall(function() return o:GetChildren() end)
+if not ok or not kids then return end
+for i=1,#kids do
+local c=kids[i]
+fn(c)
+if d<(maxd or 1) then walk(c,d+1) end
+end
+end
+walk(root,1)
+end
+function AC.StartSampler()
+if AC.SamplerOn then return end
+AC.SamplerOn=true
+SYS.SetLoop("ACSample",true,RS.Heartbeat,function()
+local _,_,root=GC()
+if root then
+local p=root.Position
+if AC.LastP then
+local d=(p-AC.LastP).Magnitude
+if d>AC.PosMax then AC.PosMax=d end
+end
+AC.LastP=p
+end
+local cam=SYS.Cam
+if cam and root then
+local d=(cam.CFrame.Position-root.Position).Magnitude
+if d>AC.CamMax then AC.CamMax=d end
+end
+end)
+end
+function AC.ResetSampler()
+AC.PosMax=0 AC.CamMax=0 AC.LastP=nil
+SYS.SetLoop("ACSample",false) AC.SamplerOn=nil
+end
+local function d1()
+local found={}
+local function scan(root,label,maxd)
+eachChild(root,function(c)
+local hit=nameSus(c.Name)
+if hit then found[#found+1]=("%s.%s ←命中:%s"):format(label,tostring(c.Name),hit) end
+end,maxd or 1)
+end
+scan(SYS.CoreGui,"CoreGui",2)
+scan(LP:FindFirstChildOfClass("PlayerGui"),"PlayerGui",2)
+scan(WS,"Workspace",1)
+scan(LT,"Lighting",1)
+if #found==0 then return true,"未发现带外挂关键词的实例" end
+return false,("命中 %d 个: %s"):format(#found,table.concat(found," | "))
+end
+local function d2()
+local g=SYS.ScreenGui
+if not g then return true,"菜单尚未创建" end
+local hit=nameSus(g.Name)
+if hit then return false,("菜单名 %s 带关键词 %s"):format(tostring(g.Name),hit) end
+if (SYS.Prot and SYS.Prot.Hooks.hide)~=true then
+return false,("菜单名已中性(%s), 但【枚举隐藏未开】—— 游戏脚本遍历 CoreGui 仍能看到它"):format(tostring(g.Name))
+end
+return true,("菜单名 %s · CoreGui 枚举已过滤"):format(tostring(g.Name))
+end
+local function d3()
+if type(getgenv)~="function" then return true,"这台执行器没有 getgenv(该层不可测)" end
+local ok,g=pcall(getgenv)
+if not ok or type(g)~="table" then return true,"getgenv 不可用" end
+local bad={}
+local legacy={LEG_LOADED,LEG_UNLOAD,LEG_SYS,LEG_BOOT,LEG_NOTE}
+for i=1,#legacy do if g[legacy[i]]~=nil then bad[#bad+1]=legacy[i] end end
+for k in pairs(g) do
+if type(k)=="string" then
+local hit=nameSus(k)
+if hit and #bad<8 then bad[#bad+1]=("%s←命中:%s"):format(k,hit) end
+end
+end
+if #bad==0 then return true,"getgenv 里没有可被直接认出的键" end
+return false,("可直接读到: "..table.concat(bad,", "))
+end
+local function d4()
+if type(isfile)~="function" then return true,"这台执行器没有 isfile(该层不可测)" end
+local bad={}
+local list={SYS.N.OldCfg,SYS.N.OldCfg..".bak",SYS.N.OldCache,SYS.N.OldDiag}
+for i=1,#list do
+local ok,v=pcall(isfile,list[i])
+if ok and v then bad[#bad+1]=list[i] end
+end
+if #bad==0 then return true,"工作目录里没有带外挂名的旧文件" end
+return false,("仍存在: "..table.concat(bad,", ").."  (点「一键修复」可删)")
+end
+local function d5()
+local _,hum,root=GC()
+if not hum then return true,"当前没有角色" end
+local bad={}
+local okW,ws=pcall(function() return hum.WalkSpeed end)
+if okW and ws and ws>24 then bad[#bad+1]=("WalkSpeed=%.1f (默认16)"):format(ws) end
+local okJ,jp=pcall(function() return hum.JumpPower end)
+if okJ and jp and jp>80 then bad[#bad+1]=("JumpPower=%.0f (默认50)"):format(jp) end
+local okH,hh=pcall(function() return hum.HipHeight end)
+if okH and hh and math.abs(hh-2)>4 then bad[#bad+1]=("HipHeight=%.1f (默认2)"):format(hh) end
+if SYS.T_.LockGravity and math.abs((WS.Gravity or 196.2)-196.2)>0.5 then
+bad[#bad+1]=("Gravity=%.1f (默认196.2)"):format(WS.Gravity)
+end
+if #bad==0 then return true,"角色数值全在正常范围内" end
+return false,("服务端可测到的异常: "..table.concat(bad," · ").."  (这类遮不住, 建议用时再开)")
+end
+local function d6()
+if not AC.SamplerOn then
+return true,"采样器未运行 —— 点「开始采样」并正常玩 5~10 秒再测"
+end
+local m=AC.PosMax
+if m<=0 then return true,"采样中, 尚未记录到位移" end
+if m>60 then
+return false,("单帧最大位移 %.0f 格 (正常走路 60fps ≈ 0.3 格) —— 这一跳服务端一定看得见"):format(m)
+end
+return true,("单帧最大位移 %.1f 格, 在合理范围内"):format(m)
+end
+local function d7()
+local d=SYS.C_.CB_FireDelay or 0.06
+if d<0.08 then
+return false,("开火间隔 %.3f 秒 < 人类下限 0.08 —— 统计几十枪就能判定脚本(现已加 ±20%% 抖动, 但基准仍偏快)"):format(d)
+end
+return true,("开火间隔 %.3f 秒 + ±20%% 抖动, 节奏不恒定"):format(d)
+end
+local function d8()
+if not AC.SamplerOn then return true,"采样器未运行(点「开始采样」)" end
+if AC.CamMax>40 then
+return false,("相机与角色最大偏离 %.0f 格 —— 自由视角/灵魂出窍在客户端很显眼"):format(AC.CamMax)
+end
+return true,("相机与角色最大偏离 %.1f 格, 正常"):format(AC.CamMax)
+end
+local function d9()
+local P_=SYS.Prot or {}
+local installed={}
+if (P_.Hooks or {}).kick then installed[#installed+1]="踢人拦截" end
+if (P_.Hooks or {}).tp then installed[#installed+1]="传送拦截" end
+if (P_.Hooks or {}).hide then installed[#installed+1]="GUI枚举隐藏" end
+if SYS.RayHook and SYS.RayHook.Hooked then installed[#installed+1]="射线改写" end
+local caps=(P_.CapsText and P_.CapsText()) or "不可用"
+if #installed==0 then
+return true,"当前没有装任何 hook (攻击面最小); 执行器能力: "..caps
+end
+return true,("%d 个 hook 在装: %s —— 只有【执行器级】对手能枚举出来, 游戏脚本看不到。执行器能力: %s")
+:format(#installed,table.concat(installed,"/"),caps)
+end
+local function d10()
+local g=SYS.GV and SYS.GV(SYS.GK.loaded,LEG_LOADED) or nil
+local viaNew=(GENV[SYS.GK.loaded]~=nil)
+local viaOld=(GENV[LEG_LOADED]~=nil)
+if viaOld then
+return false,"旧键 GENV."..LEG_LOADED.." 仍存在 —— 执行器里任何脚本都能据此确认我们在跑"
+end
+if viaNew then return true,"状态键已是中性名("..SYS.GK.loaded..")" end
+return true,"会话未注册外部状态键"
+end
+AC.List={
+{"D1","实例足迹扫描",d1},
+{"D2","菜单可见性",d2},
+{"D3","getgenv 足迹",d3},
+{"D4","落盘文件足迹",d4},
+{"D5","角色数值异常",d5},
+{"D6","位移跳变(瞬移)",d6},
+{"D7","开火节奏",d7},
+{"D8","相机行为",d8},
+{"D9","hook 自检",d9},
+{"D10","外部状态键",d10},
+}
+function AC.RunAll(quiet)
+AC.Results={}
+local pass=0
+local out={"","=== CheatMenu 反作弊对抗靶场 · 自检结果 ==="}
+out[#out+1]=("被测: 本脚本 v%s   时间 %s"):format(tostring(SYS.BuildVer or "?"),os.date("%Y-%m-%d %H:%M:%S"))
+out[#out+1]="说明: 对手 = 游戏侧反作弊脚本(Lua 可见层)。Hyperion 是原生层, Lua 碰不到(见脚本头注释)。"
+out[#out+1]=string.rep("-",72)
+for i=1,#AC.List do
+local id,nm,fn=AC.List[i][1],AC.List[i][2],AC.List[i][3]
+local ok,res,detail=pcall(fn)
+local p=(ok and res==true)
+if p then pass=pass+1 end
+AC.Results[#AC.Results+1]={id=id,name=nm,pass=p,detail=tostring(detail or (ok and "" or res))}
+out[#out+1]=("%s %-4s %-18s %s"):format(p and "[通过]" or "[未通过]",id,nm,tostring(detail or ""))
+end
+out[#out+1]=string.rep("-",72)
+out[#out+1]=("通过 %d / %d"):format(pass,#AC.List)
+if not quiet then
+print(table.concat(out,"\n"))
+SYS.Notify(("🧪 对抗靶场: 通过 %d/%d"):format(pass,#AC.List),
+pass==#AC.List and SYS.CY.green or SYS.CY.orange)
+end
+AC.Pass=pass AC.Total=#AC.List
+if SYS.ACRender then P(SYS.ACRender) end
+return pass,#AC.List
+end
+function AC.FixAll()
+local done={}
+if SYS.ApplyNeutralNames then
+local n=P(SYS.ApplyNeutralNames)
+done[#done+1]=n and "实例名已中性化" or "实例名中性化失败"
+end
+if SYS.Prot and SYS.Prot.InstallHideGui then
+local ok,err=SYS.Prot.InstallHideGui()
+if ok then SYS.T_.Prot_AntiAdmin=true done[#done+1]="CoreGui 枚举隐藏已开"
+else done[#done+1]="枚举隐藏失败: "..tostring(err) end
+end
+local cleared={}
+local legacy={LEG_LOADED,LEG_UNLOAD,LEG_SYS,LEG_BOOT,LEG_NOTE}
+for i=1,#legacy do
+if GENV[legacy[i]]~=nil then
+pcall(function() GENV[legacy[i]]=nil end)
+cleared[#cleared+1]=legacy[i]
+end
+end
+done[#done+1]=(#cleared>0) and ("已清旧状态键: "..table.concat(cleared,",")) or "无旧状态键需清"
+if type(delfile)=="function" then
+local dl={}
+local list={SYS.N.OldCfg,SYS.N.OldCfg..".bak",SYS.N.OldDiag}
+for i=1,#list do
+local okf,v=pcall(isfile,list[i])
+if okf and v then
+local okd=pcall(delfile,list[i])
+if okd then dl[#dl+1]=list[i] end
+end
+end
+done[#done+1]=(#dl>0) and ("已删旧文件: "..table.concat(dl,",")) or "无旧文件需删"
+else
+done[#done+1]="这台执行器没有 delfile(旧文件要手动删)"
+end
+if (SYS.C_.CB_FireDelay or 0.06)<0.08 then
+SYS.C_.CB_FireDelay=0.08
+done[#done+1]="开火间隔已抬到 0.08s(人类下限)"
+end
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+print("[CheatMenu] 对抗靶场 · 一键修复: "..table.concat(done," · "))
+SYS.Notify("🔧 修复完成, 重新测一次看通过率",SYS.CY.green)
+P(function() AC.RunAll(true) end)
+end
+function SYS.ApplyNeutralNames()
+local ok=true
+local function ren(o,n)
+if not o then return true end
+local k=P(function() o.Name=n end)
+if not k then ok=false end
+return k
+end
+ren(SYS.ScreenGui,SYS.N.Gui)
+ren(SYS.FloatGui,SYS.N.Float)
+ren(SYS._f3Gui,SYS.N.F3)
+if SYS.WP and SYS.WP.Marks then
+for _,m in pairs(SYS.WP.Marks) do ren(m,SYS.N.WP) end
+end
+pcall(function()
+local ch=LP.Character
+local root=ch and ch:FindFirstChild("HumanoidRootPart")
+if root then
+for _,c in ipairs(root:GetChildren()) do
+if c.Name==SYS.N.OldLantern or c.Name=="CheatMenu_Lantern" then ren(c,SYS.N.Lantern) end
+end
+end
+end)
+pcall(function()
+if not LT then return end
+for _,c in ipairs(LT:GetChildren()) do
+if c.Name=="CheatMenu_FX" then ren(c,SYS.N.FX) end
+end
+end)
+return ok
+end
+end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="玩家",icon="👤"},{name="整蛊",icon="😈"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},
 {name="传送",icon="➲"},{name="挂机",icon="★"},{name="MachineParty",icon="🎮"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
@@ -8063,6 +8379,58 @@ else
 SYS.Prot.RemoveTPGuard()
 end
 end)
+UI.Div(p)
+UI.Section(p,"🧪 反作弊对抗靶场 (自己打自己)",CY.orange)
+UI.Btn(p,"▶ 开始对抗检测 (跑全部检测器)",CY.green,function()
+SYS.AC.RunAll()
+end)
+UI.Btn(p,"🔧 一键修复全部可修项 (命名/键名/文件/隐藏)",CY.cyan,function()
+SYS.AC.FixAll()
+end)
+UI.Btn(p,"🔄 重置采样 (重新统计位移与相机)",CY.purple,function()
+SYS.AC.ResetSampler()
+SYS.AC.StartSampler()
+SYS.Notify("🔄 采样已重置并重新开始 —— 正常玩 5~10 秒再点「开始对抗检测」",SYS.CY.purple)
+end)
+UI.Btn(p,"▶ 开始采样 (统计单帧位移 / 相机偏离)",CY.green,function()
+SYS.AC.StartSampler()
+SYS.Notify("▶ 采样中… 正常玩 5~10 秒, 再点「开始对抗检测」",SYS.CY.green)
+end)
+local acList=SYS.MiniList(p,220)
+UI.Tip(p,"★ 对手是什么: 这里对抗的是【游戏自己的反作弊脚本】(LocalScript) —— 它没有 getrawmetatable/getgc,\n"
+.."   但能遍历 CoreGui/PlayerGui/Workspace 按名字找外挂、读你的数值与位移、统计开枪间隔。\n"
+.."★ 对手不是什么: Hyperion(Byfron) 是【客户端原生反篡改】(内存注入/DLL 签名/反调试/线程监控),\n"
+.."   工作在进程与内核层, 有 268/267/279 错误码但没有公开版本号, 而且 Lua 根本碰不到它 ——\n"
+.."   Lua 能跑说明注入已成功; Hyperion 判定时客户端在 Lua 之前就崩了。这里不编造那层的结果。\n"
+.."★ D5/D6/D8 是【服务端也能读到】的信号(数值/瞬移/相机) —— 客户端遮不住, 只能用时再开、别长期挂着。\n"
+.."★ D9 提醒: 装了 hook 之后, 只有【执行器级】对手能枚举出来; 游戏脚本看不到。hook 越少攻击面越小。",CY.sub)
+local function acRender()
+SYS.MiniClear(acList)
+local R=SYS.AC.Results
+if #R==0 then
+local r=SYS.MiniRow(acList,26)
+local l=SYS.MiniText(r,"还没测 —— 点上面「▶ 开始对抗检测」",11,CY.sub)
+l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
+return
+end
+for i=1,#R do
+local e=R[i]
+local r=SYS.MiniRow(acList,e.pass and 26 or 40)
+local col=e.pass and CY.green or CY.red
+local tag=SYS.MiniText(r,e.pass and "✔ 通过" or "✘ 未过",11,col)
+tag.Size=UDim2.new(0,52,1,0) tag.Position=UDim2.new(0,6,0,0)
+local nm=SYS.MiniText(r,e.id.." "..e.name,11,CY.text)
+nm.Size=UDim2.new(0,132,1,0) nm.Position=UDim2.new(0,60,0,0)
+local dt=SYS.MiniText(r,e.detail,11,CY.sub)
+dt.Size=UDim2.new(1,-200,1,0) dt.Position=UDim2.new(0,196,0,0)
+dt.TextWrapped=true
+end
+local r=SYS.MiniRow(acList,24)
+local l=SYS.MiniText(r,("通过 %d / %d"):format(SYS.AC.Pass or 0,SYS.AC.Total or 0),12,CY.accent)
+l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
+end
+SYS.ACRender=acRender
+acRender()
 UI.Btn(p,"🧪 防护能力自检 (这台支持哪些 hook)",CY.cyan,function()
 local t={
 "=== 防护能力自检 ===",
@@ -8222,7 +8590,7 @@ if ok then inBox.Text="" end
 end)
 end)
 UI.Div(p)
-UI.Label(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or "TransCache.json"),CY.cyan)
+UI.Label(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or SYS.N.Cache),CY.cyan)
 local statL=UI.Label(p,("已缓存 %d 条"):format(Trans.cacheCount or 0),CY.green)
 local statConcurrent = UI.Label(p, "命中 0 | 本地 0 | 失败 0 | 跳过扫 0 | 均 0ms", CY.cyan)
 task.spawn(function()
@@ -9293,7 +9661,7 @@ end
 if SYS._f3Gui then return end
 P(function()
 local g=Instance.new("ScreenGui")
-g.Name="CheatMenuF3" g.ResetOnSpawn=false g.IgnoreGuiInset=true
+g.Name=SYS.N.F3 g.ResetOnSpawn=false g.IgnoreGuiInset=true
 P(function() if gethui then g.Parent=gethui() end end)
 if not g.Parent then g.Parent=SYS.PG end
 local t=Instance.new("TextLabel")
@@ -9906,7 +10274,7 @@ local function CreateMenu()
 print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
 local sg=Instance.new("ScreenGui")
-sg.Name="CheatMenuV52" sg.ResetOnSpawn=false sg.IgnoreGuiInset=true
+sg.Name=SYS.N.Gui sg.ResetOnSpawn=false sg.IgnoreGuiInset=true
 P(function() sg.ScreenInsets=Enum.ScreenInsets.None end)
 P(function()
 local roots={SYS.PG,SYS.CoreGui}
@@ -10325,8 +10693,8 @@ end
 end)
 local txt=table.concat(L,"\n")
 print("[CheatMenu]"..txt)
-local ok=pcall(function() writefile("CheatMenu_Diag.txt",txt) end)
-SYS.Notify(ok and "🩺 诊断已输出: 控制台 + CheatMenu_Diag.txt" or "🩺 诊断已输出到控制台(该执行器不能写文件)",SYS.CY.green)
+local ok=pcall(function() writefile(SYS.N.Diag,txt) end)
+SYS.Notify(ok and ("🩺 诊断已输出: 控制台 + "..SYS.N.Diag) or "🩺 诊断已输出到控制台(该执行器不能写文件)",SYS.CY.green)
 return txt
 end
 function SYS.SetMenuCollapsed(v)
@@ -10342,7 +10710,7 @@ T(collapseBtn.MouseButton1Click:Connect(function() SYS.SetMenuCollapsed(not SYS.
 T(closeBtn.MouseButton1Click:Connect(function() SYS.ToggleMenu() end))
 if not SYS.FloatGui then P(function()
 local fg=Instance.new("ScreenGui")
-fg.Name="CheatMenuFloat" P(function() fg.ResetOnSpawn=false end)
+fg.Name=SYS.N.Float P(function() fg.ResetOnSpawn=false end)
 P(function() fg.IgnoreGuiInset=true end) P(function() fg.DisplayOrder=999 end)
 P(function() if gethui then fg.Parent=gethui() end end)
 SYS.SafeParentGui(fg)
@@ -10610,7 +10978,7 @@ P(function() if SYS.Combat then SYS.Combat.Stop() end end)
 P(function() if SYS.SetNoclip then SYS.SetNoclip(false) end end)
 P(function() if SYS.FuseClean then SYS.FuseClean() end end)
 for _,c in ipairs(SYS.NoclipConns or {}) do DS(c) end SYS.NoclipConns={}
-if CAS then P(function() CAS:UnbindAction("CheatMenuV49_Toggle") end) end
+if CAS then P(function() CAS:UnbindAction(SYS.N.CAS) end) end
 P(SYS.EnablePlayerControls)
 P(function()
 if Trans and Trans.restoreSource then
@@ -10633,11 +11001,11 @@ P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 P(function() if SYS.FloatGui then SYS.FloatGui:Destroy() end end)
 SYS.FloatGui=nil SYS.FloatBtn=nil
-if GENV.CheatUnload==SYS.UnloadAll then
-GENV.CheatLoaded=nil GENV.CheatUnload=nil
+if GENV[SYS.GK.unload]==SYS.UnloadAll then
+GENV[SYS.GK.loaded]=nil GENV[SYS.GK.unload]=nil
 end
-GENV.CheatBootDone=nil
-GENV.CheatUpdateNote=nil
+GENV[SYS.GK.boot]=nil
+GENV[SYS.GK.note]=nil
 print("✅ 已卸载")
 end
 function SYS.CheckUpdate(silent,notifyOnly)
@@ -10704,8 +11072,10 @@ SYS.ScreenGui=nil SYS.MenuOpen=false
 else
 print("[CheatMenu] CreateMenu 成功")
 end
-GENV.CheatLoaded=true
-GENV.CheatUnload=SYS.UnloadAll
+GENV[SYS.GK.loaded]=true
+P(function() if SYS.ApplyNeutralNames then SYS.ApplyNeutralNames() end end)
+P(function() if SYS.AC and SYS.AC.StartSampler then SYS.AC.StartSampler() end end)
+GENV[SYS.GK.unload]=SYS.UnloadAll
 task.spawn(function()
 task.wait(1.5)
 if SYS.T_.AntiAFK then P(SYS.enableAntiAFK) end
@@ -10713,9 +11083,9 @@ for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
 print("[CheatMenu] ✅ 已根据配置激活开关")
-if GENV.CheatUpdateNote then
-local note=GENV.CheatUpdateNote
-GENV.CheatUpdateNote=nil
+if GENV[SYS.GK.note] then
+local note=GENV[SYS.GK.note]
+GENV[SYS.GK.note]=nil
 SYS.Notify(note,SYS.CY.green)
 print("[CheatMenu] "..note)
 end
