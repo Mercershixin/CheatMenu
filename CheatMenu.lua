@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 15:14 sha 491e71b6 bytes 263494'):format('2026-09-18 15:14','491e71b6',263494))
+print(('[CheatMenu] build 2026-09-18 15:28 sha b9177054 bytes 264334'):format('2026-09-18 15:28','b9177054',264334))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -14,6 +14,13 @@ for _,c in ipairs(r:GetChildren()) do
 if c.Name=="CheatMenuV52" then c:Destroy() end
 end
 end
+end
+end)
+local _UIS_EARLY=(game and game.GetService) and game:GetService("UserInputService") or nil
+local _TOUCH=false
+pcall(function()
+if _UIS_EARLY then
+_TOUCH=(_UIS_EARLY.TouchEnabled==true) and (_UIS_EARLY.MouseEnabled~=true or _UIS_EARLY.KeyboardEnabled~=true)
 end
 end)
 local SYS={
@@ -62,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.4.0"
+SYS.BuildVer="4.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -151,6 +158,10 @@ if not isfile(CFG) then return end
 local function apply(raw)
 local data=HS:JSONDecode(raw)
 if type(data)~="table" then return false end
+if _TOUCH then
+if SYS.T_.PerfBoost==false then SYS.T_.PerfBoost=true end
+if SYS.T_.AntiAFK==false then SYS.T_.AntiAFK=true end
+end
 for k,v in pairs(data.C_ or {}) do if SYS.C_[k]~=nil and type(v)==type(SYS.C_[k]) then SYS.C_[k]=v end end
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
 if SYS.C_.CB_RingModeVer~=2 then
@@ -5212,7 +5223,8 @@ return row,v
 end
 function UI.Btn(parent,text,col,fn)
 local b=Instance.new("TextButton")
-b.Size=UDim2.new(1,0,0,40) b.BackgroundColor3=col or CY.card
+local BH=_TOUCH and 46 or 40
+b.Size=UDim2.new(1,0,0,BH) b.BackgroundColor3=col or CY.card
 b.BackgroundTransparency=0.25 b.TextColor3=CY.text b.Text=text
 b.Font=Enum.Font.GothamMedium b.TextSize=14
 b.AutoButtonColor=false b.BorderSizePixel=0 b.Parent=parent
@@ -5222,15 +5234,15 @@ UI.Hover(b,Color3.new(
 math.min(1,(col or CY.card).R*1.25+0.05),
 math.min(1,(col or CY.card).G*1.25+0.05),
 math.min(1,(col or CY.card).B*1.25+0.05)), col or CY.card, st)
-T(b.MouseButton1Down:Connect(function() tw(b,0.06,{Size=UDim2.new(1,-8,0,40)}) end))
-T(b.MouseButton1Up:Connect(function() tw(b,0.10,{Size=UDim2.new(1,0,0,40)}) end))
+T(b.MouseButton1Down:Connect(function() tw(b,0.06,{Size=UDim2.new(1,-8,0,BH-4)}) end))
+T(b.MouseButton1Up:Connect(function() tw(b,0.10,{Size=UDim2.new(1,0,0,BH)}) end))
 T(b.MouseButton1Click:Connect(function() P(fn) end))
 return b
 end
 function UI.Switch(parent,label,key,onChange)
 if not parent then return end
 local row=Instance.new("Frame")
-row.Size=UDim2.new(1,0,0,44) row.BackgroundColor3=CY.card
+row.Size=UDim2.new(1,0,0,_TOUCH and 50 or 44) row.BackgroundColor3=CY.card
 row.BackgroundTransparency=0.18 row.BorderSizePixel=0 row.Parent=parent
 UI.Round(row,10) UI.Stroke(row,CY.line,1,0.75)
 local lb=Instance.new("TextLabel")
@@ -5344,7 +5356,7 @@ return row
 end
 function UI.Input(parent,label,placeholder,get,set)
 local row=Instance.new("Frame")
-row.Size=UDim2.new(1,0,0,44) row.BackgroundColor3=CY.card
+row.Size=UDim2.new(1,0,0,_TOUCH and 50 or 44) row.BackgroundColor3=CY.card
 row.BackgroundTransparency=0.18 row.BorderSizePixel=0 row.Parent=parent
 UI.Round(row,10) UI.Stroke(row,CY.line,1,0.75)
 local lb=Instance.new("TextLabel")
@@ -5367,7 +5379,7 @@ end
 function UI.Cycle(parent,label,opts,get,set)
 if not parent then return end
 local row=Instance.new("Frame")
-row.Size=UDim2.new(1,0,0,44) row.BackgroundColor3=CY.card
+row.Size=UDim2.new(1,0,0,_TOUCH and 50 or 44) row.BackgroundColor3=CY.card
 row.BackgroundTransparency=0.18 row.BorderSizePixel=0 row.Parent=parent
 UI.Round(row,10) UI.Stroke(row,CY.line,1,0.75)
 local lb=Instance.new("TextLabel")
@@ -6161,6 +6173,17 @@ end
 if type(getreg)=="function" then
 local n=0 pcall(function() for _ in pairs(getreg()) do n=n+1 end end)
 line(("getreg()   Lua registry: %d 个键"):format(n))
+end
+do
+local vds="?"
+pcall(function()
+if UIS.ViewportDisplaySize~=nil then
+vds=(tostring(UIS.ViewportDisplaySize):gsub("Enum.ViewportDisplaySize.",""))
+end
+end)
+line(("设备: 触屏=%s 键盘=%s 鼠标=%s 视口档=%s")
+:format(tostring(UIS.TouchEnabled),tostring(UIS.KeyboardEnabled),
+tostring(UIS.MouseEnabled),vds))
 end
 if type(getthreadidentity)=="function" then
 local ok2,v=P(function() return getthreadidentity() end)
@@ -6958,7 +6981,8 @@ P(function() fg.IgnoreGuiInset=true end) P(function() fg.DisplayOrder=999 end)
 P(function() if gethui then fg.Parent=gethui() end end)
 SYS.SafeParentGui(fg)
 local fb=Instance.new("TextButton")
-fb.Size=UDim2.new(0,58,0,58) fb.Position=UDim2.new(1,-76,0,96)
+local fsz=DEV.small and 52 or 58
+fb.Size=UDim2.new(0,fsz,0,fsz) fb.Position=UDim2.new(1,-(fsz+18),0,96)
 fb.BackgroundColor3=CY.accent fb.BackgroundTransparency=0.12
 fb.Text="☰" fb.TextSize=28 fb.TextColor3=CY.text
 fb.Font=Enum.Font.GothamBold fb.BorderSizePixel=0 fb.AutoButtonColor=true
