@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 14:23 sha fb3ce96b bytes 263496'):format('2026-09-18 14:23','fb3ce96b',263496))
+print(('[CheatMenu] build 2026-09-18 15:10 sha 491e71b6 bytes 263494'):format('2026-09-18 15:10','491e71b6',263494))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -62,7 +62,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.3.0"
+SYS.BuildVer="4.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3222,7 +3222,7 @@ if k==nil then return end
 if first==nil then first=k elseif k~=first then second=true end
 end
 feed(CB.TeamKey(SYS.LP))
-local _,pok=P(function()
+local pok=P(function()
 for _,pl in ipairs(Players:GetPlayers()) do feed(CB.TeamKey(pl)) end
 end)
 CB._tkVal=(pok and second)==true
