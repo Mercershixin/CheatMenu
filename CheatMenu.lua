@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 18:23 sha bc82c54c bytes 274234'):format('2026-09-18 18:23','bc82c54c',274234))
+print(('[CheatMenu] build 2026-09-18 19:01 sha e7c38163 bytes 277076'):format('2026-09-18 19:01','e7c38163',277076))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.10.0"
+SYS.BuildVer="5.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3573,6 +3573,21 @@ local s=table.concat(t," → ")
 if SYS.T_.CB_TgtStrict then s=s.."    ★「只打指定目标」开着: 实际只打指定的那个人, 整条链不参与" end
 return s
 end
+local CB_PART_ORDER={
+[1]={"Head","UpperTorso","Torso","LowerTorso","LeftUpperArm","RightUpperArm","Left Arm","Right Arm","LeftLowerArm","RightLowerArm","LeftHand","RightHand","LeftUpperLeg","RightUpperLeg","Left Leg","Right Leg","LeftLowerLeg","RightLowerLeg","LeftFoot","RightFoot"},
+[2]={"UpperTorso","Torso","LowerTorso","Head","LeftUpperArm","RightUpperArm","Left Arm","Right Arm","LeftLowerArm","RightLowerArm","LeftHand","RightHand","LeftUpperLeg","RightUpperLeg","Left Leg","Right Leg","LeftLowerLeg","RightLowerLeg","LeftFoot","RightFoot"},
+[3]={"UpperTorso","Torso","Head","LowerTorso","LeftUpperArm","RightUpperArm","Left Arm","Right Arm","LeftLowerArm","RightLowerArm","LeftHand","RightHand","LeftUpperLeg","RightUpperLeg","Left Leg","Right Leg","LeftLowerLeg","RightLowerLeg"},
+}
+function CB.PickVisiblePart(pl,mode)
+local ch=pl and pl.Character
+if not ch then return nil end
+local order=CB_PART_ORDER[mode] or CB_PART_ORDER[2]
+for i=1,#order do
+local p=ch:FindFirstChild(order[i])
+if p and p:IsA("BasePart") and clearShot(p) then return p end
+end
+return nil
+end
 local function pickTarget()
 local cam=SYS.Cam
 if not cam then return nil,nil end
@@ -3591,11 +3606,11 @@ local myRoot=bodyOf(SYS.LP.Character)
 local cands={}
 for _,pl in ipairs(Players:GetPlayers()) do
 if isEnemy(pl) then
-local p=partOf(pl,mode)
+local p=CB.PickVisiblePart(pl,mode)
 if p then
 local d=(p.Position-camPos).Magnitude
 local _sh=hasShield(pl)
-if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD and clearShot(p) then
+if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD then
 local sp,on=cam:WorldToViewportPoint(p.Position)
 local inView=on and sp.Z>0
 local dd=inView and math.sqrt((sp.X-cx)^2+(sp.Y-cy)^2) or 1e7
@@ -6569,10 +6584,14 @@ function() return SYS.C_.MouseTPMode end,
 function(v) SYS.C_.MouseTPMode=v end)
 UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
 UI.Label(p,"玩家列表")
-local plList=Instance.new("Frame")
+local plList=Instance.new("ScrollingFrame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
 plList.BackgroundTransparency=0.3 plList.BorderSizePixel=0 plList.Parent=p
 plList.ClipsDescendants=true
+P(function() plList.CanvasSize=UDim2.new(0,0,0,0) plList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
+P(function() plList.ScrollBarThickness=6 plList.ScrollBarImageColor3=CY.accent end)
+P(function() plList.ScrollingDirection=Enum.ScrollingDirection.Y end)
+P(function() plList.ElasticBehavior=Enum.ElasticBehavior.Never end)
 UI.Round(plList,8) UI.Stroke(plList,CY.line,1,0.85)
 local lay=Instance.new("UIListLayout") lay.Padding=UDim.new(0,4) lay.Parent=plList
 local pad=Instance.new("UIPadding")
@@ -6610,10 +6629,14 @@ Ref()
 T(Players.PlayerAdded:Connect(function() task.wait(0.3) P(Ref) end))
 T(Players.PlayerRemoving:Connect(function() task.wait(0.3) P(Ref) end))
 UI.Label(p,"已保存位置 (点行里的「自动」按钮才会循环传送, 默认关)",CY.sub)
-local svList=Instance.new("Frame")
+local svList=Instance.new("ScrollingFrame")
 svList.Size=UDim2.new(1,0,0,140) svList.BackgroundColor3=CY.card
 svList.BackgroundTransparency=0.3 svList.BorderSizePixel=0 svList.Parent=p
 svList.ClipsDescendants=true
+P(function() svList.CanvasSize=UDim2.new(0,0,0,0) svList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
+P(function() svList.ScrollBarThickness=6 svList.ScrollBarImageColor3=CY.accent end)
+P(function() svList.ScrollingDirection=Enum.ScrollingDirection.Y end)
+P(function() svList.ElasticBehavior=Enum.ElasticBehavior.Never end)
 UI.Round(svList,8) UI.Stroke(svList,CY.line,1,0.85)
 local svLay=Instance.new("UIListLayout") svLay.Padding=UDim.new(0,4) svLay.Parent=svList
 local svPad=Instance.new("UIPadding")
@@ -7009,17 +7032,8 @@ main.AnchorPoint=Vector2.new(0.5,0.5)
 main.Position=UDim2.new(0.5,0,0.5,0)
 end)
 end
-if not SYS._ParentChecked then
-P(function()
-local wantX=(vp.X-W*sc)*0.5
-local gotX=main.AbsolutePosition.X
-if math.abs(gotX-wantX)>8 then
-if SYS.ScreenGui then SYS.ScreenGui.Parent=SYS.PG end
-print(("[CheatMenu] 父容器不是全屏(期望X=%.0f 实际X=%.0f) -> 退回 PlayerGui 保证居中"):format(wantX,gotX))
-end
-SYS._ParentChecked=true
-end)
-end
+SYS.MenuScale=sc
+if SYS.MenuPlacementCheck then P(SYS.MenuPlacementCheck,"ApplyScale") end
 end)
 end
 ApplyScale()
@@ -7286,6 +7300,41 @@ P(ApplyScale)
 SYS.Notify("⊙ 菜单已回到正中间",SYS.CY.green)
 end
 T(centerBtn.MouseButton1Click:Connect(function() P(SYS.CenterMenu) end))
+function SYS.MenuPlacementCheck(tag)
+if SYS._PlaceChecking then return end
+SYS._PlaceChecking=true
+local okAll=pcall(function()
+local cam=WS.CurrentCamera
+local vp=cam and cam.ViewportSize
+if not (vp and vp.X>10 and vp.Y>10) then return end
+local sc=tonumber(SYS.MenuScale) or 1
+if sc<=0 then sc=1 end
+local wx=(vp.X-W*sc)*0.5
+local wy=(vp.Y-H*sc)*0.5
+local gx,gy=0,0
+P(function() local ap=main.AbsolutePosition gx=ap.X gy=ap.Y end)
+local dx,dy=math.abs(gx-wx),math.abs(gy-wy)
+SYS.PlaceDbg=("父容器=%s 视口=%.0fx%.0f 缩放=%.2f 期望=(%.0f,%.0f) 实际=(%.0f,%.0f)")
+:format(tostring(sg.Parent and (sg.Parent.Name or "?") or "nil"),vp.X,vp.Y,sc,wx,wy,gx,gy)
+print("[CheatMenu] 位置自检("..tostring(tag or "-").."): "..SYS.PlaceDbg)
+if (dx>8 or dy>8) and not SYS._ParentSwitched then
+SYS._ParentSwitched=true
+P(function() if SYS.ScreenGui then SYS.ScreenGui.Parent=SYS.PG end end)
+P(function()
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,0,0.5,0)
+end)
+P(ApplyScale)
+print("[CheatMenu] ↳ 父容器不是全屏 -> 已退回 PlayerGui 并重新居中")
+end
+end)
+SYS._PlaceChecking=false
+return okAll
+end
+P(SYS.MenuPlacementCheck,"建完菜单")
+task.delay(0.5,function() P(SYS.MenuPlacementCheck,"0.5s") end)
+task.delay(1.5,function() P(SYS.MenuPlacementCheck,"1.5s") end)
+task.delay(3.0,function() P(SYS.MenuPlacementCheck,"3s") end)
 function SYS.SetMenuCollapsed(v)
 SYS.Collapsed=v and true or false
 for _,c in ipairs(main:GetChildren()) do
