@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 23:48 sha edb979a7 bytes 296684'):format('2026-09-18 23:48','edb979a7',296684))
+print(('[CheatMenu] build 2026-09-18 23:55 sha df6c27a4 bytes 301530'):format('2026-09-18 23:55','df6c27a4',301530))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.1.4"
+SYS.BuildVer="6.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1685,6 +1685,7 @@ local HL,LB,HB={},{},{}
 local HN={} SYS._npcList=nil SYS._npcN=0
 local HP={} SYS._pickList=nil SYS._pickN=0
 local HD={} SYS._doorList=nil SYS._doorN=0
+local HM={} SYS._miniList=nil SYS._miniN=0
 local LBL={}
 local HI={}
 local LW,LWL={},{}
@@ -1714,6 +1715,8 @@ for _,h in pairs(HP) do if h then h:Destroy() end end
 HP={} SYS._pickList=nil
 for _,h in pairs(HD) do if h then h:Destroy() end end
 HD={} SYS._doorList=nil
+for _,h in pairs(HM) do if h then h:Destroy() end end
+HM={} SYS._miniList=nil
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
 for _,b in pairs(HB) do if b then b:Destroy() end end
@@ -1724,7 +1727,7 @@ HI={}
 LW,LWL={},{}
 end
 function SYS.ESPTick()
-if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick or SYS.T_.ESP_Door) then
+if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick or SYS.T_.ESP_Door or SYS.T_.ESP_Mini) then
 if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
 return
 end
@@ -2018,6 +2021,75 @@ end
 else
 if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
 SYS._doorList=nil
+end
+if SYS.T_.ESP_Mini then
+SYS._miniN=(SYS._miniN or 0)+1
+local _now=os.clock()
+if (SYS._miniN%25==1 and (not SYS._miniAt or _now-SYS._miniAt>1)) or not SYS._miniList then
+SYS._miniAt=_now
+local list={}
+local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+local MAXD=tonumber(SYS.C_.PickDist) or 1200
+local AREA={"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
+"bumpermadness","mppadhost","mpstation","machin"}
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+local cn=o.ClassName
+if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
+local hit=false
+local anc=o
+for _=1,4 do
+if not anc then break end
+local raw=anc.Name
+if type(raw)=="string" and raw~="" then
+local nm=raw:lower():gsub("%s+","")
+for _,kw in ipairs(AREA) do if nm:find(kw,1,true) then hit=true break end end
+if not hit and (raw:find("小游戏") or raw:find("关卡") or raw:find("模式")) then hit=true end
+end
+if hit then break end
+anc=anc.Parent
+end
+if hit and o.Parent and o~=LP.Character then
+local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
+if part and part.Position then
+local d=camPos and (part.Position-camPos).Magnitude or 0
+if not camPos or d<=MAXD then list[#list+1]=part end
+end
+end
+end
+end
+end)
+SYS._miniList=list
+if not SYS._miniLogged then
+SYS._miniLogged=true
+print(("[ESP] 小游戏区域透视: 找到 %d 个候选"):format(#list))
+end
+end
+local mact={}
+for _,p in ipairs(SYS._miniList or {}) do if p and p.Parent then mact[p]=true end end
+for p,h in pairs(HM) do
+if not mact[p] or h.Adornee~=p then P(function() h:Destroy() end) HM[p]=nil end
+end
+for p in pairs(mact) do
+local h=HM[p]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=p
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.OutlineTransparency=0
+h.Parent=p
+HM[p]=h
+elseif h.Parent~=p then
+P(function() h.Parent=p end)
+end
+local wall=espWall(p)
+h.FillTransparency=wall and 0.7 or 0.35
+h.FillColor   =Color3.fromRGB(180,255,60)
+h.OutlineColor=Color3.fromRGB(140,220,30)
+end
+else
+if next(HM) then for _,h in pairs(HM) do P(function() h:Destroy() end) end HM={} end
+SYS._miniList=nil
 end
 if SYS.T_.ESPNameTag then
 for p,l in pairs(LB) do
@@ -6214,7 +6286,7 @@ end)
 end
 end
 UI.Defs={
-{name="战斗",icon="⚔"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},
+{name="战斗",icon="⚔"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},{name="MachineParty",icon="🎮"},
 {name="挂机",icon="★"},{name="翻译",icon="🌐"},{name="传送",icon="➲"},{name="设置",icon="⚙"},
 }
 UI.Pages["移动"]=function(p)
@@ -7282,6 +7354,52 @@ end
 end
 end
 end)
+end
+UI.Pages["MachineParty"]=function(p)
+UI.Section(p,"小游戏 · 透视",CY.accent)
+UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮黄绿)","ESP_Mini")
+UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
+UI.Section(p,"小游戏 · 状态",CY.sub)
+UI.Btn(p,"📋 列出小游戏脚本 & 场景(打到控制台)",CY.cyan,function()
+P(function()
+print("========== MachineParty 小游戏状态 ==========")
+local names={"MachinePartyDuckHunt","MachinePartyRightOfWay","MachinePartyBlindout",
+"MachinePartyCrushHour","BumperMadness","MachinePartyActions","MachinePartyControlCard",
+"MachinePartyLimitedStand","MachinePartyStationSigns","MachinePartyPadFocus","MachinePartyWorldUI"}
+local PS=SYS.LP and SYS.LP.PlayerScripts
+for _,n in ipairs(names) do
+local has=(PS and PS:FindFirstChild(n)) and "有" or "无"
+print(("  PlayerScripts.%-28s %s"):format(n,has))
+end
+local areas={"duck hunt","Chisel Gauntlet","Lobby","MPPadHost_LimitedDrop","MPPadHost_Vault100"}
+for _,n in ipairs(areas) do
+local o=WS:FindFirstChild(n)
+print(("  Workspace.%-28s %s"):format(n,o and "有" or "无"))
+end
+print("  相关 Remote: Sniper.Shoot / MachineParty.Event (见「综合扫描」A 层)")
+print("=============================================")
+end)
+end)
+UI.Btn(p,"🔍 探测小游戏里的可交互物(打到控制台)",CY.purple,function()
+P(function()
+print("========== 小游戏可交互物探测 ==========")
+local n1,n2=0,0
+for _,o in ipairs(WS:GetDescendants()) do
+local nm=tostring(o.Name):lower()
+if nm:find("chisel",1,true) or nm:find("duck",1,true) or nm:find("gauntlet",1,true) then
+if o:IsA("ClickDetector") then n1=n1+1
+elseif o:IsA("ProximityPrompt") then n2=n2+1
+elseif o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
+print("  Remote: "..o:GetFullName())
+end
+end
+end
+print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
+print("=======================================")
+end)
+end)
+UI.Section(p,"自动 / 辅助",CY.accent)
+UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
 UI.Label(p,"配置",CY.green)
