@@ -1,3 +1,25 @@
+## 5.11.0 · 2026-09-18
+
+### 🧩 针对 **MachineParty**（当前这个游戏）接入真实信号
+> 依据是你给的「综合扫描」结果 —— 这游戏**不是**事件库里那个 MM2 类，它的权威数据全在
+> **Player 的 `MP*` Attribute** 里。
+
+1. **`MPGhost` → 玩家透视「紫色」**：这游戏用 `MPGhost` Attribute 表示**被服务器隐身 / 幽灵态**
+   （扫描实锤：本机玩家就是 `MPGhost=true` + `MPWalkSpeed=0`）。
+   现在**幽灵态的人用紫色单独标出**，和普通玩家（队友绿 / 敌人红）一眼分得开
+   —— 回答你之前问的"能不能透视被服务器隐身的人"：**能，而且现在能单独认出来** ✓
+2. **`MP*` 状态 HUD（新增开关）**：直接读权威 Attribute 显示
+   `MPScrap(碎片) / MPRating / MPWins / MPSeasonWins / MPStreak / MPTier(段位) / MPRoomCell(房间)`。
+   非这个游戏时显示 `-`（不报错、不刷屏）。
+3. **可交互道具透视**：关键词补上这游戏的真实命名 `mpbuy / limiteddrop / mpstation / mppadhost`
+   （扫描里的 34 个 `MPBuy_*` ClickDetector + 2 个 `MPBuy_*Pad` ProximityPrompt 立刻就能命中）。
+
+> ⚠️ 同一次扫描也证明：`EntityService.Heal` / `GameService.Revive` / `GameService.Respawn`
+> **在本游戏里不存在**（那是事件库里另一个游戏的清单）→ 那三个按钮**在这里会提示"没找到"**
+> （优雅降级，不崩）。换游戏前记得重新抓包。
+
+---
+
 ## 5.10.0 · 2026-09-18
 
 ### 🔭 新增「视野 FOV」+「第三人称最远距离」（设置页，纯客户端视觉）
