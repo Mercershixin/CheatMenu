@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:08 sha cebf94af bytes 277222'):format('2026-09-18 19:08','cebf94af',277222))
+print(('[CheatMenu] build 2026-09-18 19:21 sha 9bc925a1 bytes 278187'):format('2026-09-18 19:21','9bc925a1',278187))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.2.0"
+SYS.BuildVer="5.2.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -213,15 +213,19 @@ if base=="" or base:find("{{",1,true) then base=tostring(SYS.FallbackRepo or "")
 local user,repo,branch=base:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/([^/]+)")
 local VER,SRC
 if user then
+local ts=tostring(os.time() or 0)
+local function bust(u)
+return u..(u:find("?",1,true) and "&" or "?").."t="..ts
+end
 VER={
-("https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch),
-("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch),
-("https://cdn.jsdelivr.net/gh/%s/%s@%s/version.txt"):format(user,repo,branch),
+bust(("https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch)),
+bust(("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/version.txt"):format(user,repo,branch)),
+bust(("https://cdn.jsdelivr.net/gh/%s/%s@%s/version.txt"):format(user,repo,branch)),
 }
 SRC={
-("https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch),
-("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch),
-("https://cdn.jsdelivr.net/gh/%s/%s@%s/CheatMenu.lua"):format(user,repo,branch),
+bust(("https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch)),
+bust(("https://ghproxy.net/https://raw.githubusercontent.com/%s/%s/%s/CheatMenu.lua"):format(user,repo,branch)),
+bust(("https://cdn.jsdelivr.net/gh/%s/%s@%s/CheatMenu.lua"):format(user,repo,branch)),
 }
 else
 VER={tostring(SYS.BuildVerURL or "")} SRC={base}
@@ -3857,15 +3861,45 @@ if not p then return end
 local root=bodyOf(SYS.LP.Character)
 if not root then return end
 local d=(p.Position-root.Position).Magnitude
-if d>(SYS.C_.CB_MeleeDist or 9) then return end
+local MD=SYS.C_.CB_MeleeDist or 9
+if d>MD then
+CB.MeleeDoneFor=nil
+return
+end
+if CB.MeleeDoneFor==p then return end
+if CB.MeleeLockUntil and os.clock()<CB.MeleeLockUntil then return end
 local now=os.clock()
 if now-(CB.LastMelee or 0)<(SYS.C_.CB_MeleeGap or 0.35) then return end
 CB.LastMelee=now
+CB.MeleeDoneFor=p
+CB.MeleeLockUntil=now+0.9
+local function key(down)
 P(function()
 if SYS.VIM and SYS.VIM.SendKeyEvent then
-SYS.VIM:SendKeyEvent(true,Enum.KeyCode.F,false,game)
-SYS.VIM:SendKeyEvent(false,Enum.KeyCode.F,false,game)
+SYS.VIM:SendKeyEvent(down,Enum.KeyCode.F,false,game)
 end
+end)
+end
+key(true)
+task.delay(0.05,function()
+key(false)
+task.delay(0.25,function() key(false) end)
+end)
+task.delay(0.6,function()
+if SYS.Unloaded or not SYS.T_.CB_Melee then return end
+P(function()
+local _,hum,r2=GC()
+if not hum or not r2 then return end
+local want=(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 1)
+if hum.WalkSpeed<want*0.5 then
+hum.WalkSpeed=want
+print("[CheatMenu] 近战解卡: WalkSpeed 被清零, 已写回 "..tostring(want))
+end
+local ok,st=pcall(function() return hum:GetState() end)
+if ok and st==Enum.HumanoidStateType.Physics and not SYS.T_.GodMode then
+P(function() hum:ChangeState(Enum.HumanoidStateType.Running) end)
+end
+end)
 end)
 CB.Stat.melee=(CB.Stat.melee or 0)+1
 end
