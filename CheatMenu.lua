@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 00:03 sha 64e7ab3b bytes 303028'):format('2026-09-19 00:03','64e7ab3b',303028))
+print(('[CheatMenu] build 2026-09-19 00:24 sha 9a938644 bytes 308013'):format('2026-09-19 00:24','9a938644',308013))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,InstantPrompt=false,ClickInspect=false,FootstepESP=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.2.1"
+SYS.BuildVer="6.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6350,6 +6350,55 @@ if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
 UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门)。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
+local FSMark={} SYS._fsN=0
+function SYS.SetFootstep(on)
+if not on then
+for _,m in pairs(FSMark) do P(function() m:Destroy() end) end
+FSMark={} SYS.Notify("👣 落脚点指示 已关闭",SYS.CY.sub) return
+end
+SYS.TT(task.spawn(function()
+while SYS.T_.FootstepESP and not SYS.Unloaded do
+local act={}
+P(function()
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=LP then
+local ch=pl.Character
+local root=ch and ch:FindFirstChild("HumanoidRootPart")
+if root then
+local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(root.Position,Vector3.new(0,-12,0)),{ch}))
+local pos=(hit and hit.Position) or (root.Position+Vector3.new(0,-3,0))
+act[root]=pos
+end
+end
+end
+end)
+for k,m in pairs(FSMark) do
+if not act[k] then P(function() m:Destroy() end) FSMark[k]=nil end
+end
+for root,pos in pairs(act) do
+local m=FSMark[root]
+if not m then
+local ok,pt=P(function()
+local q=Instance.new("Part")
+q.Shape=Enum.PartType.Cylinder
+q.Size=Vector3.new(0.08,3.2,3.2)
+q.Anchored=true q.CanCollide=false q.CastShadow=false
+q.CanQuery=false q.CanTouch=false q.Archivable=false
+q.Material=Enum.Material.Neon q.Transparency=0.55
+q.Color=Color3.fromRGB(255,80,80)
+q.Parent=WS
+return q
+end)
+if ok and pt then m=pt FSMark[root]=m end
+end
+if m then P(function() m.CFrame=CFrame.new(pos)*CFrame.Angles(0,0,math.rad(90)) end) end
+end
+task.wait(0.2)
+end
+end))
+SYS.Notify("👣 落脚点指示 已开启",SYS.CY.green)
+end
+UI.Switch(p,"👣 落脚点指示 (每个人脚下的光圈, 看谁站哪/往哪走)","FootstepESP",function(on) P(SYS.SetFootstep,on) end)
 UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
@@ -7314,6 +7363,45 @@ UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是�
 UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF')
 UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
+function SYS.SetClickInspect(on)
+if not on then SYS._ciOn=false return end
+SYS._ciOn=true
+T(UIS.InputBegan:Connect(function(input,gp)
+if not SYS._ciOn or SYS.Unloaded then return end
+if input.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+local ctrl=false
+P(function() ctrl=UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) end)
+if not ctrl then return end
+P(function()
+local cam=WS.CurrentCamera
+local m=LP:GetMouse()
+local unit=WS.CurrentCamera.CFrame:PointToWorldSpace(Vector3.new(0,0,0))
+local ray=WS.CurrentCamera:ScreenPointToRay(m.X,m.Y)
+local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(ray.Origin,ray.Direction*600),{LP.Character}))
+if not hit then print("🔍 Ctrl+点击: 没命中任何部件") return end
+print(string.rep("═",56))
+print("🔍 部件信息 (Ctrl+点击)")
+print("  名称      : "..tostring(hit.Name))
+print("  完整路径  : "..tostring(hit:GetFullName()))
+print("  类型      : "..tostring(hit.ClassName))
+local par=hit.Parent
+print("  父级      : "..tostring(par and par:GetFullName()))
+print("  位置      : "..tostring(hit.Position))
+print("  大小      : "..tostring(hit.Size))
+print("  材质/颜色 : "..tostring(hit.Material).." / "..tostring(hit.Color))
+print("  锚定/碰撞 : "..tostring(hit.Anchored).." / "..tostring(hit.CanCollide))
+print("  透明度    : "..tostring(hit.Transparency))
+local at=hit:GetAttributes()
+local ak={} for k,v in pairs(at or {}) do ak[#ak+1]=k.."="..tostring(v) end
+if #ak>0 then table.sort(ak) print("  属性      : "..table.concat(ak,", ")) end
+print("  子级      : "..tostring(#hit:GetChildren()).." 个")
+print(string.rep("═",56))
+end)
+end))
+SYS.Notify("🔍 Ctrl+点击 看部件 已开启",SYS.CY.green)
+end
+UI.Switch(p,"🔍 Ctrl+点击 看部件信息 (只读, 排障用)","ClickInspect",function(on) P(SYS.SetClickInspect,on) end)
+UI.Tip(p,"按住 Ctrl 用鼠标左键点一个部件 -> 控制台打出它的名字/路径/类型/位置/材质/属性/子级数。\n纯只读, 不改任何东西。",CY.sub)
 UI.Section(p,"诊断",CY.sub)
 UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
 if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
@@ -7431,6 +7519,41 @@ print("====================================")
 end)
 end)
 UI.Tip(p,"透视现在是: 队友=绿 / 敌人=红 / 幽灵(MPGhost)=紫。若所有人都红, 说明【队伍信号没读到】——\n点上面这个按钮把结果发我即可(这游戏的队伍字段名必须按实际数据接, 不能猜)。",CY.sub)
+local IPrompt={}
+function SYS.SetInstantPrompt(on)
+if not on then
+for p,v in pairs(IPrompt) do P(function() if p and p.Parent then p.HoldDuration=v end end) end
+IPrompt={}
+SYS.Notify("⚡ 瞬间交互 已关闭(时长已还原)",SYS.CY.sub)
+return
+end
+local function apply(p)
+if not p or IPrompt[p]~=nil then return end
+P(function()
+IPrompt[p]=p.HoldDuration
+p.HoldDuration=0
+end)
+end
+P(function()
+for _,v in ipairs(WS:GetDescendants()) do
+if v:IsA("ProximityPrompt") then apply(v) end
+end
+end)
+T(WS.DescendantAdded:Connect(function(d)
+if SYS.T_.InstantPrompt and d:IsA("ProximityPrompt") then apply(d) end
+end))
+T((SYS.TT or function() end)(task.spawn(function()
+while SYS.T_.InstantPrompt and not SYS.Unloaded do
+for p in pairs(IPrompt) do
+P(function() if p and p.Parent and p.HoldDuration~=0 then p.HoldDuration=0 end end)
+end
+task.wait(0.5)
+end
+end)))
+SYS.Notify("⚡ 瞬间交互 已开启(提示变成一按即用)",SYS.CY.green)
+end
+UI.Switch(p,"⚡ 瞬间交互 (按住读条变成一按即成, 纯客户端)","InstantPrompt",function(on) P(SYS.SetInstantPrompt,on) end)
+UI.Tip(p,"把游戏里 ProximityPrompt(按 E 的那种)的【按住时长】设成 0 -> 一按就用。\n只改你本地, 不改服务端; 关闭会把原时长写回。",CY.sub)
 UI.Section(p,"自动 / 辅助",CY.accent)
 UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
@@ -8238,6 +8361,7 @@ end)
 P(SYS.ResetCam)
 P(function() if SYS.SetForceCam then SYS.SetForceCam("off") end end)
 P(function() if SYS.RestoreCamOpts then SYS.RestoreCamOpts() end end)
+P(function() if SYS.SetInstantPrompt then SYS.SetInstantPrompt(false) end end)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 P(function() if SYS.FloatGui then SYS.FloatGui:Destroy() end end)
