@@ -7,6 +7,29 @@
 
 ## 4.1.0 · 2026-09-18
 
+### 扫描大改：合并成一个按钮，八层一次扫完（用户要求）
+- **删掉单独的「🔬 实验室」页**（用户：不用单独排布，也不好找），扫描功能**全部搬进「功能」页**。
+- **`🔍 综合扫描` 一个按钮**，输出**按层分行**打到控制台（F9），并带 `📋 复制扫描摘要到剪贴板`：
+
+| 层 | 扫什么 | 你能得到什么 |
+|---|---|---|
+| **A 通信层** | 全部 Remote（RemoteEvent/Function、Bindable、ProximityPrompt、ClickDetector）| **能触发哪些接口** —— 并按 `⚔战斗 / 💰经济 / 📦物品 / 👥社交 / 🏃角色` 分组挑出**能做功能的关键词**（原来的「扫描游戏 Remote」按钮已并进来）|
+| **B 代码层** | `getgc(true)` 的函数/表 + 按**归属脚本**分组 | 游戏有哪些函数；**名字可疑的**（damage/fire/aim/kill…）列出来可直接拿去观察 |
+| **C 脚本层** | `getscripts` / `getloadedmodules` / **`getrunningscripts`** | 跑了哪些脚本/模块，**正在运行**的是哪些 |
+| **D 实例层** | **`getnilinstances`**(父级为 nil 的隐藏对象) + Workspace 规模 + 角色/Highlight/Prompt 统计 | **游戏藏起来的东西**往往在这里 |
+| **E 数据层** | 自己/他人的 **Attribute 全字段** + 角色 Attribute + **leaderstats** | `@Health/@Team/@State` 这些就是从这里来的；能发现还没用上的新字段 |
+| **F 连接层** | `getconnections` | 游戏自己挂了哪些事件监听（可查看/挂起）|
+| **G 环境层** | `getgenv`/`getrenv`/`getreg` + **线程身份** | 判断脚本跑在什么权限上下文下 |
+| **H 反查层** | `getcallingscript` + 函数 **upvalue 概览** | 这段代码是被谁调起来的、闭包里有什么 |
+
+- **进阶区保留**（同一个页面下方）：`观察某个函数`（hook 一层**只记录参数、原样转发、绝不改行为**）+ 调用记录 + 调用链探测 + 一键还原。
+- 新增执行器全局（getrunningscripts/getgenv/getrenv/getreg/getthreadidentity/getcallingscript/getnilinstances/getconnections/setclipboard…）
+  已进白名单（53 个名字）；仿真桩补了 `GetAttributes`（真实 Roblox 有、桩缺了会让数据层报 nil 方法）。
+
+---
+
+## 4.1.0 · 2026-09-18
+
 ### 修：锁不上敌人（队友误判 + 隔墙射线太严）
 - **「不打队友」把敌人也判成队友** → 谁都锁不上。
   根因：队伍判据改成了 `@Team` Attribute，但**自愈逻辑还在看 `Player.Team`**（本游戏恒 nil）→ 自愈永不触发；
@@ -50,7 +73,7 @@
 - 保留 `-b 4096 -ub 1024 --cache-reuse 256 -sps 0.2`（大 batch + prompt 前缀缓存复用）。
 
 ### 工程
-- **源码文件名跟版本号走**：`CheatMenu_v68.lua` → **`CheatMenu-<版本>.lua`**（本版 = `CheatMenu-4.0.0.lua`）。
+- **源码文件名跟版本号走**：`CheatMenu_v68.lua` → **`CheatMenu-<版本>.lua`**（本版 = `CheatMenu-4.1.0.lua`）。
   新增 `rename_version.py`：升版时一键改文件名并更新所有脚本引用。
 - **README 补「本地测试 / 模拟方法」章节**（给智能体接手用）：`verify_all.py` 一条命令 7 步门禁、
   仿真台原理、桩的保真度坑（JSONDecode 假解析 / os.clock 真时钟 / 必须走真实触发链路）都写清了。
