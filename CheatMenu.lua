@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 21:09 sha b843ca27 bytes 283093'):format('2026-09-18 21:09','b843ca27',283093))
+print(('[CheatMenu] build 2026-09-18 21:33 sha 9c1805aa bytes 287655'):format('2026-09-18 21:33','9c1805aa',287655))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.5.0"
+SYS.BuildVer="5.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1644,6 +1644,8 @@ function SYS.disableAntiAFK()
 if AFKConn then AFKConn:Disconnect() AFKConn=nil end
 end
 local HL,LB,HB={},{},{}
+local HN={} SYS._npcList=nil SYS._npcN=0
+local HP={} SYS._pickList=nil SYS._pickN=0
 local LBL={}
 local HI={}
 local LW,LWL={},{}
@@ -1667,6 +1669,10 @@ ESP_WALL_CACHE[part]={t=now,ok=ok}
 return ok
 end
 function SYS.ClearESP()
+for _,h in pairs(HN) do if h then h:Destroy() end end
+HN={} SYS._npcList=nil
+for _,h in pairs(HP) do if h then h:Destroy() end end
+HP={} SYS._pickList=nil
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
 for _,b in pairs(HB) do if b then b:Destroy() end end
@@ -1677,7 +1683,7 @@ HI={}
 LW,LWL={},{}
 end
 function SYS.ESPTick()
-if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon) then
+if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick) then
 if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
 return
 end
@@ -1739,6 +1745,108 @@ end
 else
 if next(HL) then for _,h in pairs(HL) do h:Destroy() end HL={} end
 if next(HB) then for _,b in pairs(HB) do b:Destroy() end HB={} end
+end
+if SYS.T_.ESP_NPC then
+SYS._npcN=(SYS._npcN or 0)+1
+if SYS._npcN%10==1 or not SYS._npcList then
+local list={}
+P(function()
+for _,m in ipairs(WS:GetDescendants()) do
+if m:IsA("Model") and m~=LP.Character and m:FindFirstChildOfClass("Humanoid") then
+local isPlayerChar=false
+if Players.GetPlayerFromCharacter then
+local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(m) end)
+isPlayerChar=(ok and pl~=nil)
+end
+local h=m:FindFirstChildOfClass("Humanoid")
+if not isPlayerChar and h and h.Health>0 then list[#list+1]=m end
+end
+end
+end)
+SYS._npcList=list
+end
+local nact={}
+for _,m in ipairs(SYS._npcList or {}) do if m and m.Parent then nact[m]=true end end
+for m,h in pairs(HN) do
+if not nact[m] or h.Adornee~=m then P(function() h:Destroy() end) HN[m]=nil end
+end
+for m in pairs(nact) do
+local h=HN[m]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=m
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.OutlineTransparency=0
+h.Parent=m
+HN[m]=h
+elseif h.Parent~=m then
+P(function() h.Parent=m end)
+end
+local part=m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
+local wall=espWall(part)
+h.FillTransparency=wall and 0.75 or 0.4
+h.FillColor=Color3.fromRGB(255,150,0)
+h.OutlineColor=Color3.fromRGB(255,110,0)
+end
+else
+if next(HN) then for _,h in pairs(HN) do P(function() h:Destroy() end) end HN={} end
+SYS._npcList=nil
+end
+if SYS.T_.ESP_Pick then
+SYS._pickN=(SYS._pickN or 0)+1
+if SYS._pickN%10==1 or not SYS._pickList then
+local list={}
+local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+local MAXD=600
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+local cn=o.ClassName
+local ok=false
+if cn=="Tool" then ok=true
+elseif cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="TrussPart"
+or cn=="Model" or cn=="Folder" then
+if o:FindFirstChildOfClass("ClickDetector") or o:FindFirstChildOfClass("ProximityPrompt") then ok=true
+else
+local par=o.Parent
+if par and (par:FindFirstChildOfClass("ClickDetector") or par:FindFirstChildOfClass("ProximityPrompt")) then ok=true end
+end
+end
+if ok and o.Parent and o~=LP.Character then
+local part=o.PrimaryPart or (cn~="Model" and cn~="Folder" and o) or o:FindFirstChildWhichIsA("BasePart")
+if part and part.Position then
+local d=camPos and (part.Position-camPos).Magnitude or 0
+if not camPos or d<=MAXD then list[#list+1]=part end
+end
+end
+end
+end)
+SYS._pickList=list
+end
+local pact={}
+for _,p in ipairs(SYS._pickList or {}) do if p and p.Parent then pact[p]=true end end
+for p,h in pairs(HP) do
+if not pact[p] or h.Adornee~=p then P(function() h:Destroy() end) HP[p]=nil end
+end
+for p in pairs(pact) do
+local h=HP[p]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=p
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.OutlineTransparency=0
+h.Parent=p
+HP[p]=h
+elseif h.Parent~=p then
+P(function() h.Parent=p end)
+end
+local wall=espWall(p)
+h.FillTransparency=wall and 0.7 or 0.35
+h.FillColor=Color3.fromRGB(0,200,255)
+h.OutlineColor=Color3.fromRGB(0,160,255)
+end
+else
+if next(HP) then for _,h in pairs(HP) do P(function() h:Destroy() end) end HP={} end
+SYS._pickList=nil
 end
 if SYS.T_.ESPNameTag then
 for p,l in pairs(LB) do
@@ -5964,14 +6072,23 @@ end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
-if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
+if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Switch(p,"玩家名字","ESPNameTag",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPItem then SYS.ClearESP() end
+if not on and not SYS.T_.ESP and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
+UI.Switch(p,"👹 怪物/NPC 透视 (不属于玩家的怪也高亮, 橙色)","ESP_NPC",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
+end)
+UI.Tip(p,"把地图里【不属于任何玩家】但带 Humanoid 的模型(怪物/NPC/假人)用【橙色】高亮, 与玩家(队友绿·敌人红)区分。\n全 Workspace 扫描已节流(约每 0.5s 重扫一次), 不影响帧率; 隔墙时填充更透。",CY.sub)
 UI.Switch(p,"掉落物透视","ESPItem",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon then SYS.ClearESP() end
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
+UI.Switch(p,"🖐 可交互道具透视 (点击/按E/能拿的东西, 青色)","ESP_Pick",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
+and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
+end)
+UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
 UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
