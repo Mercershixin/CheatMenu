@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 21:33 sha 9c1805aa bytes 287655'):format('2026-09-18 21:33','9c1805aa',287655))
+print(('[CheatMenu] build 2026-09-18 21:38 sha 1bd08e40 bytes 288229'):format('2026-09-18 21:38','1bd08e40',288229))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,MenuMouse=true,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.6.0"
+SYS.BuildVer="5.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -7131,6 +7131,8 @@ if h then h.Health=0 end
 end
 end)
 UI.Btn(p,"重置相机",CY.cyan,SYS.ResetCam)
+UI.Switch(p,"🖱 打开菜单时接管鼠标 (显示鼠标 + 自由移动)","MenuMouse")
+UI.Tip(p,"开(默认) = 开菜单后把鼠标切回【显示 + 自由移动】(第一人称/锁鼠标的游戏里, 不这样菜单点不到)。\n关 = 【完全不碰】鼠标行为 —— 有些服务器每帧把鼠标锁回 LockCenter, 我们每帧抢回会和它互刷(鼠标抖动/不听使唤), 这种服务器上关掉更稳(但菜单可能点不到, 得用键盘/触屏)。",CY.sub)
 UI.Cycle(p,"强制视角",{"关","第一人称","第三人称"},
 function()
 local m=SYS.C_.ForceCam or "off"
@@ -7654,12 +7656,15 @@ end)
 sg.Enabled=true SYS.MenuOpen=true
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
 SYS.MenuPrevMouseIcon=UIS.MouseIconEnabled
+if SYS.T_.MenuMouse~=false then
 UIS.MouseBehavior=Enum.MouseBehavior.Default
 UIS.MouseIconEnabled=true
+end
 if not (SYS.MenuGuard and SYS.MenuGuard.Connected) then
 if SYS.MenuGuard then P(function() SYS.MenuGuard:Disconnect() end) end
 local okG,gconn=P(function() return RS.RenderStepped:Connect(function()
 if SYS.Unloaded or not SYS.MenuOpen then return end
+if SYS.T_.MenuMouse==false then return end
 P(function()
 if UIS.MouseBehavior~=Enum.MouseBehavior.Default then UIS.MouseBehavior=Enum.MouseBehavior.Default end
 if not UIS.MouseIconEnabled then UIS.MouseIconEnabled=true end
