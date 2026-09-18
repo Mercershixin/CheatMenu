@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 13:43 sha 559dd964 bytes 264773'):format('2026-09-18 13:43','559dd964',264773))
+print(('[CheatMenu] build 2026-09-18 14:20 sha fb3ce96b bytes 263496'):format('2026-09-18 14:20','fb3ce96b',263496))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -20,7 +20,7 @@ local SYS={
 Conns={},Threads={},Unloaded=false,
 T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
-GodMode=false,NoFall=false,Invisible=false,DeepHide=false,
+GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
@@ -62,7 +62,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.2.0"
+SYS.BuildVer="4.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -955,49 +955,6 @@ LT.Ambient=SYS.Orig.Ambient LT.OutdoorAmbient=SYS.Orig.OutdoorAmbient
 LT.FogEnd=SYS.Orig.FogEnd LT.FogColor=SYS.Orig.FogColor
 LT.GlobalShadows=true
 if SYS.OrigFX then for e,en in pairs(SYS.OrigFX) do e.Enabled=en end SYS.OrigFX=nil end
-end
-end
-local InvisConn
-local InvisSaved=setmetatable({},{__mode="k"})
-function SYS.SetInvisible(on)
-if InvisConn then InvisConn:Disconnect() InvisConn=nil end
-local function apply(ch,hide)
-if not ch then return end
-for _,p in ipairs(ch:GetDescendants()) do
-if p:IsA("BasePart") then
-if hide then
-if InvisSaved[p]==nil then InvisSaved[p]=p.Transparency end
-p.Transparency=1
-p.LocalTransparencyModifier=1
-else
-if InvisSaved[p]~=nil then p.Transparency=InvisSaved[p] end
-p.LocalTransparencyModifier=0
-InvisSaved[p]=nil
-end
-elseif p:IsA("Decal") then
-if hide then
-if InvisSaved[p]==nil then InvisSaved[p]=p.Transparency end
-p.Transparency=1
-else
-if InvisSaved[p]~=nil then p.Transparency=InvisSaved[p] end
-InvisSaved[p]=nil
-end
-end
-end
-local h=ch:FindFirstChildOfClass("Humanoid")
-if h then pcall(function()
-h.DisplayDistanceType=hide and Enum.HumanoidDisplayDistanceType.None or Enum.HumanoidDisplayDistanceType.Viewer
-end) end
-end
-apply(LP.Character,on)
-if on then
-InvisConn=LP.CharacterAdded:Connect(function(c)
-task.wait(0.3)
-if SYS.Unloaded then return end
-if SYS.T_.Invisible then InvisSaved=setmetatable({},{__mode="k"}) apply(c,true) end
-end)
-else
-InvisSaved=setmetatable({},{__mode="k"})
 end
 end
 local DeepHideConn, DeepHideCharConn, DeepHideAnchor, DeepHideY = nil, nil, nil, 0
@@ -5646,7 +5603,7 @@ function(v)
 SYS.C_.DeepHideOffZ=v
 if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
 end,"%.0f")
-UI.Tip(p,"⚠ 透明隐身=本地(别人看得到你); 藏地下=【真的把你传送进地下】(位置是服务器同步的, 无法只骗别人不骗自己)。\n"
+UI.Tip(p,"⚠ 藏地下=【真的把你传送进地下】(位置是服务器同步的, 无法只骗别人不骗自己)。\n"
 .."· 能真实走动(水平速度不再被清零 + 脚下有块客户端隐形地板, 不会一直自由落体)。\n"
 .."· 枪械/近战命中在客户端判定 -> 不受深度影响(能不能打中还取决于游戏是客户端还是服务端判定)。\n"
 .."· 商店/NPC/偷取这类【按距离判定】的交互够不到 -> 把深度调到 10~20 格才有机会够到。\n"
@@ -7237,7 +7194,7 @@ SYS.Unloaded=true
 for k in pairs(SYS.T_) do SYS.T_[k]=false end
 P(SYS.SaveConfig)
 P(SYS.SetGod,false) P(SYS.SetNoFall,false) P(SYS.SetJumpBoost,false)
-P(SYS.SetInvisible,false) P(SYS.SetDeepHide,false)
+P(SYS.SetDeepHide,false)
 P(SYS.CleanFly) P(SYS.CleanSpeed)
 P(SYS.SetInfiniteJump,false)
 P(function() WS.Gravity=SYS.Orig.Gravity end)
