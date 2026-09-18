@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 22:56 sha c2d7966b bytes 297502'):format('2026-09-18 22:56','c2d7966b',297502))
+print(('[CheatMenu] build 2026-09-18 23:16 sha 2f6f64d9 bytes 297605'):format('2026-09-18 23:16','2f6f64d9',297605))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.0.0"
+SYS.BuildVer="6.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2278,6 +2278,10 @@ end
 do
 local line=nil
 local function tracerOrigin()
+local cam=WS.CurrentCamera
+if cam and cam.CFrame then
+return cam.CFrame.Position, cam.CFrame.LookVector
+end
 local ch=SYS.LP and SYS.LP.Character
 if not ch then return nil,nil end
 local root=ch:FindFirstChild("HumanoidRootPart")
@@ -2286,8 +2290,7 @@ local eye
 if hd then eye=hd.Position
 elseif root then eye=root.Position+Vector3.new(0,1.5,0)
 end
-local dir
-if root then dir=root.CFrame.LookVector end
+local dir=root and root.CFrame.LookVector or nil
 return eye,dir
 end
 function SYS.TracerHide()
