@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:01 sha e7c38163 bytes 277076'):format('2026-09-18 19:01','e7c38163',277076))
+print(('[CheatMenu] build 2026-09-18 19:08 sha cebf94af bytes 277222'):format('2026-09-18 19:08','cebf94af',277222))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -3585,6 +3585,11 @@ local order=CB_PART_ORDER[mode] or CB_PART_ORDER[2]
 for i=1,#order do
 local p=ch:FindFirstChild(order[i])
 if p and p:IsA("BasePart") and clearShot(p) then return p end
+end
+local hrp=bodyOf(ch)
+local my=bodyOf(SYS.LP.Character)
+if hrp and my and (hrp.Position-my.Position).Magnitude<=12 then
+return partOf(pl,mode)
 end
 return nil
 end
