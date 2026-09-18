@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 00:24 sha 9a938644 bytes 308013'):format('2026-09-19 00:24','9a938644',308013))
+print(('[CheatMenu] build 2026-09-19 00:33 sha 4e850d50 bytes 313466'):format('2026-09-19 00:33','4e850d50',313466))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,InstantPrompt=false,ClickInspect=false,FootstepESP=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,InstantPrompt=false,ClickInspect=false,FootstepESP=false,AntiVoid=false,AirWalk=false,F3Debug=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.3.0"
+SYS.BuildVer="6.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1811,14 +1811,15 @@ SYS._npcAt=_now
 local list={}
 P(function()
 for _,m in ipairs(WS:GetDescendants()) do
-if m:IsA("Model") and m~=LP.Character and m:FindFirstChildOfClass("Humanoid") then
+local isRig=(m:FindFirstChild("Head")~=nil and m:FindFirstChild("HumanoidRootPart")~=nil)
+if m:IsA("Model") and m~=LP.Character and (m:FindFirstChildOfClass("Humanoid") or isRig) then
 local isPlayerChar=false
 if Players.GetPlayerFromCharacter then
 local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(m) end)
 isPlayerChar=(ok and pl~=nil)
 end
 local h=m:FindFirstChildOfClass("Humanoid")
-if not isPlayerChar and h and h.Health>0 then list[#list+1]=m end
+if not isPlayerChar and ((h and h.Health>0) or (not h and isRig)) then list[#list+1]=m end
 end
 end
 end)
@@ -7363,6 +7364,140 @@ UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是�
 UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF')
 UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
+UI.Section(p,"工具 / 调试 (融合自 ChronixHub)",CY.purple)
+UI.Switch(p,"🕳 防掉虚空 (掉太深自动拉回原位)","AntiVoid",function(on)
+if not on then SYS.Notify("🕳 防掉虚空 已关闭",SYS.CY.sub) return end
+SYS.TT(task.spawn(function()
+local lastGood=nil
+while SYS.T_.AntiVoid and not SYS.Unloaded do
+P(function()
+local ch=LP.Character
+local root=ch and ch:FindFirstChild("HumanoidRootPart")
+if root then
+local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(root.Position,Vector3.new(0,-6,0)),{ch}))
+if hit then lastGood=root.CFrame
+elseif root.Position.Y < -50 and lastGood then
+root.CFrame=lastGood
+end
+end
+end)
+task.wait(0.5)
+end
+end))
+SYS.Notify("🕳 防掉虚空 已开启",SYS.CY.green)
+end)
+UI.Switch(p,"🦅 空中走 (悬停在地面高度上, 不落地)","AirWalk",function(on)
+if not on then
+if SYS._awConn then P(function() SYS._awConn:Disconnect() end) SYS._awConn=nil end
+SYS.Notify("🦅 空中走 已关闭",SYS.CY.sub) return
+end
+if SYS._awConn then return end
+SYS._awConn=RS.Heartbeat:Connect(function()
+if not SYS.T_.AirWalk or SYS.Unloaded then return end
+P(function()
+local ch=LP.Character
+local root=ch and ch:FindFirstChild("HumanoidRootPart")
+local hum=ch and ch:FindFirstChildOfClass("Humanoid")
+if root and hum then
+local v=root.AssemblyLinearVelocity
+if math.abs(v.Y)>0.5 then root.AssemblyLinearVelocity=Vector3.new(v.X,0,v.Z) end
+end
+end)
+end)
+T(SYS._awConn)
+SYS.Notify("🦅 空中走 已开启(悬停, 不落地)",SYS.CY.green)
+end)
+UI.Btn(p,"🧪 执行器能力自检 (这台支持哪些函数, 打到控制台)",CY.cyan,function()
+P(function()
+print("========== 执行器能力自检 ==========")
+local list={"getgc","getgenv","getrenv","getreg","getconnections","getnilinstances","getrunningscripts",
+"getscripts","getloadedmodules","getcallingscript","getscriptsource","getscriptbytecode",
+"fireclickdetector","fireproximityprompt","firetouchinterest","hookfunction","replaceclosure",
+"newcclosure","checkcaller","islclosed","isreadonly","setreadonly","getupvalue","setupvalue",
+"getrawmetatable","setrawmetatable","make_writeable","identifyexecutor","request","http_request",
+"writefile","readfile","isfile","listfiles","makefolder","delfile","loadstring","getcustomasset","setclipboard"}
+for _,n in ipairs(list) do
+local f=nil
+P(function() f=getfenv()[n] end)
+if f==nil then P(function() f=_G[n] end) end
+print(("  %-22s %s"):format(n, type(f)=="function" and "✓ 有" or "✗ 没有"))
+end
+print(("  身份 identity: %s"):format(tostring(P(function() return "ok" end) and "见综合扫描 G 层")))
+print("===================================")
+end)
+end)
+UI.Switch(p,"📊 F3 调试屏 (FPS / 延迟 / 坐标 / 实例数)","F3Debug",function(on)
+if not on then
+if SYS._f3Gui then P(function() SYS._f3Gui:Destroy() end) SYS._f3Gui=nil end
+SYS.Notify("📊 调试屏 已关闭",SYS.CY.sub) return
+end
+if SYS._f3Gui then return end
+P(function()
+local g=Instance.new("ScreenGui")
+g.Name="CheatMenuF3" g.ResetOnSpawn=false g.IgnoreGuiInset=true
+P(function() if gethui then g.Parent=gethui() end end)
+if not g.Parent then g.Parent=SYS.PG end
+local t=Instance.new("TextLabel")
+t.Size=UDim2.new(0,240,0,86) t.Position=UDim2.new(0,10,0,10)
+t.BackgroundColor3=Color3.fromRGB(10,12,18) t.BackgroundTransparency=0.3
+t.BorderSizePixel=0 t.TextColor3=Color3.fromRGB(180,255,120)
+t.Font=Enum.Font.Code t.TextSize=13 t.TextXAlignment=Enum.TextXAlignment.Left
+t.Text="…" t.Parent=g
+SYS._f3Gui=g SYS._f3Lbl=t
+end)
+SYS.TT(task.spawn(function()
+local last,acc=os.clock(),0
+while SYS.T_.F3Debug and not SYS.Unloaded do
+P(function()
+local f=RS.RenderStepped:Wait()
+acc=acc+1
+local now=os.clock()
+if now-last>=0.5 then
+local fps=math.floor(acc/(now-last)+0.5)
+acc=0 last=now
+local ch=LP.Character
+local root=ch and ch:FindFirstChild("HumanoidRootPart")
+local pos=root and root.Position or Vector3.new(0,0,0)
+local ping=0
+P(function() ping=math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+if SYS._f3Lbl and SYS._f3Lbl.Parent then
+SYS._f3Lbl.Text=("FPS %d   Ping %d ms\n位置 %.0f, %.0f, %.0f\nWorkspace 实例 %d\n角色 %d  玩家 %d")
+:format(fps,ping,pos.X,pos.Y,pos.Z,#WS:GetChildren(),#Players:GetPlayers())
+end
+end
+end)
+end
+end))
+SYS.Notify("📊 调试屏 已开启",SYS.CY.green)
+end)
+UI.Section(p,"客户端清理",CY.sub)
+UI.Btn(p,"🧹 清理游戏里乱动的垃圾部件 (只删明显是特效残留的)",CY.orange,function()
+P(function()
+local n=0
+for _,o in ipairs(WS:GetDescendants()) do
+if o:IsA("BasePart") and o.Name:lower():find("debris",1,true) and not o:IsDescendantOf(LP.Character) then
+n=n+1 P(function() o:Destroy() end)
+end
+end
+SYS.Notify(("🧹 清理完成, 删了 %d 个"):format(n),SYS.CY.green)
+end)
+end)
+UI.Btn(p,"🗑 删掉游戏自带的广告/公告 GUI (只删名字可疑的)",CY.orange,function()
+P(function()
+local n=0
+local PG=SYS.PG
+if PG then
+for _,o in ipairs(PG:GetChildren()) do
+local nm=o:GetDescendants()
+local hit=false
+P(function() if o.Name:lower():find("ad",1,true) or o.Name:lower():find("promo",1,true)
+or o.Name:lower():find("notice",1,true) or o.Name:lower():find("公告") then hit=true end end)
+if hit and o~=SYS.ScreenGui then n=n+1 P(function() o:Destroy() end) end
+end
+end
+SYS.Notify(("🗑 已删 %d 个广告类 GUI"):format(n),SYS.CY.green)
+end)
+end)
 function SYS.SetClickInspect(on)
 if not on then SYS._ciOn=false return end
 SYS._ciOn=true
