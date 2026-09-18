@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 21:50 sha 41d41db8 bytes 288271'):format('2026-09-18 21:50','41d41db8',288271))
+print(('[CheatMenu] build 2026-09-18 21:55 sha 2be859a0 bytes 288629'):format('2026-09-18 21:55','2be859a0',288629))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.7.1"
+SYS.BuildVer="5.7.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1748,7 +1748,9 @@ if next(HB) then for _,b in pairs(HB) do b:Destroy() end HB={} end
 end
 if SYS.T_.ESP_NPC then
 SYS._npcN=(SYS._npcN or 0)+1
-if SYS._npcN%10==1 or not SYS._npcList then
+local _now=os.clock()
+if (SYS._npcN%25==1 and (not SYS._npcAt or _now-SYS._npcAt>1)) or not SYS._npcList then
+SYS._npcAt=_now
 local list={}
 P(function()
 for _,m in ipairs(WS:GetDescendants()) do
@@ -1794,7 +1796,9 @@ SYS._npcList=nil
 end
 if SYS.T_.ESP_Pick then
 SYS._pickN=(SYS._pickN or 0)+1
-if SYS._pickN%10==1 or not SYS._pickList then
+local _now=os.clock()
+if (SYS._pickN%25==1 and (not SYS._pickAt or _now-SYS._pickAt>1)) or not SYS._pickList then
+SYS._pickAt=_now
 local list={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=600
@@ -1805,10 +1809,15 @@ local ok=false
 if cn=="Tool" then ok=true
 elseif cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="TrussPart"
 or cn=="Model" or cn=="Folder" then
-if o:FindFirstChildOfClass("ClickDetector") or o:FindFirstChildOfClass("ProximityPrompt") then ok=true
+local function hasI(x)
+return x and (x:FindFirstChildOfClass("ClickDetector")~=nil or x:FindFirstChildOfClass("ProximityPrompt")~=nil)
+end
+if hasI(o) then ok=true
 else
-local par=o.Parent
-if par and (par:FindFirstChildOfClass("ClickDetector") or par:FindFirstChildOfClass("ProximityPrompt")) then ok=true end
+if hasI(o.Parent) then ok=true
+else
+for _,ch in ipairs(o:GetChildren()) do if hasI(ch) then ok=true break end end
+end
 end
 end
 if ok and o.Parent and o~=LP.Character then
@@ -5246,6 +5255,10 @@ function Trans.HookText(obj)
 if not obj then return false end
 if TextHooked[obj] then return true end
 if TextHookedN>=TEXT_HOOK_MAX then return false end
+local now=os.clock()
+if not SYS._hkT or now-SYS._hkT>=1 then SYS._hkT=now SYS._hkN=0 end
+SYS._hkN=(SYS._hkN or 0)+1
+if SYS._hkN>40 then return false end
 local ok,conn=pcall(function()
 return obj:GetPropertyChangedSignal("Text"):Connect(function() onTextChanged(obj) end)
 end)
