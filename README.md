@@ -38,7 +38,7 @@
 | `CHANGELOG.md` | 更新记录（**发行前先在顶部加本版说明**） |
 | `事件库/` | 游戏 Remote 事件抓包清单，做新功能先来这里查信号 |
 
-> ⚠️ 本地工作区里是**完整源码，带注释**（**文件名跟版本号走**：`CheatMenu-<版本>.lua`，如 `CheatMenu-4.8.0.lua`，
+> ⚠️ 本地工作区里是**完整源码，带注释**（**文件名跟版本号走**：`CheatMenu-<版本>.lua`，如 `CheatMenu-6.5.0.lua`，
 > 升版用 `.workbuddy/build/rename_version.py` 一键改名）。仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
 > **改代码要改本地源码，不是直接改仓库产物。**
 
