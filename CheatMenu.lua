@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 16:03 sha f0086847 bytes 265464'):format('2026-09-18 16:03','f0086847',265464))
+print(('[CheatMenu] build 2026-09-18 16:28 sha 702f5cb1 bytes 265482'):format('2026-09-18 16:28','702f5cb1',265482))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.6.0"
+SYS.BuildVer="4.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6704,7 +6704,9 @@ print("[CheatMenu] ScreenGui 父级:",sg.Parent and sg.Parent:GetFullName() or "
 local Pages=SYS.Pages
 local W,H=830,664
 local main=Instance.new("Frame")
-main.Size=UDim2.new(0,W,0,H) main.Position=UDim2.new(0.5,-W/2,0.5,-H/2)
+main.Size=UDim2.new(0,W,0,H)
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,0,0.5,0)
 main.BackgroundColor3=CY.bg main.BackgroundTransparency=0.06
 main.BorderSizePixel=0 main.ClipsDescendants=true main.Parent=sg
 UI.Round(main,16)
@@ -7051,7 +7053,7 @@ if okG and gconn then SYS.MenuGuard=T(gconn) end
 end
 local tw0=main.Size
 main.Size=UDim2.new(0,W*0.93,0,H*0.93)
-main.Position=UDim2.new(0.5,-W*0.465,0.5,-H*0.465)
+main.Position=UDim2.new(0.5,0,0.5,0)
 main.BackgroundTransparency=0.5
 P(function()
 TweenService:Create(main,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
