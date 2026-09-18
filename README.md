@@ -44,6 +44,10 @@
 ## 开发约定（⚠️ 接手必读，否则会踩坑）
 
 1. **版本号三段式** `主.次.补丁`：新功能 → 次+1 补丁归零；修 bug/清理 → 只加补丁。推送脚本按源码 sha 自动定版本。
+   ⚠️ **脚本默认是按「功能版」次+1** —— **修 bug 必须显式加 `--patch`**
+   （`python .workbuddy/build/push_now.py --patch`，或 `local_sync.py --patch`，或环境变量 `CM_VER_KIND=patch`）。
+   不加 `--patch` 就会把一次 bug 修复发成功能版（例：本该 4.8.1 却发成 4.9.0）。
+   **发完记得核对 `version.txt` 与 CHANGELOG 顶部的版本号一致。**
 2. **改完必跑门禁**：`python .workbuddy/build/verify_all.py`（7 步：luau-compile / check.py 回归锁 / 仿真 / 探针 / dist 一致性 / 词法作用域）。
 3. **改文件姿势**：用 `find`+切片+`assert` 唯一命中，**禁止 `re.sub(...,re.S)` 带 `.*`**（会吞行）。
 4. **连接必须经 `T()` 登记进 `SYS.Conns`**；"只挂一次"标记用弱表，别用实例属性（跨代次残留）。
