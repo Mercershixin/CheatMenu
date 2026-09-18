@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 22:42 sha 493efaeb bytes 295226'):format('2026-09-18 22:42','493efaeb',295226))
+print(('[CheatMenu] build 2026-09-18 22:56 sha c2d7966b bytes 297502'):format('2026-09-18 22:56','c2d7966b',297502))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MP_Hud=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.10.0"
+SYS.BuildVer="6.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1771,11 +1771,20 @@ return pp.Team and pp.Team.Name or nil
 end
 local mt=ateam(LP) local pt=ateam(p)
 team=(mt and pt and mt==pt)
+local ghost=false
+if type(p.GetAttribute)=="function" then
+P(function() ghost=(p:GetAttribute("MPGhost")==true) end)
+end
 local wall=espWall(tagPart(c) or c.PrimaryPart)
 local fillT=wall and 0.75 or 0.35
 h.FillTransparency=fillT
+if ghost then
+h.FillColor   =Color3.fromRGB(190,60,255)
+h.OutlineColor=Color3.fromRGB(160,40,230)
+else
 h.FillColor   = team and Color3.fromRGB(0,255,90)  or Color3.fromRGB(255,40,50)
 h.OutlineColor= team and Color3.fromRGB(0,210,70)  or Color3.fromRGB(255,20,30)
+end
 h.OutlineTransparency=0
 end
 if not SYS._ESPLogged then
@@ -1864,7 +1873,8 @@ end
 if not ok and type(o.Name)=="string" and o.Name~="" then
 local nm=o.Name:lower()
 for _,kw in ipairs({"chest","crate","locker","cabinet","vault","safe","coffer","stash",
-"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem"}) do
+"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem",
+"mpbuy","limiteddrop","mpstation","mppadhost"}) do
 if nm:find(kw,1,true) then ok=true break end
 end
 if not ok and (o.Name:find("宝箱") or o.Name:find("箱子") or o.Name:find("柜") or o.Name:find("箱")) then ok=true end
@@ -7263,6 +7273,51 @@ if h then h.Health=0 end
 end
 end)
 UI.Btn(p,"重置相机",CY.cyan,SYS.ResetCam)
+local MPHudGui,MPHudLabel,MPHudOn=false,false,false
+local function mpAttr(k)
+local v=nil
+P(function() if type(LP.GetAttribute)=="function" then v=LP:GetAttribute(k) end end)
+if v==nil then return "-" end
+return tostring(v)
+end
+function SYS.SetMPHud(on)
+MPHudOn=on and true or false
+if not MPHudOn then
+if MPHudGui then P(function() MPHudGui:Destroy() end) MPHudGui=false end
+MPHudLabel=false
+return
+end
+if MPHudGui then return end
+P(function()
+local g=Instance.new("ScreenGui")
+g.Name="CheatMenuMPHud" g.ResetOnSpawn=false g.IgnoreGuiInset=true
+P(function() if gethui then g.Parent=gethui() end end)
+if not g.Parent then g.Parent=SYS.PG end
+local t=Instance.new("TextLabel")
+t.Size=UDim2.new(0,260,0,96) t.Position=UDim2.new(0,10,0,120)
+t.BackgroundColor3=Color3.fromRGB(12,14,20) t.BackgroundTransparency=0.25
+t.BorderSizePixel=0 t.TextColor3=Color3.fromRGB(230,235,245)
+t.Font=Enum.Font.GothamMedium t.TextSize=14 t.TextXAlignment=Enum.TextXAlignment.Left
+t.RichText=false t.Text="" t.Parent=g
+P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(0,8) r.Parent=t end)
+MPHudGui=g MPHudLabel=t
+end)
+SYS.TT(task.spawn(function()
+while MPHudOn and not SYS.Unloaded do
+P(function()
+if MPHudLabel and MPHudLabel.Parent then
+MPHudLabel.Text=("MachineParty 状态\n"..
+"碎片 MPScrap: %s\n评级 MPRating: %s   胜场 MPWins: %s\n赛季胜 MPSeasonWins: %s   连胜 MPStreak: %s\n段位 MPTier: %s   房间 MPRoomCell: %s")
+:format(mpAttr("MPScrap"),mpAttr("MPRating"),mpAttr("MPWins"),
+mpAttr("MPSeasonWins"),mpAttr("MPStreak"),mpAttr("MPTier"),mpAttr("MPRoomCell"))
+end
+end)
+task.wait(0.5)
+end
+end))
+end
+UI.Switch(p,"🧩 MachineParty 状态 HUD (读 MP* Attribute)","MP_Hud",function(on) P(SYS.SetMPHud,on) end)
+UI.Tip(p,"这个游戏( MachineParty )的权威数据全在 Player 的 MP* Attribute 里(综合扫描实锤), 所以直接读它显示:\n碎片 / 评级 / 胜场 / 赛季胜 / 连胜 / 段位 / 房间号。\n非这个游戏时显示 - (不会报错)。",CY.sub)
 UI.Switch(p,"🖱 打开菜单时接管鼠标 (显示鼠标 + 自由移动)","MenuMouse")
 UI.Tip(p,"开(默认) = 开菜单后把鼠标切回【显示 + 自由移动】(第一人称/锁鼠标的游戏里, 不这样菜单点不到)。\n关 = 【完全不碰】鼠标行为 —— 有些服务器每帧把鼠标锁回 LockCenter, 我们每帧抢回会和它互刷(鼠标抖动/不听使唤), 这种服务器上关掉更稳(但菜单可能点不到, 得用键盘/触屏)。",CY.sub)
 UI.Cycle(p,"强制视角",{"关","第一人称","第三人称"},
