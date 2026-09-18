@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 20:07 sha f5abcb52 bytes 280543'):format('2026-09-18 20:07','f5abcb52',280543))
+print(('[CheatMenu] build 2026-09-18 20:18 sha f9ec74ea bytes 279442'):format('2026-09-18 20:18','f9ec74ea',279442))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.4.1"
+SYS.BuildVer="5.4.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6873,10 +6873,6 @@ UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF
 UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"诊断",CY.sub)
-UI.Btn(p,"🩺 一键诊断 (UI/拖动/居中 → 控制台 + CheatMenu_Diag.txt)",CY.cyan,function()
-P(function() if SYS.DiagUI then SYS.DiagUI() end end)
-end)
-UI.Tip(p,"会打出: 视口 / GuiInset / ScreenGui(父级·尺寸·ScreenInsets) / 菜单实际位置与尺寸 / 锚点 /\nUIScale / 拖动把手的类·Active·尺寸 / ★并把光标位置换算到【标题栏正中】做命中测试 —— 看究竟是谁在最上层。\n把控制台这段发我就能定位。",CY.sub)
 UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
 if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
 end)
@@ -7324,7 +7320,6 @@ end
 T(UIS.InputBegan:Connect(function(input,gp)
 if not input or not input.Position then return end
 P(function()
-if gp then return end
 if not SYS.MenuOpen then return end
 if not isGrab(input) then return end
 local pos=input.Position
@@ -7352,21 +7347,13 @@ collapseBtn.Text="▬" collapseBtn.TextSize=18 collapseBtn.TextColor3=CY.text
 collapseBtn.Font=Enum.Font.GothamBold collapseBtn.BorderSizePixel=0
 collapseBtn.Parent=top
 P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=collapseBtn end)
-local centerBtn=Instance.new("TextButton")
-centerBtn.Size=UDim2.new(0,34,0,34) centerBtn.Position=UDim2.new(1,-140,0.5,-17)
-centerBtn.BackgroundColor3=CY.panel centerBtn.BackgroundTransparency=0.25
-centerBtn.Text="⊙" centerBtn.TextSize=18 centerBtn.TextColor3=CY.text
-centerBtn.Font=Enum.Font.GothamBold centerBtn.BorderSizePixel=0 centerBtn.Parent=top
-P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=centerBtn end)
 function SYS.CenterMenu()
 SYS._UserMoved=false
 main.AnchorPoint=Vector2.new(0.5,0.5)
 main.Position=UDim2.new(0.5,0,0.5,0)
 P(ApplyScale)
-SYS.Notify("⊙ 菜单已回到正中间",SYS.CY.green)
 end
-T(centerBtn.MouseButton1Click:Connect(function() P(SYS.CenterMenu) end))
-SYS.CM_TitleBtns={closeBtn,collapseBtn,centerBtn}
+SYS.CM_TitleBtns={closeBtn,collapseBtn}
 SYS.MenuMain=main
 function SYS.DiagUI()
 local L={}
