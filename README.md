@@ -88,7 +88,7 @@ $G reset --hard FETCH_HEAD
   （`CheatMenu-<版本>.lua`，升版用 `.workbuddy/build/rename_version.py` 改名）。
 
 ### 2. 遇到"UI 位置 / 拖动 / 显示不对"——先要诊断，不要猜
-设置页 → **诊断** → **`🩺 一键诊断`**。它会一键把全部事实扫出来：
+在控制台执行 **`SYS.DiagUI()`**（v5.4.2 起界面按钮已按用户要求删除，函数保留）。它会一键把全部事实扫出来：
 控制台 + 写 `CheatMenu_Diag.txt`（能写文件时）。内容含：
 视口 · GuiInset · `ScreenGui`（父级 / 尺寸 / `ScreenInsets` / `IgnoreGuiInset`）· 菜单**实际位置与尺寸** ·
 **居中校验（期望 vs 实际）** · 锚点 · `UIScale`（含挂在谁身上）· 拖动把手（类 / `Active` / 尺寸）·
