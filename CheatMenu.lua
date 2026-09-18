@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 23:16 sha 2f6f64d9 bytes 297605'):format('2026-09-18 23:16','2f6f64d9',297605))
+print(('[CheatMenu] build 2026-09-18 23:24 sha db8d81e4 bytes 297882'):format('2026-09-18 23:24','db8d81e4',297882))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.1.0"
+SYS.BuildVer="6.1.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1924,8 +1924,9 @@ SYS._doorAt=_now
 local list={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
-local KW={"door","gate","trap","hazard","damage","damaging","kill","lava","spike","spikes","pit",
-"void","saw","blade","crusher","press","fire","burn","acid","poison","zap","electric","deadly"}
+local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
+"spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
+"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper"}
 P(function()
 for _,o in ipairs(WS:GetDescendants()) do
 local cn=o.ClassName
@@ -1952,6 +1953,10 @@ end
 end
 end)
 SYS._doorList=list
+if not SYS._doorLogged then
+SYS._doorLogged=true
+print(("[ESP] 门/陷阱透视: 找到 %d 个候选(名字/结构命中)。若为 0, 把陷阱门的真名发来我加关键词"):format(#list))
+end
 end
 local dact={}
 for _,p in ipairs(SYS._doorList or {}) do if p and p.Parent then dact[p]=true end end
