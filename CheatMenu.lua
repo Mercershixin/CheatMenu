@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 17:58 sha cc9c69af bytes 268602'):format('2026-09-18 17:58','cc9c69af',268602))
+print(('[CheatMenu] build 2026-09-18 18:23 sha bc82c54c bytes 274234'):format('2026-09-18 18:23','bc82c54c',274234))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.9.0"
+SYS.BuildVer="4.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1140,6 +1140,107 @@ if TS and TS.Teleport and game.PlaceId then
 TS:Teleport(game.PlaceId)
 end
 end)
+end
+function SYS.GetPingMs()
+local ms
+P(function()
+local ok,v=pcall(function() return LP:GetNetworkPing() end)
+if ok and type(v)=="number" and v>0 then ms=math.floor(v*1000+0.5) end
+end)
+if not ms then
+P(function()
+local st=game:GetService("Stats")
+local it=st.Network.ServerStatsItem["Data Ping"]
+if it then ms=math.floor(it:GetValue()+0.5) end
+end)
+end
+return ms
+end
+local LowLatSaved=nil
+function SYS.SetLowLatency(on)
+local LT=game:GetService("Lighting")
+if on then
+if not LowLatSaved then
+LowLatSaved={}
+P(function() LowLatSaved.Shadows=LT.GlobalShadows LT.GlobalShadows=false end)
+P(function() LowLatSaved.Soft=LT.ShadowSoftness LT.ShadowSoftness=0 end)
+P(function() LowLatSaved.EnvD=LT.EnvironmentDiffuseScale LT.EnvironmentDiffuseScale=0 end)
+P(function() LowLatSaved.EnvS=LT.EnvironmentSpecularScale LT.EnvironmentSpecularScale=0 end)
+end
+P(function() if SYS.SetPerf then SYS.SetPerf(true) end end)
+SYS.Notify("🚀 低延迟模式已开: 关阴影/环境反射(压帧时间) —— 注意这降的是【帧时间】, 不是 ping",SYS.CY.green)
+else
+if LowLatSaved then
+P(function() if LowLatSaved.Shadows~=nil then LT.GlobalShadows=LowLatSaved.Shadows end end)
+P(function() if LowLatSaved.Soft~=nil then LT.ShadowSoftness=LowLatSaved.Soft end end)
+P(function() if LowLatSaved.EnvD~=nil then LT.EnvironmentDiffuseScale=LowLatSaved.EnvD end end)
+P(function() if LowLatSaved.EnvS~=nil then LT.EnvironmentSpecularScale=LowLatSaved.EnvS end end)
+LowLatSaved=nil
+end
+end
+end
+function SYS.HopLowPing(reason)
+if SYS._Hopping then return false end
+local maxTry=tonumber(SYS.C_.HopMaxTry) or 4
+local n=tonumber(_G and _G.CM_HOPN) or 0
+if n>=maxTry then
+SYS.Notify(("已跳 %d 次仍未达标, 停止(避免一直跳) —— 当前 ping %s ms")
+:format(n,tostring(SYS.GetPingMs())),SYS.CY.yellow)
+return false
+end
+local TS=game:GetService("TeleportService")
+if not (TS and TS.TeleportToPlaceInstance and game.PlaceId) then
+SYS.Notify("跳服不可用(拿不到 TeleportService)",SYS.CY.red) return false
+end
+local okH,body=pcall(function()
+return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true"):format(game.PlaceId))
+end)
+if not okH or type(body)~="string" or body=="" then
+SYS.Notify("拉服务器列表失败(执行器没有 HttpGet / 网络不通) -> 不跳",SYS.CY.red); return false
+end
+local list=nil
+P(function()
+local hs=game:GetService("HttpService")
+local d=hs and hs:JSONDecode(body)
+if d and d.data then list=d.data end
+end)
+if type(list)~="table" then SYS.Notify("服务器列表解析失败 -> 不跳",SYS.CY.red); return false end
+local tried=SYS.HopTried or {} SYS.HopTried=tried
+local pick=nil
+for _,v in ipairs(list) do
+local id=(type(v)=="table") and v.id or nil
+local pl=tonumber((type(v)=="table") and v.playing) local mx=tonumber((type(v)=="table") and v.maxPlayers)
+if type(id)=="string" and id~=game.JobId and not tried[id] and pl and mx and pl<mx then
+pick=id break
+end
+end
+if not pick then SYS.Notify("没有可跳的服务器(都满了 / 都试过了)",SYS.CY.yellow); return false end
+tried[pick]=true
+SYS._Hopping=true
+local url=tostring(SYS.BuildURL or "")
+local canReinject=(url:sub(1,4)=="http") and (type(queue_on_teleport)=="function")
+if canReinject then
+P(function()
+queue_on_teleport(('_G.CM_HOPN=%d loadstring(game:HttpGet("%s"))()'):format(n+1,url))
+end)
+else
+SYS.Notify("⚠️ 本地版没有网络地址 -> 跳过去后【脚本不会自动回来】, 要重新执行一次加载器。\n(网络版/加载器版会自动重注入)",SYS.CY.yellow)
+end
+SYS.Notify(("🚀 跳到下一个服务器找低延迟(第 %d/%d 次) reason=%s"):format(n+1,maxTry,tostring(reason or "")),SYS.CY.cyan)
+task.delay(0.8,function() P(function() TS:TeleportToPlaceInstance(game.PlaceId,pick,LP) end) end)
+return true
+end
+function SYS.AutoHopCheck(tag)
+if not SYS.T_.AutoLowPing then return end
+local limit=tonumber(SYS.C_.HopPingLimit) or 120
+local ms=SYS.GetPingMs()
+if not ms then return end
+if ms>limit then
+SYS.Notify(("📡 当前 ping %d ms > 阈值 %d ms -> 自动找低延迟服务器"):format(ms,limit),SYS.CY.yellow)
+P(function() SYS.HopLowPing(tag or "auto") end)
+else
+SYS.Notify(("✅ 当前服务器 ping %d ms, 低于阈值 %d ms, 保持不动"):format(ms,limit),SYS.CY.green)
+end
 end
 local SpectateConn=nil
 function SYS.Spectate(pl)
@@ -6806,11 +6907,7 @@ UI.Tip(p,"卸载 = 关掉全部功能 + 销毁菜单 + 恢复相机/控制; 不�
 end
 local function GetGuiParent()
 local parent=PG
-pcall(function()
-if gethui then local h=gethui() if h then parent=h return end end
-if get_hui then local h=get_hui() if h then parent=h return end end
-if CoreGui then parent=CoreGui end
-end)
+pcall(function() if CoreGui then parent=CoreGui end end)
 return parent
 end
 function SYS.SafeParentGui(gui)
@@ -6906,6 +7003,23 @@ local lo=0.30
 local sc=math.min(fit,hi)
 if sc<lo then sc=lo end
 scale.Scale=sc
+if not SYS._UserMoved then
+P(function()
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,0,0.5,0)
+end)
+end
+if not SYS._ParentChecked then
+P(function()
+local wantX=(vp.X-W*sc)*0.5
+local gotX=main.AbsolutePosition.X
+if math.abs(gotX-wantX)>8 then
+if SYS.ScreenGui then SYS.ScreenGui.Parent=SYS.PG end
+print(("[CheatMenu] 父容器不是全屏(期望X=%.0f 实际X=%.0f) -> 退回 PlayerGui 保证居中"):format(wantX,gotX))
+end
+SYS._ParentChecked=true
+end)
+end
 end)
 end
 ApplyScale()
@@ -6917,9 +7031,9 @@ local okC,conn=P(function() return sig:Connect(ApplyScale) end)
 if okC and conn then T(conn) end
 end
 end
-local top=Instance.new("Frame")
-top.Size=UDim2.new(1,0,0,62) top.BackgroundTransparency=1 top.Parent=main
-top.Active=true
+local top=Instance.new("TextButton")
+top.Size=UDim2.new(1,0,0,62) top.BackgroundTransparency=1
+top.Text="" top.AutoButtonColor=false top.Active=true top.Parent=main
 local logo=Instance.new("TextLabel")
 logo.Size=UDim2.new(0,220,1,0) logo.Position=UDim2.new(0,24,0,0)
 logo.BackgroundTransparency=1 logo.Text="CHEATMENU"
@@ -7128,13 +7242,24 @@ local function isMove(i)
 return i.UserInputType==Enum.UserInputType.MouseMovement
 or i.UserInputType==Enum.UserInputType.Touch
 end
+local function curScale()
+local ok,v=pcall(function() return scale.Scale end)
+local n=(ok and tonumber(v)) or 1
+if not n or n<=0 then n=1 end
+return n
+end
 T(top.InputBegan:Connect(function(input)
-if isGrab(input) then drg=true dS=input.Position fS=main.Position end
+if isGrab(input) then
+drg=true dS=input.Position fS=main.Position
+SYS._UserMoved=true
+end
 end))
 T(UIS.InputChanged:Connect(function(input)
 if drg and isMove(input) then
 local d=input.Position-dS
-main.Position=UDim2.new(fS.X.Scale,fS.X.Offset+d.X,fS.Y.Scale,fS.Y.Offset+d.Y)
+local sc=curScale()
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(fS.X.Scale,fS.X.Offset+d.X/sc,fS.Y.Scale,fS.Y.Offset+d.Y/sc)
 end
 end))
 T(UIS.InputEnded:Connect(function(input)
@@ -7147,6 +7272,20 @@ collapseBtn.Text="▬" collapseBtn.TextSize=18 collapseBtn.TextColor3=CY.text
 collapseBtn.Font=Enum.Font.GothamBold collapseBtn.BorderSizePixel=0
 collapseBtn.Parent=top
 P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=collapseBtn end)
+local centerBtn=Instance.new("TextButton")
+centerBtn.Size=UDim2.new(0,34,0,34) centerBtn.Position=UDim2.new(1,-140,0.5,-17)
+centerBtn.BackgroundColor3=CY.panel centerBtn.BackgroundTransparency=0.25
+centerBtn.Text="⊙" centerBtn.TextSize=18 centerBtn.TextColor3=CY.text
+centerBtn.Font=Enum.Font.GothamBold centerBtn.BorderSizePixel=0 centerBtn.Parent=top
+P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=centerBtn end)
+function SYS.CenterMenu()
+SYS._UserMoved=false
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,0,0.5,0)
+P(ApplyScale)
+SYS.Notify("⊙ 菜单已回到正中间",SYS.CY.green)
+end
+T(centerBtn.MouseButton1Click:Connect(function() P(SYS.CenterMenu) end))
 function SYS.SetMenuCollapsed(v)
 SYS.Collapsed=v and true or false
 for _,c in ipairs(main:GetChildren()) do
