@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 23:42 sha 1d5c84f8 bytes 296047'):format('2026-09-18 23:42','1d5c84f8',296047))
+print(('[CheatMenu] build 2026-09-18 23:48 sha edb979a7 bytes 296684'):format('2026-09-18 23:48','edb979a7',296684))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.1.3"
+SYS.BuildVer="6.1.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1922,6 +1922,7 @@ local _now=os.clock()
 if (SYS._doorN%25==1 and (not SYS._doorAt or _now-SYS._doorAt>1)) or not SYS._doorList then
 SYS._doorAt=_now
 local list={}
+local CUTOF={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
@@ -1952,16 +1953,36 @@ anc=anc.Parent
 end
 end
 end
+local isCut=false
+if ok then
+local anc=o
+for _=1,4 do
+if not anc then break end
+local raw=anc.Name
+if type(raw)=="string" and raw~="" then
+local nm=raw:lower()
+for _,kw in ipairs({"chisel","gauntlet","cut","slice","sliceable","grind","machin"}) do
+if nm:find(kw,1,true) then isCut=true break end
+end
+if not isCut then
+if raw:find("切割") or raw:find("凿") or raw:find("切") then isCut=true end
+end
+end
+if isCut then break end
+anc=anc.Parent
+end
+end
 if ok and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
 if part and part.Position then
 local d=camPos and (part.Position-camPos).Magnitude or 0
-if not camPos or d<=MAXD then list[#list+1]=part end
+if not camPos or d<=MAXD then list[#list+1]=part CUTOF[part]=isCut end
 end
 end
 end
 end)
 SYS._doorList=list
+SYS._doorCut=CUTOF
 if not SYS._doorLogged then
 SYS._doorLogged=true
 print(("[ESP] 门/陷阱透视: 找到 %d 个候选(名字/结构命中)。若为 0, 把陷阱门的真名发来我加关键词"):format(#list))
@@ -1986,8 +2007,13 @@ P(function() h.Parent=p end)
 end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.7 or 0.35
-h.FillColor=Color3.fromRGB(255,225,0)
+if (SYS._doorCut or {})[p] then
+h.FillColor   =Color3.fromRGB(255,70,200)
+h.OutlineColor=Color3.fromRGB(230,40,180)
+else
+h.FillColor   =Color3.fromRGB(255,225,0)
 h.OutlineColor=Color3.fromRGB(255,200,0)
+end
 end
 else
 if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
@@ -6243,7 +6269,7 @@ and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Slider(p,"🖐 可交互道具探测距离 (格)",200,5000,100,function() return SYS.C_.PickDist or 1200 end,function(v) SYS.C_.PickDist=v end,"%.0f")
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
-UI.Switch(p,"🚪 门 / 陷阱类透视 (门·闸门·陷阱·伤害机关, 黄色)","ESP_Door",function(on)
+UI.Switch(p,"🚪 门/陷阱/切割 透视 (陷阱·伤害机关=黄, 切割类=品红)","ESP_Door",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
