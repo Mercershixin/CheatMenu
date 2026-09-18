@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 21:38 sha 1bd08e40 bytes 288229'):format('2026-09-18 21:38','1bd08e40',288229))
+print(('[CheatMenu] build 2026-09-18 21:50 sha 41d41db8 bytes 288271'):format('2026-09-18 21:50','41d41db8',288271))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.7.0"
+SYS.BuildVer="5.7.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4770,6 +4770,7 @@ if s:match("^https?://%S+$") or s:match("^www%.%S+$") then return false end
 if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
 if Trans.IsEmoticon(s) then return false end
 if Trans.KeepWords[s:lower()] then return false end
+if not s:find("%a") then return false end
 return true
 end
 local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
