@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 22:27 sha bc735fab bytes 290606'):format('2026-09-18 22:27','bc735fab',290606))
+print(('[CheatMenu] build 2026-09-18 22:34 sha 01383705 bytes 293608'):format('2026-09-18 22:34','01383705',293608))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,MenuMouse=true,PickDist=1200,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MenuMouse=true,PickDist=1200,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.8.1"
+SYS.BuildVer="5.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1665,6 +1665,7 @@ end
 local HL,LB,HB={},{},{}
 local HN={} SYS._npcList=nil SYS._npcN=0
 local HP={} SYS._pickList=nil SYS._pickN=0
+local HD={} SYS._doorList=nil SYS._doorN=0
 local LBL={}
 local HI={}
 local LW,LWL={},{}
@@ -1692,6 +1693,8 @@ for _,h in pairs(HN) do if h then h:Destroy() end end
 HN={} SYS._npcList=nil
 for _,h in pairs(HP) do if h then h:Destroy() end end
 HP={} SYS._pickList=nil
+for _,h in pairs(HD) do if h then h:Destroy() end end
+HD={} SYS._doorList=nil
 for _,h in pairs(HL) do if h then h:Destroy() end end
 for _,l in pairs(LB) do if l then l:Destroy() end end
 for _,b in pairs(HB) do if b then b:Destroy() end end
@@ -1702,7 +1705,7 @@ HI={}
 LW,LWL={},{}
 end
 function SYS.ESPTick()
-if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick) then
+if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick or SYS.T_.ESP_Door) then
 if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
 return
 end
@@ -1883,6 +1886,69 @@ end
 else
 if next(HP) then for _,h in pairs(HP) do P(function() h:Destroy() end) end HP={} end
 SYS._pickList=nil
+end
+if SYS.T_.ESP_Door then
+SYS._doorN=(SYS._doorN or 0)+1
+local _now=os.clock()
+if (SYS._doorN%25==1 and (not SYS._doorAt or _now-SYS._doorAt>1)) or not SYS._doorList then
+SYS._doorAt=_now
+local list={}
+local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+local MAXD=tonumber(SYS.C_.PickDist) or 1200
+local KW={"door","gate","trap","hazard","damage","damaging","kill","lava","spike","spikes","pit",
+"void","saw","blade","crusher","press","fire","burn","acid","poison","zap","electric","deadly"}
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+local cn=o.ClassName
+local ok=false
+if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
+if o:FindFirstChildOfClass("HingeConstraint") or o:FindFirstChildOfClass("Motor6D") then ok=true end
+if not ok and type(o.Name)=="string" and o.Name~="" then
+local nm=o.Name:lower()
+for _,kw in ipairs(KW) do if nm:find(kw,1,true) then ok=true break end end
+if not ok then
+local raw=o.Name
+if raw:find("门") or raw:find("陷阱") or raw:find("机关") or raw:find("刺")
+or raw:find("熔岩") or raw:find("伤害") or raw:find("危险") then ok=true end
+end
+end
+end
+if ok and o.Parent and o~=LP.Character then
+local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
+if part and part.Position then
+local d=camPos and (part.Position-camPos).Magnitude or 0
+if not camPos or d<=MAXD then list[#list+1]=part end
+end
+end
+end
+end)
+SYS._doorList=list
+end
+local dact={}
+for _,p in ipairs(SYS._doorList or {}) do if p and p.Parent then dact[p]=true end end
+for p,h in pairs(HD) do
+if not dact[p] or h.Adornee~=p then P(function() h:Destroy() end) HD[p]=nil end
+end
+for p in pairs(dact) do
+local h=HD[p]
+if not h then
+h=Instance.new("Highlight")
+h.Adornee=p
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.OutlineTransparency=0
+h.Parent=p
+HD[p]=h
+elseif h.Parent~=p then
+P(function() h.Parent=p end)
+end
+local wall=espWall(p)
+h.FillTransparency=wall and 0.7 or 0.35
+h.FillColor=Color3.fromRGB(255,225,0)
+h.OutlineColor=Color3.fromRGB(255,200,0)
+end
+else
+if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
+SYS._doorList=nil
 end
 if SYS.T_.ESPNameTag then
 for p,l in pairs(LB) do
@@ -6131,6 +6197,11 @@ and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Slider(p,"🖐 可交互道具探测距离 (格)",200,5000,100,function() return SYS.C_.PickDist or 1200 end,function(v) SYS.C_.PickDist=v end,"%.0f")
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
+UI.Switch(p,"🚪 门 / 陷阱类透视 (门·闸门·陷阱·伤害机关, 黄色)","ESP_Door",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
+and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
+end)
+UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门)。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
 UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
 end)
