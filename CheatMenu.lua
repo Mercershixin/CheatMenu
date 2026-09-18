@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 22:34 sha 01383705 bytes 293608'):format('2026-09-18 22:34','01383705',293608))
+print(('[CheatMenu] build 2026-09-18 22:42 sha 493efaeb bytes 295226'):format('2026-09-18 22:42','493efaeb',295226))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -29,7 +29,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MenuMouse=true,PickDist=1200,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.9.0"
+SYS.BuildVer="5.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -370,7 +370,7 @@ pcall(function() LP.CameraMode=Enum.CameraMode.LockFirstPerson end)
 elseif mode=="third" then
 pcall(function()
 LP.CameraMode=Enum.CameraMode.Classic
-LP.CameraMaxZoomDistance=math.max(LP.CameraMaxZoomDistance or 12, 20)
+LP.CameraMaxZoomDistance=math.max(LP.CameraMaxZoomDistance or 12, tonumber(SYS.C_.CamZoom) or 20)
 end)
 end
 ForceCamConn=SYS.TT(task.spawn(function()
@@ -380,12 +380,31 @@ pcall(function() LP.CameraMode=Enum.CameraMode.LockFirstPerson end)
 elseif SYS.C_.ForceCam=="third" then
 pcall(function()
 LP.CameraMode=Enum.CameraMode.Classic
-if LP.CameraMaxZoomDistance<20 then LP.CameraMaxZoomDistance=20 end
+local _cz=tonumber(SYS.C_.CamZoom) or 20 if LP.CameraMaxZoomDistance<_cz then LP.CameraMaxZoomDistance=_cz end
 end)
 end
 task.wait(0.5)
 end
 end))
+SYS.CamOrig=SYS.CamOrig or {}
+function SYS.SetCamFov(v)
+local cam=SYS.Cam or WS.CurrentCamera
+if not cam then return end
+if SYS.CamOrig.fov==nil then P(function() SYS.CamOrig.fov=cam.FieldOfView end) end
+local n=tonumber(v) or 70
+P(function() cam.FieldOfView=n end)
+end
+function SYS.SetCamZoom(v)
+if SYS.CamOrig.zoom==nil then P(function() SYS.CamOrig.zoom=LP.CameraMaxZoomDistance end) end
+local n=tonumber(v) or 20
+if n<1 then n=1 end
+P(function() LP.CameraMaxZoomDistance=n end)
+if SYS.C_.ForceCam=="third" and SYS.SetForceCam then P(SYS.SetForceCam,"third") end
+end
+function SYS.RestoreCamOpts()
+P(function() if SYS.CamOrig.fov and (SYS.Cam or WS.CurrentCamera) then (SYS.Cam or WS.CurrentCamera).FieldOfView=SYS.CamOrig.fov end end)
+P(function() if SYS.CamOrig.zoom then LP.CameraMaxZoomDistance=SYS.CamOrig.zoom end end)
+end
 end
 local FreeCtrl=nil
 function SYS.DisablePlayerControls()
@@ -7253,7 +7272,9 @@ return (m=="first") and "第一人称" or ((m=="third") and "第三人称" or "�
 end,
 function(v)
 SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "third" or "off")
-if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
+UI.Slider(p,"🔭 视野 FOV (70=原版, 越大看得越广)",60,180,1,function() return SYS.C_.CamFov or 70 end,function(v) SYS.C_.CamFov=v if SYS.SetCamFov then P(SYS.SetCamFov,v) end end,"%.0f")
+UI.Slider(p,"🔭 第三人称最远距离 (格)",20,500,10,function() return SYS.C_.CamZoom or 20 end,function(v) SYS.C_.CamZoom=v if SYS.SetCamZoom then P(SYS.SetCamZoom,v) end end,"%.0f")
+UI.Tip(p,"两个都是【纯客户端视觉】, 只改你自己看到的画面, 不碰任何别人; 卸载时会还原。\n第一人称想拉远没用(相机锁在头里) —— 拉远要先切【第三人称】。",CY.sub)            if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
 end)
 UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
 UI.Btn(p,"🩹 回血 (走游戏自己的 remote)",CY.green,function() P(SYS.HealSelf) end)
@@ -8012,6 +8033,7 @@ SYS.RestoreMouse()
 end)
 P(SYS.ResetCam)
 P(function() if SYS.SetForceCam then SYS.SetForceCam("off") end end)
+P(function() if SYS.RestoreCamOpts then SYS.RestoreCamOpts() end end)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 P(function() if SYS.FloatGui then SYS.FloatGui:Destroy() end end)
