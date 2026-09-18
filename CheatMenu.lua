@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:40 sha 2cea9305 bytes 277490'):format('2026-09-18 19:40','2cea9305',277490))
+print(('[CheatMenu] build 2026-09-18 19:56 sha 06f5a0a6 bytes 280581'):format('2026-09-18 19:56','06f5a0a6',280581))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -41,7 +41,6 @@ CB_SnapFire=false,
 CB_OnlyAlive=true,
 CB_SkipFF=true,
 CB_Melee=false,
-CB_MeleeAll=false,
 TrapImmune=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
@@ -70,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.3.0"
+SYS.BuildVer="5.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3857,7 +3856,11 @@ CB.Stat.scan=0 CB.Stat.hud=0 CB.Stat.aim=0
 end
 local function meleeCandidate(root)
 local MD=SYS.C_.CB_MeleeDist or 9
-if not SYS.T_.CB_MeleeAll then return CB.TargetPart end
+local tp=CB.TargetPart
+if tp then
+local d=(tp.Position-root.Position).Magnitude
+if d<=MD then return tp end
+end
 local best,bestD=nil,MD
 for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=SYS.LP and isEnemyEx(pl) then
@@ -5929,16 +5932,6 @@ end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
 UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
 UI.Div(p)
-UI.Section(p,"进阶: 观察某个函数(只记录, 不改游戏行为)",CY.purple)
-local watchName=""
-UI.Input(p,"函数名","如 damage / TakeDamage",function() return watchName end,function(v) watchName=v or "" end)
-UI.Btn(p,"👁 开始观察这个函数",CY.purple,function() P(function() SYS.Lab.Watch(watchName) end) end)
-UI.Btn(p,"📄 输出调用记录",CY.cyan,function() P(function() SYS.Lab.DumpLog() end) end)
-UI.Btn(p,"🔗 调用链探测(谁在调它)",CY.purple,function() P(function() SYS.Lab.WhoCalls(watchName) end) end)
-UI.Btn(p,"⛔ 停止观察并还原全部",CY.red,function()
-SYS.Notify(("已还原 %d 个函数"):format(SYS.Lab.UnwatchAll() or 0),SYS.CY.green)
-end)
-UI.Tip(p,"用法: 先点【综合扫描】→ 在控制台看【B 代码层】里可疑的函数名 → 填进来点观察 →\n游戏调用它时会把参数打到控制台(但**不改它的行为**)。",CY.sub)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
@@ -6868,9 +6861,8 @@ end)
 UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定」= 你在战斗页指定的那个人。默认链里它排第 2 —— 有人正瞄着你时先打他, 没人瞄你才轮到指定目标。\n★ 打开「只打指定目标」后, 指定目标仍【绝对最优先】(整条链都不参与)。\n默认「正在瞄我的→指定→最近→屏幕中心」: 先打正瞄着你的人, 其次你指定的, 再次最近的, 最后屏幕中间那个。",CY.sub)
 UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
 UI.Switch(p,"🛡 不打队友 (混战/自建房请关掉)","CB_Team")
-UI.Switch(p,"🔪 近距离补刀 (贴脸自动按 F)","CB_Melee")
-UI.Switch(p,"🔪 补刀也打非目标 (附近所有敌人, 取最近的)","CB_MeleeAll")
-UI.Tip(p,"关(默认) = 只补【当前锁定的目标】。\n开 = 附近【任意敌人】贴脸都会补一刀(取最近的那个)。\n敌我判定和索敌同一套规则(队伍 / 队友免伤开关都生效)。",CY.sub)
+UI.Switch(p,"🔪 近距离补刀 (贴脸自动按 F, 含非目标)","CB_Melee")
+UI.Tip(p,"开 = 有敌人在补刀距离内就自动按 F: 优先补【锁定的目标】, 它不在射程内就补【最近的敌人】。\n(所以旁边的非目标敌人贴脸也会补, 不会漏。) 距离用下面的滑块调。",CY.sub)
 UI.Slider(p,"补刀距离(格)",3,25,1,function() return SYS.C_.CB_MeleeDist end,function(v) SYS.C_.CB_MeleeDist=v end,"%.0f")
 UI.Tip(p,"和敌人贴脸时枪常打不中(准星/弹道问题), 开着这个会自动按 F 用近战收掉。\n只对【已锁定的目标】且在设定距离内才按, 不影响中远距离枪战。",CY.sub)
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
@@ -6881,6 +6873,10 @@ UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF
 UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"诊断",CY.sub)
+UI.Btn(p,"🩺 一键诊断 (UI/拖动/居中 → 控制台 + CheatMenu_Diag.txt)",CY.cyan,function()
+P(function() if SYS.DiagUI then SYS.DiagUI() end end)
+end)
+UI.Tip(p,"会打出: 视口 / GuiInset / ScreenGui(父级·尺寸·ScreenInsets) / 菜单实际位置与尺寸 / 锚点 /\nUIScale / 拖动把手的类·Active·尺寸 / ★并把光标位置换算到【标题栏正中】做命中测试 —— 看究竟是谁在最上层。\n把控制台这段发我就能定位。",CY.sub)
 UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
 if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
 end)
@@ -7313,11 +7309,30 @@ local n=(ok and tonumber(v)) or 1
 if not n or n<=0 then n=1 end
 return n
 end
-T(top.InputBegan:Connect(function(input)
-if isGrab(input) then
-drg=true dS=input.Position fS=main.Position
-SYS._UserMoved=true
+local function inRect(pos, obj)
+if not obj then return false end
+local ok,ap,asz=pcall(function() return obj.AbsolutePosition, obj.AbsoluteSize end)
+if not ok or not ap or not asz then return false end
+return pos.X>=ap.X and pos.X<=(ap.X+asz.X) and pos.Y>=ap.Y and pos.Y<=(ap.Y+asz.Y)
 end
+local function onTitleBtn(pos)
+for _,b in ipairs(SYS.CM_TitleBtns or {}) do
+if inRect(pos,b) then return true end
+end
+return false
+end
+T(UIS.InputBegan:Connect(function(input,gp)
+if not input or not input.Position then return end
+P(function()
+if gp then return end
+if not SYS.MenuOpen then return end
+if not isGrab(input) then return end
+local pos=input.Position
+if not inRect(pos, top) then return end
+if onTitleBtn(pos) then return end
+drg=true dS=pos fS=main.Position
+SYS._UserMoved=true
+end)
 end))
 T(UIS.InputChanged:Connect(function(input)
 if drg and isMove(input) then
@@ -7351,6 +7366,74 @@ P(ApplyScale)
 SYS.Notify("⊙ 菜单已回到正中间",SYS.CY.green)
 end
 T(centerBtn.MouseButton1Click:Connect(function() P(SYS.CenterMenu) end))
+SYS.CM_TitleBtns={closeBtn,collapseBtn,centerBtn}
+SYS.MenuMain=main
+function SYS.DiagUI()
+local L={}
+local function A(f,...) L[#L+1]="  "..(select("#",...)>0 and f:format(...) or f) end
+A("=========== CheatMenu UI 诊断 ===========")
+A("版本=%s  时间=%.0f",tostring(SYS.BuildVer),os.time())
+local cam=WS.CurrentCamera
+local vp=cam and cam.ViewportSize or Vector2.new(0,0)
+A("视口=%dx%d  触屏=%s",vp.X,vp.Y,tostring(UIS.TouchEnabled))
+A("菜单开着=%s  用户拖过=%s",tostring(SYS.MenuOpen),tostring(SYS._UserMoved))
+local gs=game:GetService("GuiService")
+if gs and gs.GetGuiInset then
+P(function()
+local t,b=gs:GetGuiInset()
+A("GuiInset: top=%d bottom=%d",t and t.Y or -1,(b and b.Y) or -1)
+end)
+else
+A("GuiInset: (该环境没有 GuiService:GetGuiInset)")
+end
+local s=SYS.ScreenGui
+if not s then A("!! ScreenGui=nil") else
+P(function() A("ScreenGui: 父=%s Enabled=%s IgnoreGuiInset=%s ScreenInsets=%s",
+tostring(s.Parent and s.Parent:GetFullName() or "nil"),tostring(s.Enabled),
+tostring(s.IgnoreGuiInset),tostring(s.ScreenInsets)) end)
+P(function() A("ScreenGui: 尺寸=%dx%d 位置=%d,%d",s.AbsoluteSize.X,s.AbsoluteSize.Y,
+s.AbsolutePosition.X,s.AbsolutePosition.Y) end)
+end
+local m=SYS.MenuMain
+if not m then A("!! main=nil") else
+P(function()
+A("main: 位置=%d,%d 尺寸=%dx%d 锚点=%.2f,%.2f 可见=%s",
+m.AbsolutePosition.X,m.AbsolutePosition.Y,m.AbsoluteSize.X,m.AbsoluteSize.Y,
+m.AnchorPoint.X,m.AnchorPoint.Y,tostring(m.Visible))
+A("居中校验: 期望=(%d,%d) 实际=(%d,%d)  [两者一致=居中正确]",
+(vp.X-m.AbsoluteSize.X)*0.5,(vp.Y-m.AbsoluteSize.Y)*0.5,
+m.AbsolutePosition.X,m.AbsolutePosition.Y)
+end)
+end
+P(function() A("UIScale=%.3f (挂在 %s 上)",scale.Scale,tostring(scale.Parent and scale.Parent.Name or "nil")) end)
+P(function()
+if not top then return end
+A("拖动把手: 类=%s Active=%s 可见=%s 位置=%d,%d 尺寸=%dx%d",
+top.ClassName,tostring(top.Active),tostring(top.Visible),
+top.AbsolutePosition.X,top.AbsolutePosition.Y,top.AbsoluteSize.X,top.AbsoluteSize.Y)
+local cx=top.AbsolutePosition.X+top.AbsoluteSize.X*0.5
+local cy=top.AbsolutePosition.Y+top.AbsoluteSize.Y*0.5
+local names={}
+if not PG.GetGuiObjectsAtPosition then
+A("命中测试: (该环境没有 PlayerGui:GetGuiObjectsAtPosition, 跳过)")
+else
+P(function()
+local objs=PG:GetGuiObjectsAtPosition(cx,cy)
+if objs then
+for i=1,math.min(#objs,6) do
+names[#names+1]=("%s(%s)"):format(tostring(objs[i].Name),tostring(objs[i].ClassName))
+end
+end
+end)
+A("命中测试(%d,%d) 最上层: %s",cx,cy,#names>0 and table.concat(names," > ") or "(该点没有任何 GUI)")
+end
+end)
+local txt=table.concat(L,"\n")
+print("[CheatMenu]"..txt)
+local ok=pcall(function() writefile("CheatMenu_Diag.txt",txt) end)
+SYS.Notify(ok and "🩺 诊断已输出: 控制台 + CheatMenu_Diag.txt" or "🩺 诊断已输出到控制台(该执行器不能写文件)",SYS.CY.green)
+return txt
+end
 function SYS.SetMenuCollapsed(v)
 SYS.Collapsed=v and true or false
 for _,c in ipairs(main:GetChildren()) do
