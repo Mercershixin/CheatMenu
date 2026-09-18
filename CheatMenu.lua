@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:21 sha 9bc925a1 bytes 278187'):format('2026-09-18 19:21','9bc925a1',278187))
+print(('[CheatMenu] build 2026-09-18 19:31 sha 99b9cba2 bytes 278272'):format('2026-09-18 19:31','99b9cba2',278272))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.2.1"
+SYS.BuildVer="5.2.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6968,18 +6968,17 @@ end)
 UI.Tip(p,"卸载 = 关掉全部功能 + 销毁菜单 + 恢复相机/控制; 不会重进服务器、不会断开连接。\n换服务器用上面的「重进服务器」。(之前报 277 被踢, 是点到重进服务器了, 不是卸载)",CY.sub)
 end
 local function GetGuiParent()
-local parent=PG
-pcall(function() if CoreGui then parent=CoreGui end end)
-return parent
+return PG
 end
 function SYS.SafeParentGui(gui)
 if not gui then return "nil" end
 P(function() if protect_gui then protect_gui(gui) end end)
 P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
-local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
-if ok2 and gui.Parent then return "CoreGui" end
 P(function() gui.Parent=SYS.PG end)
-return "PlayerGui"
+if gui.Parent then return "PlayerGui" end
+local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
+if ok2 and gui.Parent then return "CoreGui(兜底)" end
+return "失败"
 end
 function SYS.TryAntiKick()
 if SYS.KickHooked then return "已启用" end
@@ -7348,8 +7347,11 @@ local vp=cam and cam.ViewportSize
 if not (vp and vp.X>10 and vp.Y>10) then return end
 local sc=tonumber(SYS.MenuScale) or 1
 if sc<=0 then sc=1 end
-local wx=(vp.X-W*sc)*0.5
-local wy=(vp.Y-H*sc)*0.5
+local sz
+P(function() sz=main.AbsoluteSize end)
+if not sz or sz.X<=0 or sz.Y<=0 then sz=Vector2.new(W*sc,H*sc) end
+local wx=(vp.X-sz.X)*0.5
+local wy=(vp.Y-sz.Y)*0.5
 local gx,gy=0,0
 P(function() local ap=main.AbsolutePosition gx=ap.X gy=ap.Y end)
 local dx,dy=math.abs(gx-wx),math.abs(gy-wy)
