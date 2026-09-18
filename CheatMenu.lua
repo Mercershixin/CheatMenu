@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 11:37 sha cd7f1ba2 bytes 258042'):format('2026-09-18 11:37','cd7f1ba2',258042))
+print(('[CheatMenu] build 2026-09-18 13:40 sha 559dd964 bytes 264773'):format('2026-09-18 13:40','559dd964',264773))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -62,7 +62,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="4.1.0"
+SYS.BuildVer="4.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5542,7 +5542,6 @@ end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},
 {name="挂机",icon="★"},{name="翻译",icon="🌐"},{name="传送",icon="➲"},{name="设置",icon="⚙"},
-{name="实验室",icon="🔬"},
 }
 UI.Pages["移动"]=function(p)
 UI.Switch(p,"飞行 (Fly)","Fly",function(on)
@@ -5604,6 +5603,22 @@ UI.Slider(p,"自由视角速度",10,300,5,function() return SYS.C_.FreeCamSpeed 
 UI.Slider(p,"自由视角灵敏度",0.1,2,0.05,function() return SYS.C_.FreeCamSens end,function(v) SYS.C_.FreeCamSens=v end,"%.2f")
 end
 UI.Pages["功能"]=function(p)
+UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查 八层一次扫完)",CY.green,function()
+P(function() SYS.Lab.FullScan() end)
+end)
+UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
+UI.Div(p)
+UI.Section(p,"进阶: 观察某个函数(只记录, 不改游戏行为)",CY.purple)
+local watchName=""
+UI.Input(p,"函数名","如 damage / TakeDamage",function() return watchName end,function(v) watchName=v or "" end)
+UI.Btn(p,"👁 开始观察这个函数",CY.purple,function() P(function() SYS.Lab.Watch(watchName) end) end)
+UI.Btn(p,"📄 输出调用记录",CY.cyan,function() P(function() SYS.Lab.DumpLog() end) end)
+UI.Btn(p,"🔗 调用链探测(谁在调它)",CY.purple,function() P(function() SYS.Lab.WhoCalls(watchName) end) end)
+UI.Btn(p,"⛔ 停止观察并还原全部",CY.red,function()
+SYS.Notify(("已还原 %d 个函数"):format(SYS.Lab.UnwatchAll() or 0),SYS.CY.green)
+end)
+UI.Tip(p,"用法: 先点【综合扫描】→ 在控制台看【B 代码层】里可疑的函数名 → 填进来点观察 →\n游戏调用它时会把参数打到控制台(但**不改它的行为**)。",CY.sub)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
@@ -6037,6 +6052,212 @@ if #LAB.Log==0 then out[#out+1]="  (还没有记录 —— 先在 ④ 里填函�
 print(table.concat(out,"\n"))
 SYS.Notify("调用记录已输出",SYS.CY.green)
 end
+local function line(s) print("  "..s) end
+local function head(s) print(""); print("════════ "..s.." ════════") end
+function LAB.FullScan()
+local t0=os.clock()
+print(""); print("##################  🔍 综合扫描  ##################")
+print(("时间 %s"):format(os.date("%H:%M:%S")))
+print("")
+head("A · 通信层(游戏接口: 能触发什么)")
+local remotes
+P(function() remotes=SYS.DumpRemotes() end)
+if type(remotes)=="table" then
+local GROUPS={
+{"⚔ 战斗/伤害",{"Combat","Damage","Hit","Killed","Death","Die","Weapon","Ammo","Reload","Equip"}},
+{"💰 经济/商城",{"Shop","Buy","Purchase","Product","Gamepass","Gacha","Spin","Reward","Claim","Coin","Cash","Sell"}},
+{"📦 物品/背包",{"Inventory","Item","Stack","Backpack","Loot","Pickup","Collect","Drop"}},
+{"👥 社交/交易",{"Trade","Friend","Postie","Social","Vote"}},
+{"🏃 角色/移动",{"Character","Teleport","Respawn","Spawn","Jump","Move","AFK","Suicide"}},
+}
+local gen=0
+for _,g in ipairs(GROUPS) do
+local hits={}
+for _,r in ipairs(remotes) do
+for _,k in ipairs(g[2]) do
+if r:find(k,1,true) then hits[#hits+1]=r break end
+end
+end
+if #hits>0 then
+print(("  ── %s (%d) ──"):format(g[1],#hits))
+for x=1,math.min(#hits,14) do line(hits[x]) end
+if #hits>14 then line(("... 还有 %d 个"):format(#hits-14)) end
+gen=gen+#hits
+end
+end
+line(("→ 命中可做功能的关键词 %d 个 / Remote 总数 %d(完整清单见上)"):format(gen,#remotes))
+else line("!! Remote 扫描失败") end
+head("B · 代码层(游戏函数: 怎么实现的)")
+LAB.ScanGC()
+LAB.ListHookable()
+head("C · 脚本层(跑了哪些脚本)")
+LAB.ListScripts()
+P(function()
+if type(getrunningscripts)=="function" then
+local list=getrunningscripts()
+line(("getrunningscripts: %d 个【正在运行】的脚本(比 getscripts 更准, 含动态加载的)"):format(#list))
+local shown=0
+for _,s in ipairs(list) do
+if shown<14 then
+local ok2,nm=P(function() return s:GetFullName() end)
+line(("  · "..tostring(ok2 and nm or s))); shown=shown+1
+end
+end
+else line("(这台执行器没有 getrunningscripts)") end
+end)
+head("D · 实例层(游戏藏在哪)")
+local okD=P(function()
+local gi=_G.getnilinstances
+if type(gi)=="function" then
+local list=gi()
+line(("getnilinstances: %d 个(父级为 nil 的实例 —— 游戏刻意藏起来的对象常在这)"):format(#list))
+local shown=0
+for _,v in ipairs(list) do
+if shown<18 then
+local cls="?"
+pcall(function() cls=v.ClassName end)
+local nm="?"
+pcall(function() nm=v.Name end)
+line(("  · %-22s %s"):format(tostring(cls),tostring(nm)))
+shown=shown+1
+end
+end
+else line("(这台执行器没有 getnilinstances)") end
+end)
+if not okD then line("!! 实例层扫描异常") end
+P(function()
+local ws=game:GetService("Workspace")
+local n=0
+for _,v in ipairs(ws:GetDescendants()) do n=n+1 if n>20000 then break end end
+line(("Workspace 子对象: %d+ 个"):format(n))
+local chars,hl,pp,cd,trig=0,0,0,0,0
+for _,v in ipairs(ws:GetDescendants()) do
+local c=v.ClassName
+if c=="Model" and v:FindFirstChildOfClass("Humanoid") then chars=chars+1
+elseif c=="Highlight" then hl=hl+1
+elseif c=="ProximityPrompt" then pp=pp+1
+elseif c=="ClickDetector" then cd=cd+1
+elseif c=="Part" and v:FindFirstChildOfClass("TouchTransmitter") then trig=trig+1 end
+end
+line(("角色模型 %d · Highlight %d · ProximityPrompt %d · ClickDetector %d (可交互 %d)")
+:format(chars,hl,pp,cd,pp+cd))
+end)
+head("E · 数据层(游戏把数据放哪)")
+local okE=P(function()
+local function dumpAttr(obj,tag)
+local ok2,attrs=P(function()
+local t2={}
+for k,v in pairs(obj:GetAttributes()) do t2[#t2+1]=("    %-18s = %s"):format(k,tostring(v)) end
+return t2
+end)
+if ok2 and type(attrs)=="table" and #attrs>0 then
+line(("%s (%s) 有 %d 个 Attribute:"):format(obj.Name,obj.ClassName,#attrs))
+table.sort(attrs)
+for x=1,math.min(#attrs,22) do line(attrs[x]) end
+end
+end
+if SYS.LP then dumpAttr(SYS.LP,"自己") end
+local n=0
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=SYS.LP and n<2 then n=n+1 dumpAttr(pl,"他人") end
+end
+local ch=SYS.LP and SYS.LP.Character
+if ch then dumpAttr(ch,"自己角色") end
+if SYS.LP then
+local ls=SYS.LP:FindFirstChild("leaderstats") or SYS.LP:FindFirstChild("Leaderstats")
+if ls then
+line("leaderstats 字段:")
+for _,v in ipairs(ls:GetChildren()) do
+line(("    %-18s = %s"):format(v.Name,tostring(v.Value)))
+end
+else line("(没有 leaderstats)") end
+end
+end)
+if not okE then line("!! 数据层扫描异常") end
+head("F · 连接层(游戏自己挂了哪些监听)")
+P(function()
+local gc2=_G.getconnections
+if type(gc2)~="function" then line("(这台执行器没有 getconnections)"); return end
+line("getconnections 可用 —— 可用于查看/挂起游戏自己的事件连接")
+local targets={
+{"Players.LocalPlayer.Idled", SYS.LP and SYS.LP.Idled},
+{"RunService.Heartbeat", game:GetService("RunService").Heartbeat},
+{"RunService.RenderStepped", game:GetService("RunService").RenderStepped},
+}
+for _,x in ipairs(targets) do
+if x[2] then
+local ok3,cnt=P(function() return #gc2(x[2]) end)
+line(("  %-28s %s 个连接"):format(x[1], ok3 and tostring(cnt) or "?"))
+end
+end
+end)
+head("G · 环境层(脚本跑在什么环境里)")
+P(function()
+if type(getgenv)=="function" then
+local n=0 for _ in pairs(getgenv()) do n=n+1 end
+line(("getgenv()  执行器全局: %d 个键"):format(n))
+end
+if type(getrenv)=="function" then
+local n=0 for _ in pairs(getrenv()) do n=n+1 end
+line(("getrenv()  游戏全局:   %d 个键"):format(n))
+end
+if type(getreg)=="function" then
+local n=0 pcall(function() for _ in pairs(getreg()) do n=n+1 end end)
+line(("getreg()   Lua registry: %d 个键"):format(n))
+end
+if type(getthreadidentity)=="function" then
+local ok2,v=P(function() return getthreadidentity() end)
+line(("线程身份(identity): %s   (7=执行器, 2=普通脚本)"):format(ok2 and tostring(v) or "?"))
+end
+end)
+head("H · 反查层(这段代码是被谁调起来的)")
+P(function()
+if type(getcallingscript)=="function" then
+local ok2,s=P(function() return getcallingscript() end)
+line(("getcallingscript(): %s"):format(ok2 and tostring(s and s:GetFullName() or s) or "?"))
+else line("(这台执行器没有 getcallingscript)") end
+local fns=LAB.LastFns
+if fns and #fns>0 then
+local f=fns[1]
+local ok2=pcall(function()
+if type(debug)=="table" and type(debug.getupvalue)=="function" then
+local i=1
+local cnt=0
+while true do
+local nm,val=debug.getupvalue(f,i)
+if nm==nil then break end
+cnt=cnt+1
+if cnt<=12 then
+local vs=tostring(val)
+if #vs>60 then vs=vs:sub(1,60).."…" end
+line(("    upvalue[%d] %-20s = %s"):format(i,tostring(nm),vs))
+end
+i=i+1
+end
+line(("(该函数共 %d 个 upvalue)"):format(cnt))
+end
+end)
+if not ok2 then line("(读 upvalue 失败)") end
+end
+end)
+print(""); print(("##################  扫描完毕 (%.2fs)  ##################"):format(os.clock()-t0))
+SYS.Notify("综合扫描完成 —— 结果在控制台(F9)",SYS.CY.green)
+end
+function LAB.Summary()
+local out={"=== CheatMenu 扫描摘要 ===", "时间: "..os.date("%Y-%m-%d %H:%M:%S")}
+local c=LAB.Caps()
+out[#out+1]=("执行器: getgc=%s hook=%s restore=%s getscripts=%s")
+:format(tostring(c.getgc),tostring(c.hookfn),tostring(c.restore),tostring(c.scripts))
+if LAB.LastFns then out[#out+1]=("GC 函数数: %d"):format(#LAB.LastFns) end
+if #LAB.Log>0 then out[#out+1]=("调用记录 %d 条, 最近: %s"):format(#LAB.Log,LAB.Log[#LAB.Log]) end
+local txt=table.concat(out,"\n")
+local ok=P(function()
+if type(setclipboard)=="function" then setclipboard(txt)
+elseif type(toclipboard)=="function" then toclipboard(txt) end
+end)
+if ok then SYS.Notify("摘要已复制到剪贴板",SYS.CY.green) else print(txt) SYS.Notify("无剪贴板, 已打到控制台") end
+return txt
+end
 function LAB.WhoCalls(name)
 local fns=LAB.LastFns
 if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return end
@@ -6062,41 +6283,6 @@ local out={"========== 调用链探测: "..tostring(name).." ==========",
 print(table.concat(out,"\n"))
 SYS.Notify("调用链已输出到控制台",SYS.CY.green)
 end
-end
-UI.Pages["实验室"]=function(p)
-UI.Label(p,"🔬 实验室 · 执行器高级 API 实验",CY.purple)
-UI.Tip(p,"只读 / 可撤销的实验工具: 研究 getgc(true) 遍历、hookfunction 包一层观察、pcall+caller 调用链。\n★ 只做观察, 不改游戏逻辑, 不碰反检测 —— 全部只影响你自己的客户端。",CY.sub)
-local caps=(SYS.Lab and SYS.Lab.Caps) and SYS.Lab.Caps() or {}
-local function yn(v) return v and "✓" or "✗" end
-UI.Label(p,("执行器能力: getgc=%s  hook=%s  restore=%s  getscripts=%s  modules=%s")
-:format(yn(caps.getgc),yn(caps.hookfn),yn(caps.restore),yn(caps.scripts),yn(caps.modules)),
-(caps.getgc and caps.hookfn) and CY.green or CY.yellow)
-UI.Tip(p,"如果 hook 那里是 ✗, 说明这台执行器不支持, 后面的④⑥用不了(③①②仍可用)。",CY.sub)
-UI.Div(p)
-UI.Section(p,"A · 只读扫描",CY.cyan)
-UI.Btn(p,"① GC 扫描(函数/表 数量 + 按归属脚本分组)",CY.cyan,function() P(function() SYS.Lab.ScanGC() end) end)
-UI.Btn(p,"② 列出可疑函数(名字含 damage/fire/aim/kill…)",CY.cyan,function() P(function() SYS.Lab.ListHookable() end) end)
-UI.Btn(p,"③ 已加载脚本 / 模块清单",CY.cyan,function() P(function() SYS.Lab.ListScripts() end) end)
-UI.Tip(p,"①②③ 结果都打到【控制台】(F9), 不弹窗, 方便你复制。",CY.sub)
-UI.Div(p)
-UI.Section(p,"B · 函数观察(hook 一层, 只记录不改行为)",CY.green)
-local watchName=""
-UI.Input(p,"函数名","如 damage / TakeDamage",function() return watchName end,function(v) watchName=v or "" end)
-UI.Btn(p,"④ 开始观察这个函数",CY.green,function() P(function() SYS.Lab.Watch(watchName) end) end)
-UI.Btn(p,"⑤ 输出调用记录(最近 60 条)",CY.cyan,function() P(function() SYS.Lab.DumpLog() end) end)
-UI.Btn(p,"⑥ 调用链探测: 谁在调它(pcall+caller)",CY.purple,function() P(function() SYS.Lab.WhoCalls(watchName) end) end)
-UI.Btn(p,"⛔ 停止观察并还原全部 hook",CY.red,function()
-local n=SYS.Lab.UnwatchAll()
-SYS.Notify(("已还原 %d 个函数"):format(n or 0),SYS.CY.green)
-end)
-local hookL=UI.Label(p,"当前观察: (无)",CY.sub)
-SYS.BtnRefs[#SYS.BtnRefs+1]=function()
-if not hookL or not hookL.Parent then return end
-local ks={} for k in pairs(SYS.Lab.Hooks or {}) do ks[#ks+1]=k end
-hookL.Text=("当前观察(%d): %s"):format(#ks, #ks>0 and table.concat(ks,"  ") or "(无)")
-hookL.TextColor3=(#ks>0) and CY.green or CY.sub
-end
-UI.Tip(p,"原理: hookfunction(原函数, 我的函数) 会返回【旧函数】; 我的函数里记录参数后\n调用旧函数并把它的返回值原样返回 —— 所以游戏行为完全不变, 只是多了一层记录。\n不能 hook 局部函数/匿名函数(Luau 也常把函数 inline 掉), 那些会 hook 失败。",CY.sub)
 end
 UI.Pages["传送"]=function(p)
 UI.Switch(p,"允许鼠标传送 (T)","TPEnabled")
@@ -6444,9 +6630,6 @@ UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢�
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
-end)
-UI.Btn(p,"🔍 扫描游戏 Remote(只看有哪些)",CY.cyan,function()
-SYS.DumpRemotes()
 end)
 UI.Div(p)
 UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
