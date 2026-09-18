@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-18 19:56 sha 06f5a0a6 bytes 280581'):format('2026-09-18 19:56','06f5a0a6',280581))
+print(('[CheatMenu] build 2026-09-18 20:07 sha f5abcb52 bytes 280543'):format('2026-09-18 20:07','f5abcb52',280543))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,7 +69,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="5.4.0"
+SYS.BuildVer="5.4.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -7505,7 +7505,7 @@ main.Position=UDim2.new(0.5,0,0.5,0)
 main.BackgroundTransparency=0.5
 P(function()
 TweenService:Create(main,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
-{Size=tw0,Position=UDim2.new(0.5,-W/2,0.5,-H/2),BackgroundTransparency=0.06}):Play()
+{Size=tw0,BackgroundTransparency=0.06}):Play()
 end)
 print("[CheatMenu] ✅ UI 创建完成")
 end
