@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:29 sha dc102e54 bytes 425010'):format('2026-09-19 20:29','dc102e54',425010))
+print(('[CheatMenu] build 2026-09-19 20:34 sha fb803c9c bytes 422916'):format('2026-09-19 20:34','fb803c9c',422916))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -30,7 +30,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,AutoDodge=false,AutoHitMinigame=false,ClickInspect=false,FootstepESP=false,AntiVoid=false,AirWalk=false,F3Debug=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -48,10 +48,8 @@ PathKey=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
 FX_Enable=false,
-FX_HBlur=false,FX_HBloom=false,FX_HDoF=false,FX_HRays=false,FX_HCC=false,
 NightVision=false,NightVisionPro=false,Lantern=false,SuperLight=false,
 NoFog=false,NoShadow=false,
-AudioCtl=false,AudioProbe=false,ChatLog=false,
 WPShow=false,WPKey=false,
 NoDeath=false,NoKnock=false,
 CB_MissMode=false,
@@ -62,15 +60,11 @@ AutoLowPing=false,
 AutoClaim=false,AutoPickup=false,AutoRespawn=false,
 TrapWatch=false,
 AutoUse=false,
-TimeScale=1,
-UseInterval=0.15,
 AutoShop=false,AutoTeam=false,AutoEmote=false,
-ShopInterval=5,EmoteInterval=10,
-FarmInterval=3,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
-PC_Freeze=false,PC_Mute=false,
-PG_Spin=false,PG_FlingAll=false,PG_SpinHit=false,PG_FlyHit=false,
+PC_Freeze=false,
+PG_Spin=false,PG_SpinHit=false,PG_FlyHit=false,
 PG_WalkHit=false,PG_HideHit=false,PG_OrbitTool=false,PG_BlackHole=false,
 PG_KillNear=false,
 },
@@ -107,7 +101,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.19"
+SYS.BuildVer="6.9.20"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5767,7 +5761,7 @@ else
 canFire = crosshairOnEnemy()
 end
 if not canFire then return end
-local noTurn=(SYS.T_.CB_SilentAim and SYS.T_.CB_SilentNoTurn)
+local noTurn=SYS.T_.CB_SilentNoTurn
 if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire) and not noTurn then
 local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if ap2 then
@@ -6197,14 +6191,7 @@ Trans.SendLang="en"
 Trans.cacheCount=0
 Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0}
 local HOST_DEFAULT="http://127.0.0.1:8080"
-local function hostOf()
-local h=SYS.C_ and SYS.C_.TransHost
-if type(h)=="string" and h~="" then
-if not h:find("^https?://") then h="http://"..h end
-return (h:gsub("/+$",""))
-end
-return HOST_DEFAULT
-end
+local function hostOf() return HOST_DEFAULT end
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
 local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
@@ -6910,7 +6897,7 @@ local ok,res=pcall(function()
 return request({
 Url=hostOf().."/v1/chat/completions", Method="POST",
 Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
-Body=payload, Timeout=(tonumber(SYS.C_ and SYS.C_.TransTimeout) or 30),
+Body=payload, Timeout=60,
 })
 end)
 if not ok or type(res)~="table" or not res.Body then
@@ -6962,7 +6949,7 @@ if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return
 if type(request)~="function" or not HS then return nil end
 if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
-local res,netFail=rawRequest(text,transPrompt(),0.1,(tonumber(SYS.C_ and SYS.C_.TransMaxTok) or Trans.maxTok or 512))
+local res,netFail=rawRequest(text,transPrompt(),0.1,1024)
 if res then
 local v=tidy(res,text)
 if v then
@@ -6990,13 +6977,7 @@ return ("You are a game-UI translation engine. Translate the user's text into %s
 .."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
 .."Keep numbers, currency ($), emoji, URLs, placeholders and player names unchanged."):format(name)
 end
-function transPrompt()
-local code=SYS.C_ and SYS.C_.TransTarget
-if type(code)=="string" and code~="" and code~="zh" then
-return Trans.promptFor(code)
-end
-return SYS_PROMPT
-end
+function transPrompt() return SYS_PROMPT end
 function Trans.translateTo(text,code)
 if Trans.Unloaded or type(text)~="string" then return nil end
 text=(text:gsub("^%s+","")):gsub("%s+$","")
@@ -10048,32 +10029,6 @@ end)
 end)
 UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSource("ui") end)
 UI.Div(p)
-UI.Section(p,"⚙ 翻译设置 (模型地址 / 接收语言 / 超时)",CY.purple)
-UI.Input(p,"模型服务地址 (留空=本机 127.0.0.1:8080)","127.0.0.1:8080",
-function() return SYS.C_.TransHost or "" end,
-function(v) SYS.C_.TransHost=(v~="" and v or nil) QueueSave() end)
-local tgtOpts={}
-for _,l in ipairs(Trans.LANGS or {}) do tgtOpts[#tgtOpts+1]=l.name end
-UI.Dropdown(p,"接收翻译成什么语言",tgtOpts,
-function()
-local c=SYS.C_.TransTarget or "zh"
-for _,l in ipairs(Trans.LANGS or {}) do if l.code==c then return l.name end end
-return "中文"
-end,
-function(v)
-for _,l in ipairs(Trans.LANGS or {}) do
-if l.name==v then SYS.C_.TransTarget=l.code break end
-end
-QueueSave()
-end)
-UI.Slider(p,"请求超时 (秒)",5,60,5,
-function() return SYS.C_.TransTimeout or 30 end,
-function(v) SYS.C_.TransTimeout=v QueueSave() end,"%.0f")
-UI.Slider(p,"最大输出长度 (token)",64,1024,64,
-function() return SYS.C_.TransMaxTok or 512 end,
-function(v) SYS.C_.TransMaxTok=v QueueSave() end,"%.0f")
-UI.Tip(p,"★ 地址: 留空 = 默认本机 127.0.0.1:8080; 只填 127.0.0.1:8080 也可(自动补 http://)。\n★ 接收语言: 默认中文(用精调过的游戏术语词表); 换成别的语言就走通用提示词。\n★ 改完点上面的「🔄 立即检测本地模型」确认能连上; 发送方向的语言在「发送消息」那里单独选。",CY.sub)
-UI.Div(p)
 end
 do
 local LAB={Hooks={}, Log={}, MaxLog=200}
@@ -10744,16 +10699,16 @@ UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的�
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
-UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线)","CB_SilentNoTurn")
-UI.Switch(p,"静默瞄准 (准星没对上也判定命中)","CB_SilentAim",function(on)
+UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线命中)","CB_SilentNoTurn",function(on)
+SYS.T_.CB_SilentAim = on and true or false
 if on then
 local ok,err=SYS.RayHook.Install()
 if not ok then
-SYS.T_.CB_SilentAim=false
+SYS.T_.CB_SilentAim=false SYS.T_.CB_SilentNoTurn=false
 SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 else
-SYS.Notify("⚠ 静默瞄准已开 —— 射线改写中",SYS.CY.red)
+SYS.Notify("🙈 真·静默已开 —— 射线改写中, 相机与角色都不动",SYS.CY.red)
 end
 elseif SYS.T_.CB_BulletWall~=true and SYS.T_.CB_BlockRay~=true then
 SYS.RayHook.Remove()
