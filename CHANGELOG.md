@@ -1,3 +1,28 @@
+## 6.9.22 · 2026-09-19
+
+### 🎯 索敌接入「游戏自己的敌人名单」(你这游戏有权威敌我信号)
+
+你 20:35 的扫描报告里有一行很关键:
+
+```
+BindableFunction  Workspace.Highlight.Enemy.HighlightHolder.SamanthaPlayz02.Animate.PlayEmote
+```
+
+说明这游戏自己维护了一个 **`Workspace.Highlight.Enemy.HighlightHolder.<玩家名>`** 容器 ——
+**谁在里面谁就是敌人**。这比 `@Team`(混战里所有人取值都一样)靠谱得多。
+
+脚本里原本已经写了读取它的函数 `CB.GameSaysEnemy()`, 但**只被用来当"判活的兜底"**, 索敌判定没用上。
+现在接进了 `isEnemyEx()`(索敌/360/自动开火共用的敌我判定):
+
+- 容器在、且他的名字在里面 -> **直接判敌人**, 并跳过"不打队友"的排除(否则混战里整队被排掉);
+- 容器不在(换别的游戏) -> 返回 nil, 原逻辑不变, 零影响。
+
+配合 360 无死角 / 索敌间隔 0, 现在"**有人就锁、就开火**"用的是游戏自己承认的敌人名单。
+
+### 附: 这轮报告里与"防回退"有关的两个 remote(确认还在)
+- `ReplicatedStorage.ClientReplicateCFrame` —— 防回退 hook 的目标(已随飞行/加速自动开关);
+- `Remote.Any.Heartbeat`(RemoteFunction) —— 心跳/校验, 服务端定期核对状态用的。
+
 ## 6.9.21 · 2026-09-19
 
 ### 🙈 修「真·静默还是不行」+ ⚡「无延迟」改成参数(0ms)
