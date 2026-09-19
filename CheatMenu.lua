@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:24 sha 4bcf76c2 bytes 441042'):format('2026-09-19 21:24','4bcf76c2',441042))
+print(('[CheatMenu] build 2026-09-19 21:43 sha a834ffbd bytes 437080'):format('2026-09-19 21:43','a834ffbd',437080))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.32"
+SYS.BuildVer="6.9.33"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -223,6 +223,7 @@ writefile(CFG,json)
 end
 end)
 end
+SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -237,7 +238,7 @@ end
 if data._resumeT == true and type(data.T_) == "table" then
 local n = 0
 for k, v in pairs(data.T_) do
-if SYS.T_[k] ~= nil and type(v) == "boolean" then
+if SYS.T_[k] ~= nil and type(v) == "boolean" and not (SYS.REMOVED_FEATURES and SYS.REMOVED_FEATURES[k]) then
 SYS.T_[k] = v
 n = n + 1
 end
@@ -10122,64 +10123,16 @@ UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or
 function(v) SYS.C_.FarmInterval=v end,"%.0f")
 UI.Switch(p,"死亡自动重生","AutoRespawn",SYS.SetAutoRespawn)
 UI.Btn(p,"💰 一键 0 元扫货 (只买标价 0 的)",CY.green,function() P(SYS.FreeSweep) end)
-UI.Section(p,"🧺 隔空获取 (不用靠近)",CY.cyan)
-UI.Cycle(p,"获取范围",{"全部","单独(最近的)"},
-function() return SYS.C_.GrabMode or "全部" end,
-function(v) SYS.C_.GrabMode=v QueueSave() end)
-UI.Btn(p,"🧺 立即获取",CY.green,function()
-P(function() SYS.RangedGrab((SYS.C_.GrabMode=="单独(最近的)") and "one" or "all") end)
-end)
-UI.Section(p,"🆕 推荐功能 (一键全领 / 开箱 / 商店 / 换服 / 背包)",CY.green)
+UI.Section(p,"🆕 推荐功能 (一键全领 / 开箱 / 商店)",CY.green)
 UI.Btn(p,"🎁 一键全领 (邮件+好友+里程碑+在线+赛季)",CY.green,function() P(SYS.ClaimEverything) end)
 UI.Btn(p,"📦 一键开箱 / 抽奖",CY.cyan,function() P(SYS.OpenAllBoxes) end)
 UI.Switch(p,"🛒 自动商店 (周期试全部商店通道)","AutoShop",SYS.SetAutoShop)
 UI.Slider(p,"商店间隔 (秒)",1,60,1,function() return SYS.C_.ShopInterval or 5 end,
 function(v) SYS.C_.ShopInterval=v QueueSave() end,"%.0f")
-UI.Btn(p,"🖥 读服务器列表 (打到控制台)",CY.sub,function() P(SYS.DumpServerList) end)
-UI.Btn(p,"🖥 快速换服 (跳到下一个服)",CY.purple,function() P(SYS.JoinNextServer) end)
-UI.Btn(p,"🎒 读取背包 (打到控制台)",CY.cyan,function() P(SYS.DumpInventory) end)
 UI.Switch(p,"🚩 自动选队伍/角色","AutoTeam",SYS.SetAutoTeam)
 UI.Switch(p,"💃 自动表情 (循环)","AutoEmote",SYS.SetAutoEmote)
 UI.Tip(p,"★ 这些都走通用事件查找(别名+模糊扫描)，换游戏也能用。\n"..
-"先点「读取背包 / 读服务器列表」看看本游戏能拿到什么；\n"..
-"拿不到说明该游戏的这类数据不走客户端（服务端直接渲染），属正常。",CY.yellow)
-UI.Section(p,"🎒 道具 / 装备 (别名取自事件库)",CY.purple)
-UI.Btn(p,"🎒 使用道具 (TryUse 系)",CY.green,function() P(function() SYS.UseItem() end) end)
-UI.Btn(p,"⚔ 装备 (TryEquip 系)",CY.cyan,function() P(function() SYS.ToggleEquip(true) end) end)
-UI.Btn(p,"🛡 卸下装备 (TryUnequip 系)",CY.cyan,function() P(function() SYS.ToggleEquip(false) end) end)
-UI.Btn(p,"🎁 一键领取每日/在线/新手/赛季奖励",CY.green,function() P(SYS.ClaimAllDaily) end)
-UI.Tip(p,"✅ 能做: 游戏【本身免费/无限次】的道具直接可用; 自动使用/自动装备省手速; 通道尽量找全。\n"..
-"⛔ 免道具(用东西不消耗)做不到: 使用/装备/合成都是【服务端权威】—— 客户端发请求后,\n"..
-"   服务端查背包(有没有/够不够/冷却过没过), 不够直接拒。客户端没有合法途径免掉消耗。",CY.yellow)
-UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近也能触发。\n"..
-"   全部 = 场景里所有可拾取物逐个发一遍; 单独 = 只拿离你最近的那个。\n"..
-"⛔ 刷物品: 做不到。物品增减是服务端权威 —— 客户端发的是请求, 服务端按自己的库存处理;\n"..
-"   凭空造物只可能来自游戏自身漏洞, 客户端没有合法途径。",CY.yellow)
-UI.Switch(p,"🛡 反陷阱预警 (陷阱伤害/被挡/状态 → HUD)","TrapWatch",SYS.SetTrapWatch)
-UI.Section(p,"⏱ 冷却加速 / 自动连用",CY.orange)
-UI.Slider(p,"时间倍率 (1=关, 越高冷却越快)",1,20,0.5,
-function() return SYS.C_.TimeScale or 1 end,
-function(v) SYS.SetTimeScale(v) QueueSave() end,"%.1fx")
-UI.Switch(p,"🎒 自动连用 (不用手点, 消耗照旧)","AutoUse",SYS.SetAutoUse)
-UI.Slider(p,"连用间隔 (秒)",0.05,2,0.05,function() return SYS.C_.UseInterval or 0.15 end,
-function(v) SYS.C_.UseInterval=v QueueSave() end,"%.2f")
-UI.Tip(p,"⛔ 绕不过: 物品【数量】/【耐久】/【使用次数上限】—— 这些数字在服务端。\n"..
-"   客户端发的只是\"我想用\", 服务端拿自己的副本校验+扣减; 要凭空加数量/免耐久 = 改服务端数据, 客户端没这通道。\n"..
-"   (本地把显示改成 999 只是骗自己, 一操作就被覆盖回来。)\n"..
-"✅ 能做: ①【冷却加速】很多游戏把上次使用时间存在客户端, 时间函数 hook 快一点冷却就立刻到期;\n"..
-"   ②【自动连用】帮你按住不放, 消耗照旧但频率拉满。\n"..
-"⚠️ 冷却加速只对【客户端判定】的冷却有效; 服务端若也限流, 仍会被拒。",CY.yellow)
-UI.Tip(p,"事件库里这几个名字就是权威信号: TouchDamage(接触伤害, 陷阱几乎都走这条) ·\n"..
-"DamageDenyInform(伤害被挡) · StatusService/PlayState(状态) · QueryLock/SelectedRole(锁定)。\n"..
-"开了之后陷阱一触发立刻 HUD 警告 —— 而不是莫名其妙掉血。\n"..
-"⚠️ 这是【预警播报】, 不是让陷阱无效; 让陷阱不造成伤害属于改服务端判定, 客户端做不到。",CY.yellow)
-UI.Btn(p,"🔎 看看本游戏有哪些可预告的信号",CY.sub,function()
-P(function()
-local n,names=SYS.EventWatchScan()
-print(("[CheatMenu] 可预告信号 %d 条: %s"):format(n,table.concat(names,", ")))
-SYS.Hud(("可预告信号 %d 条 (详见控制台 F9)"):format(n),6)
-end)
-end)
+"本游戏(MachineParty)只有 5 条真 remote —— 这类通用查找大多拿不到东西, 属正常。",CY.yellow)
 UI.Tip(p,"✅ 能做: 游戏【本身免费】的东西 —— 每日/活动奖励、0 元商品、地上掉落物。\n"..
 "⛔ 做不到: 白嫖【付费】物品。购买是服务端权威 —— 客户端发请求后服务端要查你的货币余额, 不够直接拒绝;\n"..
 "   客户端改不动服务端余额, 这是引擎架构, 不是脚本没生效。真能 0 元买的只有服务端自己标价 0 的商品。",CY.yellow)
