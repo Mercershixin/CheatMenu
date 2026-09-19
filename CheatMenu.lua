@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:31 sha bea628c2 bytes 441530'):format('2026-09-19 22:31','bea628c2',441530))
+print(('[CheatMenu] build 2026-09-19 22:36 sha 8e91d433 bytes 442190'):format('2026-09-19 22:36','8e91d433',442190))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.5"
+SYS.BuildVer="6.10.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3355,7 +3355,8 @@ local PK = {}
 SYS.PickKinds = {
 { name = "箱子/收纳", color = Color3.fromRGB(0,200,255),
 kws = {"chest","crate","locker","cabinet","vault","safe","coffer","stash","case","box","container",
-"宝箱","箱子","柜","收纳","棺材"} },
+"drawer","dresser","desk","table","knobs","cupboard","bookcase","checkout","wardrobe",
+"宝箱","箱子","柜","收纳","棺材","抽屉","桌"} },
 { name = "拾取物", color = Color3.fromRGB(0,200,255),
 kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem","item","scrap",
 "money","cash","orb","star","card","key","gold","coin",
@@ -3363,7 +3364,10 @@ kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","ge
 { name = "道具/补给", color = Color3.fromRGB(0,200,255),
 kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","lockpick","skeleton",
 "battery","fuse","candle","bottle","ribbon","cheese","bone","keycard","syringe","potion",
-"手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛"} },
+"alarmclock","clock","globe","typewriter","keyobtain","padlock","lever","breaker","timer",
+"paperplane","portrait","rift","revive","chandelier","obstruction",
+"手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛","钟","地球仪","打字机",
+"密码锁","拉杆","电闸","定时"} },
 { name = "躲藏点", color = Color3.fromRGB(0,200,255),
 kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
 "躲","藏身","衣柜","抽屉"} },
@@ -3371,6 +3375,7 @@ kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabin
 kws = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
 "lore","hint","clue","code","password","passcode","padlock","combination","document",
 "letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
+"livehint","libraryhint","librarybook","hintbook","hintpaper",
 "书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"} },
 { name = "梯子/攀爬", color = Color3.fromRGB(0,200,255),
 kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
@@ -3461,8 +3466,22 @@ local part=o.PrimaryPart or (cn~="Model" and cn~="Folder" and o) or o:FindFirstC
 if part and part.Position then
 local d=camPos and (part.Position-camPos).Magnitude or 0
 if not camPos or d<=MAXD then
+local kk=kind or {name="通用可交互", color=Color3.fromRGB(0,200,255)}
+if cn=="Model" or cn=="Folder" then
+local _n=0
+for _,ch in ipairs(o:GetChildren()) do
+if ch:IsA("BasePart") and ch.Position then
+_n=_n+1
+if _n>12 then break end
+list[#list+1]=ch
+PK[ch]=kk
+end
+end
+if _n==0 then list[#list+1]=part PK[part]=kk end
+else
 list[#list+1]=part
-PK[part]=kind or {name="通用可交互", color=Color3.fromRGB(0,200,255)}
+PK[part]=kk
+end
 if #names<16 and type(o.Name)=="string" then
 local dup=false
 for _,n in ipairs(names) do if n==o.Name then dup=true break end end
