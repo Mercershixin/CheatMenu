@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:36 sha 5eee2fc8 bytes 423095'):format('2026-09-19 20:36','5eee2fc8',423095))
+print(('[CheatMenu] build 2026-09-19 20:39 sha 22a50a50 bytes 423167'):format('2026-09-19 20:39','22a50a50',423167))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -101,7 +101,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.21"
+SYS.BuildVer="6.9.22"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5336,6 +5336,7 @@ local function isEnemyEx(pl,ignoreTeam,ignoreFF)
 if not pl or pl==SYS.LP then return false end
 if SYS.WL and not SYS.WL.Allow(pl.Name) then return false end
 if not alive(pl) then return false end
+if CB.GameSaysEnemy and CB.GameSaysEnemy(pl)==true then return true end
 if not ignoreTeam and SYS.T_.CB_Team then
 local mt=CB.TeamKey(SYS.LP) local pt=CB.TeamKey(pl)
 if mt and pt and mt==pt and CB.TeamKeyUseful() then return false end
