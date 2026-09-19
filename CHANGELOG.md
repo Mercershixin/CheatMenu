@@ -1,4 +1,56 @@
-## 6.9.35 · 2026-09-19
+## 6.10.1 · 2026-09-19
+
+### 🔌 按【DOORS(门)】抓包补全事件 ——「功能缺少的事件在这部补」
+
+游戏：`门 (游戏)` · PlaceId **6839171747** · GameId 2440500124 · CreatorId 3049798
+（= Roblox **DOORS**；所有 remote 都在 `ReplicatedStorage/RemotesFolder` 下，命名**平铺直白**）
+
+#### (1) ★ 修掉控制台那条报错：死亡事件在 DOORS 里根本订不上
+
+```
+[CheatMenu] 80 秒内没等到 ReplicatedStorage.Remote -> 死亡事件没订上(会退化回 Humanoid 判断)
+```
+
+**根因**：死亡订阅只会找 `ReplicatedStorage.Remote` 这**一个**容器；而 DOORS 的死亡信号是
+`ReplicatedStorage/RemotesFolder/PlayerDied` —— 容器叫 `RemotesFolder`，而且事件**平铺**挂在容器下
+（没有 `GameService` / `EntityService` 那一层）。于是 `sub()` 全拿到 nil → 永远订不上 → 死亡判定只剩 Humanoid 猜。
+
+**现在三级查找**：
+1. **容器候选**：`Remote / RemotesFolder / Remotes / RemoteEvents / Events / GameRemotes / Net / Shared`
+2. **平铺事件名**（容器内 + `ReplicatedStorage` 根都扫）：
+   - die → `PlayerDied / Died / Death / PlayerKilled / Killed / CharacterDied / OnDeath`
+   - alive → `Revive / PlayerRevived / OnRevive / Respawn / PlayerRespawn / CharacterAdded / Spawned`
+3. **关键词兜底**：一个都没订上时扫容器（≤200 项，只认 `RemoteEvent/RemoteFunction/BindableEvent`）
+
+#### (2) `SYS.RemoteAlias` 补 DOORS 的事件名（每类只补功能真会调用的，不加空类别）
+
+| 类别 | 新增的事件名 |
+|---|---|
+| `revive` | `ReviveFriend` · `ObtainGiftedRevive` · `CheckRevive` · `ReviveRift` |
+| `respawn` | `PlayAgain` · `ContinueOrSave` |
+| `pickup` | `HidePickup` · `DropItem` · `PaperPlanePickup` · `RequestItemInfo` |
+| `teleport` | `Teleport` · `ServerTeleported` · `SwitchServers` · `SkipToRoomNumber` · `UpdateFloor` |
+| `chat` | `SystemMessage` · `Caption` · `CaptionWithChat` |
+| `itemuse` | `UsePowerup` · `UseEnemyModule` · `UseEventModule` |
+| `inventory` | `Inventory` · `RequestInventory` · `RequestItemInfo` |
+| `deathfx` | `PlayerDied` · `Jumpscare` · `SpiderJumpscare` · `HideMonster` |
+| **`doors`（新）** | `HitDoor` · `Interaction_Door` · `ClientOpen` · `DoorOpen` · `DoorClose` · `ManualOpen` · `DoorFunc` |
+| **`doorshop`（新）** | `PreRunShop` · `RequestShop` · `PurchaseShopItem` · `InventoryShopFunc` · `ShopCode` · `GiftProduct` · `ProductPurchased` |
+
+`SYS.RemoteKeywords` 同步补 `doors / doorshop` + `pickup / server / round / itemuse / inventory / kill / chat`
+的子串关键词（关键词是**子串匹配**，只写最独特那段）。
+
+#### (3) ★★ 假门终于有真名了：`DoorFake` —— 门透视新增【假门=红】
+
+- **正常门** = `Workspace.CurrentRooms.<间号>.Door`
+  （带 `Func_Open / Func_Close / Func_Lock / Func_ForceOpen` 等 BindableEvent + `ManualOpenPrompt`），也有直接叫 `DoorNormal` 的
+- **假门** = **`DoorFake`**，挂在 `CurrentRooms.<间号>.SideroomDupe.*` —— 那种"**复制出来的侧房**"里
+  （另有 `ClientOpen` RemoteEvent 和 `HitDoor` / `Interaction_Door` 两条交互通道）
+- **判据**：自己的名字或 3 层祖先名含 `fake / dupe / false / 假门 / 伪装` → 判为假门，标**红色**
+- **颜色优先级**：**假门=红** > 切割=品红 > 形状猜的"疑似假门"=橙 > 陷阱/伤害机关=黄（都带 ☠ 标记）
+- 界面文案同步：`🚪 门/陷阱/假门 透视 (陷阱=黄, 切割=品红, 假门=红, 疑似假门=橙)`
+
+## 6.10.0 · 2026-09-19
 
 ### 🌗 接上「光照 · 去雾」+ 🌐「全图高亮」的界面入口
 
