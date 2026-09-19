@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 23:53 sha 00f13b3c bytes 454045'):format('2026-09-19 23:53','00f13b3c',454045))
+print(('[CheatMenu] build 2026-09-20 01:19 sha d45dd69b bytes 450201'):format('2026-09-20 01:19','d45dd69b',450201))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -31,6 +31,7 @@ Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
+TracerAll=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -58,10 +59,6 @@ CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 AutoLowPing=false,
-AutoClaim=false,AutoPickup=false,AutoRespawn=false,
-TrapWatch=false,
-AutoUse=false,
-AutoShop=false,AutoTeam=false,AutoEmote=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 PC_Freeze=false,
@@ -76,6 +73,7 @@ JumpMult=2,
 Gravity=196.2,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
+TracerMaxDist=500,TracerMaxN=12,
 ESPNameH=0,
 PickDist=1200,
 QuickRange=60,
@@ -105,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.0.0"
+SYS.BuildVer="7.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -844,62 +842,6 @@ end
 function SYS.RespawnSelected()
 local pl=SYS.PC and SYS.PC.Get()
 return SYS.RespawnSelf(pl or LP)
-end
-function SYS.SetAutoClaim(on)
-SYS.T_.AutoClaim = on and true or false
-SYS.SetLoop("AutoClaim", on, RS.Heartbeat, SYS.AutoClaimTick)
-if on then
-local r,name = SYS.FindEvent("claim")
-SYS.Notify(r and ("🎁 自动领取已开 · remote="..tostring(name))
-or "⚠️ 本游戏没找到 claim 类 remote(自动领取会空转)",
-r and SYS.CY.green or SYS.CY.yellow)
-end
-end
-function SYS.SetAutoPickup(on)
-SYS.T_.AutoPickup = on and true or false
-SYS.SetLoop("AutoPickup", on, RS.Heartbeat, SYS.AutoPickupTick)
-if on then
-local r,name = SYS.FindEvent("pickup")
-SYS.Notify(r and ("🧺 自动收集已开 · remote="..tostring(name))
-or "⚠️ 本游戏没找到 pickup 类 remote(自动收集会空转)",
-r and SYS.CY.green or SYS.CY.yellow)
-end
-end
-function SYS.SetAutoRespawn(on)
-SYS.T_.AutoRespawn = on and true or false
-if on then
-SYS.SetLoop("AutoRespawn", true, RS.Heartbeat, SYS.AutoRespawnTick)
-else
-SYS.SetLoop("AutoRespawn", false)
-end
-end
-function SYS.AutoClaimTick()
-local now = os.clock()
-if now - (SYS._claimAt or 0) < (tonumber(SYS.C_.FarmInterval) or 3) then return end
-SYS._claimAt = now
-local r = SYS.FindEvent("claim")
-if r then P(function() r:FireServer() end) end
-end
-function SYS.AutoPickupTick()
-local now = os.clock()
-if now - (SYS._pickupAt or 0) < (tonumber(SYS.C_.FarmInterval) or 3) then return end
-SYS._pickupAt = now
-local r = SYS.FindEvent("pickup")
-if r then P(function() r:FireServer() end) end
-end
-function SYS.AutoRespawnTick()
-local now = os.clock()
-if now - (SYS._respawnAt or 0) < 2 then return end
-local ch = LP.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local dead = false
-if not ch or not ch.Parent then dead = true end
-if hum and hum.Health <= 0 then dead = true end
-pcall(function() if LP:GetAttribute("State") == "Dead" then dead = true end end)
-if not dead then return end
-SYS._respawnAt = now
-local r = SYS.FindEvent("respawn") or SYS.FindEvent("revive")
-if r then P(function() r:FireServer() end) end
 end
 function SYS.FreeSweep()
 local n0, bought = 0, 0
@@ -2084,21 +2026,6 @@ SYS.Notify(msg, n > 0 and SYS.CY.green or SYS.CY.yellow)
 SYS.Hud(msg, 6)
 return n
 end
-function SYS.SetAutoShop(on)
-SYS.T_.AutoShop = on and true or false
-SYS.SetLoop("AutoShop", on, RS.Heartbeat, SYS.AutoShopTick)
-if on then
-local r, nm = SYS.FindEvent("shop")
-SYS.Notify(r and ("🛒 自动商店已开 · remote=" .. tostring(nm))
-or "⚠️ 本游戏没找到商店类 remote", r and SYS.CY.green or SYS.CY.yellow)
-end
-end
-function SYS.AutoShopTick()
-local now = os.clock()
-if now - (SYS._shopAt or 0) < (tonumber(SYS.C_.ShopInterval) or 5) then return end
-SYS._shopAt = now
-tryMany("shop")
-end
 function SYS.DumpInventory()
 local out = {}
 local rel = RStorage:FindFirstChild("Remote")
@@ -2196,30 +2123,6 @@ end
 SYS.Notify("⛔ 本游戏没找到换服通道(先跑「读服务器列表」看看)", SYS.CY.yellow)
 return false
 end
-function SYS.SetAutoTeam(on)
-SYS.T_.AutoTeam = on and true or false
-SYS.SetLoop("AutoTeam", on, RS.Heartbeat, SYS.AutoTeamTick)
-if on then
-local r, nm = SYS.FindEvent("team")
-SYS.Notify(r and ("🚩 自动选队伍已开 · remote=" .. tostring(nm))
-or "⚠️ 本游戏没找到选队伍 remote", r and SYS.CY.green or SYS.CY.yellow)
-end
-end
-function SYS.AutoTeamTick()
-local now = os.clock()
-if now - (SYS._teamAt or 0) < 3 then return end
-SYS._teamAt = now
-tryMany("team")
-end
-function SYS.SetAutoEmote(on)
-SYS.T_.AutoEmote = on and true or false
-SYS.SetLoop("AutoEmote", on, RS.Heartbeat, function()
-local now = os.clock()
-if now - (SYS._emoteAt or 0) < (tonumber(SYS.C_.EmoteInterval) or 10) then return end
-SYS._emoteAt = now
-tryMany("emote")
-end)
-end
 SYS._realClock = SYS._realClock or os.clock
 SYS._realTime  = SYS._realTime  or os.time
 SYS._timeScale = 1
@@ -2261,84 +2164,6 @@ _tsHooked = true
 end
 SYS.Notify(("⏱ 冷却加速: %.1fx (只对客户端判定的冷却有效) "):format(scale), SYS.CY.green)
 SYS.Hud(("⏱ 冷却加速 %.1fx 已开"):format(scale), 5)
-end
-function SYS.SetAutoUse(on)
-SYS.T_.AutoUse = on and true or false
-SYS.SetLoop("AutoUse", on, RS.Heartbeat, SYS.AutoUseTick)
-if on then
-local r, nm = SYS.FindEvent("itemuse")
-local msg = r and ("🎒 自动连用已开 · remote=" .. tostring(nm))
-or "⚠️ 没找到使用类 remote —— 改走「按住当前工具」方式"
-SYS.Notify(msg, r and SYS.CY.green or SYS.CY.yellow)
-end
-end
-function SYS.AutoUseTick()
-local now = os.clock()
-if now - (SYS._useAt or 0) < (tonumber(SYS.C_.UseInterval) or 0.15) then return end
-SYS._useAt = now
-local r = SYS.FindEvent("itemuse")
-if r and SYS.C_.UseViaRemote ~= false then
-P(function() r:FireServer() end)
-return
-end
-P(function()
-local ch = LP.Character
-if not ch then return end
-local tool = ch:FindFirstChildOfClass("Tool")
-if tool and type(tool.Activate) == "function" then
-pcall(function() tool:Activate() end)
-end
-end)
-end
-SYS.TrapWatch = { conns = {}, seen = {} }
-function SYS.SetTrapWatch(on)
-SYS.T_.TrapWatch = on and true or false
-local w = SYS.TrapWatch
-for _, c in ipairs(w.conns) do P(function() c:Disconnect() end) end
-w.conns = {}
-if not SYS.T_.TrapWatch then
-SYS.Notify("🛡 反陷阱预警已关", SYS.CY.sub)
-return
-end
-local rel = RStorage:FindFirstChild("Remote")
-local names = {"TouchDamage","DamageDenyInform","StatusService","PlayState",
-"QueryLock","SelectedRole","PreSpawnDarken"}
-local hooked, hit = 0, {}
-for _, nm in ipairs(names) do
-local inst = rel and rel:FindFirstChild(nm, true)
-if inst and inst:IsA("RemoteEvent") then
-pcall(function()
-w.conns[#w.conns + 1] = inst.OnClientEvent:Connect(function(...)
-if not SYS.T_.TrapWatch then return end
-local a = table.pack(...)
-local parts = {}
-for i = 1, math.min(a.n, 3) do
-local tv = type(a[i])
-if tv == "string" or tv == "number" or tv == "boolean" then
-parts[#parts + 1] = tostring(a[i])
-end
-end
-local d = table.concat(parts, " · ")
-local key = nm .. "|" .. d
-local now = os.clock()
-if w.seen[key] and now - w.seen[key] < 3 then return end
-w.seen[key] = now
-local icon = "🛡"
-if nm == "TouchDamage" then icon = "⚠️ 陷阱/接触伤害"
-elseif nm == "DamageDenyInform" then icon = "🛡 伤害被挡"
-elseif nm == "QueryLock" or nm == "SelectedRole" then icon = "🎯 锁定" end
-P(function()
-SYS.Hud(("%s %s%s"):format(icon, nm, d ~= "" and ("  →  " .. d) or ""), 4)
-end)
-end)
-end)
-hooked = hooked + 1
-hit[#hit + 1] = nm
-end
-end
-SYS.Notify(("🛡 反陷阱预警: 挂上 %d 条(%s)"):format(hooked, table.concat(hit, ", ")),
-hooked > 0 and SYS.CY.green or SYS.CY.yellow)
-print(("[CheatMenu] 反陷阱预警: 命中 %d 条 -> %s"):format(hooked, table.concat(hit, ", ")))
 end
 function SYS.ProbeTrapWatch()
 local rel = RStorage:FindFirstChild("Remote")
@@ -3199,6 +3024,58 @@ end
 ESP_WALL_CACHE[part]={t=now,ok=ok}
 return ok
 end
+local IDX={ t=0, desc=nil }
+function SYS.Index()
+local now=os.clock()
+if IDX.desc and (now-IDX.t)<0.4 then return IDX.desc end
+local ok,d=P(function() return WS:GetDescendants() end)
+if ok and type(d)=="table" and #d>0 then
+IDX.desc=d IDX.t=now
+return d
+end
+return IDX.desc or {}
+end
+function SYS.IndexDrop() IDX.desc=nil IDX.t=0 end
+SYS.MiniArea = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
+"bumpermadness","mppadhost","mpstation","machin"}
+SYS.MiniAreaCN = {"小游戏","关卡","模式"}
+SYS.KwHazard = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
+"spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
+"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
+"obstacle","mine","landmine","bomb","tnt","explosive"}
+SYS.KwGateExtra = {"exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
+"tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
+"trick","danger","death","fatal","hurt","ouch"}
+SYS.KwGate = {}
+for _,w in ipairs(SYS.KwHazard)    do SYS.KwGate[#SYS.KwGate+1]=w end
+for _,w in ipairs(SYS.KwGateExtra) do SYS.KwGate[#SYS.KwGate+1]=w end
+SYS.KwGateCN = {"门","陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","关卡","考验",
+"出口","入口","传送","电梯","楼梯","假门","伪装","死亡","致死","致命","坑"}
+SYS.KwTrap = {"trap","trapdoor","hazard","damage","damaging","kill","lava","spike","pit","void","saw",
+"blade","crusher","crush","piston","hammer","press","fire","burn","acid","poison",
+"zap","electric","deadly","mine","landmine","bomb","tnt","explosive",
+"fake","dupe","false","danger","death","fatal","hurt","ouch"}
+SYS.KwTrapCN = {"陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","假门","伪装","致死","致命","坑"}
+SYS.KwCut = {"chisel","gauntlet","cut","slice","sliceable","grind","machin"}
+SYS.KwMpExtra = {"mpbuy","limiteddrop","mpstation","mppadhost"}
+SYS.KwHidePick   = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
+"躲","藏身","衣柜","抽屉"}
+SYS.KwHidePrompt = {"hide","hiding","hideprompt","closet","wardrobe","bed","locker","cabinet",
+"藏身","躲","衣柜","床","柜"}
+SYS.KwClue = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
+"lore","hint","clue","code","password","passcode","padlock","combination","document",
+"letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
+"livehint","libraryhint","librarybook","hintbook","hintpaper",
+"书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"}
+SYS.KwClueText = {"hint","librarybook","note","paper","book"}
+function SYS.ESPAnyOn()
+return SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPWeapon
+or SYS.T_.ESPItem or SYS.T_.ESP_Pick or SYS.T_.ESP_Door
+or SYS.T_.ESP_NPC or SYS.T_.ESP_Mini or false
+end
+function SYS.ESPMaybeClear()
+if not SYS.ESPAnyOn() then SYS.ClearESP() end
+end
 function SYS.ClearESP()
 for _,h in pairs(HN) do if h then h:Destroy() end end
 HN={} SYS._npcList=nil
@@ -3220,8 +3097,9 @@ HI={}
 LW,LWL={},{}
 end
 function SYS.ESPTick()
-if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick or SYS.T_.ESP_Door or SYS.T_.ESP_Mini) then
-if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
+if SYS.T_.ESPWeapon and not SYS.T_.ESPNameTag then SYS.T_.ESPNameTag=true end
+if not SYS.ESPAnyOn() then
+SYS.ClearESP()
 return
 end
 local function tagPart(c)
@@ -3349,7 +3227,7 @@ end
 return false
 end
 P(function()
-for _,m in ipairs(WS:GetDescendants()) do
+for _,m in ipairs(SYS.Index()) do
 local isRig=(m:FindFirstChild("Head")~=nil and m:FindFirstChild("HumanoidRootPart")~=nil)
 if m:IsA("Model") and m~=LP.Character and (m:FindFirstChildOfClass("Humanoid") or isRig) then
 local isPlayerChar=false
@@ -3425,14 +3303,9 @@ kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","loc
 "手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛","钟","地球仪","打字机",
 "密码锁","拉杆","电闸","定时"} },
 { name = "躲藏点", color = Color3.fromRGB(0,200,255),
-kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
-"躲","藏身","衣柜","抽屉"} },
+kws = SYS.KwHidePick },
 { name = "书籍/纸张/线索", color = Color3.fromRGB(0,200,255),
-kws = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
-"lore","hint","clue","code","password","passcode","padlock","combination","document",
-"letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
-"livehint","libraryhint","librarybook","hintbook","hintpaper",
-"书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"} },
+kws = SYS.KwClue },
 { name = "梯子/攀爬", color = Color3.fromRGB(0,200,255),
 kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
 "梯","爬","绳","藤"} },
@@ -3451,6 +3324,10 @@ kws = {"shop","vendor","merchant","trader","station","kiosk","market","atm","ban
 { name = "检查点/目标", color = Color3.fromRGB(0,200,255),
 kws = {"checkpoint","flag","goal","finish","objective","spawn","base",
 "检查点","终点","目标","旗"} },
+{ name = "小游戏区域", color = Color3.fromRGB(0,200,255),
+kws = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
+"bumpermadness","mppadhost","mpstation","machin",
+"小游戏","关卡","模式"} },
 }
 local function pickKind(o)
 local nm = type(o.Name) == "string" and o.Name:lower() or ""
@@ -3475,7 +3352,7 @@ local names={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 local cn=o.ClassName
 local ok=false
 if cn=="Tool" then ok=true
@@ -3532,7 +3409,7 @@ end
 end
 if not kind and not ok and type(o.Name)=="string" and o.Name~="" then
 local nm=o.Name:lower()
-for _,kw in ipairs({"mpbuy","limiteddrop","mpstation","mppadhost"}) do
+for _,kw in ipairs(SYS.KwMpExtra) do
 if nm:find(kw,1,true) then ok=true break end
 end
 end
@@ -3618,21 +3495,11 @@ local FAKE={}
 local TRAP={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
-local TRAPKW={"trap","trapdoor","hazard","damage","damaging","kill","lava","spike","pit","void","saw",
-"blade","crusher","crush","piston","hammer","press","fire","burn","acid","poison",
-"zap","electric","deadly","mine","landmine","bomb","tnt","explosive",
-"fake","dupe","false","danger","death","fatal","hurt","ouch"}
-local TRAPCN={"陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","假门","伪装","致死","致命","坑"}
-local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
-"spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
-"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet","obstacle",
-"mine","landmine","bomb","tnt","explosive",
-"exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
-"tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
-"trick","danger","death","fatal","hurt","ouch"}
-local CUTKW={"chisel","gauntlet","cut","slice","sliceable","grind","machin"}
-local CNKW={"门","陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","关卡","考验",
-"出口","入口","传送","电梯","楼梯","假门","伪装","死亡","致死","致命","坑"}
+local TRAPKW=SYS.KwTrap
+local TRAPCN=SYS.KwTrapCN
+local KW=SYS.KwGate
+local CUTKW=SYS.KwCut
+local CNKW=SYS.KwGateCN
 local function doorShaped(o, pr)
 if not pr then return false end
 local okS,sz=pcall(function() return pr.Size end)
@@ -3658,7 +3525,7 @@ return false
 end
 local names={}
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 local cn=o.ClassName
 local ok=false
 local soft=false
@@ -3829,10 +3696,10 @@ SYS._miniAt=_now
 local list={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
-local AREA={"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
-"bumpermadness","mppadhost","mpstation","machin"}
+local AREA=SYS.MiniArea
+local AREACN=SYS.MiniAreaCN
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 local cn=o.ClassName
 if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
 local hit=false
@@ -3843,7 +3710,9 @@ local raw=anc.Name
 if type(raw)=="string" and raw~="" then
 local nm=raw:lower():gsub("%s+","")
 for _,kw in ipairs(AREA) do if nm:find(kw,1,true) then hit=true break end end
-if not hit and (raw:find("小游戏") or raw:find("关卡") or raw:find("模式")) then hit=true end
+if not hit then
+for _,cw in ipairs(AREACN) do if raw:find(cw,1,true) then hit=true break end end
+end
 end
 if hit then break end
 anc=anc.Parent
@@ -4080,10 +3949,7 @@ elseif next(LW) then
 for _,l in pairs(LW) do P(function() l:Destroy() end) end LW={} LWL={}
 end
 end
-local DODGE_KW = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
-"spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
-"fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
-"obstacle","mine","landmine","bomb","tnt","explosive"}
+local DODGE_KW = SYS.KwHazard
 SYS._hitSeen = setmetatable({}, {__mode="k"})
 SYS._dodgeStat = SYS._dodgeStat or {n=0, hits=0}
 function SYS.AutoDodgeScan()
@@ -4171,8 +4037,7 @@ SYS.T_.AutoDodge = on and true or false
 SYS.SetLoop("AutoDodge", on, RS.Heartbeat, SYS.AutoDodgeTick)
 if on then SYS.Notify("🏃 自动躲机关: 已开(靠近陷阱/地雷/压板会自动退开)", SYS.CY.green) end
 end
-local AUTO_MINI_AREA = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
-"bumpermadness","mppadhost","mpstation","machin"}
+local AUTO_MINI_AREA = SYS.MiniArea
 local function _globalFn(n)
 local f = rawget(_G, n)
 if type(f) ~= "function" then P(function() f = getfenv()[n] end) end
@@ -4192,7 +4057,7 @@ end
 function SYS.AutoHitScan()
 local list = {}
 P(function()
-for _, o in ipairs(WS:GetDescendants()) do
+for _, o in ipairs(SYS.Index()) do
 if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then
 local inMini = false
 local anc = o.Parent
@@ -4372,16 +4237,72 @@ elseif root then eye=root.Position+Vector3.new(0,1.5,0)
 elseif cam and cam.CFrame then eye=cam.CFrame.Position end
 return eye,dir
 end
+local TPL={}
+local function tracerDrop(p)
+local q=TPL[p]
+if q then TPL[p]=nil P(function() q:Destroy() end) end
+end
 function SYS.TracerHide()
 if line then P(function() line:Destroy() end) line=nil end
+for p in pairs(TPL) do tracerDrop(p) end
+end
+local function tracerDraw(key,o,endP)
+local d=endP-o
+local len=d.Magnitude
+if len<2 then return end
+local q=TPL[key]
+if not q then
+local ok,pt=P(function()
+local w=Instance.new("Part")
+w.Anchored=true w.CanCollide=false w.CastShadow=false
+w.CanQuery=false w.CanTouch=false
+w.Material=Enum.Material.Neon w.Transparency=0.4
+w.Color=Color3.fromRGB(140,255,170)
+w.Archivable=false
+w.Parent=WS
+return w
+end)
+if not ok or not pt then return end
+q=pt TPL[key]=q
+end
+P(function()
+q.Size=Vector3.new(0.07,0.07,len)
+q.CFrame=CFrame.lookAt(o+d*0.5,endP)
+end)
 end
 function SYS.TracerTick()
 if not SYS.T_.Tracer then
-if line then SYS.TracerHide() end
+if line or next(TPL) then SYS.TracerHide() end
 return
 end
 local o,dir=tracerOrigin()
 if not o or not dir then return end
+local maxD=tonumber(SYS.C_.TracerMaxDist) or 500
+local cap=tonumber(SYS.C_.TracerMaxN) or 12
+local all=SYS.T_.TracerAll and true or false
+if all then
+if line then P(function() line:Destroy() end) line=nil end
+elseif next(TPL) then
+for p in pairs(TPL) do tracerDrop(p) end
+end
+if all then
+local used,n={},0
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=LP and n<cap then
+local c=pl.Character
+local rp=c and (c.PrimaryPart or c:FindFirstChild("HumanoidRootPart"))
+if rp and rp.Position then
+local dd=(rp.Position-o).Magnitude
+if maxD<=0 or dd<=maxD then
+used[pl]=true n=n+1
+tracerDraw(pl,o,rp.Position)
+end
+end
+end
+end
+for p in pairs(TPL) do if not used[p] then tracerDrop(p) end end
+return
+end
 local tp=SYS.Combat and SYS.Combat.TargetPart
 local endP
 if tp and tp.Position then endP=tp.Position else endP=o+dir*200 end
@@ -9920,7 +9841,7 @@ return ok
 end
 end
 do
-local AH_KW={"hide","hiding","hideprompt","closet","wardrobe","bed","locker","cabinet","藏身","躲","衣柜","床","柜"}
+local AH_KW=SYS.KwHidePrompt
 local HOST_KW2={"monster","enemy","hostile","killer","seek","rush","ambush","figure","halt","screech","eyes",
 "dupe","snare","spider","jumpscare","zombie","mob","hunter","chaser","怪","敌","杀手","鬼"}
 local QI_ORIG={}
@@ -9954,7 +9875,7 @@ local mp=root and root.Position
 if not mp then return nil end
 local best,bd=nil,1e9
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 if o.ClassName=="ProximityPrompt" then
 local nm=tostring(o.Name or ""):lower()
 local act=tostring(o.ActionText or ""):lower()
@@ -9982,7 +9903,7 @@ if now-(SYS._qiAt or 0)<2 then return end
 SYS._qiAt=now
 local rng=tonumber(SYS.C_.QuickRange) or 60
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 local cn=o.ClassName
 if cn=="ProximityPrompt" or cn=="ClickDetector" then
 local rec=QI_ORIG[o]
@@ -10058,10 +9979,10 @@ end
 function SYS.ReadHintTexts()
 local out={}
 P(function()
-for _,o in ipairs(WS:GetDescendants()) do
+for _,o in ipairs(SYS.Index()) do
 local nm=tostring(o.Name or ""):lower()
-local isHint=(nm:find("hint",1,true) or nm:find("librarybook",1,true) or nm:find("note",1,true)
-or nm:find("paper",1,true) or nm:find("book",1,true))
+local isHint=false
+for _,kw in ipairs(SYS.KwClueText) do if nm:find(kw,1,true) then isHint=true break end end
 if isHint then
 local sg=o:FindFirstChildOfClass("SurfaceGui")
 if not sg and o.Parent then sg=o.Parent:FindFirstChildOfClass("SurfaceGui") end
@@ -10264,31 +10185,38 @@ if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
 end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
-UI.Section(p,"👁 人物 · 名字",CY.accent)
+UI.Section(p,"👁 活物透视 (玩家 / 生物)",CY.accent)
 UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮(统一亮青) —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
-UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
-if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
+local LIVING_MODES={"关闭","仅玩家","全部活物(含 NPC/怪物)"}
+UI.Cycle(p,"👁 活物透视",LIVING_MODES,
+function()
+if SYS.T_.ESP_NPC then return "全部活物(含 NPC/怪物)" end
+if SYS.T_.ESP    then return "仅玩家" end
+return "关闭"
+end,
+function(v)
+SYS.T_.ESP_NPC=(v=="全部活物(含 NPC/怪物)")
+SYS.T_.ESP    =(v~="关闭")
+SYS.ESPMaybeClear()
 end)
-UI.Switch(p,"玩家名字","ESPNameTag",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
+UI.Tip(p,"把所有【活物】都点亮。🎨 配色: 玩家 = 队友绿 / 敌人红 / 幽灵紫; "..
+"非玩家生物 = 敌对红 / 中立橙。\n"..
+"「敌对」判据 = 名字或 3 层祖先命中敌意词(monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider …)，"..
+"或 Attribute Hostile / Enemy / Aggro 为 true。\n"..
+"拿不准一律算【中立橙】—— 与玩家透视「拿不到队伍 = 队友绿」同一个保守口径, 不误标红。\n"..
+"藏身/幽灵态(Humanoid.Health 被游戏打成 0)照样亮 —— 透视本来就该看得见「藏起来的」。\n"..
+"全 Workspace 扫描已节流, 并与其它透视共用同一次扫描; 隔墙时填充更透。",CY.sub)
+UI.Div(p)
+UI.Section(p,"🪧 头顶标签 (名字 / 武器标记)",CY.accent)
+UI.Switch(p,"🪧 头顶标签 (名字+血量+距离 · 有武器就标红)","ESPNameTag",function(on)
+SYS.T_.ESPWeapon=on
+SYS.ESPMaybeClear()
 end)
 UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
 function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
-UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
-end)
-UI.Div(p)
-UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 机关)",CY.accent)
-UI.Switch(p,"🐾 生物透视 (所有活物全亮 · 敌对=红 / 中立=橙)","ESP_NPC",function(on)
-if on then SYS.T_.ESP=true end
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
-and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
-if SYS.BtnRefs then for _,f in ipairs(SYS.BtnRefs) do P(f) end end
-end)
-UI.Tip(p,"把所有【活物】都点亮: 玩家(队友绿 / 敌人红 / 幽灵紫) + 全部非玩家生物(怪物 / NPC / 动物 / 假人)。\n"..
-"🎨 非玩家生物分两种: 【敌对 = 红】(名字或 3 层祖先命中敌意词: monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider … 或 Attribute Hostile / Enemy / Aggro 为 true)\n"..
-"   【中立 = 橙】(其余全部; 拿不准一律算中立, 不误标红 —— 与玩家透视「拿不到队伍=队友绿」同一个保守口径)。\n"..
-"开这个开关会【一起打开玩家透视】(不然不算「所有活物」)。全 Workspace 扫描已节流(约每 1s 重扫), 隔墙时填充更透。",CY.sub)
+UI.Tip(p,"标签内容 = 名字(优先 DisplayName) + 当前/最大血量 + 离你几格; 血量低于 60% 转橙、低于 30% 转红。\n"..
+"有武器(手上或背包里, 标准 Backpack 属性)就在下方再标一行 🔫 武器名(红字)。\n"..
+"挂点自动回退 Head -> UpperTorso -> Torso -> HumanoidRootPart, 名字高度再按角色包围盒自动贴顶。",CY.sub)
 UI.Div(p)
 UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
 UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
@@ -10302,70 +10230,43 @@ UI.Btn(p,"📖 读密码提示 (控制台 + HUD)",CY.cyan,function() P(SYS.DumpH
 UI.Tip(p,"⚡ 快速交互 = ProximityPrompt 的「按住时长」归零 + 触发距离拉大(本地视角; 服务端一般只校验距离/权限)。\n"..
 "🏃 自动藏身 = 敌意生物进到设定距离, 用最近的藏身点 Prompt 钻进去 —— 等价于你按 E, **走服务端认可那条路**(不保证服务端一定接受)。\n"..
 "📖 读密码提示 = 找名字含 hint/book/note/paper 的物件并读出它表面 SurfaceGui 上的文字(贴图 Decal 读不到)。",CY.sub)
-UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 一起)","ESP_Pick",function(on)
-SYS.T_.ESPItem=on SYS.T_.ESP_Door=on
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then
-SYS.ClearESP()
-end
-end)
-UI.Tip(p,"一个开关同时点亮三类物件(判据合并, 不用分别开):\n"..
-"· 掉落物: 名字像掉落物(pickup/item/chest/gold…), 或客户端能看到的可捡物件\n"..
-"· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
-"· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
-"🎨 颜色统一: 普通物件 + 普通门 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。",CY.sub)
 UI.Div(p)
-UI.Section(p,"👣 落脚点 · 射线",CY.accent)
-local FSMark={} SYS._fsN=0
-function SYS.SetFootstep(on)
-if not on then
-for _,m in pairs(FSMark) do P(function() m:Destroy() end) end
-FSMark={} SYS.Notify("👣 落脚点指示 已关闭",SYS.CY.sub) return
-end
-SYS.TT(task.spawn(function()
-while SYS.T_.FootstepESP and not SYS.Unloaded do
-local act={}
-P(function()
-for _,pl in ipairs(Players:GetPlayers()) do
-if pl~=LP then
-local ch=pl.Character
-local root=ch and ch:FindFirstChild("HumanoidRootPart")
-if root then
-local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(root.Position,Vector3.new(0,-12,0)),{ch}))
-local pos=(hit and hit.Position) or (root.Position+Vector3.new(0,-3,0))
-act[root]=pos
-end
-end
-end
+UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏)",CY.accent)
+UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏 一起)","ESP_Pick",function(on)
+SYS.T_.ESPItem=on SYS.T_.ESP_Door=on SYS.T_.ESP_Mini=on
+SYS.ESPMaybeClear()
 end)
-for k,m in pairs(FSMark) do
-if not act[k] then P(function() m:Destroy() end) FSMark[k]=nil end
-end
-for root,pos in pairs(act) do
-local m=FSMark[root]
-if not m then
-local ok,pt=P(function()
-local q=Instance.new("Part")
-q.Shape=Enum.PartType.Cylinder
-q.Size=Vector3.new(0.08,3.2,3.2)
-q.Anchored=true q.CanCollide=false q.CastShadow=false
-q.CanQuery=false q.CanTouch=false q.Archivable=false
-q.Material=Enum.Material.Neon q.Transparency=0.55
-q.Color=Color3.fromRGB(255,80,80)
-q.Parent=WS
-return q
+UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n"..
+"· 掉落物: 名字像掉落物(pickup/item/chest/gold…), 或客户端能看到的可捡物件\n"..
+"· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点/小游戏); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
+"· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
+"· 小游戏区域: 名字或 3 层祖先命中区域名(duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost / machin) 或含「小游戏/关卡/模式」\n"..
+"🎨 颜色统一: 普通物件 + 普通门 + 小游戏里的东西 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。\n"..
+"💡 小游戏区域透视已并入本开关 —— MachineParty 页不再单独提供。",CY.sub)
+UI.Div(p)
+UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
+local TR_MODES={"关闭","只锁定的目标","全部玩家"}
+UI.Cycle(p,"子弹射线 (只画线, 不改弹道)",TR_MODES,
+function()
+if not SYS.T_.Tracer then return "关闭" end
+return SYS.T_.TracerAll and "全部玩家" or "只锁定的目标"
+end,
+function(v)
+SYS.T_.Tracer=(v~="关闭")
+SYS.T_.TracerAll=(v=="全部玩家")
+if not SYS.T_.Tracer then P(SYS.TracerHide) end
 end)
-if ok and pt then m=pt FSMark[root]=m end
-end
-if m then P(function() m.CFrame=CFrame.new(pos)*CFrame.Angles(0,0,math.rad(90)) end) end
-end
-task.wait(0.2)
-end
-end))
-SYS.Notify("👣 落脚点指示 已开启",SYS.CY.green)
-end
-UI.Switch(p,"子弹射线 (只画线, 不改弹道)","Tracer",function(on)
-if not on then P(SYS.TracerHide) end
-end)
+UI.Slider(p,"射线最远距离 (格 · 0=不限)",0,2000,50,
+function() return SYS.C_.TracerMaxDist or 500 end,
+function(v) SYS.C_.TracerMaxDist=v end,"%.0f")
+UI.Slider(p,"射线最多几条 (人多时防卡)",1,24,1,
+function() return SYS.C_.TracerMaxN or 12 end,
+function(v) SYS.C_.TracerMaxN=v end,"%.0f")
+UI.Tip(p,"从一个挂点(枪口 / 手 / 头, 都取不到就退回相机)画一条 Neon 细线。\n"..
+"· 只锁定的目标 = 画到【战斗页当前锁定的目标】身上; 没有目标就沿朝向画 200 格(原行为)\n"..
+"· 全部玩家 = 给每个其他玩家各画一条 —— 池化复用(每人一条常驻, 只改位置/长度, 不每帧新建),\n"..
+"  谁在哪、谁在朝我这边, 一眼就有数。「最远距离」「最多几条」两道上限防几十人局画满屏。\n"..
+"纯视觉: 只画线, 不改弹道、不改命中判定。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
 UI.Switch(p,"自由视角","FreeCam",function(on)
@@ -11600,13 +11501,11 @@ end
 end)
 end
 UI.Pages["MachineParty"]=function(p)
-UI.Section(p,"🎮 小游戏 · 透视",CY.accent)
-UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮青)","ESP_Mini")
-UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
 UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
+UI.Tip(p,"🎮 小游戏区域透视已并入【视觉页 -> 🔍 物件透视】(判据合并, 一个开关一起亮)。",CY.sub)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
-UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
+UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
@@ -12547,7 +12446,6 @@ P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
-P(function() if SYS.SetFootstep then SYS.SetFootstep(false) end end)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
