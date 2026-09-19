@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:13 sha 1e717f2a bytes 422196'):format('2026-09-19 20:13','1e717f2a',422196))
+print(('[CheatMenu] build 2026-09-19 20:18 sha 8e275446 bytes 423047'):format('2026-09-19 20:18','8e275446',423047))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -104,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.17"
+SYS.BuildVer="6.9.18"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5552,7 +5552,7 @@ if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
 if pl and isEnemy(pl) and not (SYS.T_.CB_SkipFF and hasShield(pl)) then
 local p=partOf(pl,mode)
-if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or clearShot(p)) then return pl,p end
+if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or SYS.T_.CB_ZeroDelay or clearShot(p)) then return pl,p end
 end
 if (not pl) or (not alive(pl)) then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
@@ -5670,7 +5670,8 @@ if okH and hit then
 local hp=playerFromPart(hit)
 if hp and isEnemy(hp) and not (SYS.T_.CB_SkipFF and hasShield(hp)) then
 local pp=partOf(hp,mode)
-if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or clearShot(pp)) then return hp,pp end
+if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or SYS.T_.CB_ZeroDelay
+or (SYS.T_.CB_SilentAim and SYS.T_.CB_SilentNoTurn) or clearShot(pp)) then return hp,pp end
 end
 end
 end
@@ -5740,13 +5741,14 @@ local function fireTick()
 if not SYS.T_.CB_Fire then return end
 if SYS.MenuOpen then return end
 local now=os.clock()
-local fireGap=(SYS.C_.CB_FireDelay or 0.06)*(0.8+math.random()*0.4)
+local fireGap=(SYS.T_.CB_ZeroDelay and true) and 0.005
+or ((SYS.C_.CB_FireDelay or 0.06)*(0.8+math.random()*0.4))
 if now-CB.LastFire<fireGap then return end
 local cam=SYS.Cam
 if not cam then return end
 local vp=cam.ViewportSize
 local canFire
-local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire)
+local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire or SYS.T_.CB_ZeroDelay)
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire or SYS.T_.CB_360 then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
@@ -5762,7 +5764,8 @@ else
 canFire = crosshairOnEnemy()
 end
 if not canFire then return end
-if SYS.T_.CB_360 or SYS.T_.CB_SnapFire then
+local noTurn=(SYS.T_.CB_SilentAim and SYS.T_.CB_SilentNoTurn)
+if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire) and not noTurn then
 local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if ap2 then
 P(function() cam.CFrame=CFrame.lookAt(cam.CFrame.Position,ap2) end)
@@ -5818,12 +5821,14 @@ return
 end
 end
 local anyOn=SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
+or SYS.T_.CB_360 or SYS.T_.CB_SilentAim or SYS.T_.CB_BulletWall or SYS.T_.CB_ZeroDelay
 if not anyOn then
 CB.Target=nil CB.TargetPart=nil
 return
 end
+local scanDt=(SYS.T_.CB_ZeroDelay and true) and 0 or SCAN_DT
 accScan=accScan+dt
-if accScan>=SCAN_DT then
+if accScan>=scanDt then
 accScan=0
 CB.Stat.scan=CB.Stat.scan+1
 CB.Moving = SYS.T_.CB_PauseMove and movingNow() or false
@@ -8719,6 +8724,7 @@ if SYS.FloatGui then SYS.FloatGui.Archivable=true end
 end)
 Prot.Hooks.hide=nil
 end
+local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
 Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0
 function Ray.Target()
@@ -8742,6 +8748,7 @@ if SYS.T_.CB_BlockRay==true then
 Ray.Rewrites=Ray.Rewrites+1
 return nil
 end
+local a1,a2=...
 local res=h(self,...)
 if SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true then
 local tp=Ray.Target()
@@ -8755,12 +8762,18 @@ if not res then
 local cam=WS.CurrentCamera
 if cam then dist=(cam.CFrame.Position-pos).Magnitude end
 end
+local rayObj=(res and res.Ray) or nil
+if not rayObj and RayCtor and RayCtor.new
+and (typeof(a1)=="Vector3") and (typeof(a2)=="Vector3") then
+P(function() rayObj=RayCtor.new(a1, a2*(dist>0 and dist or 1)) end)
+end
 return {
 Instance = tp,
 Position = pos,
 Normal   = nrm,
 Material = mat,
 Distance = dist,
+Ray      = rayObj,
 }
 end
 end
@@ -10556,6 +10569,7 @@ end
 end)
 UI.Tip(p,"「自动瞄准」= 每帧把准星转到目标身上。移动中被相机带偏就打开「移动时暂停瞄准」。\n背身锁得快不快看下面的「跟随速度」(调大更快)。",CY.yellow)
 UI.Switch(p,"🎯 360 无死角 (有人就锁就打 · 不看方向/视野)","CB_360")
+UI.Switch(p,"⚡ 无延迟模式 (每帧索敌 · 看到就锁 · 瞄到就开火)","CB_ZeroDelay")
 UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
 function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
 function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
@@ -10686,6 +10700,7 @@ UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的�
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
+UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线)","CB_SilentNoTurn")
 UI.Switch(p,"静默瞄准 (准星没对上也判定命中)","CB_SilentAim",function(on)
 if on then
 local ok,err=SYS.RayHook.Install()
