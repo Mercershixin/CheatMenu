@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:48 sha 4eb787b0 bytes 436643'):format('2026-09-19 21:48','4eb787b0',436643))
+print(('[CheatMenu] build 2026-09-19 21:53 sha a25de44e bytes 439470'):format('2026-09-19 21:53','a25de44e',439470))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.0"
+SYS.BuildVer="6.10.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -602,9 +602,11 @@ SYS.RemoteAlias = {
 heal    = {"EntityService.Heal","Heal","RequestHeal","HealSelf","SelfHeal","HealPlayer",
 "Regen","Regenerate","RestoreHealth","RequestHealSelf"},
 revive  = {"GameService.Revive","Revive","RequestRevive","ReviveSelf","RevivePlayer","Resurrect","Resurrection",
-"Any.Suicide","GameService.Revive"},
+"Any.Suicide","GameService.Revive",
+"ReviveFriend","ObtainGiftedRevive","CheckRevive","ReviveRift"},
 respawn = {"GameService.Respawn","Respawn","RequestRespawn","CharacterReset","Reset","RespawnSelf",
-"PlayerRespawn","RequestCharacterReset","GameService.Respawn","GameService.Join","GameService.JoinLater"},
+"PlayerRespawn","RequestCharacterReset","GameService.Respawn","GameService.Join","GameService.JoinLater",
+"PlayAgain","ContinueOrSave"},
 kill    = {"GameService.Killed","Killed","Kill","Damage","CombatEvent","Died"},
 damage  = {"Damage","Hit","Damaged","TakeDamage","ApplyDamage","DamageEvent","BeDamaged"},
 buy     = {"BuyProduct","Buy","Purchase","BuyItem","RequestBuy","BuyGamepass","BoxBuy","ItemBuyEvent"},
@@ -618,18 +620,22 @@ sell    = {"Sell","SellItem","RequestSell","SellProduct","AutoSell",
 "WeaponService.Sell","PlayerMarketService.Purchase","PlayerMarketService.AddListing",
 "PlayerMarketService.SetPrice","PlayerMarketService.RemoveListing","PlayerMarketService.LoadListed",
 "AuctionService.Bid","PlayerMarketService.Query"},
-pickup  = {"Pickup","Collect","PickupItem","Loot","PickItem","Grab","CollectItem","DropCoin"},
+pickup  = {"Pickup","Collect","PickupItem","Loot","PickItem","Grab","CollectItem","DropCoin",
+"HidePickup","DropItem","PaperPlanePickup","RequestItemInfo"},
 trade   = {"Trade","RequestTrade","TradeRequest","TradeOffer","CashTrade",
 "Trade.Request","Trade.Ready","Trade.Select","Trade.SetConfirm","Trade.Toggle","Trade.Cancel",
 "CashGun.Fire","CashGun.Pickup","TradeLobby.Teleport"},
-chat    = {"Chat","SayMessage","SendMessage","Message","ChatMessage","PostieSent"},
+chat    = {"Chat","SayMessage","SendMessage","Message","ChatMessage","PostieSent",
+"SystemMessage","Caption","CaptionWithChat"},
 round   = {"RoundStart","RoundEnd","GameStart","GameEnd","GameMode","RoundResult"},
-teleport= {"Teleport","RequestTeleport","TeleportTo","JoinServer","TeleportToServer","CharacterService_TeleportCharacter",
+teleport= {"Teleport","ServerTeleported","SwitchServers","SkipToRoomNumber","UpdateFloor",
+"RequestTeleport","TeleportTo","JoinServer","TeleportToServer","CharacterService_TeleportCharacter",
 "Any.Teleport","Any.Teleporter","Any.PlaceTeleport","Any.ServerTeleport","EntityService.Teleported",
 "ReplicateService.Teleport","ClientTeleported","TradeLobby.Teleport"},
 kick    = {"Kick","KickPlayer","Ban","PlayerKick"},
 itemuse = {"TryUse","UseItem","Use","RequestUse","ConsumeItem","UseTool","UseAbility",
-"ItemService.TryUse","Any.Track"},
+"ItemService.TryUse","Any.Track",
+"UsePowerup","UseEnemyModule","UseEventModule"},
 equip   = {"TryEquip","Equip","SetEquip","RequestGear","RequestEquip","EquipmentService",
 "BackpackService.TryEquip","EquipmentService.SetEquip","CharmService.Equip","WeaponService.SetWeapon"},
 unequip = {"TryUnequip","Unequip","UnEquip","CleanEquipped","BackpackService.TryUnequip",
@@ -663,14 +669,18 @@ server  = {"ServerList","ServerListService","GetServerData","UpdateServerData","
 team    = {"PickGameTeam","SelectRole","SelectRoleRequest","SelectLoadout","TeamService",
 "TeamService.Invite","TeamService.Accept","TeamService.Kick","TeamService.Leave",
 "GameService.SelectRole","GameService.SelectRoleRequest"},
-inventory= {"RequestInventoryView","InventoryViewResponse","InventoryQueryService",
+inventory= {"Inventory","RequestInventory","RequestItemInfo",
+"RequestInventoryView","InventoryViewResponse","InventoryQueryService",
 "InventoryQueryService.Query","WeaponService.GetGlobalCounts","WeaponService.GetTradeCounts","CareerStatsService.Request",
 "RequestItems","SetBackpack","BackpackService"},
 emote   = {"PlayEmote","StopEmote","GlobalEmote","RequestEmote","EmoteService"},
-deathfx = {"DeathEffects_ClearAll","DeathEffects_ClearPersisting","EntityService.Died","TouchDead"},
+deathfx = {"DeathEffects_ClearAll","DeathEffects_ClearPersisting","EntityService.Died","TouchDead",
+"PlayerDied","Jumpscare","SpiderJumpscare","HideMonster"},
 combat  = {"CombatService.Action","CombatService.ActionEvent","CombatService.SetWeapon","CombatService.Ammo",
 "CombatService.SwitchSlot","WeaponService.SetSkin","WeaponService.SetWrap","WeaponService.SetFavorite",
 "WeaponService.ReName","WeaponService.ResetName","ShootingRangeDummy"},
+doors   = {"HitDoor","Interaction_Door","ClientOpen","DoorOpen","DoorClose","ManualOpen","DoorFunc"},
+doorshop= {"PreRunShop","RequestShop","PurchaseShopItem","InventoryShopFunc","ShopCode","GiftProduct","ProductPurchased"},
 move    = {"EntityService.WalkSpeed","EntityService.Jump","EntityService.SetState","EntityService.SetInAir",
 "EntityService.PitchYaw","Any.AirJump","Any.JumpPad","ClientReplicateCFrame","ServerReplicateCFrame"},
 }
@@ -678,18 +688,18 @@ SYS.RemoteKeywords = {
 heal    = {"heal","regen","restorehealth","restore"},
 revive  = {"revive","resurrect"},
 respawn = {"respawn","characterreset"},
-kill    = {"killed","kill","death","died"},
+kill    = {"killed","kill","death","died","playerdied","jumpscare"},
 damage  = {"damage","hit"},
 buy     = {"buy","purchase"},
 claim   = {"claim","reward"},
 sell    = {"sell"},
-pickup  = {"pickup","collect","loot"},
+pickup  = {"pickup","collect","loot","hidepickup","dropitem"},
 trade   = {"trade"},
-chat    = {"chat","message","say"},
-round   = {"roundstart","roundend","gamestart","gameend"},
+chat    = {"chat","message","say","systemmessage","caption"},
+round   = {"roundstart","roundend","gamestart","gameend","elevator"},
 teleport= {"teleport","joinserver"},
 kick    = {"kick","ban"},
-itemuse = {"tryuse","useitem"},
+itemuse = {"tryuse","useitem","usepowerup","useenemy","useevent"},
 equip   = {"tryequip","equip","requestgear"},
 unequip = {"tryunequip","unequip"},
 orb     = {"orbpickup","pickupprompt","weaponpickup"},
@@ -702,11 +712,13 @@ box     = {"roulette","secretcase","prototypecase"},
 mail    = {"mailbox","removemail","commanditems"},
 friend  = {"friendreward","socialrewards","friendtoken"},
 milestone= {"milestone","onlinereward","battlepass","minipass"},
-server  = {"serverlist","joinserver","teleporttoserver"},
+server  = {"serverlist","joinserver","teleporttoserver","switchservers","skiptoroom"},
 team    = {"pickgameteam","selectrole","selectloadout"},
-inventory= {"inventoryview","inventoryquery","requestitems"},
+inventory= {"inventoryview","inventoryquery","requestitems","iteminfo","dropitem"},
 emote   = {"playemote","globalemote","requestemote"},
 deathfx = {"deatheffects"},
+doors   = {"hitdoor","interaction_door","dooropen","doorfake","doornormal","currentrooms"},
+doorshop= {"prerunshop","requestshop","purchaseshopitem","inventoryshop","shopcode","giftproduct"},
 }
 local function scanRemoteByKeywords(kws, wantCls)
 if not RStorage then return nil end
@@ -3463,6 +3475,7 @@ SYS._doorAt=_now
 local list={}
 local CUTOF={}
 local SOFT={}
+local FAKE={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
@@ -3544,6 +3557,20 @@ if isCut then break end
 anc=anc.Parent
 end
 end
+local isFake=false
+if ok then
+local anc=o
+for _=1,4 do
+if not anc then break end
+local raw=anc.Name
+if type(raw)=="string" and raw~="" then
+local nm=raw:lower()
+if nm:find("fake",1,true) or nm:find("dupe",1,true) or nm:find("false",1,true)
+or raw:find("假门",1,true) or raw:find("伪装",1,true) then isFake=true break end
+end
+anc=anc.Parent
+end
+end
 if ok and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
 if part and part.Position then
@@ -3552,6 +3579,7 @@ if not camPos or d<=MAXD then
 list[#list+1]=part
 CUTOF[part]=isCut
 SOFT[part]=soft
+FAKE[part]=isFake
 if #names<14 and type(o.Name)=="string" then
 local dup=false
 for _,n in ipairs(names) do if n==o.Name then dup=true break end end
@@ -3565,6 +3593,7 @@ end)
 SYS._doorList=list
 SYS._doorCut=CUTOF
 SYS._doorSoft=SOFT
+SYS._doorFake=FAKE
 if not SYS._doorLogged then
 SYS._doorLogged=true
 print(("[ESP] 门/陷阱/假门透视: 找到 %d 个候选。名字样本: %s"):format(#list, table.concat(names,", ")))
@@ -3583,6 +3612,7 @@ if not dact[p] or s.Adornee~=p then P(function() s:Destroy() end) HD_SK[p]=nil e
 end
 local DCUT=SYS._doorCut or {}
 local DSOFT=SYS._doorSoft or {}
+local DFAKE=SYS._doorFake or {}
 for p in pairs(dact) do
 local h=HD[p]
 if not h then
@@ -3598,7 +3628,10 @@ end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
 h.OutlineTransparency=0
-if DCUT[p]==true then
+if DFAKE[p]==true then
+h.FillColor   =Color3.fromRGB(255,30,30)
+h.OutlineColor=Color3.fromRGB(255,0,0)
+elseif DCUT[p]==true then
 h.FillColor   =Color3.fromRGB(255,0,180)
 h.OutlineColor=Color3.fromRGB(225,0,150)
 elseif DSOFT[p]==true then
@@ -3634,6 +3667,7 @@ if next(HD_SK) then for _,s in pairs(HD_SK) do P(function() s:Destroy() end) end
 SYS._doorList=nil
 SYS._doorCut=nil
 SYS._doorSoft=nil
+SYS._doorFake=nil
 end
 if SYS.T_.ESP_Mini then
 SYS._miniN=(SYS._miniN or 0)+1
@@ -5237,12 +5271,19 @@ local function hookDeathEvents(attempt)
 attempt=attempt or 0
 local _,rp=P(function() return game:GetService("ReplicatedStorage") end)
 if not rp then return end
-local R=rp:FindFirstChild("Remote")
+local function firstOf(par,...)
+for i=1,select("#",...) do
+local c=par:FindFirstChild(select(i,...))
+if c then return c end
+end
+return nil
+end
+local R=firstOf(rp,"Remote","RemotesFolder","Remotes","RemoteEvents","Events","GameRemotes","Net","Shared")
 if not R then
 if attempt<40 then
 SYS.TT(task.delay(2,function() P(hookDeathEvents,attempt+1) end))
 else
-warn("[CheatMenu] 80 秒内没等到 ReplicatedStorage.Remote -> 死亡事件没订上(会退化回 Humanoid 判断)")
+warn("[CheatMenu] 80 秒内没等到任何 Remote 容器(Remote/RemotesFolder/Remotes/RemoteEvents/Events/Net/Shared) -> 死亡事件没订上(会退化回 Humanoid 判断)")
 end
 return
 end
@@ -5298,6 +5339,34 @@ sub(C(GS,"Revive"),  "GameService.Revive",  "alive")
 sub(C(ES,"Spawned"), "EntityService.Spawned", "alive")
 local GC_=GS and GS:FindFirstChild("GameClient") or nil
 sub(GC_ and GC_:FindFirstChild("Killed"), "GameService.GameClient.Killed", "die")
+local FLAT_DIE  ={"PlayerDied","Died","Death","PlayerKilled","Killed","CharacterDied","OnDeath"}
+local FLAT_ALIVE={"Revive","PlayerRevived","OnRevive","Respawn","PlayerRespawn","CharacterAdded","Spawned"}
+local function flatScan(par,list,mode,tag)
+if not par then return end
+for i=1,#list do
+local inst=par:FindFirstChild(list[i])
+if inst then sub(inst,tag.."."..list[i],mode) end
+end
+end
+flatScan(R,FLAT_DIE,"die","flat")    flatScan(rp,FLAT_DIE,"die","rs")
+flatScan(R,FLAT_ALIVE,"alive","flat")flatScan(rp,FLAT_ALIVE,"alive","rs")
+if #CB.DeathHooked==0 then
+P(function()
+local n=0
+for _,o in ipairs(R:GetChildren()) do
+n=n+1
+if n>200 then break end
+if o:IsA("RemoteEvent") or o:IsA("RemoteFunction") or o:IsA("BindableEvent") then
+local nm=o.Name:lower()
+if nm:find("died",1,true) or nm:find("killed",1,true) or nm:find("death",1,true) then
+sub(o,"kw."..o.Name,"die")
+elseif nm:find("revive",1,true) or nm:find("respawn",1,true) then
+sub(o,"kw."..o.Name,"alive")
+end
+end
+end
+end)
+end
 if #CB.DeathHooked==0 and attempt<40 then
 SYS.TT(task.delay(2,function() P(hookDeathEvents,attempt+1) end))
 end
@@ -9873,7 +9942,7 @@ if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
-UI.Switch(p,"🚪 门/陷阱/假门 透视 (陷阱·伤害机关=黄, 切割类=品红, 疑似假门=橙)","ESP_Door",function(on)
+UI.Switch(p,"🚪 门/陷阱/假门 透视 (陷阱=黄, 切割=品红, 假门=红, 疑似假门=橙)","ESP_Door",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
