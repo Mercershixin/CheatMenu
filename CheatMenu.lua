@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:18 sha 8e275446 bytes 423047'):format('2026-09-19 20:18','8e275446',423047))
+print(('[CheatMenu] build 2026-09-19 20:29 sha dc102e54 bytes 425010'):format('2026-09-19 20:29','dc102e54',425010))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -56,6 +56,9 @@ WPShow=false,WPKey=false,
 NoDeath=false,NoKnock=false,
 CB_MissMode=false,
 CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
+CB_360=false,CB_ZeroDelay=false,CB_SilentNoTurn=false,
+TransBilingual=false,
+AutoLowPing=false,
 AutoClaim=false,AutoPickup=false,AutoRespawn=false,
 TrapWatch=false,
 AutoUse=false,
@@ -104,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.18"
+SYS.BuildVer="6.9.19"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6193,7 +6196,15 @@ end
 Trans.SendLang="en"
 Trans.cacheCount=0
 Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0}
-local HOST="http://127.0.0.1:8080"
+local HOST_DEFAULT="http://127.0.0.1:8080"
+local function hostOf()
+local h=SYS.C_ and SYS.C_.TransHost
+if type(h)=="string" and h~="" then
+if not h:find("^https?://") then h="http://"..h end
+return (h:gsub("/+$",""))
+end
+return HOST_DEFAULT
+end
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
 local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
@@ -6897,9 +6908,9 @@ temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or 512, stream=false,
 })
 local ok,res=pcall(function()
 return request({
-Url=HOST.."/v1/chat/completions", Method="POST",
+Url=hostOf().."/v1/chat/completions", Method="POST",
 Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
-Body=payload, Timeout=30,
+Body=payload, Timeout=(tonumber(SYS.C_ and SYS.C_.TransTimeout) or 30),
 })
 end)
 if not ok or type(res)~="table" or not res.Body then
@@ -6951,7 +6962,7 @@ if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return
 if type(request)~="function" or not HS then return nil end
 if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
-local res,netFail=rawRequest(text,SYS_PROMPT,0.1,Trans.maxTok or 512)
+local res,netFail=rawRequest(text,transPrompt(),0.1,(tonumber(SYS.C_ and SYS.C_.TransMaxTok) or Trans.maxTok or 512))
 if res then
 local v=tidy(res,text)
 if v then
@@ -6978,6 +6989,13 @@ return ("You are a game-UI translation engine. Translate the user's text into %s
 .."Preserve the original line breaks and the original number of lines.\n"
 .."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
 .."Keep numbers, currency ($), emoji, URLs, placeholders and player names unchanged."):format(name)
+end
+function transPrompt()
+local code=SYS.C_ and SYS.C_.TransTarget
+if type(code)=="string" and code~="" and code~="zh" then
+return Trans.promptFor(code)
+end
+return SYS_PROMPT
 end
 function Trans.translateTo(text,code)
 if Trans.Unloaded or type(text)~="string" then return nil end
@@ -7481,13 +7499,13 @@ return n
 end
 function Trans.checkLocal()
 local ok,res=pcall(function()
-return request({Url=HOST.."/health",Method="GET",Timeout=10})
+return request({Url=hostOf().."/health",Method="GET",Timeout=10})
 end)
 if ok and type(res)=="table" and res.StatusCode==200 then return "online" end
 return "offline"
 end
 function Trans.probeServer()
-local ok,res=pcall(function() return request({Url=HOST.."/props",Method="GET",Timeout=10,
+local ok,res=pcall(function() return request({Url=hostOf().."/props",Method="GET",Timeout=10,
 Headers={["Authorization"]="Bearer "..KEY}}) end)
 if not ok or type(res)~="table" or not res.Body then return false end
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
@@ -10029,6 +10047,32 @@ SYS.Notify(("↩️ 已恢复聊天原文 %d 条; 之后引擎重绘也会保持
 end)
 end)
 UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSource("ui") end)
+UI.Div(p)
+UI.Section(p,"⚙ 翻译设置 (模型地址 / 接收语言 / 超时)",CY.purple)
+UI.Input(p,"模型服务地址 (留空=本机 127.0.0.1:8080)","127.0.0.1:8080",
+function() return SYS.C_.TransHost or "" end,
+function(v) SYS.C_.TransHost=(v~="" and v or nil) QueueSave() end)
+local tgtOpts={}
+for _,l in ipairs(Trans.LANGS or {}) do tgtOpts[#tgtOpts+1]=l.name end
+UI.Dropdown(p,"接收翻译成什么语言",tgtOpts,
+function()
+local c=SYS.C_.TransTarget or "zh"
+for _,l in ipairs(Trans.LANGS or {}) do if l.code==c then return l.name end end
+return "中文"
+end,
+function(v)
+for _,l in ipairs(Trans.LANGS or {}) do
+if l.name==v then SYS.C_.TransTarget=l.code break end
+end
+QueueSave()
+end)
+UI.Slider(p,"请求超时 (秒)",5,60,5,
+function() return SYS.C_.TransTimeout or 30 end,
+function(v) SYS.C_.TransTimeout=v QueueSave() end,"%.0f")
+UI.Slider(p,"最大输出长度 (token)",64,1024,64,
+function() return SYS.C_.TransMaxTok or 512 end,
+function(v) SYS.C_.TransMaxTok=v QueueSave() end,"%.0f")
+UI.Tip(p,"★ 地址: 留空 = 默认本机 127.0.0.1:8080; 只填 127.0.0.1:8080 也可(自动补 http://)。\n★ 接收语言: 默认中文(用精调过的游戏术语词表); 换成别的语言就走通用提示词。\n★ 改完点上面的「🔄 立即检测本地模型」确认能连上; 发送方向的语言在「发送消息」那里单独选。",CY.sub)
 UI.Div(p)
 end
 do
