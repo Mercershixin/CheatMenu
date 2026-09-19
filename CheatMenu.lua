@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:15 sha 3312428e bytes 438293'):format('2026-09-19 21:15','3312428e',438293))
+print(('[CheatMenu] build 2026-09-19 21:18 sha 685a100a bytes 438929'):format('2026-09-19 21:18','685a100a',438929))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.30"
+SYS.BuildVer="6.9.31"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3242,7 +3242,29 @@ local mt=ateam(LP) local pt=ateam(p)
 team=not (mt and pt and mt~=pt)
 local ghost=false
 if type(p.GetAttribute)=="function" then
-P(function() ghost=(p:GetAttribute("MPGhost")==true) end)
+P(function()
+if p:GetAttribute("MPGhost")==true then ghost=true return end
+local KEYS={"Ghost","IsGhost","Invisible","IsInvisible","Stealth","IsStealth",
+"Hidden","IsHidden","Vanish","Vanished","Phantom","InvisibleMode",
+"GhostMode","Cloak","Cloaked","Camouflage","ShadowMode"}
+for i=1,#KEYS do
+local ok,v=pcall(function() return p:GetAttribute(KEYS[i]) end)
+if ok and v==true then ghost=true return end
+end
+end)
+P(function()
+if ghost then return end
+local ch2=p.Character
+if not ch2 then return end
+local tot,n=0,0
+for _,d in ipairs(ch2:GetChildren()) do
+if d:IsA("BasePart") then
+tot=tot+1
+if (d.Transparency or 0)>0.6 then n=n+1 end
+end
+end
+if tot>=3 and n/tot>=0.7 then ghost=true end
+end)
 end
 local wall=espWall(tagPart(c) or c.PrimaryPart)
 local fillT=wall and 0.93 or 0.88
