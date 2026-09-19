@@ -23,7 +23,7 @@
 
 ## 这是什么
 
-一个跑在 Roblox 执行器里的多功能 Lua 脚本（约 8k 行），面向 **MM2 类（Mad Murderer 类）游戏**。功能覆盖：战斗辅助（索敌/自动瞄准/自动开火）、移动（飞行/加速/穿墙）、视觉（玩家透视/名字/武器标记）、传送、藏身、翻译等。
+一个跑在 Roblox 执行器里的多功能 Lua 脚本（**13220 行**），当前主攻 **MachineParty**（权威数据全在 Player 的 `MP*` / `@*` Attribute 那套）。功能覆盖：战斗辅助（索敌/自动瞄准/自动开火）、移动（飞行/加速/穿墙）、视觉（玩家透视/名字/武器标记）、传送、藏身、翻译等。
 
 - **仓库**：`Mercershixin/CheatMenu`，分支 `main`
 - **当前版本**：见 `version.txt`
@@ -48,16 +48,21 @@
 
 ## 这个游戏的关键事实（做功能前必读）
 
-从 `事件库/` 抓包 + 诊断确认，**这个游戏的权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
+从诊断实锤确认（`CheatMenu-6.8.1.lua:4531`），**权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
 
-| 判据 | 位置 |
-|------|------|
-| 血量/状态 | `@Health` / `@MaxHealth` / `@State`（`Sprint`/`Slide`/`Stand`/`Dead`） |
-| 护盾 | `@Shield` / `@TempShield` |
-| 队伍 | `@Team`（`Team1`/`Team3` 字符串；标准 `Player.Team` 是 **nil**） |
-| 换弹/受控 | `@combatPaused`（`true` = 换弹/无法攻击） |
+| 判据 | 位置 | 关键点 |
+|------|------|------|
+| 血量 | `@Health` / `@MaxHealth` | `Humanoid.Health` **不可信** —— 满血活人会被误判已死 → 索敌全空 |
+| 状态 | `@State` = `Sprint`/`Slide`/`Stand`/`Dead` | 比 `Humanoid:GetState()` 准（权威状态） |
+| 护盾 | `@Shield` / `@TempShield` | 0 = 无盾 |
+| 换弹/受控 | `@combatPaused` | `true` = 换弹 / 受控 / 无法攻击 |
+| 队伍 | **多信号按序试**：`Team` → `MPTeam` → `MPTeamId` → `team` → `MPFaction` → `MPSide`，最后回退 `Player.Team.Name` | 标准 `Player.Team` 恒为 **nil**；这些可能**全为 nil** → 透视颜色恒定，属已知现象（`CheatMenu-6.8.1.lua:2413`） |
+| **幽灵/隐身态** | `MPGhost == true` | **MachineParty 特有**；本机玩家实测 `MPGhost=true` + `MPWalkSpeed=0` → 透视里单独标**紫色**（`CheatMenu-6.8.1.lua:2426`） |
 
-- 战斗框架是 **Madwork**（`MadworkCombat_*`），击杀信号走 `GameService.Killed`（不是 Madwork 那条，Madwork 那条是命中/伤害）。
+- ⚠️ **`MadworkCombat_*` 那套战斗框架在当前游戏里没有**（源码 0 处引用）—— 那是 `事件库/` 里**另一个游戏**的清单，
+  别照着写机判。
+- ⚠️ `EntityService.Heal` / `GameService.Revive` / `GameService.Respawn` **只有索引到才生效**；
+  换图 / 改版后可能 `FindFirstChild` 不到 → 按钮提示"没找到"（**优雅降级，不是崩**）。**换游戏前先重新抓包。**
 - **没有独立的"换弹"Remote** —— 换弹是纯客户端动画，检测只能用 `@combatPaused` 近似。
 
 ## 开发约定（⚠️ 接手必读，否则会踩坑）
@@ -67,7 +72,11 @@
    （`python .workbuddy/build/push_now.py --patch`，或 `local_sync.py --patch`，或环境变量 `CM_VER_KIND=patch`）。
    不加 `--patch` 就会把一次 bug 修复发成功能版（例：本该 4.8.1 却发成 4.9.0）。
    **发完记得核对 `version.txt` 与 CHANGELOG 顶部的版本号一致。**
-2. **改完必跑门禁**：`python .workbuddy/build/verify_all.py`（7 步：luau-compile / check.py 回归锁 / 仿真 / 探针 / dist 一致性 / 词法作用域）。
+2. **改完必跑门禁**：`python .workbuddy/build/verify_all.py`（分母 7，含一个 3.5 子步）：
+   **1/7** 官方 Luau 编译器 · **2/7** `check.py` 静态接线 + 回归锁 · **3/7** `diag_inject` 注入前体检（编码/BOM/危险 API）·
+   **3.5/7** 加载阶段有界冒烟（桩环境 + 顶层执行 + 建菜单）· **4/7** 整脚本桩仿真\* · **5/7** v69 规则探针\* ·
+   **6/7** 构建发布版 + 等价性 + 编译门禁 · **7/7** `check_globals` 词法作用域。
+   带 \* 的是**信息项** —— 仿真台在本机有既有死循环（改造前的 6.6.0 同样跑不完），跑不完不算失败。
 3. **改文件姿势**：用 `find`+切片+`assert` 唯一命中，**禁止 `re.sub(...,re.S)` 带 `.*`**（会吞行）。
 4. **连接必须经 `T()` 登记进 `SYS.Conns`**；"只挂一次"标记用弱表，别用实例属性（跨代次残留）。
 5. **★ 不要自作主张跑「模拟检测循环 / 多轮深度验证」** —— 这类"模拟 → 修复 → 再模拟 → 再修复"的循环
