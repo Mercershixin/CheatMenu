@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 18:17 sha c6b0bab4 bytes 464249'):format('2026-09-19 18:17','c6b0bab4',464249))
+print(('[CheatMenu] build 2026-09-19 18:32 sha f039e520 bytes 465897'):format('2026-09-19 18:32','f039e520',465897))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.1"
+SYS.BuildVer="6.9.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -7715,9 +7715,12 @@ local asz=btn.AbsoluteSize
 panel=Instance.new("ScrollingFrame")
 panel.BackgroundColor3=CY.panel panel.BackgroundTransparency=0.02
 panel.BorderSizePixel=0 panel.ZIndex=600
-panel.Position=UDim2.fromOffset(ap.X,ap.Y+asz.Y+4)
-panel.Size=UDim2.fromOffset(asz.X,math.min(#list,9)*30+10)
-panel.CanvasSize=UDim2.fromOffset(0,#list*30+10)
+local sc=tonumber(SYS.LastUIScale) or 1
+if not (sc>0) then sc=1 end
+panel.Position=UDim2.fromOffset(ap.X/sc,(ap.Y+asz.Y+4)/sc)
+panel.Size=UDim2.fromOffset(asz.X/sc,(math.min(#list,9)*30+10)/sc)
+panel.CanvasSize=UDim2.fromOffset(0,(#list*30+10)/sc)
+local psc=Instance.new("UIScale") psc.Scale=sc psc.Parent=panel
 panel.ScrollBarThickness=3 panel.ScrollBarImageColor3=CY.accent
 panel.Parent=SYS.ScreenGui
 UI.Round(panel,10) UI.Stroke(panel,CY.accent,1,0.5)
@@ -9396,10 +9399,12 @@ return ok
 end
 end
 UI.Defs={
-{name="战斗",icon="⚔"},{name="玩家",icon="👤"},{name="整蛊",icon="😈"},{name="移动",icon="◈"},{name="视觉",icon="◉"},{name="功能",icon="✱"},
-{name="传送",icon="➲"},{name="挂机",icon="★"},{name="MachineParty",icon="🎮"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
+{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},
+{name="MachineParty",icon="🎮"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},
+{name="整蛊",icon="😈"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
 }
 UI.Pages["移动"]=function(p)
+UI.Section(p,"✈️ 飞行",CY.accent)
 UI.Switch(p,"飞行 (Fly)","Fly",function(on)
 if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
@@ -9410,6 +9415,7 @@ function() return SYS.C_.FlyMode end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
 UI.Tip(p,"★ 默认「Align」= 官方推荐的 LinearVelocity + AlignOrientation, 也最不容易被服务器拉回。\n「BodyVelocity」= 老执行器(已弃用), 兼容用。\n「CFrame」= 逐帧瞬移, **会被服务端位置校验拉回**, 不推荐。\n另外: 新版本开飞行时不再把世界重力清零(那正是被拉回的经典原因), 只对角色自身抵消重力。",CY.yellow)
 UI.Div(p)
+UI.Section(p,"⚡ 移动加速",CY.accent)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
 if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
@@ -9420,9 +9426,11 @@ function() return SYS.C_.SpeedMode end,
 function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
 UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
 UI.Div(p)
+UI.Section(p,"🚧 穿墙 / 免伤",CY.green)
 UI.Switch(p,"穿墙 (Noclip)","Noclip",SYS.SetNoclip)
-UI.Switch(p,"🛡 反陷阱免伤 (地图道具/生物/陷阱都免)","TrapImmune",SYS.SetTrapImmune)
+UI.Switch(p,"🛡 反陷阱免伤","TrapImmune",SYS.SetTrapImmune)
 UI.Tip(p,"★ 完全豁免: 被撞/被弹开/被推走的位移 · 定身(走不动) · 布娃娃倒地 · 被坐骑锁住 · 被焊接钉住 · 客户端结算的伤害(掉血立刻补回)。\n★ 免不了: 服务端结算的伤害 —— 服务端是权威, 它扣的血客户端改不动。\n★ 滚石: 被撞后【水平速度清零 + 被拉走就渐进压回撞击点】, 所以不弹开、不被压着推走。\n★ 与「上帝模式」同开时会互相让位(不抢同一个状态)。",CY.yellow)
+UI.Section(p,"🦘 跳跃",CY.accent)
 UI.Switch(p,"无限跳跃","InfiniteJump",SYS.SetInfiniteJump)
 UI.Switch(p,"⤴ 超级跳跃 (跳得更高)","JumpBoost",SYS.SetJumpBoost)
 UI.Slider(p,"跳跃高度倍率",1,10,0.5,function() return SYS.C_.JumpMult end,
@@ -9431,20 +9439,30 @@ SYS.C_.JumpMult=v
 if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
 end,"x%.1f")
 UI.Div(p)
-UI.Switch(p,"🔒 锁定移速 (被改回去就抢回来)","LockSpeed",SYS.SetLocks)
-UI.Switch(p,"🔒 锁定跳跃 (跳跃力/高度都锁)","LockJump",SYS.SetLocks)
+UI.Section(p,"🔒 数值锁定 (被游戏改回去就抢回来)",CY.orange)
+UI.Switch(p,"🔒 锁定移速","LockSpeed",SYS.SetLocks)
+UI.Switch(p,"🔒 锁定跳跃","LockJump",SYS.SetLocks)
 UI.Switch(p,"🔒 锁定世界重力","LockGravity",SYS.SetLocks)
 UI.Slider(p,"世界重力",0,500,5,function() return SYS.C_.Gravity or 196.2 end,
 function(v) SYS.C_.Gravity=v if SYS.T_.LockGravity then P(function() WS.Gravity=v end) end end,"%.0f")
 UI.Tip(p,"「锁定」= 持续把数值抢回来。很多游戏的脚本每帧把移速/跳跃改回默认值, 于是「滑块拖了过一会儿自己变回去」 —— 开锁就稳住。\n★ 锁移速的目标会跟着上面的「移动速度倍率」走(开着加速时锁的是加速后的值), 两者不打架。\n★ 世界重力 196 = 原版; 调大更沉(掉得快), 调小更飘(跳得远)。\n★ 只写你自己和本地 Workspace, 卸载时自动还原(重力随已有逻辑恢复原值)。",CY.sub)
 end
 UI.Pages["视觉"]=function(p)
+UI.Section(p,"👁 人物 · 名字",CY.accent)
+UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮、金色 —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
 if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Switch(p,"玩家名字","ESPNameTag",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
+UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
+function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
+UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
+end)
+UI.Div(p)
+UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 机关)",CY.accent)
 UI.Switch(p,"👹 怪物/NPC 透视 (不属于玩家的怪也高亮, 橙色)","ESP_NPC",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
@@ -9463,6 +9481,8 @@ if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
 UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门)。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
+UI.Div(p)
+UI.Section(p,"👣 落脚点 · 射线",CY.accent)
 local FSMark={} SYS._fsN=0
 function SYS.SetFootstep(on)
 if not on then
@@ -9512,16 +9532,11 @@ end))
 SYS.Notify("👣 落脚点指示 已开启",SYS.CY.green)
 end
 UI.Switch(p,"👣 落脚点指示 (每个人脚下的光圈, 看谁站哪/往哪走)","FootstepESP",function(on) P(SYS.SetFootstep,on) end)
-UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
-end)
-UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
-function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
 UI.Switch(p,"子弹射线 (只画线, 不改弹道)","Tracer",function(on)
 if not on then P(SYS.TracerHide) end
 end)
-UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮、金色 —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
 UI.Div(p)
+UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
 UI.Switch(p,"自由视角","FreeCam",function(on)
 if on then SYS.StartFreeCam() else SYS.StopFreeCam() end
 end)
@@ -9559,7 +9574,7 @@ SYS.FX.Apply()
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 SYS.Notify("♻ 滤镜已重置",SYS.CY.sub)
 end)
-UI.Label(p,"后处理特效开关 (逐个隐藏游戏自带的后处理)",CY.sub)
+UI.Section(p,"🪟 后处理特效开关 (逐个隐藏游戏自带的后处理)",CY.purple)
 UI.Switch(p,"隐藏 模糊 (Blur)","FX_HBlur",function(on) SYS.FX.HidePost("BlurEffect",on) end)
 UI.Switch(p,"隐藏 泛光 (Bloom)","FX_HBloom",function(on) SYS.FX.HidePost("BloomEffect",on) end)
 UI.Switch(p,"隐藏 景深 (DepthOfField)","FX_HDoF",function(on) SYS.FX.HidePost("DepthOfFieldEffect",on) end)
@@ -9643,6 +9658,7 @@ end
 end)
 end
 UI.Pages["功能"]=function(p)
+UI.Section(p,"🔍 综合扫描 (八层一次扫完)",CY.green)
 UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查 八层一次扫完)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
@@ -9685,7 +9701,7 @@ UI.Tip(p,"⚠ 藏地下=【真的把你传送进地下】(位置是服务器同�
 .."· 高风险: 服务器可能做位置校验把你拉回/踢掉。",CY.yellow)
 UI.Switch(p,"穿透玩家","NoCollide",function(on) SYS.RefreshNC(on) end)
 UI.Div(p)
-UI.Label(p,"帧率优化（强化版）",CY.cyan)
+UI.Section(p,"⚡ 帧率优化 (强化版)",CY.cyan)
 UI.Switch(p,"帧率优化 (一键)","PerfBoost",SYS.SetPerf)
 UI.Slider(p,"剔除距离",30,500,10,function() return SYS.C_.PerfCull end,function(v) SYS.C_.PerfCull=v end,"%.0f")
 UI.Div(p)
@@ -9862,36 +9878,36 @@ end)
 UI.Tip(p,"技术来源(2026-09 复核 · 均为近 2 个月内更新的开源实现):\n  · Windows81/Personal-Roblox-Client-Scripts · anti-kick.lua —— hookfunction(Player.Kick/Destroy) + __namecall 过滤 kick/destroy\n  · Direnta/RBLXAntiKick —— getrawmetatable(game) 换掉 __namecall, 命中 Kick 直接丢弃\n  · CF-Trail/random utilLoader —— Adonis 识别特征: 带 __FUNCTION 的 RemoteFunction\n★ 只能拦【客户端发起的】踢人与传送 —— 服务端直接判定你违规时, 客户端拦不住。\n★ 需要执行器有 hookmetamethod / hookfunction / newcclosure; 没有会在上面自检里如实报出来。\n★ 单独关掉某一项会把它卸下(和「一键开启」不联动)。",CY.yellow)
 end
 UI.Pages["挂机"]=function(p)
-UI.Label(p,"挂机增强")
+UI.Section(p,"🎁 挂机增强",CY.accent)
 UI.Switch(p,"挂机防踢","AntiAFK",function(on)
 if on then SYS.enableAntiAFK() else SYS.disableAntiAFK() end
 end)
 UI.Div(p)
-UI.Label(p,"训练")
+UI.Section(p,"🏋 训练",CY.accent)
 UI.Switch(p,"自动训练踢击力量","AutoTrain",function(on)
 if on then SYS.StartTrain() else SYS.StopTrain() end
 end)
 UI.Slider(p,"训练循环间隔(秒)",1,30,0.5,function() return SYS.C_.AutoTrainSec end,function(v) SYS.C_.AutoTrainSec=v end,"%.1f")
 UI.Div(p)
-UI.Label(p,"进度")
+UI.Section(p,"📈 进度",CY.accent)
 UI.Switch(p,"自动重生","AutoRebirth",function(on)
 if on then SYS.StartReb() else SYS.StopReb() end
 end)
 UI.Slider(p,"重生检查间隔(秒)",1,15,0.5,function() return SYS.C_.RebirthCheck end,function(v) SYS.C_.RebirthCheck=v end,"%.1f")
 UI.Div(p)
-UI.Label(p,"训练加成")
+UI.Section(p,"✨ 训练加成",CY.accent)
 UI.Switch(p,"自动领取训练加成","AutoBonus")
 UI.Div(p)
-UI.Label(p,"健身房事件")
+UI.Section(p,"🏋 健身房事件",CY.accent)
 UI.Switch(p,"优先参加健身事件","AutoGym",function(on)
 if on then SYS.StartGym() else SYS.StopGym() end
 end)
 UI.Div(p)
-UI.Label(p,"基地操作",CY.cyan)
+UI.Section(p,"🏠 基地操作",CY.cyan)
 UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(30) end)
 UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
 UI.Div(p)
-UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
+UI.Section(p,"💰 自动售卖 (低于 CPS 门槛才卖)",CY.yellow)
 UI.Section(p,"🎁 自动领取 / 收集 (走游戏自己的 remote)",CY.green)
 UI.Switch(p,"自动领取奖励 (每日/活动/周常)","AutoClaim",SYS.SetAutoClaim)
 UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetAutoPickup)
@@ -10015,7 +10031,7 @@ UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
 if SYS.sellLowCPSTools then SYS.sellLowCPSTools(true) end
 end)
 UI.Div(p)
-UI.Label(p,"📊 CPS 统计",CY.purple)
+UI.Section(p,"📊 CPS 统计",CY.purple)
 local scanResL=UI.Label(p,"输入 CPS 后点击扫描",CY.sub)
 UI.Btn(p,"🔍 扫描低于当前门槛的脑红数量",CY.purple,function()
 task.spawn(function()
@@ -10052,6 +10068,7 @@ end)
 end)
 end
 UI.Pages["翻译"]=function(p)
+UI.Section(p,"💬 翻译开关",CY.accent)
 UI.Switch(p,"💬 聊天翻译","TransChat",function(on)
 if on then Trans.startChatListener() else Trans.stopChatListener() end
 end)
@@ -10066,7 +10083,7 @@ print("[Trans] ✅ 手动全屏扫描完成")
 end)
 end)
 UI.Div(p)
-UI.Label(p,"📤 发送消息",CY.yellow)
+UI.Section(p,"📤 发送消息",CY.yellow)
 local langOpts={}
 for _,l in ipairs(Trans.LANGS or {}) do table.insert(langOpts,l.name) end
 if #langOpts>0 then
@@ -10097,7 +10114,7 @@ if ok then inBox.Text="" end
 end)
 end)
 UI.Div(p)
-UI.Label(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or SYS.N.Cache),CY.cyan)
+UI.Section(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or SYS.N.Cache),CY.cyan)
 local statL=UI.Label(p,("已缓存 %d 条"):format(Trans.cacheCount or 0),CY.green)
 local statConcurrent = UI.Label(p, "命中 0 | 本地 0 | 失败 0 | 跳过扫 0 | 均 0ms", CY.cyan)
 task.spawn(function()
@@ -10121,7 +10138,7 @@ end)
 UI.Switch(p,"📖 本地短语表 (train→训练 这类常见词离线直译)","LocalPhrase")
 UI.Tip(p,"「清空缓存」只清已缓存的译文 + 删除缓存文件, 不动这个内置短语表。\n关掉这个开关 = 完全依赖翻译模型, 模型没开就一个都不翻。",CY.sub)
 UI.Div(p)
-UI.Label(p,"🔌 本地模型状态",CY.cyan)
+UI.Section(p,"🔌 本地模型状态",CY.cyan)
 local stL=UI.Label(p,"本地模型: ⚪ 检测中...",CY.sub)
 local function refresh()
 if not stL or not stL.Parent then return end
@@ -10636,6 +10653,7 @@ SYS.Notify("调用链已输出到控制台",SYS.CY.green)
 end
 end
 UI.Pages["传送"]=function(p)
+UI.Section(p,"🖱 鼠标传送 · 快速跳转",CY.accent)
 UI.Switch(p,"允许鼠标传送 (T)","TPEnabled")
 UI.Btn(p,"传送到鼠标位置",CY.cyan,SYS.TPToMouse)
 UI.Btn(p,"传送到最近玩家",CY.cyan,SYS.TPToNearest)
@@ -10662,7 +10680,7 @@ function(v) SYS.C_.MouseTPMode=v end)
 UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
 UI.Switch(p,"⌨ Ctrl+数字 直达保存点","PathKey",SYS.SetPathKey)
 UI.Tip(p,"按住 Ctrl 再按数字键 1~9 -> 直接传送到下面「已保存位置」里对应的那一条(主键盘/小键盘都认)。\n只对前 9 个生效; 那一条还不存在时会在屏幕上提示。默认关(避免误触)。",CY.sub)
-UI.Label(p,"服务器列表 (同游戏的其它房间)",CY.sub)
+UI.Section(p,"🖥 服务器列表 (同游戏的其它房间)",CY.cyan)
 local svrList=Instance.new("ScrollingFrame")
 svrList.Size=UDim2.new(1,0,0,132) svrList.BackgroundColor3=CY.card
 svrList.BackgroundTransparency=0.3 svrList.BorderSizePixel=0 svrList.Parent=p
@@ -10767,7 +10785,7 @@ end
 end
 SYS.WPRender=wpRender
 wpRender()
-UI.Label(p,"玩家列表")
+UI.Section(p,"👥 玩家列表",CY.cyan)
 local plList=Instance.new("ScrollingFrame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
 plList.BackgroundTransparency=0.3 plList.BorderSizePixel=0 plList.Parent=p
@@ -10812,7 +10830,7 @@ end
 Ref()
 T(Players.PlayerAdded:Connect(function() task.wait(0.3) P(Ref) end))
 T(Players.PlayerRemoving:Connect(function() task.wait(0.3) P(Ref) end))
-UI.Label(p,"已保存位置 (点行里的「自动」按钮才会循环传送, 默认关)",CY.sub)
+UI.Section(p,"📍 已保存位置 (点「自动」才循环传送, 默认关)",CY.purple)
 local svList=Instance.new("ScrollingFrame")
 svList.Size=UDim2.new(1,0,0,140) svList.BackgroundColor3=CY.card
 svList.BackgroundTransparency=0.3 svList.BorderSizePixel=0 svList.Parent=p
@@ -10873,6 +10891,7 @@ RebuildSaved()
 end
 UI.Pages["战斗"]=function(p)
 local AUTO_TXT="自动 · 按优先级挑"
+UI.Section(p,"📊 实时状态",CY.accent)
 local card,inner=UI.Card(p,175)
 local _,targetV=UI.Stat(inner,"当前目标","—")
 local _,wantV=UI.Stat(inner,"指定目标","自动")
@@ -10880,7 +10899,7 @@ local _,lockV=UI.Stat(inner,"锁定状态","未锁定")
 local _,aimV=UI.Stat(inner,"瞄准方式","关闭")
 local _,distV=UI.Stat(inner,"距离","—")
 local _,perfV=UI.Stat(inner,"循环频率(选人/开火)","—")
-UI.Section(p,"一键 · 开战 / 停战",CY.green)
+UI.Section(p,"⚔ 一键开战 / 停战",CY.green)
 UI.Btn(p,"⚡ 一键开战 (秒锁秒开枪 · 移动中也准)",CY.green,function()
 if SYS.Combat and SYS.Combat.QuickMode then SYS.Combat.QuickMode() end
 end)
@@ -10896,7 +10915,7 @@ SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
 UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(正在瞄我的→指定→最近→屏幕中心)。\n点完直接打就行。",CY.green)
 UI.Div(p)
-UI.Section(p,"瞄准 · 关闭 / 自动瞄准",CY.accent)
+UI.Section(p,"🎯 瞄准 (自动瞄准 / 关闭)",CY.accent)
 local AIM_OFF   ="关闭"
 local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
 UI.Cycle(p,"瞄准方式",{AIM_OFF,AIM_AUTO},
@@ -10939,7 +10958,7 @@ function() return SYS.C_.CB_MissRate end,
 function(v) SYS.C_.CB_MissRate=v end,"%.0f")
 UI.Tip(p,"「命中率」= 只有 n% 的帧去转相机; 100 = 最准, 调低后更接近人手的间歇感。\n「漏打模式」= 开火前按概率跳过一枪, 避免每枪都爆头的统计特征。\n★ 平滑度/预判量/索敌半径已经在上面 —— 对应「跟随速度 / 预测提前量 / 索敌范围」, 不再重复给控件。\n★ 「粘性瞄准(锁定保持)」你早前明确删过, 这次没有加回来 —— 需要的话单独说。",CY.sub)
 UI.Div(p)
-UI.Section(p,"开火 · Triggerbot",CY.red)
+UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
 UI.Slider(p,"开火间隔 (秒 · 调小=更快)",0.02,0.50,0.005,
 function() return SYS.C_.CB_FireDelay end,
@@ -10949,7 +10968,7 @@ function() return SYS.C_.CB_HpThr end,
 function(v) SYS.C_.CB_HpThr=v end,"%.0f")
 UI.Tip(p,"「自动开火」要看得见目标才开枪: 开着自动瞄准时直接用锁定目标;\n瞄准关着时要求准星真压在敌人身上(纯扳机模式)。",CY.sub)
 UI.Div(p)
-UI.Section(p,"打谁 · 选人规则",CY.purple)
+UI.Section(p,"🧭 打谁 · 选人规则",CY.purple)
 UI.Dropdown(p,"指定目标(点开选择)", function()
 local L={AUTO_TXT}
 local names={}
@@ -10994,7 +11013,7 @@ end)
 UI.Switch(p,"🚫 只打指定目标 (他不在就不动手)","CB_TgtStrict")
 UI.Div(p)
 UI.Div(p)
-UI.Section(p,"白名单 / 黑名单 (选人硬规则)",CY.orange)
+UI.Section(p,"📋 白名单 / 黑名单 (选人硬规则)",CY.orange)
 UI.Dropdown(p,"选一个玩家", function()
 local L={}
 local ps=Players:GetPlayers()
@@ -11028,7 +11047,7 @@ SYS.WL.White={} SYS.WL.Black={}
 SYS.Notify("🧹 名单已清空",SYS.CY.sub)
 end)
 UI.Tip(p,"规则: 黑名单里的名字【永远不选】; 白名单【非空】时只从白名单里选人(其余全部排除)。\n两边互斥 —— 加进一边会自动从另一边移除。",CY.sub)
-UI.Section(p,"选人偏好",CY.purple)
+UI.Section(p,"🔀 选人偏好 (自动选人的先后顺序)",CY.purple)
 UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
 function() return ({"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
 function(v)
@@ -11050,7 +11069,7 @@ UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF
 UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
 UI.Div(p)
-UI.Section(p,"⚠ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
+UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
 UI.Switch(p,"静默瞄准 (准星没对上也判定命中)","CB_SilentAim",function(on)
 if on then
 local ok,err=SYS.RayHook.Install()
@@ -11099,7 +11118,7 @@ print("[CheatMenu] 射线改写次数: "..tostring(SYS.RayHook.Rewrites)
 SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
 end)
 UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 同上, 且不要求视线\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
-UI.Section(p,"工具 / 调试 (融合自 ChronixHub)",CY.purple)
+UI.Section(p,"🧰 工具 / 调试 (融合自 ChronixHub)",CY.purple)
 UI.Switch(p,"🕳 防掉虚空 (掉太深自动拉回原位)","AntiVoid",function(on)
 if not on then SYS.Notify("🕳 防掉虚空 已关闭",SYS.CY.sub) return end
 SYS.TT(task.spawn(function()
@@ -11204,7 +11223,7 @@ end
 end))
 SYS.Notify("📊 调试屏 已开启",SYS.CY.green)
 end)
-UI.Section(p,"客户端清理",CY.sub)
+UI.Section(p,"🧹 客户端清理",CY.sub)
 UI.Btn(p,"🧹 清理游戏里乱动的垃圾部件 (只删明显是特效残留的)",CY.orange,function()
 P(function()
 local n=0
@@ -11271,7 +11290,7 @@ SYS.Notify("🔍 Ctrl+点击 看部件 已开启",SYS.CY.green)
 end
 UI.Switch(p,"🔍 Ctrl+点击 看部件信息 (只读, 排障用)","ClickInspect",function(on) P(SYS.SetClickInspect,on) end)
 UI.Tip(p,"按住 Ctrl 用鼠标左键点一个部件 -> 控制台打出它的名字/路径/类型/位置/材质/属性/子级数。\n纯只读, 不改任何东西。",CY.sub)
-UI.Section(p,"诊断",CY.sub)
+UI.Section(p,"🩺 诊断 (一键输出问题)",CY.sub)
 UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
 if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
 end)
@@ -11317,14 +11336,14 @@ end
 end)
 end
 UI.Pages["MachineParty"]=function(p)
-UI.Section(p,"小游戏 · 透视",CY.accent)
+UI.Section(p,"🎮 小游戏 · 透视",CY.accent)
 UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮黄绿)","ESP_Mini")
 UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
-UI.Section(p,"小游戏 · 自动",CY.accent)
+UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
-UI.Section(p,"小游戏 · 状态",CY.sub)
+UI.Section(p,"📊 小游戏 · 状态",CY.sub)
 UI.Btn(p,"📋 列出小游戏脚本 & 场景(打到控制台)",CY.cyan,function()
 P(function()
 print("========== MachineParty 小游戏状态 ==========")
@@ -11363,7 +11382,7 @@ print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
 print("=======================================")
 end)
 end)
-UI.Section(p,"敌我 / 队伍",CY.yellow)
+UI.Section(p,"👥 敌我 / 队伍",CY.yellow)
 UI.Btn(p,"👥 敌我诊断 (打出每个玩家的队伍信号, 打到控制台)",CY.yellow,function()
 P(function()
 print("========== 敌我 / 队伍 诊断 ==========")
@@ -11427,15 +11446,15 @@ SYS.Notify("⚡ 瞬间交互 已开启(提示变成一按即用)",SYS.CY.green)
 end
 UI.Switch(p,"⚡ 瞬间交互 (按住读条变成一按即成, 纯客户端)","InstantPrompt",function(on) P(SYS.SetInstantPrompt,on) end)
 UI.Tip(p,"把游戏里 ProximityPrompt(按 E 的那种)的【按住时长】设成 0 -> 一按就用。\n只改你本地, 不改服务端; 关闭会把原时长写回。",CY.sub)
-UI.Section(p,"自动 / 辅助",CY.accent)
+UI.Section(p,"⚙ 自动 / 辅助",CY.accent)
 UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
-UI.Label(p,"配置",CY.green)
+UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
 UI.Tip(p,"开关改动会自动保存, 下次加载脚本时自动生效(无需手动操作)。",CY.sub)
 UI.Div(p)
-UI.Section(p,"热键设置 · 点一下再按新键",CY.cyan)
+UI.Section(p,"⌨ 热键设置 (点一下再按新键)",CY.cyan)
 local function keyRow(label,field)
 local b=UI.Btn(p,label.."  ["..tostring(SYS.C_[field] or "?").."]",CY.card,function()
 SYS.KeyPickTarget=field
@@ -11596,7 +11615,7 @@ end)
 UI.Tip(p,"卸载 = 关掉全部功能 + 销毁菜单 + 恢复相机/控制; 不会重进服务器、不会断开连接。\n换服务器用上面的「重进服务器」。(之前报 277 被踢, 是点到重进服务器了, 不是卸载)",CY.sub)
 end
 UI.Pages["玩家"]=function(p)
-UI.Section(p,"选择目标",CY.cyan)
+UI.Section(p,"🎯 选择目标",CY.cyan)
 UI.Dropdown(p,"选择玩家", function()
 local L={}
 local ps=Players:GetPlayers()
@@ -11641,7 +11660,7 @@ SYS.PCRender=pcRender
 pcRender()
 UI.Btn(p,"🔄 刷新信息",CY.cyan,function() pcRender() end)
 UI.Div(p)
-UI.Section(p,"传送类 (只把你送过去 / 拉过来)",CY.green)
+UI.Section(p,"🚀 传送类 (只把你送过去 / 拉过来)",CY.green)
 UI.Btn(p,"🚀 传送到他",CY.green,function() SYS.PC.GotoTarget("tp") end)
 UI.Btn(p,"🎯 缓动到他 (1.2 秒滑过去)",CY.purple,function() SYS.PC.GotoTarget("tween") end)
 UI.Btn(p,"🚶 寻路/步行到他",CY.cyan,function() SYS.PC.GotoTarget("walk") end)
@@ -11649,13 +11668,13 @@ UI.Switch(p,"🔁 循环跟传 (离远了自动再过去)","PC_LoopTP",function(
 UI.Btn(p,"🧲 把他拉过来 (客户端)",CY.orange,function() SYS.PC.BringTarget() end)
 UI.Tip(p,"带「客户端」字样的按钮只改你本地看到的画面 —— 服务端不认, 他本人没感觉, 而且很快会被拉回。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.sub)
 UI.Div(p)
-UI.Section(p,"控制类 (全部只写本地副本)",CY.orange)
+UI.Section(p,"🎛 控制类 (全部只写本地副本)",CY.orange)
 UI.Switch(p,"🧊 冻结他 (客户端)","PC_Freeze",function(on) SYS.PC.Freeze(on) end)
 UI.Btn(p,"⚡ 闪现半秒 (客户端)",CY.purple,function() SYS.PC.Blink(0.5) end)
 UI.Switch(p,"🗣 本地静音他 (只静音他角色里的音效)","PC_Mute",function(on) SYS.PC.MuteVoice(on) end)
 UI.Tip(p,"⚠ 客户端【没有】静音他人语音的公开 API —— 这条只能静音他角色里的 Sound。\n「冻结 / 闪现 / 拉过来」同理: 只改你本地副本。",CY.yellow)
 UI.Div(p)
-UI.Section(p,"跟随 / 环绕类 (动的是你自己)",CY.purple)
+UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己)",CY.purple)
 UI.Switch(p,"🎩 坐他头上","PC_OnHead",function(on) SYS.PC.OnHead(on) end)
 UI.Switch(p,"🌀 绕着他旋转","PC_Orbit",function(on) SYS.PC.Orbit(on) end)
 UI.Slider(p,"旋转速度",0.5,12,0.5,function() return SYS.C_.PC_SpinSpeed end,
@@ -11665,7 +11684,7 @@ function(v) SYS.C_.PC_Range=v end,"%.0f")
 UI.Switch(p,"👁 盯着他 (相机锁死在他身上)","PC_Stare",function(on) SYS.PC.Stare(on) end)
 UI.Switch(p,"🚶 行走跟随","PC_Follow",function(on) SYS.PC.Follow(on) end)
 UI.Div(p)
-UI.Section(p,"好友",CY.cyan)
+UI.Section(p,"👥 好友",CY.cyan)
 UI.Btn(p,"➕ 添加好友",CY.green,function()
 local pl=SYS.PC.Get()
 if not pl then SYS.Notify("先在上面选一个玩家",SYS.CY.sub) return end
@@ -11695,10 +11714,26 @@ end
 end)
 end
 UI.Pages["整蛊"]=function(p)
-UI.Section(p,"目标",CY.orange)
-UI.Input(p,"玩家名 (留空 = 用「玩家」页选中的那位)","",
-function() return SYS.C_.PG_Target or "" end,
-function(v) SYS.C_.PG_Target=v end)
+UI.Section(p,"🎯 目标 (先选人)",CY.orange)
+local NONE_TXT="(不指定 · 跟随「玩家」页选中的那位)"
+local function prankNames()
+local L={NONE_TXT}
+local names={}
+local ps=Players:GetPlayers()
+for _,pl in ipairs(ps) do
+if pl~=LP and pl.Character and pl.Character.Parent then names[#names+1]=pl.Name end
+end
+table.sort(names)
+for i=1,#names do L[#L+1]=names[i] end
+return L
+end
+UI.Dropdown(p,"目标玩家 (点开选择)", prankNames,
+function()
+local v=SYS.C_.PG_Target
+if (not v) or v=="" then return NONE_TXT end
+return v
+end,
+function(v) SYS.C_.PG_Target=(v==NONE_TXT) and "" or v end)
 UI.Btn(p,"🌀 甩飞这个玩家",CY.orange,function()
 local pl=SYS.Prank.Target()
 if pl and SYS.Prank.Fling(pl) then
@@ -11721,7 +11756,7 @@ end
 UI.Switch(p,"🔁 持续甩飞全部玩家 (每 0.5 秒一轮)","PG_FlingAll",flingAllLoop)
 UI.Tip(p,"⚠ 整蛊工具全部只写【你本地的副本】: 对方屏幕上不会动, 服务端也不认 —— 但你会看到他被甩飞。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.yellow)
 UI.Div(p)
-UI.Section(p,"旋转 / 击飞",CY.purple)
+UI.Section(p,"🌀 旋转 / 击飞",CY.purple)
 UI.Slider(p,"旋转速度",1,30,1,function() return SYS.C_.PG_SpinSpeed end,
 function(v) SYS.C_.PG_SpinSpeed=v end,"%.0f")
 UI.Switch(p,"🌀 开始旋转 (所有玩家原地打转)","PG_Spin",function(on) SYS.Prank.Spin(on) end)
@@ -11730,14 +11765,19 @@ UI.Switch(p,"🚀 飞行击飞","PG_FlyHit",function(on) SYS.Prank.FlyHit(on) en
 UI.Switch(p,"🚶 走路击飞 (靠近谁谁飞)","PG_WalkHit",function(on) SYS.Prank.WalkHit(on) end)
 UI.Switch(p,"🫥 隐身击飞 (自己透明 + 靠近就飞)","PG_HideHit",function(on) SYS.Prank.HideHit(on) end)
 UI.Div(p)
-UI.Section(p,"工具环绕 / 附着",CY.cyan)
+UI.Section(p,"🧲 工具环绕 / 附着",CY.cyan)
 UI.Switch(p,"🛠 环绕工具 (手里道具绕自己转)","PG_OrbitTool",function(on) SYS.Prank.OrbitTool(on) end)
 UI.Slider(p,"环绕范围 (格)",2,30,1,function() return SYS.C_.PG_OrbitRange end,
 function(v) SYS.C_.PG_OrbitRange=v end,"%.0f")
 UI.Slider(p,"环绕速度 (度/秒)",10,360,10,function() return SYS.C_.PG_OrbitSpeed end,
 function(v) SYS.C_.PG_OrbitSpeed=v end,"%.0f")
-UI.Input(p,"要附着的玩家名","",function() return SYS.C_.PG_Attach or "" end,
-function(v) SYS.C_.PG_Attach=v end)
+UI.Dropdown(p,"工具附着到谁 (点开选择)", prankNames,
+function()
+local v=SYS.C_.PG_Attach
+if (not v) or v=="" then return NONE_TXT end
+return v
+end,
+function(v) SYS.C_.PG_Attach=(v==NONE_TXT) and "" or v end)
 UI.Btn(p,"🧲 把工具附着到他身上 (客户端)",CY.orange,function()
 SYS.Prank.AttachToolTo(SYS.C_.PG_Attach)
 end)
@@ -11754,7 +11794,7 @@ end)
 SYS.Notify("📌 工具已钉在脚下",SYS.CY.purple)
 end)
 UI.Div(p)
-UI.Section(p,"黑洞 (把附近的人和物吸过来)",CY.purple)
+UI.Section(p,"🕳 黑洞 (把附近的人和物吸过来)",CY.purple)
 UI.Switch(p,"🕳 开启黑洞","PG_BlackHole",function(on) SYS.Prank.BlackHole(on) end)
 UI.Slider(p,"范围 (格)",10,200,5,function() return SYS.C_.PG_BH_Range end,
 function(v) SYS.C_.PG_BH_Range=v end,"%.0f")
@@ -11763,7 +11803,7 @@ function(v) SYS.C_.PG_BH_Height=v end,"%.0f")
 UI.Slider(p,"吸引力",10,500,10,function() return SYS.C_.PG_BH_Pull end,
 function(v) SYS.C_.PG_BH_Pull=v end,"%.0f")
 UI.Div(p)
-UI.Section(p,"近距离击杀",CY.red)
+UI.Section(p,"☠ 近距离击杀",CY.red)
 UI.Switch(p,"☠ 击杀贴着你的人","PG_KillNear",function(on) SYS.Prank.KillNear(on) end)
 UI.Slider(p,"距离 (格)",1,40,1,function() return SYS.C_.PG_KillDist end,
 function(v) SYS.C_.PG_KillDist=v end,"%.0f")
