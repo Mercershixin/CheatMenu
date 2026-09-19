@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:49 sha acd5c1ed bytes 414656'):format('2026-09-19 19:49','acd5c1ed',414656))
+print(('[CheatMenu] build 2026-09-19 19:54 sha 75e4ade5 bytes 418146'):format('2026-09-19 19:54','75e4ade5',418146))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.11"
+SYS.BuildVer="6.9.12"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2556,6 +2556,108 @@ local out = {}
 for k, v in pairs(c) do out[#out + 1] = ("  %-24s %d"):format(k, v) end
 table.sort(out)
 return out
+end)
+SYS.RegisterScanner("反作弊模块痕迹 (客户端可见部分)", function()
+local L = {}
+local function add(s) L[#L + 1] = tostring(s) end
+local function nmOf(o)
+local ok, v = P(function() return tostring(o.Name) end)
+return (ok and type(v) == "string") and v or ""
+end
+local function pathOf(o)
+local ok, v = P(function() return o:GetFullName() end)
+return (ok and type(v) == "string") and v or "?"
+end
+local KW = {"anticheat","anti_cheat","anti-cheat","antiexploit","exploit","guard","moderation",
+"detect","sanit","validate","verify","integrity","suspicious","speedhack","flyhack",
+"cheat","hack","ban","kick","反作弊","检测","校验","拦截","封禁"}
+local function hitKW(nm)
+local ln = string.lower(nm)
+for i = 1, #KW do if string.find(ln, KW[i], 1, true) then return KW[i] end end
+return nil
+end
+add("① 名字含反作弊关键词的实例:")
+local roots = {}
+for _, sn in ipairs({"ReplicatedStorage","ReplicatedFirst","Workspace","Lighting","StarterGui","StarterPlayer","Players"}) do
+local ok, v = P(function() return game:GetService(sn) end)
+if ok and v then roots[#roots + 1] = v end
+end
+if LP then
+for _, cn in ipairs({"PlayerGui","PlayerScripts","Backpack"}) do
+local ok, v = P(function() return LP:FindFirstChild(cn) end)
+if ok and v then roots[#roots + 1] = v end
+end
+end
+local n1 = 0
+for r = 1, #roots do
+local ok, ds = P(function() return roots[r]:GetDescendants() end)
+if ok and type(ds) == "table" then
+for i = 1, #ds do
+local o = ds[i]
+local nm = nmOf(o)
+local k = hitKW(nm)
+if k then
+local cl = ""
+P(function() cl = tostring(o.ClassName) end)
+add(("   [%s] %s   <- 命中 \"%s\"   %s"):format(cl, nm, k, pathOf(o)))
+n1 = n1 + 1
+if n1 > 60 then add("   ...(超过 60 条, 先列这些)") break end
+end
+end
+end
+end
+if n1 == 0 then
+add("   (客户端可见范围内没扫到名字可疑的实例 —— 反作弊很可能【全在服务端】, 客户端这边看不到)")
+end
+add("")
+add("② 像「位置上报 / 校验」的 Remote (位置被回退时, 优先怀疑它们):")
+local P2 = {"position","cframe","move","movement","sync","update","pos","velocity","speed",
+"teleport","tp","distance","walk","humanoid","character","report","heartbeat"}
+local n2 = 0
+local okr, rs = P(function() return game:GetService("ReplicatedStorage") end)
+if okr and rs then
+local okd, ds = P(function() return rs:GetDescendants() end)
+if okd and type(ds) == "table" then
+for i = 1, #ds do
+local o = ds[i]
+local cl = ""
+P(function() cl = tostring(o.ClassName) end)
+if cl == "RemoteEvent" or cl == "RemoteFunction" or cl == "UnreliableRemoteEvent" then
+local ln = string.lower(nmOf(o))
+for q = 1, #P2 do
+if string.find(ln, P2[q], 1, true) then
+add(("   [%s] %s   %s"):format(cl, nmOf(o), pathOf(o)))
+n2 = n2 + 1
+break
+end
+end
+end
+if n2 > 60 then break end
+end
+end
+end
+if n2 == 0 then add("   (没扫到 —— 位置校验可能用别的命名, 或直接在服务端做校验)") end
+add("")
+add("③ 已加载的模块脚本:")
+if type(getloadedmodules) == "function" then
+local okm, mods = P(getloadedmodules)
+if okm and type(mods) == "table" then
+add(("   共 %d 个已加载模块"):format(#mods))
+local n3 = 0
+for i = 1, #mods do
+local o = mods[i]
+local nm = nmOf(o)
+local k = hitKW(nm)
+if k then add(("   %s   <- 命中 \"%s\"   %s"):format(nm, k, pathOf(o))) n3 = n3 + 1 end
+end
+if n3 == 0 then add("   (模块名里没有可疑关键词)") end
+else
+add("   (getloadedmodules() 没返回表)")
+end
+else
+add("   (这台执行器没有 getloadedmodules)")
+end
+return L
 end)
 function SYS.DumpRemotes()
 local counts={RE=0,RF=0,BE=0,BF=0,PP=0,CD=0}
