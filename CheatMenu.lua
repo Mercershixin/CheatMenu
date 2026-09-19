@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:34 sha fb803c9c bytes 422916'):format('2026-09-19 20:34','fb803c9c',422916))
+print(('[CheatMenu] build 2026-09-19 20:36 sha 5eee2fc8 bytes 423095'):format('2026-09-19 20:36','5eee2fc8',423095))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -54,7 +54,7 @@ WPShow=false,WPKey=false,
 NoDeath=false,NoKnock=false,
 CB_MissMode=false,
 CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
-CB_360=false,CB_ZeroDelay=false,CB_SilentNoTurn=false,
+CB_360=false,CB_SilentNoTurn=false,
 TransBilingual=false,
 AutoLowPing=false,
 AutoClaim=false,AutoPickup=false,AutoRespawn=false,
@@ -101,7 +101,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.20"
+SYS.BuildVer="6.9.21"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5549,7 +5549,7 @@ if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
 if pl and isEnemy(pl) and not (SYS.T_.CB_SkipFF and hasShield(pl)) then
 local p=partOf(pl,mode)
-if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or SYS.T_.CB_ZeroDelay or clearShot(p)) then return pl,p end
+if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or (tonumber(SYS.C_.CB_ScanMs) or 33)<=0 or clearShot(p)) then return pl,p end
 end
 if (not pl) or (not alive(pl)) then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
@@ -5667,8 +5667,8 @@ if okH and hit then
 local hp=playerFromPart(hit)
 if hp and isEnemy(hp) and not (SYS.T_.CB_SkipFF and hasShield(hp)) then
 local pp=partOf(hp,mode)
-if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or SYS.T_.CB_ZeroDelay
-or (SYS.T_.CB_SilentAim and SYS.T_.CB_SilentNoTurn) or clearShot(pp)) then return hp,pp end
+if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or (tonumber(SYS.C_.CB_ScanMs) or 33)<=0
+or SYS.T_.CB_SilentNoTurn or clearShot(pp)) then return hp,pp end
 end
 end
 end
@@ -5700,6 +5700,7 @@ if #cands==0 then P(CB.SelfHealFilters) end
 return nil,nil
 end
 local function aimTick()
+if SYS.T_.CB_SilentNoTurn then return end
 if not SYS.T_.CB_Aim then return end
 if SYS.T_.CB_SnapFire then return end
 if SYS.MenuOpen then return end
@@ -5738,14 +5739,15 @@ local function fireTick()
 if not SYS.T_.CB_Fire then return end
 if SYS.MenuOpen then return end
 local now=os.clock()
-local fireGap=(SYS.T_.CB_ZeroDelay and true) and 0.005
-or ((SYS.C_.CB_FireDelay or 0.06)*(0.8+math.random()*0.4))
+local fd=tonumber(SYS.C_.CB_FireDelay) or 0.06
+local fireGap=(fd<=0) and 0 or (fd*(0.8+math.random()*0.4))
 if now-CB.LastFire<fireGap then return end
 local cam=SYS.Cam
 if not cam then return end
 local vp=cam.ViewportSize
 local canFire
-local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire or SYS.T_.CB_ZeroDelay)
+local zeroScan=(tonumber(SYS.C_.CB_ScanMs) or 33)<=0
+local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire or zeroScan)
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire or SYS.T_.CB_360 then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
@@ -5818,12 +5820,14 @@ return
 end
 end
 local anyOn=SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
-or SYS.T_.CB_360 or SYS.T_.CB_SilentAim or SYS.T_.CB_BulletWall or SYS.T_.CB_ZeroDelay
+or SYS.T_.CB_360 or SYS.T_.CB_SilentAim or SYS.T_.CB_BulletWall or SYS.T_.CB_SilentNoTurn
 if not anyOn then
 CB.Target=nil CB.TargetPart=nil
 return
 end
-local scanDt=(SYS.T_.CB_ZeroDelay and true) and 0 or SCAN_DT
+local scanMs=tonumber(SYS.C_.CB_ScanMs)
+if scanMs==nil then scanMs=33 end
+local scanDt=scanMs/1000
 accScan=accScan+dt
 if accScan>=scanDt then
 accScan=0
@@ -10568,7 +10572,9 @@ end
 end)
 UI.Tip(p,"「自动瞄准」= 每帧把准星转到目标身上。移动中被相机带偏就打开「移动时暂停瞄准」。\n背身锁得快不快看下面的「跟随速度」(调大更快)。",CY.yellow)
 UI.Switch(p,"🎯 360 无死角 (有人就锁就打 · 不看方向/视野)","CB_360")
-UI.Switch(p,"⚡ 无延迟模式 (每帧索敌 · 看到就锁 · 瞄到就开火)","CB_ZeroDelay")
+UI.Slider(p,"索敌间隔 (毫秒 · 0=每帧秒锁)",0,200,1,
+function() return SYS.C_.CB_ScanMs or 33 end,
+function(v) SYS.C_.CB_ScanMs=v QueueSave() end,"%.0f")
 UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
 function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
 function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
@@ -10589,7 +10595,7 @@ UI.Tip(p,"★ 已移除「命中率 / 漏打模式」—— 不再有任何「�
 UI.Div(p)
 UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
-UI.Slider(p,"开火间隔 (秒 · 调小=更快)",0.02,0.50,0.005,
+UI.Slider(p,"开火间隔 (秒 · 0=每帧都开, 最快)",0,0.50,0.005,
 function() return SYS.C_.CB_FireDelay end,
 function(v) SYS.C_.CB_FireDelay=v end,"%.3f")
 UI.Slider(p,"只打血量低于此值的目标 (0=不限)",0,100,5,
