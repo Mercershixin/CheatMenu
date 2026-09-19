@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:43 sha a834ffbd bytes 437080'):format('2026-09-19 21:43','a834ffbd',437080))
+print(('[CheatMenu] build 2026-09-19 21:46 sha 1c43a9cb bytes 435319'):format('2026-09-19 21:46','1c43a9cb',435319))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.33"
+SYS.BuildVer="6.9.34"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -223,7 +223,8 @@ writefile(CFG,json)
 end
 end)
 end
-SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true }
+SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
+AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -10116,26 +10117,6 @@ UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(
 UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
 UI.Div(p)
 UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
-UI.Section(p,"🎁 自动领取 / 收集 (走游戏自己的 remote)",CY.green)
-UI.Switch(p,"自动领取奖励 (每日/活动/周常)","AutoClaim",SYS.SetAutoClaim)
-UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetAutoPickup)
-UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or 3 end,
-function(v) SYS.C_.FarmInterval=v end,"%.0f")
-UI.Switch(p,"死亡自动重生","AutoRespawn",SYS.SetAutoRespawn)
-UI.Btn(p,"💰 一键 0 元扫货 (只买标价 0 的)",CY.green,function() P(SYS.FreeSweep) end)
-UI.Section(p,"🆕 推荐功能 (一键全领 / 开箱 / 商店)",CY.green)
-UI.Btn(p,"🎁 一键全领 (邮件+好友+里程碑+在线+赛季)",CY.green,function() P(SYS.ClaimEverything) end)
-UI.Btn(p,"📦 一键开箱 / 抽奖",CY.cyan,function() P(SYS.OpenAllBoxes) end)
-UI.Switch(p,"🛒 自动商店 (周期试全部商店通道)","AutoShop",SYS.SetAutoShop)
-UI.Slider(p,"商店间隔 (秒)",1,60,1,function() return SYS.C_.ShopInterval or 5 end,
-function(v) SYS.C_.ShopInterval=v QueueSave() end,"%.0f")
-UI.Switch(p,"🚩 自动选队伍/角色","AutoTeam",SYS.SetAutoTeam)
-UI.Switch(p,"💃 自动表情 (循环)","AutoEmote",SYS.SetAutoEmote)
-UI.Tip(p,"★ 这些都走通用事件查找(别名+模糊扫描)，换游戏也能用。\n"..
-"本游戏(MachineParty)只有 5 条真 remote —— 这类通用查找大多拿不到东西, 属正常。",CY.yellow)
-UI.Tip(p,"✅ 能做: 游戏【本身免费】的东西 —— 每日/活动奖励、0 元商品、地上掉落物。\n"..
-"⛔ 做不到: 白嫖【付费】物品。购买是服务端权威 —— 客户端发请求后服务端要查你的货币余额, 不够直接拒绝;\n"..
-"   客户端改不动服务端余额, 这是引擎架构, 不是脚本没生效。真能 0 元买的只有服务端自己标价 0 的商品。",CY.yellow)
 UI.Switch(p,"自动售卖 (每5秒)","AutoSell")
 UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
 local row=Instance.new("Frame")
