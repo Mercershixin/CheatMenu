@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:06 sha 0bbea9e5 bytes 439512'):format('2026-09-19 21:06','0bbea9e5',439512))
+print(('[CheatMenu] build 2026-09-19 21:12 sha b429d7d7 bytes 438277'):format('2026-09-19 21:12','b429d7d7',438277))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.28"
+SYS.BuildVer="6.9.29"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -114,6 +114,7 @@ end
 SYS.N={
 Gui    = ({"App","MainGui","Interface","CorePack","UiRoot","HudRoot","PanelRoot"})[math.random(1,7)],
 Float  = "FloatingButton",
+Hud    = ({"HudRoot","Interface","UiRoot"})[math.random(1,3)],
 F3     = "Stats",
 Combat = "Render",
 CAS    = "CoreAction_".._rands(4),
@@ -955,12 +956,12 @@ local a,v,al=FlyParts()
 if a and a.Parent==root and v and v.Parent==root and al and al.Parent==root then return true end
 SYS.FlyTeardown()
 local okF=pcall(function()
-a=Instance.new("Attachment") a.Name="CM_FlyAtt" a.Parent=root
-v=Instance.new("LinearVelocity") v.Name="CM_FlyVel" v.Attachment0=a
+a=Instance.new("Attachment") a.Name="Attachment" a.Parent=root
+v=Instance.new("LinearVelocity") v.Name="LinearVelocity" v.Attachment0=a
 v.MaxForce=math.huge
 pcall(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
 v.VectorVelocity=Vector3.zero v.Parent=root
-al=Instance.new("AlignOrientation") al.Name="CM_FlyAlign" al.Attachment0=a
+al=Instance.new("AlignOrientation") al.Name="AlignOrientation" al.Attachment0=a
 pcall(function() al.Mode=Enum.OrientationAlignmentMode.OneAttachment end)
 al.MaxTorque=math.huge al.Responsiveness=200 al.RigidityEnabled=false
 al.Parent=root
@@ -1084,8 +1085,8 @@ end
 if not (SpeedAtt and SpeedAtt.Parent==root) or not (SpeedLV and SpeedLV.Parent==root) then
 if SpeedLV then SpeedLV:Destroy() SpeedLV=nil end
 if SpeedAtt then SpeedAtt:Destroy() SpeedAtt=nil end
-SpeedAtt=Instance.new("Attachment") SpeedAtt.Name="CM_SpdAtt" SpeedAtt.Parent=root
-SpeedLV=Instance.new("LinearVelocity") SpeedLV.Name="CM_SpdVel" SpeedLV.Attachment0=SpeedAtt
+SpeedAtt=Instance.new("Attachment") SpeedAtt.Name="Attachment" SpeedAtt.Parent=root
+SpeedLV=Instance.new("LinearVelocity") SpeedLV.Name="LinearVelocity" SpeedLV.Attachment0=SpeedAtt
 SpeedLV.MaxForce=math.huge
 P(function() SpeedLV.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
 SpeedLV.VectorVelocity=Vector3.zero SpeedLV.Parent=root
@@ -1152,11 +1153,11 @@ if not NoclipVel or NoclipVel.Parent~=root then
 if NoclipVel then NoclipVel:Destroy() end
 if NoclipAtt then NoclipAtt:Destroy() end
 local okA,att=pcall(function()
-local a=Instance.new("Attachment") a.Name="CM_NoclipAtt" a.Parent=root
+local a=Instance.new("Attachment") a.Name="Attachment" a.Parent=root
 return a
 end)
 local okV,vel=pcall(function()
-local v=Instance.new("LinearVelocity") v.Name="CM_NoclipVel"
+local v=Instance.new("LinearVelocity") v.Name="LinearVelocity"
 v.Attachment0=att v.MaxForce=math.huge
 v.VectorVelocity=Vector3.zero v.Parent=root
 return v
@@ -2011,48 +2012,6 @@ local ok=P(function() writefile(fn,table.concat(buf,"\n")) end)
 return ok and fn or nil
 end
 local HudGui, HudLabel, HudHideAt = nil, nil, nil
-function SYS.Hud(text, secs)
-secs = tonumber(secs) or 4
-P(function()
-local pg = SYS.ScreenGui or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
-if not pg then return end
-if not HudGui or not HudGui.Parent then
-local gui = Instance.new("ScreenGui")
-gui.Name = "CM_Hud"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.DisplayOrder = 999999
-P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
-local fr = Instance.new("Frame")
-fr.AnchorPoint = Vector2.new(0.5, 0)
-fr.Position = UDim2.new(0.5, 0, 0, 44)
-fr.Size = UDim2.new(0, 540, 0, 34)
-fr.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
-fr.BackgroundTransparency = 0.15
-fr.BorderSizePixel = 0
-fr.Parent = gui
-local r = Instance.new("UICorner")
-r.CornerRadius = UDim.new(0, 9)
-r.Parent = fr
-local lab = Instance.new("TextLabel")
-lab.Size = UDim2.new(1, -20, 1, 0)
-lab.Position = UDim2.new(0, 10, 0, 0)
-lab.BackgroundTransparency = 1
-lab.Font = Enum.Font.GothamMedium
-lab.TextSize = 15
-lab.TextColor3 = Color3.fromRGB(235, 240, 250)
-lab.TextXAlignment = Enum.TextXAlignment.Center
-lab.TextWrapped = true
-lab.Parent = fr
-gui.Parent = pg
-HudGui, HudLabel = gui, lab
-end
-HudLabel.Text = tostring(text or "")
-HudGui.Enabled = true
-HudHideAt = (secs > 0) and (os.clock() + secs) or nil
-end)
-print("[CheatMenu][HUD] " .. tostring(text))
-end
 if RS and RS.Heartbeat then
 T(RS.Heartbeat:Connect(function()
 if HudHideAt and os.clock() >= HudHideAt then
@@ -2493,7 +2452,7 @@ local pg = (SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("Pl
 if not pg then return end
 if not HudGui then
 local gui = Instance.new("ScreenGui")
-gui.Name = "CM_Hud"
+gui.Name = SYS.N.Hud
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 999999
