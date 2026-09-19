@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:15 sha 834c07c4 bytes 434387'):format('2026-09-19 19:15','834c07c4',434387))
+print(('[CheatMenu] build 2026-09-19 19:31 sha 1449e387 bytes 419037'):format('2026-09-19 19:31','1449e387',419037))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.7"
+SYS.BuildVer="6.9.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6995,6 +6995,11 @@ return true
 end
 return false
 end
+local function biText(plain,hit)
+if not SYS.T_.TransBilingual then return hit end
+if (not plain) or plain=="" or plain==hit then return hit end
+return tostring(hit).." ("..tostring(plain)..")"
+end
 function Trans.processLabel(obj,source)
 if not obj or not obj.Parent or Trans.Unloaded then return end
 if Trans.isIgnored(obj) then return end
@@ -7010,7 +7015,8 @@ end
 local plain=v.plain
 local hit=Cache[plain] or Cache[v.nk] or v.loc
 if hit and hit~="" and hit~=plain then
-local newText=(plain==cur) and hit or plainReplace(cur,plain,hit)
+local tr=biText(plain,hit)
+local newText=(plain==cur) and tr or plainReplace(cur,plain,tr)
 if writeProp(obj,"Text",cur,newText) then
 Trans.Stats.hit=Trans.Stats.hit+1
 remember(cur,newText,plain,hit)
@@ -7023,7 +7029,8 @@ if not res or res=="" then return end
 if not obj or not obj.Parent or Trans.Unloaded then return end
 local now=obj.Text
 if now~=cur then return end
-local newText=(plain==cur) and res or plainReplace(cur,plain,res)
+local tr=biText(plain,res)
+local newText=(plain==cur) and tr or plainReplace(cur,plain,tr)
 if writeProp(obj,"Text",cur,newText) then remember(cur,newText,plain,res) end
 end)
 end
@@ -9467,7 +9474,6 @@ UI.Switch(p,"🖐 可交互对象透视 (箱子/梯子/按钮/传送门…轮廓
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
-UI.Slider(p,"🖐 可交互道具探测距离 (格)",200,5000,100,function() return SYS.C_.PickDist or 1200 end,function(v) SYS.C_.PickDist=v end,"%.0f")
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
 UI.Switch(p,"🚪 门/陷阱/切割 透视 (陷阱·伤害机关=黄, 切割类=品红)","ESP_Door",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
@@ -9550,6 +9556,72 @@ P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
 UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
+UI.Btn(p,"📋 列出小游戏脚本 & 场景(打到控制台)",CY.cyan,function()
+P(function()
+print("========== MachineParty 小游戏状态 ==========")
+local names={"MachinePartyDuckHunt","MachinePartyRightOfWay","MachinePartyBlindout",
+"MachinePartyCrushHour","BumperMadness","MachinePartyActions","MachinePartyControlCard",
+"MachinePartyLimitedStand","MachinePartyStationSigns","MachinePartyPadFocus","MachinePartyWorldUI"}
+local PS=SYS.LP and SYS.LP.PlayerScripts
+for _,n in ipairs(names) do
+local has=(PS and PS:FindFirstChild(n)) and "有" or "无"
+print(("  PlayerScripts.%-28s %s"):format(n,has))
+end
+local areas={"duck hunt","Chisel Gauntlet","Lobby","MPPadHost_LimitedDrop","MPPadHost_Vault100"}
+for _,n in ipairs(areas) do
+local o=WS:FindFirstChild(n)
+print(("  Workspace.%-28s %s"):format(n,o and "有" or "无"))
+end
+print("  相关 Remote: Sniper.Shoot / MachineParty.Event (见「综合扫描」A 层)")
+print("=============================================")
+end)
+end)
+UI.Btn(p,"🔍 探测小游戏里的可交互物(打到控制台)",CY.purple,function()
+P(function()
+print("========== 小游戏可交互物探测 ==========")
+local n1,n2=0,0
+for _,o in ipairs(WS:GetDescendants()) do
+local nm=tostring(o.Name):lower()
+if nm:find("chisel",1,true) or nm:find("duck",1,true) or nm:find("gauntlet",1,true) then
+if o:IsA("ClickDetector") then n1=n1+1
+elseif o:IsA("ProximityPrompt") then n2=n2+1
+elseif o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
+print("  Remote: "..o:GetFullName())
+end
+end
+end
+print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
+print("=======================================")
+end)
+end)
+UI.Btn(p,"👥 敌我诊断 (打出每个玩家的队伍信号, 打到控制台)",CY.yellow,function()
+P(function()
+print("========== 敌我 / 队伍 诊断 ==========")
+print(("[1] 本机 Player.Team = %s"):format(tostring(SYS.LP and SYS.LP.Team and SYS.LP.Team.Name)))
+for _,pl in ipairs(Players:GetPlayers()) do
+local ap={}
+if type(pl.GetAttributes)=="function" then
+local ok,t=pcall(function() return pl:GetAttributes() end)
+if ok and type(t)=="table" then
+for k,v in pairs(t) do
+local lk=tostring(k):lower()
+if lk:find("team") or lk:find("side") or lk:find("role") or lk:find("faction")
+or lk:find("cell") or lk:find("group") or lk:find("party") then
+ap[#ap+1]=k.."="..tostring(v)
+end
+end
+end
+end
+table.sort(ap)
+print(("  %-22s Team=%-8s 可疑属性: %s"):format(
+pl.Name, tostring(pl.Team and pl.Team.Name),
+#ap>0 and table.concat(ap,", ") or "(无 team/side/role/cell 类属性)"))
+end
+print("  ↑ 把这几行发我, 我按真实字段接进透视的颜色判定")
+print("====================================")
+end)
+end)
+UI.Tip(p,"透视现在是: 队友=绿 / 敌人=红 / 幽灵(MPGhost)=紫。若所有人都红, 说明【队伍信号没读到】——\n点上面这个按钮把结果发我即可(这游戏的队伍字段名必须按实际数据接, 不能猜)。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
@@ -9600,21 +9672,6 @@ UI.Btn(p,"📍 设置当前位置为重生点",CY.cyan,function() SYS.SetSpawnHe
 UI.Btn(p,"↩️ 恢复默认重生点",CY.orange,function() SYS.ClearSpawnHere() end)
 UI.Tip(p,"重生点记账是【纯本地】的(写本地 RespawnLocation + 死了把你挪回去)。\n若这个游戏的重生位置由服务端决定, 本地改无效 —— 那时只有「原地重生」按钮能立即生效。",CY.sub)
 UI.Div(p)
-UI.Section(p,"🧰 工具增删",CY.green)
-UI.Btn(p,"🧰 获取游戏内全部工具 (复制进背包)",CY.green,function() SYS.GiveAllTools() end)
-UI.Btn(p,"✋ 把手中工具放回背包",CY.orange,function()
-local ch=LP.Character
-local t=ch and ch:FindFirstChildOfClass("Tool")
-local bp=LP:FindFirstChildOfClass("Backpack")
-if t and bp then
-P(function() t.Parent=bp end)
-SYS.Notify("✋ 已把手中工具放回背包",SYS.CY.sub)
-else
-SYS.Notify("手里没有工具(或没有背包)",SYS.CY.sub)
-end
-end)
-UI.Btn(p,"🧹 移除全部工具 (背包 + 手上)",CY.red,function() SYS.RemoveAllTools() end)
-UI.Tip(p,"「获取全部工具」是把场景里所有 Tool 复制一份进你的背包 —— 只影响你自己, 别人看不到。\n背包里放太多会被游戏脚本卡顿, 用完记得「移除全部工具」。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
 UI.Switch(p,"🛡 一键开启全部防护","Prot_HideGui",function(on)
@@ -9698,70 +9755,6 @@ else
 SYS.Prot.RemoveTPGuard()
 end
 end)
-UI.Div(p)
-UI.Section(p,"🧪 反作弊对抗靶场 (自己打自己)",CY.orange)
-UI.Btn(p,"▶ 开始对抗检测 (跑全部检测器)",CY.green,function()
-SYS.AC.RunAll()
-end)
-UI.Btn(p,"🔧 一键修复全部可修项 (命名/键名/文件/隐藏)",CY.cyan,function()
-SYS.AC.FixAll()
-end)
-UI.Btn(p,"🔄 重置采样 (重新统计位移与相机)",CY.purple,function()
-SYS.AC.ResetSampler()
-SYS.AC.StartSampler()
-SYS.Notify("🔄 采样已重置并重新开始 —— 正常玩 5~10 秒再点「开始对抗检测」",SYS.CY.purple)
-end)
-UI.Btn(p,"▶ 开始采样 (统计单帧位移 / 相机偏离)",CY.green,function()
-SYS.AC.StartSampler()
-SYS.Notify("▶ 采样中… 正常玩 5~10 秒, 再点「开始对抗检测」",SYS.CY.green)
-end)
-local acList=SYS.MiniList(p,220)
-UI.Tip(p,"★ 对手是什么: 这里对抗的是【游戏自己的反作弊脚本】(LocalScript) —— 它没有 getrawmetatable/getgc,\n"
-.."   但能遍历 CoreGui/PlayerGui/Workspace 按名字找外挂、读你的数值与位移、统计开枪间隔。\n"
-.."★ 对手不是什么: Hyperion(Byfron) 是【客户端原生反篡改】(内存注入/DLL 签名/反调试/线程监控),\n"
-.."   工作在进程与内核层, 有 268/267/279 错误码但没有公开版本号, 而且 Lua 根本碰不到它 ——\n"
-.."   Lua 能跑说明注入已成功; Hyperion 判定时客户端在 Lua 之前就崩了。这里不编造那层的结果。\n"
-.."★ D5/D6/D8 是【服务端也能读到】的信号(数值/瞬移/相机) —— 客户端遮不住, 只能用时再开、别长期挂着。\n"
-.."★ D9 提醒: 装了 hook 之后, 只有【执行器级】对手能枚举出来; 游戏脚本看不到。hook 越少攻击面越小。",CY.sub)
-local function acRender()
-SYS.MiniClear(acList)
-local R=SYS.AC.Results
-if #R==0 then
-local r=SYS.MiniRow(acList,26)
-local l=SYS.MiniText(r,"还没测 —— 点上面「▶ 开始对抗检测」",11,CY.sub)
-l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
-return
-end
-for i=1,#R do
-local e=R[i]
-local r=SYS.MiniRow(acList,e.pass and 26 or 40)
-local col=e.pass and CY.green or CY.red
-local tag=SYS.MiniText(r,e.pass and "✔ 通过" or "✘ 未过",11,col)
-tag.Size=UDim2.new(0,52,1,0) tag.Position=UDim2.new(0,6,0,0)
-local nm=SYS.MiniText(r,e.id.." "..e.name,11,CY.text)
-nm.Size=UDim2.new(0,132,1,0) nm.Position=UDim2.new(0,60,0,0)
-local dt=SYS.MiniText(r,e.detail,11,CY.sub)
-dt.Size=UDim2.new(1,-200,1,0) dt.Position=UDim2.new(0,196,0,0)
-dt.TextWrapped=true
-end
-local r=SYS.MiniRow(acList,24)
-local l=SYS.MiniText(r,("通过 %d / %d"):format(SYS.AC.Pass or 0,SYS.AC.Total or 0),12,CY.accent)
-l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
-end
-SYS.ACRender=acRender
-acRender()
-UI.Btn(p,"🧪 防护能力自检 (这台支持哪些 hook)",CY.cyan,function()
-local t={
-"=== 防护能力自检 ===",
-SYS.Prot.CapsText(),
-"识别到 Adonis 结构: "..tostring(SYS.Prot.DetectAdonis()),
-"已拦截次数: "..tostring(SYS.Prot.Blocked),
-"最后被拦截来源: "..tostring(SYS.Prot.LastFrom),
-}
-print(table.concat(t,"\n"))
-SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
-end)
-UI.Tip(p,"技术来源(2026-09 复核 · 均为近 2 个月内更新的开源实现):\n  · Windows81/Personal-Roblox-Client-Scripts · anti-kick.lua —— hookfunction(Player.Kick/Destroy) + __namecall 过滤 kick/destroy\n  · Direnta/RBLXAntiKick —— getrawmetatable(game) 换掉 __namecall, 命中 Kick 直接丢弃\n  · CF-Trail/random utilLoader —— Adonis 识别特征: 带 __FUNCTION 的 RemoteFunction\n★ 只能拦【客户端发起的】踢人与传送 —— 服务端直接判定你违规时, 客户端拦不住。\n★ 需要执行器有 hookmetamethod / hookfunction / newcclosure; 没有会在上面自检里如实报出来。\n★ 单独关掉某一项会把它卸下(和「一键开启」不联动)。",CY.yellow)
 end
 UI.Pages["挂机"]=function(p)
 UI.Section(p,"🎁 挂机增强",CY.accent)
@@ -9769,22 +9762,6 @@ UI.Switch(p,"挂机防踢","AntiAFK",function(on)
 if on then SYS.enableAntiAFK() else SYS.disableAntiAFK() end
 end)
 UI.Div(p)
-UI.Section(p,"🎁 自动领取 / 收集 (走游戏自己的 remote)",CY.green)
-UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetAutoPickup)
-UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or 3 end,
-function(v) SYS.C_.FarmInterval=v end,"%.0f")
-UI.Section(p,"🧺 隔空获取 (不用靠近)",CY.cyan)
-UI.Cycle(p,"获取范围",{"全部","单独(最近的)"},
-function() return SYS.C_.GrabMode or "全部" end,
-function(v) SYS.C_.GrabMode=v QueueSave() end)
-UI.Btn(p,"🧺 立即获取",CY.green,function()
-P(function() SYS.RangedGrab((SYS.C_.GrabMode=="单独(最近的)") and "one" or "all") end)
-end)
-UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近也能触发。\n"..
-"   全部 = 场景里所有可拾取物逐个发一遍; 单独 = 只拿离你最近的那个。\n"..
-"⛔ 刷物品: 做不到。物品增减是服务端权威 —— 客户端发的是请求, 服务端按自己的库存处理;\n"..
-"   凭空造物只可能来自游戏自身漏洞, 客户端没有合法途径。",CY.yellow)
-UI.Switch(p,"📣 事件预告 (怪物/波次/回合等 → HUD 提示)","EventWatch",SYS.SetEventWatch)
 UI.Section(p,"⏱ 冷却加速 / 自动连用",CY.orange)
 UI.Slider(p,"时间倍率 (1=关, 越高冷却越快)",1,20,0.5,
 function() return SYS.C_.TimeScale or 1 end,
@@ -9816,6 +9793,10 @@ if on then Trans.startChatListener() else Trans.stopChatListener() end
 end)
 UI.Switch(p,"🖼️ 界面翻译","TransUI",function(on)
 if on then Trans.startUIScan() else Trans.stopUIScan() end
+end)
+UI.Switch(p,"🔤 中英对照 (显示成「译文 (原文)」)","TransBilingual",function(on)
+if Trans.reqOn(false) or Trans.reqOn(true) then P(function() Trans.forceRescan() end) end
+SYS.Notify(on and "🔤 中英对照已开: 译文 (原文)" or "🔤 已关: 只显示译文",SYS.CY.cyan)
 end)
 UI.Btn(p,"🔍 立即强制全屏扫描翻译",CY.cyan,function()
 task.spawn(function()
@@ -10635,186 +10616,6 @@ print("[CheatMenu] 射线改写次数: "..tostring(SYS.RayHook.Rewrites)
 SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
 end)
 UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 同上, 且不要求视线\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
-UI.Section(p,"🧰 工具 / 调试 (融合自 ChronixHub)",CY.purple)
-UI.Switch(p,"🕳 防掉虚空 (掉太深自动拉回原位)","AntiVoid",function(on)
-if not on then SYS.Notify("🕳 防掉虚空 已关闭",SYS.CY.sub) return end
-SYS.TT(task.spawn(function()
-local lastGood=nil
-while SYS.T_.AntiVoid and not SYS.Unloaded do
-P(function()
-local ch=LP.Character
-local root=ch and ch:FindFirstChild("HumanoidRootPart")
-if root then
-local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(root.Position,Vector3.new(0,-6,0)),{ch}))
-if hit then lastGood=root.CFrame
-elseif root.Position.Y < -50 and lastGood then
-root.CFrame=lastGood
-end
-end
-end)
-task.wait(0.5)
-end
-end))
-SYS.Notify("🕳 防掉虚空 已开启",SYS.CY.green)
-end)
-UI.Switch(p,"🦅 空中走 (悬停在地面高度上, 不落地)","AirWalk",function(on)
-if not on then
-if SYS._awConn then P(function() SYS._awConn:Disconnect() end) SYS._awConn=nil end
-SYS.Notify("🦅 空中走 已关闭",SYS.CY.sub) return
-end
-if SYS._awConn then return end
-SYS._awConn=RS.Heartbeat:Connect(function()
-if not SYS.T_.AirWalk or SYS.Unloaded then return end
-P(function()
-local ch=LP.Character
-local root=ch and ch:FindFirstChild("HumanoidRootPart")
-local hum=ch and ch:FindFirstChildOfClass("Humanoid")
-if root and hum then
-local v=root.AssemblyLinearVelocity
-if math.abs(v.Y)>0.5 then root.AssemblyLinearVelocity=Vector3.new(v.X,0,v.Z) end
-end
-end)
-end)
-T(SYS._awConn)
-SYS.Notify("🦅 空中走 已开启(悬停, 不落地)",SYS.CY.green)
-end)
-UI.Btn(p,"🧪 执行器能力自检 (这台支持哪些函数, 打到控制台)",CY.cyan,function()
-P(function()
-print("========== 执行器能力自检 ==========")
-local list={"getgc","getgenv","getrenv","getreg","getconnections","getnilinstances","getrunningscripts",
-"getscripts","getloadedmodules","getcallingscript","getscriptsource","getscriptbytecode",
-"fireclickdetector","fireproximityprompt","firetouchinterest","hookfunction","replaceclosure",
-"newcclosure","checkcaller","islclosed","isreadonly","setreadonly","getupvalue","setupvalue",
-"getrawmetatable","setrawmetatable","make_writeable","identifyexecutor","request","http_request",
-"writefile","readfile","isfile","listfiles","makefolder","delfile","loadstring","getcustomasset","setclipboard"}
-for _,n in ipairs(list) do
-local f=nil
-P(function() f=getfenv()[n] end)
-if f==nil then P(function() f=_G[n] end) end
-print(("  %-22s %s"):format(n, type(f)=="function" and "✓ 有" or "✗ 没有"))
-end
-print("===================================")
-end)
-end)
-UI.Switch(p,"📊 F3 调试屏 (FPS / 延迟 / 坐标 / 实例数)","F3Debug",function(on)
-if not on then
-if SYS._f3Gui then P(function() SYS._f3Gui:Destroy() end) SYS._f3Gui=nil end
-SYS.Notify("📊 调试屏 已关闭",SYS.CY.sub) return
-end
-if SYS._f3Gui then return end
-P(function()
-local g=Instance.new("ScreenGui")
-g.Name=SYS.N.F3 g.ResetOnSpawn=false g.IgnoreGuiInset=true
-P(function() if gethui then g.Parent=gethui() end end)
-if not g.Parent then g.Parent=SYS.PG end
-local t=Instance.new("TextLabel")
-t.Size=UDim2.new(0,240,0,86) t.Position=UDim2.new(0,10,0,10)
-t.BackgroundColor3=Color3.fromRGB(10,12,18) t.BackgroundTransparency=0.3
-t.BorderSizePixel=0 t.TextColor3=Color3.fromRGB(180,255,120)
-t.Font=Enum.Font.Code t.TextSize=13 t.TextXAlignment=Enum.TextXAlignment.Left
-t.Text="…" t.Parent=g
-SYS._f3Gui=g SYS._f3Lbl=t
-end)
-SYS.TT(task.spawn(function()
-local last,acc=os.clock(),0
-while SYS.T_.F3Debug and not SYS.Unloaded do
-P(function()
-local f=RS.RenderStepped:Wait()
-acc=acc+1
-local now=os.clock()
-if now-last>=0.5 then
-local fps=math.floor(acc/(now-last)+0.5)
-acc=0 last=now
-local ch=LP.Character
-local root=ch and ch:FindFirstChild("HumanoidRootPart")
-local pos=root and root.Position or Vector3.new(0,0,0)
-local ping=0
-P(function() ping=math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-if SYS._f3Lbl and SYS._f3Lbl.Parent then
-SYS._f3Lbl.Text=("FPS %d   Ping %d ms\n位置 %.0f, %.0f, %.0f\nWorkspace 实例 %d\n角色 %d  玩家 %d")
-:format(fps,ping,pos.X,pos.Y,pos.Z,#WS:GetChildren(),#Players:GetPlayers())
-end
-end
-end)
-end
-end))
-SYS.Notify("📊 调试屏 已开启",SYS.CY.green)
-end)
-UI.Section(p,"🧹 客户端清理",CY.sub)
-UI.Btn(p,"🧹 清理游戏里乱动的垃圾部件 (只删明显是特效残留的)",CY.orange,function()
-P(function()
-local n=0
-for _,o in ipairs(WS:GetDescendants()) do
-if o:IsA("BasePart") and o.Name:lower():find("debris",1,true) and not o:IsDescendantOf(LP.Character) then
-n=n+1 P(function() o:Destroy() end)
-end
-end
-SYS.Notify(("🧹 清理完成, 删了 %d 个"):format(n),SYS.CY.green)
-end)
-end)
-UI.Btn(p,"🗑 删掉游戏自带的广告/公告 GUI (只删名字可疑的)",CY.orange,function()
-P(function()
-local n=0
-local PG=SYS.PG
-if PG then
-for _,o in ipairs(PG:GetChildren()) do
-local nm=o:GetDescendants()
-local hit=false
-P(function() if o.Name:lower():find("ad",1,true) or o.Name:lower():find("promo",1,true)
-or o.Name:lower():find("notice",1,true) or o.Name:lower():find("公告") then hit=true end end)
-if hit and o~=SYS.ScreenGui then n=n+1 P(function() o:Destroy() end) end
-end
-end
-SYS.Notify(("🗑 已删 %d 个广告类 GUI"):format(n),SYS.CY.green)
-end)
-end)
-function SYS.SetClickInspect(on)
-if not on then SYS._ciOn=false return end
-SYS._ciOn=true
-T(UIS.InputBegan:Connect(function(input,gp)
-if not SYS._ciOn or SYS.Unloaded then return end
-if input.UserInputType~=Enum.UserInputType.MouseButton1 then return end
-local ctrl=false
-P(function() ctrl=UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) end)
-if not ctrl then return end
-P(function()
-local cam=WS.CurrentCamera
-local m=LP:GetMouse()
-local unit=WS.CurrentCamera.CFrame:PointToWorldSpace(Vector3.new(0,0,0))
-local ray=WS.CurrentCamera:ScreenPointToRay(m.X,m.Y)
-local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(ray.Origin,ray.Direction*600),{LP.Character}))
-if not hit then print("🔍 Ctrl+点击: 没命中任何部件") return end
-print(string.rep("═",56))
-print("🔍 部件信息 (Ctrl+点击)")
-print("  名称      : "..tostring(hit.Name))
-print("  完整路径  : "..tostring(hit:GetFullName()))
-print("  类型      : "..tostring(hit.ClassName))
-local par=hit.Parent
-print("  父级      : "..tostring(par and par:GetFullName()))
-print("  位置      : "..tostring(hit.Position))
-print("  大小      : "..tostring(hit.Size))
-print("  材质/颜色 : "..tostring(hit.Material).." / "..tostring(hit.Color))
-print("  锚定/碰撞 : "..tostring(hit.Anchored).." / "..tostring(hit.CanCollide))
-print("  透明度    : "..tostring(hit.Transparency))
-local at=hit:GetAttributes()
-local ak={} for k,v in pairs(at or {}) do ak[#ak+1]=k.."="..tostring(v) end
-if #ak>0 then table.sort(ak) print("  属性      : "..table.concat(ak,", ")) end
-print("  子级      : "..tostring(#hit:GetChildren()).." 个")
-print(string.rep("═",56))
-end)
-end))
-SYS.Notify("🔍 Ctrl+点击 看部件 已开启",SYS.CY.green)
-end
-UI.Switch(p,"🔍 Ctrl+点击 看部件信息 (只读, 排障用)","ClickInspect",function(on) P(SYS.SetClickInspect,on) end)
-UI.Tip(p,"按住 Ctrl 用鼠标左键点一个部件 -> 控制台打出它的名字/路径/类型/位置/材质/属性/子级数。\n纯只读, 不改任何东西。",CY.sub)
-UI.Section(p,"🩺 诊断 (一键输出问题)",CY.sub)
-UI.Btn(p,"▶ 立即测试一次 (结果看控制台)",CY.green,function()
-if SYS.Combat and SYS.Combat.TestOnce then SYS.Combat.TestOnce() end
-end)
-UI.Btn(p,"📋 输出战斗诊断到控制台",CY.accent,function()
-if SYS.Combat and SYS.Combat.Diag then SYS.Combat.Diag() end
-end)
-UI.Tip(p,"不生效就先点「立即测试一次」: 它逐条打出 选没选到目标 / 相机转没转 /\nhook 装没装 / 准星在不在敌人身上 —— 一眼看出卡在哪一步。",CY.red)
 task.spawn(function()
 local lastScan,lastHud=0,0
 while card.Parent do
@@ -10861,73 +10662,7 @@ UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
 UI.Section(p,"📊 小游戏 · 状态",CY.sub)
-UI.Btn(p,"📋 列出小游戏脚本 & 场景(打到控制台)",CY.cyan,function()
-P(function()
-print("========== MachineParty 小游戏状态 ==========")
-local names={"MachinePartyDuckHunt","MachinePartyRightOfWay","MachinePartyBlindout",
-"MachinePartyCrushHour","BumperMadness","MachinePartyActions","MachinePartyControlCard",
-"MachinePartyLimitedStand","MachinePartyStationSigns","MachinePartyPadFocus","MachinePartyWorldUI"}
-local PS=SYS.LP and SYS.LP.PlayerScripts
-for _,n in ipairs(names) do
-local has=(PS and PS:FindFirstChild(n)) and "有" or "无"
-print(("  PlayerScripts.%-28s %s"):format(n,has))
-end
-local areas={"duck hunt","Chisel Gauntlet","Lobby","MPPadHost_LimitedDrop","MPPadHost_Vault100"}
-for _,n in ipairs(areas) do
-local o=WS:FindFirstChild(n)
-print(("  Workspace.%-28s %s"):format(n,o and "有" or "无"))
-end
-print("  相关 Remote: Sniper.Shoot / MachineParty.Event (见「综合扫描」A 层)")
-print("=============================================")
-end)
-end)
-UI.Btn(p,"🔍 探测小游戏里的可交互物(打到控制台)",CY.purple,function()
-P(function()
-print("========== 小游戏可交互物探测 ==========")
-local n1,n2=0,0
-for _,o in ipairs(WS:GetDescendants()) do
-local nm=tostring(o.Name):lower()
-if nm:find("chisel",1,true) or nm:find("duck",1,true) or nm:find("gauntlet",1,true) then
-if o:IsA("ClickDetector") then n1=n1+1
-elseif o:IsA("ProximityPrompt") then n2=n2+1
-elseif o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
-print("  Remote: "..o:GetFullName())
-end
-end
-end
-print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
-print("=======================================")
-end)
-end)
 UI.Section(p,"👥 敌我 / 队伍",CY.yellow)
-UI.Btn(p,"👥 敌我诊断 (打出每个玩家的队伍信号, 打到控制台)",CY.yellow,function()
-P(function()
-print("========== 敌我 / 队伍 诊断 ==========")
-print(("[1] 本机 Player.Team = %s"):format(tostring(SYS.LP and SYS.LP.Team and SYS.LP.Team.Name)))
-for _,pl in ipairs(Players:GetPlayers()) do
-local ap={}
-if type(pl.GetAttributes)=="function" then
-local ok,t=pcall(function() return pl:GetAttributes() end)
-if ok and type(t)=="table" then
-for k,v in pairs(t) do
-local lk=tostring(k):lower()
-if lk:find("team") or lk:find("side") or lk:find("role") or lk:find("faction")
-or lk:find("cell") or lk:find("group") or lk:find("party") then
-ap[#ap+1]=k.."="..tostring(v)
-end
-end
-end
-end
-table.sort(ap)
-print(("  %-22s Team=%-8s 可疑属性: %s"):format(
-pl.Name, tostring(pl.Team and pl.Team.Name),
-#ap>0 and table.concat(ap,", ") or "(无 team/side/role/cell 类属性)"))
-end
-print("  ↑ 把这几行发我, 我按真实字段接进透视的颜色判定")
-print("====================================")
-end)
-end)
-UI.Tip(p,"透视现在是: 队友=绿 / 敌人=红 / 幽灵(MPGhost)=紫。若所有人都红, 说明【队伍信号没读到】——\n点上面这个按钮把结果发我即可(这游戏的队伍字段名必须按实际数据接, 不能猜)。",CY.sub)
 local IPrompt={}
 function SYS.SetInstantPrompt(on)
 if not on then
@@ -11027,24 +10762,6 @@ if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 SYS.Notify("📐 已恢复自动适配",SYS.CY.green)
 end)
-UI.Btn(p,"🧪 打印设备与缩放信息 (控制台)",CY.purple,function()
-local D=SYS.DEV or {}
-local cam=WS.CurrentCamera
-local vp=(cam and cam.ViewportSize) or Vector2.new(0,0)
-local t={
-"=== 界面适配诊断 ===",
-("视口         : %.0f x %.0f"):format(vp.X,vp.Y),
-("触屏 / 纯触屏: %s / %s"):format(tostring(D.anyTouch),tostring(D.touch)),
-("视口档位     : %s"):format(tostring(D.vds)),
-("小屏适配     : %s"):format(tostring(D.small)),
-("fit(可容纳)  : %s"):format(tostring(SYS.LastUIScaleFit)),
-("自动结果     : %s"):format(tostring(SYS.LastUIScaleAuto)),
-("当前实际缩放 : %s"):format(tostring(SYS.LastUIScale)),
-("手动缩放值   : %s   (0 = 自动)"):format(tostring(SYS.C_.UIScaleManual)),
-}
-print(table.concat(t,"\n"))
-SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
-end)
 UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍数 ——\n"
 .."   手机 / 平板(纯触屏) 最多放大到 1.75 倍, 小视口 1.35 倍, PC 保持 1.0 倍。\n"
 .."   算法是 sc = min(fit, 上限), fit 已扣掉刘海 / 顶部栏边距 -> 【永远塞得进屏幕】。\n"
@@ -11082,16 +10799,6 @@ P(SYS.SaveConfig)
 SYS.Notify(("📥 已导入 %d 项(切页/重载菜单后生效)"):format(n),SYS.CY.green)
 end)
 end
-UI.Btn(p,"📤 导出全部配置到剪贴板",CY.cyan,function() P(SYS.ExportConfig) end)
-UI.Btn(p,"📥 从剪贴板导入配置 (只认已知项)",CY.purple,function()
-P(function()
-local str=nil
-if getclipboard then P(function() str=getclipboard() end) end
-if not str then SYS.Notify("这台没有 getclipboard —— 请用「导出」把串发我, 我手动帮你回填",SYS.CY.yellow) return end
-P(SYS.ImportConfig,str)
-end)
-end)
-UI.Tip(p,"导出 = 把你当前所有设置拼成一行放剪贴板(方便备份/换号); 导入 = 校验前缀后只回填【已声明】的键,\n陌生键一律丢弃(和我们配置加载的规矩一致, 不会写脏配置)。",CY.sub)
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
@@ -11164,12 +10871,6 @@ UI.Btn(p,"🚶 寻路/步行到他",CY.cyan,function() SYS.PC.GotoTarget("walk")
 UI.Switch(p,"🔁 循环跟传 (离远了自动再过去)","PC_LoopTP",function(on) SYS.PC.LoopTP(on) end)
 UI.Btn(p,"🧲 把他拉过来 (客户端)",CY.orange,function() SYS.PC.BringTarget() end)
 UI.Tip(p,"带「客户端」字样的按钮只改你本地看到的画面 —— 服务端不认, 他本人没感觉, 而且很快会被拉回。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.sub)
-UI.Div(p)
-UI.Section(p,"🎛 控制类 (全部只写本地副本)",CY.orange)
-UI.Switch(p,"🧊 冻结他 (客户端)","PC_Freeze",function(on) SYS.PC.Freeze(on) end)
-UI.Btn(p,"⚡ 闪现半秒 (客户端)",CY.purple,function() SYS.PC.Blink(0.5) end)
-UI.Switch(p,"🗣 本地静音他 (只静音他角色里的音效)","PC_Mute",function(on) SYS.PC.MuteVoice(on) end)
-UI.Tip(p,"⚠ 客户端【没有】静音他人语音的公开 API —— 这条只能静音他角色里的 Sound。\n「冻结 / 闪现 / 拉过来」同理: 只改你本地副本。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己)",CY.purple)
 UI.Switch(p,"🎩 坐他头上","PC_OnHead",function(on) SYS.PC.OnHead(on) end)
