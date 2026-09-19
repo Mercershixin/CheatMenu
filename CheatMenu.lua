@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:02 sha 13ae03cf bytes 440067'):format('2026-09-19 21:02','13ae03cf',440067))
+print(('[CheatMenu] build 2026-09-19 21:06 sha 0bbea9e5 bytes 439512'):format('2026-09-19 21:06','0bbea9e5',439512))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.27"
+SYS.BuildVer="6.9.28"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2645,6 +2645,29 @@ local out = { ("共 %d 个"):format(#l) }
 for i, d in ipairs(l) do
 if i > 40 then out[#out + 1] = "  ... 还有 " .. (#l - 40) .. " 个" break end
 out[#out + 1] = ("  %-28s %s"):format(tostring(d.Name):sub(1, 28), tostring(d.ClassName))
+end
+return out
+end)
+SYS.RegisterScanner("自动躲避状态 (扫到几个机关 / 躲了几次)", function()
+local st = SYS._dodgeStat or {n=0, hits=0}
+local out = {
+("扫到机关部件: %s 个"):format(tostring(st.n)),
+("躲避已触发  : %s 次"):format(tostring(st.hits)),
+("扫描间隔    : 2 秒   |   触发距离: %.0f 格"):format(tonumber(SYS.C_.DodgeDist) or 15),
+("开关状态    : %s"):format(SYS.T_.AutoDodge and "已开" or "关"),
+"判据: 名字含 trap/hazard/spike/lava/fire/burn/acid/poison/mine/bomb/地雷/炸弹/机关/陷阱/刺… 或带 HingeConstraint/Motor6D",
+}
+local l = SYS._dodgeList or {}
+if #l == 0 then
+out[#out+1] = "(当前没扫到机关 —— 这局可能没有可判定的陷阱, 或名字不在判据里)"
+else
+out[#out+1] = ("被判为机关的前 %d 个:"):format(math.min(#l, 12))
+for i = 1, math.min(#l, 12) do
+local x = l[i]
+if x and x.Parent then
+out[#out+1] = ("   %s   %s"):format(tostring(x.Name), tostring(x:GetFullName()))
+end
+end
 end
 return out
 end)
@@ -10064,12 +10087,6 @@ UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetA
 UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or 3 end,
 function(v) SYS.C_.FarmInterval=v end,"%.0f")
 UI.Switch(p,"死亡自动重生","AutoRespawn",SYS.SetAutoRespawn)
-UI.Btn(p,"🔎 探测本游戏的领取/收集/购买 remote",CY.sub,function()
-P(function() SYS.ProbeEvent("claim") end)
-P(function() SYS.ProbeEvent("pickup") end)
-P(function() SYS.ProbeEvent("buy") end)
-SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
-end)
 UI.Btn(p,"💰 一键 0 元扫货 (只买标价 0 的)",CY.green,function() P(SYS.FreeSweep) end)
 UI.Section(p,"🧺 隔空获取 (不用靠近)",CY.cyan)
 UI.Cycle(p,"获取范围",{"全部","单独(最近的)"},
@@ -10100,26 +10117,11 @@ UI.Btn(p,"🎁 一键领取每日/在线/新手/赛季奖励",CY.green,function(
 UI.Tip(p,"✅ 能做: 游戏【本身免费/无限次】的道具直接可用; 自动使用/自动装备省手速; 通道尽量找全。\n"..
 "⛔ 免道具(用东西不消耗)做不到: 使用/装备/合成都是【服务端权威】—— 客户端发请求后,\n"..
 "   服务端查背包(有没有/够不够/冷却过没过), 不够直接拒。客户端没有合法途径免掉消耗。",CY.yellow)
-UI.Btn(p,"🔎 数一数场景里有多少可拿的",CY.sub,function()
-P(function()
-local l=SYS.FindGrabbables()
-local msg=("场景里可拾取物: %d 个"):format(#l)
-print("[CheatMenu] "..msg)
-SYS.Hud(msg,6)
-end)
-end)
 UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近也能触发。\n"..
 "   全部 = 场景里所有可拾取物逐个发一遍; 单独 = 只拿离你最近的那个。\n"..
 "⛔ 刷物品: 做不到。物品增减是服务端权威 —— 客户端发的是请求, 服务端按自己的库存处理;\n"..
 "   凭空造物只可能来自游戏自身漏洞, 客户端没有合法途径。",CY.yellow)
 UI.Switch(p,"🛡 反陷阱预警 (陷阱伤害/被挡/状态 → HUD)","TrapWatch",SYS.SetTrapWatch)
-UI.Btn(p,"🔎 探测本游戏的陷阱/状态信号",CY.sub,function() P(SYS.ProbeTrapWatch) end)
-UI.Btn(p,"🔍 统一扫描 (全部探测一次跑完 → 控制台+文件+剪贴板)",CY.green,function()
-P(function() SYS.ScanAll({copy=true}) end)
-end)
-UI.Btn(p,"🔍 统一扫描 (复制完整结果到剪贴板)",CY.cyan,function()
-P(function() SYS.ScanAll({file=false,copy=true}) end)
-end)
 UI.Section(p,"⏱ 冷却加速 / 自动连用",CY.orange)
 UI.Slider(p,"时间倍率 (1=关, 越高冷却越快)",1,20,0.5,
 function() return SYS.C_.TimeScale or 1 end,
@@ -11160,21 +11162,6 @@ UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮�
 UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
 UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
-UI.Btn(p,"🔎 自动躲避状态 (控制台)",CY.cyan,function()
-P(function()
-local st=SYS._dodgeStat or {n=0,hits=0}
-print(("[Dodge] 本轮扫到机关部件=%s  躲避触发次数=%s  扫描间隔=2s  触发距离=%.0f格")
-:format(tostring(st.n),tostring(st.hits),tonumber(SYS.C_.DodgeDist) or 15))
-local l=SYS._dodgeList or {}
-for i=1,math.min(#l,10) do
-local x=l[i]
-if x and x.Parent then print(("   %s  %s"):format(tostring(x.Name),tostring(x:GetFullName())) ) end
-end
-if #l==0 then
-print("   (没扫到机关 —— 这局可能没有可判定的陷阱; 判据: 名字含 trap/hazard/spike/lava/地雷/炸弹… 或带铰链/马达)")
-end
-end)
-end)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
 end
