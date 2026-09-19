@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 01:19 sha d45dd69b bytes 450201'):format('2026-09-20 01:19','d45dd69b',450201))
+print(('[CheatMenu] build 2026-09-20 02:10 sha 265ac167 bytes 451310'):format('2026-09-20 02:10','265ac167',451310))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.3.0"
+SYS.BuildVer="7.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10068,6 +10068,15 @@ function() return SYS.C_.SpeedMode end,
 function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
 UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
 UI.Div(p)
+UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
+UI.Switch(p,"穿墙 (角色各部位关碰撞)","Noclip",function(on)
+P(SYS.SetNoclip,on)
+SYS.Notify(("🕳 穿墙 %s"):format(on and "已开" or "已关"), on and SYS.CY.green or SYS.CY.sub)
+end)
+UI.Tip(p,"把角色所有部件的 CanCollide 关掉, 并每帧复查一遍(游戏写回来会再关一次); 重生后自动套到新角色。\n"..
+"⚠ 纯客户端: 服务端仍按它自己的碰撞判定走 —— 能不能真穿过去取决于该游戏是客户端还是服务端权威。\n"..
+"⚠ 部分游戏对「位置异常/卡进几何体」另有校验, 出现被拉回或被踢属正常风险。",CY.yellow)
+UI.Div(p)
 UI.Section(p,"🛡 免伤",CY.green)
 local NA={tick=0, wrote=0, scanned=0, others={}}
 SYS.NoAggroInfo=NA
@@ -10128,17 +10137,24 @@ end
 NA.scanned=n NA.wrote=NA.wrote+w NA.tick=NA.tick+1
 end)
 end
+local NoAggroPrev=nil
 function SYS.SetNoAggro(on)
 SYS.T_.NoAggro = on and true or false
 if not on then
-SYS.T_.TrapImmune=false SYS.T_.AutoDodge=false
+local prev=NoAggroPrev or {}
+NoAggroPrev=nil
+if not prev.trap  then SYS.T_.TrapImmune=false end
+if not prev.dodge then SYS.T_.AutoDodge=false end
 P(function()
-if SYS.SetTrapImmune then SYS.SetTrapImmune(false) end
-if SYS.SetAutoDodge then SYS.SetAutoDodge(false) end
+if not prev.trap and SYS.SetTrapImmune then SYS.SetTrapImmune(false) end
+if not prev.dodge and SYS.SetAutoDodge then SYS.SetAutoDodge(false) end
+if prev.dodge and SYS.T_.AutoDodge and SYS.SetAutoDodge then SYS.SetAutoDodge(true) end
+if prev.trap  and SYS.T_.TrapImmune and SYS.SetTrapImmune then SYS.SetTrapImmune(true) end
 end)
 SYS.Notify("🕊 无仇恨模式已关",SYS.CY.sub)
 return
 end
+NoAggroPrev={trap=SYS.T_.TrapImmune and true or false, dodge=SYS.T_.AutoDodge and true or false}
 SYS.T_.TrapImmune=true SYS.T_.AutoDodge=true
 P(function()
 if SYS.SetTrapImmune then SYS.SetTrapImmune(true) end
