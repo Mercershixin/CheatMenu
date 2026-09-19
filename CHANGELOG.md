@@ -1,3 +1,28 @@
+## 6.9.12 · 2026-09-19
+
+### 🔍 新增「反作弊模块痕迹」专项扫描（已并入统一扫描，点一次就一起跑）
+
+想绕开"飞行/加速被回退", 第一步得先知道**是谁在拦你** —— 是客户端脚本(看得到, 能想办法绕)
+还是纯服务端(看不到, 只能控制位移幅度别触发阈值)。所以加了这一段, 直接进「统一扫描」报告:
+
+- **① 名字含反作弊关键词的实例** —— 扫 ReplicatedStorage / ReplicatedFirst / Workspace / Lighting /
+  StarterGui / StarterPlayer / Players, 以及你自己的 PlayerGui / PlayerScripts / Backpack,
+  命中 `anticheat / anti_cheat / guard / detect / validate / verify / integrity / speedhack / flyhack /
+  ban / kick / 反作弊 / 检测 / 校验 / 拦截 …` 的一律列出来(带 ClassName 和完整路径)。
+- **② 像「位置上报 / 校验」的 Remote** —— 名字含 `position / cframe / move / sync / update / velocity /
+  speed / teleport / distance / walk / humanoid / character / report / heartbeat` 的 RemoteEvent /
+  RemoteFunction / UnreliableRemoteEvent。**位置回退最可能的来源就是它们**(客户端上报 -> 服务端比对)。
+- **③ 已加载的模块脚本** —— 要执行器有 `getloadedmodules`, 没有就跳过; 模块名命中关键词的列出来。
+
+用法: 功能页「🔍 扫描 / 检查」→ 点综合扫描或一次全扫, 报告里就会多出这一段。
+
+**接下来怎么绕**(把扫出来的结果发我):
+- 如果 ② 里扫到了"位置上报"类 Remote → 大概率能绕: **hook 它的 FireServer, 上报"看起来正常"的位置**,
+  服务端以为你在按规矩走就不会拉你回去(飞行/加速保留, 只是上报值受限)。
+- 如果 ① 扫到的是客户端脚本 → 可以看到它的判据, 针对性做;
+- 如果三层都是空的 → 说明校验纯在服务端(客户端拿不到任何线索), 那就只能靠**控制每帧位移别超阈值**
+  (脚本层面加"位移平滑"), 没法真正绕。
+
 ## 6.9.11 · 2026-09-19
 
 ### 🧽 清掉删除功能留下的空壳 + 全代码死代码摸底
