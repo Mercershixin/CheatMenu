@@ -1,3 +1,35 @@
+## 6.10.2 · 2026-09-19
+
+### 🔍 可交互透视补强：把漏掉的可交互物全点亮（用户: 把缺少可交互的东西补上高亮透视）
+
+**三个漏洞一起补：**
+
+**1. 类名太窄** —— 原来只认 `Part / MeshPart / UnionOperation / TrussPart / Model / Folder`，
+于是【楔形板 / 座椅 / 圆柱 / 球 / 霓虹牌 …】这些可交互物**全部漏掉** → 改成**任意 `BasePart`**。
+
+**2. 只比自己的名字** —— 可交互物的常见结构是
+「外层模型叫 `Flashlight` / `Wardrobe`（命中关键词），里面的部件叫 `Part` / `Handle`（不命中）」，
+所以整组都漏。现在按 **自己 + 最多 3 层祖先名** 判分类（与门/陷阱透视同一套做法）。
+
+**3. 分类表补两类（按 DOORS 抓包来）**
+
+| 新分类 | 颜色 | 关键词 |
+|---|---|---|
+| **道具/补给** | 青绿 `0,235,180` | `flashlight` `torch` `lighter` `vitamin` `bandage` `medkit` `crucif` `lockpick` `skeleton` `battery` `fuse` `candle` `bottle` `ribbon` `cheese` `bone` `keycard` `syringe` `potion` + 手电/打火机/维生素/绷带/开锁/骷髅/电池/保险丝/蜡烛 |
+| **躲藏点** | 亮青绿 `150,255,205` | `hide` `hiding` `wardrobe` `closet` `drawer` `undercouch` `locker` `cabinet` `chest` + 躲/藏身/衣柜/抽屉 |
+
+> DOORS 的玩法核心之一就是"躲衣柜躲怪" —— 这类藏身点以前一个都不亮，现在单独一类颜色。
+> 配套的权威信号：`HidePickup`（进藏身点）/ `GetOutOfHiding`（出来）/ 角色属性 `Hiding`。
+
+**4. 自诊断（方便下一轮按真名补）**
+
+控制台首轮打印：
+```
+[ESP] 可交互透视: 找到 N 个候选。名字样本: xxx[道具/补给], yyy[躲藏点], zzz[结构], ...
+```
+格式是 `物件名[分类]`（`[结构]` = 靠 ClickDetector/ProximityPrompt 命中、没分类）。
+某个你要的东西还是不亮 → 把这行发我，加个关键词就行。
+
 ## 6.10.1 · 2026-09-19
 
 ### 🔌 按【DOORS(门)】抓包补全事件 ——「功能缺少的事件在这部补」
