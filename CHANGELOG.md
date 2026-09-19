@@ -1,3 +1,41 @@
+## 6.9.33 · 2026-09-19
+
+### 🗑 删掉挂机页里一组「对这个游戏没用」的功能（用户点名）
+
+用户原话：「冷却 道具 服务器 在挂机哪里的 删掉 没用功能」「反陷阱预警也不要了」「隔空索取也不要了」。
+
+**删掉的界面入口（全在挂机页）**
+
+| 删掉的东西 | 原来调用的实现 |
+|---|---|
+| 🧺 隔空获取 (不用靠近) —— 获取范围 / 立即获取 | `SYS.RangedGrab` |
+| 🎒 道具 / 装备 (别名取自事件库) —— 使用道具 / 装备 / 卸下装备 / 一键领取每日·在线·新手·赛季 | `SYS.UseItem` / `SYS.ToggleEquip` / `SYS.ClaimAllDaily` |
+| ⏱ 冷却加速 / 自动连用 —— 时间倍率 / 自动连用 / 连用间隔 | `SYS.SetTimeScale` / `SYS.SetAutoUse` |
+| 🛡 反陷阱预警 (陷阱伤害/被挡/状态 → HUD) 开关 | `SYS.SetTrapWatch` |
+| 🔎 看看本游戏有哪些可预告的信号 按钮 | `SYS.EventWatchScan` |
+| 🖥 读服务器列表 / 🖥 快速换服 / 🎒 读取背包 三个按钮 | `SYS.DumpServerList` / `SYS.JoinNextServer` / `SYS.DumpInventory` |
+| 三处说明 Tip（含"先点读背包/读服务器列表看看"那段 → 改成"本游戏只有 5 条真 remote"） | — |
+| 节标题 `🆕 推荐功能 (…/ 换服 / 背包)` → `(一键全领 / 开箱 / 商店)` | — |
+
+**为什么该删**：MachineParty **只有 5 条真 remote**（`MachineParty.Event` 总通道等），
+上面这些全靠「通用事件查找（别名 + 模糊扫描）」—— 在这个游戏里查不到任何东西
+（`SYS.RemoteAlias` 那套对它无效），点了只会弹一句「没找到」。
+
+**防"删了又自己回来"**：新增黑名单
+
+```lua
+SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true }
+```
+
+热更新恢复开关状态时**跳过**名单里的开关 —— 6.9.26「事件预告」整页恢复时被带回来过一次，这次先堵上。
+
+> 底层实现函数（`SYS.RangedGrab` / `SYS.UseItem` / `SYS.ToggleEquip` / `SYS.SetTimeScale` / `SYS.SetAutoUse` /
+> `SYS.SetTrapWatch` / `SYS.DumpServerList` / `SYS.JoinNextServer` / `SYS.DumpInventory`）**保留未删**，
+> 只是界面里点不到了；要彻底清可以走 `_clean_dead.py`。
+
+**挂机页现在长这样**：挂机防踢 · 自动训练踢击力量 · 自动重生 · 自动领取训练加成 · 优先参加健身事件 ·
+💰 一键收取基地金币 / 📥 一键收起全部脑红 · 🎁 自动领取·收集(4 项) · 🆕 推荐功能(一键全领 / 开箱 / 自动商店 / 自动选队伍 / 自动表情) · 自动售卖 + CPS 统计。
+
 ## 6.9.32 · 2026-09-19
 
 ### 🚪🔧 门/假门透视「一直不亮」——找到并修掉根因(一行 nil 索引把整个循环打断)
