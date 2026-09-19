@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:54 sha 79c3630b bytes 443636'):format('2026-09-19 22:54','79c3630b',443636))
+print(('[CheatMenu] build 2026-09-19 23:49 sha 00f13b3c bytes 454045'):format('2026-09-19 23:49','00f13b3c',454045))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -30,7 +30,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -78,6 +78,8 @@ MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 ESPNameH=0,
 PickDist=1200,
+QuickRange=60,
+AutoHideDist=40,
 DeepHideDepth=120,
 DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
@@ -103,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.9"
+SYS.BuildVer="7.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1806,7 +1808,17 @@ keywords = {"monster","fake","real","boss","wave","round","event","spawn","alert
 "mailbox","roulette","secretcase","prototypecase","socialrewards",
 "friendreward","milestone","onlinereward","battlepass","minipass",
 "serverlist","joinserver","teleporttoserver","pickgameteam","selectloadout",
-"inventoryview","inventoryquery","operate","companion","dungeon"},
+"inventoryview","inventoryquery","operate","companion","dungeon",
+"purchase","buyproduct","buygamepass","boxbuy","buyeventitem","purchaseresult",
+"claimreward","claimdaily","claimweeklycase","claimpremiumreward","claimrebirthreward",
+"claimseasonweapon","claimstall","claimtradetokenreward","collectrionclaim","dailyreward",
+"rewardreceived","commanditemsreceived","friendreward","milestonereward","onlinereward",
+"pickup","collect","lootevent","dropcoin","dropflag","orbpickup","itemcapture","craftitems",
+"roundstart","roundend","gamestart","gameend","matchend","matchstart","result",
+"gacha","spin","raffle","secretluck","case","jackpot",
+"quest","seasonchanged","challenge","ranked",
+"playerdied","revive","resurrect","checkrevive",
+"detect","detected","violation","flagged","punish","suspicious","antich","automod","report"},
 conns = {}, seen = {},
 }
 function SYS.EventWatchScan()
@@ -3224,7 +3236,7 @@ if p~=LP then
 local c=p.Character
 if c and tagPart(c) then
 local h=c:FindFirstChildOfClass("Humanoid")
-if not h or h.Health>0 then act[p]=c end
+act[p]=c
 end
 end
 end
@@ -3346,7 +3358,7 @@ local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(m) end)
 isPlayerChar=(ok and pl~=nil)
 end
 local h=m:FindFirstChildOfClass("Humanoid")
-if not isPlayerChar and ((h and h.Health>0) or (not h and isRig)) then
+if not isPlayerChar then
 list[#list+1]=m
 HOST[m]=isHostile(m)
 end
@@ -3468,14 +3480,33 @@ local cn=o.ClassName
 local ok=false
 if cn=="Tool" then ok=true
 elseif o:IsA("BasePart") or o:IsA("Model") or cn=="Folder" then
-local function hasI(x)
-return x and (x:FindFirstChildOfClass("ClickDetector")~=nil or x:FindFirstChildOfClass("ProximityPrompt")~=nil)
+local function hasI(x, deep)
+if not x then return false end
+if x:FindFirstChildOfClass("ClickDetector")~=nil
+or x:FindFirstChildOfClass("ProximityPrompt")~=nil then return true end
+if deep and (x:IsA("Model") or x:IsA("Folder")) then
+local ok2, has = P(function()
+if #x:GetChildren() > 60 then return false end
+return (x:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil)
+or (x:FindFirstChildWhichIsA("ClickDetector", true) ~= nil)
+end)
+if ok2 and has == true then return true end
+end
+return false
 end
 if hasI(o) then ok=true
 else
 if hasI(o.Parent) then ok=true
 else
 for _,ch in ipairs(o:GetChildren()) do if hasI(ch) then ok=true break end end
+if not ok then
+local anc=o.Parent
+for _=1,2 do
+if not anc then break end
+if hasI(anc,true) then ok=true break end
+anc=anc.Parent
+end
+end
 end
 end
 end
@@ -9888,6 +9919,205 @@ end)
 return ok
 end
 end
+do
+local AH_KW={"hide","hiding","hideprompt","closet","wardrobe","bed","locker","cabinet","藏身","躲","衣柜","床","柜"}
+local HOST_KW2={"monster","enemy","hostile","killer","seek","rush","ambush","figure","halt","screech","eyes",
+"dupe","snare","spider","jumpscare","zombie","mob","hunter","chaser","怪","敌","杀手","鬼"}
+local QI_ORIG={}
+local function nearestEnemyDist()
+local _,_,root=GC()
+local mp=root and root.Position
+if not mp then return nil end
+local bd=nil
+P(function()
+for _,m in ipairs(WS:GetChildren()) do
+local h=m:FindFirstChildOfClass("Humanoid")
+if h and h.Health>0 and not Players:GetPlayerFromCharacter(m) then
+local rp=m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
+if rp then
+local nm=tostring(m.Name or ""):lower()
+local hit=false
+for _,kw in ipairs(HOST_KW2) do if nm:find(kw,1,true) then hit=true break end end
+if hit then
+local d=(rp.Position-mp).Magnitude
+if not bd or d<bd then bd=d end
+end
+end
+end
+end
+end)
+return bd
+end
+local function findHidePrompt()
+local _,_,root=GC()
+local mp=root and root.Position
+if not mp then return nil end
+local best,bd=nil,1e9
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+if o.ClassName=="ProximityPrompt" then
+local nm=tostring(o.Name or ""):lower()
+local act=tostring(o.ActionText or ""):lower()
+local hit=false
+for _,kw in ipairs(AH_KW) do
+if nm:find(kw,1,true) or act:find(kw,1,true) then hit=true break end
+end
+if hit then
+local par=o.Parent
+local pos=par and par.Position
+if pos then
+local d=(pos-mp).Magnitude
+if d<bd then bd=d best=o end
+end
+end
+end
+end
+end)
+return best,bd
+end
+function SYS.QuickInteractTick()
+if not SYS.T_.QuickInteract then return end
+local now=os.clock()
+if now-(SYS._qiAt or 0)<2 then return end
+SYS._qiAt=now
+local rng=tonumber(SYS.C_.QuickRange) or 60
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+local cn=o.ClassName
+if cn=="ProximityPrompt" or cn=="ClickDetector" then
+local rec=QI_ORIG[o]
+if not rec then
+rec={}
+pcall(function() rec.h=o.HoldDuration end)
+pcall(function() rec.d=o.MaxActivationDistance end)
+QI_ORIG[o]=rec
+end
+if cn=="ProximityPrompt" then pcall(function() o.HoldDuration=0 end) end
+pcall(function() if o.MaxActivationDistance<rng then o.MaxActivationDistance=rng end end)
+end
+end
+end)
+end
+function SYS.SetQuickInteract(on)
+SYS.T_.QuickInteract = on and true or false
+if on then
+SYS.SetLoop("QuickInteract",true,RS.Heartbeat,SYS.QuickInteractTick)
+SYS.QuickInteractTick()
+SYS.Notify(("⚡ 快速交互: 开 —— 按住时长归零 + 触发距离 >= %d 格"):format(tonumber(SYS.C_.QuickRange) or 60), SYS.CY.green)
+else
+SYS.SetLoop("QuickInteract",false)
+P(function()
+for pr,v in pairs(QI_ORIG) do
+if pr and pr.Parent then
+if v.h then pcall(function() pr.HoldDuration=v.h end) end
+if v.d then pcall(function() pr.MaxActivationDistance=v.d end) end
+end
+end
+end)
+QI_ORIG={}
+SYS.Notify("⚡ 快速交互: 关(已还原)", SYS.CY.sub)
+end
+end
+function SYS.AutoHideNow()
+local pr,d=findHidePrompt()
+if not pr then
+SYS.Notify("🏃 自动藏身: 没找到藏身点(名字/动作里没有 hide/closet/wardrobe/bed…)", SYS.CY.yellow)
+return false
+end
+local ok=false
+if type(fireproximityprompt)=="function" then
+ok=P(function() fireproximityprompt(pr) end)
+end
+if not ok then
+ok=P(function() pr:InputHoldBegin() end)
+if ok then task.delay(0.05,function() P(function() pr:InputHoldEnd() end) end) end
+end
+SYS.Notify(ok and ("🏃 自动藏身: 已钻进 %s (离你 %.0f 格)"):format(tostring(pr.Parent and pr.Parent.Name or pr.Name), d or 0)
+or "🏃 自动藏身: 触发失败(执行器不支持 fireproximityprompt)", ok and SYS.CY.green or SYS.CY.yellow)
+return ok
+end
+function SYS.AutoHideTick()
+if not SYS.T_.AutoHide then return end
+local now=os.clock()
+if now-(SYS._ahAt or 0)<1 then return end
+SYS._ahAt=now
+local d=nearestEnemyDist()
+local thr=tonumber(SYS.C_.AutoHideDist) or 40
+if d and d<thr then SYS.AutoHideNow() end
+end
+function SYS.SetAutoHide(on)
+SYS.T_.AutoHide = on and true or false
+if on then
+SYS.SetLoop("AutoHide",true,RS.Heartbeat,SYS.AutoHideTick)
+SYS.Notify(("🏃 自动藏身: 开 —— 敌对生物进到 %d 格内自动钻最近藏身点"):format(tonumber(SYS.C_.AutoHideDist) or 40), SYS.CY.green)
+else
+SYS.SetLoop("AutoHide",false)
+SYS.Notify("🏃 自动藏身: 关", SYS.CY.sub)
+end
+end
+function SYS.ReadHintTexts()
+local out={}
+P(function()
+for _,o in ipairs(WS:GetDescendants()) do
+local nm=tostring(o.Name or ""):lower()
+local isHint=(nm:find("hint",1,true) or nm:find("librarybook",1,true) or nm:find("note",1,true)
+or nm:find("paper",1,true) or nm:find("book",1,true))
+if isHint then
+local sg=o:FindFirstChildOfClass("SurfaceGui")
+if not sg and o.Parent then sg=o.Parent:FindFirstChildOfClass("SurfaceGui") end
+if sg then
+local txt={}
+for _,g in ipairs(sg:GetDescendants()) do
+if g:IsA("TextLabel") or g:IsA("TextBox") then
+local t=tostring(g.Text or "")
+if t~="" and #t<200 then txt[#txt+1]=t end
+end
+end
+if #txt>0 then out[#out+1]={name=tostring(o.Name),text=table.concat(txt," / ")} end
+end
+end
+end
+end)
+return out
+end
+function SYS.DumpHintTexts()
+local list=SYS.ReadHintTexts()
+if #list==0 then
+print("[Hint] 没读到密码书/提示纸的文字(可能是贴图 Decal, 或还没复制到客户端)")
+SYS.Hud("📖 没读到密码提示(可能是贴图)",4)
+return
+end
+print(("[Hint] 读到 %d 条提示:"):format(#list))
+for i,v in ipairs(list) do print(("   %d) %s -> %s"):format(i,v.name,v.text)) end
+SYS.Hud(("📖 %s"):format(tostring(list[1].text)):sub(1,120),8)
+end
+function SYS.BlockHandlersTick()
+if not SYS.T_.BlockHandlers then return end
+local now=os.clock()
+if now-(SYS._bhAt or 0)<0.5 then return end
+SYS._bhAt=now
+local _,h=GC()
+if h then
+P(function()
+h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
+h:SetStateEnabled(Enum.HumanoidStateType.Physics,false)
+h:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
+h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
+end)
+end
+end
+function SYS.SetBlockHandlers(on)
+SYS.T_.BlockHandlers = on and true or false
+if on then
+SYS.SetLoop("BlockHandlers",true,RS.Heartbeat,SYS.BlockHandlersTick)
+SYS.BlockHandlersTick()
+SYS.Notify("🧱 表现层对抗: 开(禁布娃娃/物理状态)", SYS.CY.green)
+else
+SYS.SetLoop("BlockHandlers",false)
+SYS.Notify("🧱 表现层对抗: 关", SYS.CY.sub)
+end
+end
+end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},
 {name="MachineParty",icon="🎮"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
@@ -10059,6 +10289,19 @@ UI.Tip(p,"把所有【活物】都点亮: 玩家(队友绿 / 敌人红 / 幽灵�
 "🎨 非玩家生物分两种: 【敌对 = 红】(名字或 3 层祖先命中敌意词: monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider … 或 Attribute Hostile / Enemy / Aggro 为 true)\n"..
 "   【中立 = 橙】(其余全部; 拿不准一律算中立, 不误标红 —— 与玩家透视「拿不到队伍=队友绿」同一个保守口径)。\n"..
 "开这个开关会【一起打开玩家透视】(不然不算「所有活物」)。全 Workspace 扫描已节流(约每 1s 重扫), 隔墙时填充更透。",CY.sub)
+UI.Div(p)
+UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
+UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
+UI.Slider(p,"快速交互距离 (格)",10,300,5,function() return SYS.C_.QuickRange or 60 end,
+function(v) SYS.C_.QuickRange=v end,"%.0f")
+UI.Switch(p,"🏃 自动藏身 (敌对生物靠近自动钻进藏身点)","AutoHide",SYS.SetAutoHide)
+UI.Slider(p,"自动藏身触发距离 (格)",5,150,5,function() return SYS.C_.AutoHideDist or 40 end,
+function(v) SYS.C_.AutoHideDist=v end,"%.0f")
+UI.Btn(p,"🏃 立即钻一次藏身点",CY.green,function() P(SYS.AutoHideNow) end)
+UI.Btn(p,"📖 读密码提示 (控制台 + HUD)",CY.cyan,function() P(SYS.DumpHintTexts) end)
+UI.Tip(p,"⚡ 快速交互 = ProximityPrompt 的「按住时长」归零 + 触发距离拉大(本地视角; 服务端一般只校验距离/权限)。\n"..
+"🏃 自动藏身 = 敌意生物进到设定距离, 用最近的藏身点 Prompt 钻进去 —— 等价于你按 E, **走服务端认可那条路**(不保证服务端一定接受)。\n"..
+"📖 读密码提示 = 找名字含 hint/book/note/paper 的物件并读出它表面 SurfaceGui 上的文字(贴图 Decal 读不到)。",CY.sub)
 UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 一起)","ESP_Pick",function(on)
 SYS.T_.ESPItem=on SYS.T_.ESP_Door=on
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then
@@ -11257,6 +11500,19 @@ UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的�
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
+UI.Switch(p,"🧱 表现层对抗 (禁布娃娃/物理状态 · 纯本地)","BlockHandlers",SYS.SetBlockHandlers)
+UI.Tip(p,"⚠ 封号风险自查(由高到低):\n"..
+"① 在【热门服】飞天 / 瞬移 / 乱杀 = 最高 —— 会被其他玩家举报 -> 人工复核, 任何绕过都藏不住行为;\n"..
+"② 自动打人 / 自动农场 = 高(服务端行为统计能看出规律);  ③ 纯视觉(透视 / 光照 / 屏蔽表现) = 最低。\n"..
+"🧱 表现层对抗 = 禁布娃娃 / 物理 / 平台站立状态(纯本地, 不影响别人)。\n"..
+"⚠ 本执行器【没有 getconnections】, 做不到「让游戏根本不播」跳脸 / 震屏 —— 只能事后对抗状态。\n"..
+"— 现代反作弊在查什么(2026-09 公开清单, 知道=能避):\n"..
+"  · 服务端侧: 飞行(CFrame/载具/座位) · 移速与速度异常 · 位置/传送校验 · 穿墙碰撞 · 多工具/背包利用 · 角色物理完整性;\n"..
+"  · 客户端侧: __namecall/__index/__newindex 被 hook · 元表被改(setreadonly/getrawmetatable) · 函数被 hook(debug.info/getfenv/hookfunction) · CoreGui 注入 · gcinfo/collectgarbage 伪装 · 弱表操纵;\n"..
+"  · 战斗侧: 静默瞄准的弹道分析 · 命中盒扩张 · 近战/射程超限;\n"..
+"  · 网络侧: Remote 速率限制 · 远程方法 hook 检测 · 挑战-应答令牌。\n"..
+"⇒ 直接推论: 本菜单把『管理员检测绕过』改成【不 hook __namecall、只挪进隐藏容器】是对的;\n"..
+"  自动开火间隔带 ±20% 抖动也是对的(恒定节奏最容易被速率统计抓)。这两条别改回去。",CY.yellow)
 UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线命中)","CB_SilentNoTurn",function(on)
 SYS.T_.CB_SilentAim = on and true or false
 if on then
