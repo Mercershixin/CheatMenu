@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:18 sha 685a100a bytes 438929'):format('2026-09-19 21:18','685a100a',438929))
+print(('[CheatMenu] build 2026-09-19 21:24 sha 4bcf76c2 bytes 441042'):format('2026-09-19 21:24','4bcf76c2',441042))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.31"
+SYS.BuildVer="6.9.32"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3459,17 +3459,49 @@ if (SYS._doorN%25==1 and (not SYS._doorAt or _now-SYS._doorAt>1)) or not SYS._do
 SYS._doorAt=_now
 local list={}
 local CUTOF={}
+local SOFT={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet","obstacle",
-"mine","landmine","bomb","tnt","explosive"}
+"mine","landmine","bomb","tnt","explosive",
+"exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
+"tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
+"trick","danger","death","fatal","hurt","ouch"}
+local CUTKW={"chisel","gauntlet","cut","slice","sliceable","grind","machin"}
+local CNKW={"门","陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","关卡","考验",
+"出口","入口","传送","电梯","楼梯","假门","伪装","死亡","致死","致命","坑"}
+local function doorShaped(o, pr)
+if not pr then return false end
+local okS,sz=pcall(function() return pr.Size end)
+if not okS or typeof(sz)~="Vector3" then return false end
+local x,y,z=sz.X,sz.Y,sz.Z
+local mn=math.min(x,y,z)
+local mx=math.max(x,y,z)
+if y~=mx then return false end
+if y<3.5 then return false end
+if mn>1.5 then return false end
+if (x+y+z-mn-mx)<2.2 then return false end
+local cc=nil
+local tr=nil
+pcall(function() cc=pr.CanCollide end)
+pcall(function() tr=pr.Transparency end)
+if cc==false then return true end
+if type(tr)=="number" and tr>0.05 then return true end
+if pr:FindFirstChildOfClass("Decal") or pr:FindFirstChildOfClass("Texture")
+or pr:FindFirstChildOfClass("SurfaceGui") then return true end
+if pr:FindFirstChildOfClass("ProximityPrompt") or pr:FindFirstChildOfClass("ClickDetector") then return true end
+if o~=pr and (o:FindFirstChildOfClass("ProximityPrompt") or o:FindFirstChildOfClass("ClickDetector")) then return true end
+return false
+end
+local names={}
 P(function()
 for _,o in ipairs(WS:GetDescendants()) do
 local cn=o.ClassName
 local ok=false
-if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
+local soft=false
+if o:IsA("BasePart") or cn=="Model" then
 if o:FindFirstChildOfClass("HingeConstraint") or o:FindFirstChildOfClass("Motor6D") then ok=true end
 if not ok then
 local anc=o
@@ -3480,15 +3512,16 @@ if type(raw)=="string" and raw~="" then
 local nm=raw:lower()
 for _,kw in ipairs(KW) do if nm:find(kw,1,true) then ok=true break end end
 if not ok then
-if raw:find("门") or raw:find("陷阱") or raw:find("机关") or raw:find("刺")
-or raw:find("熔岩") or raw:find("伤害") or raw:find("危险")
-or raw:find("地雷") or raw:find("炸弹")
-or raw:find("关卡") or raw:find("考验") then ok=true end
+for _,cw in ipairs(CNKW) do if raw:find(cw,1,true) then ok=true break end end
 end
 end
 if ok then break end
 anc=anc.Parent
 end
+end
+if not ok then
+local pr=(cn~="Model") and o or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
+if doorShaped(o, pr) then ok=true soft=true end
 end
 end
 local isCut=false
@@ -3499,11 +3532,9 @@ if not anc then break end
 local raw=anc.Name
 if type(raw)=="string" and raw~="" then
 local nm=raw:lower()
-for _,kw in ipairs({"chisel","gauntlet","cut","slice","sliceable","grind","machin"}) do
-if nm:find(kw,1,true) then isCut=true break end
-end
+for _,kw in ipairs(CUTKW) do if nm:find(kw,1,true) then isCut=true break end end
 if not isCut then
-if raw:find("切割") or raw:find("凿") or raw:find("切") then isCut=true end
+if raw:find("切割",1,true) or raw:find("凿",1,true) then isCut=true end
 end
 end
 if isCut then break end
@@ -3514,16 +3545,29 @@ if ok and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
 if part and part.Position then
 local d=camPos and (part.Position-camPos).Magnitude or 0
-if not camPos or d<=MAXD then list[#list+1]=part CUTOF[part]=isCut end
+if not camPos or d<=MAXD then
+list[#list+1]=part
+CUTOF[part]=isCut
+SOFT[part]=soft
+if #names<14 and type(o.Name)=="string" then
+local dup=false
+for _,n in ipairs(names) do if n==o.Name then dup=true break end end
+if not dup then names[#names+1]=o.Name end
+end
+end
 end
 end
 end
 end)
 SYS._doorList=list
 SYS._doorCut=CUTOF
+SYS._doorSoft=SOFT
 if not SYS._doorLogged then
 SYS._doorLogged=true
-print(("[ESP] 门/陷阱透视: 找到 %d 个候选(名字/结构命中)。若为 0, 把陷阱门的真名发来我加关键词"):format(#list))
+print(("[ESP] 门/陷阱/假门透视: 找到 %d 个候选。名字样本: %s"):format(#list, table.concat(names,", ")))
+if #list==0 then
+print("[ESP] 门/假门一个都没找到 -> 把那个假门的真名(或截图)发来, 我按名字直接加判据")
+end
 end
 end
 local dact={}
@@ -3534,6 +3578,8 @@ end
 for p,s in pairs(HD_SK) do
 if not dact[p] or s.Adornee~=p then P(function() s:Destroy() end) HD_SK[p]=nil end
 end
+local DCUT=SYS._doorCut or {}
+local DSOFT=SYS._doorSoft or {}
 for p in pairs(dact) do
 local h=HD[p]
 if not h then
@@ -3549,9 +3595,16 @@ end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
 h.OutlineTransparency=0
-local cut=CUTOF[p]==true
-h.FillColor   = cut and Color3.fromRGB(255,0,180) or Color3.fromRGB(255,200,0)
-h.OutlineColor= cut and Color3.fromRGB(225,0,150) or Color3.fromRGB(255,170,0)
+if DCUT[p]==true then
+h.FillColor   =Color3.fromRGB(255,0,180)
+h.OutlineColor=Color3.fromRGB(225,0,150)
+elseif DSOFT[p]==true then
+h.FillColor   =Color3.fromRGB(255,120,0)
+h.OutlineColor=Color3.fromRGB(255,90,0)
+else
+h.FillColor   =Color3.fromRGB(255,200,0)
+h.OutlineColor=Color3.fromRGB(255,170,0)
+end
 local sk=HD_SK[p]
 if not sk then
 sk=Instance.new("BillboardGui")
@@ -3576,6 +3629,8 @@ else
 if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
 if next(HD_SK) then for _,s in pairs(HD_SK) do P(function() s:Destroy() end) end HD_SK={} end
 SYS._doorList=nil
+SYS._doorCut=nil
+SYS._doorSoft=nil
 end
 if SYS.T_.ESP_Mini then
 SYS._miniN=(SYS._miniN or 0)+1
@@ -9815,11 +9870,11 @@ if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
 UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
-UI.Switch(p,"🚪 门/陷阱/切割 透视 (陷阱·伤害机关=黄, 切割类=品红)","ESP_Door",function(on)
+UI.Switch(p,"🚪 门/陷阱/假门 透视 (陷阱·伤害机关=黄, 切割类=品红, 疑似假门=橙)","ESP_Door",function(on)
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
 and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
-UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门)。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
+UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门);\n③ 竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示) => 判为【疑似假门】, 橙色显示。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
 UI.Div(p)
 UI.Section(p,"👣 落脚点 · 射线",CY.accent)
 local FSMark={} SYS._fsN=0
