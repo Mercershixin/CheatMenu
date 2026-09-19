@@ -1,3 +1,41 @@
+## 6.9.15 · 2026-09-19
+
+### 🔌 按你的扫描报告扩充 remote 别名表（对战 / 交易服适配）
+
+你 20:04 那份报告里 game=[没有机器人，自由对战模式]，476 个 Remote 全列出来了。我把里面**真实存在**的
+名字接进了别名表，这样"一键全领 / 自动领取 / 商店 / 卖出 / 交易 / 队伍 / 复活"这些不用改代码就能命中:
+
+- **领取(免费, 服务端给每人一份)**: `Days7Claim` `Days4RecurClaim` `NewBieClaim` `OnlineRewardClaim`
+  `TryGroupReward` `BattlepassService.Claim`/`ClaimPremiumReward`/`ClaimRebirthReward` `MinipassService.Claim`
+  `MailboxService.Claim` `QuestService.ClaimReward` `Challenge.Claim` `RankedService.ClaimReward`
+  `ClaimWeeklyCase` `ClaimSeasonWeapon` `ClaimTradeTokenReward` `ClaimLimitedBundleReward`
+  `CollectrionClaim` `CodeInviteClaim` `RebackRewardInvok`
+- **抽奖/抽卡**: `Spin.Spin`(转盘) `GachaService.Gacha`/`InvokeServer` `RaffleService.Join` `Any.Raffle` `Any.SecretLuck`
+- **商店**: `ShopService.Purchase`/`Gift` `Shop.Purchase` `Any.Purchase` `RandomShopService.Purchase`/`Refresh`/`Gift`
+  `CustomShopService.Purchase`/`Select` `Beginner.OpenShop`
+- **卖出/市场**: `WeaponService.Sell` `PlayerMarketService.Purchase`/`AddListing`/`SetPrice`/`RemoveListing`/`LoadListed`
+  `AuctionService.Bid`
+- **交易**: `Trade.Request`/`Ready`/`Select`/`SetConfirm`/`Toggle`/`Cancel`、`CashGun.Fire`/`Pickup`
+- **物品/装备**: `ItemService.TryUse` `BackpackService.TryEquip`/`TryUnequip` `EquipmentService.SetEquip`
+  `CharmService.Equip`/`UnEquip`
+- **复活/自杀/重生**: `GameService.Revive` `Any.Suicide` `GameService.Respawn`/`Join`/`JoinLater`
+- **传送**: `Any.Teleport`/`Teleporter`/`PlaceTeleport`/`ServerTeleport` `EntityService.Teleported`
+  `ReplicateService.Teleport` `ClientTeleported`
+- **队伍**: `TeamService.Invite`/`Accept`/`Kick`/`Leave`、`GameService.SelectRole`/`SelectRoleRequest`
+- **换服**: `ServerListService.Join`/`JoinAny`/`Cancel`
+- **背包/查询**: `InventoryQueryService.Query` `WeaponService.GetGlobalCounts`/`GetTradeCounts` `CareerStatsService.Request`
+- **邮件**: `MailboxService.Claim`/`MarkRead`/`RemoveMail`
+- **新增两个类别**(专门给对战服):
+  - `combat` — `CombatService.Action`/`ActionEvent`/`SetWeapon`/`Ammo`/`SwitchSlot`、`WeaponService.SetSkin`/`SetWrap`/`ReName`/`ResetName`、`ShootingRangeDummy`
+  - `move` — `EntityService.WalkSpeed`/`Jump`/`SetState`/`SetInAir`/`PitchYaw`、`Any.AirJump`/`JumpPad`、**`ClientReplicateCFrame`/`ServerReplicateCFrame`**
+
+### ⚠ 报告里两个值得注意的东西（跟"位置回退"直接相关）
+- **`Any.Heartbeat`**(RemoteFunction) —— 心跳/校验类调用, 很可能是服务端定期核对客户端状态的地方;
+- **`ClientReplicateCFrame` / `ServerReplicateCFrame`**(RemoteEvent) —— 一收一发, 典型就是
+  **客户端上报自己的 CFrame -> 服务端比对**。如果飞行/加速被拉回, 十有八九走的是这一对。
+  想绕的话就是 hook `ClientReplicateCFrame:FireServer`, 上报"正常速度能走到的位置"(或按正常节奏上报),
+  服务端就不会判你瞬移 —— 需要的话我做成一个开关。
+
 ## 6.9.14 · 2026-09-19
 
 ### 🗑 顺手删掉「事件预告」整套(你之前说不要了)
