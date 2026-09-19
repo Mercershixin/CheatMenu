@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:13 sha ff0ba2a9 bytes 441436'):format('2026-09-19 22:13','ff0ba2a9',441436))
+print(('[CheatMenu] build 2026-09-19 22:26 sha 27853152 bytes 441530'):format('2026-09-19 22:26','27853152',441530))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.3"
+SYS.BuildVer="6.10.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3353,41 +3353,41 @@ SYS._npcList=nil
 end
 local PK = {}
 SYS.PickKinds = {
-{ name = "箱子/收纳", color = Color3.fromRGB(255,200,0),
+{ name = "箱子/收纳", color = Color3.fromRGB(0,200,255),
 kws = {"chest","crate","locker","cabinet","vault","safe","coffer","stash","case","box","container",
 "宝箱","箱子","柜","收纳","棺材"} },
-{ name = "拾取物", color = Color3.fromRGB(0,220,255),
+{ name = "拾取物", color = Color3.fromRGB(0,200,255),
 kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem","item","scrap",
 "money","cash","orb","star","card","key","gold","coin",
 "金币","掉落","奖励","拾取","道具"} },
-{ name = "道具/补给", color = Color3.fromRGB(0,235,180),
+{ name = "道具/补给", color = Color3.fromRGB(0,200,255),
 kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","lockpick","skeleton",
 "battery","fuse","candle","bottle","ribbon","cheese","bone","keycard","syringe","potion",
 "手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛"} },
-{ name = "躲藏点", color = Color3.fromRGB(150,255,205),
+{ name = "躲藏点", color = Color3.fromRGB(0,200,255),
 kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
 "躲","藏身","衣柜","抽屉"} },
-{ name = "书籍/纸张/线索", color = Color3.fromRGB(255,170,255),
+{ name = "书籍/纸张/线索", color = Color3.fromRGB(0,200,255),
 kws = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
 "lore","hint","clue","code","password","passcode","padlock","combination","document",
 "letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
 "书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"} },
-{ name = "梯子/攀爬", color = Color3.fromRGB(80,255,120),
+{ name = "梯子/攀爬", color = Color3.fromRGB(0,200,255),
 kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
 "梯","爬","绳","藤"} },
-{ name = "按钮/机关", color = Color3.fromRGB(255,90,90),
+{ name = "按钮/机关", color = Color3.fromRGB(0,200,255),
 kws = {"button","switch","lever","panel","console","puzzle","mechanism","trigger","valve","terminal",
 "按钮","机关","开关","拉杆","控制"} },
-{ name = "传送/入口", color = Color3.fromRGB(200,120,255),
+{ name = "传送/入口", color = Color3.fromRGB(0,200,255),
 kws = {"portal","warp","teleport","gateway","exit","entrance","door","gate","elevator","stairs",
 "传送","入口","出口","楼梯","电梯"} },
-{ name = "座位/载具", color = Color3.fromRGB(255,160,60),
+{ name = "座位/载具", color = Color3.fromRGB(0,200,255),
 kws = {"seat","vehicle","chair","mount","cart","boat","car","bike","ride",
 "坐","车","船"} },
-{ name = "商店/交互台", color = Color3.fromRGB(120,255,220),
+{ name = "商店/交互台", color = Color3.fromRGB(0,200,255),
 kws = {"shop","vendor","merchant","trader","station","kiosk","market","atm","bank","forge","workbench",
 "商店","商人","柜台","工作台","锻造"} },
-{ name = "检查点/目标", color = Color3.fromRGB(180,180,255),
+{ name = "检查点/目标", color = Color3.fromRGB(0,200,255),
 kws = {"checkpoint","flag","goal","finish","objective","spawn","base",
 "检查点","终点","目标","旗"} },
 }
@@ -3447,7 +3447,7 @@ local hasText=false
 for _,g in ipairs(sg:GetDescendants()) do
 if g:IsA("TextLabel") or g:IsA("TextBox") then hasText=true break end
 end
-if hasText then kind={name="文字线索", color=Color3.fromRGB(255,170,255)} end
+if hasText then kind={name="文字线索", color=Color3.fromRGB(0,200,255)} end
 end
 end
 if not kind and not ok and type(o.Name)=="string" and o.Name~="" then
@@ -3521,8 +3521,14 @@ local list={}
 local CUTOF={}
 local SOFT={}
 local FAKE={}
+local TRAP={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
+local TRAPKW={"trap","trapdoor","hazard","damage","damaging","kill","lava","spike","pit","void","saw",
+"blade","crusher","crush","piston","hammer","press","fire","burn","acid","poison",
+"zap","electric","deadly","mine","landmine","bomb","tnt","explosive",
+"fake","dupe","false","danger","death","fatal","hurt","ouch"}
+local TRAPCN={"陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","假门","伪装","致死","致命","坑"}
 local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet","obstacle",
@@ -3603,6 +3609,7 @@ anc=anc.Parent
 end
 end
 local isFake=false
+local isTrap=false
 if ok then
 local anc=o
 for _=1,4 do
@@ -3611,8 +3618,15 @@ local raw=anc.Name
 if type(raw)=="string" and raw~="" then
 local nm=raw:lower()
 if nm:find("fake",1,true) or nm:find("dupe",1,true) or nm:find("false",1,true)
-or raw:find("假门",1,true) or raw:find("伪装",1,true) then isFake=true break end
+or raw:find("假门",1,true) or raw:find("伪装",1,true) then isFake=true end
+if not isTrap then
+for _,kw in ipairs(TRAPKW) do if nm:find(kw,1,true) then isTrap=true break end end
 end
+if not isTrap then
+for _,cw in ipairs(TRAPCN) do if raw:find(cw,1,true) then isTrap=true break end end
+end
+end
+if isFake and isTrap then break end
 anc=anc.Parent
 end
 end
@@ -3625,6 +3639,7 @@ list[#list+1]=part
 CUTOF[part]=isCut
 SOFT[part]=soft
 FAKE[part]=isFake
+TRAP[part]=(isTrap or isCut or isFake)
 if #names<14 and type(o.Name)=="string" then
 local dup=false
 for _,n in ipairs(names) do if n==o.Name then dup=true break end end
@@ -3639,6 +3654,7 @@ SYS._doorList=list
 SYS._doorCut=CUTOF
 SYS._doorSoft=SOFT
 SYS._doorFake=FAKE
+SYS._doorTrap=TRAP
 if not SYS._doorLogged then
 SYS._doorLogged=true
 print(("[ESP] 门/陷阱/假门透视: 找到 %d 个候选。名字样本: %s"):format(#list, table.concat(names,", ")))
@@ -3658,6 +3674,7 @@ end
 local DCUT=SYS._doorCut or {}
 local DSOFT=SYS._doorSoft or {}
 local DFAKE=SYS._doorFake or {}
+local DTRAP=SYS._doorTrap or {}
 for p in pairs(dact) do
 local h=HD[p]
 if not h then
@@ -3673,18 +3690,12 @@ end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
 h.OutlineTransparency=0
-if DFAKE[p]==true then
+if DTRAP[p]==true then
 h.FillColor   =Color3.fromRGB(255,30,30)
 h.OutlineColor=Color3.fromRGB(255,0,0)
-elseif DCUT[p]==true then
-h.FillColor   =Color3.fromRGB(255,0,180)
-h.OutlineColor=Color3.fromRGB(225,0,150)
-elseif DSOFT[p]==true then
-h.FillColor   =Color3.fromRGB(255,120,0)
-h.OutlineColor=Color3.fromRGB(255,90,0)
 else
-h.FillColor   =Color3.fromRGB(255,200,0)
-h.OutlineColor=Color3.fromRGB(255,170,0)
+h.FillColor   =Color3.fromRGB(0,200,255)
+h.OutlineColor=Color3.fromRGB(0,170,230)
 end
 local sk=HD_SK[p]
 if not sk then
@@ -3705,6 +3716,7 @@ HD_SK[p]=sk
 elseif sk.Parent~=p then
 P(function() sk.Parent=p end)
 end
+if sk then sk.Enabled=(DTRAP[p]==true) end
 end
 else
 if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
@@ -3713,6 +3725,7 @@ SYS._doorList=nil
 SYS._doorCut=nil
 SYS._doorSoft=nil
 SYS._doorFake=nil
+SYS._doorTrap=nil
 end
 if SYS.T_.ESP_Mini then
 SYS._miniN=(SYS._miniN or 0)+1
@@ -3776,8 +3789,8 @@ P(function() h.Parent=p end)
 end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
-h.FillColor   =Color3.fromRGB(170,255,60)
-h.OutlineColor=Color3.fromRGB(140,230,40)
+h.FillColor   =Color3.fromRGB(0,200,255)
+h.OutlineColor=Color3.fromRGB(0,170,230)
 end
 else
 if next(HM) then for _,h in pairs(HM) do P(function() h:Destroy() end) end HM={} end
@@ -3915,8 +3928,8 @@ h.Adornee=o
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.FillTransparency=0.88
 h.OutlineTransparency=0
-h.FillColor=Color3.fromRGB(255,200,0)
-h.OutlineColor=Color3.fromRGB(255,170,0)
+h.FillColor=Color3.fromRGB(0,200,255)
+h.OutlineColor=Color3.fromRGB(0,170,230)
 P(function() h.Parent=o end)
 HI[o]=h
 elseif h.Parent~=o then
@@ -9961,7 +9974,7 @@ end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
 UI.Section(p,"👁 人物 · 名字",CY.accent)
-UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮、金色 —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
+UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮(统一亮青) —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
 UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
 if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
 end)
@@ -9979,19 +9992,17 @@ UI.Switch(p,"👹 怪物/NPC 透视 (不属于玩家的怪也高亮, 橙色)","E
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
 end)
 UI.Tip(p,"把地图里【不属于任何玩家】但带 Humanoid 的模型(怪物/NPC/假人)用【橙色】高亮, 与玩家(队友绿·敌人红)区分。\n全 Workspace 扫描已节流(约每 0.5s 重扫一次), 不影响帧率; 隔墙时填充更透。",CY.sub)
-UI.Switch(p,"掉落物透视","ESPItem",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
+UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 一起)","ESP_Pick",function(on)
+SYS.T_.ESPItem=on SYS.T_.ESP_Door=on
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then
+SYS.ClearESP()
+end
 end)
-UI.Switch(p,"🖐 可交互对象透视 (箱子/梯子/按钮/传送门…轮廓高亮)","ESP_Pick",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
-and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then SYS.ClearESP() end
-end)
-UI.Tip(p,"按【结构】找, 不看名字: 带 ClickDetector(点击拾取) / ProximityPrompt(按 E) 的部件与模型, 以及 Tool 本身。\n所以名字里没有 item/drop 的道具也照样点亮(这是它和上面「掉落物透视」的区别)。\n青色高亮; 只点亮 600 格内的(免得整张图都是框); 扫描已节流。",CY.sub)
-UI.Switch(p,"🚪 门/陷阱/假门 透视 (陷阱=黄, 切割=品红, 假门=红, 疑似假门=橙)","ESP_Door",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
-and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC and not SYS.T_.ESP_Pick then SYS.ClearESP() end
-end)
-UI.Tip(p,"判据: 名字含 door/gate/trap/hazard/damage/lava/spike/pit/… 或中文 门/陷阱/机关/刺/熔岩/伤害/危险;\n结构上带 HingeConstraint / Motor6D(会转的门);\n③ 竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示) => 判为【疑似假门】, 橙色显示。\n⚠️ 【碰了会不会掉血】客户端看不出来(伤害在服务端结算) -> 这条只能按名字给提示, 会有误报。\n探测距离用上面那个「可交互道具探测距离」滑块。",CY.sub)
+UI.Tip(p,"一个开关同时点亮三类物件(判据合并, 不用分别开):\n"..
+"· 掉落物: 名字像掉落物(pickup/item/chest/gold…), 或客户端能看到的可捡物件\n"..
+"· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
+"· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
+"🎨 颜色统一: 普通物件 + 普通门 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。",CY.sub)
 UI.Div(p)
 UI.Section(p,"👣 落脚点 · 射线",CY.accent)
 local FSMark={} SYS._fsN=0
@@ -11264,7 +11275,7 @@ end)
 end
 UI.Pages["MachineParty"]=function(p)
 UI.Section(p,"🎮 小游戏 · 透视",CY.accent)
-UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮黄绿)","ESP_Mini")
+UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮青)","ESP_Mini")
 UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
 UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
