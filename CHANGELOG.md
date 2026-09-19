@@ -1,3 +1,20 @@
+## 6.9.31 · 2026-09-19
+
+### 👻 修「透视里隐身人物的效果没了」
+
+**原因**: 幽灵态判定原来**只认 MachineParty 的 `MPGhost` 属性** —— 换到别的游戏它恒为 false,
+所以隐身的人不再被标紫(透视本身还看得见, 只是没有那个"紫色=他在隐身"的标记了)。
+
+**现在改成三层判定**(任一命中即算隐形/幽灵态, 全程只读、不动游戏状态):
+1. **`MPGhost`**(MachineParty 原判据, 保留);
+2. **通用属性**: 名字像隐身且值为 `true` ——
+   `Ghost / IsGhost / Invisible / IsInvisible / Stealth / IsStealth / Hidden / IsHidden /
+   Vanish / Vanished / Phantom / InvisibleMode / GhostMode / Cloak / Cloaked / Camouflage / ShadowMode`;
+3. **结构兜底**: 本地看到的这个角色**整体透明**(透明度过 0.6 的部件占七成以上) → 判定"他隐身了"。
+   这条对"只在你自己客户端生效的隐身"同样管用 —— 透视本来就穿墙, 再加一圈紫色更好认。
+
+所以现在无论游戏用哪种方式表示隐身(属性 / 整体透明), 透视都会把他标成**紫色**。
+
 ## 6.9.30 · 2026-09-19
 
 ### 🎯 子弹射线改成「人物模型的第一视角射线」
