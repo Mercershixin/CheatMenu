@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:56 sha 7ae86d66 bytes 416385'):format('2026-09-19 19:56','7ae86d66',416385))
+print(('[CheatMenu] build 2026-09-19 20:00 sha 2b2a3b79 bytes 417108'):format('2026-09-19 20:00','2b2a3b79',417108))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,6 @@ NoDeath=false,NoKnock=false,
 CB_MissMode=false,
 CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
 AutoClaim=false,AutoPickup=false,AutoRespawn=false,
-EventWatch=false,
 TrapWatch=false,
 AutoUse=false,
 TimeScale=1,
@@ -105,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.13"
+SYS.BuildVer="6.9.14"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1883,73 +1882,6 @@ P(function() if HudGui then HudGui.Enabled = false end end)
 end
 end))
 end
-SYS.EventWatch = {
-keywords = {"monster","fake","real","boss","wave","round","event","spawn","alert","warn","announce","hint","notice",
-"touchdamage","damagedeny","denyinform","highlight","renam","resetname",
-"status","playstate","preSpawnDarken","prespawndarken","querylock",
-"selectrole","selectedrole","deathEffects","deatheffects",
-"mailbox","roulette","secretcase","prototypecase","socialrewards",
-"friendreward","milestone","onlinereward","battlepass","minipass",
-"serverlist","joinserver","teleporttoserver","pickgameteam","selectloadout",
-"inventoryview","inventoryquery","operate","companion","dungeon"},
-conns = {}, seen = {},
-}
-function SYS.EventWatchScan()
-local roots = {}
-local r1 = RStorage:FindFirstChild("Remote")
-if r1 then roots[#roots+1] = r1 end
-roots[#roots+1] = RStorage
-local n, names, seen = 0, {}, {}
-pcall(function()
-for _, root in ipairs(roots) do
-for _, c in ipairs(root:GetDescendants()) do
-local ln = string.lower(tostring(c.Name))
-for _, k in ipairs(SYS.EventWatch.keywords) do
-if ln:find(k, 1, true) and not seen[c.Name] then
-seen[c.Name] = true
-n = n + 1 names[#names+1] = c.Name break
-end
-end
-end
-end
-end)
-return n, names, RStorage
-end
-function SYS.SetEventWatch(on)
-SYS.T_.EventWatch = on and true or false
-local E = SYS.EventWatch
-for _, c in ipairs(E.conns) do P(function() c:Disconnect() end) end
-E.conns = {}
-if not SYS.T_.EventWatch then return end
-local n, names, rel = SYS.EventWatchScan()
-for _, nm in ipairs(names) do
-local inst = rel and rel:FindFirstChild(nm, true)
-if inst then
-pcall(function()
-E.conns[#E.conns+1] = inst.OnClientEvent:Connect(function(...)
-if not SYS.T_.EventWatch then return end
-local a = table.pack(...)
-local parts = {}
-for i = 1, math.min(a.n, 3) do
-local tv = type(a[i])
-if tv == "string" or tv == "number" or tv == "boolean" then
-parts[#parts+1] = tostring(a[i])
-end
-end
-local d = table.concat(parts, " · ")
-local key = nm .. "|" .. d
-local now = os.clock()
-if E.seen[key] and now - E.seen[key] < 8 then return end
-E.seen[key] = now
-P(function() SYS.Hud("📣 " .. nm .. (d ~= "" and ("  →  " .. d) or ""), 6) end)
-end)
-end)
-end
-end
-SYS.Notify(("📣 事件预告已开: 挂上 %d 条信号"):format(#E.conns),
-#E.conns > 0 and SYS.CY.green or SYS.CY.yellow)
-print(("[CheatMenu] 事件预告: 命中 %d 条 -> %s"):format(n, table.concat(names, ", ")))
-end
 local function tryMany(kind)
 local list = SYS.RemoteAlias[kind] or {}
 local okN, hit = 0, {}
@@ -2527,10 +2459,6 @@ end)
 SYS.RegisterScanner("陷阱 / 状态 / 锁定信号", function()
 local have, miss = SYS.ProbeTrapWatch()
 return { "有: " .. table.concat(have, ", "), "无: " .. table.concat(miss, ", ") }
-end)
-SYS.RegisterScanner("可预告信号 (事件预告用)", function()
-local n, names = SYS.EventWatchScan()
-return { ("共 %d 条: %s"):format(n, table.concat(names, ", "):sub(1, 900)) }
 end)
 SYS.RegisterScanner("场景可拾取物", function()
 local l = SYS.FindGrabbables()
@@ -9750,6 +9678,93 @@ UI.Switch(p,"挂机防踢","AntiAFK",function(on)
 if on then SYS.enableAntiAFK() else SYS.disableAntiAFK() end
 end)
 UI.Div(p)
+UI.Section(p,"🏋 训练 / 健身房",CY.accent)
+UI.Switch(p,"自动训练踢击力量","AutoTrain",function(on)
+if on then SYS.StartTrain() else SYS.StopTrain() end
+end)
+UI.Slider(p,"训练循环间隔(秒)",1,30,0.5,function() return SYS.C_.AutoTrainSec end,function(v) SYS.C_.AutoTrainSec=v end,"%.1f")
+UI.Switch(p,"自动重生","AutoRebirth",function(on)
+if on then SYS.StartReb() else SYS.StopReb() end
+end)
+UI.Slider(p,"重生检查间隔(秒)",1,15,0.5,function() return SYS.C_.RebirthCheck end,function(v) SYS.C_.RebirthCheck=v end,"%.1f")
+UI.Switch(p,"自动领取训练加成","AutoBonus")
+UI.Switch(p,"优先参加健身事件","AutoGym",function(on)
+if on then SYS.StartGym() else SYS.StopGym() end
+end)
+UI.Div(p)
+UI.Section(p,"🏠 基地操作",CY.cyan)
+UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(30) end)
+UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
+UI.Div(p)
+UI.Section(p,"💰 自动售卖 / CPS 统计",CY.yellow)
+UI.Switch(p,"自动售卖 (每5秒)","AutoSell")
+UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
+local row=Instance.new("Frame")
+row.Size=UDim2.new(1,0,0,42) row.BackgroundColor3=CY.card
+row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
+UI.Round(row,10) UI.Stroke(row,CY.line,1,0.85)
+local lb=Instance.new("TextLabel")
+lb.Size=UDim2.new(1,-130,1,0) lb.Position=UDim2.new(0,12,0,0)
+lb.BackgroundTransparency=1 lb.Text="最低 CPS 门槛"
+lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
+lb.TextSize=13 lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
+local box=Instance.new("TextBox")
+box.Size=UDim2.new(0,110,0,28) box.Position=UDim2.new(1,-122,0.5,-14)
+box.BackgroundColor3=CY.panel box.BackgroundTransparency=0.2
+box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
+box.TextColor3=CY.cyan box.Font=Enum.Font.Code
+box.TextSize=13 box.BorderSizePixel=0 box.ClearTextOnFocus=false box.Parent=row
+UI.Round(box,6) UI.Stroke(box,CY.cyan,1,0.7)
+box.FocusLost:Connect(function()
+local v=tonumber(box.Text)
+if v and v>=0 then
+if SYS.AFK_Sell then SYS.AFK_Sell.MinCPS=v end
+if SYS.SyncMinCPS then SYS.SyncMinCPS() end
+box.Text=tostring(math.floor(v))
+print("[Sell] CPS 门槛设为: "..box.Text.." (已保存)")
+else
+box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
+end
+end)
+UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
+if SYS.sellLowCPSTools then SYS.sellLowCPSTools(true) end
+end)
+UI.Div(p)
+UI.Section(p,"📊 CPS 统计 (扫低于门槛的脑红)",CY.purple)
+local scanResL=UI.Label(p,"输入 CPS 后点击扫描",CY.sub)
+UI.Btn(p,"🔍 扫描低于当前门槛的脑红数量",CY.purple,function()
+task.spawn(function()
+if scanResL and scanResL.Parent then
+scanResL.Text="扫描中..." scanResL.TextColor3=CY.yellow
+end
+local picks,th=0,0
+pcall(function()
+picks,th=SYS.scanLowCPSCount()
+end)
+if scanResL and scanResL.Parent then
+if type(picks)=="table" then
+local cnt=#picks
+local names={}
+for i=1,math.min(cnt,8) do
+table.insert(names,("%s(%.0f)"):format(picks[i].Name,picks[i].CPS))
+end
+local preview=table.concat(names,", ")
+if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
+if cnt==0 then
+scanResL.Text=("门槛 %.0f: 无低 CPS 脑红"):format(th)
+scanResL.TextColor3=CY.green
+else
+scanResL.Text=("门槛 %.0f: 共 %d 个  |  %s"):format(th,cnt,preview)
+scanResL.TextColor3=CY.cyan
+end
+print(("[Scan] 门槛 %.0f · 共 %d 个"):format(th,cnt))
+else
+scanResL.Text="扫描失败"
+scanResL.TextColor3=CY.red
+end
+end
+end)
+end)
 UI.Section(p,"⏱ 冷却加速 / 自动连用",CY.orange)
 UI.Slider(p,"时间倍率 (1=关, 越高冷却越快)",1,20,0.5,
 function() return SYS.C_.TimeScale or 1 end,
@@ -9763,13 +9778,6 @@ UI.Tip(p,"⛔ 绕不过: 物品【数量】/【耐久】/【使用次数上限�
 "✅ 能做: ①【冷却加速】很多游戏把上次使用时间存在客户端, 时间函数 hook 快一点冷却就立刻到期;\n"..
 "   ②【自动连用】帮你按住不放, 消耗照旧但频率拉满。\n"..
 "⚠️ 冷却加速只对【客户端判定】的冷却有效; 服务端若也限流, 仍会被拒。",CY.yellow)
-UI.Btn(p,"🔎 看看本游戏有哪些可预告的信号",CY.sub,function()
-P(function()
-local n,names=SYS.EventWatchScan()
-print(("[CheatMenu] 可预告信号 %d 条: %s"):format(n,table.concat(names,", ")))
-SYS.Hud(("可预告信号 %d 条 (详见控制台 F9)"):format(n),6)
-end)
-end)
 UI.Tip(p,"✅ 能做: 游戏【本身免费】的东西 —— 每日/活动奖励、0 元商品、地上掉落物。\n"..
 "⛔ 做不到: 白嫖【付费】物品。购买是服务端权威 —— 客户端发请求后服务端要查你的货币余额, 不够直接拒绝;\n"..
 "   客户端改不动服务端余额, 这是引擎架构, 不是脚本没生效。真能 0 元买的只有服务端自己标价 0 的商品。",CY.yellow)
