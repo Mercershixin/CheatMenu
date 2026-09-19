@@ -26,6 +26,10 @@
    **只在用户明确说「跑一下 / 验证一下 / 测试一下 / 发版」时才跑**。
    > 用户原话：**"我让你做你才做，没让你做我不做。"**
 
+   ★ 2026-09-20 补充：**发版流程里的仿真门禁是固定步骤**（见 §4；`publish.py` 不加 `--fast` 就会跑它，
+   用户称「仿真循环检测也是必须的」）。这条规则约束的是**"别自己加戏跑额外验证"**，不是"发版时跳过门禁"。
+   仿真台本身已修成全绿（见 §6.1），**用户明确要求不要绕过它**。
+
 2. **UI 上标「不推荐 / 会被拉回 / 有风险」是给用户看的提示，不是让你改行为。**
    用户要的是「**标出来，我自己决定用不用**」——**不要**因此删选项、改默认值、加限制。
 
@@ -34,6 +38,71 @@
 4. **不要为了"验证我没改坏"去跑门禁。** 改完直接交付，或问用户要不要验。
 
 5. 同一条请求**换个说法再问，答案要一致** —— 不因提问角度变化而放宽或收紧。
+
+---
+
+## 1.5 ⛔ 已删除功能 / 禁止回加清单（**最重要的一节**）
+
+> 用户 2026-09-20 原话：**「让后面接替的智能体不要再拿老版本的东西给我重新加回来了（除非我提起的）」**
+>
+> 下面这些**用户明确要求删过**。**不要**因为"事件库里还写着""公开脚本里还有""看着挺有用"就加回来。
+> 只有**用户本人重新提起**才能加。加回来 = 违反本节 = 返工。
+
+### A. 已整块删除（配置键 + 后端函数 + 循环全删，`-253 行`）
+
+| 功能 | 曾经的键 / 函数 |
+|---|---|
+| 反陷阱预警 | `TrapWatch` / `SYS.SetTrapWatch`（⚠  `SYS.ProbeTrapWatch` **例外，保留**——它被「综合扫描 → 陷阱/状态/锁定信号」用着） |
+| 自动连用 | `AutoUse` / `SYS.SetAutoUse` / `SYS.AutoUseTick` |
+| 自动领取 | `AutoClaim` / `SYS.SetAutoClaim` / `SYS.AutoClaimTick` |
+| 自动收集 | `AutoPickup` / `SYS.SetAutoPickup` / `SYS.AutoPickupTick` |
+| 死亡自动重生 | `AutoRespawn` / `SYS.SetAutoRespawn` / `SYS.AutoRespawnTick` |
+| 自动商店 | `AutoShop` / `SYS.SetAutoShop` / `SYS.AutoShopTick` |
+| 自动选队伍/角色 | `AutoTeam` / `SYS.SetAutoTeam` / `SYS.AutoTeamTick` |
+| 自动表情 | `AutoEmote` / `SYS.SetAutoEmote` |
+| 落脚点指示 | `SYS.SetFootstep` / `FSMark`（后端也已删除，不只是藏了入口） |
+
+> `SYS.REMOVED_FEATURES` 黑名单**必须留着** —— 删掉配置键之后它反而更重要：挡住老存档把这些键复活。
+
+### B. 界面入口已删、后端可能还在（**禁止恢复入口**）
+
+| 功能 | 键 / 备注 |
+|---|---|
+| 人物方框 | 方框 / `SelectionBox` / `BoxHandleAdornment` 形态 —— 用户要的是**人物高亮**，v72 整块删 |
+| 隐身 | v82 删（只能本地生效，别人仍看得到） |
+| 锁定保持（粘性瞄准） | 用户早前明确删过；现在由优先链决定 |
+| 命中率 / 漏打模式 | v6.9.17 删（`CB_MissMode` 等残键还在，`SYS.Combat` 主循环仍读它 —— **删残键要先动战斗主循环，风险另评**） |
+| 快照瞄准 | v77 删（`CB_SnapFire` 残键同上） |
+| 静默瞄准 | v74 起 `CB_Silent` 恒 false，原 ~210 行 hook 已永不执行（`CB_SilentAim` / `CB_SilentNoTurn` 残键同上） |
+| 视场 pov / FOV 圈 / 距离标签 / 目标高亮 | v72 整组删 |
+| 「进阶: 观察某个函数」 | v5.4.0 整段删（实现留在原处但无入口） |
+| 手动的「立即保存 / 立即加载」 | v57 删（保存/读回**仍然是自动的**，只是没有手动按钮） |
+| 物品栏来源诊断 | 2026-09-17 删 |
+| 「整蛊」页 | 已删 —— **页面总数是 10 页，不是 11 页** |
+
+### C. ⚠️ 用户 2026-09-20 明确说「还需要」的（**别再删**）
+
+- **穿墙（NoClip）** —— 它的界面入口在 v6.9.6 被删过一轮，**v7.4.0 按用户要求加回来了**（移动页 `Noclip` 开关 + `SYS.SetNoclip`）。用户原话：「**穿墙的功能我还是需要的**」。后端 `SYS.SetNoclip` / `SYS.ApplyNoclip` / 卸载里的调用**都不要删**。
+
+### D. 已经按用户要求【合并过】的形态（**不要拆开**）
+
+用户 2026-09-20 原话：「把这个能合并的 合并了。不建议的不合」。
+
+- 「玩家透视 `ESP`」+「生物透视 `ESP_NPC`」→ 合并成 **「👁 活物透视」三态**（关闭 / 仅玩家 / 全部活物）
+- 「玩家名字 `ESPNameTag`」+「头顶武器标记 `ESPWeapon`」→ 合并成 **「🪧 头顶标签」**（一个开关同时驱动两个池）
+- 「小游戏区域透视 `ESP_Mini`」→ 并入 **「🔍 物件透视」总闸** + 分类表第 12 类「小游戏区域」
+- 8 处功能各自的全量扫描 → **`SYS.Index()` 统一扫描索引器**（一次扫描 + 0.4s 缓存）
+- 重复判据表 → **`SYS.Kw*` 共享常量**（`MiniArea` / `KwHazard` / `KwGate` / `KwTrap` / `KwCut` / `KwMpExtra` / `KwHidePick` / `KwHidePrompt` / `KwClue` / `KwClueText`）
+- 4 处互锁判断 → **`SYS.ESPAnyOn()` / `SYS.ESPMaybeClear()`**
+
+★ 刻意**没有**合并的两处（别"顺手"合并）：**藏身点判据分两份**（透视宽松 / 自动藏身严格，合了会跑去翻抽屉）；
+**自动躲避不能用 `SYS.KwGate`**（多出的 `exit/stairs/teleport/fake` 会让它去躲出口）。
+
+### E. 参数表的两张表别搞混
+
+- `SYS.T_` = **开关布尔**（UI.Switch / UI.Cycle 驱动）
+- `SYS.C_` = **参数值**（UI.Slider 驱动）
+- 新增参数时先看代码读的是哪张表（**这个坑踩过**：`TracerMaxDist/TracerMaxN` 一开始加进了 `T_`，而代码读 `C_`）
 
 ---
 
@@ -104,3 +173,19 @@
 - 主攻游戏随用户变（今天可能是 **MachineParty（机器派对）** 或 **DOORS（门）**）
 - 事件库清单在 `事件库/`（每个游戏一份，含权威 Attribute / Remote 分类 / 可做功能映射）
 - 详细历史看 `CHANGELOG.md`（很长，搜关键词就行）
+
+### 6.1 仿真台（`.workbuddy/sim/`）—— 2026-09-20 已修成全绿
+
+- 入口：`<lua53 的 python> .workbuddy/sim/run_full.py CheatMenu-6.9.1.lua` → 结果写 `.workbuddy/sim/full_result.txt`
+  （**注意：仿真的 stdout 被 `run_full.py` 捕获进 `full_result.txt`，不要在终端 grep 仿真输出**）
+- 运行时真相：**lupa 2.8 + Lua 5.5**（不是 Luau！所以 Luau 合法的写法在仿真里可能报错，反之亦然）
+- 当前基线：**246 通过 / 0 失败 / 被 pcall 吞掉的错误 0 条**（`publish.py` 不加 `--fast` 现在能一次过）
+- 已修的关键缺口（**别再改回去**）：
+  - `string.format` shim —— Luau 的 `%d` 会截断浮点，Lua 5.5 会抛 `number has no integer representation`；这一个缺口曾经造出 1400+ 条假错误
+  - `_G.__restoreMe()` —— "点遍所有按钮"会点到「☠ 强制自杀(抹除)」，那个按钮**真的会 `hum:Destroy()`**；真机由引擎重生，仿真台必须等价补上，否则之后所有依赖 `GC()` 的用例静默失效
+  - `__SUPPRESS`/精确豁免 —— 只豁免「HttpGet 未登记 URL」这一种**预期内**失败；**不要**开整段豁免窗口（会把用例真正依赖的错误也吞掉）
+  - 中性键名 —— 启动锁/更新提示是 `SYS.GK.boot` / `SYS.GK.note`（**不是** `CheatBootDone`）；战斗循环绑定名是 `SYS.N.Combat`（**不是** `CheatMenuCombat`）
+  - 执行器桩 —— `newcclosure` / `cloneref` / `setreadonly` / `fireproximityprompt` / `fireclickdetector` / `getconnections` / `getnilinstances` / `checkcaller` / `getreg` / `getgc` / `MarketplaceService`
+  - 设计联动白名单 `PAIRED` —— 8 组（`ESP_Pick`→三类物件、`GodMode`→NoDeath/NoKnock、`Prot_HideGui`→两个防护、`Lantern`/`NoFog`/`NoAggro`、`ESPNameTag`→`ESPWeapon`、`CB_SilentNoTurn`→`CB_SilentAim`）
+- 仿真台**测不到**的东西（别拿它当"实机通过"）：真实物理/碰撞、真实复制与延迟、服务端权威、DataStore、
+  动画、**真实 UI 渲染**（`SIM_NO_WIDGETS=true`，仿真台只注册回调、不建 WindUI 元素）、真实执行器差异
