@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:57 sha 79715d34 bytes 440675'):format('2026-09-19 21:57','79715d34',440675))
+print(('[CheatMenu] build 2026-09-19 22:13 sha ff0ba2a9 bytes 441436'):format('2026-09-19 22:13','ff0ba2a9',441436))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.2"
+SYS.BuildVer="6.10.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3358,7 +3358,7 @@ kws = {"chest","crate","locker","cabinet","vault","safe","coffer","stash","case"
 "宝箱","箱子","柜","收纳","棺材"} },
 { name = "拾取物", color = Color3.fromRGB(0,220,255),
 kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem","item","scrap",
-"money","cash","orb","star","card","key",
+"money","cash","orb","star","card","key","gold","coin",
 "金币","掉落","奖励","拾取","道具"} },
 { name = "道具/补给", color = Color3.fromRGB(0,235,180),
 kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","lockpick","skeleton",
@@ -3367,6 +3367,11 @@ kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","loc
 { name = "躲藏点", color = Color3.fromRGB(150,255,205),
 kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
 "躲","藏身","衣柜","抽屉"} },
+{ name = "书籍/纸张/线索", color = Color3.fromRGB(255,170,255),
+kws = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
+"lore","hint","clue","code","password","passcode","padlock","combination","document",
+"letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
+"书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"} },
 { name = "梯子/攀爬", color = Color3.fromRGB(80,255,120),
 kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
 "梯","爬","绳","藤"} },
@@ -3433,6 +3438,16 @@ if not anc then break end
 kind=pickKind(anc)
 if kind then break end
 anc=anc.Parent
+end
+end
+if not kind then
+local sg=o:FindFirstChildOfClass("SurfaceGui")
+if sg then
+local hasText=false
+for _,g in ipairs(sg:GetDescendants()) do
+if g:IsA("TextLabel") or g:IsA("TextBox") then hasText=true break end
+end
+if hasText then kind={name="文字线索", color=Color3.fromRGB(255,170,255)} end
 end
 end
 if not kind and not ok and type(o.Name)=="string" and o.Name~="" then
