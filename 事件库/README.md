@@ -10,15 +10,21 @@
 | `2026-09-17_MM2类游戏_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出 | 同上一份 |
 | `2026-09-18_完整Remote清单+战斗诊断.txt` | ⚠️ **不是 MM2**（特征：`Season`/`Rebirth`/`Trade`/`Cash`/`Skin`/`Room`/`Claim`，疑似模拟经营类）；**文件末尾还混了战斗诊断日志** | 全量 dump | 447 个 Remote 相关名 |
 | `2026-09-19_对战服(FFA混战+交易)_没有机器人自由对战模式.md` | **对战服**：`[没有机器人，自由对战模式]`（PlaceId 119661268047775，FFA/TDM + 交易市场 + 抽卡箱） | 按功能分类 + **实例路径/属性** + 可做功能映射 | RemoteEvent 289 + RemoteFunction 149 + BindableEvent 29 + Prompt 23 |
+| `2026-09-19_MachineParty(机器派对).md` | **机器派对**：`[UPD2] 机器派对 💥`（PlaceId 127775478639865，小游戏合集 + 大厅车站 + 限量商城） | 按功能分类 + **`MP*` Attribute 权威数据** + 可 hook 函数（含"哪些其实是自家函数"的坑）+ 环境边界实锤 + 可做功能映射 | RemoteEvent **3** + RemoteFunction **2** + BindableEvent 6 + BindableFunction 50 + Prompt 7 + ClickDetector 186 |
+| `2026-09-19_MachineParty_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出（168 条） | 168 |
+| `2026-09-19_DOORS(门).md` | **DOORS**：`门 (游戏)`（PlaceId 6839171747，恐怖跑图 + 门/假门 + 复活 + 商店） | 按功能分类 + **门/假门实例结构** + Attribute 权威数据 + **别碰的蜜罐** + 可做功能映射。★ 已接进主脚本 6.10.1 | RemoteEvent 172 + RemoteFunction 19 + BindableEvent 116 + BindableFunction 5 + Prompt 50 |
+| `2026-09-19_DOORS(门)_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出（362 条） | 362 |
 
 > ★ 这份还专门记了**非 remote 的判定数据**：敌我容器 `Workspace.Highlight.Enemy.HighlightHolder.<玩家名>`、
 > Player 的 Attribute 清单、场景物件路径 —— 这类"游戏自己的判定数据"往往比 remote 更有用（6.9.22 已接进索敌）。
 
 ## ⚠️ 已知缺口（2026-09-19 分析）
 
-1. **当前在玩的 MachineParty 没有专项清单。**
-   它的权威数据不在 Remote 里，而在 Player 的 `MP*` Attribute（`MPGhost`/`MPScrap`/`MPTier`/`MPWalkSpeed`…）
-   —— 这条见仓库 README 的「这个游戏的关键事实」一节。**下次抓包务必单独存一份 `YYYY-MM-DD_MachineParty.md`。**
+1. ~~**当前在玩的 MachineParty 没有专项清单。**~~ → ✅ **2026-09-19 已补**：`2026-09-19_MachineParty(机器派对).md`。
+   注意它的权威数据不在 Remote 里，而在 Player 的 `MP*` Attribute（`MPGhost`/`MPScrap`/`MPTier`/`MPWalkSpeed`…）
+   —— 这条见仓库 README 的「这个游戏的关键事实」一节。
+   ⚠ 但那份抓包是**在大厅**做的：小游戏（陷阱/门/小游戏物件）**还没有快照**，下次要在小游戏里补一份。
+   ⚠ 另外 `MPGhost` 不是"隐身标志"（本机在大厅就是 `true`，别人身上根本没这个属性）。
 2. `2026-09-18` 那份**文件名没写游戏名**，且**内容里混了诊断日志**，检索时会干扰。
 3. 事件库里 **461 个事件名中有 417 个从没被主脚本用到** —— 下面「未覆盖索引」列出可做功能的机会。
 
