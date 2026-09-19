@@ -38,7 +38,7 @@
 | `CHANGELOG.md` | 更新记录（**发行前先在顶部加本版说明**） |
 | `事件库/` | 游戏 Remote 事件抓包清单，做新功能先来这里查信号 |
 
-> ⚠️ 本地工作区里是**完整源码，带注释**（**文件名跟版本号走**：`CheatMenu-<版本>.lua`，如 `CheatMenu-6.9.0.lua`，
+> ⚠️ 本地工作区里是**完整源码，带注释**（**文件名跟版本号走**：`CheatMenu-<版本>.lua`，如 `CheatMenu-6.9.1.lua`，
 > 升版用 `.workbuddy/build/rename_version.py` 一键改名）。仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
 > **改代码要改本地源码，不是直接改仓库产物。**
 
@@ -48,7 +48,7 @@
 
 ## 这个游戏的关键事实（做功能前必读）
 
-从诊断实锤确认（`CheatMenu-6.9.0.lua:4531`），**权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
+从诊断实锤确认（`CheatMenu-6.9.1.lua:4531`），**权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
 
 | 判据 | 位置 | 关键点 |
 |------|------|------|
@@ -56,8 +56,8 @@
 | 状态 | `@State` = `Sprint`/`Slide`/`Stand`/`Dead` | 比 `Humanoid:GetState()` 准（权威状态） |
 | 护盾 | `@Shield` / `@TempShield` | 0 = 无盾 |
 | 换弹/受控 | `@combatPaused` | `true` = 换弹 / 受控 / 无法攻击 |
-| 队伍 | **多信号按序试**：`Team` → `MPTeam` → `MPTeamId` → `team` → `MPFaction` → `MPSide`，最后回退 `Player.Team.Name` | 标准 `Player.Team` 恒为 **nil**；这些可能**全为 nil** → 透视颜色恒定，属已知现象（`CheatMenu-6.9.0.lua:2413`） |
-| **幽灵/隐身态** | `MPGhost == true` | **MachineParty 特有**；本机玩家实测 `MPGhost=true` + `MPWalkSpeed=0` → 透视里单独标**紫色**（`CheatMenu-6.9.0.lua:2426`） |
+| 队伍 | **多信号按序试**：`Team` → `MPTeam` → `MPTeamId` → `team` → `MPFaction` → `MPSide`，最后回退 `Player.Team.Name` | 标准 `Player.Team` 恒为 **nil**；这些可能**全为 nil** → 透视颜色恒定，属已知现象（`CheatMenu-6.9.1.lua:2413`） |
+| **幽灵/隐身态** | `MPGhost == true` | **MachineParty 特有**；本机玩家实测 `MPGhost=true` + `MPWalkSpeed=0` → 透视里单独标**紫色**（`CheatMenu-6.9.1.lua:2426`） |
 
 - ⚠️ **`MadworkCombat_*` 那套战斗框架在当前游戏里没有**（源码 0 处引用）—— 那是 `事件库/` 里**另一个游戏**的清单，
   别照着写机判。
