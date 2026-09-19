@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:52 sha 835f338a bytes 439102'):format('2026-09-19 20:52','835f338a',439102))
+print(('[CheatMenu] build 2026-09-19 20:58 sha 26c0f457 bytes 438857'):format('2026-09-19 20:58','26c0f457',438857))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.25"
+SYS.BuildVer="6.9.26"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -9849,7 +9849,6 @@ end
 end))
 SYS.Notify("👣 落脚点指示 已开启",SYS.CY.green)
 end
-UI.Switch(p,"👣 落脚点指示 (每个人脚下的光圈, 看谁站哪/往哪走)","FootstepESP",function(on) P(SYS.SetFootstep,on) end)
 UI.Switch(p,"子弹射线 (只画线, 不改弹道)","Tracer",function(on)
 if not on then P(SYS.TracerHide) end
 end)
@@ -10094,7 +10093,6 @@ UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近
 "   全部 = 场景里所有可拾取物逐个发一遍; 单独 = 只拿离你最近的那个。\n"..
 "⛔ 刷物品: 做不到。物品增减是服务端权威 —— 客户端发的是请求, 服务端按自己的库存处理;\n"..
 "   凭空造物只可能来自游戏自身漏洞, 客户端没有合法途径。",CY.yellow)
-UI.Switch(p,"📣 事件预告 (怪物/波次/回合等 → HUD 提示)","EventWatch",SYS.SetEventWatch)
 UI.Switch(p,"🛡 反陷阱预警 (陷阱伤害/被挡/状态 → HUD)","TrapWatch",SYS.SetTrapWatch)
 UI.Btn(p,"🔎 探测本游戏的陷阱/状态信号",CY.sub,function() P(SYS.ProbeTrapWatch) end)
 UI.Btn(p,"🔍 统一扫描 (全部探测一次跑完 → 控制台+文件+剪贴板)",CY.green,function()
