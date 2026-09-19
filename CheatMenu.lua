@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:03 sha e1faf070 bytes 456351'):format('2026-09-19 19:03','e1faf070',456351))
+print(('[CheatMenu] build 2026-09-19 19:05 sha 392887b6 bytes 454497'):format('2026-09-19 19:05','392887b6',454497))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.5"
+SYS.BuildVer="6.9.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10040,53 +10040,6 @@ end)
 end)
 UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSource("ui") end)
 UI.Div(p)
-UI.Section(p,"📨 聊天接收器 (实时看全部聊天 · 一键复制)",CY.cyan)
-UI.Switch(p,"开始接收聊天","ChatLog",function(on)
-if on then SYS.ChatLog.Start() else SYS.ChatLog.Stop() end
-if SYS.ChatLogRender then P(SYS.ChatLogRender) end
-end)
-UI.Btn(p,"📋 复制全部消息到剪贴板",CY.cyan,function()
-local m=SYS.ChatLog.Msgs
-local out={}
-for i=1,#m do out[#out+1]="["..m[i].who.."] "..m[i].txt end
-if setclipboard then
-setclipboard(table.concat(out,"\n"))
-SYS.Notify(("📋 已复制 %d 条消息"):format(#out),SYS.CY.cyan)
-else
-SYS.Notify("这台执行器没有 setclipboard",SYS.CY.yellow)
-end
-end)
-UI.Btn(p,"🗑️ 清空所有消息",CY.orange,function() SYS.ChatLog.Clear() end)
-local cList=SYS.MiniList(p,200)
-UI.Tip(p,"同时兼容新聊天(TextChatService.MessageReceived)与旧聊天(OnMessageDoneFiltering)。\n只读取本地已经收到的消息 —— 不加任何东西、不发任何东西。\n★ 和我们自己的「聊天翻译」是一对: 一个翻, 一个留档。",CY.sub)
-local function chatRender()
-SYS.MiniClear(cList)
-local m=SYS.ChatLog.Msgs
-if #m==0 then
-local r=SYS.MiniRow(cList,26)
-local l=SYS.MiniText(r,"还没有收到消息(把开关打开后开始接收)",11,CY.sub)
-l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
-return
-end
-local from=math.max(1,#m-120)
-for i=from,#m do
-local e=m[i]
-local r=SYS.MiniRow(cList,24)
-local nm=SYS.MiniText(r,tostring(e.who),11,CY.green)
-nm.Size=UDim2.new(0,124,1,0) nm.Position=UDim2.new(0,6,0,0)
-local tx=SYS.MiniText(r,tostring(e.txt),11,CY.text)
-tx.Size=UDim2.new(1,-190,1,0) tx.Position=UDim2.new(0,132,0,0)
-local cb=SYS.MiniBtn(r,"复制",CY.cyan,function()
-if setclipboard then
-setclipboard(tostring(e.txt))
-SYS.Notify("📋 已复制该条",CY.cyan)
-end
-end,52)
-cb.Position=UDim2.new(1,-58,0,1)
-end
-end
-SYS.ChatLogRender=chatRender
-chatRender()
 end
 do
 local LAB={Hooks={}, Log={}, MaxLog=200}
