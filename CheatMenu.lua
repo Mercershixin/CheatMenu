@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:11 sha 6a99ffc7 bytes 422774'):format('2026-09-19 20:11','6a99ffc7',422774))
+print(('[CheatMenu] build 2026-09-19 20:13 sha 1e717f2a bytes 422196'):format('2026-09-19 20:13','1e717f2a',422196))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -104,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.16"
+SYS.BuildVer="6.9.17"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5703,7 +5703,6 @@ return nil,nil
 end
 local function aimTick()
 if not SYS.T_.CB_Aim then return end
-if SYS.AimEx and not SYS.AimEx.HitGate() then return end
 if SYS.T_.CB_SnapFire then return end
 if SYS.MenuOpen then return end
 if CB.Moving then return end
@@ -5743,7 +5742,6 @@ if SYS.MenuOpen then return end
 local now=os.clock()
 local fireGap=(SYS.C_.CB_FireDelay or 0.06)*(0.8+math.random()*0.4)
 if now-CB.LastFire<fireGap then return end
-if SYS.AimEx and not SYS.AimEx.MissGate() then CB.LastFire=now return end
 local cam=SYS.Cam
 if not cam then return end
 local vp=cam.ViewportSize
@@ -10574,14 +10572,7 @@ function(v) SYS.C_.CB_Fov=v end,"%.0f")
 UI.Slider(p,"最大距离",50,2000,50,
 function() return SYS.C_.CB_MaxDist end,
 function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
-UI.Slider(p,"命中率 (% · 100=每帧都瞄, 调低=像手抖)",5,100,5,
-function() return SYS.C_.CB_HitRate end,
-function(v) SYS.C_.CB_HitRate=v end,"%.0f")
-UI.Switch(p,"🚫 漏打模式 (按概率故意打偏一枪)","CB_MissMode")
-UI.Slider(p,"漏打概率 (%)",0,80,5,
-function() return SYS.C_.CB_MissRate end,
-function(v) SYS.C_.CB_MissRate=v end,"%.0f")
-UI.Tip(p,"「命中率」= 只有 n% 的帧去转相机; 100 = 最准, 调低后更接近人手的间歇感。\n「漏打模式」= 开火前按概率跳过一枪, 避免每枪都爆头的统计特征。\n★ 平滑度/预判量/索敌半径已经在上面 —— 对应「跟随速度 / 预测提前量 / 索敌范围」, 不再重复给控件。\n★ 「粘性瞄准(锁定保持)」你早前明确删过, 这次没有加回来 —— 需要的话单独说。",CY.sub)
+UI.Tip(p,"★ 已移除「命中率 / 漏打模式」—— 不再有任何「故意打偏」, 开了就是最准。\n★ 平滑度/预判量/索敌半径已经在上面 —— 对应「跟随速度 / 预测提前量 / 索敌范围」, 不再重复给控件。\n★ 「粘性瞄准(锁定保持)」你早前明确删过, 这次没有加回来 —— 需要的话单独说。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
