@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:44 sha 95c2dfd5 bytes 443710'):format('2026-09-19 22:44','95c2dfd5',443710))
+print(('[CheatMenu] build 2026-09-19 22:54 sha 79c3630b bytes 443636'):format('2026-09-19 22:54','79c3630b',443636))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.8"
+SYS.BuildVer="6.10.9"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -9980,18 +9980,16 @@ end
 function SYS.SetNoAggro(on)
 SYS.T_.NoAggro = on and true or false
 if not on then
-SYS.T_.DeepHide=false SYS.T_.TrapImmune=false SYS.T_.AutoDodge=false
+SYS.T_.TrapImmune=false SYS.T_.AutoDodge=false
 P(function()
-if SYS.SetDeepHide then SYS.SetDeepHide(false) end
 if SYS.SetTrapImmune then SYS.SetTrapImmune(false) end
 if SYS.SetAutoDodge then SYS.SetAutoDodge(false) end
 end)
 SYS.Notify("🕊 无仇恨模式已关",SYS.CY.sub)
 return
 end
-SYS.T_.DeepHide=true SYS.T_.TrapImmune=true SYS.T_.AutoDodge=true
+SYS.T_.TrapImmune=true SYS.T_.AutoDodge=true
 P(function()
-if SYS.SetDeepHide then SYS.SetDeepHide(true) end
 if SYS.SetTrapImmune then SYS.SetTrapImmune(true) end
 if SYS.SetAutoDodge then SYS.SetAutoDodge(true) end
 end)
@@ -10001,7 +9999,7 @@ task.wait(0.5)
 P(SYS.NoAggroTick)
 end
 end)
-SYS.Notify("🕊 无仇恨模式已开: 正在把怪的目标改写到别人身上\n(改不动就退化成隐身+免伤; 控制台可看 SYS.NoAggroInfo)",SYS.CY.cyan)
+SYS.Notify("🕊 无仇恨模式已开: 正在把怪的目标改写到别人身上\n(附赠 反陷阱免伤 + 自动躲; 不再自动潜地 —— 要隐身请自己开「藏地下隐身」\n控制台可看 SYS.NoAggroInfo)",SYS.CY.cyan)
 end
 UI.Switch(p,"🕊 无仇恨模式 (怪去打别人 · 唯独不打你)","NoAggro",function(on)
 P(SYS.SetNoAggro,on)
