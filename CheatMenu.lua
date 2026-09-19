@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:54 sha 75e4ade5 bytes 418146'):format('2026-09-19 19:54','75e4ade5',418146))
+print(('[CheatMenu] build 2026-09-19 19:56 sha 7ae86d66 bytes 416385'):format('2026-09-19 19:56','7ae86d66',416385))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -30,7 +30,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,AutoDodge=false,AutoHitMinigame=false,InstantPrompt=false,ClickInspect=false,FootstepESP=false,AntiVoid=false,AirWalk=false,F3Debug=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,AutoDodge=false,AutoHitMinigame=false,ClickInspect=false,FootstepESP=false,AntiVoid=false,AirWalk=false,F3Debug=false,MenuMouse=true,PickDist=1200,CamFov=70,CamZoom=20,FreeCam=false,Tracer=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.12"
+SYS.BuildVer="6.9.13"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10649,42 +10649,6 @@ UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
-local IPrompt={}
-function SYS.SetInstantPrompt(on)
-if not on then
-for p,v in pairs(IPrompt) do P(function() if p and p.Parent then p.HoldDuration=v end end) end
-IPrompt={}
-SYS.Notify("⚡ 瞬间交互 已关闭(时长已还原)",SYS.CY.sub)
-return
-end
-local function apply(p)
-if not p or IPrompt[p]~=nil then return end
-P(function()
-IPrompt[p]=p.HoldDuration
-p.HoldDuration=0
-end)
-end
-P(function()
-for _,v in ipairs(WS:GetDescendants()) do
-if v:IsA("ProximityPrompt") then apply(v) end
-end
-end)
-T(WS.DescendantAdded:Connect(function(d)
-if SYS.T_.InstantPrompt and d:IsA("ProximityPrompt") then apply(d) end
-end))
-TT(task.spawn(function()
-while SYS.T_.InstantPrompt and not SYS.Unloaded do
-for p in pairs(IPrompt) do
-P(function() if p and p.Parent and p.HoldDuration~=0 then p.HoldDuration=0 end end)
-end
-task.wait(0.5)
-end
-end))
-SYS.Notify("⚡ 瞬间交互 已开启(提示变成一按即用)",SYS.CY.green)
-end
-UI.Switch(p,"⚡ 瞬间交互 (按住读条变成一按即成, 纯客户端)","InstantPrompt",function(on) P(SYS.SetInstantPrompt,on) end)
-UI.Tip(p,"把游戏里 ProximityPrompt(按 E 的那种)的【按住时长】设成 0 -> 一按就用。\n只改你本地, 不改服务端; 关闭会把原时长写回。",CY.sub)
-UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
@@ -11628,7 +11592,6 @@ P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=n
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
 P(function() if SYS.SetFootstep then SYS.SetFootstep(false) end end)
-P(function() if SYS.SetInstantPrompt then SYS.SetInstantPrompt(false) end end)
 P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
@@ -11653,7 +11616,6 @@ end)
 P(SYS.ResetCam)
 P(function() if SYS.SetForceCam then SYS.SetForceCam("off") end end)
 P(function() if SYS.RestoreCamOpts then SYS.RestoreCamOpts() end end)
-P(function() if SYS.SetInstantPrompt then SYS.SetInstantPrompt(false) end end)
 P(function() if SYS.ScreenGui then SYS.ScreenGui:Destroy() end end)
 SYS.ScreenGui=nil SYS.MenuOpen=false
 P(function() if SYS.FloatGui then SYS.FloatGui:Destroy() end end)
