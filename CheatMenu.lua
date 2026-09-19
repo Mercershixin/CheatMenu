@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 02:12 sha 265ac167 bytes 451310'):format('2026-09-20 02:12','265ac167',451310))
+print(('[CheatMenu] build 2026-09-20 06:08 sha ec478ef1 bytes 453457'):format('2026-09-20 06:08','ec478ef1',453457))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -60,6 +60,7 @@ NoAggro=false,
 TransBilingual=false,
 AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
+AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 PC_Freeze=false,
 PG_Spin=false,PG_SpinHit=false,PG_FlyHit=false,
@@ -103,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.4.0"
+SYS.BuildVer="7.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2992,9 +2993,25 @@ pcall(function() VirtualUser:CaptureController() end)
 pcall(function() VirtualUser:ClickButton2(Vector2.new(0,0)) end)
 end
 end)
+SYS.SetLoop("AntiAFKBeat",true,RS.Heartbeat,function()
+if SYS.T_.AntiAFK~=true then return end
+local now=os.clock()
+if now-(SYS._afkAt or 0)<5 then return end
+SYS._afkAt=now
+P(function()
+if LP.SetAttribute then LP:SetAttribute("Heartbeat",math.floor(now*1000)) end
+end)
+P(function()
+local _,hum,root=GC()
+if not (hum and root) then return end
+local v=root.AssemblyLinearVelocity
+if v and v.Magnitude<1 then hum.Jump=true end
+end)
+end)
 end
 function SYS.disableAntiAFK()
 if AFKConn then AFKConn:Disconnect() AFKConn=nil end
+SYS.SetLoop("AntiAFKBeat",false)
 end
 local HL,LB,HB={},{},{}
 local HN={} SYS._npcList=nil SYS._npcN=0
@@ -8793,6 +8810,28 @@ else
 SYS.SetLoop("NoKnock",false)
 end
 end
+local FLING_MAX=80
+function SYS.SetAntiFling(on)
+SYS.T_.AntiFling=on==true
+if on then
+SYS.SetLoop("AntiFling",true,RS.Heartbeat,function()
+if SYS.T_.AntiFling~=true then return end
+local _,_,root=GC()
+if not root then return end
+P(function()
+local v=root.AssemblyLinearVelocity
+if v and v.Magnitude>FLING_MAX then
+root.AssemblyLinearVelocity=Vector3.zero
+SYS._flingN=(SYS._flingN or 0)+1
+end
+end)
+end)
+SYS.Notify(("🎈 防甩飞: 已开(速度超过 %d 格/秒立即清零)"):format(FLING_MAX),SYS.CY.green)
+else
+SYS.SetLoop("AntiFling",false)
+SYS.Notify("🎈 防甩飞: 已关",SYS.CY.sub)
+end
+end
 local SpawnRec={}
 function SYS.SpawnRec()
 if SpawnRec.def==nil then
@@ -8946,6 +8985,16 @@ print(("[CheatMenu] 🛡 已拦截 game:Shutdown (来源: %s) 第 %d 次"):forma
 end))
 end)
 if okS then Prot.Unhook.shutdown=oldS end
+local okB,oldB=pcall(function()
+if Players and Players.BanAsync then
+return hookfunction(Players.BanAsync,newcclosure(function()
+Prot.Blocked=Prot.Blocked+1 Prot.LastFrom=callerName()
+print(("[CheatMenu] 🛡 已拦截本地 BanAsync (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
+return nil
+end))
+end
+end)
+if okB and oldB then Prot.Unhook.ban=oldB end
 if LP and LP.AncestryChanged then
 local okA,conn=pcall(function()
 return LP.AncestryChanged:Connect(function()
@@ -8968,8 +9017,11 @@ if c.hf then
 if Prot.Unhook.kick then P(function() hookfunction(LP.Kick,Prot.Unhook.kick) end) end
 if Prot.Unhook.destroy then P(function() hookfunction(LP.Destroy,Prot.Unhook.destroy) end) end
 if Prot.Unhook.shutdown then P(function() hookfunction(game.Shutdown,Prot.Unhook.shutdown) end) end
+if Prot.Unhook.ban and Players and Players.BanAsync then
+P(function() hookfunction(Players.BanAsync,Prot.Unhook.ban) end)
 end
-Prot.Unhook.kick=nil Prot.Unhook.destroy=nil Prot.Unhook.namecall=nil
+end
+Prot.Unhook.kick=nil Prot.Unhook.destroy=nil Prot.Unhook.namecall=nil Prot.Unhook.ban=nil
 Prot.Hooks.kick=nil
 end
 function Prot.InstallTPGuard()
@@ -10408,6 +10460,7 @@ if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) 
 return SYS.Prot.InstallHideGui()
 end)
 setOne("Prot_AntiTP",SYS.Prot.InstallTPGuard)
+setOne("AntiFling",SYS.SetAntiFling)
 SYS.Notify("🛡 全部防护已尝试开启(失败项会单独提示)",SYS.CY.green)
 else
 SYS.T_.Prot_AntiAC=false
@@ -10416,6 +10469,7 @@ SYS.T_.Prot_AntiTP=false
 SYS.Prot.RemoveKickGuard()
 SYS.Prot.RemoveHideGui()
 SYS.Prot.RemoveTPGuard()
+P(SYS.SetAntiFling,false)
 SYS.Notify("防护已全部卸下",SYS.CY.sub)
 end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
@@ -10464,6 +10518,10 @@ else
 SYS.Prot.RemoveTPGuard()
 end
 end)
+UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",SYS.SetAntiFling)
+UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
+"这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
+"纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
 end
 UI.Pages["挂机"]=function(p)
 UI.Label(p,"挂机增强")
