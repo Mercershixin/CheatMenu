@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 18:55 sha ea2c4f36 bytes 457792'):format('2026-09-19 18:55','ea2c4f36',457792))
+print(('[CheatMenu] build 2026-09-19 19:01 sha e1faf070 bytes 456351'):format('2026-09-19 19:01','e1faf070',456351))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.4"
+SYS.BuildVer="6.9.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -11403,26 +11403,6 @@ UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍�
 .."   算法是 sc = min(fit, 上限), fit 已扣掉刘海 / 顶部栏边距 -> 【永远塞得进屏幕】。\n"
 .."★ 还是嫌小就往右拉滑块(会覆盖自动值); 想回到自动点「恢复自动适配」。\n"
 .."⚠ 手动拉得过大(超过 fit)菜单会超出屏幕、边角按钮点不到 —— 拉回来或点恢复自动即可。",CY.sub)
-UI.Cycle(p,"作用对象",{"自己","选中的人"},
-function() return SYS.C_.HR_Target or "自己" end,
-function(v) SYS.C_.HR_Target=v QueueSave() end)
-UI.Btn(p,"🩹 回血 (走游戏自己的 remote)",CY.green,function()
-if (SYS.C_.HR_Target or "自己")=="选中的人" then P(SYS.HealSelected) else P(SYS.HealSelf) end
-end)
-UI.Btn(p,"✨ 复活 (走游戏自己的 remote)",CY.green,function()
-if (SYS.C_.HR_Target or "自己")=="选中的人" then P(SYS.ReviveSelected) else P(SYS.ReviveSelf) end
-end)
-UI.Btn(p,"♻ 重生 (Respawn)",CY.cyan,function()
-if (SYS.C_.HR_Target or "自己")=="选中的人" then P(SYS.RespawnSelected) else P(SYS.RespawnSelf) end
-end)
-UI.Btn(p,"⚡ 自动三连 (回血+复活+重生 都试一遍)",CY.purple,function() P(SYS.HealReviveAuto) end)
-UI.Btn(p,"🔎 探测本游戏有哪些 (回血/复活/重生)",CY.sub,function()
-P(function() SYS.ProbeEvent("heal") end)
-P(function() SYS.ProbeEvent("revive") end)
-P(function() SYS.ProbeEvent("respawn") end)
-SYS.Notify("已把探测结果打到控制台(F9)",SYS.CY.cyan)
-end)
-UI.Tip(p,"这三条都是【发游戏自己的 remote】—— 所以是服务端认可的真实生效, 不是客户端自欺(客户端改血会被服务端覆盖)。\n源: 事件库确认 EntityService.Heal / GameService.Revive / GameService.Respawn 存在。\n⚠️ 参数形式清单里没记, 先按无参发; 若某条没反应, 告诉我, 我按实际参数补。",CY.sub)
 function SYS.ExportConfig()
 P(function()
 local parts={}
