@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:45 sha b7bf06fa bytes 414797'):format('2026-09-19 19:45','b7bf06fa',414797))
+print(('[CheatMenu] build 2026-09-19 19:49 sha acd5c1ed bytes 414656'):format('2026-09-19 19:49','acd5c1ed',414656))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.10"
+SYS.BuildVer="6.9.11"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10547,8 +10547,6 @@ UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
-UI.Section(p,"📊 小游戏 · 状态",CY.sub)
-UI.Section(p,"👥 敌我 / 队伍",CY.yellow)
 local IPrompt={}
 function SYS.SetInstantPrompt(on)
 if not on then
@@ -10584,7 +10582,6 @@ SYS.Notify("⚡ 瞬间交互 已开启(提示变成一按即用)",SYS.CY.green)
 end
 UI.Switch(p,"⚡ 瞬间交互 (按住读条变成一按即成, 纯客户端)","InstantPrompt",function(on) P(SYS.SetInstantPrompt,on) end)
 UI.Tip(p,"把游戏里 ProximityPrompt(按 E 的那种)的【按住时长】设成 0 -> 一按就用。\n只改你本地, 不改服务端; 关闭会把原时长写回。",CY.sub)
-UI.Section(p,"⚙ 自动 / 辅助",CY.accent)
 UI.Tip(p,"⚠️ 「自动切割」等自动化功能【还没做】—— 不是不能做, 而是必须先知道这游戏【人是怎么操作的】:\n是鼠标点部件 / 按 E / 走上去碰? 切的是石料还是怪? 有没有次数?\n把玩法说一句, 或者点上面那个「探测」把结果发我, 我就能按真实信号做。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
