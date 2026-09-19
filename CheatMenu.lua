@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 18:32 sha f039e520 bytes 465897'):format('2026-09-19 18:32','f039e520',465897))
+print(('[CheatMenu] build 2026-09-19 18:55 sha ea2c4f36 bytes 457792'):format('2026-09-19 18:55','ea2c4f36',457792))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.2"
+SYS.BuildVer="6.9.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3039,7 +3039,7 @@ if ok2 and nm and nm~="" then return nm end
 return nil
 end
 local mt=ateam(LP) local pt=ateam(p)
-team=(mt and pt and mt==pt)
+team=not (mt and pt and mt~=pt)
 local ghost=false
 if type(p.GetAttribute)=="function" then
 P(function() ghost=(p:GetAttribute("MPGhost")==true) end)
@@ -3107,8 +3107,8 @@ end
 local part=m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
 local wall=espWall(part)
 h.FillTransparency=wall and 0.93 or 0.88
-h.FillColor=Color3.fromRGB(0,200,255)
-h.OutlineColor=Color3.fromRGB(0,200,255)
+h.FillColor=Color3.fromRGB(255,140,0)
+h.OutlineColor=Color3.fromRGB(255,105,0)
 end
 else
 if next(HN) then for _,h in pairs(HN) do P(function() h:Destroy() end) end HN={} end
@@ -3220,9 +3220,11 @@ elseif h.Parent~=p then
 P(function() h.Parent=p end)
 end
 local wall=espWall(p)
+local kk=PK[p]
+local kc=(kk and kk.color) or Color3.fromRGB(0,200,255)
 h.FillTransparency=wall and 0.93 or 0.88
-h.FillColor=Color3.fromRGB(0,200,255)
-h.OutlineColor=Color3.fromRGB(0,200,255)
+h.FillColor=kc
+h.OutlineColor=kc
 end
 else
 if next(HP) then for _,h in pairs(HP) do P(function() h:Destroy() end) end HP={} end
@@ -3325,8 +3327,9 @@ end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
 h.OutlineTransparency=0
-h.FillColor   =Color3.fromRGB(255,30,30)
-h.OutlineColor=Color3.fromRGB(255,30,30)
+local cut=CUTOF[p]==true
+h.FillColor   = cut and Color3.fromRGB(255,0,180) or Color3.fromRGB(255,200,0)
+h.OutlineColor= cut and Color3.fromRGB(225,0,150) or Color3.fromRGB(255,170,0)
 local sk=HD_SK[p]
 if not sk then
 sk=Instance.new("BillboardGui")
@@ -3414,8 +3417,8 @@ P(function() h.Parent=p end)
 end
 local wall=espWall(p)
 h.FillTransparency=wall and 0.93 or 0.88
-h.FillColor   =Color3.fromRGB(0,200,255)
-h.OutlineColor=Color3.fromRGB(0,200,255)
+h.FillColor   =Color3.fromRGB(170,255,60)
+h.OutlineColor=Color3.fromRGB(140,230,40)
 end
 else
 if next(HM) then for _,h in pairs(HM) do P(function() h:Destroy() end) end HM={} end
@@ -3553,8 +3556,8 @@ h.Adornee=o
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.FillTransparency=0.88
 h.OutlineTransparency=0
-h.FillColor=Color3.fromRGB(0,200,255)
-h.OutlineColor=Color3.fromRGB(0,200,255)
+h.FillColor=Color3.fromRGB(255,200,0)
+h.OutlineColor=Color3.fromRGB(255,170,0)
 P(function() h.Parent=o end)
 HI[o]=h
 elseif h.Parent~=o then
@@ -9438,14 +9441,6 @@ function(v)
 SYS.C_.JumpMult=v
 if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
 end,"x%.1f")
-UI.Div(p)
-UI.Section(p,"🔒 数值锁定 (被游戏改回去就抢回来)",CY.orange)
-UI.Switch(p,"🔒 锁定移速","LockSpeed",SYS.SetLocks)
-UI.Switch(p,"🔒 锁定跳跃","LockJump",SYS.SetLocks)
-UI.Switch(p,"🔒 锁定世界重力","LockGravity",SYS.SetLocks)
-UI.Slider(p,"世界重力",0,500,5,function() return SYS.C_.Gravity or 196.2 end,
-function(v) SYS.C_.Gravity=v if SYS.T_.LockGravity then P(function() WS.Gravity=v end) end end,"%.0f")
-UI.Tip(p,"「锁定」= 持续把数值抢回来。很多游戏的脚本每帧把移速/跳跃改回默认值, 于是「滑块拖了过一会儿自己变回去」 —— 开锁就稳住。\n★ 锁移速的目标会跟着上面的「移动速度倍率」走(开着加速时锁的是加速后的值), 两者不打架。\n★ 世界重力 196 = 原版; 调大更沉(掉得快), 调小更飘(跳得远)。\n★ 只写你自己和本地 Workspace, 卸载时自动还原(重力随已有逻辑恢复原值)。",CY.sub)
 end
 UI.Pages["视觉"]=function(p)
 UI.Section(p,"👁 人物 · 名字",CY.accent)
@@ -9543,119 +9538,6 @@ end)
 UI.Slider(p,"自由视角速度",10,300,5,function() return SYS.C_.FreeCamSpeed end,function(v) SYS.C_.FreeCamSpeed=v end,"%.0f")
 UI.Slider(p,"自由视角灵敏度",0.1,2,0.05,function() return SYS.C_.FreeCamSens end,function(v) SYS.C_.FreeCamSens=v end,"%.2f")
 UI.Div(p)
-UI.Section(p,"💡 光照档位包 (各档独立 · 关掉精确还原)",CY.yellow)
-UI.Cycle(p,"提亮档位",{"关闭","夜视","超级光明","全亮"},
-function() return SYS.C_.LightMode or "关闭" end,
-function(v) SYS.C_.LightMode=v SYS.ReapplyLight() QueueSave() end)
-UI.Switch(p,"🏮 随身灯笼 (角色发光 · 只本地可见)","Lantern",SYS.ReapplyLight)
-UI.Switch(p,"🌫 禁用雾效","NoFog",SYS.ReapplyLight)
-UI.Switch(p,"🕶 禁用全局阴影","NoShadow",SYS.ReapplyLight)
-UI.Tip(p,"★ 已整合成单档位(互斥): 关闭 / 夜视 / 超级光明 / 全亮 —— 不会再互相打架。\n「全亮」额外关掉景深/模糊/泛光等限制视野的后期效果, 地图最通透; 「超级光明」只调到最亮、不动后期。\n随身灯笼 / 禁雾 / 禁阴影 是独立开关, 可以和任意档位叠加。全部关闭会精确还原成加载时的光照。\n★ 游戏若每帧把 Lighting 改回去, 会看到闪烁 —— 那种图请用「全亮」。",CY.yellow)
-UI.Div(p)
-UI.Section(p,"🎨 滤镜控制器 (只改你自己的画面)",CY.purple)
-UI.Switch(p,"启用滤镜 (自建后处理)","FX_Enable",SYS.FX.Apply)
-UI.Slider(p,"饱和度",-1,1,0.05,function() return SYS.C_.FX_Sat end,
-function(v) SYS.C_.FX_Sat=v SYS.FX.Apply() end,"%.2f")
-UI.Slider(p,"亮度",-1,1,0.05,function() return SYS.C_.FX_Bri end,
-function(v) SYS.C_.FX_Bri=v SYS.FX.Apply() end,"%.2f")
-UI.Slider(p,"对比度",-1,1,0.05,function() return SYS.C_.FX_Con end,
-function(v) SYS.C_.FX_Con=v SYS.FX.Apply() end,"%.2f")
-UI.Dropdown(p,"🌈 色盲模拟 (选中即覆盖上面三个滑块)",SYS.FX.Modes,
-function() return SYS.C_.FX_CB or "关闭" end,
-function(v)
-SYS.C_.FX_CB=v
-if SYS.T_.FX_Enable~=true then SYS.T_.FX_Enable=true end
-SYS.FX.Apply()
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end)
-UI.Btn(p,"♻ 重置滤镜为默认",CY.orange,function()
-SYS.C_.FX_Sat=0 SYS.C_.FX_Bri=0 SYS.C_.FX_Con=0 SYS.C_.FX_CB="关闭"
-SYS.FX.Apply()
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-SYS.Notify("♻ 滤镜已重置",SYS.CY.sub)
-end)
-UI.Section(p,"🪟 后处理特效开关 (逐个隐藏游戏自带的后处理)",CY.purple)
-UI.Switch(p,"隐藏 模糊 (Blur)","FX_HBlur",function(on) SYS.FX.HidePost("BlurEffect",on) end)
-UI.Switch(p,"隐藏 泛光 (Bloom)","FX_HBloom",function(on) SYS.FX.HidePost("BloomEffect",on) end)
-UI.Switch(p,"隐藏 景深 (DepthOfField)","FX_HDoF",function(on) SYS.FX.HidePost("DepthOfFieldEffect",on) end)
-UI.Switch(p,"隐藏 太阳光晕 (SunRays)","FX_HRays",function(on) SYS.FX.HidePost("SunRaysEffect",on) end)
-UI.Switch(p,"隐藏 色彩校正 (ColorCorrection)","FX_HCC",function(on) SYS.FX.HidePost("ColorCorrectionEffect",on) end)
-UI.Tip(p,"色盲模拟是【近似】—— Roblox 没有真正的色盲变换矩阵, 这里用「去饱和 + 色调偏移」模拟观感, 不能当医学用途。\n「隐藏后处理」只关你自己客户端看到的效果, 关掉会把原状态写回。",CY.sub)
-UI.Div(p)
-UI.Section(p,"🔊 音频 (控制器 + 检查器)",CY.cyan)
-UI.Switch(p,"启用音频检测 (每 3 秒自动刷新列表)","AudioCtl",function()
-if SYS.AudioRender then P(SYS.AudioRender) end
-end)
-UI.Switch(p,"只看正在响的 (按响度阈值过滤)","AudioProbe",function()
-if SYS.AudioRender then P(SYS.AudioRender) end
-end)
-UI.Slider(p,"响度阈值 (建议 10-50)",0,200,5,function() return SYS.C_.AudioThr end,
-function(v) SYS.C_.AudioThr=v if SYS.AudioRender then P(SYS.AudioRender) end end,"%.0f")
-UI.Slider(p,"总音量 (%)",0,100,5,function() return SYS.C_.AudioMaster end,
-function(v) SYS.C_.AudioMaster=v SYS.Audio.SetMaster(v) end,"%.0f")
-UI.Btn(p,"🔄 立即刷新音频列表",CY.cyan,function() if SYS.AudioRender then P(SYS.AudioRender) end end)
-UI.Btn(p,"🔊 恢复全部静音与总音量",CY.purple,function()
-SYS.Audio.RestoreAll()
-if SYS.AudioRender then P(SYS.AudioRender) end
-SYS.Notify("🔊 已恢复全部音频设置",SYS.CY.purple)
-end)
-local aList=SYS.MiniList(p,190)
-UI.Tip(p,"只列【你本地已经拿到】的 Sound(扫 SoundService / Workspace / ReplicatedStorage / 你的角色, 最多 4 层)。\n静音与总音量都只影响你自己听到的, 不会传给别人。\n⚠ 客户端没有静音他人语音的公开 API —— 想要那个请用「玩家」页的本地静音(它只静音对方角色里的音效)。",CY.sub)
-local function audioRender()
-SYS.MiniClear(aList)
-local arr=SYS.Audio.Scan(60)
-local probeOn=SYS.T_.AudioProbe==true
-local thr=SYS.C_.AudioThr or 15
-local head=SYS.MiniRow(aList,24)
-local hl=SYS.MiniText(head,("总音量 %d%%   扫到 %d 个声音"):format(math.floor(SYS.C_.AudioMaster or 100),#arr),11,CY.sub)
-hl.Size=UDim2.new(1,-8,1,0) hl.Position=UDim2.new(0,6,0,0)
-local shown=0
-for i=1,#arr do
-local s=arr[i]
-if i>60 then break end
-local okL,loud=pcall(function() return s.PlaybackLoudness end)
-loud=(okL and loud) or 0
-local okP,playing=pcall(function() return s.Playing end)
-playing=okP and playing
-if (not probeOn) or (playing and loud>=thr) then
-shown=shown+1
-local r=SYS.MiniRow(aList,26)
-local okId,sid=pcall(function() return s.SoundId end)
-sid=tostring((okId and sid) or "?")
-sid=(sid:gsub("rbxassetid://",""))
-if #sid>34 then sid=sid:sub(1,34).."…" end
-local nm=SYS.MiniText(r,("%s · %s"):format(tostring(s.Name),sid),11,playing and CY.text or CY.sub)
-nm.Size=UDim2.new(1,-196,1,0) nm.Position=UDim2.new(0,6,0,0)
-local lb=SYS.MiniText(r,("%.0f"):format(loud),11,CY.yellow)
-lb.Size=UDim2.new(0,32,1,0) lb.Position=UDim2.new(1,-190,0,0)
-local mb=SYS.MiniBtn(r,SYS.Audio.IsMuted(s) and "已静音" or "静音",CY.orange,function()
-SYS.Audio.Mute(s,not SYS.Audio.IsMuted(s))
-P(audioRender)
-end,58)
-mb.Position=UDim2.new(1,-154,0,2)
-local cb=SYS.MiniBtn(r,"复制ID",CY.cyan,function()
-if setclipboard then
-setclipboard(tostring(sid))
-SYS.Notify("📋 已复制 "..sid,CY.cyan)
-end
-end,58)
-cb.Position=UDim2.new(1,-92,0,2)
-end
-end
-if shown==0 then
-local r=SYS.MiniRow(aList,26)
-local l=SYS.MiniText(r,probeOn and "未检测到超过阈值的音频" or "点上面「立即刷新音频列表」开始扫描",11,CY.sub)
-l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
-end
-end
-SYS.AudioRender=audioRender
-audioRender()
-SYS.SpawnLoop(function()
-while not SYS.Unloaded do
-task.wait(3)
-if SYS.T_.AudioCtl==true and SYS.AudioRender then P(SYS.AudioRender) end
-end
-end)
 end
 UI.Pages["功能"]=function(p)
 UI.Section(p,"🔍 综合扫描 (八层一次扫完)",CY.green)
@@ -9663,6 +9545,12 @@ UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/�
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
+UI.Btn(p,"🔎 探测本游戏的领取/收集/购买 remote",CY.sub,function()
+P(function() SYS.ProbeEvent("claim") end)
+P(function() SYS.ProbeEvent("pickup") end)
+P(function() SYS.ProbeEvent("buy") end)
+SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
+end)
 UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
@@ -9914,12 +9802,6 @@ UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetA
 UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or 3 end,
 function(v) SYS.C_.FarmInterval=v end,"%.0f")
 UI.Switch(p,"死亡自动重生","AutoRespawn",SYS.SetAutoRespawn)
-UI.Btn(p,"🔎 探测本游戏的领取/收集/购买 remote",CY.sub,function()
-P(function() SYS.ProbeEvent("claim") end)
-P(function() SYS.ProbeEvent("pickup") end)
-P(function() SYS.ProbeEvent("buy") end)
-SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
-end)
 UI.Btn(p,"💰 一键 0 元扫货 (只买标价 0 的)",CY.green,function() P(SYS.FreeSweep) end)
 UI.Section(p,"🧺 隔空获取 (不用靠近)",CY.cyan)
 UI.Cycle(p,"获取范围",{"全部","单独(最近的)"},
@@ -9963,14 +9845,6 @@ UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近
 "⛔ 刷物品: 做不到。物品增减是服务端权威 —— 客户端发的是请求, 服务端按自己的库存处理;\n"..
 "   凭空造物只可能来自游戏自身漏洞, 客户端没有合法途径。",CY.yellow)
 UI.Switch(p,"📣 事件预告 (怪物/波次/回合等 → HUD 提示)","EventWatch",SYS.SetEventWatch)
-UI.Switch(p,"🛡 反陷阱预警 (陷阱伤害/被挡/状态 → HUD)","TrapWatch",SYS.SetTrapWatch)
-UI.Btn(p,"🔎 探测本游戏的陷阱/状态信号",CY.sub,function() P(SYS.ProbeTrapWatch) end)
-UI.Btn(p,"🔍 统一扫描 (全部探测一次跑完 → 控制台+文件+剪贴板)",CY.green,function()
-P(function() SYS.ScanAll({copy=true}) end)
-end)
-UI.Btn(p,"🔍 统一扫描 (复制完整结果到剪贴板)",CY.cyan,function()
-P(function() SYS.ScanAll({file=false,copy=true}) end)
-end)
 UI.Section(p,"⏱ 冷却加速 / 自动连用",CY.orange)
 UI.Slider(p,"时间倍率 (1=关, 越高冷却越快)",1,20,0.5,
 function() return SYS.C_.TimeScale or 1 end,
@@ -9984,10 +9858,6 @@ UI.Tip(p,"⛔ 绕不过: 物品【数量】/【耐久】/【使用次数上限�
 "✅ 能做: ①【冷却加速】很多游戏把上次使用时间存在客户端, 时间函数 hook 快一点冷却就立刻到期;\n"..
 "   ②【自动连用】帮你按住不放, 消耗照旧但频率拉满。\n"..
 "⚠️ 冷却加速只对【客户端判定】的冷却有效; 服务端若也限流, 仍会被拒。",CY.yellow)
-UI.Tip(p,"事件库里这几个名字就是权威信号: TouchDamage(接触伤害, 陷阱几乎都走这条) ·\n"..
-"DamageDenyInform(伤害被挡) · StatusService/PlayState(状态) · QueryLock/SelectedRole(锁定)。\n"..
-"开了之后陷阱一触发立刻 HUD 警告 —— 而不是莫名其妙掉血。\n"..
-"⚠️ 这是【预警播报】, 不是让陷阱无效; 让陷阱不造成伤害属于改服务端判定, 客户端做不到。",CY.yellow)
 UI.Btn(p,"🔎 看看本游戏有哪些可预告的信号",CY.sub,function()
 P(function()
 local n,names=SYS.EventWatchScan()
