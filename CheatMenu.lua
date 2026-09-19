@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:06 sha 16bfcacb bytes 419850'):format('2026-09-19 20:06','16bfcacb',419850))
+print(('[CheatMenu] build 2026-09-19 20:11 sha 6a99ffc7 bytes 422774'):format('2026-09-19 20:11','6a99ffc7',422774))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -104,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.15"
+SYS.BuildVer="6.9.16"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1410,6 +1410,89 @@ end)
 for i=1,#TrapConns do T(TrapConns[i]) end
 P(function() SYS.TrapIgnore(true) end)
 print("[CheatMenu] 反陷阱免伤: 已开启(无视触发 + 免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
+end
+end
+do
+local AR = { on=false, ev=nil, orig=nil, lastPos=nil, lastT=0, fixed=0 }
+SYS.AntiRevert = AR
+local function findRepl()
+local r=RStorage
+if not r then return nil end
+local ok,ev=P(function() return r:FindFirstChild("ClientReplicateCFrame", true) end)
+if ok and ev and (ev:IsA("RemoteEvent") or ev:IsA("UnreliableRemoteEvent")) then return ev end
+if SYS.FindEvent then
+local ok2,e2=P(function() return SYS.FindEvent("move") end)
+if ok2 and e2 and e2.FireServer then return e2 end
+end
+return nil
+end
+function AR.On()
+if AR.on then return true end
+if type(hookfunction)~="function" then return false,"这台执行器没有 hookfunction" end
+local ev=findRepl()
+if not ev then return false,"没找到位置上报的 remote(ClientReplicateCFrame)" end
+local ok=pcall(function()
+AR.ev=ev
+AR.orig=hookfunction(ev.FireServer,newcclosure(function(self,...)
+if not AR.on then return AR.orig(self,...) end
+local n=select("#",...)
+if n==0 then return AR.orig(self,...) end
+local now=os.clock()
+local dt=now-(AR.lastT or now)
+local maxStep=math.max(3,(SYS.C_.WalkSpeed or 22)*3*math.min(dt,0.5))
+local a={...}
+local touched=false
+for i=1,n do
+local v=a[i]
+local tp=(typeof and typeof(v)) or type(v)
+if tp=="CFrame" then
+local p=v.Position
+if AR.lastPos then
+local d=p-AR.lastPos
+local m=d.Magnitude
+if m>maxStep and m>0 then
+local np=AR.lastPos+d.Unit*maxStep
+a[i]=CFrame.new(np, np+v.LookVector)
+AR.fixed=AR.fixed+1
+touched=true
+p=np
+end
+end
+AR.lastPos=p
+elseif tp=="Vector3" then
+if AR.lastPos then
+local d=v-AR.lastPos
+local m=d.Magnitude
+if m>maxStep and m>0 then
+a[i]=AR.lastPos+d.Unit*maxStep
+AR.fixed=AR.fixed+1
+touched=true
+end
+end
+AR.lastPos=a[i]
+end
+end
+AR.lastT=now
+return AR.orig(self, table.unpack(a,1,n))
+end))
+end)
+if not ok then return false,"hook 失败" end
+AR.on=true AR.lastPos=nil AR.lastT=os.clock()
+print("[CheatMenu] 防回退已随飞行/加速开启(位置上报限速)")
+return true
+end
+function AR.Off()
+if not AR.on then return end
+AR.on=false
+if AR.ev and AR.orig and type(hookfunction)=="function" then
+P(function() hookfunction(AR.ev.FireServer,AR.orig) end)
+end
+AR.lastPos=nil
+print("[CheatMenu] 防回退已关闭")
+end
+function SYS.SyncAntiRevert()
+local want=(SYS.T_.Fly==true) or (SYS.T_.Speed==true)
+if want then P(AR.On) else P(AR.Off) end
 end
 end
 do
@@ -5469,7 +5552,7 @@ if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
 if pl and isEnemy(pl) and not (SYS.T_.CB_SkipFF and hasShield(pl)) then
 local p=partOf(pl,mode)
-if p and (not SYS.T_.CB_Wall or clearShot(p)) then return pl,p end
+if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or clearShot(p)) then return pl,p end
 end
 if (not pl) or (not alive(pl)) then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
@@ -5587,7 +5670,7 @@ if okH and hit then
 local hp=playerFromPart(hit)
 if hp and isEnemy(hp) and not (SYS.T_.CB_SkipFF and hasShield(hp)) then
 local pp=partOf(hp,mode)
-if pp and (not SYS.T_.CB_Wall or clearShot(pp)) then return hp,pp end
+if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or clearShot(pp)) then return hp,pp end
 end
 end
 end
@@ -5665,21 +5748,35 @@ local cam=SYS.Cam
 if not cam then return end
 local vp=cam.ViewportSize
 local canFire
-if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire then
+local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire)
+if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire or SYS.T_.CB_360 then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
-if (SYS.C_.CB_Smooth or 0.25)>=1 then
+if silo or (SYS.C_.CB_Smooth or 0.25)>=1 then
 canFire=true
 else
 local sp,on=cam:WorldToViewportPoint(ap)
 if not (on and sp.Z>0) then return end
-local tol=(vp.Y or 1080)*0.06
+local tol=(vp.Y or 1080)*0.12
 canFire=((sp.X-vp.X/2)^2+(sp.Y-vp.Y/2)^2)<=tol*tol
 end
 else
 canFire = crosshairOnEnemy()
 end
 if not canFire then return end
+if SYS.T_.CB_360 or SYS.T_.CB_SnapFire then
+local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
+if ap2 then
+P(function() cam.CFrame=CFrame.lookAt(cam.CFrame.Position,ap2) end)
+local root2=bodyOf(SYS.LP.Character)
+if root2 then
+local rp=root2.Position
+if (ap2-rp).Magnitude>0.01 then
+P(function() root2.CFrame=CFrame.lookAt(rp,ap2) end)
+end
+end
+end
+end
 local thr=SYS.C_.CB_HpThr or 0
 if thr>0 then
 local h=CB.Target and humOf(CB.Target)
@@ -9430,6 +9527,7 @@ UI.Section(p,"✈️ 飞行",CY.accent)
 UI.Switch(p,"飞行 (Fly)","Fly",function(on)
 if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
+P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度倍率",0,20,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
@@ -9441,6 +9539,7 @@ UI.Section(p,"⚡ 移动加速",CY.accent)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
 if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
+P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"移动速度倍率",0,20,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
@@ -10458,6 +10557,7 @@ SYS.Combat.Say("瞄准方式 -> "..v,SYS.CY.accent)
 end
 end)
 UI.Tip(p,"「自动瞄准」= 每帧把准星转到目标身上。移动中被相机带偏就打开「移动时暂停瞄准」。\n背身锁得快不快看下面的「跟随速度」(调大更快)。",CY.yellow)
+UI.Switch(p,"🎯 360 无死角 (有人就锁就打 · 不看方向/视野)","CB_360")
 UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
 function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
 function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
