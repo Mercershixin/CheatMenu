@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:39 sha 22a50a50 bytes 423167'):format('2026-09-19 20:39','22a50a50',423167))
+print(('[CheatMenu] build 2026-09-19 20:44 sha 092f0f33 bytes 423925'):format('2026-09-19 20:44','092f0f33',423925))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -101,7 +101,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.22"
+SYS.BuildVer="6.9.23"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -8650,6 +8650,23 @@ end)
 if okK then Prot.Unhook.kick=oldK end
 local okD,oldD=pcall(function() return hookfunction(LP.Destroy,newcclosure(function() end)) end)
 if okD then Prot.Unhook.destroy=oldD end
+local okS,oldS=pcall(function()
+return hookfunction(game.Shutdown,newcclosure(function()
+Prot.Blocked=Prot.Blocked+1 Prot.LastFrom=callerName()
+print(("[CheatMenu] 🛡 已拦截 game:Shutdown (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
+end))
+end)
+if okS then Prot.Unhook.shutdown=oldS end
+if LP and LP.AncestryChanged then
+local okA,conn=pcall(function()
+return LP.AncestryChanged:Connect(function()
+if not SYS.Unloaded and not LP:IsDescendantOf(Players) then
+print("[CheatMenu] ⚠ 本地玩家已被移出 Players(被踢/被断开) —— 服务端的断开拦不住, 但记录一下")
+end
+end)
+end)
+if okA and conn then T(conn) end
+end
 end)
 if not ok then return false,tostring(err) end
 Prot.Hooks.kick=true
@@ -8661,6 +8678,7 @@ local c=Prot.Caps()
 if c.hf then
 if Prot.Unhook.kick then P(function() hookfunction(LP.Kick,Prot.Unhook.kick) end) end
 if Prot.Unhook.destroy then P(function() hookfunction(LP.Destroy,Prot.Unhook.destroy) end) end
+if Prot.Unhook.shutdown then P(function() hookfunction(game.Shutdown,Prot.Unhook.shutdown) end) end
 end
 Prot.Unhook.kick=nil Prot.Unhook.destroy=nil Prot.Unhook.namecall=nil
 Prot.Hooks.kick=nil
