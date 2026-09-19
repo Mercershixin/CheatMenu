@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:53 sha a25de44e bytes 439470'):format('2026-09-19 21:53','a25de44e',439470))
+print(('[CheatMenu] build 2026-09-19 21:57 sha 79715d34 bytes 440675'):format('2026-09-19 21:57','79715d34',440675))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.1"
+SYS.BuildVer="6.10.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3360,6 +3360,13 @@ kws = {"chest","crate","locker","cabinet","vault","safe","coffer","stash","case"
 kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem","item","scrap",
 "money","cash","orb","star","card","key",
 "金币","掉落","奖励","拾取","道具"} },
+{ name = "道具/补给", color = Color3.fromRGB(0,235,180),
+kws = {"flashlight","torch","lighter","vitamin","bandage","medkit","crucif","lockpick","skeleton",
+"battery","fuse","candle","bottle","ribbon","cheese","bone","keycard","syringe","potion",
+"手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛"} },
+{ name = "躲藏点", color = Color3.fromRGB(150,255,205),
+kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
+"躲","藏身","衣柜","抽屉"} },
 { name = "梯子/攀爬", color = Color3.fromRGB(80,255,120),
 kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
 "梯","爬","绳","藤"} },
@@ -3398,6 +3405,7 @@ local _now=os.clock()
 if (SYS._pickN%25==1 and (not SYS._pickAt or _now-SYS._pickAt>1)) or not SYS._pickList then
 SYS._pickAt=_now
 local list={}
+local names={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 P(function()
@@ -3405,8 +3413,7 @@ for _,o in ipairs(WS:GetDescendants()) do
 local cn=o.ClassName
 local ok=false
 if cn=="Tool" then ok=true
-elseif cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="TrussPart"
-or cn=="Model" or cn=="Folder" then
+elseif o:IsA("BasePart") or o:IsA("Model") or cn=="Folder" then
 local function hasI(x)
 return x and (x:FindFirstChildOfClass("ClickDetector")~=nil or x:FindFirstChildOfClass("ProximityPrompt")~=nil)
 end
@@ -3419,6 +3426,15 @@ end
 end
 end
 local kind = pickKind(o)
+if not kind and type(o.Name)=="string" then
+local anc=o
+for _=1,4 do
+if not anc then break end
+kind=pickKind(anc)
+if kind then break end
+anc=anc.Parent
+end
+end
 if not kind and not ok and type(o.Name)=="string" and o.Name~="" then
 local nm=o.Name:lower()
 for _,kw in ipairs({"mpbuy","limiteddrop","mpstation","mppadhost"}) do
@@ -3432,12 +3448,26 @@ local d=camPos and (part.Position-camPos).Magnitude or 0
 if not camPos or d<=MAXD then
 list[#list+1]=part
 PK[part]=kind or {name="通用可交互", color=Color3.fromRGB(0,200,255)}
+if #names<16 and type(o.Name)=="string" then
+local dup=false
+for _,n in ipairs(names) do if n==o.Name then dup=true break end end
+if not dup then
+names[#names+1]=o.Name..(kind and ("["..kind.name.."]") or "[结构]")
+end
+end
 end
 end
 end
 end
 end)
 SYS._pickList=list
+if not SYS._pickLogged then
+SYS._pickLogged=true
+print(("[ESP] 可交互透视: 找到 %d 个候选。名字样本: %s"):format(#list, table.concat(names,", ")))
+if #list==0 then
+print("[ESP] 一个可交互物都没找到 -> 把那个物件(比如躲藏点/道具)的名字或截图发来, 我按真名加判据")
+end
+end
 end
 local pact={}
 for _,p in ipairs(SYS._pickList or {}) do if p and p.Parent then pact[p]=true end end
