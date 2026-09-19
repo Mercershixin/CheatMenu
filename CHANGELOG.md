@@ -1,3 +1,43 @@
+## 6.10.5 · 2026-09-19
+
+### ⛔ 强制规范「让所有 AI / 所有账号都自动读到」+ 📚 事件库归档入库
+
+用户需求：把写在 git 里的规范（"我的提示词"）变成 **不管换什么模型、哪个账号、用什么智能体，都会自动看到**的东西。
+
+#### (1) 四个「AI 会自动加载」的文件（正文统一在 `AGENTS.md`）
+
+| 文件 | 谁会自动读它 |
+|---|---|
+| **`AGENTS.md`**（正文，仓库根） | Codex / Cursor / 多数 CLI Agent 的事实标准约定文件 |
+| `CLAUDE.md` | Claude Code |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+| `.cursor/rules/cheatmenu.mdc`（`alwaysApply: true`） | Cursor |
+
+内容 = 用户规范全文：
+- **只做用户明确要求的那一件事**；不擅自新增功能、不动用户没让动的地方；
+- ⛔ **不要自作主张跑测试循环**（`verify_all` / `run_smoke` / `run_full` / `luau-compile` / `check.py` …）——只在用户明确说"跑一下/验证一下"时跑；
+- UI 上标「不推荐/有风险」是给用户看的提示，**不是让你改行为**；
+- 🎨 **配色规范**：所有高亮=边框高亮；普通物件+普通门=**统一亮青**；危险(陷阱/伤害机关/切割/假门)=**红+☠**；人物=队友绿/敌人红/幽灵紫；怪物=橙；三个透视已合并成一个开关；
+- 目录结构（本地工作区 = 手改入口 / 仓库 = 发行产物）、**固定发版流程**（`push_now --fast --patch` → 失败补 `push_api` → `local_sync --no-sim-target` → 核对 `version.txt` == CHANGELOG 顶部）；
+- 能力边界（服务端权威改不动；别碰蜜罐 remote，如 DOORS 的 `DroneStickyNoteMyNameIsExploiter…`）。
+
+#### (2) 源码文件头加「⛔ 改这个文件之前必读」块
+
+`CheatMenu-6.9.1.lua` **最顶部**（现有头部注释之前）插入 30 行必读块 ——
+**任何 agent 只要打开源码就一定会看到**，这是最"强制"的一层。
+
+#### (3) README 顶部加指引
+
+在"给智能体/协作者的接手说明"下面直接写出 `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` /
+`.cursor/rules/cheatmenu.mdc` / 源码文件头 这一串位置。
+
+#### (4) 之前只归档在本地的清单，一并推上仓库
+
+- `事件库/2026-09-19_MachineParty(机器派对).md` + `事件库/2026-09-19_MachineParty_原始抓包.txt`
+- `事件库/2026-09-19_DOORS(门).md` + `事件库/2026-09-19_DOORS(门)_原始抓包.txt`
+
+并把它们加进 `push_docs.py` 的 `FILES` —— 以后跑一次文档推送就全同步。
+
 ## 6.10.4 · 2026-09-19
 
 ### 🎨 透视配色按规范统一 + 🔍 三个透视合并成一个开关
