@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 21:46 sha 1c43a9cb bytes 435319'):format('2026-09-19 21:46','1c43a9cb',435319))
+print(('[CheatMenu] build 2026-09-19 21:48 sha 4eb787b0 bytes 436643'):format('2026-09-19 21:48','4eb787b0',436643))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -77,6 +77,7 @@ Gravity=196.2,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 ESPNameH=0,
+PickDist=1200,
 DeepHideDepth=120,
 DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
@@ -102,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.34"
+SYS.BuildVer="6.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -9937,6 +9938,29 @@ if on then SYS.StartFreeCam() else SYS.StopFreeCam() end
 end)
 UI.Slider(p,"自由视角速度",10,300,5,function() return SYS.C_.FreeCamSpeed end,function(v) SYS.C_.FreeCamSpeed=v end,"%.0f")
 UI.Slider(p,"自由视角灵敏度",0.1,2,0.05,function() return SYS.C_.FreeCamSens end,function(v) SYS.C_.FreeCamSens=v end,"%.2f")
+UI.Div(p)
+UI.Section(p,"🌗 光照 · 去雾 (夜视 / 全亮 / 禁雾)",CY.orange)
+UI.Cycle(p,"光照档位",SYS.LIGHT_MODES,
+function() return SYS.C_.LightMode or "关闭" end,
+function(v) SYS.C_.LightMode=v P(SYS.ReapplyLight) end)
+UI.Switch(p,"🚫 禁雾 (去迷雾 · 远处不再白茫茫)","NoFog",function() P(SYS.ReapplyLight) end)
+UI.Switch(p,"🌑 禁阴影","NoShadow",function() P(SYS.ReapplyLight) end)
+UI.Switch(p,"🏮 随身灯笼 (只有你看得见的光)","Lantern",function() P(SYS.ReapplyLight) end)
+local __DIST={"600","1200","3000","8000","全图"}
+UI.Cycle(p,"透视距离 (物件/门/小游戏)",__DIST,
+function()
+local d=tonumber(SYS.C_.PickDist) or 1200
+if d>=9000 then return "全图" end
+return tostring(math.floor(d+0.5))
+end,
+function(v)
+local m={["600"]=600,["1200"]=1200,["3000"]=3000,["8000"]=8000,["全图"]=99999}
+SYS.C_.PickDist=m[v] or 1200
+end)
+UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处不再白茫茫一片。\n"..
+"光照档位互斥: 关闭 / 夜视(提亮) / 超级光明(最亮) / 全亮(亮 + 正午 + 禁雾 + 禁阴影)。\n"..
+"透视距离只作用于【物件 / 门 / 小游戏】; 玩家透视本来就是全图, 不受它限制。\n"..
+"⚠ 有 0.4s 低频守护: 游戏把光改回去会自动抢回来。",CY.sub)
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
