@@ -1,0 +1,173 @@
+-- CheatMenu 抓包清单
+-- 游戏: [UPD2] 机器派对 💥  | PlaceId: 127775478639865 | GameId: 10635348596 | CreatorId: 35175010 | JobId: 9e31ae6a-4c66-4577-a25d-fde9c0e0bd4e
+-- 时间: 2026-09-19 21:13:59
+-- 由 SYS.DumpRemotes() 生成 · 共 168 条
+
+  [1] BindableEvent  CoreGui.RobloxGui.SendNotificationInfo
+  [2] BindableEvent  ReplicatedStorage.MP_Customization.Signals.CloseCustomization
+  [3] BindableEvent  ReplicatedStorage.MP_Customization.Signals.OpenCustomization
+  [4] BindableEvent  ReplicatedStorage.MP_Customization.Signals.ReapplyLoadout
+  [5] BindableEvent  ReplicatedStorage.MachineParty.Signals.EmotesChanged
+  [6] BindableEvent  ReplicatedStorage.MachineParty.Signals.OpenStore
+  [7] BindableFunction  Workspace.folia1220.Animate.PlayEmote
+  [8] BindableFunction  Workspace.kiana812i.Animate.PlayEmote
+  [9] BindableFunction  Workspace.skins.NEW_ABYSSAL.Animate.PlayEmote
+  [10] BindableFunction  Workspace.skins.NEW_AEGIS.Animate.PlayEmote
+  [11] BindableFunction  Workspace.skins.NEW_AURORA.Animate.PlayEmote
+  [12] BindableFunction  Workspace.skins.NEW_BULWARK.Animate.PlayEmote
+  [13] BindableFunction  Workspace.skins.NEW_CARBON.Animate.PlayEmote
+  [14] BindableFunction  Workspace.skins.NEW_CATHEDRAL.Animate.PlayEmote
+  [15] BindableFunction  Workspace.skins.NEW_CINNABAR.Animate.PlayEmote
+  [16] BindableFunction  Workspace.skins.NEW_DAMASCUS.Animate.PlayEmote
+  [17] BindableFunction  Workspace.skins.NEW_ECLIPSE.Animate.PlayEmote
+  [18] BindableFunction  Workspace.skins.NEW_MERIDIAN.Animate.PlayEmote
+  [19] BindableFunction  Workspace.skins.NEW_MIRAGE.Animate.PlayEmote
+  [20] BindableFunction  Workspace.skins.NEW_MONSOON.Animate.PlayEmote
+  [21] BindableFunction  Workspace.skins.NEW_OBSIDIAN.Animate.PlayEmote
+  [22] BindableFunction  Workspace.skins.NEW_SPORE.Animate.PlayEmote
+  [23] BindableFunction  Workspace.skins.NEW_VANTA.Animate.PlayEmote
+  [24] BindableFunction  Workspace.skins.NEW_WRAITH.Animate.PlayEmote
+  [25] BindableFunction  Workspace.skins.Rig 10.Animate.PlayEmote
+  [26] BindableFunction  Workspace.skins.Rig 11.Animate.PlayEmote
+  [27] BindableFunction  Workspace.skins.Rig 12.Animate.PlayEmote
+  [28] BindableFunction  Workspace.skins.Rig 13.Animate.PlayEmote
+  [29] BindableFunction  Workspace.skins.Rig 14.Animate.PlayEmote
+  [30] BindableFunction  Workspace.skins.Rig 15.Animate.PlayEmote
+  [31] BindableFunction  Workspace.skins.Rig 16.Animate.PlayEmote
+  [32] BindableFunction  Workspace.skins.Rig 17.Animate.PlayEmote
+  [33] BindableFunction  Workspace.skins.Rig 18.Animate.PlayEmote
+  [34] BindableFunction  Workspace.skins.Rig 19.Animate.PlayEmote
+  [35] BindableFunction  Workspace.skins.Rig 2.Animate.PlayEmote
+  [36] BindableFunction  Workspace.skins.Rig 20.Animate.PlayEmote
+  [37] BindableFunction  Workspace.skins.Rig 21.Animate.PlayEmote
+  [38] BindableFunction  Workspace.skins.Rig 22.Animate.PlayEmote
+  [39] BindableFunction  Workspace.skins.Rig 23.Animate.PlayEmote
+  [40] BindableFunction  Workspace.skins.Rig 24.Animate.PlayEmote
+  [41] BindableFunction  Workspace.skins.Rig 25.Animate.PlayEmote
+  [42] BindableFunction  Workspace.skins.Rig 26.Animate.PlayEmote
+  [43] BindableFunction  Workspace.skins.Rig 3.Animate.PlayEmote
+  [44] BindableFunction  Workspace.skins.Rig 5.Animate.PlayEmote
+  [45] BindableFunction  Workspace.skins.Rig 6.Animate.PlayEmote
+  [46] BindableFunction  Workspace.skins.Rig 7.Animate.PlayEmote
+  [47] BindableFunction  Workspace.skins.Rig 8.Animate.PlayEmote
+  [48] BindableFunction  Workspace.skins.Rig 9.Animate.PlayEmote
+  [49] BindableFunction  Workspace.skins.Rig.Animate.PlayEmote
+  [50] BindableFunction  Workspace.skins.Rig10.Animate.PlayEmote
+  [51] BindableFunction  Workspace.skins.Rig5.Animate.PlayEmote
+  [52] BindableFunction  Workspace.skins.Rig7.Animate.PlayEmote
+  [53] BindableFunction  Workspace.skins.Rig8.Animate.PlayEmote
+  [54] BindableFunction  Workspace.skins.Rig9.Animate.PlayEmote
+  [55] BindableFunction  Workspace.skins.SPINS SKINS.Animate.PlayEmote
+  [56] BindableFunction  Workspace.ysf14514.Animate.PlayEmote
+  [57] ClickDetector  Workspace.Firearm Factory.Model.Power Box.Door.Handle.ClickDetector
+  [58] ClickDetector  Workspace.Lobby.MPStation_Event.Board.MPEvent_Join
+  [59] ClickDetector  Workspace.Lobby.MPStation_Event.Body.MPEvent_Join
+  [60] ClickDetector  Workspace.Lobby.MPStation_Event.Glow.MPEvent_Join
+  [61] ClickDetector  Workspace.Lobby.MPStation_Event.Metal.MPEvent_Join
+  [62] ClickDetector  Workspace.Lobby.MPStation_Event.Plinth.MPEvent_Join
+  [63] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.Face.MPBuy_LimitedDrop
+  [64] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.HeaderLamp.MPBuy_LimitedDrop
+  [65] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.Head.MPBuy_LimitedDrop
+  [66] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.HumanoidRootPart.MPBuy_LimitedDrop
+  [67] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftFoot.MPBuy_LimitedDrop
+  [68] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftHand.MPBuy_LimitedDrop
+  [69] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftLowerArm.MPBuy_LimitedDrop
+  [70] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftLowerLeg.MPBuy_LimitedDrop
+  [71] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftUpperArm.MPBuy_LimitedDrop
+  [72] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LeftUpperLeg.MPBuy_LimitedDrop
+  [73] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.LowerTorso.MPBuy_LimitedDrop
+  [74] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.Pal Hair.Handle.MPBuy_LimitedDrop
+  [75] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightFoot.MPBuy_LimitedDrop
+  [76] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightHand.MPBuy_LimitedDrop
+  [77] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightLowerArm.MPBuy_LimitedDrop
+  [78] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightLowerLeg.MPBuy_LimitedDrop
+  [79] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightUpperArm.MPBuy_LimitedDrop
+  [80] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.RightUpperLeg.MPBuy_LimitedDrop
+  [81] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.MannequinYou.UpperTorso.MPBuy_LimitedDrop
+  [82] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.Plinth.MPBuy_LimitedDrop
+  [83] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_0.MPBuy_LimitedDrop
+  [84] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_1.MPBuy_LimitedDrop
+  [85] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_10.MPBuy_LimitedDrop
+  [86] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_11.MPBuy_LimitedDrop
+  [87] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_12.MPBuy_LimitedDrop
+  [88] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_13.MPBuy_LimitedDrop
+  [89] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_14.MPBuy_LimitedDrop
+  [90] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_15.MPBuy_LimitedDrop
+  [91] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_16.MPBuy_LimitedDrop
+  [92] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_17.MPBuy_LimitedDrop
+  [93] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_18.MPBuy_LimitedDrop
+  [94] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_19.MPBuy_LimitedDrop
+  [95] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_2.MPBuy_LimitedDrop
+  [96] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_20.MPBuy_LimitedDrop
+  [97] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_21.MPBuy_LimitedDrop
+  [98] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_22.MPBuy_LimitedDrop
+  [99] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_23.MPBuy_LimitedDrop
+  [100] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_24.MPBuy_LimitedDrop
+  [101] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_25.MPBuy_LimitedDrop
+  [102] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_3.MPBuy_LimitedDrop
+  [103] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_4.MPBuy_LimitedDrop
+  [104] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_5.MPBuy_LimitedDrop
+  [105] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_6.MPBuy_LimitedDrop
+  [106] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_7.MPBuy_LimitedDrop
+  [107] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_8.MPBuy_LimitedDrop
+  [108] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.deck_tread_9.MPBuy_LimitedDrop
+  [109] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.platform_deck.MPBuy_LimitedDrop
+  [110] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.post_column.001.MPBuy_LimitedDrop
+  [111] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.post_column.MPBuy_LimitedDrop
+  [112] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.post_footplate.001.MPBuy_LimitedDrop
+  [113] ClickDetector  Workspace.Lobby.MPStation_LimitedDrop.post_footplate.MPBuy_LimitedDrop
+  [114] ClickDetector  Workspace.Lobby.MPStation_Vault100.ArmorCuff.MPBuy_LimitedDrop
+  [115] ClickDetector  Workspace.Lobby.MPStation_Vault100.ArmorSeam.MPBuy_LimitedDrop
+  [116] ClickDetector  Workspace.Lobby.MPStation_Vault100.BackSpine.MPBuy_LimitedDrop
+  [117] ClickDetector  Workspace.Lobby.MPStation_Vault100.BuckleTongue.MPBuy_LimitedDrop
+  [118] ClickDetector  Workspace.Lobby.MPStation_Vault100.Face.MPBuy_LimitedDrop
+  [119] ClickDetector  Workspace.Lobby.MPStation_Vault100.FoundationSteel.MPBuy_LimitedDrop
+  [120] ClickDetector  Workspace.Lobby.MPStation_Vault100.FrontArmor.MPBuy_LimitedDrop
+  [121] ClickDetector  Workspace.Lobby.MPStation_Vault100.FrontInset.MPBuy_LimitedDrop
+  [122] ClickDetector  Workspace.Lobby.MPStation_Vault100.GraphiteBackPad.MPBuy_LimitedDrop
+  [123] ClickDetector  Workspace.Lobby.MPStation_Vault100.InstrumentBezel.MPBuy_LimitedDrop
+  [124] ClickDetector  Workspace.Lobby.MPStation_Vault100.InstrumentGlass.MPBuy_LimitedDrop
+  [125] ClickDetector  Workspace.Lobby.MPStation_Vault100.InstrumentGlint.MPBuy_LimitedDrop
+  [126] ClickDetector  Workspace.Lobby.MPStation_Vault100.InstrumentHousing.MPBuy_LimitedDrop
+  [127] ClickDetector  Workspace.Lobby.MPStation_Vault100.IvoryHeaderBottom.MPBuy_LimitedDrop
+  [128] ClickDetector  Workspace.Lobby.MPStation_Vault100.IvoryHeaderEnd.MPBuy_LimitedDrop
+  [129] ClickDetector  Workspace.Lobby.MPStation_Vault100.IvoryHeaderTop.MPBuy_LimitedDrop
+  [130] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.Head.MPBuy_LimitedDrop
+  [131] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.HumanoidRootPart.MPBuy_LimitedDrop
+  [132] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftFoot.MPBuy_LimitedDrop
+  [133] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftHand.MPBuy_LimitedDrop
+  [134] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftLowerArm.MPBuy_LimitedDrop
+  [135] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftLowerLeg.MPBuy_LimitedDrop
+  [136] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftUpperArm.MPBuy_LimitedDrop
+  [137] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LeftUpperLeg.MPBuy_LimitedDrop
+  [138] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.LowerTorso.MPBuy_LimitedDrop
+  [139] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.Pal Hair.Handle.MPBuy_LimitedDrop
+  [140] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightFoot.MPBuy_LimitedDrop
+  [141] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightHand.MPBuy_LimitedDrop
+  [142] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightLowerArm.MPBuy_LimitedDrop
+  [143] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightLowerLeg.MPBuy_LimitedDrop
+  [144] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightUpperArm.MPBuy_LimitedDrop
+  [145] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.RightUpperLeg.MPBuy_LimitedDrop
+  [146] ClickDetector  Workspace.Lobby.MPStation_Vault100.MannequinYou.UpperTorso.MPBuy_LimitedDrop
+  [147] ClickDetector  Workspace.Lobby.MPStation_Vault100.PanelBinding.MPBuy_LimitedDrop
+  [148] ClickDetector  Workspace.Lobby.MPStation_Vault100.PlatformDeck.MPBuy_LimitedDrop
+  [149] ClickDetector  Workspace.Lobby.MPStation_Vault100.Plinth.MPBuy_LimitedDrop
+  [150] ClickDetector  Workspace.Lobby.MPStation_Vault100.ShoulderCap.MPBuy_LimitedDrop
+  [151] ClickDetector  Workspace.Lobby.MPStation_Vault100.SideArmor.MPBuy_LimitedDrop
+  [152] ClickDetector  Workspace.Lobby.MPStation_Vault100.SteelBuckleEnd.MPBuy_LimitedDrop
+  [153] ClickDetector  Workspace.Lobby.MPStation_Vault100.SteelBuckleSide.MPBuy_LimitedDrop
+  [154] ClickDetector  Workspace.Lobby.MPStation_Vault100.Stitch.MPBuy_LimitedDrop
+  [155] ClickDetector  Workspace.Lobby.MPStation_Vault100.Strap.MPBuy_LimitedDrop
+  [156] ClickDetector  Workspace.Lobby.Model.Power Box.Door.Handle.ClickDetector
+  [157] ProximityPrompt  Workspace.Lobby.MPStation_Customize.Board.MPStation_Customize
+  [158] ProximityPrompt  Workspace.Lobby.MPStation_Settings.Board.MPStation_Settings
+  [159] ProximityPrompt  Workspace.Lobby.MPStation_Support.Board.MPStation_Support
+  [160] ProximityPrompt  Workspace.Lobby.ShopWorker.Torso.MPStation_Shop
+  [161] ProximityPrompt  Workspace.MPPadHost_LimitedDrop.MPBuy_LimitedDropPad
+  [162] ProximityPrompt  Workspace.MPPadHost_Vault100.MPBuy_LimitedDropPad
+  [163] ProximityPrompt  Workspace.probs.Leaderboard_Group.Screen.JoinGroupPrompt
+  [164] RemoteEvent  ReplicatedStorage.MP_Customization.Remotes.SaveLoadout
+  [165] RemoteEvent  ReplicatedStorage.MachineParty.Event
+  [166] RemoteEvent  Workspace.duck hunt.Sniper.Shoot
+  [167] RemoteFunction  ReplicatedStorage.MP_Customization.Remotes.FetchAccessory
+  [168] RemoteFunction  ReplicatedStorage.MP_Customization.Remotes.GetLoadout
