@@ -9,6 +9,10 @@
 | `2026-09-17_MM2类游戏.md` | **MM2 类**（Madwork 战斗框架：`MadworkCombat_*`） | 按功能分类的清单 | RemoteEvent 119 + BindableEvent 2 + BindableFunction 9 + ProximityPrompt 26 + ClickDetector 4 |
 | `2026-09-17_MM2类游戏_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出 | 同上一份 |
 | `2026-09-18_完整Remote清单+战斗诊断.txt` | ⚠️ **不是 MM2**（特征：`Season`/`Rebirth`/`Trade`/`Cash`/`Skin`/`Room`/`Claim`，疑似模拟经营类）；**文件末尾还混了战斗诊断日志** | 全量 dump | 447 个 Remote 相关名 |
+| `2026-09-19_对战服(FFA混战+交易)_没有机器人自由对战模式.md` | **对战服**：`[没有机器人，自由对战模式]`（PlaceId 119661268047775，FFA/TDM + 交易市场 + 抽卡箱） | 按功能分类 + **实例路径/属性** + 可做功能映射 | RemoteEvent 289 + RemoteFunction 149 + BindableEvent 29 + Prompt 23 |
+
+> ★ 这份还专门记了**非 remote 的判定数据**：敌我容器 `Workspace.Highlight.Enemy.HighlightHolder.<玩家名>`、
+> Player 的 Attribute 清单、场景物件路径 —— 这类"游戏自己的判定数据"往往比 remote 更有用（6.9.22 已接进索敌）。
 
 ## ⚠️ 已知缺口（2026-09-19 分析）
 
