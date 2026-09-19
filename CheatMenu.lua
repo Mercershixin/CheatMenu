@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:41 sha c2b10c5f bytes 419303'):format('2026-09-19 19:41','c2b10c5f',419303))
+print(('[CheatMenu] build 2026-09-19 19:45 sha b7bf06fa bytes 414797'):format('2026-09-19 19:45','b7bf06fa',414797))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.9"
+SYS.BuildVer="6.9.10"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -8472,42 +8472,19 @@ return (ok and found) or false
 end
 function Prot.InstallKickGuard()
 local c=Prot.Caps()
-if not c.ok then return false,"这台执行器没有 hookmetamethod/newcclosure" end
+if not c.hf then return false,"这台执行器没有 hookfunction" end
 if Prot.Hooks.kick then return true end
 local ok,err=pcall(function()
-if c.hmm and c.gnm then
-local h
-h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
-if checkcaller and checkcaller() then return h(self,...) end
-local m=getnamecallmethod()
-if m then
-local lm=string.lower(tostring(m))
-local hitKick = (lm:find("kick")~=nil) or (lm:find("ban")~=nil)
-if (hitKick or lm=="destroy") and self==LP then
+local okK,oldK=pcall(function()
+return hookfunction(LP.Kick,newcclosure(function()
 Prot.Blocked=Prot.Blocked+1
 Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截 %s (来源: %s) 第 %d 次")
-:format(lm,Prot.LastFrom,Prot.Blocked))
-return
-end
-if lm=="shutdown" and self==game then
-Prot.Blocked=Prot.Blocked+1
-Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截 shutdown (来源: %s) 第 %d 次")
-:format(Prot.LastFrom,Prot.Blocked))
-return
-end
-end
-return h(self,...)
+print(("[CheatMenu] 🛡 已拦截本地 Kick (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
 end))
-Prot.Unhook.namecall=h
-end
-if c.hf then
-local okK,oldK=pcall(function() return hookfunction(LP.Kick,newcclosure(function() end)) end)
+end)
 if okK then Prot.Unhook.kick=oldK end
 local okD,oldD=pcall(function() return hookfunction(LP.Destroy,newcclosure(function() end)) end)
 if okD then Prot.Unhook.destroy=oldD end
-end
 end)
 if not ok then return false,tostring(err) end
 Prot.Hooks.kick=true
@@ -8516,14 +8493,12 @@ end
 function Prot.RemoveKickGuard()
 if not Prot.Hooks.kick then return end
 local c=Prot.Caps()
-if c.hmm and Prot.Unhook.namecall then
-P(function() hookmetamethod(game,"__namecall",Prot.Unhook.namecall) end)
-end
 if c.hf then
 if Prot.Unhook.kick then P(function() hookfunction(LP.Kick,Prot.Unhook.kick) end) end
 if Prot.Unhook.destroy then P(function() hookfunction(LP.Destroy,Prot.Unhook.destroy) end) end
 end
-Prot.Unhook={} Prot.Hooks.kick=nil
+Prot.Unhook.kick=nil Prot.Unhook.destroy=nil Prot.Unhook.namecall=nil
+Prot.Hooks.kick=nil
 end
 function Prot.InstallTPGuard()
 local c=Prot.Caps()
@@ -8569,58 +8544,24 @@ end
 Prot.Unhook.tp={} Prot.Hooks.tp=nil
 end
 function Prot.InstallHideGui()
-local c=Prot.Caps()
-if not c.hmm then return false,"这台执行器没有 hookmetamethod" end
 if Prot.Hooks.hide then return true end
-local ok,err=pcall(function()
-local h
-h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
-if checkcaller and checkcaller() then return h(self,...) end
-local m=getnamecallmethod()
-if m then
-local lm=m
-if (lm=="GetChildren" or lm=="GetDescendants" or lm=="FindFirstChild"
-or lm=="FindFirstChildOfClass" or lm=="WaitForChild"
-or lm=="FindFirstChildWhichIsA")
-and (self==SYS.CoreGui or self==LP:FindFirstChildOfClass("PlayerGui")
-or (SYS.ScreenGui and self==SYS.ScreenGui.Parent)) then
-local res=h(self,...)
-local hideName=function(o)
-if not o then return false end
-if o==SYS.ScreenGui or o==SYS.FloatGui then return true end
-local nm=tostring(o.Name or "")
-return nm==tostring(SYS.ScreenGui and SYS.ScreenGui.Name or "\1")
-or nm==tostring(SYS.FloatGui and SYS.FloatGui.Name or "\2")
+if SYS.SafeParentGui and SYS.ScreenGui then
+P(function() SYS.SafeParentGui(SYS.ScreenGui) end)
 end
-if lm=="getchildren" or lm=="getdescendants" then
-if type(res)=="table" then
-local out={}
-for i=1,#res do
-if not hideName(res[i]) then out[#out+1]=res[i] end
-end
-return out
-end
-else
-if hideName(res) then return nil end
-end
-return res
-end
-end
-return h(self,...)
-end))
-Prot.Unhook.hide=h
+P(function()
+if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
+if SYS.FloatGui then SYS.FloatGui.Archivable=false end
 end)
-if not ok then return false,tostring(err) end
 Prot.Hooks.hide=true
 return true
 end
 function Prot.RemoveHideGui()
 if not Prot.Hooks.hide then return end
-local c=Prot.Caps()
-if c.hmm and Prot.Unhook.hide then
-P(function() hookmetamethod(game,"__namecall",Prot.Unhook.hide) end)
-end
-Prot.Unhook.hide=nil Prot.Hooks.hide=nil
+P(function()
+if SYS.ScreenGui then SYS.ScreenGui.Archivable=true end
+if SYS.FloatGui then SYS.FloatGui.Archivable=true end
+end)
+Prot.Hooks.hide=nil
 end
 local Ray={} SYS.RayHook=Ray
 Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0
@@ -8635,10 +8576,12 @@ if Ray.Hooked then return true end
 local ok,err=pcall(function()
 local h
 h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
+if checkcaller and checkcaller() then return h(self,...) end
+if self~=WS then return h(self,...) end
 local m=getnamecallmethod()
-if m and self==WS then
-local lm=string.lower(tostring(m))
-if lm=="raycast" then
+if m then
+local lm=m
+if lm=="Raycast" then
 if SYS.T_.CB_BlockRay==true then
 Ray.Rewrites=Ray.Rewrites+1
 return nil
@@ -8666,8 +8609,8 @@ Distance = dist,
 end
 end
 return res
-elseif lm=="findpartonray" or lm=="findpartonraywithignorelist"
-or lm=="findpartonraywithwhitelist" then
+elseif lm=="FindPartOnRay" or lm=="FindPartOnRayWithIgnoreList"
+or lm=="FindPartOnRayWithWhitelist" then
 if SYS.T_.CB_BlockRay==true then
 Ray.Rewrites=Ray.Rewrites+1
 return nil,nil
@@ -9565,72 +9508,6 @@ P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
 UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
-UI.Btn(p,"📋 列出小游戏脚本 & 场景(打到控制台)",CY.cyan,function()
-P(function()
-print("========== MachineParty 小游戏状态 ==========")
-local names={"MachinePartyDuckHunt","MachinePartyRightOfWay","MachinePartyBlindout",
-"MachinePartyCrushHour","BumperMadness","MachinePartyActions","MachinePartyControlCard",
-"MachinePartyLimitedStand","MachinePartyStationSigns","MachinePartyPadFocus","MachinePartyWorldUI"}
-local PS=SYS.LP and SYS.LP.PlayerScripts
-for _,n in ipairs(names) do
-local has=(PS and PS:FindFirstChild(n)) and "有" or "无"
-print(("  PlayerScripts.%-28s %s"):format(n,has))
-end
-local areas={"duck hunt","Chisel Gauntlet","Lobby","MPPadHost_LimitedDrop","MPPadHost_Vault100"}
-for _,n in ipairs(areas) do
-local o=WS:FindFirstChild(n)
-print(("  Workspace.%-28s %s"):format(n,o and "有" or "无"))
-end
-print("  相关 Remote: Sniper.Shoot / MachineParty.Event (见「综合扫描」A 层)")
-print("=============================================")
-end)
-end)
-UI.Btn(p,"🔍 探测小游戏里的可交互物(打到控制台)",CY.purple,function()
-P(function()
-print("========== 小游戏可交互物探测 ==========")
-local n1,n2=0,0
-for _,o in ipairs(WS:GetDescendants()) do
-local nm=tostring(o.Name):lower()
-if nm:find("chisel",1,true) or nm:find("duck",1,true) or nm:find("gauntlet",1,true) then
-if o:IsA("ClickDetector") then n1=n1+1
-elseif o:IsA("ProximityPrompt") then n2=n2+1
-elseif o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
-print("  Remote: "..o:GetFullName())
-end
-end
-end
-print(("  ClickDetector=%d  ProximityPrompt=%d"):format(n1,n2))
-print("=======================================")
-end)
-end)
-UI.Btn(p,"👥 敌我诊断 (打出每个玩家的队伍信号, 打到控制台)",CY.yellow,function()
-P(function()
-print("========== 敌我 / 队伍 诊断 ==========")
-print(("[1] 本机 Player.Team = %s"):format(tostring(SYS.LP and SYS.LP.Team and SYS.LP.Team.Name)))
-for _,pl in ipairs(Players:GetPlayers()) do
-local ap={}
-if type(pl.GetAttributes)=="function" then
-local ok,t=pcall(function() return pl:GetAttributes() end)
-if ok and type(t)=="table" then
-for k,v in pairs(t) do
-local lk=tostring(k):lower()
-if lk:find("team") or lk:find("side") or lk:find("role") or lk:find("faction")
-or lk:find("cell") or lk:find("group") or lk:find("party") then
-ap[#ap+1]=k.."="..tostring(v)
-end
-end
-end
-end
-table.sort(ap)
-print(("  %-22s Team=%-8s 可疑属性: %s"):format(
-pl.Name, tostring(pl.Team and pl.Team.Name),
-#ap>0 and table.concat(ap,", ") or "(无 team/side/role/cell 类属性)"))
-end
-print("  ↑ 把这几行发我, 我按真实字段接进透视的颜色判定")
-print("====================================")
-end)
-end)
-UI.Tip(p,"透视现在是: 队友=绿 / 敌人=红 / 幽灵(MPGhost)=紫。若所有人都红, 说明【队伍信号没读到】——\n点上面这个按钮把结果发我即可(这游戏的队伍字段名必须按实际数据接, 不能猜)。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
@@ -9720,7 +9597,7 @@ SYS.Notify("防护已全部卸下",SYS.CY.sub)
 end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 end)
-UI.Switch(p,"反作弊绕过 (拦截客户端踢人 / 抹除)","Prot_AntiAC",function(on)
+UI.Switch(p,"反作弊绕过 (只拦本地 Kick · 零开销)","Prot_AntiAC",function(on)
 if on then
 local ok,err=SYS.Prot.InstallKickGuard()
 if not ok then
@@ -9735,7 +9612,7 @@ SYS.Prot.RemoveKickGuard()
 SYS.Notify("已卸下踢人拦截",SYS.CY.sub)
 end
 end)
-UI.Switch(p,"管理员检测绕过 (对自己 GUI 隐身)","Prot_AntiAdmin",function(on)
+UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
 if on then
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
 local ok,err=SYS.Prot.InstallHideGui()
@@ -9744,7 +9621,7 @@ SYS.T_.Prot_AntiAdmin=false
 SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 else
-SYS.Notify("🕵 自己的 GUI 已从 CoreGui 枚举里隐藏",SYS.CY.green)
+SYS.Notify("🕵 菜单已挪进执行器隐藏容器 + 关闭 Archivable\n(不再 hook __namecall —— 之前那个是卡顿主因)",SYS.CY.green)
 end
 else
 SYS.Prot.RemoveHideGui()
