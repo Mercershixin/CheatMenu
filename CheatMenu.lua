@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:31 sha 1449e387 bytes 419037'):format('2026-09-19 19:31','1449e387',419037))
+print(('[CheatMenu] build 2026-09-19 19:41 sha c2b10c5f bytes 419303'):format('2026-09-19 19:41','c2b10c5f',419303))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.8"
+SYS.BuildVer="6.9.9"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1349,6 +1349,14 @@ end
 local hit=SYS.TrapHit
 if hit and (os.clock()-hit)<TRAP_WIN then
 local v=hrp.AssemblyLinearVelocity
+local md=hum.MoveDirection
+local walking=md and (math.abs(md.X)>0.01 or math.abs(md.Z)>0.01)
+if walking then
+local w2=wantWalkSpeed()
+hrp.AssemblyLinearVelocity=Vector3.new(md.X*w2,v.Y,md.Z*w2)
+SYS.TrapAnchor=hrp.Position
+else
+local v=hrp.AssemblyLinearVelocity
 hrp.AssemblyLinearVelocity=Vector3.new(0,v.Y,0)
 local a=SYS.TrapAnchor
 if a then
@@ -1361,6 +1369,7 @@ local cap=math.min(TRAP_MAXSTEP, math.max(0.5, expectSpeed()*(dt or 1/60)*1.5))
 local np=hrp.Position-dir*math.min(hzm,cap)
 local rot=hrp.CFrame-hrp.CFrame.Position
 hrp.CFrame=CFrame.new(Vector3.new(np.X,np.Y,np.Z))*rot
+end
 end
 end
 elseif hit then
