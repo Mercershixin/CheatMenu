@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 20:58 sha 26c0f457 bytes 438857'):format('2026-09-19 20:58','26c0f457',438857))
+print(('[CheatMenu] build 2026-09-19 21:02 sha 13ae03cf bytes 440067'):format('2026-09-19 21:02','13ae03cf',440067))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -102,7 +102,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.26"
+SYS.BuildVer="6.9.27"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3837,17 +3837,19 @@ local DODGE_KW = {"door","gate","trap","trapdoor","hatch","portal","hazard","dam
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
 "obstacle","mine","landmine","bomb","tnt","explosive"}
 SYS._hitSeen = setmetatable({}, {__mode="k"})
+SYS._dodgeStat = SYS._dodgeStat or {n=0, hits=0}
 function SYS.AutoDodgeScan()
 local list = {}
 P(function()
-for _, o in ipairs(WS:GetDescendants()) do
+local function consider(o)
+if not o then return end
 local cn = o.ClassName
-if cn == "Part" or cn == "MeshPart" or cn == "UnionOperation" or cn == "Model" then
+if not (cn == "Part" or cn == "MeshPart" or cn == "UnionOperation" or cn == "Model") then return end
 local ok = false
 if o:FindFirstChildOfClass("HingeConstraint") or o:FindFirstChildOfClass("Motor6D") then ok = true end
 if not ok then
 local anc = o
-for _=1,4 do
+for _=1,2 do
 if not anc then break end
 local raw = anc.Name
 if type(raw)=="string" and raw~="" then
@@ -3867,6 +3869,14 @@ local part = o.PrimaryPart or (cn ~= "Model" and o) or o:FindFirstChildWhichIsA(
 if part and part.Position then list[#list+1] = part end
 end
 end
+for _, o in ipairs(WS:GetChildren()) do
+consider(o)
+local ok, kids = P(function() return o:GetChildren() end)
+if ok and type(kids)=="table" then
+local n = #kids
+if n > 80 then n = 80 end
+for i = 1, n do consider(kids[i]) end
+end
 end
 end)
 return list
@@ -3876,9 +3886,12 @@ if not SYS.T_.AutoDodge then return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 local now = os.clock()
-if (now - (SYS._dodgeAt or 0)) > 1 or not SYS._dodgeList then
+if (now - (SYS._dodgeAt or 0)) > 2 or not SYS._dodgeList then
 SYS._dodgeAt = now
-SYS._dodgeList = SYS.AutoDodgeScan()
+local l = SYS.AutoDodgeScan()
+SYS._dodgeList = l
+SYS._dodgeStat = SYS._dodgeStat or {n=0, hits=0}
+SYS._dodgeStat.n = #l
 end
 local nearest, nd = nil, math.huge
 for _, p in ipairs(SYS._dodgeList or {}) do
@@ -3892,11 +3905,17 @@ if nearest and nd < thr then
 local away = root.Position - nearest.Position
 away = Vector3.new(away.X, 0, away.Z)
 if away.Magnitude < 0.001 then away = Vector3.new(1, 0, 0) end
-P(function() hum:MoveTo(root.Position + away.Unit * (thr + 2)) end)
+local step = math.min(0.35, math.max(0.06, (thr - nd) * 0.25))
+local dir = away.Unit
+P(function()
+local rp = root.Position
+local rot = root.CFrame - rp
+root.CFrame = CFrame.new(rp + dir * step) * rot
+end)
 SYS._dodgeOn = true
+if SYS._dodgeStat then SYS._dodgeStat.hits = SYS._dodgeStat.hits + 1 end
 elseif SYS._dodgeOn then
 SYS._dodgeOn = false
-P(function() hum:MoveTo(root.Position) end)
 end
 end
 function SYS.SetAutoDodge(on)
@@ -11141,6 +11160,21 @@ UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮�
 UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
 UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
+UI.Btn(p,"🔎 自动躲避状态 (控制台)",CY.cyan,function()
+P(function()
+local st=SYS._dodgeStat or {n=0,hits=0}
+print(("[Dodge] 本轮扫到机关部件=%s  躲避触发次数=%s  扫描间隔=2s  触发距离=%.0f格")
+:format(tostring(st.n),tostring(st.hits),tonumber(SYS.C_.DodgeDist) or 15))
+local l=SYS._dodgeList or {}
+for i=1,math.min(#l,10) do
+local x=l[i]
+if x and x.Parent then print(("   %s  %s"):format(tostring(x.Name),tostring(x:GetFullName())) ) end
+end
+if #l==0 then
+print("   (没扫到机关 —— 这局可能没有可判定的陷阱; 判据: 名字含 trap/hazard/spike/lava/地雷/炸弹… 或带铰链/马达)")
+end
+end)
+end)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
 end
