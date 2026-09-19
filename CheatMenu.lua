@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 19:05 sha 392887b6 bytes 454497'):format('2026-09-19 19:05','392887b6',454497))
+print(('[CheatMenu] build 2026-09-19 19:15 sha 834c07c4 bytes 434387'):format('2026-09-19 19:15','834c07c4',434387))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.9.6"
+SYS.BuildVer="6.9.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -8562,10 +8562,10 @@ h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
 if checkcaller and checkcaller() then return h(self,...) end
 local m=getnamecallmethod()
 if m then
-local lm=string.lower(tostring(m))
-if (lm=="getchildren" or lm=="getdescendants" or lm=="findfirstchild"
-or lm=="findfirstchildofclass" or lm=="waitforchild"
-or lm=="findfirstchildwhichisa")
+local lm=m
+if (lm=="GetChildren" or lm=="GetDescendants" or lm=="FindFirstChild"
+or lm=="FindFirstChildOfClass" or lm=="WaitForChild"
+or lm=="FindFirstChildWhichIsA")
 and (self==SYS.CoreGui or self==LP:FindFirstChildOfClass("PlayerGui")
 or (SYS.ScreenGui and self==SYS.ScreenGui.Parent)) then
 local res=h(self,...)
@@ -9403,8 +9403,7 @@ end
 end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},
-{name="MachineParty",icon="🎮"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},
-{name="整蛊",icon="😈"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
+{name="MachineParty",icon="🎮"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
 }
 UI.Pages["移动"]=function(p)
 UI.Section(p,"✈️ 飞行",CY.accent)
@@ -9429,8 +9428,7 @@ function() return SYS.C_.SpeedMode end,
 function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
 UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
 UI.Div(p)
-UI.Section(p,"🚧 穿墙 / 免伤",CY.green)
-UI.Switch(p,"穿墙 (Noclip)","Noclip",SYS.SetNoclip)
+UI.Section(p,"🛡 免伤",CY.green)
 UI.Switch(p,"🛡 反陷阱免伤","TrapImmune",SYS.SetTrapImmune)
 UI.Tip(p,"★ 完全豁免: 被撞/被弹开/被推走的位移 · 定身(走不动) · 布娃娃倒地 · 被坐骑锁住 · 被焊接钉住 · 客户端结算的伤害(掉血立刻补回)。\n★ 免不了: 服务端结算的伤害 —— 服务端是权威, 它扣的血客户端改不动。\n★ 滚石: 被撞后【水平速度清零 + 被拉走就渐进压回撞击点】, 所以不弹开、不被压着推走。\n★ 与「上帝模式」同开时会互相让位(不抢同一个状态)。",CY.yellow)
 UI.Section(p,"🦘 跳跃",CY.accent)
@@ -9771,74 +9769,16 @@ UI.Switch(p,"挂机防踢","AntiAFK",function(on)
 if on then SYS.enableAntiAFK() else SYS.disableAntiAFK() end
 end)
 UI.Div(p)
-UI.Section(p,"🏋 训练",CY.accent)
-UI.Switch(p,"自动训练踢击力量","AutoTrain",function(on)
-if on then SYS.StartTrain() else SYS.StopTrain() end
-end)
-UI.Slider(p,"训练循环间隔(秒)",1,30,0.5,function() return SYS.C_.AutoTrainSec end,function(v) SYS.C_.AutoTrainSec=v end,"%.1f")
-UI.Div(p)
-UI.Section(p,"📈 进度",CY.accent)
-UI.Switch(p,"自动重生","AutoRebirth",function(on)
-if on then SYS.StartReb() else SYS.StopReb() end
-end)
-UI.Slider(p,"重生检查间隔(秒)",1,15,0.5,function() return SYS.C_.RebirthCheck end,function(v) SYS.C_.RebirthCheck=v end,"%.1f")
-UI.Div(p)
-UI.Section(p,"✨ 训练加成",CY.accent)
-UI.Switch(p,"自动领取训练加成","AutoBonus")
-UI.Div(p)
-UI.Section(p,"🏋 健身房事件",CY.accent)
-UI.Switch(p,"优先参加健身事件","AutoGym",function(on)
-if on then SYS.StartGym() else SYS.StopGym() end
-end)
-UI.Div(p)
-UI.Section(p,"🏠 基地操作",CY.cyan)
-UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(30) end)
-UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
-UI.Div(p)
-UI.Section(p,"💰 自动售卖 (低于 CPS 门槛才卖)",CY.yellow)
 UI.Section(p,"🎁 自动领取 / 收集 (走游戏自己的 remote)",CY.green)
-UI.Switch(p,"自动领取奖励 (每日/活动/周常)","AutoClaim",SYS.SetAutoClaim)
 UI.Switch(p,"自动收集物品 (掉落物/宝箱/光球)","AutoPickup",SYS.SetAutoPickup)
 UI.Slider(p,"尝试间隔 (秒)",1,30,1,function() return SYS.C_.FarmInterval or 3 end,
 function(v) SYS.C_.FarmInterval=v end,"%.0f")
-UI.Switch(p,"死亡自动重生","AutoRespawn",SYS.SetAutoRespawn)
-UI.Btn(p,"💰 一键 0 元扫货 (只买标价 0 的)",CY.green,function() P(SYS.FreeSweep) end)
 UI.Section(p,"🧺 隔空获取 (不用靠近)",CY.cyan)
 UI.Cycle(p,"获取范围",{"全部","单独(最近的)"},
 function() return SYS.C_.GrabMode or "全部" end,
 function(v) SYS.C_.GrabMode=v QueueSave() end)
 UI.Btn(p,"🧺 立即获取",CY.green,function()
 P(function() SYS.RangedGrab((SYS.C_.GrabMode=="单独(最近的)") and "one" or "all") end)
-end)
-UI.Section(p,"🆕 推荐功能 (一键全领 / 开箱 / 商店 / 换服 / 背包)",CY.green)
-UI.Btn(p,"🎁 一键全领 (邮件+好友+里程碑+在线+赛季)",CY.green,function() P(SYS.ClaimEverything) end)
-UI.Btn(p,"📦 一键开箱 / 抽奖",CY.cyan,function() P(SYS.OpenAllBoxes) end)
-UI.Switch(p,"🛒 自动商店 (周期试全部商店通道)","AutoShop",SYS.SetAutoShop)
-UI.Slider(p,"商店间隔 (秒)",1,60,1,function() return SYS.C_.ShopInterval or 5 end,
-function(v) SYS.C_.ShopInterval=v QueueSave() end,"%.0f")
-UI.Btn(p,"🖥 读服务器列表 (打到控制台)",CY.sub,function() P(SYS.DumpServerList) end)
-UI.Btn(p,"🖥 快速换服 (跳到下一个服)",CY.purple,function() P(SYS.JoinNextServer) end)
-UI.Btn(p,"🎒 读取背包 (打到控制台)",CY.cyan,function() P(SYS.DumpInventory) end)
-UI.Switch(p,"🚩 自动选队伍/角色","AutoTeam",SYS.SetAutoTeam)
-UI.Switch(p,"💃 自动表情 (循环)","AutoEmote",SYS.SetAutoEmote)
-UI.Tip(p,"★ 这些都走通用事件查找(别名+模糊扫描)，换游戏也能用。\n"..
-"先点「读取背包 / 读服务器列表」看看本游戏能拿到什么；\n"..
-"拿不到说明该游戏的这类数据不走客户端（服务端直接渲染），属正常。",CY.yellow)
-UI.Section(p,"🎒 道具 / 装备 (别名取自事件库)",CY.purple)
-UI.Btn(p,"🎒 使用道具 (TryUse 系)",CY.green,function() P(function() SYS.UseItem() end) end)
-UI.Btn(p,"⚔ 装备 (TryEquip 系)",CY.cyan,function() P(function() SYS.ToggleEquip(true) end) end)
-UI.Btn(p,"🛡 卸下装备 (TryUnequip 系)",CY.cyan,function() P(function() SYS.ToggleEquip(false) end) end)
-UI.Btn(p,"🎁 一键领取每日/在线/新手/赛季奖励",CY.green,function() P(SYS.ClaimAllDaily) end)
-UI.Tip(p,"✅ 能做: 游戏【本身免费/无限次】的道具直接可用; 自动使用/自动装备省手速; 通道尽量找全。\n"..
-"⛔ 免道具(用东西不消耗)做不到: 使用/装备/合成都是【服务端权威】—— 客户端发请求后,\n"..
-"   服务端查背包(有没有/够不够/冷却过没过), 不够直接拒。客户端没有合法途径免掉消耗。",CY.yellow)
-UI.Btn(p,"🔎 数一数场景里有多少可拿的",CY.sub,function()
-P(function()
-local l=SYS.FindGrabbables()
-local msg=("场景里可拾取物: %d 个"):format(#l)
-print("[CheatMenu] "..msg)
-SYS.Hud(msg,6)
-end)
 end)
 UI.Tip(p,"✅ 隔空获取: 只要游戏有 pickup/collect 类 remote, 不靠近也能触发。\n"..
 "   全部 = 场景里所有可拾取物逐个发一遍; 单独 = 只拿离你最近的那个。\n"..
@@ -9868,74 +9808,6 @@ end)
 UI.Tip(p,"✅ 能做: 游戏【本身免费】的东西 —— 每日/活动奖励、0 元商品、地上掉落物。\n"..
 "⛔ 做不到: 白嫖【付费】物品。购买是服务端权威 —— 客户端发请求后服务端要查你的货币余额, 不够直接拒绝;\n"..
 "   客户端改不动服务端余额, 这是引擎架构, 不是脚本没生效。真能 0 元买的只有服务端自己标价 0 的商品。",CY.yellow)
-UI.Switch(p,"自动售卖 (每5秒)","AutoSell")
-UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
-local row=Instance.new("Frame")
-row.Size=UDim2.new(1,0,0,42) row.BackgroundColor3=CY.card
-row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
-UI.Round(row,10) UI.Stroke(row,CY.line,1,0.85)
-local lb=Instance.new("TextLabel")
-lb.Size=UDim2.new(1,-130,1,0) lb.Position=UDim2.new(0,12,0,0)
-lb.BackgroundTransparency=1 lb.Text="最低 CPS 门槛"
-lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
-lb.TextSize=13 lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
-local box=Instance.new("TextBox")
-box.Size=UDim2.new(0,110,0,28) box.Position=UDim2.new(1,-122,0.5,-14)
-box.BackgroundColor3=CY.panel box.BackgroundTransparency=0.2
-box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
-box.TextColor3=CY.cyan box.Font=Enum.Font.Code
-box.TextSize=13 box.BorderSizePixel=0 box.ClearTextOnFocus=false box.Parent=row
-UI.Round(box,6) UI.Stroke(box,CY.cyan,1,0.7)
-box.FocusLost:Connect(function()
-local v=tonumber(box.Text)
-if v and v>=0 then
-if SYS.AFK_Sell then SYS.AFK_Sell.MinCPS=v end
-if SYS.SyncMinCPS then SYS.SyncMinCPS() end
-box.Text=tostring(math.floor(v))
-print("[Sell] CPS 门槛设为: "..box.Text.." (已保存)")
-else
-box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
-end
-end)
-UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
-if SYS.sellLowCPSTools then SYS.sellLowCPSTools(true) end
-end)
-UI.Div(p)
-UI.Section(p,"📊 CPS 统计",CY.purple)
-local scanResL=UI.Label(p,"输入 CPS 后点击扫描",CY.sub)
-UI.Btn(p,"🔍 扫描低于当前门槛的脑红数量",CY.purple,function()
-task.spawn(function()
-if scanResL and scanResL.Parent then
-scanResL.Text="扫描中..." scanResL.TextColor3=CY.yellow
-end
-local picks,th=0,0
-pcall(function()
-picks,th=SYS.scanLowCPSCount()
-end)
-if scanResL and scanResL.Parent then
-if type(picks)=="table" then
-local cnt=#picks
-local names={}
-for i=1,math.min(cnt,8) do
-table.insert(names,("%s(%.0f)"):format(picks[i].Name,picks[i].CPS))
-end
-local preview=table.concat(names,", ")
-if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
-if cnt==0 then
-scanResL.Text=("门槛 %.0f: 无低 CPS 脑红"):format(th)
-scanResL.TextColor3=CY.green
-else
-scanResL.Text=("门槛 %.0f: 共 %d 个  |  %s"):format(th,cnt,preview)
-scanResL.TextColor3=CY.cyan
-end
-print(("[Scan] 门槛 %.0f · 共 %d 个"):format(th,cnt))
-else
-scanResL.Text="扫描失败"
-scanResL.TextColor3=CY.red
-end
-end
-end)
-end)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
@@ -10482,132 +10354,12 @@ UI.Btn(p,"传送到鼠标位置",CY.cyan,SYS.TPToMouse)
 UI.Btn(p,"传送到最近玩家",CY.cyan,SYS.TPToNearest)
 UI.Btn(p,"停止观战 (回自己视角)",CY.orange,SYS.StopSpectate)
 UI.Btn(p,"回到主城",CY.green,function() SYS.TPTo(SYS.GetDefSpawn()) end)
-UI.Btn(p,"保存当前坐标",CY.purple,function()
-local _,_,root=GC()
-if root then
-table.insert(SYS.SavedPos,{name="位置"..#SYS.SavedPos+1,position=root.Position,autoTP=false})
-if SYS.RebuildSaved then SYS.RebuildSaved() end
-P(function()
-SYS.Notify(("📍 已保存位置 #%d (自动循环传送: 关 · 点该行的「自动」按钮开启)")
-:format(#SYS.SavedPos),SYS.CY.cyan)
-end)
-print("[TP] 已保存位置 #"..#SYS.SavedPos.." (autoTP=false · 需要时点列表行里的「自动」按钮)")
-end
-end)
 UI.Cycle(p,"传送方式",{"CFrame","MoveTo"},
 function() return SYS.C_.TPMethod end,
 function(v) SYS.C_.TPMethod=v end)
 UI.Cycle(p,"鼠标传送模式",{"Raycast","Infinite"},
 function() return SYS.C_.MouseTPMode end,
 function(v) SYS.C_.MouseTPMode=v end)
-UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
-UI.Switch(p,"⌨ Ctrl+数字 直达保存点","PathKey",SYS.SetPathKey)
-UI.Tip(p,"按住 Ctrl 再按数字键 1~9 -> 直接传送到下面「已保存位置」里对应的那一条(主键盘/小键盘都认)。\n只对前 9 个生效; 那一条还不存在时会在屏幕上提示。默认关(避免误触)。",CY.sub)
-UI.Section(p,"🖥 服务器列表 (同游戏的其它房间)",CY.cyan)
-local svrList=Instance.new("ScrollingFrame")
-svrList.Size=UDim2.new(1,0,0,132) svrList.BackgroundColor3=CY.card
-svrList.BackgroundTransparency=0.3 svrList.BorderSizePixel=0 svrList.Parent=p
-svrList.ClipsDescendants=true
-P(function() svrList.CanvasSize=UDim2.new(0,0,0,0) svrList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
-P(function() svrList.ScrollBarThickness=6 svrList.ScrollBarImageColor3=CY.accent end)
-P(function() svrList.ScrollingDirection=Enum.ScrollingDirection.Y end)
-P(function() svrList.ElasticBehavior=Enum.ElasticBehavior.Never end)
-UI.Round(svrList,8) UI.Stroke(svrList,CY.line,1,0.85)
-local svrLay=Instance.new("UIListLayout") svrLay.Padding=UDim.new(0,4) svrLay.Parent=svrList
-local svrPad=Instance.new("UIPadding")
-svrPad.PaddingTop=UDim.new(0,6) svrPad.PaddingLeft=UDim.new(0,6)
-svrPad.PaddingRight=UDim.new(0,6) svrPad.Parent=svrList
-local function ClearSvr()
-for _,c in ipairs(svrList:GetChildren()) do
-if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end
-end
-end
-local function svrHint(txt,col)
-ClearSvr()
-local h=Instance.new("TextLabel")
-h.Size=UDim2.new(1,-12,0,26) h.BackgroundTransparency=1
-h.Text=txt h.TextColor3=col or CY.sub h.Font=Enum.Font.GothamMedium h.TextSize=12
-h.TextXAlignment=Enum.TextXAlignment.Left h.Parent=svrList
-end
-svrHint("点下面「刷新」拉取列表")
-local function RenderServers(arr)
-ClearSvr()
-for _,s in ipairs(arr) do
-local r=Instance.new("Frame")
-r.Size=UDim2.new(1,-12,0,28) r.BackgroundColor3=CY.panel
-r.BackgroundTransparency=0.3 r.BorderSizePixel=0 r.Parent=svrList
-UI.Round(r,6)
-local nm=Instance.new("TextLabel")
-nm.Size=UDim2.new(1,-90,1,0) nm.Position=UDim2.new(0,6,0,0)
-nm.BackgroundTransparency=1 nm.TextColor3=CY.text
-nm.Text=("%d/%d 人%s"):format(s.playing,s.max,s.cur and "   ← 当前房间" or "")
-nm.Font=Enum.Font.GothamMedium nm.TextSize=12
-nm.TextXAlignment=Enum.TextXAlignment.Left nm.Parent=r
-local jb=Instance.new("TextButton")
-jb.Size=UDim2.new(0,64,1,0) jb.Position=UDim2.new(1,-70,0,0)
-jb.BackgroundColor3=s.cur and CY.sub or CY.green
-jb.BackgroundTransparency=0.3 jb.TextColor3=CY.text
-jb.Text=s.cur and "当前" or "加入"
-jb.Font=Enum.Font.GothamBold jb.TextSize=11
-jb.BorderSizePixel=0 jb.Parent=r UI.Round(jb,4)
-if not s.cur then
-jb.MouseButton1Click:Connect(function() P(SYS.JoinServer,s.id) end)
-end
-end
-end
-UI.Btn(p,"🔄 刷新服务器列表",CY.cyan,function()
-svrHint("⏳ 正在拉取...",CY.yellow)
-task.spawn(function()
-local arr,err=SYS.FetchServers()
-if not arr then svrHint("❌ "..tostring(err),CY.red) return end
-if #arr==0 then svrHint("没有拿到服务器(接口返回空)",CY.yellow) return end
-table.sort(arr,function(a,b) return a.playing>b.playing end)
-RenderServers(arr)
-end)
-end)
-UI.Tip(p,"只读官方接口拉取【同游戏的其它房间】, 按人数从多到少排, 点「加入」换过去。\n★ 列表里没有可靠的延迟字段(Roblox 接口不给) —— 想按延迟挑请用「自动找低延迟服务器」。\n★ 本地版跳过去后脚本不会自动回来, 要重新执行一次加载器(网络版会自动重注入)。",CY.sub)
-UI.Div(p)
-UI.Section(p,"📍 多路径点系统 (保存 / 世界显示 / 三种前往方式)",CY.cyan)
-UI.Input(p,"备注名 (留空自动编号)","",
-function() return SYS.C_.WPNote or "" end,
-function(v) SYS.C_.WPNote=v end)
-UI.Btn(p,"➕ 添加路径点 (记录当前位置)",CY.green,function() SYS.WP.Add(SYS.C_.WPNote or "") end)
-UI.Switch(p,"在世界中显示路径点 (蓝色光柱 + 编号)","WPShow",function() SYS.WP.RefreshMarks() end)
-UI.Switch(p,"⌨ Ctrl+数字 用于路径点 (优先于保存位置)","WPKey")
-UI.Btn(p,"🧹 清空全部路径点",CY.red,function()
-for i=#SYS.WP.List,1,-1 do SYS.WP.Remove(i) end
-SYS.Notify("🧹 路径点已清空",SYS.CY.sub)
-end)
-local wList=SYS.MiniList(p,170)
-UI.Tip(p,"每个路径点三个按钮: 传送(瞬移) / 缓动(1.2 秒平滑过去) / 步行(交给 Humanoid 走, 会撞墙但最不容易被判定瞬移)。\n「Ctrl+数字」打开后: 前 9 个路径点用 Ctrl+1~9 直达 —— 若那个序号没有路径点, 会自动回退到「已保存位置」。\n★ 路径点只存在内存里, 卸载/换服就没了(坐标是当前服务器专用的)。",CY.sub)
-local function wpRender()
-SYS.MiniClear(wList)
-local L2=SYS.WP.List
-if #L2==0 then
-local r=SYS.MiniRow(wList,26)
-local l=SYS.MiniText(r,"还没有路径点 —— 点上面「添加路径点」把当前位置存下来",11,CY.sub)
-l.Size=UDim2.new(1,-8,1,0) l.Position=UDim2.new(0,6,0,0)
-return
-end
-for i=1,#L2 do
-local w=L2[i]
-local r=SYS.MiniRow(wList,28)
-local nm=SYS.MiniText(r,("%d. %s"):format(i,tostring(w.name)),11,CY.text)
-nm.Size=UDim2.new(1,-262,1,0) nm.Position=UDim2.new(0,6,0,0)
-local b1=SYS.MiniBtn(r,"传送",CY.cyan,function() SYS.WP.Goto(i,"tp") end,46)
-b1.Position=UDim2.new(1,-256,0,3)
-local b2=SYS.MiniBtn(r,"缓动",CY.purple,function() SYS.WP.Goto(i,"tween") end,46)
-b2.Position=UDim2.new(1,-208,0,3)
-local b3=SYS.MiniBtn(r,"步行",CY.green,function() SYS.WP.Goto(i,"walk") end,46)
-b3.Position=UDim2.new(1,-160,0,3)
-local b4=SYS.MiniBtn(r,"去标记",CY.orange,function() SYS.WP.Unmark(i) end,56)
-b4.Position=UDim2.new(1,-112,0,3)
-local b5=SYS.MiniBtn(r,"删除",CY.red,function() SYS.WP.Remove(i) end,44)
-b5.Position=UDim2.new(1,-52,0,3)
-end
-end
-SYS.WPRender=wpRender
-wpRender()
 UI.Section(p,"👥 玩家列表",CY.cyan)
 local plList=Instance.new("ScrollingFrame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
@@ -10653,64 +10405,6 @@ end
 Ref()
 T(Players.PlayerAdded:Connect(function() task.wait(0.3) P(Ref) end))
 T(Players.PlayerRemoving:Connect(function() task.wait(0.3) P(Ref) end))
-UI.Section(p,"📍 已保存位置 (点「自动」才循环传送, 默认关)",CY.purple)
-local svList=Instance.new("ScrollingFrame")
-svList.Size=UDim2.new(1,0,0,140) svList.BackgroundColor3=CY.card
-svList.BackgroundTransparency=0.3 svList.BorderSizePixel=0 svList.Parent=p
-svList.ClipsDescendants=true
-P(function() svList.CanvasSize=UDim2.new(0,0,0,0) svList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
-P(function() svList.ScrollBarThickness=6 svList.ScrollBarImageColor3=CY.accent end)
-P(function() svList.ScrollingDirection=Enum.ScrollingDirection.Y end)
-P(function() svList.ElasticBehavior=Enum.ElasticBehavior.Never end)
-UI.Round(svList,8) UI.Stroke(svList,CY.line,1,0.85)
-local svLay=Instance.new("UIListLayout") svLay.Padding=UDim.new(0,4) svLay.Parent=svList
-local svPad=Instance.new("UIPadding")
-svPad.PaddingTop=UDim.new(0,6) svPad.PaddingLeft=UDim.new(0,6)
-svPad.PaddingRight=UDim.new(0,6) svPad.Parent=svList
-local function RebuildSaved()
-for _,c in ipairs(svList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
-for i,s in ipairs(SYS.SavedPos) do
-local r=Instance.new("Frame")
-r.Size=UDim2.new(1,-12,0,30) r.BackgroundColor3=CY.panel
-r.BackgroundTransparency=0.3 r.BorderSizePixel=0 r.Parent=svList
-UI.Round(r,6)
-local tp=Instance.new("TextButton")
-tp.Size=UDim2.new(0.5,0,1,0) tp.BackgroundTransparency=1
-tp.TextColor3=CY.text
-tp.Text=string.format("%s (%.0f,%.0f,%.0f)",s.name,s.position.X,s.position.Y,s.position.Z)
-tp.Font=Enum.Font.GothamMedium tp.TextSize=12
-tp.TextXAlignment=Enum.TextXAlignment.Left tp.Parent=r
-tp.MouseButton1Click:Connect(function() P(SYS.TPTo,s.position+Vector3.new(0,2,0)) end)
-local au=Instance.new("TextButton")
-au.Size=UDim2.new(0,60,1,0) au.Position=UDim2.new(0.55,0,0,0)
-au.BackgroundColor3=s.autoTP and CY.green or CY.sub
-au.BackgroundTransparency=0.3 au.TextColor3=CY.text
-au.Text=s.autoTP and "自动✓" or "自动"
-au.Font=Enum.Font.GothamBold au.TextSize=11
-au.BorderSizePixel=0 au.Parent=r UI.Round(au,4)
-au.MouseButton1Click:Connect(function()
-s.autoTP=not s.autoTP
-au.Text=s.autoTP and "自动✓" or "自动"
-au.BackgroundColor3=s.autoTP and CY.green or CY.sub
-P(function()
-SYS.Notify(s.autoTP and ("📍 「"..s.name.."」自动循环传送已开启")
-or ("📍 「"..s.name.."」自动循环传送已关闭"),
-s.autoTP and CY.green or CY.sub)
-end)
-end)
-local dl=Instance.new("TextButton")
-dl.Size=UDim2.new(0,40,1,0) dl.Position=UDim2.new(1,-44,0,0)
-dl.BackgroundColor3=CY.red dl.BackgroundTransparency=0.3
-dl.TextColor3=CY.text dl.Text="删"
-dl.Font=Enum.Font.GothamBold dl.TextSize=11
-dl.BorderSizePixel=0 dl.Parent=r UI.Round(dl,4)
-dl.MouseButton1Click:Connect(function()
-table.remove(SYS.SavedPos,i) RebuildSaved()
-end)
-end
-end
-SYS.RebuildSaved=RebuildSaved
-RebuildSaved()
 end
 UI.Pages["战斗"]=function(p)
 local AUTO_TXT="自动 · 按优先级挑"
@@ -11515,102 +11209,6 @@ task.wait(0.5)
 if SYS.PCRender then P(SYS.PCRender) end
 end
 end)
-end
-UI.Pages["整蛊"]=function(p)
-UI.Section(p,"🎯 目标 (先选人)",CY.orange)
-local NONE_TXT="(不指定 · 跟随「玩家」页选中的那位)"
-local function prankNames()
-local L={NONE_TXT}
-local names={}
-local ps=Players:GetPlayers()
-for _,pl in ipairs(ps) do
-if pl~=LP and pl.Character and pl.Character.Parent then names[#names+1]=pl.Name end
-end
-table.sort(names)
-for i=1,#names do L[#L+1]=names[i] end
-return L
-end
-UI.Dropdown(p,"目标玩家 (点开选择)", prankNames,
-function()
-local v=SYS.C_.PG_Target
-if (not v) or v=="" then return NONE_TXT end
-return v
-end,
-function(v) SYS.C_.PG_Target=(v==NONE_TXT) and "" or v end)
-UI.Btn(p,"🌀 甩飞这个玩家",CY.orange,function()
-local pl=SYS.Prank.Target()
-if pl and SYS.Prank.Fling(pl) then
-SYS.Notify("🌀 已甩飞 "..pl.Name.."(本地)",SYS.CY.orange)
-else
-SYS.Notify("没找到目标 —— 先在「玩家」页选人, 或在这里填名字",SYS.CY.sub)
-end
-end)
-local function flingAllLoop(on)
-SYS.T_.PG_FlingAll=on==true
-if not on then SYS.SetLoop("PGFlingAll",false) return end
-SYS.SetLoop("PGFlingAll",true,RS.Heartbeat,function()
-if SYS.T_.PG_FlingAll~=true then return end
-if not SYS.Prank._lastAll or (os.clock()-SYS.Prank._lastAll)>0.5 then
-SYS.Prank._lastAll=os.clock()
-SYS.Prank.FlingAll()
-end
-end)
-end
-UI.Switch(p,"🔁 持续甩飞全部玩家 (每 0.5 秒一轮)","PG_FlingAll",flingAllLoop)
-UI.Tip(p,"⚠ 整蛊工具全部只写【你本地的副本】: 对方屏幕上不会动, 服务端也不认 —— 但你会看到他被甩飞。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.yellow)
-UI.Div(p)
-UI.Section(p,"🌀 旋转 / 击飞",CY.purple)
-UI.Slider(p,"旋转速度",1,30,1,function() return SYS.C_.PG_SpinSpeed end,
-function(v) SYS.C_.PG_SpinSpeed=v end,"%.0f")
-UI.Switch(p,"🌀 开始旋转 (所有玩家原地打转)","PG_Spin",function(on) SYS.Prank.Spin(on) end)
-UI.Switch(p,"🌀↑ 旋转击飞","PG_SpinHit",function(on) SYS.Prank.SpinHit(on) end)
-UI.Switch(p,"🚀 飞行击飞","PG_FlyHit",function(on) SYS.Prank.FlyHit(on) end)
-UI.Switch(p,"🚶 走路击飞 (靠近谁谁飞)","PG_WalkHit",function(on) SYS.Prank.WalkHit(on) end)
-UI.Switch(p,"🫥 隐身击飞 (自己透明 + 靠近就飞)","PG_HideHit",function(on) SYS.Prank.HideHit(on) end)
-UI.Div(p)
-UI.Section(p,"🧲 工具环绕 / 附着",CY.cyan)
-UI.Switch(p,"🛠 环绕工具 (手里道具绕自己转)","PG_OrbitTool",function(on) SYS.Prank.OrbitTool(on) end)
-UI.Slider(p,"环绕范围 (格)",2,30,1,function() return SYS.C_.PG_OrbitRange end,
-function(v) SYS.C_.PG_OrbitRange=v end,"%.0f")
-UI.Slider(p,"环绕速度 (度/秒)",10,360,10,function() return SYS.C_.PG_OrbitSpeed end,
-function(v) SYS.C_.PG_OrbitSpeed=v end,"%.0f")
-UI.Dropdown(p,"工具附着到谁 (点开选择)", prankNames,
-function()
-local v=SYS.C_.PG_Attach
-if (not v) or v=="" then return NONE_TXT end
-return v
-end,
-function(v) SYS.C_.PG_Attach=(v==NONE_TXT) and "" or v end)
-UI.Btn(p,"🧲 把工具附着到他身上 (客户端)",CY.orange,function()
-SYS.Prank.AttachToolTo(SYS.C_.PG_Attach)
-end)
-UI.Btn(p,"📌 把工具钉在脚下",CY.purple,function()
-local ch=LP.Character
-local t=ch and ch:FindFirstChildOfClass("Tool")
-local h=t and (t:FindFirstChild("Handle") or t:FindFirstChildWhichIsA("BasePart"))
-if not h then SYS.Notify("手里没有工具",SYS.CY.sub) return end
-local _,_,r=GC()
-P(function()
-h.Anchored=true
-if r then h.CFrame=CFrame.new(r.Position+Vector3.new(0,-2,0)) end
-end)
-SYS.Notify("📌 工具已钉在脚下",SYS.CY.purple)
-end)
-UI.Div(p)
-UI.Section(p,"🕳 黑洞 (把附近的人和物吸过来)",CY.purple)
-UI.Switch(p,"🕳 开启黑洞","PG_BlackHole",function(on) SYS.Prank.BlackHole(on) end)
-UI.Slider(p,"范围 (格)",10,200,5,function() return SYS.C_.PG_BH_Range end,
-function(v) SYS.C_.PG_BH_Range=v end,"%.0f")
-UI.Slider(p,"中心高度 (格 · 0=脚底)",0,200,5,function() return SYS.C_.PG_BH_Height end,
-function(v) SYS.C_.PG_BH_Height=v end,"%.0f")
-UI.Slider(p,"吸引力",10,500,10,function() return SYS.C_.PG_BH_Pull end,
-function(v) SYS.C_.PG_BH_Pull=v end,"%.0f")
-UI.Div(p)
-UI.Section(p,"☠ 近距离击杀",CY.red)
-UI.Switch(p,"☠ 击杀贴着你的人","PG_KillNear",function(on) SYS.Prank.KillNear(on) end)
-UI.Slider(p,"距离 (格)",1,40,1,function() return SYS.C_.PG_KillDist end,
-function(v) SYS.C_.PG_KillDist=v end,"%.0f")
-UI.Tip(p,"「击杀」只在【你本地】把对方 Humanoid.Health 写成 0 —— 服务端不认, 对方不死。\n真要击杀请用「战斗」页(走游戏自己的伤害链路)。",CY.yellow)
 end
 local function GetGuiParent()
 return PG
