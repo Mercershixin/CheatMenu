@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:36 sha 8e91d433 bytes 442190'):format('2026-09-19 22:36','8e91d433',442190))
+print(('[CheatMenu] build 2026-09-19 22:39 sha ead20c44 bytes 444097'):format('2026-09-19 22:39','ead20c44',444097))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.6"
+SYS.BuildVer="6.10.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3308,6 +3308,30 @@ local _now=os.clock()
 if (SYS._npcN%25==1 and (not SYS._npcAt or _now-SYS._npcAt>1)) or not SYS._npcList then
 SYS._npcAt=_now
 local list={}
+local HOST_KW={"monster","enemy","hostile","killer","kill","attack","aggro","boss","guard",
+"zombie","mob","hunter","stalker","chaser","demon","ghoul","skeleton","brute",
+"seek","rush","ambush","figure","halt","screech","eyes","dupe","snare","spider",
+"jumpscare","cursed","glitch","entity"}
+local HOST_CN={"怪","敌","杀手","恶魔","猎","鬼","僵尸","追","凶"}
+local HOST={}
+local function isHostile(m)
+for _,k in ipairs({"Hostile","Enemy","IsEnemy","Aggro","Dangerous","Killer"}) do
+local ok,v=pcall(function() return m:GetAttribute(k) end)
+if ok and v==true then return true end
+end
+local anc=m
+for _=1,4 do
+if not anc then break end
+local raw=anc.Name
+if type(raw)=="string" and raw~="" then
+local nm=raw:lower()
+for _,kw in ipairs(HOST_KW) do if nm:find(kw,1,true) then return true end end
+for _,cw in ipairs(HOST_CN) do if raw:find(cw,1,true) then return true end end
+end
+anc=anc.Parent
+end
+return false
+end
 P(function()
 for _,m in ipairs(WS:GetDescendants()) do
 local isRig=(m:FindFirstChild("Head")~=nil and m:FindFirstChild("HumanoidRootPart")~=nil)
@@ -3318,11 +3342,21 @@ local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(m) end)
 isPlayerChar=(ok and pl~=nil)
 end
 local h=m:FindFirstChildOfClass("Humanoid")
-if not isPlayerChar and ((h and h.Health>0) or (not h and isRig)) then list[#list+1]=m end
+if not isPlayerChar and ((h and h.Health>0) or (not h and isRig)) then
+list[#list+1]=m
+HOST[m]=isHostile(m)
+end
 end
 end
 end)
 SYS._npcList=list
+SYS._npcHostile=HOST
+if not SYS._npcLogged then
+SYS._npcLogged=true
+local hn=0
+for _,mm in ipairs(list) do if HOST[mm]==true then hn=hn+1 end end
+print(("[ESP] 生物透视: 活物 %d 个 (敌对 %d / 中立 %d)"):format(#list,hn,#list-hn))
+end
 end
 local nact={}
 for _,m in ipairs(SYS._npcList or {}) do if m and m.Parent then nact[m]=true end end
@@ -3344,12 +3378,18 @@ end
 local part=m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
 local wall=espWall(part)
 h.FillTransparency=wall and 0.93 or 0.88
-h.FillColor=Color3.fromRGB(255,140,0)
+if (SYS._npcHostile and SYS._npcHostile[m])==true then
+h.FillColor   =Color3.fromRGB(255,30,30)
+h.OutlineColor=Color3.fromRGB(255,0,0)
+else
+h.FillColor   =Color3.fromRGB(255,140,0)
 h.OutlineColor=Color3.fromRGB(255,105,0)
+end
 end
 else
 if next(HN) then for _,h in pairs(HN) do P(function() h:Destroy() end) end HN={} end
 SYS._npcList=nil
+SYS._npcHostile=nil
 end
 local PK = {}
 SYS.PickKinds = {
@@ -10007,10 +10047,16 @@ if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem th
 end)
 UI.Div(p)
 UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 机关)",CY.accent)
-UI.Switch(p,"👹 怪物/NPC 透视 (不属于玩家的怪也高亮, 橙色)","ESP_NPC",function(on)
-if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
+UI.Switch(p,"🐾 生物透视 (所有活物全亮 · 敌对=红 / 中立=橙)","ESP_NPC",function(on)
+if on then SYS.T_.ESP=true end
+if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
+and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
+if SYS.BtnRefs then for _,f in ipairs(SYS.BtnRefs) do P(f) end end
 end)
-UI.Tip(p,"把地图里【不属于任何玩家】但带 Humanoid 的模型(怪物/NPC/假人)用【橙色】高亮, 与玩家(队友绿·敌人红)区分。\n全 Workspace 扫描已节流(约每 0.5s 重扫一次), 不影响帧率; 隔墙时填充更透。",CY.sub)
+UI.Tip(p,"把所有【活物】都点亮: 玩家(队友绿 / 敌人红 / 幽灵紫) + 全部非玩家生物(怪物 / NPC / 动物 / 假人)。\n"..
+"🎨 非玩家生物分两种: 【敌对 = 红】(名字或 3 层祖先命中敌意词: monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider … 或 Attribute Hostile / Enemy / Aggro 为 true)\n"..
+"   【中立 = 橙】(其余全部; 拿不准一律算中立, 不误标红 —— 与玩家透视「拿不到队伍=队友绿」同一个保守口径)。\n"..
+"开这个开关会【一起打开玩家透视】(不然不算「所有活物」)。全 Workspace 扫描已节流(约每 1s 重扫), 隔墙时填充更透。",CY.sub)
 UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 一起)","ESP_Pick",function(on)
 SYS.T_.ESPItem=on SYS.T_.ESP_Door=on
 if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then
