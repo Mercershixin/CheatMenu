@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-19 22:39 sha ead20c44 bytes 444097'):format('2026-09-19 22:39','ead20c44',444097))
+print(('[CheatMenu] build 2026-09-19 22:44 sha 95c2dfd5 bytes 443710'):format('2026-09-19 22:44','95c2dfd5',443710))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -103,7 +103,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="6.10.7"
+SYS.BuildVer="6.10.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1648,10 +1648,14 @@ return d
 end
 local function deepHideTarget(root)
 local depth=deepHideDepthNow()
-local sign=(tostring(SYS.C_.DeepHideMode or "down")=="up") and 1 or -1
-local ty=DeepHideY + sign*depth
+local md=tostring(SYS.C_.DeepHideMode or "down")
 local ox=tonumber(SYS.C_.DeepHideOffX) or 0
 local oz=tonumber(SYS.C_.DeepHideOffZ) or 0
+if md=="flat" then
+return Vector3.new(root.Position.X+ox, root.Position.Y, root.Position.Z+oz)
+end
+local sign=(md=="up") and 1 or -1
+local ty=DeepHideY + sign*depth
 return Vector3.new(root.Position.X+ox, ty, root.Position.Z+oz)
 end
 local function deepHideApply(root)
@@ -10170,13 +10174,16 @@ UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
-UI.Cycle(p,"藏身方向",{"地下","天上"},
-function() return SYS.C_.DeepHideMode=="up" and "天上" or "地下" end,
+UI.Cycle(p,"藏身方向",{"地下","天上","平地"},
+function()
+local m=tostring(SYS.C_.DeepHideMode or "down")
+return (m=="up") and "天上" or ((m=="flat") and "平地" or "地下")
+end,
 function(v)
-SYS.C_.DeepHideMode=(v=="天上") and "up" or "down"
+SYS.C_.DeepHideMode=(v=="天上") and "up" or ((v=="平地") and "flat" or "down")
 if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
 end)
-UI.Slider(p,"藏地下隐身深度 (格 · 小=能交互 / 大=藏得深)",5,300,5,
+UI.Slider(p,"藏地下隐身深度 (格 · 小=能交互 / 大=藏得深 · 平地模式用不到)",5,300,5,
 function() return SYS.C_.DeepHideDepth end,
 function(v)
 SYS.C_.DeepHideDepth=v
@@ -11389,9 +11396,7 @@ return (m=="first") and "第一人称" or ((m=="third") and "第三人称" or "�
 end,
 function(v)
 SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "third" or "off")
-UI.Slider(p,"🔭 视野 FOV (70=原版, 越大看得越广)",60,180,1,function() return SYS.C_.CamFov or 70 end,function(v) SYS.C_.CamFov=v if SYS.SetCamFov then P(SYS.SetCamFov,v) end end,"%.0f")
-UI.Slider(p,"🔭 第三人称最远距离 (格)",20,500,10,function() return SYS.C_.CamZoom or 20 end,function(v) SYS.C_.CamZoom=v if SYS.SetCamZoom then P(SYS.SetCamZoom,v) end end,"%.0f")
-UI.Tip(p,"两个都是【纯客户端视觉】, 只改你自己看到的画面, 不碰任何别人; 卸载时会还原。\n第一人称想拉远没用(相机锁在头里) —— 拉远要先切【第三人称】。",CY.sub)            if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
+if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
 end)
 UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
 UI.Div(p)
