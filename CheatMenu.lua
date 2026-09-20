@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 21:55 sha 373b2a04 bytes 491189'):format('2026-09-20 21:55','373b2a04',491189))
+print(('[CheatMenu] build 2026-09-20 22:15 sha b9335fb4 bytes 492280'):format('2026-09-20 22:15','b9335fb4',492280))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.2.0"
+SYS.BuildVer="8.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4478,12 +4478,27 @@ if not t or not t:IsA("Tool") then return false end
 local ok,ht=pcall(function() return t:HasTag("EntityTool") end)
 return ok and ht
 end
+local EXCLUSIVE_KEEP = {
+"W","Dragon Cannelloni","Spaghetti Tualetti","Esok Sekolah","Job Job Job Sahur",
+"Yess My Examen","Lucky Kick","Hippocopter","Auto Grizzlioni","Los Bombardinos","Rocky",
+"Hat Tricky","GOAT","Bronze Block Medali","Golden Block Cuppy","Silver Block Cuppy",
+"Bronze Block Cuppy","Golden Block Medali","Silver Block Medali","Stadoini",
+"Cone Cone Cone Sahur","Ballberto","Soccerdino","Netini Goalini","Orangutango Supremo",
+"Croakumber","Lampuccio Raccoonelli","Tuki Tuki Taco","Professor Tigrellini",
+"Patagotitan","Frigorex","Velacoraptor","Bicletairussaurus","Jet Jet Raptoret",
+"Tricerabob","Teacherrina","Locko Blocko","Scuolabus Giraffini","Donutello",
+"Professor Penneroni","Brain Mogger",
+}
+local EXCLUSIVE_KEEP_SET = {}
+for _, nm in ipairs(EXCLUSIVE_KEEP) do EXCLUSIVE_KEEP_SET[nm] = true end
+SYS.ExclusiveKeepSet = EXCLUSIVE_KEEP_SET
 local function isExclusiveTool(t)
 if not t then return false end
+if EXCLUSIVE_KEEP_SET[t.Name] then return true end
 local n = string.lower(t.Name)
 local exclusiveKeywords = {
 "exclusive", "独家", "专属", "limited", "限定",
-"vip", "%%", "x2", "x5", "x10", "x20", "x50",
+"vip", "%", "x2", "x5", "x10", "x20", "x50",
 "percent", "百分比", "幸运", "lucky"
 }
 for _, kw in ipairs(exclusiveKeywords) do
@@ -4676,9 +4691,16 @@ return nil
 end
 local function sellHeld()
 local rf=SYS.RFunction("B_Sell")
-if not rf then print("[Sell] ❌ ref_B_Sell 找不到") return false end
+if rf then
 local ok,res=pcall(function() return rf:InvokeServer() end)
 if ok then print("[Sell] ✅ 返回:",tostring(res)) return true end
+end
+local re=SYS.REvent("B_Sell")
+if re then
+local ok=P(function() re:FireServer() end)
+if ok then print("[Sell] ✅ 已发 rev_B_Sell (这条没有返回值)") return true end
+end
+print("[Sell] ❌ ref_B_Sell / rev_B_Sell 都没找到")
 return false
 end
 local function moveToSeller()
