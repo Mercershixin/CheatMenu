@@ -193,6 +193,15 @@
   - `事件库/` = 抓包清单（**要进仓库**）
 - **仓库 = 发行产物**：`CheatMenu.lua`（minify）/ `version.txt` / `loader.lua` / `CHANGELOG.md` **四件套**，
   外加 `README.md`、`AGENTS.md`、`事件库/`。
+- ★★ **报告与源码备份不进项目本体，进仓库**（用户 2026-09-20 定）：
+  - `文档存档/` = 开发过程中的报告（功能总览 / 功能体检 / 各批次审计 / 翻译模块 / 云端验证 …）
+  - `源码快照/CheatMenu-<版本>.lua` = **当前版带注释源码**（`push_docs.py` 推）
+  - `源码快照/历史备份/` = **旧版本源码快照**（`.bak-*` / `.keep-*`）
+  - 本地暂存在**项目外**：`C:\Users\Administrator\Desktop\CheatMenu-归档暂存\`
+    （`报告存档/`、`源码快照/`、`backups/source/`）—— **项目根目录只留源码/规范/`dist/`/`事件库/`/两个 bat**。
+  - 推送脚本：`push_docs.py`（源码快照）+ `push_archive.py`（文档存档 + 历史备份，走 Contents API）。
+    ⛔ **别用 `git push` 推这些** —— `dist/repo` 的本地 git 落后于远端（远端更新是走 API 的），
+    一律 `git push` 会把 `AGENTS.md` / `CLAUDE.md` 等**回退成旧版**。
 - **推送不是 `git push`** —— 走 GitHub Contents API（`push_now.py` / `push_api.py`；文档走 `push_docs.py`）。
   所以**本地 git 落后远程属常态**，别用 `git log` 判断"有没有推上去"。
 - 事件库按 `事件库/YYYY-MM-DD_游戏名.md` 归档，**游戏名一定要写**。
