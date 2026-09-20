@@ -4,9 +4,12 @@
 
 三条必记（用户 2026-09-19 定稿）：
 1. **只做用户明确要求的那一件事**；不擅自新增功能、不改用户没让动的地方。
-2. ⛔ **不要自作主张跑测试循环**（verify_all / run_smoke / run_full / luau-compile / check.py /
-   luau-analyze …）—— 只在用户明确说「跑一下 / 验证一下 / 测试一下」时才跑。
-   默认命令就是 `python .workbuddy/build/push_now.py --fast`。
+2. ⛔⛔ **测试只允许三种手段：① 静态分析 ② 单元测试 ③ 云端执行（OCALE）。整脚本仿真已【彻底禁用】**
+   （`sim/run_full.py` / `full_sim.lua` / `run_smoke.py` / `run_probe_v69.py` —— 不要运行、不要修复、不要扩展；
+   见 `AGENTS.md` §0.1 与 `.workbuddy/sim/DISABLED.md`）。
+   「不要自作主张跑测试循环」仍然有效（verify_all / luau-compile / luau-analyze / 加载器探针）——
+   只在用户明确说「跑一下 / 验证一下 / 测试一下 / 发版」时才跑。
+   默认命令：`python .workbuddy/build/push_now.py`（`--fast` 已只剩兼容意义）。
 3. 🎨 **配色规范**：所有高亮=边框高亮；普通物件 + 普通门 = **统一亮青** (0,200,255)/(0,170,230)；
    **危险**（陷阱/伤害机关/切割/假门）= **红** (255,30,30) **+ ☠**；人物=队友绿/敌人红/幽灵紫；怪物=橙。
    三个透视已合并成一个开关「🔍 物件透视」，别再拆开。
