@@ -131,7 +131,7 @@
   （只有 `Vector3` 的 `TargetPoint`），裸读必抛 `Target is not a valid member of Humanoid`。
   v7.5.1 已整条删除（包 `pcall` 也不行 —— 那只是把异常变成"每个怪每 0.5s 一次"）。
   无仇恨**只走 Attribute 通道**（`Target|Enemy|Aggro|TargetPlayer|TargetEntity|Hostile`）。
-  仿真台有**结构性断言**盯着源码文本：出现 `h.Target` 立刻判红。
+  ⛔ 不许加回来。判据：**猜字段存在之前先去官方 API 文档确认它存不存在**，别靠推理、更别靠 mock 验证。
 
 ---
 
@@ -209,7 +209,8 @@
 > **用户 2026-09-20 原话：「彻底禁用仿真测试 …… 现在的测试只能静态分析 单元测试 云端执行（OCALE）」**
 >
 > **不要运行、不要修复、不要扩展。** 只允许的三种验证手段见 **§0.1**。
-> 完整禁用说明（为什么禁 / 谁被点名 / 工具链改了什么）见 `.workbuddy/sim/DISABLED.md`。
+> 完整禁用说明见 `.workbuddy/sim/DISABLED.md`（⚠ 那是**本地文件**，在 `.workbuddy/` 下、**不进仓库**；
+> **规则正文以本节与 §0.1 为准**，不依赖那个文件也能执行）。
 > 下面这些是**历史记录**，留着是为了「别踩同一个坑」，**不是**让你复活它。
 
 - 历史入口（**已禁跑**）：`run_full.py` → `full_result.txt`；`run_smoke.py`；`run_probe_v69.py`
