@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 23:59 sha 90587ced bytes 498073'):format('2026-09-20 23:59','90587ced',498073))
+print(('[CheatMenu] build 2026-09-21 00:11 sha 32f6b034 bytes 499697'):format('2026-09-21 00:11','32f6b034',499697))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -37,7 +37,7 @@ AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
-CB_PauseMove=false,CB_Predict=false,CB_Team=false,CB_Wall=true,
+CB_PauseMove=false,CB_Predict=true,CB_Team=false,CB_Wall=true,
 CB_Ballistic=false,
 CB_TgtStrict=false,
 CB_SnapFire=false,
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.6.0"
+SYS.BuildVer="8.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3154,6 +3154,21 @@ HL,LB,HB,LBL={},{},{},{}
 HI={}
 LW,LWL={},{}
 end
+local EHCache, EHAt = nil, -99
+local function espEnemyHolder()
+if EHCache and EHCache.Parent then return EHCache end
+local now=os.clock()
+if now-EHAt<2 then return EHCache end
+EHAt=now
+local _,hl=P(function()
+local w=WS:FindFirstChild("Highlight")
+local en=w and w:FindFirstChild("Enemy")
+return en and en:FindFirstChild("HighlightHolder")
+end)
+EHCache=hl
+return hl
+end
+SYS.EspEnemyHolder=espEnemyHolder
 function SYS.ESPTick()
 if SYS.T_.ESPWeapon and not SYS.T_.ESPNameTag then SYS.T_.ESPNameTag=true end
 if not SYS.ESPAnyOn() then
@@ -3205,8 +3220,24 @@ local ok2,nm=pcall(function() return pp.Team and pp.Team.Name end)
 if ok2 and nm and nm~="" then return nm end
 return nil
 end
+local faction=nil
+do
+local holder=espEnemyHolder()
+if holder and holder.Parent then
+local hasKid=false
+for _ in ipairs(holder:GetChildren()) do hasKid=true break end
+if holder:FindFirstChild(p.Name) then
+faction=false
+elseif hasKid then
+faction=true
+end
+end
+end
+if faction==nil then
 local mt=ateam(LP) local pt=ateam(p)
-team=not (mt and pt and mt~=pt)
+faction=not (mt and pt and mt~=pt)
+end
+team=faction
 local ghost=false
 if type(p.GetAttribute)=="function" then
 P(function()
@@ -6125,14 +6156,26 @@ local bp=CB.BallisticPoint(p,pos)
 if bp then return bp end
 end
 if not SYS.T_.CB_Predict then return pos end
-local t=SYS.C_.CB_PredictTime or 0.14
+local base=SYS.C_.CB_PredictTime or 0.14
+local p2=CB.TargetPart and CB.TargetPart.Position
+local dist=(p2 and (p2-pos).Magnitude) or 0
+local t=base*math.clamp(1+dist/500,1,3.0)
 local v=p.AssemblyLinearVelocity
 if not v then
 local ok,r=pcall(function() return p.Velocity end)
 if ok then v=r end
 end
 local lead=pos
-if v then lead=lead+v*t end
+local vspeed=(v and v.Magnitude) or 0
+if vspeed>0.05 then
+lead=lead+v*t
+else
+local h0=CB.Target and humOf(CB.Target)
+local md=h0 and h0.MoveDirection
+if md and md.Magnitude>0.01 then
+lead=lead+md.Unit*(vspeed>0 and vspeed or (7*t))
+end
+end
 local h=CB.Target and humOf(CB.Target)
 if h and h.FloorMaterial==Enum.Material.Air then
 local g=(WS and WS.Gravity) or 196.2
@@ -6207,7 +6250,7 @@ if not (CB.TargetName() and (SYS.C_.CB_TargetMode or 1)==2) then return nil end
 local pl=Players:FindFirstChild(CB.TargetName())
 if pl and isEnemy(pl) and not (SYS.T_.CB_SkipFF and hasShield(pl)) then
 local p=partOf(pl,mode)
-if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or (tonumber(SYS.C_.CB_ScanMs) or 33)<=0 or clearShot(p)) then return pl,p end
+if p and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or clearShot(p)) then return pl,p end
 end
 if (not pl) or (not alive(pl)) then
 SYS.C_.CB_TargetName="" SYS.C_.CB_TargetMode=1
@@ -6325,7 +6368,7 @@ if okH and hit then
 local hp=playerFromPart(hit)
 if hp and isEnemy(hp) and not (SYS.T_.CB_SkipFF and hasShield(hp)) then
 local pp=partOf(hp,mode)
-if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360 or (tonumber(SYS.C_.CB_ScanMs) or 33)<=0
+if pp and (not SYS.T_.CB_Wall or SYS.T_.CB_360
 or SYS.T_.CB_SilentNoTurn or clearShot(pp)) then return hp,pp end
 end
 end
@@ -6422,7 +6465,7 @@ canFire = crosshairOnEnemy()
 end
 if not canFire then return end
 local noTurn=SYS.T_.CB_SilentNoTurn
-if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire) and not noTurn then
+if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire or (SYS.T_.CB_Aim and SYS.T_.CB_Fire)) and not noTurn then
 local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if ap2 then
 P(function() cam.CFrame=CFrame.lookAt(cam.CFrame.Position,ap2) end)
@@ -12211,6 +12254,8 @@ UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
 function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
 function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
 UI.Switch(p,"📐 预测瞄准 (算目标移动的提前量)","CB_Predict")
+UI.Tip(p,"★ v8.7.0 起【默认打开】—— 打移动目标必须有它，不然等于永远瞄他上一帧的位置。"..
+"提前量会随距离自动放大（越远补得越多，最多 3 倍）；速度取不到时退回用人形的移动方向估。",CY.sub)
 UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
 function() return SYS.C_.CB_PredictTime end,
 function(v) SYS.C_.CB_PredictTime=v end,"%.2f")
@@ -12337,6 +12382,9 @@ UI.Tip(p,"开 = 有敌人在补刀距离内就自动按 F: 优先补【锁定的
 UI.Slider(p,"补刀距离(格)",3,25,1,function() return SYS.C_.CB_MeleeDist end,function(v) SYS.C_.CB_MeleeDist=v end,"%.0f")
 UI.Tip(p,"和敌人贴脸时枪常打不中(准星/弹道问题), 开着这个会自动按 F 用近战收掉。\n只对【已锁定的目标】且在设定距离内才按, 不影响中远距离枪战。",CY.sub)
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
+UI.Tip(p,"★ v8.7.0 修：这条【不再被「索敌间隔」影响】。\n"..
+"以前把索敌间隔设成 0（每帧秒锁）会连带【不判视线】→ 隔墙也会锁人。现在两件事解耦：\n"..
+"间隔只管「扫多快」，视线只看这个开关。真要无视墙请用「子弹穿墙」或「360 无死角」。",CY.sub)
 UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
 UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
 UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是「不穿墙」)。\n背身/360° 转身照样锁得到 —— 判定按实时相机走, 只要你和目标之间没有墙。\n关掉 = 隔墙的人也选(会对着墙开枪, 基本没用)。",CY.yellow)
