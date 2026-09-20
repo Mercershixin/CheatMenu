@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 18:01 sha 446bb735 bytes 477571'):format('2026-09-20 18:01','446bb735',477571))
+print(('[CheatMenu] build 2026-09-20 18:45 sha 026414ec bytes 476037'):format('2026-09-20 18:45','026414ec',476037))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -111,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.8.5"
+SYS.BuildVer="7.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6703,20 +6703,11 @@ end
 print("[CheatMenu] 战斗模块已加载 (菜单战斗页: 一键开战/停战 + 各开关 · 按 V 切换指定目标)")
 local Trans={}
 SYS.Trans=Trans
-Trans.LANGS={ {name="英语",code="en"},{name="中文",code="zh"},{name="日语",code="ja"},
-{name="韩语",code="ko"},{name="泰语",code="th"},{name="俄语",code="ru"},
-{name="阿拉伯语",code="ar"} }
-function Trans.langName(c)
-for _,l in ipairs(Trans.LANGS) do if l.code==c then return l.name end end
-return c
-end
-Trans.SendLang="en"
-Trans.cacheCount=0
-Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0,dyn=0,wait=0}
-local HOST_DEFAULT="http://127.0.0.1:8080"
-local function hostOf() return HOST_DEFAULT end
+do
+local HOST="http://127.0.0.1:8080"
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
+local function hostOf() return HOST end
 local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
 Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.
 Preserve the original line breaks and the original number of lines.
@@ -6731,6 +6722,116 @@ Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shie
 Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
 Currency symbols (\$, €, ¥) must ALWAYS be kept EXACTLY as-is, even standing alone: write "1,500 $", NEVER write "美元"/"欧元"/"人民币". The word Robux is kept as-is too.
 If the text is already ZH or contains CJK characters, output it unchanged.]]
+Trans.LANG_PROMPT={en="English",zh="Chinese",ja="Japanese",ko="Korean",th="Thai",ru="Russian",ar="Arabic"}
+local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
+local KEEPW="og|secret|mythic|legendary|epic|rare|uncommon|common|divine|celestial|exclusive|limited|godly|ultra|special|unique|hidden|ancient|eternal|transcendent|op"
+local OUTCAP=12000
+local SELFCAP=8000
+local VERDICT_CAP=8000
+local DYN_MAX=6000
+local DYN_WIN=12
+local DYN_HITS=4
+local DYN_LEN=60
+local T2O_CAP=2000
+local RV_CAP=2000
+local FAIL_BASE,FAIL_CAP,FAIL_MAXN=3,300,4000
+local NET_STREAK_MAX,NET_GATE_S=3,4
+local HOOK_MAX=1500
+local HOOK_PER_SEC=40
+local RETRY_MAX=5
+local RETRY_GAP=0.1
+local SCAN_GAP=0.5
+local SCAN_IDLE=1
+local WS_EVERY=10
+local REQ_TIMEOUT=60
+local MAX_TOK_FALLBACK=512
+local PROMPT_FIELDS={"ActionText","ObjectText"}
+Trans.LANGS={ {name="英语",code="en"},{name="中文",code="zh"},{name="日语",code="ja"},
+{name="韩语",code="ko"},{name="泰语",code="th"},{name="俄语",code="ru"},
+{name="阿拉伯语",code="ar"} }
+function Trans.langName(c)
+for _,l in ipairs(Trans.LANGS) do if l.code==c then return l.name end end
+return c
+end
+Trans.SendLang="en"
+Trans.cacheCount=0
+Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0,dyn=0,wait=0}
+local WORD_TABLE={
+["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",["reborn"]="重生",
+["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",["energy"]="体力",["coin"]="金币",
+["coins"]="金币",["gem"]="宝石",["gems"]="宝石",["robux"]="Robux",["rare"]="稀有",["epic"]="史诗",["common"]="普通",
+["speed"]="速度",["luck"]="幸运",["exp"]="经验",["level"]="等级",["quest"]="任务",["shop"]="商店",["trade"]="交易",
+["respawn"]="复活",["spawn"]="出生",["equip"]="装备",["buy"]="购买",["sell"]="出售",["upgrade"]="升级",["craft"]="制作",
+["stats"]="属性",["skill"]="技能",["attack"]="攻击",["defense"]="防御",["health"]="生命值",["gold"]="金币",
+["cash"]="现金",["pet"]="宠物",["pets"]="宠物",["hatch"]="孵化",["evolve"]="进化",["weapon"]="武器",["armor"]="护甲",
+["lol"]="哈哈",["gg"]="打得漂亮",["wp"]="打得漂亮",["ty"]="谢谢",["thx"]="谢谢",["nice"]="不错",["afk"]="挂机",
+["brb"]="马上回来",["omg"]="天啊",["help"]="帮助",["index"]="索引",["store"]="商店",["rebirths"]="重生",
+["settings"]="设置",["acceleration"]="加速度",["achievement"]="成就",["aim"]="瞄准",["align"]="对齐",
+["alliance"]="联盟",["amplitude"]="振幅",["anchor"]="锚点",["angle"]="角度",["angularvelocity"]="角速度",
+["area"]="面积",["avatar"]="形象",["axis"]="轴",["back"]="返回",["badge"]="徽章",["beam"]="光束",["block"]="屏蔽",
+["boolvalue"]="布尔值",["branch"]="分支",["bundle"]="礼包",["buoyancy"]="浮力",["camera"]="相机",["cancel"]="取消",
+["cancollide"]="可碰撞",["canquery"]="可查询",["cantouch"]="可触摸",["character"]="角色",["chat"]="聊天",
+["checkpoint"]="检查点",["circumference"]="周长",["claim"]="领取",["click"]="点击",["close"]="关闭",["codex"]="图鉴",
+["collision"]="碰撞",["color"]="颜色",["colorsequence"]="颜色序列",["community"]="社区",["complete"]="完成",
+["cone"]="圆锥",["configuration"]="配置",["confirm"]="确认",["connecting"]="连接中",["controller"]="手柄",
+["controls"]="控制",["cooldown"]="冷却中",["crate"]="宝箱",["creator"]="创作者",["crouch"]="蹲下",["cube"]="立方体",
+["cylinder"]="圆柱",["defeat"]="失败",["degree"]="度",["density"]="密度",["depth"]="深度",["deselect"]="取消选择",
+["developer"]="开发者",["dialogue"]="对话",["diameter"]="直径",["discount"]="折扣",["distance"]="距离",["drag"]="拖动",
+["drop"]="丢弃",["effect"]="效果",["elasticity"]="弹性",["equipped"]="已装备",["error"]="错误",["euler"]="欧拉",
+["event"]="活动",["experience"]="体验",["expired"]="已过期",["explosion"]="爆炸",["failed"]="失败",["featured"]="精选",
+["floatvalue"]="浮点",["folder"]="文件夹",["force"]="力",["fps"]="帧率",["free"]="免费",["frequency"]="频率",
+["friction"]="摩擦",["friends"]="好友",["gradient"]="渐变",["graphics"]="图形",["gravity"]="重力",["grid"]="网格",
+["heal"]="治疗",["heat"]="热量",["height"]="高度",["hitbox"]="命中框",["hot"]="热门",["hover"]="悬停",
+["humanoid"]="人形",["hurtbox"]="受击框",["impulse"]="冲量",["incomplete"]="未完成",["inertia"]="惯性",
+["intvalue"]="整数",["join"]="加入",["jump"]="跳跃",["keyboard"]="键盘",["language"]="语言",["leaderboard"]="排行榜",
+["leave"]="离开",["length"]="长度",["lhello"]="你好",["lift"]="升力",["limited"]="限定",["loading"]="加载中",
+["lobby"]="大厅",["locked"]="未解锁",["lore"]="传说",["maintenance"]="维护",["mana"]="法力",["map"]="地图",
+["massless"]="无质量",["material"]="材质",["matrix"]="矩阵",["mesh"]="网格",["mission"]="任务",["mobile"]="移动端",
+["model"]="模型",["momentum"]="动量",["mouse"]="鼠标",["move"]="移动",["music"]="音乐",["mute"]="静音",
+["narration"]="旁白",["new"]="新",["next"]="下一步",["no"]="不",["notifications"]="通知",["numberrange"]="数字范围",
+["numbersequence"]="数字序列",["numbervalue"]="数字值",["objective"]="目标",["objectvalue"]="对象值",
+["official"]="官方",["ok"]="确定",["open"]="打开",["option"]="选项",["orientation"]="方向",["owned"]="已拥有",
+["pan"]="平移",["particle"]="粒子",["party"]="队伍",["pc"]="电脑",["phase"]="相位",["ping"]="延迟",["place"]="场所",
+["plane"]="平面",["play"]="开始",["popular"]="流行",["position"]="位置",["premium"]="高级",["pressure"]="压力",
+["privacy"]="隐私",["progress"]="进度",["projectile"]="弹体",["prone"]="趴下",["quality"]="画质",
+["quaternion"]="四元数",["radian"]="弧度",["radius"]="半径",["rank"]="段位",["rate"]="速率",["ready"]="准备就绪",
+["recommended"]="推荐",["rect"]="矩形",["reflectance"]="反射率",["region"]="区域",["reload"]="换弹",["report"]="举报",
+["resize"]="调整大小",["retry"]="重试",["reward"]="奖励",["rotate"]="旋转",["rotation"]="旋转",["round"]="回合",
+["run"]="奔跑",["sale"]="促销",["scalar"]="标量",["scale"]="缩放",["scroll"]="滚动",["season"]="赛季",["select"]="选择",
+["sensitivity"]="灵敏度",["server"]="服务器",["sfx"]="音效",["shoot"]="射击",["size"]="大小",["skip"]="跳过",
+["snap"]="吸附",["sphere"]="球体",["spin"]="抽取",["status"]="状态",["stringvalue"]="字符串值",["subtitle"]="字幕",
+["success"]="成功",["support"]="支持",["team"]="队伍",["temperature"]="温度",["terms"]="条款",["texture"]="纹理",
+["thrust"]="推力",["tier"]="层级",["time"]="时间",["torque"]="扭矩",["touch"]="触摸",["trail"]="拖尾",
+["transparency"]="透明度",["trending"]="趋势",["trigger"]="触发器",["unequip"]="卸下",["universe"]="宇宙",
+["unlocked"]="已解锁",["update"]="更新",["use"]="使用",["value"]="值",["vector"]="向量",["velocity"]="速度",
+["verified"]="已认证",["vibration"]="振动",["victory"]="胜利",["vip"]="贵宾",["volume"]="音量",["walk"]="行走",
+["wavelength"]="波长",["wedge"]="楔形",["width"]="宽度",["work"]="工作",["yes"]="是",["zoom"]="缩放",["accept"]="接受",
+["ammo"]="弹药",["apply"]="应用",["assist"]="助攻",["collect"]="收取",["combo"]="连击",["completed"]="已完成",
+["daily"]="每日",["death"]="死亡",["deaths"]="死亡",["decline"]="拒绝",["delete"]="删除",["draw"]="平局",
+["exit"]="退出",["friend"]="好友",["grenade"]="手雷",["headshot"]="爆头",["hp"]="生命",["info"]="信息",
+["inventory"]="背包",["invite"]="邀请",["kills"]="击杀",["knife"]="刀",["load"]="读取",["match"]="对局",
+["maxed"]="已满级",["medkit"]="医疗包",["menu"]="菜单",["message"]="消息",["missions"]="任务",["mp"]="法力",
+["now"]="现在",["okay"]="确定",["options"]="选项",["paused"]="已暂停",["pistol"]="手枪",["quests"]="任务",
+["quit"]="退出",["reconnecting"]="正在重连",["reset"]="重置",["resume"]="继续",["resumed"]="已继续",["rewards"]="奖励",
+["rifle"]="步枪",["save"]="保存",["score"]="得分",["selected"]="已选择",["send"]="发送",["shield"]="护盾",
+["shotgun"]="霰弹枪",["sniper"]="狙击枪",["spectate"]="观战",["spectating"]="观战中",["start"]="开始",["streak"]="连杀",
+["tie"]="平局",["today"]="今天",["tomorrow"]="明天",["trading"]="交易中",["unlock"]="解锁",["unmute"]="取消静音",
+["vote"]="投票",["waiting"]="等待中",["weapons"]="武器",["weekly"]="每周",["welcome"]="欢迎",
+}
+local PHRASE_TABLE={
+["good game"]="打得漂亮",["well played"]="打得漂亮",["nice shot"]="好枪法",["thank you"]="谢谢",["anyone here"]="有人吗",
+["join our discord"]="加入我们的 Discord",["click to buy"]="点击购买",["max value"]="最大值",["best value"]="最优值",
+["add friend"]="加好友",["are you sure"]="确定吗",["are you sure?"]="确定吗？",["claim all"]="全部领取",
+["collect all"]="全部收取",["coming soon"]="即将推出",["connection lost"]="连接断开",["daily reward"]="每日奖励",
+["double kill"]="双杀",["game over"]="游戏结束",["good luck"]="祝你好运",["great job"]="干得好",
+["insufficient funds"]="余额不足",["kill streak"]="连杀",["level required"]="等级不足",["level up"]="升级",
+["loading..."]="加载中…",["max level"]="满级",["not enough coins"]="金币不足",["not enough gems"]="宝石不足",
+["not ready"]="未准备",["open all"]="全部打开",["out of ammo"]="弹药耗尽",["out of stock"]="缺货",
+["please wait"]="请稍候",["press any key"]="按任意键",["press space to continue"]="按空格继续",["respawn now"]="立即复活",
+["sold out"]="已售罄",["start game"]="开始游戏",["team up"]="组队",["time left"]="剩余时间",["times up"]="时间到",
+["triple kill"]="三杀",["upgrade all"]="全部升级",["weekly reset"]="每周重置",["welcome back"]="欢迎回来",
+["you died"]="你已死亡",["you have been eliminated"]="你已被淘汰",["you lose"]="你输了",["you win"]="你赢了",
+}
 local NON_ASCII="[\128-\255]"
 local utf8codes=(type(utf8)=="table" and type(utf8.codes)=="function") and utf8.codes or nil
 local function scanScript(s)
@@ -6741,12 +6842,9 @@ local ok,iter,state,init=pcall(utf8codes,s)
 if ok and type(iter)=="function" then
 local ok2=pcall(function()
 for _,cp in iter,state,init do
-if cp>=0x4E00 and cp<=0x9FFF then han=true
-elseif cp>=0x3400 and cp<=0x4DBF then han=true
-elseif cp>=0xF900 and cp<=0xFAFF then han=true
+if (cp>=0x4E00 and cp<=0x9FFF) or (cp>=0x3400 and cp<=0x4DBF) or (cp>=0xF900 and cp<=0xFAFF) then han=true
 elseif cp>=0x3040 and cp<=0x30FF then kana=true
-elseif cp>=0xAC00 and cp<=0xD7AF then hangul=true
-end
+elseif cp>=0xAC00 and cp<=0xD7AF then hangul=true end
 end
 end)
 if ok2 then return han,kana,hangul end
@@ -6763,8 +6861,7 @@ if b2 then
 if b2>=0x81 and b2<=0x83 then kana=true
 elseif b2>=0x90 and b2<=0xBF then han=true end
 end
-elseif b>=0xEA and b<=0xED then hangul=true
-end
+elseif b>=0xEA and b<=0xED then hangul=true end
 i=i+1
 end
 return han,kana,hangul
@@ -6788,8 +6885,8 @@ while true do
 local b=s:byte(i)
 if not b then break end
 if b>=0xC0 then
-if (b>=0xE0 and b<=0xEF) then return true end
-if (b>=0xD0 and b<=0xD1) then return true end
+if b>=0xE0 and b<=0xEF then return true end
+if b>=0xD0 and b<=0xD1 then return true end
 end
 i=i+1
 end
@@ -6801,7 +6898,6 @@ local function stripRich(s)
 if type(s)~="string" then return s end
 return (s:gsub("<[^>]*>",""))
 end
-Trans.stripRich=stripRich
 local function splitPrefix(text)
 if type(text)~="string" then return "",text or "" end
 local p1,c1=text:match("^(<font[^>]*>.-:</font>%s*)(.+)$")
@@ -6810,20 +6906,18 @@ local p3,c3=text:match("^(.-[:：]%s*)([^/%s].*)$")
 if p3 and c3 and c3~="" and #p3<=40 and not text:match("^%a[%w%+%-%.]*://") then return p3,c3 end
 return "",text
 end
-Trans.splitPrefix=splitPrefix
 local function normalizeKey(text)
 if type(text)~="string" then return text end
 text=(text:gsub("<[^>]*>",""))
 return ((text:gsub("^%s+","")):gsub("%s+$","")):lower()
 end
-Trans.normalizeKey=normalizeKey
-local function plainReplace(s, from, to)
+local function trim(s) return (s:gsub("^%s+","")):gsub("%s+$","") end
+local function plainReplace(s,from,to)
 if type(s)~="string" or type(from)~="string" or from=="" then return s end
-local i, j = s:find(from, 1, true)
+local i,j=s:find(from,1,true)
 if not i then return s end
-return s:sub(1, i-1) .. tostring(to) .. s:sub(j+1)
+return s:sub(1,i-1)..tostring(to)..s:sub(j+1)
 end
-Trans.plainReplace=plainReplace
 local function isHanCp(cp)
 return (cp>=0x4E00 and cp<=0x9FFF) or (cp>=0x3400 and cp<=0x4DBF) or (cp>=0xF900 and cp<=0xFAFF)
 end
@@ -6862,277 +6956,21 @@ i=j
 end
 return segs
 end
+Trans.stripRich=stripRich
+Trans.splitPrefix=splitPrefix
+Trans.normalizeKey=normalizeKey
+Trans.plainReplace=plainReplace
 Trans.splitSegments=splitSegments
-local WORD_TABLE={
-["train"]="训练",["gym"]="健身房",["power"]="力量",["kick"]="踢击",["rebirth"]="重生",
-["reborn"]="重生",["stamina"]="体力",["bonus"]="加成",["strength"]="力量",["damage"]="伤害",
-["energy"]="能量",["coin"]="金币",["coins"]="金币",["gem"]="宝石",["gems"]="宝石",["robux"]="Robux",
-["rare"]="稀有",["epic"]="史诗",["common"]="普通",
-["speed"]="速度",["luck"]="幸运",["exp"]="经验",["level"]="等级",["quest"]="任务",
-["shop"]="商店",["trade"]="交易",
-["respawn"]="重生",["spawn"]="出生点",["equip"]="装备",["buy"]="购买",["sell"]="出售",
-["upgrade"]="升级",["craft"]="制作",["stats"]="属性",["skill"]="技能",["attack"]="攻击",
-["defense"]="防御",["health"]="生命值",["gold"]="金币",["cash"]="现金",["pet"]="宠物",
-["pets"]="宠物",["hatch"]="孵化",["evolve"]="进化",["weapon"]="武器",["armor"]="护甲",
-["lol"]="哈哈",["gg"]="打得漂亮",["wp"]="打得漂亮",["ty"]="谢谢",["thx"]="谢谢",
-["nice"]="不错",["afk"]="挂机",["brb"]="马上回来",["omg"]="天啊",["help"]="救命",
-["index"]="索引",["store"]="商店",["rebirths"]="重生",["settings"]="设置",
-["acceleration"]="加速度",["achievement"]="成就",["aim"]="瞄准",["align"]="对齐",
-["alliance"]="联盟",["amplitude"]="振幅",["anchor"]="锚点",["angle"]="角度",
-["angularvelocity"]="角速度",["area"]="面积",["avatar"]="形象",["axis"]="轴",
-["back"]="返回",["badge"]="徽章",["beam"]="光束",["block"]="屏蔽",
-["boolvalue"]="布尔值",["branch"]="分支",["bundle"]="礼包",
-["buoyancy"]="浮力",["camera"]="相机",["cancel"]="取消",["cancollide"]="可碰撞",
-["canquery"]="可查询",["cantouch"]="可触摸",["character"]="角色",["chat"]="聊天",
-["checkpoint"]="检查点",["circumference"]="周长",["claim"]="领取",
-["click"]="点击",["close"]="关闭",["codex"]="图鉴",["collision"]="碰撞",
-["color"]="颜色",["colorsequence"]="颜色序列",["community"]="社区",["complete"]="完成",
-["cone"]="圆锥",["configuration"]="配置",["confirm"]="确认",["connecting"]="连接中",
-["controller"]="手柄",["controls"]="控制",["cooldown"]="冷却",["crate"]="宝箱",
-["creator"]="创作者",["crouch"]="蹲下",["cube"]="立方体",
-["cylinder"]="圆柱",["defeat"]="失败",["degree"]="度",
-["density"]="密度",["depth"]="深度",["deselect"]="取消选择",["developer"]="开发者",
-["dialogue"]="对话",["diameter"]="直径",["discount"]="折扣",["distance"]="距离",
-["drag"]="拖动",["drop"]="丢弃",["effect"]="效果",
-["elasticity"]="弹性",["equipped"]="已装备",["error"]="错误",["euler"]="欧拉",
-["event"]="活动",["experience"]="体验",["expired"]="已过期",["explosion"]="爆炸",
-["failed"]="失败",["featured"]="精选",["floatvalue"]="浮点",["folder"]="文件夹",
-["force"]="力",["fps"]="帧率",["free"]="免费",["frequency"]="频率",
-["friction"]="摩擦",["friends"]="好友",["gradient"]="渐变",["graphics"]="图形",
-["gravity"]="重力",["grid"]="网格",["heal"]="治疗",
-["heat"]="热量",["height"]="高度",["hitbox"]="命中框",["hot"]="热门",
-["hover"]="悬停",["humanoid"]="人形",["hurtbox"]="受击框",["impulse"]="冲量",
-["incomplete"]="未完成",["inertia"]="惯性",["intvalue"]="整数",["join"]="加入",
-["jump"]="跳跃",["keyboard"]="键盘",["language"]="语言",["leaderboard"]="排行榜",
-["leave"]="离开",["length"]="长度",["lhello"]="你好",["lift"]="升力",
-["limited"]="限定",["loading"]="加载中",["lobby"]="大厅",["locked"]="已锁定",
-["lore"]="传说",["maintenance"]="维护",["mana"]="法力",["map"]="地图",
-["massless"]="无质量",["material"]="材质",["matrix"]="矩阵",["mesh"]="网格",
-["mission"]="任务",["mobile"]="移动端",["model"]="模型",["momentum"]="动量",
-["mouse"]="鼠标",["move"]="移动",["music"]="音乐",["mute"]="静音",
-["narration"]="旁白",["new"]="新",["next"]="下一步",["no"]="不",
-["notifications"]="通知",["numberrange"]="数字范围",["numbersequence"]="数字序列",["numbervalue"]="数字值",
-["objective"]="目标",["objectvalue"]="对象值",["official"]="官方",["ok"]="好的",
-["open"]="打开",["option"]="选项",["orientation"]="方向",["owned"]="已拥有",
-["pan"]="平移",["particle"]="粒子",["party"]="队伍",
-["pc"]="电脑",["phase"]="相位",["ping"]="延迟",["place"]="场所",
-["plane"]="平面",["play"]="开始",["popular"]="流行",["position"]="位置",
-["premium"]="高级",["pressure"]="压力",["privacy"]="隐私",["progress"]="进度",
-["projectile"]="弹体",["prone"]="趴下",["quality"]="画质",["quaternion"]="四元数",
-["radian"]="弧度",["radius"]="半径",["rank"]="排名",["rate"]="速率",
-["ready"]="准备就绪",["recommended"]="推荐",["rect"]="矩形",["reflectance"]="反射率",
-["region"]="区域",["reload"]="换弹",["report"]="举报",["resize"]="调整大小",
-["retry"]="重试",["reward"]="奖励",["rotate"]="旋转",["rotation"]="旋转",
-["round"]="回合",["run"]="奔跑",["sale"]="促销",["scalar"]="标量",
-["scale"]="缩放",["scroll"]="滚动",["season"]="赛季",["select"]="选择",
-["sensitivity"]="灵敏度",["server"]="服务器",["sfx"]="音效",["shoot"]="射击",
-["size"]="大小",["skip"]="跳过",["snap"]="吸附",["sphere"]="球体",
-["spin"]="抽取",["status"]="状态",["stringvalue"]="字符串值",["subtitle"]="字幕",
-["success"]="成功",["support"]="支持",["team"]="队伍",["temperature"]="温度",
-["terms"]="条款",["texture"]="纹理",["thrust"]="推力",["tier"]="层级",
-["time"]="时间",["torque"]="扭矩",["touch"]="触摸",["trail"]="拖尾",
-["transparency"]="透明度",["trending"]="趋势",["trigger"]="触发器",["unequip"]="卸下",
-["universe"]="宇宙",["unlocked"]="已解锁",["update"]="更新",["use"]="使用",
-["value"]="值",["vector"]="向量",["velocity"]="速度",["verified"]="已认证",
-["vibration"]="振动",["victory"]="胜利",["vip"]="贵宾",["volume"]="音量",
-["walk"]="行走",["wavelength"]="波长",["wedge"]="楔形",["width"]="宽度",
-["work"]="工作",["yes"]="是",["zoom"]="缩放",
-["accept"]="接受",
-["ammo"]="弹药",
-["apply"]="应用",
-["armor"]="护甲",
-["assist"]="助攻",
-["back"]="返回",
-["block"]="屏蔽",
-["bonus"]="加成",
-["buy"]="购买",
-["cancel"]="取消",
-["cash"]="现金",
-["chat"]="聊天",
-["claim"]="领取",
-["close"]="关闭",
-["collect"]="收取",
-["combo"]="连击",
-["complete"]="完成",
-["completed"]="已完成",
-["confirm"]="确认",
-["cooldown"]="冷却中",
-["daily"]="每日",
-["death"]="死亡",
-["deaths"]="死亡",
-["decline"]="拒绝",
-["defeat"]="失败",
-["delete"]="删除",
-["draw"]="平局",
-["drop"]="丢弃",
-["energy"]="体力",
-["equip"]="装备",
-["exit"]="退出",
-["expired"]="已过期",
-["free"]="免费",
-["friend"]="好友",
-["friends"]="好友",
-["gold"]="金币",
-["grenade"]="手雷",
-["headshot"]="爆头",
-["health"]="生命值",
-["help"]="帮助",
-["hp"]="生命",
-["incomplete"]="未完成",
-["info"]="信息",
-["inventory"]="背包",
-["invite"]="邀请",
-["join"]="加入",
-["kills"]="击杀",
-["knife"]="刀",
-["leave"]="离开",
-["load"]="读取",
-["loading"]="加载中",
-["locked"]="未解锁",
-["mana"]="法力",
-["match"]="对局",
-["maxed"]="已满级",
-["medkit"]="医疗包",
-["menu"]="菜单",
-["message"]="消息",
-["mission"]="任务",
-["missions"]="任务",
-["mp"]="法力",
-["mute"]="静音",
-["new"]="新",
-["next"]="下一步",
-["now"]="现在",
-["objective"]="目标",
-["ok"]="确定",
-["okay"]="确定",
-["open"]="打开",
-["options"]="选项",
-["owned"]="已拥有",
-["party"]="队伍",
-["paused"]="已暂停",
-["pistol"]="手枪",
-["play"]="开始",
-["progress"]="进度",
-["quest"]="任务",
-["quests"]="任务",
-["quit"]="退出",
-["rank"]="段位",
-["ready"]="准备就绪",
-["reconnecting"]="正在重连",
-["reload"]="换弹",
-["report"]="举报",
-["reset"]="重置",
-["respawn"]="复活",
-["resume"]="继续",
-["resumed"]="已继续",
-["reward"]="奖励",
-["rewards"]="奖励",
-["rifle"]="步枪",
-["round"]="回合",
-["save"]="保存",
-["score"]="得分",
-["select"]="选择",
-["selected"]="已选择",
-["sell"]="出售",
-["send"]="发送",
-["settings"]="设置",
-["shield"]="护盾",
-["shotgun"]="霰弹枪",
-["sniper"]="狙击枪",
-["spawn"]="出生",
-["spectate"]="观战",
-["spectating"]="观战中",
-["stamina"]="体力",
-["start"]="开始",
-["store"]="商店",
-["streak"]="连杀",
-["team"]="队伍",
-["tie"]="平局",
-["today"]="今天",
-["tomorrow"]="明天",
-["trade"]="交易",
-["trading"]="交易中",
-["unequip"]="卸下",
-["unlock"]="解锁",
-["unlocked"]="已解锁",
-["unmute"]="取消静音",
-["upgrade"]="升级",
-["use"]="使用",
-["victory"]="胜利",
-["vote"]="投票",
-["waiting"]="等待中",
-["weapon"]="武器",
-["weapons"]="武器",
-["weekly"]="每周",
-["welcome"]="欢迎",
-["yes"]="是",
-}
-local PHRASE_TABLE={
-["good game"]="打得漂亮",["well played"]="打得好",["nice shot"]="好枪法",
-["thank you"]="谢谢",["anyone here"]="有人在吗",["join our discord"]="加入我们的 Discord",
-["click to buy"]="点击购买",["max value"]="最大值",["best value"]="最值",
-["add friend"]="加好友",
-["anyone here"]="有人吗",
-["are you sure"]="确定吗",
-["are you sure?"]="确定吗？",
-["best value"]="最优值",
-["claim all"]="全部领取",
-["click to buy"]="点击购买",
-["collect all"]="全部收取",
-["coming soon"]="即将推出",
-["connection lost"]="连接断开",
-["daily reward"]="每日奖励",
-["double kill"]="双杀",
-["game over"]="游戏结束",
-["good luck"]="祝你好运",
-["great job"]="干得好",
-["insufficient funds"]="余额不足",
-["join our discord"]="加入我们的 Discord",
-["kill streak"]="连杀",
-["level required"]="等级不足",
-["level up"]="升级",
-["loading..."]="加载中…",
-["max level"]="满级",
-["max value"]="最大值",
-["nice shot"]="好枪法",
-["not enough coins"]="金币不足",
-["not enough gems"]="宝石不足",
-["not ready"]="未准备",
-["open all"]="全部打开",
-["out of ammo"]="弹药耗尽",
-["out of stock"]="缺货",
-["please wait"]="请稍候",
-["press any key"]="按任意键",
-["press space to continue"]="按空格继续",
-["respawn now"]="立即复活",
-["sold out"]="已售罄",
-["start game"]="开始游戏",
-["team up"]="组队",
-["thank you"]="谢谢",
-["time left"]="剩余时间",
-["times up"]="时间到",
-["triple kill"]="三杀",
-["upgrade all"]="全部升级",
-["weekly reset"]="每周重置",
-["welcome back"]="欢迎回来",
-["well played"]="打得漂亮",
-["you died"]="你已死亡",
-["you have been eliminated"]="你已被淘汰",
-["you lose"]="你输了",
-["you win"]="你赢了",
-}
 local function lookupLocal(text)
 if SYS.T_.LocalPhrase==false then return nil end
 if type(text)~="string" then return nil end
-local _raw=text:gsub("^%s+","")
-_raw=_raw:gsub("%s+$","")
-local _num,_rest = _raw:match("^(%d[%d%.,eE%+%-%w]*)[%s]+(%a+)$")
+local _raw=trim(text)
+local _num,_rest=_raw:match("^(%d[%d%.,eE%+%-%w]*)[%s]+(%a+)$")
 if _num and _rest then
-local _rv = WORD_TABLE[_rest:lower()] or PHRASE_TABLE[_rest:lower()]
-if _rv then return _num .. " " .. _rv end
+local _rv=WORD_TABLE[_rest:lower()] or PHRASE_TABLE[_rest:lower()]
+if _rv then return _num.." ".._rv end
 end
-local k=(text:gsub("^%s+","")):gsub("%s+$","")
-k=k:lower()
+local k=trim(text) k=k:lower()
 k=(k:gsub("[%p]+$",""))
 if k=="" or #k>48 then return nil end
 local v=WORD_TABLE[k] or PHRASE_TABLE[k]
@@ -7148,7 +6986,7 @@ Trans.OutputsN=0
 local function markOutput(s)
 if type(s)~="string" or s=="" or not hasChinese(s) then return end
 if Trans.Outputs[s] or Trans.OutputsOld[s] then return end
-if Trans.OutputsN>=12000 then
+if Trans.OutputsN>=OUTCAP then
 Trans.OutputsOld=Trans.Outputs Trans.Outputs={} Trans.OutputsN=0
 end
 Trans.Outputs[s]=true
@@ -7186,35 +7024,24 @@ end
 end
 return PlayerNames[s:lower()]==true
 end
-do
+local DynByObj=setmetatable({},{__mode="k"})
 Trans.Dyn={}
 Trans.DynN=0
-local DYN_MAX=6000
-local DYN_WIN=12
-local DYN_HITS=4
-local DYN_LEN=60
-local DynByObj=setmetatable({},{__mode="k"})
 local function dynNorm(s)
 if type(s)~="string" or s=="" then return "" end
-local t=s:lower():gsub("%d+","#")
-return (t:gsub("%s+"," "))
+return ((s:lower():gsub("%d+","#")):gsub("%s+"," "))
 end
-Trans.dynNorm=dynNorm
 local function dynMark(nk)
 if nk=="" or Trans.Dyn[nk] then return end
 if Trans.DynN>=DYN_MAX then Trans.Dyn={} Trans.DynN=0 end
 Trans.Dyn[nk]=true Trans.DynN=Trans.DynN+1
 end
-Trans.dynMark=dynMark
-function Trans.dynNote(obj,text)
+local function dynNote(obj,text)
 if SYS.T_.TransDyn==false then return end
 if not obj or type(text)~="string" or text=="" or #text>DYN_LEN then return end
 local now=os.clock()
 local e=DynByObj[obj]
-if not e then
-DynByObj[obj]={last=text,t=now,n=0,keys={}}
-return
-end
+if not e then DynByObj[obj]={last=text,t=now,n=0,keys={}} return end
 if e.last==text then return end
 if now-e.t>DYN_WIN then e.t=now e.n=0 e.keys={} end
 e.last=text
@@ -7231,29 +7058,33 @@ local function dynIsBlocked(s)
 if Trans.DynN==0 then return false end
 return Trans.Dyn[dynNorm(s)]==true
 end
-Trans.dynIsBlocked=dynIsBlocked
+Trans.dynNorm=dynNorm Trans.dynMark=dynMark Trans.dynNote=dynNote Trans.dynIsBlocked=dynIsBlocked
 Trans.Self={}
 Trans.SelfOld={}
 Trans.SelfN=0
-local SELF_MAX=8000
 local function markSelf(s)
 if type(s)~="string" or s=="" then return end
 if Trans.Self[s] or Trans.SelfOld[s] then return end
-if Trans.SelfN>=SELF_MAX then
-Trans.SelfOld=Trans.Self Trans.Self={} Trans.SelfN=0
-end
+if Trans.SelfN>=SELFCAP then Trans.SelfOld=Trans.Self Trans.Self={} Trans.SelfN=0 end
 Trans.Self[s]=true Trans.SelfN=Trans.SelfN+1
 end
-Trans.markSelf=markSelf
 local function isSelf(s)
 return type(s)=="string" and (Trans.Self[s]==true or Trans.SelfOld[s]==true)
 end
-Trans.isSelf=isSelf
+Trans.markSelf=markSelf Trans.isSelf=isSelf
+Trans.IsEmoticon=function(v)
+if type(v)~="string" then return false end
+local t=v:lower():gsub("%s+","")
+if t=="" or #t>12 then return false end
+for w in EMOTICONS:gmatch("[^|]+") do if t==w then return true end end
+return false
 end
+Trans.KeepWords={}
+for w in KEEPW:gmatch("[^|]+") do Trans.KeepWords[w]=true end
 function Trans.shouldTranslate(s,isChat)
 if type(s)~="string" then return false end
 if alreadyOurs(s) then return false end
-s=(s:gsub("^%s+","")):gsub("%s+$","")
+s=trim(s)
 if s=="" or #s<2 then return false end
 if isPlayerName(s) then return false end
 if hasChinese(s) then return false end
@@ -7263,20 +7094,9 @@ if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
 if Trans.IsEmoticon(s) then return false end
 if Trans.KeepWords[s:lower()] then return false end
 if not s:find("%a") then return false end
-if Trans.dynIsBlocked(s) then return false end
+if dynIsBlocked(s) then return false end
 return true
 end
-local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
-Trans.IsEmoticon=function(v)
-if type(v)~="string" then return false end
-local t=v:lower():gsub("%s+","")
-if t=="" or #t>12 then return false end
-for w in EMOTICONS:gmatch("[^|]+") do if t==w then return true end end
-return false
-end
-local KEEPW="og|secret|mythic|legendary|epic|rare|uncommon|common|divine|celestial|exclusive|limited|godly|ultra|special|unique|hidden|ancient|eternal|transcendent|op"
-Trans.KeepWords={}
-for w in KEEPW:gmatch("[^|]+") do Trans.KeepWords[w]=true end
 Trans.Verdict={}
 local VerdictN=0
 local function verdictOf(raw,isChat)
@@ -7287,7 +7107,7 @@ v={}
 local plain=stripRich(raw)
 if Trans.isSelf(plain) then
 v.skip=true
-if VerdictN>=8000 then Trans.Verdict={} VerdictN=0 end
+if VerdictN>=VERDICT_CAP then Trans.Verdict={} VerdictN=0 end
 Trans.Verdict[key]=v VerdictN=VerdictN+1
 return v
 end
@@ -7313,50 +7133,11 @@ v.plain=plain
 v.nk=normalizeKey(plain)
 v.loc=lookupLocal(plain)
 end
-if VerdictN>=8000 then Trans.Verdict={} VerdictN=0 end
+if VerdictN>=VERDICT_CAP then Trans.Verdict={} VerdictN=0 end
 Trans.Verdict[key]=v VerdictN=VerdictN+1
 return v
 end
 Trans.verdictOf=verdictOf
-Trans.Fail={}
-Trans.FailN=0
-local FAIL_BASE,FAIL_CAP,FAIL_MAXN=3,300,4000
-local function failCool(key)
-local f=Trans.Fail[key]
-if not f then return 0 end
-local c=FAIL_BASE*2^(f.n-1)
-return c>FAIL_CAP and FAIL_CAP or c
-end
-local function inCool(key)
-local f=Trans.Fail[key]
-if not f then return false end
-return (os.clock()-f.t)<failCool(key)
-end
-Trans.inCool=inCool
-local function markFail(key)
-if not key or key=="" then return end
-local f=Trans.Fail[key]
-if f then f.n=f.n+1 f.t=os.clock() return end
-Trans.FailN=Trans.FailN+1
-if Trans.FailN>FAIL_MAXN then
-local dead={} local now=os.clock()
-for k,g in pairs(Trans.Fail) do if (now-g.t)>=failCool(k) then dead[#dead+1]=k end end
-for i=1,#dead do Trans.Fail[dead[i]]=nil end
-Trans.FailN=0
-end
-Trans.Fail[key]={n=1,t=os.clock()}
-end
-local function clearFail(key) if key and Trans.Fail[key] then Trans.Fail[key]=nil end end
-Trans.clearFail=clearFail
-Trans.clearAllFails=function() Trans.Fail={} Trans.FailN=0 end
-local NetStreak,NetGateUntil=0,0
-local function netGateOn() return os.clock()<NetGateUntil end
-local function noteNetFail()
-NetStreak=NetStreak+1
-if NetStreak>=3 then NetGateUntil=os.clock()+4 end
-end
-local function noteNetOk() NetStreak=0 NetGateUntil=0 end
-Trans.netGateOn=netGateOn
 local Cache={}
 local MODEL_TAG="hymt2-7b-v70"
 local CFG=SYS.N.Cache
@@ -7430,12 +7211,13 @@ if not ok2 then print("[Trans] 缓存损坏且无备份, 以空缓存启动") en
 end
 end
 function Trans.clearCache()
-Cache={} Trans.cacheCount=0 Trans.Verdict={} VerdictN=0
-Trans.Trans2Orig={} Trans.Outputs={} Trans.OutputsN=0
-Trans.OutputsOld={}
+Cache={} Trans.cacheCount=0
+Trans.Verdict={} VerdictN=0
+Trans.Trans2Orig={} Trans.Orig2Trans={} T2O_N=0
+Trans.Outputs={} Trans.OutputsOld={} Trans.OutputsN=0
 Trans.Self={} Trans.SelfOld={} Trans.SelfN=0
-Trans.Dyn={} Trans.DynN=0 Trans.WaitN=0
-Trans.InflightN=0
+Trans.Dyn={} Trans.DynN=0
+Trans.WaitN=0 Trans.InflightN=0
 Trans.clearAllFails()
 pcall(function()
 if type(delfile)=="function" then
@@ -7487,19 +7269,56 @@ s=s:gsub("▮[^▮]*▮",""):gsub("▮","")
 return s
 end
 Trans.unmask=unmask
+Trans.Fail={}
+Trans.FailN=0
+local function failCool(key)
+local f=Trans.Fail[key]
+if not f then return 0 end
+local c=FAIL_BASE*2^(f.n-1)
+return c>FAIL_CAP and FAIL_CAP or c
+end
+local function inCool(key)
+local f=Trans.Fail[key]
+if not f then return false end
+return (os.clock()-f.t)<failCool(key)
+end
+local function markFail(key)
+if not key or key=="" then return end
+local f=Trans.Fail[key]
+if f then f.n=f.n+1 f.t=os.clock() return end
+Trans.FailN=Trans.FailN+1
+if Trans.FailN>FAIL_MAXN then
+local dead={} local now=os.clock()
+for k,g in pairs(Trans.Fail) do if (now-g.t)>=failCool(k) then dead[#dead+1]=k end end
+for i=1,#dead do Trans.Fail[dead[i]]=nil end
+Trans.FailN=0
+end
+Trans.Fail[key]={n=1,t=os.clock()}
+end
+local function clearFail(key) if key and Trans.Fail[key] then Trans.Fail[key]=nil end end
+local function clearAllFails() Trans.Fail={} Trans.FailN=0 end
+Trans.inCool=inCool Trans.clearFail=clearFail Trans.clearAllFails=clearAllFails
+local NetStreak,NetGateUntil=0,0
+local function netGateOn() return os.clock()<NetGateUntil end
+local function noteNetFail()
+NetStreak=NetStreak+1
+if NetStreak>=NET_STREAK_MAX then NetGateUntil=os.clock()+NET_GATE_S end
+end
+local function noteNetOk() NetStreak=0 NetGateUntil=0 end
+Trans.netGateOn=netGateOn
 local function rawRequest(body,system,temp,maxTok,noGate)
 if type(request)~="function" then return nil,true end
 local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
 model=MODEL,
 messages={ {role="system",content=system}, {role="user",content=masked} },
-temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or 512, stream=false,
+temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or MAX_TOK_FALLBACK, stream=false,
 })
 local ok,res=pcall(function()
 return request({
 Url=hostOf().."/v1/chat/completions", Method="POST",
 Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
-Body=payload, Timeout=60,
+Body=payload, Timeout=REQ_TIMEOUT,
 })
 end)
 if not ok or type(res)~="table" or not res.Body then
@@ -7519,28 +7338,35 @@ local c=type(ch)=="table" and ch[1]
 local m=c and c.message
 local v=m and m.content
 if type(v)~="string" then return nil,false end
-v=unmask(v,tok,tokN)
-v=(v:gsub("^%s+","")):gsub("%s+$","")
+v=trim(unmask(v,tok,tokN))
 if v=="" then return nil,false end
 return v,false
 end
 local function tidy(res,src)
-res=stripRich(res)
-res=(res:gsub("^%s+","")):gsub("%s+$","")
+res=trim(stripRich(res))
 if res=="" then return nil end
 res=res:gsub("^%s*[Tt]ranslation%s*[:：]%s*","")
 res=res:gsub("^%s*[Hh]ere is[^\n:：]*[:：]%s*","")
 res=res:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*","")
-res=(res:gsub("^%s+","")):gsub("%s+$","")
+res=trim(res)
 if res=="" then return nil end
 if not hasChinese(src) and res:lower()==src:lower() then return nil end
 if #src>=24 and #res>#src*3+60 then return nil end
 return res
 end
+local function transPrompt() return SYS_PROMPT end
+function Trans.promptFor(code)
+local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
+return ("You are a game-UI translation engine. Translate the user's text into %s.\n"
+.."Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.\n"
+.."Preserve the original line breaks and the original number of lines.\n"
+.."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
+.."Keep numbers, currency ($), emoji, URLs, placeholders and player names unchanged."):format(name)
+end
 function Trans.translate(text,prio)
 if Trans.Unloaded then return nil end
 if type(text)~="string" or text=="" then return nil end
-text=(text:gsub("^%s+","")):gsub("%s+$","")
+text=trim(text)
 if text=="" then return nil end
 if alreadyOurs(text) then return nil end
 if not Trans.shouldTranslate(text,false) then return nil end
@@ -7557,7 +7383,7 @@ if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return
 if type(request)~="function" or not HS then return nil end
 if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
-local res,netFail=rawRequest(text,transPrompt(),0.1,Trans.maxTok or 512)
+local res,netFail=rawRequest(text,transPrompt(),0.1,Trans.maxTok or MAX_TOK_FALLBACK)
 if res then
 local v=tidy(res,text)
 if v then
@@ -7575,20 +7401,11 @@ markFail(nk)
 if not netFail then Trans.Stats.fail=Trans.Stats.fail+1 end
 return nil
 end
-Trans.LANG_PROMPT={en="English",zh="Chinese",ja="Japanese",ko="Korean",th="Thai",ru="Russian",ar="Arabic"}
-Trans.RvCache={} local RvN=0
-function Trans.promptFor(code)
-local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
-return ("You are a game-UI translation engine. Translate the user's text into %s.\n"
-.."Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.\n"
-.."Preserve the original line breaks and the original number of lines.\n"
-.."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
-.."Keep numbers, currency ($), emoji, URLs, placeholders and player names unchanged."):format(name)
-end
-function transPrompt() return SYS_PROMPT end
+Trans.RvCache={}
+local RvN=0
 function Trans.translateTo(text,code)
 if Trans.Unloaded or type(text)~="string" then return nil end
-text=(text:gsub("^%s+","")):gsub("%s+$","")
+text=trim(text)
 if text=="" then return nil end
 local c=code or "en"
 if c=="zh" then return text end
@@ -7597,20 +7414,19 @@ local key=c.."\1"..normalizeKey(text)
 local hit=Trans.RvCache[key]
 if hit then return hit end
 if inCool(key) or netGateOn() then return nil end
-local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or 512,true)
+local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or MAX_TOK_FALLBACK,true)
 if not res then
 markFail(key)
 return nil
 end
 clearFail(key)
-res=(res:gsub("^%s+","")):gsub("%s+$","")
+res=trim(res)
 if res=="" or res==text then return nil end
 Trans.RvCache[key]=res
 RvN=RvN+1
-if RvN>2000 then Trans.RvCache={} RvN=0 end
+if RvN>RV_CAP then Trans.RvCache={} RvN=0 end
 return res
 end
-do
 Trans.MaxConc=8
 Trans.InflightN=0
 Trans.WaitN=0
@@ -7672,7 +7488,6 @@ return
 end
 runJob(nk,text,prio,(cb and {cb}) or {})
 end
-end
 Trans.Trans2Orig={}
 Trans.Orig2Trans={}
 local T2O_N=0
@@ -7682,7 +7497,7 @@ Trans.markSelf(newPlain) Trans.markSelf(newText)
 if Trans.Trans2Orig[newPlain]==nil then
 Trans.Trans2Orig[newPlain]=plain
 T2O_N=T2O_N+1
-if T2O_N>2000 then Trans.Trans2Orig={} T2O_N=0 end
+if T2O_N>T2O_CAP then Trans.Trans2Orig={} T2O_N=0 end
 end
 Trans.Orig2Trans[plain]=newPlain
 markOutput(newText)
@@ -7777,20 +7592,17 @@ local TextHooked=setmetatable({},{__mode="k"})
 local TextRetry=setmetatable({},{__mode="k"})
 local TextLastAt=setmetatable({},{__mode="k"})
 local TextHookedN=0
-local TEXT_HOOK_MAX=1500
-local TEXT_RETRY_MAX=5
-local TEXT_GAP=0.1
 local function onTextChanged(obj)
 if Trans.Unloaded or not Trans.UIScanActive then return end
 local okc,c0=pcall(function() return obj.Text end)
 if okc and Trans.isSelf(c0) then return end
 local now=os.clock()
 local last=TextLastAt[obj]
-if last and now-last<TEXT_GAP then return end
+if last and now-last<RETRY_GAP then return end
 TextLastAt[obj]=now
 local n=(TextRetry[obj] or 0)+1
 TextRetry[obj]=n
-if n>TEXT_RETRY_MAX then return end
+if n>RETRY_MAX then return end
 task.defer(function()
 if Trans.Unloaded or not Trans.UIScanActive then return end
 P(Trans.processLabel,obj,"ui")
@@ -7799,11 +7611,11 @@ end
 function Trans.HookText(obj)
 if not obj then return false end
 if TextHooked[obj] then return true end
-if TextHookedN>=TEXT_HOOK_MAX then return false end
+if TextHookedN>=HOOK_MAX then return false end
 local now=os.clock()
 if not SYS._hkT or now-SYS._hkT>=1 then SYS._hkT=now SYS._hkN=0 end
 SYS._hkN=(SYS._hkN or 0)+1
-if SYS._hkN>40 then return false end
+if SYS._hkN>HOOK_PER_SEC then return false end
 local ok,conn=pcall(function()
 return obj:GetPropertyChangedSignal("Text"):Connect(function() onTextChanged(obj) end)
 end)
@@ -7855,7 +7667,7 @@ local newText=(plain==cur) and tr or plainReplace(cur,plain,tr)
 if writeProp(obj,"Text",cur,newText) then remember(cur,newText,plain,res) end
 end)
 end
-Trans.PromptFields={"ActionText","ObjectText"}
+Trans.PromptFields=PROMPT_FIELDS
 local PromptHooked=setmetatable({},{__mode="k"})
 local function processPrompt(p)
 if not p or not p.Parent or Trans.Unloaded or not Trans.UIScanActive then return end
@@ -7869,7 +7681,7 @@ if okB and cb2 then T(cb2) end
 if okA and okB then PromptHooked[p]=true end
 end)
 end
-for _,f in ipairs(Trans.PromptFields) do
+for _,f in ipairs(PROMPT_FIELDS) do
 local ok,t=pcall(function() return p[f] end)
 if ok and type(t)=="string" and t~="" then
 local v=verdictOf(t,false)
@@ -7961,7 +7773,7 @@ P(Trans.forceRescan)
 if uiLoop then task.cancel(uiLoop) uiLoop=nil end
 uiLoop=task.spawn(function()
 while Trans.UIScanActive and not Trans.Unloaded do
-task.wait(0.5)
+task.wait(SCAN_GAP)
 if Trans.UIScanActive then
 local before=Trans.Stats.hit+Trans.Stats.replaced
 local n=0
@@ -7970,10 +7782,10 @@ if SYS.CoreGui then n=scanRoot(SYS.CoreGui,n) end
 pcall(function() if gethui then n=scanRoot(gethui(),n) end end)
 if n==0 and before==Trans.Stats.hit+Trans.Stats.replaced then
 Trans.Stats.sweepSkip=Trans.Stats.sweepSkip+1
-task.wait(1)
+task.wait(SCAN_IDLE)
 end
 Trans._w=(Trans._w or 0)+1
-if Trans._w%10==0 then pcall(function() scanRoot(WS,0) end) end
+if Trans._w%WS_EVERY==0 then pcall(function() scanRoot(WS,0) end) end
 end
 end
 end)
@@ -8096,7 +7908,7 @@ if pcall(function() o.Text=nt end) then n=n+1 end
 end
 end
 elseif cls=="ProximityPrompt" then
-for _,f in ipairs(Trans.PromptFields) do
+for _,f in ipairs(PROMPT_FIELDS) do
 local ok3,t=pcall(function() return o[f] end)
 if ok3 and type(t)=="string" and t~="" then
 local orig=Trans.Trans2Orig[t]
@@ -8193,7 +8005,7 @@ return false,"失败"
 end
 function Trans.smartSend(text)
 if not text or text:gsub("%s","")=="" then return false,"空" end
-text=(text:gsub("^%s+","")):gsub("%s+$","")
+text=trim(text)
 local target=Trans.SendLang or "en"
 local final=text
 if target~="zh" and hasChinese(text) then
@@ -8211,7 +8023,8 @@ pcall(Trans.saveCache)
 end
 pcall(loadCache)
 pcall(function() Trans.probeServer() end)
-print("[Trans] ✅ 翻译模块 v70(重写版) 已加载, 缓存="..tostring(Trans.cacheCount).." 条")
+print("[Trans] ✅ 翻译模块 v120(分层重写) 已加载, 缓存="..tostring(Trans.cacheCount).." 条")
+end
 local CY={
 bg=Color3.fromRGB(8,10,18), bg2=Color3.fromRGB(16,19,32),
 panel=Color3.fromRGB(20,24,40), card=Color3.fromRGB(26,31,50),
