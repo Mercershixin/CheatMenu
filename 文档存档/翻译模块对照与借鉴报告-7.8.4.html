@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>翻译模块对照与借鉴报告 · 7.8.4</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#0f131c; --card:#141926; --card2:#1a2032;
+    --line:#252c40; --text:#e6ebf5; --sub:#8f9bb3; --dim:#5d6880;
+    --cyan:#38d9d9; --green:#3ddc84; --yellow:#ffc53d; --orange:#ff9f43;
+    --red:#ff5c6c; --purple:#a78bfa; --blue:#4f8cff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 0 80px; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.75;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  header{
+    padding:42px 0 30px; border-bottom:1px solid var(--line); margin-bottom:34px;
+    background:linear-gradient(180deg,rgba(56,217,217,.07),transparent);
+  }
+  h1{font-size:26px;margin:0 0 10px;letter-spacing:.5px}
+  h1 span{color:var(--cyan)}
+  .meta{color:var(--sub);font-size:13px}
+  .meta b{color:var(--text);font-weight:600}
+  h2{
+    font-size:19px;margin:44px 0 16px;padding-left:12px;
+    border-left:3px solid var(--cyan);line-height:1.3;
+  }
+  h3{font-size:15.5px;margin:26px 0 10px;color:var(--cyan)}
+  h4{font-size:14px;margin:18px 0 8px;color:var(--text)}
+  p{margin:10px 0}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin:14px 0;
+  }
+  .card.warn{border-color:rgba(255,92,108,.4);background:rgba(255,92,108,.05)}
+  .card.ok{border-color:rgba(61,220,132,.35);background:rgba(61,220,132,.05)}
+  .card.info{border-color:rgba(79,140,255,.35);background:rgba(79,140,255,.05)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--cyan);font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+  code{
+    background:#0a0d14;border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-family:Consolas,Monaco,monospace;font-size:12.5px;color:#9fe8e8;
+  }
+  pre{
+    background:#080a10;border:1px solid var(--line);border-left:3px solid var(--dim);
+    border-radius:8px;padding:12px 14px;overflow-x:auto;margin:10px 0;
+    font-family:Consolas,Monaco,monospace;font-size:12.5px;line-height:1.6;color:#c7d3e8;
+  }
+  pre.good{border-left-color:var(--green)}
+  pre.bad{border-left-color:var(--red)}
+  .badge{
+    display:inline-block;padding:1px 9px;border-radius:20px;font-size:11.5px;
+    font-weight:700;letter-spacing:.4px;vertical-align:middle;white-space:nowrap;
+  }
+  .p0{background:rgba(255,92,108,.18);color:#ff8a95;border:1px solid rgba(255,92,108,.45)}
+  .p1{background:rgba(255,159,67,.18);color:#ffb877;border:1px solid rgba(255,159,67,.45)}
+  .p2{background:rgba(255,197,61,.16);color:#ffd77a;border:1px solid rgba(255,197,61,.42)}
+  .p3{background:rgba(79,140,255,.16);color:#8ab4ff;border:1px solid rgba(79,140,255,.4)}
+  .tag{
+    display:inline-block;padding:1px 8px;border-radius:6px;font-size:11.5px;
+    background:var(--card2);border:1px solid var(--line);color:var(--sub);margin-right:5px
+  }
+  .tag.their{color:#9fe8e8;border-color:rgba(56,217,217,.4)}
+  .tag.ours{color:#ffd77a;border-color:rgba(255,197,61,.35)}
+  ul,ol{margin:10px 0;padding-left:24px}
+  li{margin:6px 0}
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:6px 14px;font-size:13px}
+  .kv div:nth-child(odd){color:var(--sub)}
+  .lead{font-size:15px;color:#cdd6e6}
+  .num{color:var(--cyan);font-weight:700}
+  hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+  .small{font-size:12.5px;color:var(--sub)}
+  .file{font-family:Consolas,Monaco,monospace;font-size:12.5px;color:#9fe8e8}
+  .chain{background:#080a10;border:1px dashed var(--line);border-radius:8px;padding:12px 14px;margin:10px 0;font-size:13px}
+  .chain b{color:var(--yellow)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>翻译模块 <span>对照与借鉴</span> 报告</h1>
+  <div class="meta">
+    对象：<b>CheatMenu 翻译模块（Trans）</b> · 源码 <span class="file">CheatMenu-6.9.1.lua:8552–10099</span>（1556 行 / 60204 字符）<br>
+    对照基准：<b>bbepis/XUnity.AutoTranslator</b>（Unity 游戏 UI/资源自动翻译的事实标准，BepInEx/MelonLoader 生态）<br>
+    版本：<b>7.8.4</b> · 生成时间：<b>2026-09-20</b> · <b>本次未改动任何代码</b>
+  </div>
+</header>
+
+<h2>一、结论摘要</h2>
+
+<div class="card">
+  <p class="lead">你的翻译模块<b>不是"一堆散装 bug"</b>，而是<b>三个架构层面的缺口</b>在放大所有小毛病。</p>
+  <ol>
+    <li><b>请求层没有"并发上限 + 合批"</b> —— 开界面瞬间有多少条新文本，就有多少个并发 HTTP 打向本地 7B。<span class="tag">P0-1</span></li>
+    <li><b>没有"动态文本"识别</b> —— CPS / 倒计时 / 金币这类每秒变的文本，<b>每变一次 = 一次请求 + 一条缓存</b>，永远停不下来。<span class="tag">P0-2</span></li>
+    <li><b>失败容错是单向的</b> —— 我们有"退避"，但没有"到此为止"，也没有"哪条翻不了"的可见反馈。<span class="tag">P2</span></li>
+  </ol>
+  <p>XUnity 恰好在这三处各有成熟做法，而且<b>可验证地写死在配置里</b>（见第三节）。除此之外，本次还定位到一个<b>可完整复现的真实功能 bug</b>：开了「中英对照」之后，括号里的原文会被二次翻译吃掉 —— <span class="tag">P1-3</span>「<code>金币 (Coins)</code>」→「<code>金币(金币)</code>」，完整证据链在第四节。</p>
+</div>
+
+<h2>二、为什么拿 XUnity.AutoTranslator 当基准</h2>
+
+<div class="card info">
+  <div class="kv">
+    <div>仓库</div><div><code>bbepis/XUnity.AutoTranslator</code>（GitHub，本机 <code>api.github.com</code> 直连可读，本次实际拉取源码核对）</div>
+    <div>定位</div><div>游戏运行时 UI / 资源文本自动翻译框架，BepInEx / MelonLoader / UnityInjector 三套宿主</div>
+    <div>核心文件</div><div><code>SpamChecker.cs</code>、<code>TranslationManager.cs</code>、<code>Endpoints/TranslationEndpointManager.cs</code>、<code>Configuration/Settings.cs</code></div>
+    <div>为什么选它</div><div>它解决的是<b>和我们一模一样的问题</b>：一个持续变化的游戏界面里，"哪些文本该翻、多久翻一次、翻不出来怎么办、怎么不把翻译服务打爆"。它把这些问题拆成了独立组件并<b>量化了阈值</b>。</div>
+  </div>
+</div>
+
+<p>不适合直接照抄的部分先说清楚，省得后面白讨论：XUnity 是 <b>Unity 插件的 C# 实现</b>（有 <code>Time.frameCount</code>、组件级 Harmony 钩子、可以整插件 Shutdown），我们是 <b>Roblox 执行器里的单文件 Lua</b>（只有 <code>os.clock()</code>、属性变更信号、绝不可能"把用户的翻译功能关掉"）。所以下文只借<b>机制</b>，不借实现。</p>
+
+<h2>三、四张对照表</h2>
+
+<h3>3.1 请求调度：谁能决定"一次发多少"</h3>
+
+<table>
+<tr><th style="width:120px">维度</th><th>XUnity.AutoTranslator（他们的）</th><th>CheatMenu Trans（我们的）</th></tr>
+<tr>
+  <td>并发上限</td>
+  <td><b>有，且是端点级强制项</b>。每个翻译端点自己声明 <code>MaxConcurrency</code>：<br>· <code>ezTransXP</code> → <b>1</b><br>· <code>DeepLTranslate</code> → <b>1</b><br>· <code>ReverseTranslator</code> → 50</td>
+  <td><b>没有</b>。全模块无信号量、无队列长度控制。<br><span class="file">:9481–9513</span> <code>Trans.request</code> 命中未缓存文本就 <code>task.spawn</code> 一个协程直接打 HTTP。</td>
+</tr>
+<tr>
+  <td>合批</td>
+  <td><b>有</b>。<code>MaxTranslationsPerRequest</code> 端点级：ezTransXP <b>50</b> / DeepL <b>25</b> / 通用默认 <b>1</b>；<code>TranslationEndpointManager.HandleNextBatch</code> 一次取 N 条发一个数组，回来按<b>下标</b>对回原文。</td>
+  <td><b>故意不做</b>。<span class="file">:9479</span> 注释原文：<code>同文本只发一次, 其余等结果; 不做跨文本合批避免行错位</code>。<span class="file">:13566</span> 记录了 v82 把「短文本批量合并」开关当死开关删掉。</td>
+</tr>
+<tr>
+  <td>同文本去重</td>
+  <td><code>AssociateWithExistingJobIfPossible</code> —— 同文本命中在途任务就挂上去，跨 UI 复用。</td>
+  <td><b>有</b>。<span class="file">:9480</span> <code>Inflight[key]</code> 回调队列，同 key 只发一次。这一块我们做对了。</td>
+</tr>
+<tr>
+  <td>排队积压保护</td>
+  <td><code>UnstartedTranslations &gt; Settings.MaxUnstartedJobs</code> → 判定异常并停机。</td>
+  <td><b>没有</b>。积压多少都不报警、不限流。</td>
+</tr>
+</table>
+
+<pre class="bad">-- CheatMenu-6.9.1.lua:9506
+Inflight[key]={}
+task.spawn(function()
+    local r=Trans.translate(text,prio)   -- ← 没有任何并发闸门
+    ...
+end)</pre>
+
+<div class="card warn">
+  <h4>实际后果（可推演，非猜测）</h4>
+  <p>界面翻译循环 <span class="file">:9842–9861</span> 每 <b>0.5 秒</b>遍历一次 PlayerGui + CoreGui + gethui 的全部后代。一轮里若出现 <b>200 条</b>未缓存文本（换页面/开局都很正常），就会有 <b>200 个协程同时</b>落到 <code>rawRequest</code>，每个 <code>Timeout=60</code>（<span class="file">:9368</span>）。本地 7B 服务通常只有 4–8 个并发槽 → 其余全部排队或超时。</p>
+  <p>这就是"翻译慢 / 有时整屏卡住 / 服务端日志刷满"的直接来源。XUnity 用 <code>MaxConcurrency</code> 把同一时刻的在途请求钉死在个位数，用 <code>MaxTranslationsPerRequest</code> 把 200 条压成 4 个请求。</p>
+</div>
+
+<h3>3.2 动态文本（spam）防护：差距最大的一块</h3>
+
+<p>XUnity 有一个专门的 <code>SpamChecker</code>，在每次"要排队翻译"时跑 <b>5 项检查</b>，阈值全部硬编码在 <code>Configuration/Settings.cs</code>（本次已拉到源码核对）：</p>
+
+<table>
+<tr><th style="width:150px">检查项</th><th>机制</th><th>阈值（实际源码值）</th></tr>
+<tr><td>连续帧</td><td>上一帧刚排过译 → 计数 +1；超过阈值 → <b>判定 spam 并停机</b>。间隔帧会递减衰减。</td><td><code>MaximumConsecutiveFramesTranslated = 90</code></td></tr>
+<tr><td>连续秒</td><td>上一秒刚排过译 → 计数 +1；超过阈值 → 停机。</td><td><code>MaximumConsecutiveSecondsTranslated = 60</code></td></tr>
+<tr><td><b>滚动/打字文本</b><br><span class="small">（最值得借的一条）</span></td><td>维护一个最近 <b>3</b> 条文本的环形数组，用 <code>RemindsOf</code> 判断新文本与旧文本<b>互为前后缀</b>（<code>StartsWith</code>/<code>EndsWith</code> 四向）→ 命中即认定"文字正一帧一帧滚进来"。</td><td><code>PreviousTextStaggerCount = 3</code><br><code>MaximumStaggers = 6</code></td></tr>
+<tr><td>每秒滚动窗口</td><td>N 秒窗口内排队条数 / 窗口长度 &gt; 阈值，且<b>持续</b>超过一定秒数 → 停机。</td><td><code>TranslationQueueWatchWindow</code> + <code>MaxTranslationsQueuedPerSecond</code> + <code>MaxSecondsAboveTranslationThreshold</code></td></tr>
+<tr><td>积压</td><td>未启动的翻译任务数超限 → 停机。</td><td><code>MaxUnstartedJobs</code></td></tr>
+</table>
+
+<pre class="good">// XUnity.Common/Extensions/StringExtensions.cs — RemindsOf
+public static bool RemindsOf( this string that, string other )
+{
+   return that.StartsWith( other ) || other.StartsWith( that )
+       || that.EndsWith( other )   || other.EndsWith( that );
+}
+// 作用: "Score: 12" / "Score: 123" / "Score: 1234" 互为前缀 -> 一眼认出滚动文本</pre>
+
+<div class="card warn">
+  <h4>我们的对应物只有一条，且只挡住最粗的那种</h4>
+  <p><span class="file">:9107–9110</span> 的 ⑨ 号过滤：</p>
+  <pre class="bad">-- CheatMenu-6.9.1.lua:9110
+-- ⑨ ★★ 用户反馈「数字类文本一直被翻, 缓存疯涨」...
+if not s:find("%a") then return false end   -- 纯数字/纯符号: 没有可翻的内容</pre>
+  <p>它只挡"<b>一个字母都没有</b>"的文本。<b>只要带一个字母就全线放行</b>：</p>
+  <ul>
+    <li><code>"Time left: 12s"</code> → 有字母 → 放行 → <b>每秒一次请求 + 一条缓存</b></li>
+    <li><code>"CPS: 1234"</code> → 放行 → 每秒一条</li>
+    <li><code>"Score: 1,234,567"</code> → 放行 → 每变一次一条</li>
+    <li><code>"1.25K Coins"</code>（<span class="file">:9016</span> 还专门为这种做了本地词表）→ 数值变化后整串是新 key → 放行</li>
+  </ul>
+  <p>换算一下：一条 <code>"Score: N"</code> 在 10 分钟里能产生 <b>600 次 HTTP 请求</b>和 <b>600 条缓存条目</b>，全部塞进 <code>Cache</code> 并每 2 秒被 <code>saveNow()</code> 整体 JSON 序列化一次（<span class="file">:9226–9245</span>）。这同时解释了用户三个直观感受：<b>越玩越卡、缓存条数一直在涨、模型槽位永远被占满</b>。</p>
+</div>
+
+<p class="small">注：<code>RemindsOf</code> 是纯字符串前缀/后缀比较，Lua 里用 <code>s:sub(1,#o)==o</code> 一类判断即可等价实现，<b>零依赖、零额外 HTTP</b>，属于"可以今天就加"的一类。</p>
+
+<h3>3.3 失败处理：他们有"上限"，我们只有"退避"</h3>
+
+<table>
+<tr><th style="width:150px">维度</th><th>他们的</th><th>我们的</th></tr>
+<tr>
+  <td>单条文本失败</td>
+  <td><code>RegisterTranslationFailureFor</code> 记失败次数；<code>CanTranslate</code> 里比对 <code>MaxFailuresForSameTextPerEndpoint</code>，超过就<b>这条文本不再给这个端点</b>。</td>
+  <td><span class="file">:9176–9205</span> 指数退避：<code>3s→6→12→24→48→96→192→300</code> 封顶（<code>FAIL_BASE=3, FAIL_CAP=300</code>）。<b>没有次数上限</b> —— 300 秒后仍会无限重试。</td>
+</tr>
+<tr>
+  <td>失败回收</td>
+  <td>随端点健康度整体升降。</td>
+  <td><span class="file">:9196–9202</span> 超过 <code>FAIL_MAXN=4000</code> 条时，只清"冷却已过"的条目。做法正确。</td>
+</tr>
+<tr>
+  <td>端点/服务不可用</td>
+  <td><b>多端点 + <code>InvokeJobFailedWithFallbaack</code></b>：主端点失败自动切备用端点。</td>
+  <td><span class="file">:9208–9215</span> 全局闸门：连续 <b>3</b> 次传输失败 → 全体暂停 <b>4 秒</b>，自动恢复。只有<b>单个</b>本地服务，没有 fallback。</td>
+</tr>
+<tr>
+  <td>用户可见性</td>
+  <td>日志明确打出 <code>SPAM DETECTED: ...</code> 原因。</td>
+  <td>UI 只显示 <code>命中 N | 本地 N | 失败 N | 跳过扫 N | 均 Nms</code>（<span class="file">:13610–13621</span>），<b>看不到"哪条翻不了、为什么"</b>。有 <code>Trans.dumpPairs()</code>（<span class="file">:10023</span>）但只打印成功对照，失败侧是真空。</td>
+</tr>
+</table>
+
+<div class="card">
+<p><b>取舍判定：</b>我们没有"次数上限"<b>是刻意的</b> —— <span class="file">:9173</span> 写着 <code>⚠️ 这是"退避", 不是"永久拉黑" —— "某些文本整局永不翻译"是另一个毛病, 绝不能引入。</code> 这个判断我认为<b>是对的、该保留</b>。但缺一个折中：<b>"连续失败 N 次后，只在你手动重扫/清缓存时再试"</b>，既不永久拉黑，也不再白白占槽位。这正是 XUnity 的 <code>MaxFailuresForSameTextPerEndpoint</code> 想做的事，只是我们不该学它"永久"，应该学它"封顶"。</p>
+</div>
+
+<h3>3.4 缓存与质量门</h3>
+
+<table>
+<tr><th style="width:150px">维度</th><th>他们的</th><th>我们的</th></tr>
+<tr>
+  <td>缓存键归一化</td>
+  <td><b>模板化</b>：<code>{{A}}</code> 显式占位 + 空白变体归一，把同一句话的多种写法折成一个 key。</td>
+  <td><span class="file">:8685–8690</span> <code>normalizeKey</code> = 剥标签 + 去首尾空白 + <b>转小写</b>。没有"同句式归一"能力，<code>"2 Coins"</code> / <code>"3 Coins"</code> 是两条 key。</td>
+</tr>
+<tr>
+  <td>缓存上限</td>
+  <td>独立缓存文件 + 可导出/人工修订。</td>
+  <td><b>无上限</b>。<code>Cache</code> 只增不减，<code>saveNow</code> 每次把<b>全表</b>序列化。<span class="file">:9230</span></td>
+</tr>
+<tr>
+  <td>缓存完整性</td>
+  <td>单文件。</td>
+  <td><b>我们更好</b>：<span class="file">:9237–9243</span> 原子写（<code>.tmp</code> + <code>renamefile</code>）失败回退 <code>.bak</code>；<span class="file">:9222</span> <code>MODEL_TAG</code> 换模型自动丢弃旧缓存。这一块不要动。</td>
+</tr>
+<tr>
+  <td>输出质量门</td>
+  <td>有完整的译文校验/缓存体系。</td>
+  <td><span class="file">:9395–9401</span> <code>tidy</code> 只挡两种：<b>空</b>、<b>原样返回</b>（且源无中文）。见下方 4.5。</td>
+</tr>
+</table>
+
+<h2>四、我们模块的真实缺陷清单</h2>
+
+<p class="small">排序按"用户实际能感知的严重度"。每条标注：现象 / 代码位置 / 触发条件 / 影响。<b>所有条目都来自实际源码阅读，标注了行号；无一条是猜测。</b></p>
+
+<h3>4.1 <span class="badge p0">P0-1</span> 无并发上限 + 无合批 → 开界面时并发打爆本地服务</h3>
+<div class="card">
+  <div class="kv">
+    <div>现象</div><div>开启界面翻译后开头十几秒明显卡顿/翻译成片超时；服务端日志瞬间涌入请求。</div>
+    <div>位置</div><div><span class="file">:9481–9513</span> <code>Trans.request</code>（<code>task.spawn</code> 无闸）· <span class="file">:9425</span> <code>rawRequest(...,1024)</code> · <span class="file">:9368</span> <code>Timeout=60</code></div>
+    <div>触发</div><div>任意一次扫描里出现 ≥ 本地服务槽位数（常见 4–8）的<b>未缓存且互不相同</b>的文本。</div>
+    <div>影响</div><div>请求排队 → 单条延迟从秒级涨到几十秒 → 用户看到"翻译不出来"；同时大量协程各挂 60 秒。</div>
+    <div>对照</div><div>XUnity：<code>MaxConcurrency</code> + <code>MaxTranslationsPerRequest</code>（见 3.1）。</div>
+  </div>
+</div>
+
+<h3>4.2 <span class="badge p0">P0-2</span> 无动态文本识别 → 每秒变的文本永久刷请求 + 撑爆缓存</h3>
+<div class="card">
+  <div class="kv">
+    <div>现象</div><div>越玩越卡；<code>已缓存 N 条</code>持续单向增长；本地模型槽位长期被同一批"数字文本"占满。</div>
+    <div>位置</div><div><span class="file">:9095–9112</span> <code>shouldTranslate</code>（⑨ 只判 <code>%a</code>）· <span class="file">:9107</span> 注释已记录过一次同类投诉</div>
+    <div>触发</div><div>文本含至少一个字母且每秒变化：CPS / 倒计时 / 分数 / 金币。</div>
+    <div>影响</div><div>每条变体 = 1 请求 + 1 缓存条目；<code>saveNow</code> 每 2 秒整体 JSON 序列化一次全表（<span class="file">:9230–9234</span>），缓存越大尖峰越重。</div>
+    <div>对照</div><div>XUnity <code>SpamChecker</code> 五重检查 + <code>RemindsOf</code>（见 3.2）。</div>
+  </div>
+</div>
+
+<h3>4.3 <span class="badge p1">P1-3</span> 【功能真 bug】中英对照自噬：<code>金币 (Coins)</code> → <code>金币(金币)</code></h3>
+
+<div class="card warn">
+  <p><b>这是本次唯一一个可以完整逐行复现的功能性错误</b>，而且只在我们自己的"中英对照"功能下出现。根因是<b>混排翻译路径绕过了 <code>alreadyOurs</code> 自我保护</b>。</p>
+
+  <div class="chain">
+  <b>①</b> 用户开启 <code>TransBilingual</code>，<code>biText</code>（<span class="file">:9674–9678</span>）产出 <code>"金币 (Coins)"</code>，<code>writeProp</code> 写入控件。<br>
+  <b>②</b> 这个控件被我们挂过 <code>GetPropertyChangedSignal("Text")</code>（<span class="file">:9658</span>）→ <b>我们自己的写入也触发监听</b> → <code>onTextChanged</code> → <code>processLabel</code>。<br>
+  <b>③</b> <code>verdictOf("金币 (Coins)")</code>（<span class="file">:9141–9152</span>）：含汉字 → 走<b>混排分支</b> → <code>splitSegments</code> 得 <code>{"金币", " (Coins)"}</code>。<br>
+  <b>④</b> 对非汉字段调用 <code>Trans.shouldTranslate(" (Coins)")</code>（<span class="file">:9146</span>）—— 注意传入的是<b>片段</b>，不是整串，所以 <code>alreadyOurs</code>（<span class="file">:9097</span>）检查的是 <code>" (Coins)"</code>，<b>必然未命中</b> → 判定"有外文，要翻" → <code>v.mixed=true</code>。<br>
+  <b>⑤</b> <code>Trans.processMixed</code>（<span class="file">:9553–9604</span>）把 <code>" (Coins)"</code> 当新文本 → 缓存未命中 → <b>真的发一次 HTTP</b> → 模型返回 <code>"(金币)"</code>。<br>
+  <b>⑥</b> <code>flush()</code>（<span class="file">:9565–9585</span>）执行 <code>plainReplace("金币 (Coins)"," (Coins)","(金币)")</code> → <b>写回 <code>"金币(金币)"</code></b>。<br>
+  <b>⑦</b> 第三轮：<code>"金币(金币)"</code> 的非汉字段只剩 <code>"("</code> <code>")"</code>，<code>#s&lt;2</code> 被挡 → <code>v.skip</code> → 收敛。终态 <b><code>金币(金币)</code></b>，原文已被吃掉。
+  </div>
+
+  <p><b>为什么 <code>alreadyOurs</code> 没救回来：</b><code>Trans.Outputs</code> 里存的是<b>整串输出</b> <code>"金币 (Coins)"</code>（<span class="file">:9530</span> <code>markOutput(newText)</code>），但混排路径是拿<b>片段</b>去查的。<b>键的粒度不一致，保护网漏了。</b></p>
+
+  <p><b>同一根因的另一面：</b>任何"译文里仍留英文"的输出（模型保留品牌名/专有名词，例如 <code>"金币 Robux"</code>）都会被这条路径重新扫一遍。对 <code>"Robux"</code> 这类本地词表里 <code>hit==f</code> 的条目（<span class="file">:9590</span> 判 <code>hit~=f</code> 才用）会落进 <code>Trans.request</code> → 发一次注定失败的请求 → <code>tidy</code> 判"原样返回" → <code>markFail</code>。也就是<b>每轮都在为空转的请求累积失败冷却</b>。</p>
+
+  <p class="small">影响面：仅在中英对照开启时可见，但一旦开启就是稳定复现、且方向是"越翻越错"。关掉对照则不出现。</p>
+</div>
+
+<h3>4.4 <span class="badge p1">P1-4</span> 「翻译后发送」绕过冷却/闸门，且污染共享网络状态</h3>
+<div class="card">
+  <div class="kv">
+    <div>现象</div><div>点了"发送"翻译失败几次之后，<b>界面翻译会莫名停 4 秒</b>。</div>
+    <div>位置</div><div><span class="file">:9459–9477</span> <code>Trans.translateTo</code> · <span class="file">:9469</span> 直接 <code>rawRequest</code> · <span class="file">:9211–9215</span> 共享的 <code>NetStreak/NetGateUntil</code></div>
+    <div>原因</div><div>两条路径的容错不对称：<code>Trans.translate</code>（<span class="file">:9422</span>）会查 <code>inCool/netGateOn</code>，<code>translateTo</code> <b>两者都不查</b>；而两者共用同一个 <code>noteNetFail()</code> 连败计数。</div>
+    <div>影响</div><div>① 发送方向没有退避，反复失败会反复打；② 它的失败会让<b>界面翻译</b>的全局闸门被误触发，两个独立功能的容错状态串了。</div>
+  </div>
+</div>
+
+<h3>4.5 <span class="badge p2">P2-5</span> 质量门太弱 → 脏译文直接写进游戏 UI</h3>
+<div class="card">
+<pre class="bad">-- CheatMenu-6.9.1.lua:9395
+local function tidy(res,src)
+    res=stripRich(res)
+    res=(res:gsub("^%s+","")):gsub("%s+$","")
+    if res=="" then return nil end
+    if res==src and not hasChinese(src) then return nil end   -- 只挡"一模一样"
+    return res
+end</pre>
+  <p>只挡"空"和"完全原样返回"。以下都会<b>直接写进界面</b>：</p>
+  <ul>
+    <li>模型加解释：<code>"Translation: 金币"</code> / <code>"翻译：金币"</code> / <code>"Here is the translation:"</code> —— 无前缀剥离。</li>
+    <li>模型截断/半截句 —— 无长度比校验（译文长度 &gt; 源 3 倍或 &lt; 源 1/3 都可疑）。</li>
+    <li>只改大小写：源 <code>"Coins"</code> 回 <code>"coins"</code> —— <code>res==src</code> 不成立（大小写不同），<b>判定通过并写回</b>。</li>
+    <li>模型复读多遍 —— 无重复检测。</li>
+  </ul>
+  <p class="small">对照：XUnity 侧有专门的译文校验层。这一条改动成本最低、用户可见度最高。</p>
+</div>
+
+<h3>4.6 <span class="badge p2">P2-6</span> 掩码回填时可能漏出孤儿字符</h3>
+<div class="card">
+  <p><span class="file">:9346–9353</span> <code>unmask</code>：<code>s:gsub("▮%s*(%d+)%s*▮", …)</code> 容错一定空白，但若模型把 <code>▮7▮</code> 写成 <code>7▮</code>（丢了前哨兵），第一条匹配不上，第二条 <code>gsub("▮[^▮]*▮","")</code> 也匹配不上，最后只剩 <code>gsub("▮","")</code> 删掉哨兵 → 界面里<b>留下一个孤立的数字 7</b>。</p>
+  <p>概率不高（模型基本会保留哨兵），但 <code>maskSpecials</code> 有 19 条规则（<span class="file">:9321–9342</span>），一次文本里可能同时出现多个占位符，重排风险随数量上升。</p>
+</div>
+
+<h3>4.7 <span class="badge p2">P2-7</span> 三张表都用"全清"代替淘汰</h3>
+<div class="card">
+  <table>
+  <tr><th>表</th><th>阈值</th><th>位置</th><th>清空方式</th></tr>
+  <tr><td><code>Trans.Outputs</code></td><td>12000</td><td><span class="file">:9046</span></td><td rowspan="3"><code>表={}</code> <b>整表丢弃</b><br>（对比 <code>Trans.Fail</code> 在 <span class="file">:9196–9202</span> 用的是"只清冷却已过"的<b>正确</b>做法）</td></tr>
+  <tr><td><code>Trans.Verdict</code></td><td>8000</td><td><span class="file">:9160</span></td></tr>
+  <tr><td><code>Trans.Trans2Orig</code></td><td>2000</td><td><span class="file">:9527</span></td></tr>
+  </table>
+  <p><code>Outputs</code> 整表清空的一瞬间，<code>alreadyOurs</code> 对所有历史译文返回 false —— 而 <code>Verdict</code>（判定缓存）是<b>同时</b>被清空的，两者叠加会造成一波"全部重算"的尖峰：<code>stripRich</code> → <code>splitPrefix</code> → <code>splitSegments</code> → <code>lookupLocal</code> 在满屏控件上重跑一遍。<code>Trans2Orig</code>（还原原文用的对照表）被清空更直接：<b>那 2000 条已翻文本再也还原不回原文</b>。</p>
+</div>
+
+<h3>4.8 <span class="badge p2">P2-8</span> 超时口径不一致</h3>
+<div class="card">
+  <div class="kv">
+    <div>翻译主路径</div><div><span class="file">:9368</span> <code>Timeout=60</code>（注释说明是为 7B 慢响应留的，合理）</div>
+    <div>健康检查</div><div><span class="file">:10040</span> <code>Timeout=10</code></div>
+    <div>服务器探测</div><div><span class="file">:10046</span> <code>Timeout=10</code></div>
+  </div>
+  <p>三条用途不同的请求用两套口径。若服务地址不可达（防火墙 drop 而非 refuse），<code>Trans.translate</code> 要挂满 <b>60 秒</b>才会 <code>noteNetFail()</code> 一次，而闸门需要 3 次失败才生效 —— 意味着最坏 <b>180 秒</b>内没有任何保护。<code>checkLocal</code> 只给 10 秒，两者结论可能互相矛盾（UI 显示"🟢 在线"但实际翻译全超时）。</p>
+</div>
+
+<h3>4.9 <span class="badge p3">P3-9</span> 失败侧完全没有可观测性</h3>
+<div class="card">
+  <p>UI 只给 5 个聚合计数（<span class="file">:13610–13621</span>），<code>Trans.dumpPairs()</code>（<span class="file">:10023</span>）只打印<b>成功</b>对照。用户看到"某块文本一直没翻"，无法判断是 —— 被 <code>shouldTranslate</code> 挡了？被 <code>vr.skip</code> 跳了？在 <code>Fail</code> 冷却里？还是模型返回被 <code>tidy</code> 判废了？<b>四种原因对外长得一模一样。</b>这是"感觉一堆 bug"的心理来源之一。</p>
+</div>
+
+<h3>4.10 <span class="badge p3">P3-10</span> 聊天接管的固有限制（记录，非必修）</h3>
+<div class="card">
+  <p><span class="file">:9916–9952</span> 用<b>覆盖赋值</b>接管 <code>TextChatService.OnIncomingMessage</code>（Roblox 该回调是属性，只能覆盖，不能 Connect —— 这是平台限制，不是我们的错）。但 <span class="file">:9967</span> <code>stopChatListener</code> 会把属性恢复成<b>我们启动时保存的</b> <code>oldOnIncoming</code>；若这期间有第三方脚本（另一个翻译脚本/聊天增强）也做了接管，我们会<b>把它的覆盖掉</b>。同理，我们自己的回调也会把第三方的顶掉 —— 顺序决定胜负，无法协商。顺带：<code>scanChatOnce</code> 只扫 <code>PG</code>/<code>CoreGui</code>（<span class="file">:9897</span>），漏了 <code>gethui()</code>。</p>
+</div>
+
+<h2>五、可以直接借的三件事（按性价比排序）</h2>
+
+<table>
+<tr><th style="width:40px">#</th><th style="width:180px">借鉴项</th><th>具体做法（机制层面）</th><th style="width:100px">成本</th><th style="width:110px">风险</th></tr>
+<tr>
+  <td class="num">1</td>
+  <td><b>动态文本识别</b><br><code>RemindsOf</code> 思路</td>
+  <td>在 <code>shouldTranslate</code> 之后加一层"疑似滚动文本"判定：维护最近 <b>3</b> 条<b>已排队</b>文本的环形表，新文本与其中任一条互为<b>前缀/后缀</b>（含"减去尾部变化部分后相同"）即计数；命中累计超 <b>6</b> 次 → 把<b>该文本的规范化前缀</b>加入"动态文本"表，之后同类直接跳过。<br><b>关键区别：</b>XUnity 是整个插件停机，我们只停这一条文本 —— 不违反 <span class="file">:9173</span> 那条"绝不能整局永不翻译"的铁律（动态文本本来就每帧在变，跳过才是正确行为）。</td>
+  <td>纯 Lua 字符串比较<br><b>零额外请求</b></td>
+  <td>低<br>误伤长句需调阈值</td>
+</tr>
+<tr>
+  <td class="num">2</td>
+  <td><b>并发上限</b><br>（先不碰合批）</td>
+  <td>给请求层加一个简单的"在途计数 + 等待队列"：<code>Inflight</code> 里已有的之外，再限制<b>同时推进</b>的 <code>Trans.translate</code> 不超过 N（从 <code>probeServer</code> 拿到的 <code>total_slots</code> 直接当 N，或 N=<code>slots-1</code>）。<br><b>不动"不合批"这个决定</b> —— 合批涉及行错位风险，需要你单独点头（见第六节）。</td>
+  <td>约 30 行<br>只动 <code>Trans.request</code></td>
+  <td>低<br>只影响速度不影响结果</td>
+</tr>
+<tr>
+  <td class="num">3</td>
+  <td><b>补质量门 + 失败可观测</b></td>
+  <td>① <code>tidy</code> 加三条廉价检查：剥离已知前缀（<code>Translation:</code>/<code>翻译：</code>/<code>Here is…</code>）、长度比越界判废、去首尾引号后复判。<br>② 加一个 <code>Trans.dumpFails()</code>（对称于已有的 <code>dumpPairs</code>），打印 原文 / 失败次数 / 下次冷却时间 / 最近失败原因分类。</td>
+  <td>约 40 行</td>
+  <td>低</td>
+</tr>
+</table>
+
+<h2>六、需要你点头才能做的（有行为改变）</h2>
+
+<div class="card warn">
+  <h4>① 跨文本合批（<code>MaxTranslationsPerRequest</code> 思路）</h4>
+  <p>我们<span class="file">:9479</span> 明确写着"不做跨文本合批避免行错位"、<span class="file">:13566</span> 把合批开关当死开关删了 —— 说明<b>当初踩过坑</b>。合批能直接把请求数压到 1/N（这是本地 7B 提速最大的一招），但必须解决"数组下标对回"和"模型合并/拆分条目"两个问题。XUnity 的做法是<b>严格按下标对回 + 端点声明一次最多几条 + 失败则关掉合批并重排</b>。要不要动，你定。</p>
+</div>
+
+<div class="card warn">
+  <h4>② 单条失败封顶后"只在手动重扫时再试"</h4>
+  <p>会改变现有语义（现在是 300 秒封顶后永远自动重试）。做了它，"整局翻不出来的文本"从"每 5 分钟白试一次"变成"彻底静默直到手动重扫"。<b>好处</b>：不再白占槽位、缓存不再被失败项污染。<b>代价</b>：用户得知道有"重扫"这个按钮存在。要不要动，你定。</p>
+</div>
+
+<div class="card warn">
+  <h4>③ 缓存淘汰策略（<code>Cache</code> 加容量上限 + LRU）</h4>
+  <p>会改变缓存内容本身（老条目被淘汰 = 再次翻译时重新请求）。修完 P0-2 之后缓存增长速度会大幅下降，这条可能就不必要了 —— <b>建议先修 4.2 再评估</b>。</p>
+</div>
+
+<h2>七、不建议学的</h2>
+
+<div class="card">
+  <ul>
+    <li><b>整插件 Shutdown。</b>XUnity 检测到 spam 直接 <code>Settings.IsShutdown = true</code> 把翻译功能关掉。我们的用户是<b>主动开了开关</b>的执行器用户，静默关掉功能比翻得慢更糟。→ 学判定，不学处置。</li>
+    <li><b>多端点 + 自动 fallback。</b>我们是"本地 llama.cpp 单服务"，没有第二个端点。加 fallback 等于引入云 API 与密钥，超出当前架构。</li>
+    <li><b>Unity 组件钩子 / <code>Time.frameCount</code>。</b>没有对应 API，用 <code>os.clock()</code> 的秒级近似即可，不必强求帧级精度。</li>
+    <li><b>他们的模板化缓存键（<code>{{A}}</code>）。</b>需要模型配合遵守模板语法，改造成本高于收益；我们只缺"数字变化归一"这一小块，用"剥掉纯数字/数值单位后再做 key"就能覆盖 4.2 的大部分收益。</li>
+  </ul>
+</div>
+
+<h2>八、下一步</h2>
+
+<div class="card ok">
+  <p><b>本次没有改动任何代码</b> —— 只做了对照与诊断。等你决定要动哪几条，我再按项目既有流程（改源码 → 静态门禁 → 单元测试 → 发版 → 推送 → 复核远端 → 同步本地）来做。</p>
+  <p>如果要我一次只做一件事，<b>建议顺序</b>：<span class="tag">P0-2 动态文本识别</span> → <span class="tag">P1-3 中英对照自噬修复</span> → <span class="tag">P0-1 并发上限</span> → <span class="tag">P2-5 质量门</span>。<br>
+  理由：前两项都是"改动小、用户立刻看得见、且不改变既有设计取舍（不合批、不拉黑）"的修复；P0-1 需要你确认并发上限取多少；P2-5 属于体验优化。</p>
+</div>
+
+<hr>
+<p class="small">
+基线：<span class="file">CheatMenu-6.9.1.lua</span>（873078 B，mtime 2026-09-20 15:40）· 报告涉及的 Trans 模块范围 <span class="file">:8552–10099</span><br>
+对照源码（本次实际拉取核对）：<code>bbepis/XUnity.AutoTranslator</code> → <code>SpamChecker.cs</code>、<code>Configuration/Settings.cs</code>、<code>Endpoints/TranslationEndpointManager.cs</code>、<code>XUnity.Common/Extensions/StringExtensions.cs</code><br>
+生成的 HTML 与 Lua 源码无关，可随时删除，不影响脚本运行。
+</p>
+
+</div>
+</body>
+</html>
