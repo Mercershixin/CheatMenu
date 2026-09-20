@@ -1,3 +1,36 @@
+## 7.11.0 · 2026-09-20
+
+### 🔤 翻译底座全面重写：本地 Hy-MT2 + 云端 Hunyuan-MT-7B 统一成一个模型
+
+用户的话：**「是给本地和 api 进行全面的优化 重写架构 逻辑等一切，确保本地的和 api 都是一个模型」**。
+
+**实测依据（真 API，`tencent/Hunyuan-MT-7B`）**
+
+- 官方只推荐 user 消息 `Translate ... into Chinese`、且**无默认 system prompt**；但纯 user 会丢术语（`Coins→硬币`）、丢占位符（`{5}`）、把 `$` 翻成「美元」。
+- ★ 词表必须放 system：放 user 会被当待译内容**原样复述整张词表**（已实测复现）。
+- ★ user 不能再加「Translate…」前缀：短词会触发词表复述；`system 词表 + user 裸文本` 才是正确形态。
+
+**做了什么（本地 / 云端同一套逻辑）**
+
+- 采样参数本地/云端**完全统一**：新增 `SAMP_TEMP=0.1` / `SAMP_TOP_P=0.6` / `SAMP_TOP_K=20` /
+  `SAMP_REP_PEN=1.05`，对齐 Hunyuan-MT 官方推荐（top_k=20 / top_p=0.6 / repetition_penalty=1.05），
+  温度保持 0.1 保术语确定性。
+- `backend()` 现在额外返回该后端的**采样参数字段表**：本地 llama.cpp 用 `repeat_penalty`、
+  云端 OpenAI/SiliconFlow 用 `repetition_penalty`（字段名不同、值一致，nil 字段被 JSONEncode 自动省略）。
+- `SYS_PROMPT` / `promptFor` 改成官方翻译指令风格（`Translate the following game UI text into …`），
+  词表与约束**原样保留**（实测证明必要）。
+- `maskSpecials` 补货币保护：新增 `$1,000` / `$ 1,000`（$ 在前）与 `1,500 $` / `1500$`（$ 在后），
+  修掉「`1,500 $` → `1,500美元`」的孤立 `$` 被误译问题。
+- 本地服务 bat（`翻译模型开关.bat` / `启动服务.bat`）采样参数同步：`--top-p 0.9 → 0.6`，
+  补 `--top-k 20 --repeat-penalty 1.05`，与云端请求逐项对齐。
+
+**验证**
+
+- `luau-compile`（整文件）exit=0；`check.py` 0 问题；`verify_all.py` **6/6 全绿**；
+  `check_globals` **新增未声明名字 0**。
+
+---
+
 ## 7.10.0 · 2026-09-20
 
 ### 🔀 翻译后端二选一：本地 llama.cpp / 硅基流动云端（Hunyuan-MT-7B · 限免）
