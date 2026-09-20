@@ -1,3 +1,69 @@
+## 8.3.0 · 2026-09-20
+
+### 🤝 拿第三方客户端脚本做交叉核对，带出 3 处修复 / 增强
+
+用户给了一份 **Kick a Lucky Block（踢幸运方块）** 的客户端脚本（PuckAFK Hub v4.6.4），
+并说明 **CheatMenu 里有些功能就是从它套用过来的**。于是做了一次「来源 ↔ 我方」的**逐条交叉核对**，
+按核对结果改了 3 处（**全部有据可查，不是凭感觉改**）：
+
+**① 🐛 真 bug：`"%%"` 在 plain 模式下永远匹配不到**
+```lua
+if string.find(n, kw, 1, true) then ...   -- plain = true
+```
+`plain=true` 时模式**不做转义**，所以 `"%%"` 要的是**两个连续百分号**，而物品名里根本不会有 `%%`
+→ 「名字带 `%` 的物品算独家」这条**从来没生效过**。改成 `"%"`。
+
+**② ✚ `sellHeld()` 补 `rev_B_Sell` 兜底（我们漏了来源里的一条）**
+来源的 `SellHeldBrainrot` 是这么写的：**先试 `ref_B_Sell`（RemoteFunction），不行再退 `rev_B_Sell`（RemoteEvent）**。
+我们只试了 `RFunction` → 一旦游戏某个版本把 `B_Sell` 做成 RemoteEvent，
+就会**永远打印「❌ ref_B_Sell 找不到」，整个自动售卖静默失效**。现在按 `ref_ → rev_` 顺序试，与来源一致。
+
+**③ ✚ 独家物品保护：从「关键词猜」换成**权威名单****
+来源的数据表里有一类 **Best-% 物品**（`Best=<数字>` 且 `Upgradeable=false`，共 **41 个**：
+`W` / `Dragon Cannelloni` / `Golden Block Cuppy` / `Tricerabob` / `Brain Mogger` …）。
+它们的名字里**不一定**带 "exclusive" 或 "%" —— 光靠关键词**认不出来**。
+现在把这 41 个名字做成 `EXCLUSIVE_KEEP`（导出为 `SYS.ExclusiveKeepSet` 供诊断），**优先命中**，关键词表退为兜底。
+
+### ✅ 交叉核对的「没问题的」部分（也一并记录，免得以后重复怀疑）
+
+| 项 | 结论 |
+|---|---|
+| `[09]` 的 `CPS` 表（**127 项**） vs 来源 `BrainrotData` | **0 漏 / 0 多 / 0 值不一致** |
+| `[09]` 的 `MutBuff`（**24 项**） vs 来源 `MutationBuffs` | **逐项一致** |
+| `GetBrainrotCPS` 的 `1.25^(等级-1)` | ★来源标注为游戏官方 `EntitiesData.GetMultiplierPerLevel`，**我们是对的**（8.2.0 加的「等级乘数」保持默认 1.25 即可） |
+| `SYS.REvent("TaviMishkal")` | ✅ 名字与形态都对（是 `rev_`） |
+
+### 📚 事件库新增：Kick a Lucky Block（`功能` 侧重要参考）
+
+`事件库/2026-09-20_KickALuckyBlock(踢幸运方块).md` —— 从那份客户端脚本里抽出的**可核实结构事实**：
+
+- ★★ **网络层不是平铺的**：所有 remote 都在 **`ReplicatedStorage.Shared.Packages/Network`** 下，
+  命名是包生成的 **`rev_<名字>`（RemoteEvent）/ `ref_<名字>`（RemoteFunction）**。
+  在 `ReplicatedStorage` 顶层按名字搜**搜不到** —— 这是接手这类游戏时第一个会踩的坑。
+- **37 个 remote** 逐个记录（形态 / 方向 / 用途 / 参数）：`rev_` 35 个 · `ref_` 3 个。
+- 三条易踩：`TaviMishkal` 收发**同名**；`B_Sell` **ref_ 优先、rev_ 兜底**；`CheckFree` 与 `ClaimFree` 是**两条不同**的。
+- 权威 Attribute（`TutorialStep` / `RoundDebounce` / `KickDebounced`）、HUD 与 Workspace 关键路径。
+- 客户端控制器 `GameHandler` / `KickMinigameUI` 的**方法签名**，以及踢击的正确调用顺序
+  （`Start` → `End(真实Scale)` → `Kick(同一Scale)`；**伪造 Scale=1.0 会被服务端验**）。
+- 内置数据表：**15 档稀有度区间（按距离判定）**、功率→距离三段式曲线、CPS/升级公式、
+  风格 14 种、配重 16 档、槽位价 20 档、战令经验、学校合成 3 个配方。
+
+### 🧹 顺带修复了那份第三方脚本本身（1 处真缺陷）
+
+- **`placeFreshKickReward` 是隐式全局**：定义处写作 `placeFreshKickReward = function()`（**没有 `local`**）
+  → 这个名字被写进全局命名空间；而 `L7389` / `L7460` 调用它时**没有 nil 守卫**。
+- 修法与该文件自身已有的风格一致 —— 它上面本来就有 `local captureActualKickDistance` 这种**前向声明**，
+  只是这个漏了。已补 `local placeFreshKickReward`（前向声明）+ 定义处注释说明，**隐式全局归零**。
+- 另外顺手扫了它 8000+ 行：**无废弃 API · 无同名重复定义 · 无 `=`/`==` 混淆 · 0 处无 yield 循环 ·
+  55 个 UI 控件的「显示键 vs 写入键」全部一致**（这份 hub 质量确实高）。
+
+**验证**
+
+- `luau-compile`（整文件）exit=0；`check.py` 0 问题；`verify_all.py` **6/6 全绿**；
+  `check_globals` **新增未声明名字 0**；等价性 PASS。
+
+---
+
 ## 8.2.0 · 2026-09-20
 
 ### 🐛 修「自动售卖 / CPS 门槛」只生效一次就自己关了（用户报的 bug）
