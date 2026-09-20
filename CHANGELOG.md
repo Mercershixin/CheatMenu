@@ -1,3 +1,48 @@
+## 7.5.1 · 2026-09-20
+
+### 🕊 无仇恨模式：修好「从来没生效过」的两处真缺陷 + 删掉一条死路
+
+用自有仿真台复现后查出来的。**前两条让这个功能完全空转**（开关亮着、控制台不报错、实际什么都没做）。
+
+#### 1. `bodyOf()` 传错了对象 → 甩仇循环一次都没跑完过（真 bug ×2）
+
+`bodyOf()` 要的是**角色模型 / BasePart**，而代码里两处都传了 **Player 对象**（`SYS.LP` / `pl`）——
+Player 身上没有 `HumanoidRootPart` / `PrimaryPart`，子对象（PlayerGui / Backpack）也不是 BasePart，
+于是**恒返回 nil**：
+
+- `SYS.NoAggroTick` 开头 `local me=bodyOf(SYS.LP)` → 拿不到自己 → 下一行 `if not me then return end` 直接退出。
+  **实测 `SYS.NoAggroInfo.tick` 恒为 0** —— 函数体连一次都没执行完，卷轴上的"每 0.5 秒扫一遍怪"从来没发生。
+- `otherTarget()` 里 `bodyOf(pl)` → 永远找不到「离怪最近的别的玩家」→ 即使走到写入那一步也**写不进去**。
+
+现在两处都改成传角色（`SYS.LP.Character` / `pl.Character`）。
+
+#### 2. 删掉 `Humanoid.Target` 这条**死路**
+
+原来第 ① 条通道是「若怪把当前目标存在 `Humanoid.Target` 里 → 改写成别人」。查官方 API 文档确认：
+**Humanoid 根本没有 `Target` 属性**（只有 `Vector3` 的 `TargetPoint`）。所以：
+
+- 裸读必抛 `Target is not a valid member of Humanoid`，会把整个 tick 打断（连下面 Attribute 那条路都跑不到）
+- 就算上一版那样包一层 `pcall`，也只是把异常变成常态：**每个怪、每 0.5 秒白抛一次**（Roblox 抛异常不便宜）
+- 写入 `h.Target=newt` 同样抛错 —— 这条通道**从来不可能生效**
+
+已整条删除，只保留真正能用的 **Attribute 通道**
+（`Target|Enemy|Aggro|TargetPlayer|TargetEntity|Hostile`）。界面提示文案同步改掉；
+「🔎 看看有哪些怪」诊断按钮不再读那个不存在的属性，改成列出怪身上**真正存在**的目标类 Attribute。
+
+★ 这条已进「禁止回加清单」：源码里**不许再出现 `h.Target`**（仿真台加了结构性断言，谁加回来立刻判红）。
+
+#### 3. 仿真台自身两处缺陷（一并修掉）
+
+- `stepAll(dtMax)` 只把虚拟时钟推进到「窗口内确实有事件」的时间点 —— 队列稀疏时**时钟原地不动**，
+  于是「等 0.5 秒再醒」的协程永远醒不了。新增 `advanceTime(sec)`（按真实时间推进）修掉。
+- 新增**永久回归用例（㉑）**：造一个「非玩家但带 Humanoid」的怪 + 显式开无仇恨 + 推进时钟，断言
+  `tick` **在本窗口内真的涨了**（不是 `>0` —— 那可能吃到旧值）、`scanned>0`、且**不产生被吞掉的错误**；
+  并把「真机 `Humanoid.Target` 读写都抛错」固化成仿真台保真度断言。
+
+**门禁**：`luau-compile` exit 0 · 等价性 PASS（828,588 → 453,533 字节，省 45.3%）· 整脚本仿真 **253 通过 / 0 失败 / 0 条吞错误** · 加载器探针 6/0 · 严格 `publish.py`（不加 `--fast`）通过。
+
+---
+
 ## 7.5.0 · 2026-09-20
 
 ### 🛡 防护补强批次 1（反作弊绕过 / 挂机防踢 / 新增防甩飞）
