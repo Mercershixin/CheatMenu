@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 23:02 sha ea05a410 bytes 495910'):format('2026-09-20 23:02','ea05a410',495910))
+print(('[CheatMenu] build 2026-09-20 23:59 sha 90587ced bytes 498073'):format('2026-09-20 23:59','90587ced',498073))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.5.0"
+SYS.BuildVer="8.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4444,6 +4444,14 @@ Shadow=12,Electrified=16,Rainbow=40,Astral=50,Infinity=75,
 Void=12,Virus=14,Wet=16,Alien=22,Bacon=30,Enchanted=12,
 Phantom=35,Volcanic=35,Heavenly=36,Carnival=37,
 ["Block Cup"]=38,Undead=35,Jungle=40,Frozen=40}
+function SYS.GetBrainrotBaseCPS(tool)
+if not tool then return nil end
+local base=CPS[tool.Name]
+if base then return base end
+local a=tool:GetAttribute("CPS") or tool:GetAttribute("BaseCPS")
+if typeof(a)=="number" then return a end
+return nil
+end
 function SYS.GetBrainrotCPS(tool)
 if not tool then return nil end
 local base=CPS[tool.Name]
@@ -4738,7 +4746,7 @@ if not list then return end
 for _,t in ipairs(list:GetChildren()) do
 if isEntityTool(t) then
 if not isExclusiveTool(t) then
-local cps=SYS.GetBrainrotCPS(t)
+local cps=SYS.GetBrainrotBaseCPS(t)
 if cps~=nil and cps<th then
 table.insert(picks,{Tool=t,CPS=cps})
 end
@@ -4779,7 +4787,7 @@ round+=1
 local picks=pickLow(force)
 if #picks==0 then
 if round==1 then
-print(("[Sell] 没有低于 %d CPS 的脑红"):format(SYS.AFK_Sell.MinCPS))
+print(("[Sell] 没有【基础 CPS】低于 %d 的脑红"):format(SYS.AFK_Sell.MinCPS))
 else
 print(("[Sell] 第 %d 轮: 无更多低 CPS 脑红"):format(round))
 end
@@ -4806,8 +4814,9 @@ task.wait(0.08)
 pcall(function() hum:EquipTool(tool) end)
 task.wait(0.20)
 if tool.Parent==LP.Character then
-print(("[Sell] [%d] %s · CPS=%.0f  ⟵ %s"):format(
+print(("[Sell] [%d] %s · 基础CPS=%.0f (当前CPS=%.0f)  ⟵ %s"):format(
 totalSold+1,tool.Name,e.CPS or 0,
+SYS.GetBrainrotCPS(tool) or 0,
 SYS.DescribeBrainrotCPS and SYS.DescribeBrainrotCPS(tool) or ""))
 sellHeld()
 task.wait(0.30)
@@ -4860,7 +4869,7 @@ if not list then return end
 for _,t in ipairs(list:GetChildren()) do
 if isEntityTool(t) then
 if not isExclusiveTool(t) then
-local cps=SYS.GetBrainrotCPS(t)
+local cps=SYS.GetBrainrotBaseCPS(t)
 if cps and cps<threshold then
 table.insert(picks,{Name=t.Name,CPS=cps})
 end
@@ -7163,6 +7172,35 @@ end
 end
 return PlayerNames[s:lower()]==true
 end
+local NAME_SLOT_L, NAME_SLOT_R = "〔", "〕"
+local function protectNames(text)
+if type(text)~="string" or text=="" then return text, function(x) return x end end
+if PlayerNameCount<0 or PlayerDirty then refreshPlayerNames() end
+if PlayerNameCount<=0 then return text, function(x) return x end end
+local idx, orig = {}, {}
+local masked = text:gsub("[%w_]+", function(tok)
+if PlayerNames[tok:lower()] then
+local i = idx[tok:lower()]
+if not i then
+i = #orig + 1
+idx[tok:lower()] = i
+orig[i] = tok
+end
+return NAME_SLOT_L..i..NAME_SLOT_R
+end
+return tok
+end)
+if #orig==0 then return text, function(x) return x end end
+local function restore(s)
+if type(s)~="string" then return s end
+return (s:gsub(NAME_SLOT_L.."(%d+)"..NAME_SLOT_R, function(d)
+local i = tonumber(d)
+return (i and orig[i]) or d
+end))
+end
+return masked, restore, true
+end
+Trans.protectNames=protectNames
 local DynByObj=setmetatable({},{__mode="k"})
 Trans.Dyn={}
 Trans.DynN=0
@@ -7233,6 +7271,7 @@ if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
 if Trans.IsEmoticon(s) then return false end
 if Trans.KeepWords[s:lower()] then return false end
 if not s:find("%a") then return false end
+if s:match("^[%d%s%.,:：]+[KkMmBbTtQq]?%s*$") then return false end
 if dynIsBlocked(s) then return false end
 return true
 end
@@ -7608,6 +7647,20 @@ end
 if alreadyOurs(text) or not Trans.shouldTranslate(text,false) then
 if cb then pcall(cb,nil) end return
 end
+do
+local masked, restore, didMask = protectNames(text)
+if didMask then
+text = masked
+local ocb = cb
+cb = ocb and function(res)
+local fixed = restore(res)
+if type(fixed)=="string" and fixed:find(NAME_SLOT_L, 1, true) then
+pcall(ocb, nil) return
+end
+pcall(ocb, fixed)
+end or nil
+end
+end
 local nk=normalizeKey(text)
 local hit=Cache[text] or Cache[nk] or lookupLocal(text)
 if hit then
@@ -7664,10 +7717,20 @@ local ok=pcall(function() obj[field]=newText end)
 if ok then
 Trans.Stats.replaced=Trans.Stats.replaced+1
 task.spawn(function()
-for i=1,2 do
-task.wait(i==1 and 0.08 or 0.25)
+for i=1,4 do
+task.wait(({0.08,0.25,0.6,1.2})[i])
 if not obj or not obj.Parent or Trans.Unloaded then return end
-if obj[field]==raw then pcall(function() obj[field]=newText end) end
+local now=obj[field]
+if now==raw then
+pcall(function() obj[field]=newText end)
+elseif now~=newText then
+if not Trans.GhostWarn then
+Trans.GhostWarn=true
+print(("[Trans] ⚠ 控件被游戏改写成第三个值(重影来源): 原文=%q / 我方译文=%q / 游戏写成=%q")
+:format(tostring(raw):sub(1,40),tostring(newText):sub(1,40),tostring(now):sub(1,40)))
+end
+return
+end
 end
 end)
 end
@@ -11050,6 +11113,8 @@ UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(
 UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
 UI.Div(p)
 UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
+UI.Tip(p,"★ 门槛判的是【背包里显示的基础 CPS】，不是带等级/词缀加成后的当前值 —— "
+.. "同一只脑红升级后当前值会涨很多，按当前值判会「门槛没设多高却什么都不卖」。",CY.sub)
 UI.Switch(p,"自动售卖 (每5秒)","AutoSell",function(on)
 if on and not SYS.T_.SellThresholdEnabled then
 SYS.T_.SellThresholdEnabled=true
@@ -11057,7 +11122,7 @@ if SYS.SwitchOnChange and SYS.SwitchOnChange["SellThresholdEnabled"] then
 pcall(function() SYS.SwitchOnChange["SellThresholdEnabled"](true) end)
 end
 local th=(SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000
-print(("[Sell] 已顺带打开「启用 CPS 门槛」(当前门槛 %.0f) —— 自动售卖靠它决定卖哪些"):format(th))
+print(("[Sell] 已顺带打开「启用 CPS 门槛」(当前门槛 %.0f, 按【基础 CPS】判) —— 自动售卖靠它决定卖哪些"):format(th))
 end
 end)
 UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
@@ -11067,8 +11132,7 @@ row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
 UI.Round(row,10) UI.Stroke(row,CY.line,1,0.85)
 local lb=Instance.new("TextLabel")
 lb.Size=UDim2.new(1,-130,1,0) lb.Position=UDim2.new(0,12,0,0)
-lb.BackgroundTransparency=1 lb.Text="最低 CPS 门槛"
-lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
+lb.BackgroundTransparency=1 lb.Text="最低基础 CPS 门槛"    lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
 lb.TextSize=13 lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
 local box=Instance.new("TextBox")
 box.Size=UDim2.new(0,110,0,28) box.Position=UDim2.new(1,-122,0.5,-14)
@@ -11139,13 +11203,13 @@ end
 local preview=table.concat(names,", ")
 if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
 if cnt==0 then
-scanResL.Text=("门槛 %.0f: 无低 CPS 脑红"):format(th)
+scanResL.Text=("门槛 %.0f: 无低于该门槛的基础 CPS 脑红"):format(th)
 scanResL.TextColor3=CY.green
 else
-scanResL.Text=("门槛 %.0f: 共 %d 个  |  %s"):format(th,cnt,preview)
+scanResL.Text=("基础CPS门槛 %.0f: 共 %d 个  |  %s"):format(th,cnt,preview)
 scanResL.TextColor3=CY.cyan
 end
-print(("[Scan] 门槛 %.0f · 共 %d 个"):format(th,cnt))
+print(("[Scan] 基础CPS门槛 %.0f · 共 %d 个"):format(th,cnt))
 else
 scanResL.Text="扫描失败"
 scanResL.TextColor3=CY.red
