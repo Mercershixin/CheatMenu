@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 15:59 sha bd577476 bytes 472537'):format('2026-09-20 15:59','bd577476',472537))
+print(('[CheatMenu] build 2026-09-20 18:01 sha 446bb735 bytes 477571'):format('2026-09-20 18:01','446bb735',477571))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -59,6 +59,7 @@ CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
 CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
+TransDyn=true,
 AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 Prot_SpeedCap=false,
@@ -110,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.8.4"
+SYS.BuildVer="7.8.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6711,7 +6712,7 @@ return c
 end
 Trans.SendLang="en"
 Trans.cacheCount=0
-Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0}
+Trans.Stats={hit=0,loc=0,fail=0,netfail=0,skip=0,sweepSkip=0,lat=0,latN=0,replaced=0,dyn=0,wait=0}
 local HOST_DEFAULT="http://127.0.0.1:8080"
 local function hostOf() return HOST_DEFAULT end
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
@@ -7142,16 +7143,19 @@ return nil
 end
 Trans.lookupLocal=lookupLocal
 Trans.Outputs={}
+Trans.OutputsOld={}
 Trans.OutputsN=0
 local function markOutput(s)
 if type(s)~="string" or s=="" or not hasChinese(s) then return end
-if Trans.Outputs[s] then return end
-if Trans.OutputsN>=12000 then Trans.Outputs={} Trans.OutputsN=0 end
+if Trans.Outputs[s] or Trans.OutputsOld[s] then return end
+if Trans.OutputsN>=12000 then
+Trans.OutputsOld=Trans.Outputs Trans.Outputs={} Trans.OutputsN=0
+end
 Trans.Outputs[s]=true
 Trans.OutputsN=Trans.OutputsN+1
 end
 Trans.markOutput=markOutput
-local function alreadyOurs(s) return type(s)=="string" and Trans.Outputs[s]==true end
+local function alreadyOurs(s) return type(s)=="string" and (Trans.Outputs[s]==true or Trans.OutputsOld[s]==true) end
 Trans.alreadyOurs=alreadyOurs
 local PlayerNames={} local PlayerNameCount=-1 local PlayerDirty=true local PlayerCheckN=0
 local PLAYER_CHECK_EVERY=64
@@ -7182,6 +7186,70 @@ end
 end
 return PlayerNames[s:lower()]==true
 end
+do
+Trans.Dyn={}
+Trans.DynN=0
+local DYN_MAX=6000
+local DYN_WIN=12
+local DYN_HITS=4
+local DYN_LEN=60
+local DynByObj=setmetatable({},{__mode="k"})
+local function dynNorm(s)
+if type(s)~="string" or s=="" then return "" end
+local t=s:lower():gsub("%d+","#")
+return (t:gsub("%s+"," "))
+end
+Trans.dynNorm=dynNorm
+local function dynMark(nk)
+if nk=="" or Trans.Dyn[nk] then return end
+if Trans.DynN>=DYN_MAX then Trans.Dyn={} Trans.DynN=0 end
+Trans.Dyn[nk]=true Trans.DynN=Trans.DynN+1
+end
+Trans.dynMark=dynMark
+function Trans.dynNote(obj,text)
+if SYS.T_.TransDyn==false then return end
+if not obj or type(text)~="string" or text=="" or #text>DYN_LEN then return end
+local now=os.clock()
+local e=DynByObj[obj]
+if not e then
+DynByObj[obj]={last=text,t=now,n=0,keys={}}
+return
+end
+if e.last==text then return end
+if now-e.t>DYN_WIN then e.t=now e.n=0 e.keys={} end
+e.last=text
+e.n=e.n+1
+local nk=dynNorm(text)
+if nk~="" then e.keys[nk]=true end
+if e.n>=DYN_HITS then
+for k in pairs(e.keys) do dynMark(k) end
+Trans.Stats.dyn=Trans.Stats.dyn+1
+e.t=now e.n=0 e.keys={}
+end
+end
+local function dynIsBlocked(s)
+if Trans.DynN==0 then return false end
+return Trans.Dyn[dynNorm(s)]==true
+end
+Trans.dynIsBlocked=dynIsBlocked
+Trans.Self={}
+Trans.SelfOld={}
+Trans.SelfN=0
+local SELF_MAX=8000
+local function markSelf(s)
+if type(s)~="string" or s=="" then return end
+if Trans.Self[s] or Trans.SelfOld[s] then return end
+if Trans.SelfN>=SELF_MAX then
+Trans.SelfOld=Trans.Self Trans.Self={} Trans.SelfN=0
+end
+Trans.Self[s]=true Trans.SelfN=Trans.SelfN+1
+end
+Trans.markSelf=markSelf
+local function isSelf(s)
+return type(s)=="string" and (Trans.Self[s]==true or Trans.SelfOld[s]==true)
+end
+Trans.isSelf=isSelf
+end
 function Trans.shouldTranslate(s,isChat)
 if type(s)~="string" then return false end
 if alreadyOurs(s) then return false end
@@ -7195,6 +7263,7 @@ if not s:find("[%w]") and not hasKanaOrHangul(s) then return false end
 if Trans.IsEmoticon(s) then return false end
 if Trans.KeepWords[s:lower()] then return false end
 if not s:find("%a") then return false end
+if Trans.dynIsBlocked(s) then return false end
 return true
 end
 local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
@@ -7216,6 +7285,12 @@ local v=Trans.Verdict[key]
 if v then return v end
 v={}
 local plain=stripRich(raw)
+if Trans.isSelf(plain) then
+v.skip=true
+if VerdictN>=8000 then Trans.Verdict={} VerdictN=0 end
+Trans.Verdict[key]=v VerdictN=VerdictN+1
+return v
+end
 local core=select(2,splitPrefix(plain))
 if core~="" then plain=stripRich(core) end
 if plain=="" then
@@ -7357,6 +7432,10 @@ end
 function Trans.clearCache()
 Cache={} Trans.cacheCount=0 Trans.Verdict={} VerdictN=0
 Trans.Trans2Orig={} Trans.Outputs={} Trans.OutputsN=0
+Trans.OutputsOld={}
+Trans.Self={} Trans.SelfOld={} Trans.SelfN=0
+Trans.Dyn={} Trans.DynN=0 Trans.WaitN=0
+Trans.InflightN=0
 Trans.clearAllFails()
 pcall(function()
 if type(delfile)=="function" then
@@ -7403,11 +7482,12 @@ if type(s)~="string" then return s end
 if tok and n and n>0 then
 s=s:gsub("▮%s*(%d+)%s*▮",function(d) local i=tonumber(d) return (i and tok[i]) or "" end)
 end
+s=s:gsub("▮%s*%d+",""):gsub("%d+%s*▮","")
 s=s:gsub("▮[^▮]*▮",""):gsub("▮","")
 return s
 end
 Trans.unmask=unmask
-local function rawRequest(body,system,temp,maxTok)
+local function rawRequest(body,system,temp,maxTok,noGate)
 if type(request)~="function" then return nil,true end
 local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
@@ -7424,16 +7504,16 @@ Body=payload, Timeout=60,
 end)
 if not ok or type(res)~="table" or not res.Body then
 Trans.Stats.netfail=Trans.Stats.netfail+1
-noteNetFail()
+if not noGate then noteNetFail() end
 return nil,true
 end
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then
 Trans.Stats.netfail=Trans.Stats.netfail+1
-noteNetFail()
+if not noGate then noteNetFail() end
 return nil,true
 end
-noteNetOk()
+if not noGate then noteNetOk() end
 local ch=d.choices
 local c=type(ch)=="table" and ch[1]
 local m=c and c.message
@@ -7448,7 +7528,13 @@ local function tidy(res,src)
 res=stripRich(res)
 res=(res:gsub("^%s+","")):gsub("%s+$","")
 if res=="" then return nil end
-if res==src and not hasChinese(src) then return nil end
+res=res:gsub("^%s*[Tt]ranslation%s*[:：]%s*","")
+res=res:gsub("^%s*[Hh]ere is[^\n:：]*[:：]%s*","")
+res=res:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*","")
+res=(res:gsub("^%s+","")):gsub("%s+$","")
+if res=="" then return nil end
+if not hasChinese(src) and res:lower()==src:lower() then return nil end
+if #src>=24 and #res>#src*3+60 then return nil end
 return res
 end
 function Trans.translate(text,prio)
@@ -7471,7 +7557,7 @@ if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return
 if type(request)~="function" or not HS then return nil end
 if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
-local res,netFail=rawRequest(text,transPrompt(),0.1,1024)
+local res,netFail=rawRequest(text,transPrompt(),0.1,Trans.maxTok or 512)
 if res then
 local v=tidy(res,text)
 if v then
@@ -7510,8 +7596,13 @@ if type(request)~="function" or not HS then return nil end
 local key=c.."\1"..normalizeKey(text)
 local hit=Trans.RvCache[key]
 if hit then return hit end
-local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or 512)
-if not res then return nil end
+if inCool(key) or netGateOn() then return nil end
+local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or 512,true)
+if not res then
+markFail(key)
+return nil
+end
+clearFail(key)
 res=(res:gsub("^%s+","")):gsub("%s+$","")
 if res=="" or res==text then return nil end
 Trans.RvCache[key]=res
@@ -7519,7 +7610,32 @@ RvN=RvN+1
 if RvN>2000 then Trans.RvCache={} RvN=0 end
 return res
 end
+do
+Trans.MaxConc=8
+Trans.InflightN=0
+Trans.WaitN=0
 local Inflight={}
+local WaitQ={}
+local function runJob(key,text,prio,cbs)
+Inflight[key]=cbs or {}
+Trans.InflightN=Trans.InflightN+1
+task.spawn(function()
+local r=Trans.translate(text,prio)
+Trans.InflightN=Trans.InflightN-1
+local q=Inflight[key] Inflight[key]=nil
+if q then for i=1,#q do pcall(q[i],r) end end
+Trans.pumpQueue()
+end)
+end
+function Trans.pumpQueue()
+if Trans.WaitN<=0 or Trans.InflightN>=Trans.MaxConc then return end
+local k,w=nil,nil
+for kk,ww in pairs(WaitQ) do k,w=kk,ww break end
+if not k then return end
+WaitQ[k]=nil Trans.WaitN=Trans.WaitN-1
+runJob(k,w.text,w.prio,w.cbs)
+if Trans.WaitN>0 and Trans.InflightN<Trans.MaxConc then Trans.pumpQueue() end
+end
 function Trans.request(text,prio,cb)
 if Trans.Unloaded or type(text)~="string" or text=="" then
 if cb then pcall(cb,nil) end return
@@ -7534,29 +7650,35 @@ Trans.Stats.hit=Trans.Stats.hit+1
 if cb then pcall(cb,hit) end
 return
 end
-local key=nk
-if inCool(key) or netGateOn() then
+if inCool(nk) or netGateOn() then
 if cb then pcall(cb,nil) end
 return
 end
-local q=Inflight[key]
+local q=Inflight[nk]
 if q then
 if cb then q[#q+1]=cb end
 return
 end
-Inflight[key]={}
-task.spawn(function()
-local r=Trans.translate(text,prio)
-local q2=Inflight[key] Inflight[key]=nil
-if cb then pcall(cb,r) end
-if q2 then for _,f in ipairs(q2) do pcall(f,r) end end
-end)
+local w=WaitQ[nk]
+if w then
+if cb then w.cbs[#w.cbs+1]=cb end
+return
+end
+if Trans.InflightN>=Trans.MaxConc then
+WaitQ[nk]={text=text,prio=prio,cbs=(cb and {cb}) or {}}
+Trans.WaitN=Trans.WaitN+1
+Trans.Stats.wait=Trans.WaitN
+return
+end
+runJob(nk,text,prio,(cb and {cb}) or {})
+end
 end
 Trans.Trans2Orig={}
 Trans.Orig2Trans={}
 local T2O_N=0
 local function remember(raw,newText,plain,newPlain)
 if newPlain=="" or plain=="" or newPlain==plain then return end
+Trans.markSelf(newPlain) Trans.markSelf(newText)
 if Trans.Trans2Orig[newPlain]==nil then
 Trans.Trans2Orig[newPlain]=plain
 T2O_N=T2O_N+1
@@ -7569,6 +7691,11 @@ local function writeProp(obj,field,raw,newText)
 if not obj or not obj.Parent then return false end
 local cur=obj[field]
 if cur~=raw then return false end
+Trans.markSelf(newText)
+local np=stripRich(newText)
+Trans.markSelf(np)
+local _,ncore=splitPrefix(np)
+if ncore~="" then Trans.markSelf(stripRich(ncore)) end
 local ok=pcall(function() obj[field]=newText end)
 if ok then
 Trans.Stats.replaced=Trans.Stats.replaced+1
@@ -7655,6 +7782,8 @@ local TEXT_RETRY_MAX=5
 local TEXT_GAP=0.1
 local function onTextChanged(obj)
 if Trans.Unloaded or not Trans.UIScanActive then return end
+local okc,c0=pcall(function() return obj.Text end)
+if okc and Trans.isSelf(c0) then return end
 local now=os.clock()
 local last=TextLastAt[obj]
 if last and now-last<TEXT_GAP then return end
@@ -7696,6 +7825,7 @@ if not obj or not obj.Parent or Trans.Unloaded then return end
 if Trans.isIgnored(obj) then return end
 local ok,cur=pcall(function() return obj.Text end)
 if not ok or type(cur)~="string" or cur=="" then return end
+Trans.dynNote(obj,cur)
 local isChat=(source=="chat")
 local v=verdictOf(cur,isChat)
 if v.skip then return end
@@ -7809,6 +7939,7 @@ end
 function Trans.forceRescan()
 Trans.Verdict={} VerdictN=0
 Trans.clearAllFails()
+Trans.Dyn={} Trans.DynN=0
 local n=0
 n=scanRoot(SYS.PG,n)
 if SYS.CoreGui then n=scanRoot(SYS.CoreGui,n) end
@@ -7989,6 +8120,27 @@ print("[Trans] 已还原原文 "..n.." 条")
 return n
 end
 function Trans.restoreChatLive() return Trans.restoreSource("chat") end
+function Trans.dumpFails()
+local n,now=0,os.clock()
+print("===== 翻译失败/退避清单 =====")
+for k,f in pairs(Trans.Fail) do
+n=n+1
+local cool=failCool(k)
+local left=cool-(now-f.t)
+print(("[%d] 失败 %d 次  冷却 %.0fs  还剩 %.0fs  |  %s")
+:format(n,f.n,cool,left>0 and left or 0,k:sub(1,60)))
+end
+print(("===== 共 %d 条 (动态文本已跳过 %d 类, 排队中 %d, 在途 %d) =====")
+:format(n,Trans.DynN or 0,Trans.WaitN or 0,Trans.InflightN or 0))
+return n
+end
+function Trans.dumpDyn()
+local n=0
+print("===== 已判定为动态文本(不再翻译) =====")
+for k in pairs(Trans.Dyn) do n=n+1 print(("  [%d] %s"):format(n,k)) end
+print(("===== 共 %d 类 ====="):format(n))
+return n
+end
 function Trans.dumpPairs()
 local n=0
 print("===== 翻译对照表 (原文 -> 译文) =====")
@@ -8015,9 +8167,12 @@ local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then return false end
 local slots=tonumber(d.total_slots) or 8
 local ctx=tonumber(d.default_generation_settings and d.default_generation_settings.n_ctx) or 512
-Trans.maxTok=math.max(96,math.min(768,ctx-200))
-print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx")
-:format(slots,ctx))
+Trans.SlotCtx=ctx
+Trans.Slots=slots
+Trans.maxTok=math.max(128,math.min(512,ctx-512))
+Trans.MaxConc=math.max(2,math.min(16,slots-2))
+print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx  ->  并发上限 %d, 单次输出上限 %d token")
+:format(slots,ctx,Trans.MaxConc,Trans.maxTok))
 return true
 end
 function Trans.sendToChat(text)
@@ -10965,6 +11120,9 @@ UI.Switch(p,"🔤 中英对照 (显示成「译文 (原文)」)","TransBilingual
 if Trans.reqOn(false) or Trans.reqOn(true) then P(function() Trans.forceRescan() end) end
 SYS.Notify(on and "🔤 中英对照已开: 译文 (原文)" or "🔤 已关: 只显示译文",SYS.CY.cyan)
 end)
+UI.Switch(p,"⏱️ 跳过动态文本 (CPS/倒计时/金币这类每帧在变的, 不再反复发请求与写缓存)","TransDyn")
+UI.Btn(p,"🧹 查看已跳过的动态文本 (控制台)",CY.sub,function() pcall(Trans.dumpDyn) end)
+UI.Btn(p,"🧾 查看失败/退避清单 (控制台)",CY.sub,function() pcall(Trans.dumpFails) end)
 UI.Btn(p,"🔍 立即强制全屏扫描翻译",CY.cyan,function()
 task.spawn(function()
 print("[Trans] 手动触发全屏扫描...")
@@ -11014,8 +11172,8 @@ if statL and statL.Parent then statL.Text=("已缓存 %d 条"):format(Trans.cach
 if statConcurrent and statConcurrent.Parent then
 local st=Trans.Stats or {}
 local avg=(st.latN and st.latN>0) and (st.lat/st.latN) or 0
-statConcurrent.Text = ("命中 %d | 本地 %d | 失败 %d | 跳过扫 %d | 均 %.0fms"):format(
-st.hit or 0, st.loc or 0, st.fail or 0, st.sweepSkip or 0, avg
+statConcurrent.Text = ("命中 %d | 本地 %d | 失败 %d | 跳过扫 %d | 均 %.0fms | 动态 %d | 排队 %d"):format(
+st.hit or 0, st.loc or 0, st.fail or 0, st.sweepSkip or 0, avg, st.dyn or 0, Trans.WaitN or 0
 )
 end
 end
