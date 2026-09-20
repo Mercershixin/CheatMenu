@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 00:44 sha b6120a5d bytes 503450'):format('2026-09-21 00:44','b6120a5d',503450))
+print(('[CheatMenu] build 2026-09-21 00:50 sha bae9e882 bytes 503451'):format('2026-09-21 00:50','bae9e882',503451))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.0.0"
+SYS.BuildVer="9.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2004,10 +2004,11 @@ function SYS.SaveRemotes(found)
 if not writefile then return nil end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M")
-local fn=("Remotes_%s_%s_%s.txt"):format(safeFileName(nm),safeFileName(pid),stamp)
+local fn=("remotes_%s_%s.txt"):format(safeAscii(pid,20),stamp)
 local buf={}
 buf[#buf+1]="-- CheatMenu 抓包清单"
 buf[#buf+1]="-- "..info
+buf[#buf+1]="-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid)
 buf[#buf+1]="-- 时间: "..os.date("%Y-%m-%d %H:%M:%S")
 buf[#buf+1]="-- 由 SYS.DumpRemotes() 生成 · 共 "..tostring(#(found or {})).." 条"
 buf[#buf+1]=""
@@ -2017,12 +2018,18 @@ return ok and fn or nil
 end
 function SYS.SaveDump(tag, lines)
 if not writefile then return nil end
+if SYS.ScanOutFile then
+SYS.ScanOutExtra=SYS.ScanOutExtra or {}
+SYS.ScanOutExtra[#SYS.ScanOutExtra+1]=tostring(tag).."("..tostring(#(lines or {})).." 行)"
+return SYS.ScanOutFile
+end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M%S")
-local fn=("%s_%s_%s_%s.txt"):format(safeFileName(tag),safeFileName(nm),safeFileName(pid),stamp)
+local fn=("dump_%s_%s_%s.txt"):format(safeAscii(tag,12),safeAscii(pid,20),stamp)
 local buf={
 "-- CheatMenu 综合扫描 · "..tostring(tag),
-"-- "..info,
+"-- "..tostring(info),
+"-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid),
 "-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
 "-- 共 "..tostring(#(lines or {})).." 行",
 "",
@@ -2040,21 +2047,11 @@ SYS.ScanOutWhy="执行器不支持 writefile / isfile"
 return
 end
 local _,nm,pid=SYS.GameInfoLine()
-local hint=safeAscii(nm,16)
-local folder=("%s_%s"):format(safeAscii(pid,20),hint)
-local folderCN=("%s_%s"):format(safeAscii(pid,20),safeFileName(nm))
-local pkg="Hy-MT2翻译模型\\包\\"..folder
-local pkgCN="Hy-MT2翻译模型\\包\\"..folderCN
-local who=safeAscii(tostring((SYS.LP and SYS.LP.Name) or ""),24)
+local folder=("%s_%s"):format(safeAscii(pid,20),safeAscii(nm,16))
 local cands={
-"C:\\Users\\Administrator\\Desktop\\"..pkgCN,
-"C:\\Users\\Administrator\\Desktop\\"..pkg,
-"C:\\Users\\"..who.."\\Desktop\\"..pkgCN,
-"C:\\Users\\"..who.."\\Desktop\\"..pkg,
-"C:\\Users\\"..who.."\\Desktop\\CheatMenu\\"..folder,
-"C:\\Users\\Administrator\\Desktop\\CheatMenu\\"..folder,
-"C:\\Users\\Public\\Desktop\\CheatMenu\\"..folder,
 "CheatMenu\\"..folder,
+folder,
+".",
 }
 local function mkdirp(full)
 if type(makefolder)~="function" then return end
@@ -2098,7 +2095,7 @@ local dir=SYS.ScanOutDir
 if not dir then return nil,SYS.ScanOutWhy end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M%S")
-local fn=("scan_%s_%s.txt"):format(safeAscii(pid,20),stamp)
+local fn=SYS.ScanOutFile or ("scan_%s_%s.txt"):format(safeAscii(pid,20),stamp)
 local t={"-- CheatMenu 综合扫描（全部十层 · 单文件）",
 "-- "..tostring(info),
 "-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid),
@@ -11926,8 +11923,12 @@ print(""); print("##################  🔍 综合扫描  ##################")
 print(("时间 %s"):format(os.date("%H:%M:%S")))
 print("")
 pcall(function() SYS.ResolveScanDir() end)
+SYS.ScanOutExtra=nil
+local _info,_nm,_pid=SYS.GameInfoLine()
+SYS.ScanOutFile=("scan_%s_%s.txt"):format(SYS.SafeAscii(_pid,20),os.date("%Y%m%d_%H%M%S"))
 if SYS.ScanOutDir then
-print(("  📂 本次落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy)))
+print(("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy)))
+print(("     单文件名: %s   （全部十层都在里面）"):format(tostring(SYS.ScanOutFile)))
 else
 print(("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy)))
 end
