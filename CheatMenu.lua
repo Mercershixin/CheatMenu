@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 19:52 sha faf0bd4e bytes 477767'):format('2026-09-20 19:52','faf0bd4e',477767))
+print(('[CheatMenu] build 2026-09-20 20:28 sha a377461a bytes 487780'):format('2026-09-20 20:28','a377461a',487780))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -112,7 +112,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.0.0"
+SYS.BuildVer="8.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1999,6 +1999,22 @@ buf[#buf+1]="-- 时间: "..os.date("%Y-%m-%d %H:%M:%S")
 buf[#buf+1]="-- 由 SYS.DumpRemotes() 生成 · 共 "..tostring(#(found or {})).." 条"
 buf[#buf+1]=""
 for i,r in ipairs(found or {}) do buf[#buf+1]=("  [%d] %s"):format(i,r) end
+local ok=P(function() writefile(fn,table.concat(buf,"\n")) end)
+return ok and fn or nil
+end
+function SYS.SaveDump(tag, lines)
+if not writefile then return nil end
+local info,nm,pid=SYS.GameInfoLine()
+local stamp=os.date("%Y%m%d_%H%M%S")
+local fn=("%s_%s_%s_%s.txt"):format(safeFileName(tag),safeFileName(nm),safeFileName(pid),stamp)
+local buf={
+"-- CheatMenu 综合扫描 · "..tostring(tag),
+"-- "..info,
+"-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
+"-- 共 "..tostring(#(lines or {})).." 行",
+"",
+}
+for i=1,#(lines or {}) do buf[#buf+1]=tostring(lines[i]) end
 local ok=P(function() writefile(fn,table.concat(buf,"\n")) end)
 return ok and fn or nil
 end
@@ -10656,8 +10672,8 @@ UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处�
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
-UI.Section(p,"🔍 综合扫描 (八层一次扫完)",CY.green)
-UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查 八层一次扫完)",CY.green,function()
+UI.Section(p,"🔍 综合扫描 (十层一次扫完)",CY.green)
+UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/DEX/Remote 十层一次扫完)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
@@ -10667,7 +10683,7 @@ P(function() SYS.ProbeEvent("pickup") end)
 P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按六层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览",CY.sub)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n★ I/J 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ I/J 的完整清单会自动落盘(DEX_/Remote_ 开头, 带游戏名与时间戳), 控制台只列前若干条。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
@@ -11267,6 +11283,253 @@ SYS.Notify("调用记录已输出",SYS.CY.green)
 end
 local function line(s) print("  "..s) end
 local function head(s) print(""); print("════════ "..s.." ════════") end
+local SCAN_CAP=80000
+local NET_CLS={
+"RemoteEvent","UnreliableRemoteEvent","RemoteFunction",
+}
+local DEX_KEY={
+"RemoteEvent","UnreliableRemoteEvent","RemoteFunction",
+"BindableEvent","BindableFunction",
+"Script","LocalScript","ModuleScript",
+"ProximityPrompt","ClickDetector","Highlight","SurfaceGui",
+}
+local DEX_PROPS={
+ProximityPrompt={"ActionText","ObjectText","HoldDuration","MaxActivationDistance","Enabled","RequiresLineOfSight"},
+ClickDetector={"MaxActivationDistance"},
+Highlight={"Enabled","FillColor","OutlineColor","FillTransparency","OutlineTransparency","DepthMode"},
+SurfaceGui={"Enabled","Face","LightInfluence","AlwaysOnTop","MaxDistance"},
+Script={"Enabled","RunContext"},
+LocalScript={"Enabled"},
+}
+local function scanWholeGame()
+local out={game}
+local i,n,capped=1,0,false
+local ok=P(function()
+while i<=#out do
+local inst=out[i] i=i+1
+local ch=inst:GetChildren()
+for k=1,#ch do
+out[#out+1]=ch[k]
+n=n+1
+if n>=SCAN_CAP then capped=true return end
+end
+end
+end)
+return out,n,capped,ok
+end
+local function snapProps(inst, names)
+local got={}
+for _,p in ipairs(names) do
+local ok,v=P(function() return inst[p] end)
+if ok and v~=nil then
+local vs=tostring(v)
+if #vs>48 then vs=vs:sub(1,48).."…" end
+got[#got+1]=("        %s = %s"):format(p,vs)
+end
+end
+return got
+end
+local function kindIndex()
+local idx={}
+local A=SYS.RemoteAlias
+if type(A)=="table" then
+for kind,list in pairs(A) do
+idx[kind]=kind
+if type(list)=="table" then
+for _,nm in ipairs(list) do idx[nm]=kind end
+end
+end
+end
+return idx
+end
+function LAB.DexScan(shared, sharedN, sharedCapped)
+head("I · DEX 层(全图实例浏览器: 游戏里都有哪些东西 / 在哪)")
+local list,n,capped,ok
+if shared then list,n,capped,ok=shared,sharedN or 0,sharedCapped or false,true
+else list,n,capped,ok=scanWholeGame() end
+if not ok then line("!! 全图遍历中断(某实例 GetChildren 抛错) —— 下面是已扫到的部分") end
+local hist={}
+for i=1,#list do
+local cls=list[i].ClassName
+hist[cls]=(hist[cls] or 0)+1
+end
+local rows={}
+for cls,cnt in pairs(hist) do rows[#rows+1]={cls,cnt} end
+table.sort(rows,function(a,b)
+if a[2]~=b[2] then return a[2]>b[2] end
+return a[1]<b[1]
+end)
+line(("全图实例 %d 个(遍历上限 %d%s) · 共 %d 种 ClassName")
+:format(n,SCAN_CAP,capped and " · 已达上限" or "",#rows))
+line("  ── 类名 TOP 30 ──")
+for i=1,math.min(#rows,30) do
+line(("    %-9d %s"):format(rows[i][2],rows[i][1]))
+end
+local want={}
+for _,k in ipairs(DEX_KEY) do want[k]={} end
+for i=1,#list do
+local w=want[list[i].ClassName]
+if w and #w<40 then w[#w+1]=list[i] end
+end
+local dump={"========== 类名 TOP 30 =========="}
+for i=1,math.min(#rows,30) do dump[#dump+1]=("%-9d %s"):format(rows[i][2],rows[i][1]) end
+dump[#dump+1]=""
+dump[#dump+1]="========== 关键类全路径 =========="
+line("  ── 关键类清单(路径可直接复制进执行器) ──")
+for _,k in ipairs(DEX_KEY) do
+local hits=want[k]
+if #hits>0 then
+local total=hist[k] or #hits
+line(("    ▼ %s   × %d"):format(k,total))
+for i=1,math.min(#hits,12) do
+local okp,path=P(function() return hits[i]:GetFullName() end)
+local p=tostring(okp and path or "?")
+line(("        %s"):format(p))
+dump[#dump+1]=("%s  %s"):format(k,p)
+end
+if total>12 then
+line(("        … 还有 %d 个(完整清单见落盘文件)"):format(total-12))
+end
+end
+end
+line("  ── 属性快照(每类取第一个实例) ──")
+local anySnap=false
+for _,k in ipairs(DEX_KEY) do
+local inst=want[k][1]
+local names=DEX_PROPS[k]
+if inst and names and #names>0 then
+local got=snapProps(inst,names)
+if #got>0 then
+anySnap=true
+local okp,nm=P(function() return inst:GetFullName() end)
+line(("    [%s] %s"):format(k,tostring(okp and nm or "?")))
+for i=1,#got do line(got[i]) end
+dump[#dump+1]=""
+dump[#dump+1]=("[属性快照] "..k.."  "..tostring(okp and nm or "?"))
+for i=1,#got do dump[#dump+1]=got[i] end
+end
+end
+end
+if not anySnap then
+line("    (本图没有可快照的关键类实例, 或该执行器读不到这些属性)")
+end
+local fn=SYS.SaveDump("DEX",dump)
+if fn then line("  ✅ 完整清单已落盘: "..fn)
+elseif type(writefile)=="function" then line("  (落盘失败)")
+else line("  (这台执行器不能写文件, 只能看控制台)") end
+SYS.Notify(("DEX 层完成: %d 个实例 / %d 种类名"):format(n,#rows),SYS.CY.green)
+LAB.LastDex={inst=n,classes=#rows}
+return n,#rows,fn
+end
+function LAB.RemoteScan(shared, sharedN, sharedCapped)
+head("J · Remote 层(每条 remote 能不能用 · 谁在收)")
+local list,n,capped,ok
+if shared then list,n,capped,ok=shared,sharedN or 0,sharedCapped or false,true
+else list,n,capped,ok=scanWholeGame() end
+if not ok then line("!! 全图遍历中断 —— 下面是已扫到的部分") end
+local net,byCls={},{}
+for i=1,#list do
+local c=list[i]
+local cls=c.ClassName
+local isNet=false
+for j=1,#NET_CLS do if cls==NET_CLS[j] then isNet=true break end end
+if isNet then
+net[#net+1]=c
+byCls[cls]=(byCls[cls] or 0)+1
+elseif cls=="BindableEvent" or cls=="BindableFunction" then
+byCls[cls]=(byCls[cls] or 0)+1
+end
+end
+line(("网络通道 RemoteEvent %d · UnreliableRemoteEvent %d · RemoteFunction %d   |   本地 BindableEvent %d · BindableFunction %d")
+:format(byCls.RemoteEvent or 0,byCls.UnreliableRemoteEvent or 0,byCls.RemoteFunction or 0,
+byCls.BindableEvent or 0,byCls.BindableFunction or 0))
+local gi=_G.getconnections
+local hasGc=(type(gi)=="function")
+if not hasGc then
+line("  (这台执行器没有 getconnections —— 跳过「谁在收」, 只列清单与归类)")
+end
+local nameKind=kindIndex()
+local dump={("========== Remote 逐条侦察(共 %d 条, 列前 60) =========="):format(#net)}
+local withRecv=0
+local MAXROW=60
+for i=1,math.min(#net,MAXROW) do
+local r=net[i]
+local cls=r.ClassName
+local okp,path=P(function() return r:GetFullName() end)
+local p=tostring(okp and path or "?")
+local tail=(type(r.Name)=="string") and r.Name or "?"
+local tag=nameKind[tail] and ("  ★命中类别: "..tostring(nameKind[tail])) or ""
+local recv="?"
+if cls=="RemoteFunction" then
+local ok1,set1=P(function() return r.OnClientInvoke~=nil end)
+recv=(ok1 and set1) and "OnClientInvoke 已设置(服务端可反向调用)" or "OnClientInvoke 未设置"
+elseif hasGc then
+local okE,ev=P(function() return r.OnClientEvent end)
+local cnt=0
+if okE and ev~=nil then
+local okC,conns=P(function() return gi(ev) end)
+if okC and type(conns)=="table" then
+cnt=#conns
+local who={}
+for k=1,math.min(#conns,3) do
+local f=nil
+local okF,v=P(function() return conns[k].Function end)
+if okF then f=v end
+if f then
+local ow=ownerOf(f)
+who[#who+1]=tostring(nameOf(f) or "?").."@"..tostring(ow and (ow.Name or "?") or "-")
+end
+end
+if #who>0 then recv=("%d(谁在收: %s)"):format(cnt,table.concat(who,", "))
+else recv=tostring(cnt) end
+else
+recv="0"
+end
+else
+recv="读不到 OnClientEvent"
+end
+else
+recv="(无 getconnections)"
+end
+if type(recv)=="string" and recv~="0" and recv~="?" and recv:find("^%d") then withRecv=withRecv+1 end
+line(("    [%d] %-22s %s"):format(i,cls,p))
+line(("          收向监听: %s%s"):format(tostring(recv),tag))
+dump[#dump+1]=("[%d] %s  %s"):format(i,cls,p)
+dump[#dump+1]=("     收向监听: "..tostring(recv)..tag)
+end
+if #net>MAXROW then line(("    … 还有 %d 条(完整清单见落盘文件)"):format(#net-MAXROW)) end
+local okA,kinds=P(function()
+local t={}
+for k in pairs(SYS.RemoteAlias or {}) do t[#t+1]=k end
+table.sort(t) return t
+end)
+if okA and kinds then
+local byName={}
+for i=1,#net do byName[net[i].Name]=net[i] end
+local have={} local missN=0
+for _,kind in ipairs(kinds) do
+local found=nil
+for _,nm in ipairs((SYS.RemoteAlias and SYS.RemoteAlias[kind]) or {}) do
+if byName[nm] then found=nm break end
+end
+if found then have[#have+1]=("    ✅ %-12s → %s"):format(kind,found)
+else missN=missN+1 end
+end
+line(("  ── 功能类别通道对账: 有 %d / 共 %d(其余 %d 个本游戏没有同名通道) ──")
+:format(#have,#kinds,missN))
+for i=1,#have do line(have[i]) end
+dump[#dump+1]=""
+dump[#dump+1]=("========== 功能类别对账: 有 %d / 共 %d =========="):format(#have,#kinds)
+for i=1,#have do dump[#dump+1]=have[i] end
+end
+local fn=SYS.SaveDump("Remote",dump)
+if fn then line("  ✅ 完整清单已落盘: "..fn)
+elseif type(writefile)=="function" then line("  (落盘失败)")
+else line("  (这台执行器不能写文件, 只能看控制台)") end
+SYS.Notify(("Remote 层完成: 网络通道 %d 条, 其中有收向监听 %d 条"):format(#net,withRecv),SYS.CY.green)
+LAB.LastRemote={net=#net,recv=withRecv}
+return #net,withRecv,fn
+end
 function LAB.FullScan()
 local t0=os.clock()
 print(""); print("##################  🔍 综合扫描  ##################")
@@ -11464,6 +11727,9 @@ end)
 if not ok2 then line("(读 upvalue 失败)") end
 end
 end)
+local shared,sharedN,sharedCapped=scanWholeGame()
+P(function() LAB.DexScan(shared,sharedN,sharedCapped) end)
+P(function() LAB.RemoteScan(shared,sharedN,sharedCapped) end)
 print(""); print(("##################  扫描完毕 (%.2fs)  ##################"):format(os.clock()-t0))
 SYS.Notify("综合扫描完成 —— 结果在控制台(F9)",SYS.CY.green)
 end
@@ -11473,6 +11739,8 @@ local c=LAB.Caps()
 out[#out+1]=("执行器: getgc=%s hook=%s restore=%s getscripts=%s")
 :format(tostring(c.getgc),tostring(c.hookfn),tostring(c.restore),tostring(c.scripts))
 if LAB.LastFns then out[#out+1]=("GC 函数数: %d"):format(#LAB.LastFns) end
+if LAB.LastDex then out[#out+1]=("DEX: 全图 %d 个实例 / %d 种类名"):format(LAB.LastDex.inst,LAB.LastDex.classes) end
+if LAB.LastRemote then out[#out+1]=("Remote: 网络通道 %d 条(其中有收向监听 %d)"):format(LAB.LastRemote.net,LAB.LastRemote.recv) end
 if #LAB.Log>0 then out[#out+1]=("调用记录 %d 条, 最近: %s"):format(#LAB.Log,LAB.Log[#LAB.Log]) end
 local txt=table.concat(out,"\n")
 local ok=P(function()
