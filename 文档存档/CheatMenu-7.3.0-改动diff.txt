@@ -1,0 +1,966 @@
+CheatMenu 7.0.0 -> 7.3.0  源码改动 diff
+生成时间: 2026-09-20 01:20
+改前: CheatMenu-6.9.1.lua.bak-before-merge  (15431 行 / 812,633 字节)
+改后: CheatMenu-6.9.1.lua  (15428 行 / 818,590 字节)
+
+本批四件事:
+  ① 合并重构   M1 统一扫描索引器 SYS.Index()(8 处全量扫描 -> 1 次) / M2 活物透视三态 /
+               M3 小游戏区域并入物件透视 / M4 头顶标签 / M5 共享判据表 SYS.Kw* / 互锁收拢
+  ② UI 提示审计 42 条 Tip 机械核对; 修「👣 落脚点·射线」标题 / 「📦 物件高亮」空分区错位 / 旧开关名引用
+  ③ 死代码清理 -253 行(8 个已删功能的配置键+后端函数:TrapWatch/AutoUse/AutoClaim/AutoPickup/
+               AutoRespawn/AutoShop/AutoTeam/AutoEmote, 以及落脚点 SYS.SetFootstep)
+  ④ 人物射线强化 三态(关闭/只锁定目标/全部玩家) + 池化多目标 + 距离与条数两道上限
+
+门禁: luau-compile exit 0 · 等价性 PASS · 加载器探针 6/0 · 整脚本仿真与改前源码结果完全一致
+版本: 7.3.0  已推送 GitHub (远程 HEAD 109dae71)
+
+====================================================================================================
+
+--- CheatMenu 7.0.0 (改前)
++++ CheatMenu 7.3.0 (改后)
+@@ -68,6 +68,9 @@
+         GodMode=false,NoFall=false,DeepHide=false,
+         LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
+         ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
++        -- ★★ 强化(用户要求): 子弹射线扩成多目标 —— TracerAll=给每个其他玩家各画一条(池化多目标)。
++        --   (距离/条数两道上限在 SYS.C_ 里: TracerMaxDist / TracerMaxN)
++        TracerAll=false,
+         AntiAFK=true,AutoBonus=false,
+         AutoRebirth=false,AutoGym=false,AutoTrain=false,
+         TransChat=false,TransUI=false,
+@@ -113,13 +116,8 @@
+         NoAggro=false,      -- ★ v6.9.24 无仇恨模式(隐身+免伤+自动躲 一键开)
+         TransBilingual=false,
+         AutoLowPing=false,
+-        -- ★ v6.9.0 自动领取 / 自动收集 / 死亡自动重生(一律默认关)
+-        AutoClaim=false,AutoPickup=false,AutoRespawn=false,
+         
+-        TrapWatch=false,    -- ★ v6.9.0 反陷阱预警(TouchDamage/DamageDenyInform/Status -> HUD)
+-        AutoUse=false,      -- ★ v6.9.0 自动连用(消耗照旧, 只是不用手点)
+         -- ★ v6.9.0 冷却加速倍率(1=关闭; 只对客户端判定的冷却有效)
+-        AutoShop=false,AutoTeam=false,AutoEmote=false,   -- ★ v6.9.0 C类新功能
+         -- 防护
+         Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
+         -- 玩家控制(动手类)
+@@ -140,6 +138,9 @@
+         Gravity=196.2,
+         MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
+         FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
++        -- ★★ 强化(用户要求"人物射线"): 多目标射线的两道上限(视觉页「🎯 射线」)。
++        --   TracerMaxDist=最远画到几格(0=不限); TracerMaxN=最多同时几条(人多时防卡)。
++        TracerMaxDist=500,TracerMaxN=12,
+         -- ★ v3.9.0: 名字标签在"角色顶部之上"再加多少格(0=自动贴顶; 正数=更往上)
+         ESPNameH=0,
+         -- ★★ v6.9.35 「全图高亮」: 物件/门/小游戏 透视的距离上限(格)。
+@@ -1135,73 +1136,6 @@
+ --#        真能 0 元买的, 只有服务端自己标价 0 的商品(用下面的「一键 0 元扫货」)。
+ --##########################################################################
+ 
+--- 自动领取 (claim 类): 每日/活动/周常奖励这类"点了就送"的东西
+-function SYS.SetAutoClaim(on)
+-    SYS.T_.AutoClaim = on and true or false
+-    SYS.SetLoop("AutoClaim", on, RS.Heartbeat, SYS.AutoClaimTick)
+-    if on then
+-        local r,name = SYS.FindEvent("claim")
+-        SYS.Notify(r and ("🎁 自动领取已开 · remote="..tostring(name))
+-                     or "⚠️ 本游戏没找到 claim 类 remote(自动领取会空转)",
+-                   r and SYS.CY.green or SYS.CY.yellow)
+-    end
+-end
+-
+--- 自动收集 (pickup 类): 地上掉落物 / 宝箱 / 光球
+-function SYS.SetAutoPickup(on)
+-    SYS.T_.AutoPickup = on and true or false
+-    SYS.SetLoop("AutoPickup", on, RS.Heartbeat, SYS.AutoPickupTick)
+-    if on then
+-        local r,name = SYS.FindEvent("pickup")
+-        SYS.Notify(r and ("🧺 自动收集已开 · remote="..tostring(name))
+-                     or "⚠️ 本游戏没找到 pickup 类 remote(自动收集会空转)",
+-                   r and SYS.CY.green or SYS.CY.yellow)
+-    end
+-end
+-
+--- 死亡自动重生
+-function SYS.SetAutoRespawn(on)
+-    SYS.T_.AutoRespawn = on and true or false
+-    if on then
+-        SYS.SetLoop("AutoRespawn", true, RS.Heartbeat, SYS.AutoRespawnTick)
+-    else
+-        SYS.SetLoop("AutoRespawn", false)
+-    end
+-end
+-
+--- ★ 三个 tick 各用各的计时器（共用一个会互相压制：领取跑了收集就不跑）
+-function SYS.AutoClaimTick()
+-    local now = os.clock()
+-    if now - (SYS._claimAt or 0) < (tonumber(SYS.C_.FarmInterval) or 3) then return end
+-    SYS._claimAt = now
+-    local r = SYS.FindEvent("claim")
+-    if r then P(function() r:FireServer() end) end
+-end
+-
+-function SYS.AutoPickupTick()
+-    local now = os.clock()
+-    if now - (SYS._pickupAt or 0) < (tonumber(SYS.C_.FarmInterval) or 3) then return end
+-    SYS._pickupAt = now
+-    local r = SYS.FindEvent("pickup")
+-    if r then P(function() r:FireServer() end) end
+-end
+-
+--- 死亡自动重生: 自己 @State=Dead / Humanoid 血量<=0 就自动发 respawn
+-function SYS.AutoRespawnTick()
+-    local now = os.clock()
+-    if now - (SYS._respawnAt or 0) < 2 then return end
+-    local ch = LP.Character
+-    local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+-    local dead = false
+-    if not ch or not ch.Parent then dead = true end
+-    if hum and hum.Health <= 0 then dead = true end
+-    pcall(function() if LP:GetAttribute("State") == "Dead" then dead = true end end)
+-    if not dead then return end
+-    SYS._respawnAt = now
+-    local r = SYS.FindEvent("respawn") or SYS.FindEvent("revive")
+-    if r then P(function() r:FireServer() end) end
+-end
+-
+ -- 一键 0 元扫货: 列出游戏里【价格 = 0】的可购买商品(Gamepass / DevProduct)并尝试购买。
+ -- ⚠️ 只碰标价 0 的 —— 付费的一个都不会动。
+ function SYS.FreeSweep()
+@@ -2706,22 +2640,6 @@
+         return n
+     end
+ 
+-    -- C1 · 自动商店（周期性把所有 shop/buy 通道试一遍；默认关，间隔可调）
+-    function SYS.SetAutoShop(on)
+-        SYS.T_.AutoShop = on and true or false
+-        SYS.SetLoop("AutoShop", on, RS.Heartbeat, SYS.AutoShopTick)
+-        if on then
+-            local r, nm = SYS.FindEvent("shop")
+-            SYS.Notify(r and ("🛒 自动商店已开 · remote=" .. tostring(nm))
+-                         or "⚠️ 本游戏没找到商店类 remote", r and SYS.CY.green or SYS.CY.yellow)
+-        end
+-    end
+-    function SYS.AutoShopTick()
+-        local now = os.clock()
+-        if now - (SYS._shopAt or 0) < (tonumber(SYS.C_.ShopInterval) or 5) then return end
+-        SYS._shopAt = now
+-        tryMany("shop")
+-    end
+ 
+     -- C4 · 背包读取：把能拿到的背包/物品信息打到控制台 + 文件
+     function SYS.DumpInventory()
+@@ -2830,33 +2748,6 @@
+         return false
+     end
+ 
+-    -- C6 · 自动选队伍 / 角色
+-    function SYS.SetAutoTeam(on)
+-        SYS.T_.AutoTeam = on and true or false
+-        SYS.SetLoop("AutoTeam", on, RS.Heartbeat, SYS.AutoTeamTick)
+-        if on then
+-            local r, nm = SYS.FindEvent("team")
+-            SYS.Notify(r and ("🚩 自动选队伍已开 · remote=" .. tostring(nm))
+-                         or "⚠️ 本游戏没找到选队伍 remote", r and SYS.CY.green or SYS.CY.yellow)
+-        end
+-    end
+-    function SYS.AutoTeamTick()
+-        local now = os.clock()
+-        if now - (SYS._teamAt or 0) < 3 then return end
+-        SYS._teamAt = now
+-        tryMany("team")
+-    end
+-
+-    -- C6 · 自动表情（顺带，成本很低）
+-    function SYS.SetAutoEmote(on)
+-        SYS.T_.AutoEmote = on and true or false
+-        SYS.SetLoop("AutoEmote", on, RS.Heartbeat, function()
+-            local now = os.clock()
+-            if now - (SYS._emoteAt or 0) < (tonumber(SYS.C_.EmoteInterval) or 10) then return end
+-            SYS._emoteAt = now
+-            tryMany("emote")
+-        end)
+-    end
+ 
+     --##########################################################################
+     --# ★★ v6.9.0 冷却加速 / 自动连用（"无限使用"能实现的那一部分）
+@@ -2917,39 +2808,6 @@
+         SYS.Hud(("⏱ 冷却加速 %.1fx 已开"):format(scale), 5)
+     end
+ 
+-    -- 自动连用: 一直触发"使用"(TryUse 系), 或直接按住当前工具
+-    function SYS.SetAutoUse(on)
+-        SYS.T_.AutoUse = on and true or false
+-        SYS.SetLoop("AutoUse", on, RS.Heartbeat, SYS.AutoUseTick)
+-        if on then
+-            local r, nm = SYS.FindEvent("itemuse")
+-            local msg = r and ("🎒 自动连用已开 · remote=" .. tostring(nm))
+-                           or "⚠️ 没找到使用类 remote —— 改走「按住当前工具」方式"
+-            SYS.Notify(msg, r and SYS.CY.green or SYS.CY.yellow)
+-        end
+-    end
+-
+-    function SYS.AutoUseTick()
+-        local now = os.clock()
+-        if now - (SYS._useAt or 0) < (tonumber(SYS.C_.UseInterval) or 0.15) then return end
+-        SYS._useAt = now
+-        -- 优先走 remote(事件库里真实存在的使用通道)
+-        local r = SYS.FindEvent("itemuse")
+-        if r and SYS.C_.UseViaRemote ~= false then
+-            P(function() r:FireServer() end)
+-            return
+-        end
+-        -- 兜底: 直接激活手里的工具(本地)
+-        P(function()
+-            local ch = LP.Character
+-            if not ch then return end
+-            local tool = ch:FindFirstChildOfClass("Tool")
+-            if tool and type(tool.Activate) == "function" then
+-                pcall(function() tool:Activate() end)   -- 本地激活手里的工具
+-            end
+-        end)
+-    end
+-
+     --##########################################################################
+     --# ★★ v6.9.0 反陷阱预警 / 状态监听（信号名全部取自事件库）
+     --#
+@@ -2964,58 +2822,6 @@
+     --#   ⚠️ 注意: 这是【预警/播报】, 不是"让陷阱无效"。让陷阱不造成伤害属于改服务端判定,
+     --#      客户端做不到 —— 客户端能做的拦截见 Prot_AntiAC / TrapImmune(本地免伤)。
+     --##########################################################################
+-    SYS.TrapWatch = { conns = {}, seen = {} }
+-
+-    function SYS.SetTrapWatch(on)
+-        SYS.T_.TrapWatch = on and true or false
+-        local w = SYS.TrapWatch
+-        for _, c in ipairs(w.conns) do P(function() c:Disconnect() end) end
+-        w.conns = {}
+-        if not SYS.T_.TrapWatch then
+-            SYS.Notify("🛡 反陷阱预警已关", SYS.CY.sub)
+-            return
+-        end
+-        local rel = RStorage:FindFirstChild("Remote")
+-        local names = {"TouchDamage","DamageDenyInform","StatusService","PlayState",
+-                       "QueryLock","SelectedRole","PreSpawnDarken"}
+-        local hooked, hit = 0, {}
+-        for _, nm in ipairs(names) do
+-            local inst = rel and rel:FindFirstChild(nm, true)
+-            if inst and inst:IsA("RemoteEvent") then
+-                pcall(function()
+-                    w.conns[#w.conns + 1] = inst.OnClientEvent:Connect(function(...)
+-                        if not SYS.T_.TrapWatch then return end
+-                        local a = table.pack(...)
+-                        local parts = {}
+-                        for i = 1, math.min(a.n, 3) do
+-                            local tv = type(a[i])
+-                            if tv == "string" or tv == "number" or tv == "boolean" then
+-                                parts[#parts + 1] = tostring(a[i])
+-                            end
+-                        end
+-                        local d = table.concat(parts, " · ")
+-                        local key = nm .. "|" .. d
+-                        local now = os.clock()
+-                        if w.seen[key] and now - w.seen[key] < 3 then return end
+-                        w.seen[key] = now
+-                        local icon = "🛡"
+-                        if nm == "TouchDamage" then icon = "⚠️ 陷阱/接触伤害"
+-                        elseif nm == "DamageDenyInform" then icon = "🛡 伤害被挡"
+-                        elseif nm == "QueryLock" or nm == "SelectedRole" then icon = "🎯 锁定" end
+-                        P(function()
+-                            SYS.Hud(("%s %s%s"):format(icon, nm, d ~= "" and ("  →  " .. d) or ""), 4)
+-                        end)
+-                    end)
+-                end)
+-                hooked = hooked + 1
+-                hit[#hit + 1] = nm
+-            end
+-        end
+-        SYS.Notify(("🛡 反陷阱预警: 挂上 %d 条(%s)"):format(hooked, table.concat(hit, ", ")),
+-                   hooked > 0 and SYS.CY.green or SYS.CY.yellow)
+-        print(("[CheatMenu] 反陷阱预警: 命中 %d 条 -> %s"):format(hooked, table.concat(hit, ", ")))
+-    end
+-
+     -- 一次性把本游戏里这些信号是否可用打印出来（抓包/换游戏时先跑这个）
+     function SYS.ProbeTrapWatch()
+         local rel = RStorage:FindFirstChild("Remote")
+@@ -4005,6 +3811,127 @@
+         ESP_WALL_CACHE[part]={t=now,ok=ok}
+         return ok
+     end
++
++    --##########################################################################
++    --# ★★ 合并: 统一扫描索引器 SYS.Index()
++    --#   合并前 —— 下面这些消费者【各自】调一次 WS:GetDescendants():
++    --#     生物透视 / 可交互透视 / 门·陷阱透视 / 小游戏区域透视 /
++    --#     自动触发小游戏 / 快速交互 / 读密码提示 / 自动藏身找藏身点  = 8 处。
++    --#     同一份数据被完整遍历 8 遍; 图大的时候这就是主要的卡顿来源。
++    --#   合并后 —— 只保留【一次】扫描 + 缓存, 8 个消费者全部读它。
++    --#     各消费者内部的判据 / 配色 / 池子逻辑【一行都没改】(所以行为不变)。
++    --#
++    --#   ★ 为什么 TTL 取 0.4s:
++    --#     消费者本来就各自节流(多数是 25 tick ≈ 0.42s、快速交互 2s、读提示手动触发),
++    --#     TTL 设成 0.4s 正好让它们落进同一个窗口共用同一次扫描。
++    --#     取 1s 以上会明显滞后(新出现的物件要等一秒才亮), 取太小又失去合并意义。
++    --#   ★ 为什么安全:
++    --#     返回的列表可能是"上一次的", 里面可能有已销毁的实例 —— 但改之前也是这样
++    --#     (扫描完成到真正使用之间实例就可能被销毁), 各消费者本来就有 o.Parent 判空
++    --#     且整体包在 P() 里。这里不引入新的错误类型, 只是把"扫描"这一步去重。
++    --#   ★ 不接进来的: 掉落物透视 (:4918 注释明确写了"绝不上 GetDescendants")、
++    --#     自动躲避 (:5088 只用浅扫) —— 它们本来就便宜, 保持原样。
++    --##########################################################################
++    local IDX={ t=0, desc=nil }
++    function SYS.Index()
++        local now=os.clock()
++        if IDX.desc and (now-IDX.t)<0.4 then return IDX.desc end
++        local ok,d=P(function() return WS:GetDescendants() end)
++        if ok and type(d)=="table" and #d>0 then
++            IDX.desc=d IDX.t=now
++            return d
++        end
++        -- 扫描失败(或这张图暂时一个对象都没有): 有旧的就先拿旧的顶着 —— 返回空表而不是 nil,
++        -- 免得调用方 ipairs(nil) 当场炸掉。
++        return IDX.desc or {}
++    end
++    -- 换服/重载地图后手动丢弃缓存(目前没人调, 留给以后接 TeleportService 的场合)
++    function SYS.IndexDrop() IDX.desc=nil IDX.t=0 end
++    --##########################################################################
++    --# ★★ 合并: 共享判据表 (SYS.Kw*)
++    --#   合并前 —— 同一套判据被两个以上功能各写了一份, 改一处必忘另一处:
++    --#     ① 小游戏区域名: ESP_Mini 里一份 + AUTO_MINI_AREA 里又一份 (内容一模一样)
++    --#     ② 危险/伤害词:   门·陷阱透视的 KW 前 39 项 == 自动躲避的 DODGE_KW (逐项比对过)
++    --#     ③ 藏身点词:      透视的「躲藏点」+ 自动藏身的 AH_KW
++    --#     ④ 线索物件词:    透视的「书籍/纸张/线索」+ 读密码提示内联那一串
++    --#   合并后 —— 全部集中到这里声明一次, 各功能引用同一份。
++    --#   ★ 声明位置: [08] 是顶层 do...end, 脚本加载期就执行 —— 后面的模块(:12139 的 AH_KW 等)
++    --#     引用它时一定已经存在, 不存在"读到 nil"的时序坑。
++    --##########################################################################
++
++    -- ① 小游戏区域名(命中即算"小游戏里的东西")。来自抓包: Workspace.duck hunt / Chisel Gauntlet /
++    --    Lobby.MPStation_* / MPPadHost_* + 模块名 RightOfWay / Blindout / CrushHour / BumperMadness
++    SYS.MiniArea = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
++                    "bumpermadness","mppadhost","mpstation","machin"}
++    SYS.MiniAreaCN = {"小游戏","关卡","模式"}
++
++    -- ②-a 危险/伤害类词 —— 【门·陷阱透视】与【自动躲避】共用这一份(原来各写一份, 现已去重)
++    SYS.KwHazard = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
++        "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
++        "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
++        "obstacle","mine","landmine","bomb","tnt","explosive"}
++    -- ②-b 门/通道类扩展词 —— ★ 只有【门·陷阱透视】认这些; 【自动躲避】绝不能认:
++    --      认了就会去"躲"出口/楼梯/传送门/假门 —— 那是行为事故, 不是功能。
++    SYS.KwGateExtra = {"exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
++        "tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
++        "trick","danger","death","fatal","hurt","ouch"}
++    -- ②-c 合并结果 ≡ 原来那份 KW(顺序与内容完全一致, 纯去重不改行为)
++    SYS.KwGate = {}
++    for _,w in ipairs(SYS.KwHazard)    do SYS.KwGate[#SYS.KwGate+1]=w end
++    for _,w in ipairs(SYS.KwGateExtra) do SYS.KwGate[#SYS.KwGate+1]=w end
++    SYS.KwGateCN = {"门","陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","关卡","考验",
++                    "出口","入口","传送","电梯","楼梯","假门","伪装","死亡","致死","致命","坑"}
++    -- ②-d 危险词(只这些才标红 + ☠), 与 ②-a 是不同用途, 别混
++    SYS.KwTrap = {"trap","trapdoor","hazard","damage","damaging","kill","lava","spike","pit","void","saw",
++                  "blade","crusher","crush","piston","hammer","press","fire","burn","acid","poison",
++                  "zap","electric","deadly","mine","landmine","bomb","tnt","explosive",
++                  "fake","dupe","false","danger","death","fatal","hurt","ouch"}
++    SYS.KwTrapCN = {"陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","假门","伪装","致死","致命","坑"}
++    -- ②-e 切割类(Chisel Gauntlet 那种凿子/切割台)
++    SYS.KwCut = {"chisel","gauntlet","cut","slice","sliceable","grind","machin"}
++    -- ②-f MachineParty 专属老关键词(原来内联在 ESP_Pick 的兜底分支里) —— 表里没有但以前认得的
++    SYS.KwMpExtra = {"mpbuy","limiteddrop","mpstation","mppadhost"}
++
++    -- ③ 藏身点 —— ★ 刻意分两份, 不要合并成一份:
++    --    · KwHidePick  = 透视判据, 宽松(抽屉/箱子也算"能躲的地方", 亮了不碍事)
++    --    · KwHidePrompt= 自动藏身判据, 严格(必须是真的能钻进去的 Prompt/动作文本)
++    --    合并成一份的后果: 要么自动藏身跑去翻抽屉(认了 chest/drawer), 要么该亮的藏身点不亮。
++    SYS.KwHidePick   = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
++                        "躲","藏身","衣柜","抽屉"}
++    SYS.KwHidePrompt = {"hide","hiding","hideprompt","closet","wardrobe","bed","locker","cabinet",
++                        "藏身","躲","衣柜","床","柜"}
++
++    -- ④ 线索物件(书 / 密码纸条 / 提示牌 / 图书馆书 / 画作) —— 透视与「读密码提示」共用
++    SYS.KwClue = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
++                  "lore","hint","clue","code","password","passcode","padlock","combination","document",
++                  "letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
++                  -- DOORS 的密码书/提示纸真名: LiveHintBook / LibraryHintPaper / LibraryBook
++                  "livehint","libraryhint","librarybook","hintbook","hintpaper",
++                  "书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"}
++    -- ★ 「读密码提示」是 KwClue 的【真子集】: 它还要去读物件表面的 SurfaceGui 文字,
++    --   名单放宽只会白扫一堆没有 SurfaceGui 的东西, 所以刻意收窄。
++    SYS.KwClueText = {"hint","librarybook","note","paper","book"}
++
++    --##########################################################################
++    --# ★★ 合并: 互锁判断收成一处 (原来 4 个开关的回调里各写了一遍几乎相同的条件)
++    --#   改之前各写各的, 条件【互相不一致】:
++    --#     · 「玩家透视」那条漏了 ESPWeapon / ESP_Pick / ESP_Door / ESP_Mini
++    --#     · 「头顶武器标记」那条漏了 ESPWeapon 自己之外的 ESP_Pick / ESP_Door / ESP_Mini
++    --#   后果: 关掉玩家透视时, 即使「物件透视」还开着也会误调一次 ClearESP() ——
++    --#   把 HP/HD/HM 这些池子瞬间清空, 下一帧再重建, 表现为一闪。
++    --#   现在统一走 ESPAnyOn()(所有池的总和) -> 只要还有任何一个透视开着就不清。
++    --#   ★ 这是顺手修掉的一致性缺陷, 不是新增行为。
++    --##########################################################################
++    function SYS.ESPAnyOn()
++        return SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPWeapon
++            or SYS.T_.ESPItem or SYS.T_.ESP_Pick or SYS.T_.ESP_Door
++            or SYS.T_.ESP_NPC or SYS.T_.ESP_Mini or false
++    end
++    -- 所有透视都关了才真正清池子(开关回调统一调这个, 别再各写一遍条件)
++    function SYS.ESPMaybeClear()
++        if not SYS.ESPAnyOn() then SYS.ClearESP() end
++    end
++
+     function SYS.ClearESP()
+         for _,h in pairs(HN) do if h then h:Destroy() end end    -- ★ 怪物透视池
+         HN={} SYS._npcList=nil
+@@ -4026,8 +3953,14 @@
+         LW,LWL={},{}
+     end
+     function SYS.ESPTick()
+-        if not (SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem or SYS.T_.ESPWeapon or SYS.T_.ESP_NPC or SYS.T_.ESP_Pick or SYS.T_.ESP_Door or SYS.T_.ESP_Mini) then
+-            if next(HL) or next(LB) or next(HI) or next(LW) then SYS.ClearESP() end
++        -- ★★ 合并遗留: 老存档里「头顶武器标记 (ESPWeapon)」是个独立开关, 现在它跟着
++        --   「🪧 头顶标签 (ESPNameTag)」一起走。这里做一次单向归一(每帧一个布尔判断, 可忽略),
++        --   避免出现"开关显示关、头顶却还挂着武器标签"的不一致。关的时候两个一起关, 不会反复触发。
++        if SYS.T_.ESPWeapon and not SYS.T_.ESPNameTag then SYS.T_.ESPNameTag=true end
++        -- ★★ 用 ESPAnyOn() 代替原来手写的 8 项条件 —— 漏写一项就会"开关全关但池子不清",
++        --   而下面那句 next(HL/LB/HI/LW) 只看 4 个池, 漏了 HN/HP/HD/HM/LW, 同样容易留残留。
++        if not SYS.ESPAnyOn() then
++            SYS.ClearESP()
+             return
+         end
+         -- ★ v68.8 标签挂点兼容: 有些游戏角色没有标准 Head(实测名字标签不显示),
+@@ -4207,7 +4140,7 @@
+                     return false
+                 end
+                 P(function()
+-                    for _,m in ipairs(WS:GetDescendants()) do
++                    for _,m in ipairs(SYS.Index()) do
+                         -- ★ v6.4.0(融合 AH_FakeNPCHighlighter): 原来只认"带 Humanoid"的模型 ->
+                         --   而游戏里的【假人/木桩】常常是【没有 Humanoid 的 R6/R15 骨架】(只有 Head+HRP)。
+                         --   现在: 带 Humanoid 的算, 或者"有 Head + HumanoidRootPart"的也算 -> 假人也点亮。
+@@ -4302,18 +4235,14 @@
+                      "手电","打火机","维生素","绷带","开锁","骷髅","电池","保险丝","蜡烛","钟","地球仪","打字机",
+                      "密码锁","拉杆","电闸","定时"} },
+             { name = "躲藏点", color = Color3.fromRGB(0,200,255),
+-              kws = {"hide","hiding","wardrobe","closet","drawer","undercouch","locker","cabinet","chest",
+-                     "躲","藏身","衣柜","抽屉"} },
++              -- ★★ 合并: 引用 SYS.KwHidePick(见 [08] 顶部 ③ —— 透视用宽松版, 自动藏身用严格版, 刻意不合成一份)
++              kws = SYS.KwHidePick },
+             -- ★★ v6.10.3 用户: "可交互的一些书 或者密码书之类的呢 怎么没透视高亮"
+             --   书本 / 密码纸条 / 提示牌 / 图书馆书 / 画作 = 名字里是 book/note/paper/hint/...,
+             --   以前分类表里一个词都没有 -> 全都不亮。
+             { name = "书籍/纸张/线索", color = Color3.fromRGB(0,200,255),
+-              kws = {"book","bookshelf","shelf","journal","note","notepad","paper","page","diary","library",
+-                     "lore","hint","clue","code","password","passcode","padlock","combination","document",
+-                     "letter","scroll","manual","guide","poster","painting","portrait","puzzle","riddle","sign",
+-                     -- ★ v6.10.6 DOORS 的密码书/提示纸真名: LiveHintBook / LibraryHintPaper / LibraryBook
+-                     "livehint","libraryhint","librarybook","hintbook","hintpaper",
+-                     "书","笔记","纸","页","日记","图书","线索","密码","提示","文件","信","画","牌"} },
++              -- ★★ 合并: 引用 SYS.KwClue(「读密码提示」用的是它的子集 SYS.KwClueText)
++              kws = SYS.KwClue },
+             { name = "梯子/攀爬", color = Color3.fromRGB(0,200,255),
+               kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
+                      "梯","爬","绳","藤"} },
+@@ -4332,6 +4261,13 @@
+             { name = "检查点/目标", color = Color3.fromRGB(0,200,255),
+               kws = {"checkpoint","flag","goal","finish","objective","spawn","base",
+                      "检查点","终点","目标","旗"} },
++            -- ★★ 合并: 第 12 类「小游戏区域」—— 原来这是 MachineParty 页的独立开关 ESP_Mini,
++            --   现已并入「🔍 物件透视」总闸。★ 必须放【最后】: pickKind 是"从上到下命中即停",
++            --   放前面会把本该归到"按钮/机关""梯子"的物件抢过来(虽然颜色都一样, 但诊断标签会错)。
++            { name = "小游戏区域", color = Color3.fromRGB(0,200,255),
++              kws = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
++                     "bumpermadness","mppadhost","mpstation","machin",
++                     "小游戏","关卡","模式"} },
+         }
+         local function pickKind(o)
+             -- 先按名字分类(从上到下, 命中即停)
+@@ -4364,7 +4300,7 @@
+                 -- ★ 上限可配(默认 1200, 原来写死 600 会漏掉"散落在远处"的): C_.PickDist
+                 local MAXD=tonumber(SYS.C_.PickDist) or 1200
+                 P(function()
+-                    for _,o in ipairs(WS:GetDescendants()) do
++                    for _,o in ipairs(SYS.Index()) do
+                         local cn=o.ClassName
+                         local ok=false
+                         if cn=="Tool" then ok=true
+@@ -4443,9 +4379,10 @@
+                             end
+                         end
+                         if not kind and not ok and type(o.Name)=="string" and o.Name~="" then
+-                            -- 老关键词表保留(表里没有但以前认得的)
++                            -- 老关键词表保留(MachineParty 专属, 表里没有但以前认得的)
++                            -- ★★ 合并: 这串原来内联在 ESP_Pick 里, 挪到 SYS.KwMpExtra 统一放
+                             local nm=o.Name:lower()
+-                            for _,kw in ipairs({"mpbuy","limiteddrop","mpstation","mppadhost"}) do
++                            for _,kw in ipairs(SYS.KwMpExtra) do
+                                 if nm:find(kw,1,true) then ok=true break end
+                             end
+                         end
+@@ -4548,23 +4485,15 @@
+                 local TRAP={}           -- ★ v6.10.4 侧表: 部件 -> 是不是"危险"(红+☠); 其余=普通门(亮青)
+                 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+                 local MAXD=tonumber(SYS.C_.PickDist) or 1200
+-                -- ★★ v6.10.4 危险词表(只有这些才红 + ☠): 陷阱/伤害机关/地雷/假门那一类
+-                local TRAPKW={"trap","trapdoor","hazard","damage","damaging","kill","lava","spike","pit","void","saw",
+-                              "blade","crusher","crush","piston","hammer","press","fire","burn","acid","poison",
+-                              "zap","electric","deadly","mine","landmine","bomb","tnt","explosive",
+-                              "fake","dupe","false","danger","death","fatal","hurt","ouch"}
+-                local TRAPCN={"陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","假门","伪装","致死","致命","坑"}
+-                local KW={"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
+-                          "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
+-                          "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet","obstacle",
+-                          "mine","landmine","bomb","tnt","explosive",
+-                          -- ★ v6.9.32 新增(假门/出口类常常压根不含 door 字样):
+-                          "exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
+-                          "tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
+-                          "trick","danger","death","fatal","hurt","ouch"}
+-                local CUTKW={"chisel","gauntlet","cut","slice","sliceable","grind","machin"}
+-                local CNKW={"门","陷阱","机关","刺","熔岩","伤害","危险","地雷","炸弹","关卡","考验",
+-                            "出口","入口","传送","电梯","楼梯","假门","伪装","死亡","致死","致命","坑"}
++                -- ★★ 合并: 这四张表原来在这里内联声明, 其中「危险词表」与「自动躲避」的
++                --   DODGE_KW 是同一份内容、「门/陷阱词表」与自动躲避的取词范围也重合 ——
++                --   现在全部集中到 [08] 顶部的 SYS.Kw* 声明一次(见 SYS.KwTrap / SYS.KwGate ...)。
++                --   ★ 这里只做"换个地方引用", 词表内容与顺序与改前逐项一致 -> 行为不变。
++                local TRAPKW=SYS.KwTrap
++                local TRAPCN=SYS.KwTrapCN
++                local KW=SYS.KwGate
++                local CUTKW=SYS.KwCut
++                local CNKW=SYS.KwGateCN
+                 -- ★ v6.9.32 【竖直薄板】判据(与名字无关) —— "假门"最常见的形态。
+                 --   还要同时有"门的样子"(不可碰撞 / 半透明 / 有贴花贴图 / 带交互提示)才收,
+                 --   免得把普通薄墙、栏杆、玻璃、招牌全点亮。
+@@ -4593,7 +4522,7 @@
+                 end
+                 local names={}
+                 P(function()
+-                    for _,o in ipairs(WS:GetDescendants()) do
++                    for _,o in ipairs(SYS.Index()) do
+                         local cn=o.ClassName
+                         local ok=false
+                         local soft=false
+@@ -4787,10 +4716,12 @@
+                 local list={}
+                 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
+                 local MAXD=tonumber(SYS.C_.PickDist) or 1200
+-                local AREA={"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
+-                            "bumpermadness","mppadhost","mpstation","machin"}
++                -- ★★ 合并: 区域名表原来在这里内联一份、AutoHitMinigame 那边 AUTO_MINI_AREA 又一份
++                --   (内容完全相同) —— 现在统一引用 [08] 顶部的 SYS.MiniArea。
++                local AREA=SYS.MiniArea
++                local AREACN=SYS.MiniAreaCN
+                 P(function()
+-                    for _,o in ipairs(WS:GetDescendants()) do
++                    for _,o in ipairs(SYS.Index()) do
+                         local cn=o.ClassName
+                         if cn=="Part" or cn=="MeshPart" or cn=="UnionOperation" or cn=="Model" then
+                             local hit=false
+@@ -4801,7 +4732,9 @@
+                                 if type(raw)=="string" and raw~="" then
+                                     local nm=raw:lower():gsub("%s+","")
+                                     for _,kw in ipairs(AREA) do if nm:find(kw,1,true) then hit=true break end end
+-                                    if not hit and (raw:find("小游戏") or raw:find("关卡") or raw:find("模式")) then hit=true end
++                                    if not hit then
++                                        for _,cw in ipairs(AREACN) do if raw:find(cw,1,true) then hit=true break end end
++                                    end
+                                 end
+                                 if hit then break end
+                                 anc=anc.Parent
+@@ -5078,10 +5011,10 @@
+     --                    (fireproximityprompt/fireclickdetector 优先, InputHoldBegin 兜底)。
+     --   两个都默认关, 只在用户开开关后生效; 卸载时随 SYS.Conns 一起断开。
+     --================================================================
+-    local DODGE_KW = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
+-        "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
+-        "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
+-        "obstacle","mine","landmine","bomb","tnt","explosive"}
++    -- ★★ 合并: 这份原来内联在这里, 与「门/陷阱透视」的 KW 前 39 项逐项相同 ——
++    --   现在统一引用 SYS.KwHazard。★ 注意【不要】改成 SYS.KwGate: 合并版里多出的
++    --   exit/stairs/teleport/fake 那一组是"门与通道", 自动躲避认了会跑去躲出口。
++    local DODGE_KW = SYS.KwHazard
+     SYS._hitSeen = setmetatable({}, {__mode="k"})
+     -- ★★ v6.9.27 修「自动躲避没成功」: 旧实现每 1 秒对【整个 Workspace】GetDescendants ——
+     --   这游戏 Workspace 有近万个对象, 一次扫描几百毫秒, 主线程被拖住, 表现就是"开了没反应/卡"。
+@@ -5181,8 +5114,8 @@
+         if on then SYS.Notify("🏃 自动躲机关: 已开(靠近陷阱/地雷/压板会自动退开)", SYS.CY.green) end
+     end
+ 
+-    local AUTO_MINI_AREA = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
+-        "bumpermadness","mppadhost","mpstation","machin"}
++    -- ★★ 合并: 原来这里内联一份, 与 ESP_Mini 的区域名表内容完全相同 -> 引用 SYS.MiniArea
++    local AUTO_MINI_AREA = SYS.MiniArea
+     local function _globalFn(n)
+         local f = rawget(_G, n)
+         if type(f) ~= "function" then P(function() f = getfenv()[n] end) end
+@@ -5202,7 +5135,7 @@
+     function SYS.AutoHitScan()
+         local list = {}
+         P(function()
+-            for _, o in ipairs(WS:GetDescendants()) do
++            for _, o in ipairs(SYS.Index()) do
+                 if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then
+                     local inMini = false
+                     local anc = o.Parent
+@@ -5437,17 +5370,87 @@
+         elseif cam and cam.CFrame then eye=cam.CFrame.Position end
+         return eye,dir
+     end
++    --##########################################################################
++    --# ★★ 强化(用户要求"人物射线"): 从【只画锁定目标一条】扩成【多目标池化】
++    --#   参考公开脚本的通行做法(justforcountryballs 的 tracerParts / Exunys 的常驻画线):
++    --#     · 池化 —— 每个目标一条常驻 Neon 薄片, 存在则只改 Size/CFrame, 不每帧 new/Destroy
++    --#     · 每条都独立跟着自己的目标走, 所以"谁在哪、谁在看我"一眼就有数
++    --#     · 加两道闸防卡: 距离上限 + 最多几条(几十人局不至于画满屏、也不是几十个 Part 在动)
++    --#   为什么不用 Beam: Beam 不能穿墙(它没有 Highlight 那种 DepthMode),
++    --#     而 Neon + Transparency 0.4 的薄片天然可见、还能直接看出方向; 换 Beam 只会更难看清。
++    --#   为什么不用 Drawing: 只有部分执行器有, 现在这套在任意执行器都能跑(零依赖)。
++    --##########################################################################
++    local TPL={}                      -- ★ 强化: 多目标池(键=玩家, 值=Neon 薄片)
++    local function tracerDrop(p)
++        local q=TPL[p]
++        if q then TPL[p]=nil P(function() q:Destroy() end) end
++    end
+     function SYS.TracerHide()
+         if line then P(function() line:Destroy() end) line=nil end
++        for p in pairs(TPL) do tracerDrop(p) end
++    end
++    -- 新建/复用一个目标上的线(池里没有才 new, 有就只更新几何)
++    local function tracerDraw(key,o,endP)
++        local d=endP-o
++        local len=d.Magnitude
++        if len<2 then return end
++        local q=TPL[key]
++        if not q then
++            local ok,pt=P(function()
++                local w=Instance.new("Part")
++                w.Anchored=true w.CanCollide=false w.CastShadow=false
++                w.CanQuery=false w.CanTouch=false        -- ★ 必须: 别让射线/触碰打到自己这条线上
++                w.Material=Enum.Material.Neon w.Transparency=0.4
++                w.Color=Color3.fromRGB(140,255,170)
++                w.Archivable=false
++                w.Parent=WS
++                return w
++            end)
++            if not ok or not pt then return end
++            q=pt TPL[key]=q
++        end
++        P(function()
++            q.Size=Vector3.new(0.07,0.07,len)
++            q.CFrame=CFrame.lookAt(o+d*0.5,endP)
++        end)
+     end
+     function SYS.TracerTick()
+         if not SYS.T_.Tracer then
+-            if line then SYS.TracerHide() end
++            if line or next(TPL) then SYS.TracerHide() end
+             return
+         end
+         local o,dir=tracerOrigin()
+         if not o or not dir then return end
+-        -- 终点: 有锁定目标就画到目标身上; 没有就沿角色朝向画一条固定长度的射线
++        local maxD=tonumber(SYS.C_.TracerMaxDist) or 500
++        local cap=tonumber(SYS.C_.TracerMaxN) or 12
++        local all=SYS.T_.TracerAll and true or false
++        -- ★ 两种模式互斥: 切到"全部玩家"就收掉单目标那条; 切回单目标就清空池
++        if all then
++            if line then P(function() line:Destroy() end) line=nil end
++        elseif next(TPL) then
++            for p in pairs(TPL) do tracerDrop(p) end
++        end
++        if all then
++            -- 每个其他玩家一条: 距离上限 + 条数上限双闸
++            local used,n={},0
++            for _,pl in ipairs(Players:GetPlayers()) do
++                if pl~=LP and n<cap then
++                    local c=pl.Character
++                    local rp=c and (c.PrimaryPart or c:FindFirstChild("HumanoidRootPart"))
++                    if rp and rp.Position then
++                        local dd=(rp.Position-o).Magnitude
++                        if maxD<=0 or dd<=maxD then
++                            used[pl]=true n=n+1
++                            tracerDraw(pl,o,rp.Position)
++                        end
++                    end
++                end
++            end
++            -- 离开视野 / 超距离 / 已离场的: 收掉(不留孤儿 Part)
++            for p in pairs(TPL) do if not used[p] then tracerDrop(p) end end
++            return
++        end
++        -- 单目标模式(原行为): 有锁定目标就画到目标身上; 没有就沿角色朝向画一条固定长度
+         local tp=SYS.Combat and SYS.Combat.TargetPart
+         local endP
+         if tp and tp.Position then endP=tp.Position else endP=o+dir*200 end
+@@ -12136,7 +12139,8 @@
+ --     只能事后对抗(禁状态)。能禁用连接的执行器才做得到"完全不播"。
+ --============================================================
+ do
+-    local AH_KW={"hide","hiding","hideprompt","closet","wardrobe","bed","locker","cabinet","藏身","躲","衣柜","床","柜"}
++    -- ★★ 合并: 引用 SYS.KwHidePrompt(严格版, 见 [08] 顶部 ③: 透视那份更宽松, 刻意没合)
++    local AH_KW=SYS.KwHidePrompt
+     local HOST_KW2={"monster","enemy","hostile","killer","seek","rush","ambush","figure","halt","screech","eyes",
+                     "dupe","snare","spider","jumpscare","zombie","mob","hunter","chaser","怪","敌","杀手","鬼"}
+     local QI_ORIG={}
+@@ -12172,7 +12176,7 @@
+         if not mp then return nil end
+         local best,bd=nil,1e9
+         P(function()
+-            for _,o in ipairs(WS:GetDescendants()) do
++            for _,o in ipairs(SYS.Index()) do
+                 if o.ClassName=="ProximityPrompt" then
+                     local nm=tostring(o.Name or ""):lower()
+                     local act=tostring(o.ActionText or ""):lower()
+@@ -12201,7 +12205,7 @@
+         SYS._qiAt=now
+         local rng=tonumber(SYS.C_.QuickRange) or 60
+         P(function()
+-            for _,o in ipairs(WS:GetDescendants()) do
++            for _,o in ipairs(SYS.Index()) do
+                 local cn=o.ClassName
+                 if cn=="ProximityPrompt" or cn=="ClickDetector" then
+                     local rec=QI_ORIG[o]
+@@ -12279,10 +12283,11 @@
+     function SYS.ReadHintTexts()
+         local out={}
+         P(function()
+-            for _,o in ipairs(WS:GetDescendants()) do
++            for _,o in ipairs(SYS.Index()) do
+                 local nm=tostring(o.Name or ""):lower()
+-                local isHint=(nm:find("hint",1,true) or nm:find("librarybook",1,true) or nm:find("note",1,true)
+-                              or nm:find("paper",1,true) or nm:find("book",1,true))
++                -- ★★ 合并: 这串词原来内联在这里, 就是「书籍/纸张/线索」分类表的子集 -> 引用 SYS.KwClueText
++                local isHint=false
++                for _,kw in ipairs(SYS.KwClueText) do if nm:find(kw,1,true) then isHint=true break end end
+                 if isHint then
+                     local sg=o:FindFirstChildOfClass("SurfaceGui")
+                     if not sg and o.Parent then sg=o.Parent:FindFirstChildOfClass("SurfaceGui") end
+@@ -12524,38 +12529,52 @@
+ end
+ 
+ UI.Pages["视觉"]=function(p)
+-    UI.Section(p,"👁 人物 · 名字",CY.accent)
++    UI.Section(p,"👁 活物透视 (玩家 / 生物)",CY.accent)
+     -- ★ v72: 方框选项已删(用户要的是人物高亮, 不是框)
+     UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮(统一亮青) —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
+-    UI.Switch(p,"玩家透视 (ESP)","ESP",function(on)
+-        if not on and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
+-    end)
+-    UI.Switch(p,"玩家名字","ESPNameTag",function(on)
+-        if not on and not SYS.T_.ESP and not SYS.T_.ESPItem and not SYS.T_.ESP_NPC then SYS.ClearESP() end
++    -- ★★ 合并(用户要求): 原来「玩家透视 (ESP)」与「🐾 生物透视 (ESP_NPC)」是【两个开关】,
++    --   但底层的生物透视回调里自己就写着 `if on then SYS.T_.ESP=true end` —— 开生物透视会
++    --   自动把玩家透视也开上(不然不算"所有活物"), 还要靠 SYS.BtnRefs 手动去刷上面那个开关的
++    --   显示。语义上本来就是同一个东西(要不要看"活物"、看到哪一档), 所以合并成一个三态选项。
++    --   底层 ESP / ESP_NPC 两个配置键都保留 -> 老存档照样能读回来。
++    local LIVING_MODES={"关闭","仅玩家","全部活物(含 NPC/怪物)"}
++    UI.Cycle(p,"👁 活物透视",LIVING_MODES,
++        function()
++            if SYS.T_.ESP_NPC then return "全部活物(含 NPC/怪物)" end
++            if SYS.T_.ESP    then return "仅玩家" end
++            return "关闭"
++        end,
++        function(v)
++            SYS.T_.ESP_NPC=(v=="全部活物(含 NPC/怪物)")
++            SYS.T_.ESP    =(v~="关闭")
++            SYS.ESPMaybeClear()
++        end)
++    UI.Tip(p,"把所有【活物】都点亮。🎨 配色: 玩家 = 队友绿 / 敌人红 / 幽灵紫; "..
++        "非玩家生物 = 敌对红 / 中立橙。\n"..
++        "「敌对」判据 = 名字或 3 层祖先命中敌意词(monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider …)，"..
++        "或 Attribute Hostile / Enemy / Aggro 为 true。\n"..
++        "拿不准一律算【中立橙】—— 与玩家透视「拿不到队伍 = 队友绿」同一个保守口径, 不误标红。\n"..
++        "藏身/幽灵态(Humanoid.Health 被游戏打成 0)照样亮 —— 透视本来就该看得见「藏起来的」。\n"..
++        "全 Workspace 扫描已节流, 并与其它透视共用同一次扫描; 隔墙时填充更透。",CY.sub)
++    UI.Div(p)
++    UI.Section(p,"🪧 头顶标签 (名字 / 武器标记)",CY.accent)
++    -- ★★ 合并(用户要求): 原来「玩家名字 (ESPNameTag)」与「头顶武器标记 (ESPWeapon)」是两个开关,
++    --   但它们都是挂在同一个头顶挂点(tagPart)上的 BillboardGui、共用同一个高度参数(ESPNameH)、
++    --   走同一个清理函数, 而且两边的回调里各写了一遍几乎一样的互锁判断(共 4 处)。
++    --   现在合成一个开关同时驱动两个池(LB 名字 / LW 武器标签) —— 想只要名字不要武器标记的
++    --   场景基本不存在(有武器才标, 没武器什么都不显示, 不占地方)。
++    UI.Switch(p,"🪧 头顶标签 (名字+血量+距离 · 有武器就标红)","ESPNameTag",function(on)
++        SYS.T_.ESPWeapon=on          -- ★ 一个开关同时管"名字标签"和"武器标记"两个池
++        SYS.ESPMaybeClear()
+     end)
+     -- ★ v3.9.0 名字高度: 默认自动贴到角色顶部之上, 这里只做【额外】抬高
+     UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
+         function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
+-    -- ★ v3.10.3 头顶武器标记: 检查【背包物品栏 + 手上】是否有武器, 有就在头顶标红武器名
+-    UI.Switch(p,"头顶武器标记 (背包/手上有武器就标记)","ESPWeapon",function(on)
+-        if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem then SYS.ClearESP() end
+-    end)
++    UI.Tip(p,"标签内容 = 名字(优先 DisplayName) + 当前/最大血量 + 离你几格; 血量低于 60% 转橙、低于 30% 转红。\n"..
++        "有武器(手上或背包里, 标准 Backpack 属性)就在下方再标一行 🔫 武器名(红字)。\n"..
++        "挂点自动回退 Head -> UpperTorso -> Torso -> HumanoidRootPart, 名字高度再按角色包围盒自动贴顶。",CY.sub)
+     UI.Div(p)
+-    UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 机关)",CY.accent)
+-    -- ★★ v6.10.7 用户要求: "只要是生物/活物就透视高亮, 并区分敌人还是中立生物" ——
+-    --   整合进【原有这个开关】(不新增按钮): 打开时连玩家透视一起打开, 才算"所有活物都亮"。
+-    UI.Switch(p,"🐾 生物透视 (所有活物全亮 · 敌对=红 / 中立=橙)","ESP_NPC",function(on)
+-        if on then SYS.T_.ESP=true end
+-        if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPItem
+-           and not SYS.T_.ESPWeapon and not SYS.T_.ESP_Pick then SYS.ClearESP() end
+-        if SYS.BtnRefs then for _,f in ipairs(SYS.BtnRefs) do P(f) end end   -- 同步刷新上面的开关显示
+-    end)
+-    UI.Tip(p,"把所有【活物】都点亮: 玩家(队友绿 / 敌人红 / 幽灵紫) + 全部非玩家生物(怪物 / NPC / 动物 / 假人)。\n"..
+-        "🎨 非玩家生物分两种: 【敌对 = 红】(名字或 3 层祖先命中敌意词: monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider … 或 Attribute Hostile / Enemy / Aggro 为 true)\n"..
+-        "   【中立 = 橙】(其余全部; 拿不准一律算中立, 不误标红 —— 与玩家透视「拿不到队伍=队友绿」同一个保守口径)。\n"..
+-        "开这个开关会【一起打开玩家透视】(不然不算「所有活物」)。全 Workspace 扫描已节流(约每 1s 重扫), 隔墙时填充更透。",CY.sub)
+     -- ★★ v6.11 用户批准 "1234都加"(对照公开脚本补的能力)
+-    UI.Div(p)
+     UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
+     UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
+     UI.Slider(p,"快速交互距离 (格)",10,300,5,function() return SYS.C_.QuickRange or 60 end,
+@@ -12568,79 +12587,56 @@
+     UI.Tip(p,"⚡ 快速交互 = ProximityPrompt 的「按住时长」归零 + 触发距离拉大(本地视角; 服务端一般只校验距离/权限)。\n"..
+         "🏃 自动藏身 = 敌意生物进到设定距离, 用最近的藏身点 Prompt 钻进去 —— 等价于你按 E, **走服务端认可那条路**(不保证服务端一定接受)。\n"..
+         "📖 读密码提示 = 找名字含 hint/book/note/paper 的物件并读出它表面 SurfaceGui 上的文字(贴图 Decal 读不到)。",CY.sub)
+-    -- ★★ v6.10.4 用户要求: 把「掉落物透视 / 可交互对象透视 / 门·陷阱·假门透视」整合成【一个】开关。
+-    --   做法: 这一个开关当总闸, 开关时同步驱动原来的三个开关位(ESPItem / ESP_Pick / ESP_Door),
+-    --   底层三套扫描逻辑一行都不用改 —— 只是不再让你分别开三次。
+-    UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 一起)","ESP_Pick",function(on)
+-        SYS.T_.ESPItem=on SYS.T_.ESP_Door=on
+-        if not on and not SYS.T_.ESP and not SYS.T_.ESPNameTag and not SYS.T_.ESPWeapon and not SYS.T_.ESP_NPC then
+-            SYS.ClearESP()
+-        end
++    -- ★★ UI 审计: 顺手修掉一处【分区错位】——「📦 物件高亮」这个标题原来挂在这里之前,
++    --   但它后面跟的第一个控件是【交互·藏身】那一组, 总闸反而落在 交互·藏身 分区的末尾,
++    --   等于那个标题下面什么都没有。现在把标题挪到它真正对应的总闸前面。
++    UI.Div(p)
++    UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏)",CY.accent)
++    -- ★★ 合并(用户要求): 「🎮 小游戏区域透视 (ESP_Mini)」原来在 MachineParty 页单独占一个开关 ——
++    --   它的判据(区域名命中)本质就是物件分类表里的第 12 类, 却要用户跑另一个页面再开一次;
++    --   开着「物件透视」时小游戏里的按钮/靶子不亮, 是明显的体验割裂。现在并入这个总闸。
++    --   底层 ESP_Mini 配置键保留 -> 老存档照样能读回来, 底层扫描逻辑一行没改。
++    UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏 一起)","ESP_Pick",function(on)
++        SYS.T_.ESPItem=on SYS.T_.ESP_Door=on SYS.T_.ESP_Mini=on
++        SYS.ESPMaybeClear()
+     end)
+-    UI.Tip(p,"一个开关同时点亮三类物件(判据合并, 不用分别开):\n"..
++    UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n"..
+         "· 掉落物: 名字像掉落物(pickup/item/chest/gold…), 或客户端能看到的可捡物件\n"..
+-        "· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
++        "· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点/小游戏); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
+         "· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
+-        "🎨 颜色统一: 普通物件 + 普通门 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。",CY.sub)
++        "· 小游戏区域: 名字或 3 层祖先命中区域名(duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost / machin) 或含「小游戏/关卡/模式」\n"..
++        "🎨 颜色统一: 普通物件 + 普通门 + 小游戏里的东西 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。\n"..
++        "💡 小游戏区域透视已并入本开关 —— MachineParty 页不再单独提供。",CY.sub)
+     UI.Div(p)
+-    UI.Section(p,"👣 落脚点 · 射线",CY.accent)
+-    -- ★★ 融合自 ChronixHub 的 FootstepHighlighter: 在每个人【脚下】放一个光圈标记,
+-    --   一眼看出"谁站哪 / 往哪走"。比它那版轻: 只用一块 Neon 薄片(不用 Model+Billboard+光柱),
+-    --   扫描节流(0.2s), 关闭即清空, 连接经 T() 卸载即断。
+-    local FSMark={} SYS._fsN=0
+-    function SYS.SetFootstep(on)
+-        if not on then
+-            for _,m in pairs(FSMark) do P(function() m:Destroy() end) end
+-            FSMark={} SYS.Notify("👣 落脚点指示 已关闭",SYS.CY.sub) return
+-        end
+-        SYS.TT(task.spawn(function()
+-            while SYS.T_.FootstepESP and not SYS.Unloaded do
+-                local act={}
+-                P(function()
+-                    for _,pl in ipairs(Players:GetPlayers()) do
+-                        if pl~=LP then
+-                            local ch=pl.Character
+-                            local root=ch and ch:FindFirstChild("HumanoidRootPart")
+-                            if root then
+-                                -- 从脚下向下打一条线, 找到"他站在哪个面上"
+-                                local hit=select(1,WS:FindPartOnRayWithIgnoreList(Ray.new(root.Position,Vector3.new(0,-12,0)),{ch}))
+-                                local pos=(hit and hit.Position) or (root.Position+Vector3.new(0,-3,0))
+-                                act[root]=pos
+-                            end
+-                        end
+-                    end
+-                end)
+-                for k,m in pairs(FSMark) do
+-                    if not act[k] then P(function() m:Destroy() end) FSMark[k]=nil end
+-                end
+-                for root,pos in pairs(act) do
+-                    local m=FSMark[root]
+-                    if not m then
+-                        local ok,pt=P(function()
+-                            local q=Instance.new("Part")
+-                            q.Shape=Enum.PartType.Cylinder
+-                            q.Size=Vector3.new(0.08,3.2,3.2)
+-                            q.Anchored=true q.CanCollide=false q.CastShadow=false
+-                            q.CanQuery=false q.CanTouch=false q.Archivable=false
+-                            q.Material=Enum.Material.Neon q.Transparency=0.55
+-                            q.Color=Color3.fromRGB(255,80,80)
+-                            q.Parent=WS
+-                            return q
+-                        end)
+-                        if ok and pt then m=pt FSMark[root]=m end
+-                    end
+-                    if m then P(function() m.CFrame=CFrame.new(pos)*CFrame.Angles(0,0,math.rad(90)) end) end
+-                end
+-                task.wait(0.2)
+-            end
+-        end))
+-        SYS.Notify("👣 落脚点指示 已开启",SYS.CY.green)
+-    end
+-    -- ★★ v6.9.26 删(用户: "落脚点显示 可以删了") —— 开关去掉, 后端 SYS.SetFootstep 保留不再调用
++    -- ★★ UI 审计: 这个分区标题原来叫「👣 落脚点 · 射线」—— 落脚点指示早在 v6.9.26 就按用户要求
++    --   删掉了(v7.2.0 清理时把它的后端 SYS.SetFootstep 也一并删了), 分区里只剩「子弹射线」。
++    --   标题还挂着"落脚点"属于【没有对应功能的提示】, 改掉。
++    UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
+     -- ★ v3.9.0 子弹射线: 只画线, 不改弹道
+-    UI.Switch(p,"子弹射线 (只画线, 不改弹道)","Tracer",function(on)
+-        if not on then P(SYS.TracerHide) end
+-    end)
++    -- ★★ 强化(用户要求, 参考公开脚本的 tracerParts 池化做法): 原来只有"开/关", 开了只画锁定目标一条。
++    --   现在三态 —— 关闭 / 只锁定的目标(原行为) / 全部玩家(每个玩家一条, 池化多目标)。
++    local TR_MODES={"关闭","只锁定的目标","全部玩家"}
++    UI.Cycle(p,"子弹射线 (只画线, 不改弹道)",TR_MODES,
++        function()
++            if not SYS.T_.Tracer then return "关闭" end
++            return SYS.T_.TracerAll and "全部玩家" or "只锁定的目标"
++        end,
++        function(v)
++            SYS.T_.Tracer=(v~="关闭")
++            SYS.T_.TracerAll=(v=="全部玩家")
++            if not SYS.T_.Tracer then P(SYS.TracerHide) end
++        end)
++    UI.Slider(p,"射线最远距离 (格 · 0=不限)",0,2000,50,
++        function() return SYS.C_.TracerMaxDist or 500 end,
++        function(v) SYS.C_.TracerMaxDist=v end,"%.0f")
++    UI.Slider(p,"射线最多几条 (人多时防卡)",1,24,1,
++        function() return SYS.C_.TracerMaxN or 12 end,
++        function(v) SYS.C_.TracerMaxN=v end,"%.0f")
++    UI.Tip(p,"从一个挂点(枪口 / 手 / 头, 都取不到就退回相机)画一条 Neon 细线。\n"..
++        "· 只锁定的目标 = 画到【战斗页当前锁定的目标】身上; 没有目标就沿朝向画 200 格(原行为)\n"..
++        "· 全部玩家 = 给每个其他玩家各画一条 —— 池化复用(每人一条常驻, 只改位置/长度, 不每帧新建),\n"..
++        "  谁在哪、谁在朝我这边, 一眼就有数。「最远距离」「最多几条」两道上限防几十人局画满屏。\n"..
++        "纯视觉: 只画线, 不改弹道、不改命中判定。",CY.sub)
+     UI.Div(p)
+     UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
+     UI.Switch(p,"自由视角","FreeCam",function(on)
+@@ -14037,15 +14033,17 @@
+     -- ★★ 用户要求: 给这游戏(MachineParty)里的小游戏单独做一个页面, 页面名就用游戏名。
+     --   依据是那份综合扫描: 小游戏 = DuckHunt / RightOfWay / Blindout / CrushHour / BumperMadness,
+     --   场景区域 = Workspace.duck hunt / Workspace.Chisel Gauntlet / Lobby.MPStation_* / MPPadHost_*。
+-    UI.Section(p,"🎮 小游戏 · 透视",CY.accent)
+-    UI.Switch(p,"🎮 小游戏区域透视 (小游戏里的东西统一点亮, 亮青)","ESP_Mini")
+-    UI.Tip(p,"判据 = 自己或最多 3 层祖先的名字命中: duck hunt / chisel / gauntlet / rightofway / blindout /\ncrushhour / bumpermadness / mpstation / mppadhost。开关一开, 控制台会打印【找到 N 个候选】。",CY.sub)
++    -- ★★ 合并(用户要求): 本页原来的「🎮 小游戏区域透视 (ESP_Mini)」开关已【并入视觉页的
++    --   「🔍 物件透视」总闸】—— 那个判据本质是物件分类表的第 12 类(小游戏区域),
++    --   没必要单独占一个开关, 也没必要让你为看小游戏里的按钮专门跑回这个页面。
++    --   本页只保留"自动"类功能。底层 ESP_Mini 配置键与扫描逻辑都还在, 只是改由总闸驱动。
+     UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
++    UI.Tip(p,"🎮 小游戏区域透视已并入【视觉页 -> 🔍 物件透视】(判据合并, 一个开关一起亮)。",CY.sub)
+     UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
+     -- ★★ v6.9.28 自动躲避的诊断【整合进「统一扫描」】(用户: "自动躲避状态扫描 整合啊 不要拆开")
+     --   见功能页扫描区 / SYS.Scanners 里的「自动躲避状态」那一项。
+     UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
+-    UI.Tip(p,"自动躲: 扫全图伤害机关(与「门/陷阱透视」同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
++    UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
+ end
+ UI.Pages["设置"]=function(p)
+     UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
+@@ -15263,7 +15261,6 @@
+     P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
+     P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
+     P(function() SYS._ciOn=false end)
+-    P(function() if SYS.SetFootstep then SYS.SetFootstep(false) end end)
+     P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
+     -- ★ v114(审计修复 EV-03): 卸载必须显式关掉「反陷阱」—— 原来这里漏了,
+     --   它的三条连接(角色 Touched / CharacterAdded / RenderStepped)会留下来, 每次重载叠一条。
