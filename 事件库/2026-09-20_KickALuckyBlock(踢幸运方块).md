@@ -275,3 +275,86 @@ Carnival 37 / Block Cup 38 / Undead 35 / Jungle 40 / Frozen 40
 - `TaviMishkal` · `mightyChest` · `mathUPD` 这三条属于**活动/弹窗类**：
   服务端要你**先被通知**、再回发，**主动盲调一般无效**（还可能被记）。
 - 换游戏 / 游戏改版后**必须重新抓包**：`rev_`/`ref_` 前缀与名字都可能变。
+
+---
+
+## 八、★ 2026-09-21 综合扫描复核（**更全**：42 `rev_` + 7 `ref_`）
+
+> 来源：本脚本在我方环境跑「综合扫描」的落盘文件
+> `CheatMenu\89469502395769_srv\scan_89469502395769_20260921_005645.txt`。
+> 与第七节（来自 PuckAFK v4.6.4 客户端脚本的 37 条）对照 —— **本节更全，以此为准**；
+> 标 🆕 的是**那份客户端脚本里没有出现、扫描才发现**的通道。
+
+### 8.1 RemoteEvent（`rev_`，共 42 个）
+
+| 通道 | 以前接过? | 备注 |
+|---|---|---|
+| `rev_AddedWeather` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_AnimData` | ✅ 已用 |  |
+| `rev_AutoKickPurchase` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_B_Collect` | ✅ 已用 |  |
+| `rev_B_Sell` | ✅ 已用 |  |
+| `rev_CheckFree` | ✅ 已用 |  |
+| `rev_CheckFriend` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_ClaimFree` | ✅ 已用 |  |
+| `rev_CoinsChanged` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_CoinsMulti` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_Collected` | ✅ 已用 |  |
+| `rev_EquippedWeight` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_ForcedDestroy` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_FreezePlayer` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_FriendsUPD` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_GroupClaim` | ✅ 已用 |  |
+| `rev_GroupClaimCheck` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_GroupClaimResponse` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_IceBossShockwave` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_KickCollect` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_KickData` | ✅ 已用 |  |
+| `rev_KickMulti` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_MailClaim` | ✅ 已用 |  |
+| `rev_MailClaimedState` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_MerchantTrade` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_Offline_Claim` | ✅ 已用 |  |
+| `rev_PiniataHit` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_PlayMessage` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_RemovedWeather` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_SPEED_UPGRADE` | ✅ 已用 |  |
+| `rev_Shop_Buy` | ✅ 已用 |  |
+| `rev_TokensUpdate` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_WeatherUpdate` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_WeightEquip` | ✅ 已用 |  |
+| `rev_Weight_Multi` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_Weight_Update` | ✅ 已用 |  |
+| `rev_bossDataUpd` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_bossEndUpd` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_bossStartUpd` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_candyCollect` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_candySpawn` | 🆕 **新增** | 本次扫描新发现 |
+| `rev_sl_upd` | 🆕 **新增** | 本次扫描新发现 |
+
+### 8.2 RemoteFunction（`ref_`，共 7 个）
+
+| 通道 | 以前接过? | 备注 |
+|---|---|---|
+| `**ref_**AutoRequest` | 🆕 **新增** | 本次扫描新发现 |
+| `**ref_**B_Sell` | ✅ 已用 |  |
+| `**ref_**B_SellAll` | 🆕 **新增** | 本次扫描新发现 |
+| `**ref_**B_SellAllByRarity` | 🆕 **新增** | 本次扫描新发现 |
+| `**ref_**CanButtonBePressed` | 🆕 **新增** | 本次扫描新发现 |
+| `**ref_**candyManSkip` | 🆕 **新增** | 本次扫描新发现 |
+| `**ref_**getCoinsPerDuration` | 🆕 **新增** | 本次扫描新发现 |
+
+### 8.3 三条最值得注意的（客户端脚本里没有）
+
+1. **`ref_B_SellAll` / `ref_B_SellAllByRarity`** —— **批量卖**。第七节的 `B_Sell` 只能卖**手持那一件**，
+   所以自动售卖要一轮轮循环；这两个可能是"一次全卖 / 按稀有度全卖"。
+   ⚠ **参数与副作用未验证** —— 调错可能把该留的也卖掉，务必先小号试。
+2. **`ref_getCoinsPerDuration`** —— 直接问服务端要**每秒收益**（比本地按表估算准）。
+   这是**只读查询**，相对安全，已在我方脚本里做成按钮。
+3. **`rev_AutoKickPurchase`** —— 自动购买踢击升级（会花金币）。
+
+### 8.4 纯监听类（零风险，已接入）
+
+倍率播报 `CoinsMulti`/`KickMulti`/`Weight_Multi` · Boss `bossStartUpd`/`bossEndUpd`/`bossDataUpd`/`IceBossShockwave` ·
+糖果 `candySpawn`/`candyCollect` · 天气 `AddedWeather`/`RemovedWeather`/`WeatherUpdate` ·
+播报 `PlayMessage` · 冰冻 `FreezePlayer` · 代币 `TokensUpdate` · 好友 `FriendsUPD`。
