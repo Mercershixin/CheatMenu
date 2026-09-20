@@ -1,3 +1,74 @@
+## 9.2.0 · 2026-09-21
+
+### ❗ 先回答「内容完整吗」：**不完整**，已修
+
+用户把 9.1.0 落盘的单文件发回来，一查就发现**缺东西**：
+
+| 检查 | 结果 |
+|---|---|
+| 十层的分节标题 `════════ A · 通信层 ════════` | **一条都没有** |
+| B 代码层 / F 连接层 / H 反查层 的内容 | **整层缺失** |
+| A/C/D/E/G/I/J 七层 | ✓ 有 |
+
+**根因**：`line()` 只被**一部分**输出用；而十层标题走的是 `head()`，
+`head()` 里写的是 `print(...)` —— **绕过了落盘缓冲**；B/F/H 三层也是直接用 `print` 打的。
+
+**改法**：把缓冲**统一到 `SYS.ScanBuf`**，`head()` 与 `J` 层的分组标题都改成
+「先 `print` 再 `SYS.ScanBufNote`」；扫描开始时 `SYS.ScanBuf={}` 清空，结尾写这一个文件。
+⇒ 现在**十层标题 + 全部内容**都会进同一个 txt。
+
+**另修我自己的两处失误**（都在你发回的文件里看得见）：
+- `服务器名.txt` **被执行器写花了**（实机文件名 = `鏈嶅姟鍣ㄥ悕.txt`）—— 我自己犯了刚修过的错。
+  改成 **`server_name.txt`**（纯 ASCII）。
+- 探针文件 `_probe.txt` 落完盘后没删 → 现在成功探测后**自动 `delfile` 掉**。
+
+### 📡 补强（已直接启用）：服务端播报监听
+
+本次扫描最实在的收获 —— 这个游戏的网络包上有 **42 个 `rev_` + 7 个 `ref_`**，
+其中**一批是我们以前完全没接的**。这些**纯监听**通道可以零风险直接用：
+
+```
+💰 CoinsMulti / KickMulti / Weight_Multi   倍率变化 → HUD 弹一行
+💰 CoinsChanged / TokensUpdate             金币/代币变动
+👹 bossStartUpd / bossEndUpd / bossDataUpd  Boss 出现 / 结束 / 数据
+🧊 IceBossShockwave                         Boss 冲击波
+🍬 candySpawn / candyCollect                糖果活动
+🌦 AddedWeather / RemovedWeather / WeatherUpdate  天气
+📢 PlayMessage                              服务端播报
+🧊 FreezePlayer                             你被冻住了
+👥 FriendsUPD                               好友
+```
+
+- 新增开关 **「📡 监听 倍率/Boss/糖果/天气/消息/冰冻」**（挂机页，**默认开**）。
+- 关键事件（倍率变化 / Boss / 糖果 / 冰冻 / 服务端消息）**弹 HUD**，全部同时写控制台。
+- 新增按钮 **「📈 查询服务端每秒收益 (getCoinsPerDuration)」** —— 这是 `ref_` 通道，
+  直接问服务端要**权威的每秒收益**（比我们本地估算准）。
+- 新增按钮 **「📋 看看各通道收到几次」** —— 诊断用，确认真接上了。
+- ⛔ **为什么有些通道一个都没接**：扫描里还有一批**要主动触发**的
+  （`B_SellAll` / `B_SellAllByRarity` / `AutoKickPurchase` / `candyManSkip` / `AutoRequest`…）。
+  这些**参数与副作用都没实机验证过**，盲目调用可能造成**不可逆**的游戏内后果（比如把该留的全卖了），
+  所以本版**一个都不接**，只登记成候选（见下）。
+
+### 📋 新功能候选（登记，未接 —— 等你确认要哪个再一个个试）
+
+| 优先级 | 通道 | 能做什么 | 风险 |
+|---|---|---|---|
+| ★★★ | `ref_B_SellAll` / `ref_B_SellAllByRarity` | **一键全卖 / 按稀有度批量卖** —— 现在"逐个手持卖"要循环很多轮，这个可能一次搞定 | 参数未知；**调错可能卖掉不该卖的** |
+| ★★★ | `rev_AutoKickPurchase` | 自动购买踢击升级 | 会花金币 |
+| ★★ | `ref_AutoRequest` | 自动请求（领取类？） | 语义不明 |
+| ★★ | `ref_candyManSkip` | 跳过糖果人（活动） | 活动类，可能被记 |
+| ★★ | `rev_MerchantTrade` | 商人交易自动化 | 交易不可逆 |
+| ★ | `rev_PiniataHit` / `rev_KickCollect` / `rev_sl_upd` | 玩法相关 | 语义未明 |
+| ★ | `ref_CanButtonBePressed` | 按钮可点判定（UI 自动化用） | 低 |
+| — | `rev_ForcedDestroy` / `rev_FreezePlayer` | 被动：被销毁 / 被冻 | 已当监听接了一部分 |
+
+**验证**
+
+- `luau-compile`（整文件）exit=0；`check.py` **0 问题**；`verify_all.py` **6/6 全绿**；
+  `check_globals` **新增未声明名字 0**；等价性 PASS。
+
+---
+
 ## 9.1.0 · 2026-09-21
 
 ### 📂 落盘收口到执行器工作目录 + ★ 修「文件名乱码」的**真正来源**
