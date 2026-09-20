@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 21:04 sha a377461a bytes 487780'):format('2026-09-20 21:04','a377461a',487780))
+print(('[CheatMenu] build 2026-09-20 21:55 sha 373b2a04 bytes 491189'):format('2026-09-20 21:55','373b2a04',491189))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -30,7 +30,7 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,FootstepESP=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
 TracerAll=false,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
@@ -88,7 +88,7 @@ DeepHideDepth=120,
 DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
-SellMinCPS=100000,
+SellMinCPS=100000,SellLvMul=1.25,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
 CB_ScanMs=33,
 CB_FireDelay=0.08,CB_HpThr=0,CB_PrioMode=1,
@@ -104,6 +104,7 @@ MenuPosX=0.5,MenuPosY=0.5,MenuPosSaved=false,
 AudioMaster=100,AudioThr=15,
 CB_HitRate=100,CB_MissRate=0,
 PC_Sel="",PC_Speed=120,PC_Range=8,PC_SpinSpeed=3,
+PC_Mode="off",
 PG_SpinSpeed=8,PG_OrbitRange=8,PG_OrbitSpeed=60,PG_OrbitMode=1,
 PG_BH_Range=40,PG_BH_Height=30,PG_BH_Speed=6,PG_BH_Pull=120,
 PG_KillDist=13,PG_Target="",
@@ -112,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.1.0"
+SYS.BuildVer="8.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -234,6 +235,7 @@ end
 end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
+FootstepESP=true,
 AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
@@ -4451,7 +4453,25 @@ if typeof(a)=="number" then base=a else return nil end
 end
 local lv=math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1),1,75)
 local mut=tostring(tool:GetAttribute("Mutation") or "")
-return base*(MutBuff[mut] or 1)*(1.25^(lv-1))
+local lm=tonumber(SYS.C_.SellLvMul)
+if not lm or lm<=0 then lm=1.25 end
+return base*(MutBuff[mut] or 1)*(lm^(lv-1))
+end
+function SYS.DescribeBrainrotCPS(tool)
+if not tool then return "?" end
+local base,src=nil,nil
+base=CPS[tool.Name]
+if base then src="内置表" end
+if not base then
+local a=tool:GetAttribute("CPS") or tool:GetAttribute("BaseCPS")
+if typeof(a)=="number" then base=a src="物品属性" end
+end
+if not base then return "(不认识这个物品, 无法估算 CPS —— 不会参与售卖)" end
+local lv=math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1),1,75)
+local mut=tostring(tool:GetAttribute("Mutation") or "")
+local lm=tonumber(SYS.C_.SellLvMul); if not lm or lm<=0 then lm=1.25 end
+return ("base=%.0f(%s) · lv=%d · 词缀=%s(×%.2f) · 等级乘数=%.2f^%d"):format(
+base,src,lv,(mut=="" and "无" or mut),(MutBuff[mut] or 1),lm,lv-1)
 end
 local function isEntityTool(t)
 if not t or not t:IsA("Tool") then return false end
@@ -4764,7 +4784,9 @@ task.wait(0.08)
 pcall(function() hum:EquipTool(tool) end)
 task.wait(0.20)
 if tool.Parent==LP.Character then
-print(("[Sell] [%d] %s · CPS=%.0f"):format(totalSold+1,tool.Name,e.CPS or 0))
+print(("[Sell] [%d] %s · CPS=%.0f  ⟵ %s"):format(
+totalSold+1,tool.Name,e.CPS or 0,
+SYS.DescribeBrainrotCPS and SYS.DescribeBrainrotCPS(tool) or ""))
 sellHeld()
 task.wait(0.30)
 if not tool.Parent then
@@ -4791,22 +4813,6 @@ end
 pcall(function() hum:UnequipTools() end)
 print(("[Sell] ✅ 全部完成 · 共卖 %d 个 · %d 轮"):format(totalSold,round))
 if totalSold>0 then
-if SYS.T_.AutoSell then
-SYS.T_.AutoSell=false
-if SYS.SwitchOnChange and SYS.SwitchOnChange["AutoSell"] then
-pcall(function() SYS.SwitchOnChange["AutoSell"](false) end)
-end
-print("[Sell] 🔕 已自动关闭: AutoSell")
-end
-if SYS.T_.SellThresholdEnabled then
-SYS.T_.SellThresholdEnabled=false
-pcall(function()
-if SYS.SwitchOnChange and SYS.SwitchOnChange["SellThresholdEnabled"] then
-SYS.SwitchOnChange["SellThresholdEnabled"](false)
-end
-end)
-print("[Sell] 🔕 已自动关闭: SellThresholdEnabled")
-end
 QueueSave()
 for _,f in ipairs(SYS.BtnRefs) do P(f) end
 end
@@ -4827,11 +4833,6 @@ end
 function SYS.scanLowCPSCount(threshold)
 threshold=tonumber(threshold) or (tonumber(SYS.AFK_Sell.MinCPS) or 0)
 local picks={}
-local function isEntityTool(t)
-if not t or not t:IsA("Tool") then return false end
-local ok,ht=pcall(function() return t:HasTag("EntityTool") end)
-return ok and ht
-end
 local function scan(list)
 if not list then return end
 for _,t in ipairs(list:GetChildren()) do
@@ -9674,6 +9675,45 @@ P(function() mine.CFrame=CFrame.new(r.Position+Vector3.new(0,3,0)) end)
 end
 end)
 end
+PC.FollowModes ={"PC_LoopTP","PC_OnHead","PC_Orbit","PC_Stare","PC_Follow"}
+PC.FollowLabels={"循环跟传","坐他头上","绕着他旋转","盯着他","行走跟随"}
+function PC.FollowModeIndex(mode)
+for i,k in ipairs(PC.FollowModes) do if k==mode then return i end end
+return 0
+end
+function PC.ApplyFollowMode(mode)
+if mode~="off" and PC.FollowModeIndex(mode)==0 then mode="off" end
+for _,k in ipairs(PC.FollowModes) do
+local want=(k==mode)
+if SYS.T_[k]~=want then
+local setter=k:sub(4)
+if type(PC[setter])=="function" then pcall(PC[setter],want) end
+end
+end
+SYS.C_.PC_Mode=mode
+QueueSave()
+for _,f in ipairs(SYS.BtnRefs or {}) do pcall(f) end
+print(("[PC] 跟随模式 -> %s"):format(mode=="off" and "关闭" or mode))
+return mode
+end
+do
+local cur=tostring(SYS.C_.PC_Mode or "")
+if PC.FollowModeIndex(cur)==0 then
+local pick="off"
+for _,k in ipairs(PC.FollowModes) do
+if SYS.T_[k]==true then pick=k break end
+end
+for _,k in ipairs(PC.FollowModes) do SYS.T_[k]=(k==pick) end
+SYS.C_.PC_Mode=pick
+if pick~="off" then
+print(("[PC] v8.2.0 迁移: 跟传类 5 个开关已合并为一个互斥下拉, 只保留「%s」"):format(pick))
+end
+else
+for _,k in ipairs(PC.FollowModes) do
+if k~=cur and SYS.T_[k]==true then SYS.T_[k]=false end
+end
+end
+end
 function PC.MuteVoice(on)
 local tgt=PC.Get()
 local ch=tgt and tgt.Character
@@ -10898,7 +10938,16 @@ UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(
 UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
 UI.Div(p)
 UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
-UI.Switch(p,"自动售卖 (每5秒)","AutoSell")
+UI.Switch(p,"自动售卖 (每5秒)","AutoSell",function(on)
+if on and not SYS.T_.SellThresholdEnabled then
+SYS.T_.SellThresholdEnabled=true
+if SYS.SwitchOnChange and SYS.SwitchOnChange["SellThresholdEnabled"] then
+pcall(function() SYS.SwitchOnChange["SellThresholdEnabled"](true) end)
+end
+local th=(SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000
+print(("[Sell] 已顺带打开「启用 CPS 门槛」(当前门槛 %.0f) —— 自动售卖靠它决定卖哪些"):format(th))
+end
+end)
 UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
 local row=Instance.new("Frame")
 row.Size=UDim2.new(1,0,0,42) row.BackgroundColor3=CY.card
@@ -10925,6 +10974,32 @@ box.Text=tostring(math.floor(v))
 print("[Sell] CPS 门槛设为: "..box.Text.." (已保存)")
 else
 box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
+end
+end)
+local rowL=Instance.new("Frame")
+rowL.Size=UDim2.new(1,0,0,42) rowL.BackgroundColor3=CY.card
+rowL.BackgroundTransparency=0.3 rowL.BorderSizePixel=0 rowL.Parent=p
+UI.Round(rowL,10) UI.Stroke(rowL,CY.line,1,0.85)
+local lbL=Instance.new("TextLabel")
+lbL.Size=UDim2.new(1,-130,1,0) lbL.Position=UDim2.new(0,12,0,0)
+lbL.BackgroundTransparency=1 lbL.Text="等级乘数 (1=不看等级)"
+lbL.TextColor3=CY.text lbL.Font=Enum.Font.GothamMedium
+lbL.TextSize=13 lbL.TextXAlignment=Enum.TextXAlignment.Left lbL.Parent=rowL
+local boxL=Instance.new("TextBox")
+boxL.Size=UDim2.new(0,110,0,28) boxL.Position=UDim2.new(1,-122,0.5,-14)
+boxL.BackgroundColor3=CY.panel boxL.BackgroundTransparency=0.2
+boxL.Text=tostring(tonumber(SYS.C_.SellLvMul) or 1.25)
+boxL.TextColor3=CY.cyan boxL.Font=Enum.Font.Code
+boxL.TextSize=13 boxL.BorderSizePixel=0 boxL.ClearTextOnFocus=false boxL.Parent=rowL
+UI.Round(boxL,6) UI.Stroke(boxL,CY.cyan,1,0.7)
+boxL.FocusLost:Connect(function()
+local v=tonumber(boxL.Text)
+if v and v>0 then
+SYS.C_.SellLvMul=v QueueSave()
+boxL.Text=tostring(v)
+print(("[Sell] 等级乘数设为 %s (1 = 不考虑等级)"):format(boxL.Text))
+else
+boxL.Text=tostring(tonumber(SYS.C_.SellLvMul) or 1.25)
 end
 end)
 UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
@@ -12389,19 +12464,26 @@ UI.Section(p,"🚀 传送类 (只把你送过去 / 拉过来)",CY.green)
 UI.Btn(p,"🚀 传送到他",CY.green,function() SYS.PC.GotoTarget("tp") end)
 UI.Btn(p,"🎯 缓动到他 (1.2 秒滑过去)",CY.purple,function() SYS.PC.GotoTarget("tween") end)
 UI.Btn(p,"🚶 寻路/步行到他",CY.cyan,function() SYS.PC.GotoTarget("walk") end)
-UI.Switch(p,"🔁 循环跟传 (离远了自动再过去)","PC_LoopTP",function(on) SYS.PC.LoopTP(on) end)
 UI.Btn(p,"🧲 把他拉过来 (客户端)",CY.orange,function() SYS.PC.BringTarget() end)
 UI.Tip(p,"带「客户端」字样的按钮只改你本地看到的画面 —— 服务端不认, 他本人没感觉, 而且很快会被拉回。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.sub)
 UI.Div(p)
-UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己)",CY.purple)
-UI.Switch(p,"🎩 坐他头上","PC_OnHead",function(on) SYS.PC.OnHead(on) end)
-UI.Switch(p,"🌀 绕着他旋转","PC_Orbit",function(on) SYS.PC.Orbit(on) end)
+UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己 · 互斥下拉)",CY.purple)
+UI.Cycle(p,"跟随模式",{"关闭","循环跟传","坐他头上","绕着他旋转","盯着他","行走跟随"},
+function()
+local i=SYS.PC.FollowModeIndex(tostring(SYS.C_.PC_Mode or "off"))
+return SYS.PC.FollowLabels[i] or "关闭"
+end,
+function(v)
+local i=1
+for idx,lab in ipairs(SYS.PC.FollowLabels) do if lab==v then i=idx break end end
+SYS.PC.ApplyFollowMode(SYS.PC.FollowModes[i] or "off")
+end)
 UI.Slider(p,"旋转速度",0.5,12,0.5,function() return SYS.C_.PC_SpinSpeed end,
 function(v) SYS.C_.PC_SpinSpeed=v end,"%.1f")
 UI.Slider(p,"环绕距离 (格)",2,30,1,function() return SYS.C_.PC_Range end,
 function(v) SYS.C_.PC_Range=v end,"%.0f")
-UI.Switch(p,"👁 盯着他 (相机锁死在他身上)","PC_Stare",function(on) SYS.PC.Stare(on) end)
-UI.Switch(p,"🚶 行走跟随","PC_Follow",function(on) SYS.PC.Follow(on) end)
+UI.Tip(p,"这 5 个模式都是「动你自己」, 不是动他。「循环跟传」原来在上一节「传送类」, 一并收进来了。\n"..
+"⛔ 以前能同时开多个 —— 那种情况下它们互相抢你的位置, 表现就是抖动/瞬移。现在互斥, 一次只能选一个。",CY.sub)
 UI.Div(p)
 UI.Section(p,"👥 好友",CY.cyan)
 UI.Btn(p,"➕ 添加好友",CY.green,function()
