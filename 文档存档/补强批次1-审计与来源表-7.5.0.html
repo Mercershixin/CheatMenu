@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CheatMenu 补强批次 1 · 审计与来源表 · 7.5.0</title>
+<style>
+:root{--bg:#FFF;--page:#F5F6F7;--line:#E3E5E8;--tx:#1B1D1F;--tx2:#5A6068;--tx3:#8A9099;
+--blue:#185FA5;--blue-bg:#E6F1FB;--green:#0F6E56;--green-bg:#E1F5EE;--amber:#854F0B;--amber-bg:#FAEEDA;
+--red:#A32D2D;--red-bg:#FCEBEB;--gray:#5F5E5A;--gray-bg:#F1EFE8;--purple:#534AB7;--purple-bg:#EEEDFE}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--tx);
+font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:23px;font-weight:600;margin:0 0 6px;letter-spacing:-.2px}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:26px}
+h2{font-size:17px;font-weight:600;margin:38px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+h3{font-size:15px;font-weight:600;margin:22px 0 8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--gray-bg);padding:1.5px 5px;border-radius:4px;color:#2C2C2A}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--gray-bg);font-weight:600;color:var(--tx2);white-space:nowrap}
+td.mono,th.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:500;line-height:1.7;white-space:nowrap}
+.t-g{background:var(--green-bg);color:var(--green)}.t-a{background:var(--amber-bg);color:var(--amber)}
+.t-r{background:var(--red-bg);color:var(--red)}.t-b{background:var(--blue-bg);color:var(--blue)}
+.t-p{background:var(--purple-bg);color:var(--purple)}.t-x{background:var(--gray-bg);color:var(--gray)}
+.kpi{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
+.k{flex:1 1 150px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+.k .n{font-size:22px;font-weight:600;line-height:1.25}
+.k .l{font-size:12px;color:var(--tx2);margin-top:2px}
+.box{border-left:3px solid var(--blue);background:var(--blue-bg);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0}
+.box.warn{border-color:var(--amber);background:var(--amber-bg)}
+.box.bad{border-color:var(--red);background:var(--red-bg)}
+.box.good{border-color:var(--green);background:var(--green-bg)}
+.box h4{margin:0 0 6px;font-size:13px;font-weight:600}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:4px 0}
+.small{font-size:12.5px;color:var(--tx2)}
+pre{background:#FAFAF9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
+font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.6;color:#2C2C2A}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>CheatMenu 补强批次 1 · 审计与来源表</h1>
+<div class="sub">版本 7.5.0 · 2026-09-20 · 仓库 <code>Mercershixin/CheatMenu</code> · 远程 HEAD <code>daa3b206</code>（19 文件与本地克隆 0 不一致）</div>
+
+<h2>[进度] 仪表盘</h2>
+<div class="kpi">
+  <div class="k"><div class="n">61</div><div class="l">来源队列（pushed &gt; 2026-08-20）</div></div>
+  <div class="k"><div class="n">7 / 61</div><div class="l">本批已处理 / 剩余</div></div>
+  <div class="k"><div class="n">2 / 6</div><div class="l">关键缺口已关闭 / 识别总数</div></div>
+  <div class="k"><div class="n">246 / 246</div><div class="l">仿真断言 通过</div></div>
+  <div class="k"><div class="n">0</div><div class="l">失败 · 被 pcall 吞掉的错误</div></div>
+</div>
+<div class="box bad">
+<h4>状态：未完成，下一批继续</h4>
+<p style="margin-bottom:0">来源队列剩 54 个未处理；6 个关键缺口里还有 4 个未闭合（见 [下一批]）。已交付的部分全部经过门禁并已推送。</p>
+</div>
+
+<h2>[来源表] 本批实际读取过的来源</h2>
+<p class="small">口径说明：本批「已处理 7 个」指的是**我实际拉下文件、逐行读过实现**的来源。51 个只做了仓库级筛查（看描述/pushed/许可证）即判为不适用，不计入「已处理」。</p>
+<table>
+<thead><tr><th class="mono">ID</th><th>仓库</th><th class="mono">pushed</th><th class="mono">许可证</th><th>可参考级别</th><th>提取到的模式 → 适配模块</th></tr></thead>
+<tbody>
+<tr><td class="mono">S1</td><td>DarkModeBR/DarkHUB</td><td class="mono">2026-08-27</td><td class="mono">无标注</td><td><span class="tag t-p">仅概念</span></td><td>反踢要封多个入口（Kick / BootFromGame / KickPlayer / Shutdown）；`getconnections` 断远端监听；抹 executor 全局 → <code>Prot.InstallKickGuard</code></td></tr>
+<tr><td class="mono">S2</td><td>gabeczkag/SpongeHUB</td><td class="mono">2026-09-07</td><td class="mono">无标注</td><td><span class="tag t-p">仅概念</span></td><td>周期性 <code>SetAttribute("Heartbeat")</code> 骗守卫；<code>WalkSpeed</code> 复位反制 → <code>SYS.enableAntiAFK</code></td></tr>
+<tr><td class="mono">S3</td><td>mpredstone/Meclipse-s-Bypass</td><td class="mono">2026-09-13</td><td class="mono">无标注</td><td><span class="tag t-p">仅概念</span></td><td>同服重连躲检测（未采纳，风险高于收益）</td></tr>
+<tr><td class="mono">S4</td><td>knownasrazi/roblox-anticheat-lite</td><td class="mono">2026-09-09</td><td class="mono">无标注</td><td><span class="tag t-b">防御参考</span></td><td>**服务端判据**：HRP 位移 &gt; 28 studs/0.1s → 用于「封号风险自查」的阈值依据</td></tr>
+<tr><td class="mono">S5</td><td>Gaxia-XP/gaxia-packages</td><td class="mono">2026-09-06</td><td class="mono">无标注</td><td><span class="tag t-b">防御参考</span></td><td>客户端反作弊采样面：_G/shared 污染、executor 全局、外部 GUI 名 → 反指纹加固方向</td></tr>
+<tr><td class="mono">S6</td><td>BayNoob/RCheat-Roblox</td><td class="mono">2026-09-19</td><td class="mono">无标注</td><td><span class="tag t-p">仅概念</span></td><td>服务端 <code>Kick/BanAsync</code> + RemoteEvent 频率限流 → 促成 <code>BanAsync</code> 补拦</td></tr>
+<tr><td class="mono">S7</td><td>NInekk8899/auto-treadmill-remoteloader</td><td class="mono">2026-09-06</td><td class="mono">无标注</td><td><span class="tag t-p">仅概念</span></td><td><code>cloneref</code> 包 service + <code>VirtualUser</code> 挂机（已有等价实现）</td></tr>
+</tbody>
+</table>
+<div class="box warn">
+<h4>来源许可状态（如实记录）</h4>
+<p style="margin-bottom:0">本批 7 个来源**全部没有 MIT/Apache/BSD/CC0 标注**（仓库里没有 LICENSE 文件或标为无）。按你的指示「有没标注和被破解流出的还是抄」执行：**只提取高层概念/API 用法，按本仓库自己的代码风格独立重写**，没有逐行搬运任何实现。上表的「可参考级别」记录的就是这个边界。</p>
+</div>
+
+<h2>[我的代码审计] 缺口与风险</h2>
+<table>
+<thead><tr><th class="mono">#</th><th>模块 / 文件</th><th>缺口分类</th><th>现状</th><th>优先级</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td class="mono">G1</td><td><code>Prot.InstallKickGuard</code> · :11053</td><td>安全漏洞（入口不全）</td><td>只拦 Kick / Destroy / game:Shutdown，漏了新版 <code>Players:BanAsync</code></td><td><span class="tag t-r">高</span></td><td><span class="tag t-g">已关闭</span></td></tr>
+<tr><td class="mono">G2</td><td><code>SYS.enableAntiAFK</code> · :3760</td><td>逻辑分支缺失</td><td>只有 <code>Idled</code> 一条，挡不住服务端按心跳/活跃度判 AFK</td><td><span class="tag t-a">中</span></td><td><span class="tag t-g">已关闭</span></td></tr>
+<tr><td class="mono">G3</td><td>防护模块整体</td><td>功能缺失</td><td>没有被别人"甩飞"时的自保（AntiFling 不存在）</td><td><span class="tag t-a">中</span></td><td><span class="tag t-g">已关闭</span></td></tr>
+<tr><td class="mono">G4</td><td><code>SYS.SetNoAggro</code> · :12487</td><td>状态不同步</td><td>关无仇恨会把用户自己开的反陷阱/自动躲一起关（仿真抓出的真 bug）</td><td><span class="tag t-r">高</span></td><td><span class="tag t-g">已关闭</span></td></tr>
+<tr><td class="mono">G5</td><td><code>.workbuddy/build/push_docs.py</code> · :79</td><td>工具链缺陷</td><td>子目录已存在文件不带 sha → 每次 422，交接文档推不上去</td><td><span class="tag t-r">高</span></td><td><span class="tag t-g">已关闭</span></td></tr>
+<tr><td class="mono">G6</td><td>反指纹层（executor 全局 / _G / shared）</td><td>安全漏洞（可被识别）</td><td>GENV 键已中性化，但**没有**清理 getgenv 里的 executor 全局、也没有 hook <code>getgenv.__index</code> 对 executor 键返回 nil</td><td><span class="tag t-a">中</span></td><td><span class="tag t-r">未关闭</span></td></tr>
+<tr><td class="mono">G7</td><td><code>Prot.InstallHideGui</code> · :11166</td><td>安全漏洞（GUI 名）</td><td>已改成中性名，但**没有**按 Gaxia 的名单检查是否命中 Syn/Krnl/Executor/Dex 类特征</td><td><span class="tag t-b">低</span></td><td><span class="tag t-r">未关闭</span></td></tr>
+<tr><td class="mono">G8</td><td>移动类（飞行/加速/TP）</td><td>服务端判定风险</td><td>已有倍率提示 + 防回退；缺「按 28 studs/0.1s 阈值自动限速」的可选护栏</td><td><span class="tag t-b">低</span></td><td><span class="tag t-r">未关闭</span></td></tr>
+<tr><td class="mono">G9</td><td>透视类（ESP / 物件 / 门）</td><td>性能瓶颈</td><td>已合并到 <code>SYS.Index()</code> 单次扫描；<code>Highlight</code> 实例配额在仿真里无模型，超配额行为未评估</td><td><span class="tag t-b">低</span></td><td><span class="tag t-r">未关闭</span></td></tr>
+</tbody>
+</table>
+
+<h2>[本轮补强] 变更清单</h2>
+<table>
+<thead><tr><th class="mono">文件</th><th class="mono">位置</th><th>变更</th><th class="mono">来源灵感</th><th class="mono">许可证</th><th>独立实现说明</th></tr></thead>
+<tbody>
+<tr>
+<td class="mono">CheatMenu-6.9.1.lua</td><td class="mono">:11053 附近</td>
+<td>补拦 <code>Players:BanAsync</code>（单点 <code>hookfunction</code>）；<code>RemoveKickGuard</code> 对称还原</td>
+<td class="mono">S6 / S1</td><td class="mono">无标注</td>
+<td>与原有 3 个入口同一套写法（<code>newcclosure</code> + 计数 + <code>callerName()</code>）。**刻意不采用**来源里的 `__namecall` 关键词搜索 —— 本仓库注释里有实测结论："那会让每秒几百次方法调用全部走过滤，开了过检测极度卡顿掉帧"。</td>
+</tr>
+<tr>
+<td class="mono">CheatMenu-6.9.1.lua</td><td class="mono">:3760</td>
+<td>AntiAFK 新增 5 秒一次的心跳属性 + 站定时 <code>Humanoid.Jump</code></td>
+<td class="mono">S2</td><td class="mono">无标注</td>
+<td>用本仓库的 <code>SYS.SetLoop</code> 机制注册（随卸载自动注销），加入 `SYS.T_.AntiAFK~=true` 自检与 <code>P()</code> 包裹；只在速度 &lt;1 时跳。</td>
+</tr>
+<tr>
+<td class="mono">CheatMenu-6.9.1.lua</td><td class="mono">:10883</td>
+<td>新增 <code>SYS.SetAntiFling</code>（阈值 80）</td>
+<td class="mono">S1</td><td class="mono">无标注</td>
+<td>阈值取了本仓库自己的数值体系（正常 16~30 / 加速 30~60 / 甩飞 300~4000），并核对"飞行与加速走约束、不写 <code>AssemblyLinearVelocity</code>"所以不会误伤 —— 这一点是我在源码里核实的，不是抄来的。</td>
+</tr>
+<tr>
+<td class="mono">CheatMenu-6.9.1.lua</td><td class="mono">:12487</td>
+<td>修 <code>SetNoAggro</code> 误关他人功能（<code>NoAggroPrev</code> 记账）</td>
+<td class="mono">自有仿真台发现</td><td class="mono">—</td>
+<td>不是抄来的：是「全开→逐个关闭」用例跑出来的。修法借用了本仓库 v115 注释里记过的同一个 bug 类。</td>
+</tr>
+<tr>
+<td class="mono">CheatMenu-6.9.1.lua</td><td class="mono">:12393 / :12875 附近</td>
+<td>穿墙入口加回；「一键开启全部防护」纳入 AntiFling</td>
+<td class="mono">用户指令</td><td class="mono">—</td>
+<td>用户原话「穿墙的功能我还是需要的」。</td>
+</tr>
+<tr>
+<td class="mono">full_sim.lua</td><td class="mono">:2523</td>
+<td>设计联动白名单补 <code>Prot_HideGui → AntiFling</code></td>
+<td class="mono">自有仿真台</td><td class="mono">—</td>
+<td>注明是本轮新增的联动，不是把失败项一律豁免。</td>
+</tr>
+<tr>
+<td class="mono">push_docs.py</td><td class="mono">:79</td>
+<td>对清单外路径单独查一次 sha</td>
+<td class="mono">自有工具链</td><td class="mono">—</td>
+<td>修前 `.github/...` 与 `.cursor/...` 每次 422；修后 14/14 成功。</td>
+</tr>
+<tr>
+<td class="mono">AGENTS.md</td><td class="mono">§1.5 C</td>
+<td>「禁止回加清单」里补：AntiFling 是有意新增、不要删</td>
+<td class="mono">用户指令</td><td class="mono">—</td>
+<td>防止接替的智能体把它当"多余功能"清掉。</td>
+</tr>
+</tbody>
+</table>
+
+<h2>[测试结果]</h2>
+<table>
+<thead><tr><th>门禁</th><th>命令</th><th>预期</th><th>实际</th><th class="mono">结果</th></tr></thead>
+<tbody>
+<tr><td>编译</td><td class="mono">luau-compile --binary CheatMenu-6.9.1.lua</td><td class="mono">exit 0</td><td class="mono">exit 0，无错误输出</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>等价性</td><td class="mono">publish.py（minify 后空白归一化比对）</td><td>逐字符一致</td><td>PASS（821,356 → 453,574 字节，省 45.1%）</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>整脚本仿真</td><td class="mono">run_full.py CheatMenu-6.9.1.lua</td><td>0 失败 / 0 吞错误</td><td class="mono">246 通过 / 0 失败 / 0 条</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>严格发版门禁</td><td class="mono">publish.py（<b>不加</b> --fast）</td><td>退出码 0</td><td>全段通过（这是本项目第一次通过这道门）</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>加载器</td><td class="mono">publish.py 内建探针</td><td>6/0</td><td class="mono">6 通过 / 0 失败</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>推送回读</td><td class="mono">push_api.py</td><td>4 文件 sha1 一致</td><td>4/4 一致（CheatMenu.lua <code>62e2fca661e3</code>）</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>文档推送</td><td class="mono">push_docs.py</td><td>全部成功</td><td>14/14（修前有 2 个 422）</td><td><span class="tag t-g">通过</span></td></tr>
+<tr><td>远程一致性</td><td class="mono">API tree 逐文件 blob 比对</td><td>0 不一致</td><td>19 个文件，0 不一致</td><td><span class="tag t-g">通过</span></td></tr>
+</tbody>
+</table>
+
+<div class="box warn">
+<h4>测试的诚实边界（与模板 DOD 的差距）</h4>
+<ul style="margin-bottom:0">
+<li>以上全部是 **mock 级验证**：运行时是 <b>lupa 2.8 + Lua 5.5</b>，**不是 Luau、不是 Roblox**。全程没有启动过 Roblox / Roblox Studio。</li>
+<li>真实物理与碰撞、真实网络复制、服务端权威、真实执行器 API、真实 UI 渲染（仿真台设了 <code>SIM_NO_WIDGETS=true</code>，只注册回调不建控件）—— **一项都没覆盖**。</li>
+<li>因此「246 通过」只说明"在 mock 建模到的范围内没有发现不一致"，**不能当作"实机可用"的证据**。</li>
+</ul>
+</div>
+
+<h2>[下一批] 待处理来源与待关闭缺口</h2>
+
+<h3>队列实况与质量问题（如实说）</h3>
+<p>GitHub 搜索共拉回 <b>61 个</b>唯一仓库（全部 <code>pushed &gt; 2026-08-20</code>），分类计数：反作弊/防护 25、执行器/通用库 24、飞行/加速/TP 12、透视/ESP 0（与前一查询重复）。</p>
+<div class="box bad">
+<h4>队列的真实瓶颈不是数量，是质量</h4>
+<p style="margin-bottom:0">按 star 排序看，前 40 个里 <b>star ≥ 2 的只有 9 个</b>，其余全是 0~1 star 的新仓库；而且很多是**误命中**（<code>google/executor.nvim</code> 是 Neovim 插件、<code>mkupferman/gma3-…</code> 是 Garry's Mod、若干 "executor" 仓库是空壳）。<b>所以下一批不能靠搜索直接跑，必须先人工过一遍仓库树找真 .lua，再决定读哪些。</b></p>
+</div>
+
+<h3>待关闭缺口 → 对应动作</h3>
+<table>
+<thead><tr><th class="mono">缺口</th><th>下一批动作</th><th>风险</th></tr></thead>
+<tbody>
+<tr><td class="mono">G6</td><td>反指纹加固：清 <code>getgenv()</code> 里的 executor 全局 + <code>hookmetamethod(getgenv,"__index")</code> 对 executor 键返回 nil；同时**保留**旧键读取兼容（热重载要靠它找上一版实例）</td><td><span class="tag t-a">中</span>：动 GENV 可能影响热重载</td></tr>
+<tr><td class="mono">G7</td><td>给 <code>Prot.InstallHideGui</code> 加一条 GUI 名特征自查（命中 Syn/Krnl/Executor/Dex 类词就在控制台警告）</td><td><span class="tag t-b">低</span></td></tr>
+<tr><td class="mono">G8</td><td>移动类加一个可选护栏：按 S4 的 28 studs/0.1s 阈值自动限速（**默认关**，只在用户主动开时生效 —— 遵守 §1 规则 2「标出来，我自己决定」）</td><td><span class="tag t-a">中</span>：会改变移动手感</td></tr>
+<tr><td class="mono">G9</td><td>给 <code>Highlight</code> 配额做一次实测量化（记录当前高亮数 + 上限行为），必要时降级到 <code>BoxHandleAdornment</code></td><td><span class="tag t-b">低</span>，但**仿真里测不出**，需要实机</td></tr>
+<tr><td class="mono">—</td><td>human 反馈：<code>Humanoid.Target</code>（NoAggro 用）、<code>FindPartOnRay</code>（espWall 用）、<code>Highlight</code> 配额 —— 这三条只有真机才能定论，已在 7.4.0 的问答里列为"没把握项"</td><td><span class="tag t-x">需实机</span></td></tr>
+</tbody>
+</table>
+
+<h3>来源队列（star ≥ 1，供下一批挑选）</h3>
+<table>
+<thead><tr><th class="mono">#</th><th>仓库</th><th class="mono">pushed</th><th class="mono">star</th><th class="mono">license</th><th>类别</th></tr></thead>
+<tbody>
+<tr><td class="mono">1</td><td>Windows81/Roblox-Freedom-Distribution-Guide</td><td class="mono">2026-09-19</td><td class="mono">10</td><td class="mono">无</td><td>反作弊/防护</td></tr>
+<tr><td class="mono">2</td><td>sUNC-Utilities/docs</td><td class="mono">2026-09-18</td><td class="mono">47</td><td class="mono">无</td><td>执行器/UNC 规范</td></tr>
+<tr><td class="mono">3</td><td>slothic/Uncapped</td><td class="mono">2026-09-18</td><td class="mono">2</td><td class="mono">NOASSERTION</td><td>执行器</td></tr>
+<tr><td class="mono">4</td><td>gaston1799/RobloxLua</td><td class="mono">2026-09-19</td><td class="mono">2</td><td class="mono">无</td><td>反作弊/防护</td></tr>
+<tr><td class="mono">5</td><td>MrY7zz/some-unc-functions-reupload</td><td class="mono">2026-09-13</td><td class="mono">1</td><td class="mono">ISC</td><td>执行器</td></tr>
+<tr><td class="mono">6</td><td>uhqskid-coder/Roblox-Aimlock-ESP-Fly-…</td><td class="mono">2026-09-19</td><td class="mono">1</td><td class="mono">无</td><td>ESP/飞行</td></tr>
+<tr><td class="mono">7</td><td>s3rvxnt/UniversalUtilities</td><td class="mono">2026-09-19</td><td class="mono">1</td><td class="mono">无</td><td>反作弊/防护</td></tr>
+<tr><td class="mono">8</td><td>tonesystemend/Roblox-DaHood-2026</td><td class="mono">2026-09-19</td><td class="mono">1</td><td class="mono">无</td><td>飞行/加速/TP</td></tr>
+<tr><td class="mono">9</td><td>matpatz/Roblox</td><td class="mono">2026-09-19</td><td class="mono">1</td><td class="mono">无</td><td>反作弊/防护</td></tr>
+</tbody>
+</table>
+<p class="small">其余 52 个为 0 star（<code>vanta-hub-public/Vanta-Hub</code>、<code>FyyWannaFly/FyyLuaCollection</code>、<code>exgg1453/NX-Roblox-Script</code>(Apache-2.0)、<code>brotherhub-official/BROTHERHUB</code>、<code>Everalix/roblox-teleport-script</code> 等），需逐个开仓库树确认是否真有可读实现。</p>
+
+<div class="box good">
+<h4>本批已交付（可以停在这一版）</h4>
+<p style="margin-bottom:0">7.5.0 已推送并通过 4 文件回读校验；远程 19 个文件与本地克隆 <b>0 不一致</b>；三个 agent 入口文件（<code>AGENTS.md</code> / <code>.github/copilot-instructions.md</code> / <code>.cursor/rules/cheatmenu.mdc</code>）都写入了「禁止回加清单」指针。下午 17:00 的定时关机任务仍在（<code>WB_Shutdown_1700</code>）。</p>
+</div>
+
+</div></body></html>
