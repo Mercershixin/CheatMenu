@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 22:27 sha c108312b bytes 494496'):format('2026-09-20 22:27','c108312b',494496))
+print(('[CheatMenu] build 2026-09-20 23:02 sha ea05a410 bytes 495910'):format('2026-09-20 23:02','ea05a410',495910))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.4.0"
+SYS.BuildVer="8.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4984,6 +4984,26 @@ GymDiag[key] = true
 print(("[Gym] " .. fmt):format(...))
 end
 SYS.GymDiag = GymDiag
+local function gymPrepareRoot()
+pcall(function()
+local _, hum, root = GC()
+if hum then hum:UnequipTools() end
+if root then
+root.Anchored = false
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end
+end)
+end
+local GYM_WEIGHT_NAMES = {
+["Wooden Stick"]=true, ["Bone Barbell"]=true, ["Stone Block"]=true, ["Copper Plate"]=true,
+["Iron Plate"]=true, ["Ice Barbell"]=true, ["Donut Barbell"]=true, ["Golden Barbell"]=true,
+["Heaven Plate"]=true, ["Mega Golden Barbell"]=true, ["Neon Pulse"]=true,
+["Giant Gold Star Barbell"]=true, ["Emerald Barbell"]=true, ["Planet Barbell"]=true,
+["Big Jupiter"]=true, ["Black Hole Barbell"]=true,
+}
+SYS.GymWeightNames = GYM_WEIGHT_NAMES
+local GymLastPart, GymLastMachine = nil, nil
 local function liveMachines()
 local r = {}
 if not CS then return r end
@@ -5088,8 +5108,13 @@ return part.CFrame:PointToWorldSpace(Vector3.new(0, yOffset, 0))
 end
 local function moveToLiftMachinePart(part)
 if not part or not part.Parent then return false end
+gymPrepareRoot()
 local _, _, root = GC()
-if not root or root.Anchored then return false end
+if not root then return false end
+if root.Anchored then
+gymOnce("enterFail", "角色处于 Anchor 状态且反锚定失败 -> 传送会被弹回(检查飞行/隐身类功能是否在开)")
+return false
+end
 local target = gymTargetPosition(part)
 if not target then return false end
 pcall(function()
@@ -5102,23 +5127,29 @@ task.wait(0.16)
 local _, _, newRoot = GC()
 return newRoot ~= nil and (newRoot.Position - target).Magnitude <= 8
 end
+local function isGymWeight(t)
+if not t or not t:IsA("Tool") then return false end
+local ok, ht = pcall(function() return t:HasTag("SquatTool") end)
+if ok and ht then return true end
+return GYM_WEIGHT_NAMES[t.Name] == true
+end
 local function ensureGymTool()
 local _, hum, _ = GC()
 if not hum then return nil end
 for _, t in ipairs(hum.Parent:GetChildren()) do
-if t:IsA("Tool") and t:HasTag("SquatTool") then return t end
+if isGymWeight(t) then return t end
 end
 local bp = LP:FindFirstChild("Backpack")
 local target
 if bp then
 for _, t in ipairs(bp:GetChildren()) do
-if t:IsA("Tool") and t:HasTag("SquatTool") then target = t break end
+if isGymWeight(t) then target = t break end
 end
 end
 if not target then
 gymOnce("toolWarn",
-"背包/角色里找不到带 [SquatTool] 标签的工具 -> 传送过去也无法开始举铁。"
-.. "（需要先拿到/装备健身道具；若道具的标签名不是 SquatTool，请告诉我真名）")
+"背包/角色里找不到举铁道具（按 [SquatTool] 标签 和 16 档配重名 都查过）-> 传送过去也无法开始举铁。"
+.. "需要先拿到/装备配重（Wooden Stick → Black Hole Barbell），或把道具的准确名字告诉我")
 return nil
 end
 pcall(function() hum:UnequipTools() end)
@@ -5128,7 +5159,7 @@ pcall(function() hum:EquipTool(target) end)
 task.wait(0.15)
 if target.Parent == hum.Parent then return target end
 end
-gymOnce("toolWarn", "SquatTool(%s) 找到了，但连试 3 次 EquipTool 都没穿上",
+gymOnce("toolWarn", "举铁道具(%s) 找到了，但连试 3 次 EquipTool 都没穿上",
 tostring(target.Name))
 return nil
 end
@@ -5139,7 +5170,7 @@ local m = math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)
 if m > 1 then return true end
 task.wait(0.03)
 end
-return false
+return (math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)) > 1
 end
 local function enterGymMachine(machine)
 if not machine or not machine.Parent then return false end
@@ -5148,6 +5179,9 @@ if #candidates == 0 then
 gymOnce("enterFail", "机器 %s 里找不到任何可作为落点的 BasePart -> 跳过它",
 tostring(machine.Name))
 return false
+end
+if GymLastPart and GymLastPart.Parent and machine == GymLastMachine then
+table.insert(candidates, 1, { Part = GymLastPart, Score = math.huge })
 end
 local maximum = math.min(#candidates, 8)
 local lastStage = "未开始"
@@ -5164,10 +5198,12 @@ elseif not waitLiftMachineRecognition(0.9) then
 lastStage = "传送 + 装备都成功，但游戏没把 liftMachine 属性置为 >1（= 站位没被认可）"
 else
 print("[Gym] ✅ 已进入 LiftMachine:", machine.Name)
+GymLastPart, GymLastMachine = part, machine
 GymDiag.enterFail = false
 return true
 end
 end
+gymPrepareRoot()
 task.wait(0.05)
 end
 gymOnce("enterFail", "进入 %s 失败，卡在: %s", tostring(machine.Name), lastStage)
