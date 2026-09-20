@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 11:29 sha d699f67c bytes 460104'):format('2026-09-20 11:29','d699f67c',460104))
+print(('[CheatMenu] build 2026-09-20 12:06 sha ee01aa3f bytes 466721'):format('2026-09-20 12:06','ee01aa3f',466721))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -60,6 +60,7 @@ NoAggro=false,
 TransBilingual=false,
 AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
+Prot_SpeedCap=false,
 AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 PC_Freeze=false,
@@ -71,6 +72,7 @@ C_={
 FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
+SpeedCap=28,
 Gravity=196.2,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
@@ -105,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.6.1"
+SYS.BuildVer="7.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1006,15 +1008,22 @@ local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed then return base*(SYS.C_.SpeedMult or 1) end
 return base
 end
+local function guardSpeed(v)
+if SYS.T_.Prot_SpeedCap then
+local cap=tonumber(SYS.C_.SpeedCap) or 0
+if cap>0 and v and v>cap then return cap end
+end
+return v
+end
 local function wantWalkSpeed()
 local base=SYS.Orig.WalkSpeed or 16
-if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return base*(SYS.C_.SpeedMult or 1) end
-return base
+if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
+return guardSpeed(base)
 end
 function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
-local spd=SYS.Orig.WalkSpeed*SYS.C_.SpeedMult
+local spd=guardSpeed(SYS.Orig.WalkSpeed*(SYS.C_.SpeedMult or 1))
 if SYS.C_.SpeedMode=="WalkSpeed" then
 if math.abs(hum.WalkSpeed-spd)>spd*0.01 then hum.WalkSpeed=spd end
 lastSM=SYS.C_.SpeedMult
@@ -1166,7 +1175,7 @@ if hum and root then
 if SYS.T_.LockSpeed then
 local base=SYS.Orig.WalkSpeed or 16
 local want=base
-if SYS.T_.Speed then want=base*(SYS.C_.SpeedMult or 1) end
+if SYS.T_.Speed then want=guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
 if math.abs((hum.WalkSpeed or 0)-want)>LOCK_EPS then hum.WalkSpeed=want end
 end
 if SYS.T_.LockJump then
@@ -2385,6 +2394,12 @@ add("################  CheatMenu 统一扫描  ################")
 add(SYS.GameInfoLine())
 add("扫描时间: " .. os.date("%Y-%m-%d %H:%M:%S"))
 add(("执行器能力: %s"):format((SYS.Prot and SYS.Prot.CapsText and SYS.Prot.CapsText()) or "?"))
+if SYS.Prot and SYS.Prot.SelfAudit then
+local ok2,lines=pcall(SYS.Prot.SelfAudit)
+if ok2 and type(lines)=="table" then
+for _,l in ipairs(lines) do add(l) end
+end
+end
 add("")
 local ran, skipped = 0, 0
 for _, s in ipairs(SYS.Scanners) do
@@ -5699,6 +5714,27 @@ CB.Say(("⚠ 全服 %d 个目标都与我同队 -> 该游戏不用队伍区分�
 end
 end
 local SHOT_CACHE=setmetatable({},{__mode="k"})
+local RAY_HOPS=3
+local function castVis(o,d)
+local dir=d.Unit
+local cur=o
+local left=d.Magnitude
+for _=1,RAY_HOPS do
+if left<1 then return nil end
+local _,hit,hp=P(function()
+return WS:FindPartOnRay(Ray.new(cur,dir*(left-1)),SYS.LP.Character,false,true)
+end)
+if hit==nil then return nil end
+local tr=0 P(function() tr=hit.Transparency or 0 end)
+if tr<0.25 then return hit end
+if not hp then return hit end
+local adv=(hp-cur).Magnitude
+if adv<0.05 then return hit end
+cur=hp+dir*0.05
+left=left-adv
+end
+return nil
+end
 local function clearShot(part)
 if not SYS.T_.CB_Wall then return true end
 local now=os.clock()
@@ -5728,9 +5764,7 @@ local ok=false
 for i=1,#pts do
 local d=pts[i]-o
 if d.Magnitude<1 then ok=true break end
-local _,hit=P(function()
-return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
-end)
+local hit=castVis(o,d)
 if hit==nil or (part.Parent and hit:IsDescendantOf(part.Parent)) then ok=true break end
 end
 SHOT_CACHE[part]={t=now,ok=ok}
@@ -5740,9 +5774,7 @@ local SCALP_CACHE=setmetatable({},{__mode="k"})
 local function sightOK(part,o,q)
 local d=q-o
 if d.Magnitude<1 then return true end
-local _,hit=P(function()
-return WS:FindPartOnRay(Ray.new(o,d.Unit*(d.Magnitude-1)),SYS.LP.Character)
-end)
+local hit=castVis(o,d)
 local par=part.Parent
 return hit==nil or (par and hit:IsDescendantOf(par))
 end
@@ -9078,6 +9110,7 @@ if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
 if SYS.FloatGui then SYS.FloatGui.Archivable=false end
 end)
 Prot.Hooks.hide=true
+if Prot.NeutralizeNames then P(function() Prot.LastRenamed=Prot.NeutralizeNames() end) end
 return true
 end
 function Prot.RemoveHideGui()
@@ -9087,6 +9120,88 @@ if SYS.ScreenGui then SYS.ScreenGui.Archivable=true end
 if SYS.FloatGui then SYS.FloatGui.Archivable=true end
 end)
 Prot.Hooks.hide=nil
+end
+Prot.FPWords={"cheat","hack","exploit","aimbot","macro","autofarm","inject",
+"cheatmenu","synapse","krnl","script-ware","fluxus"}
+local function fpBad(name)
+local lo=string.lower(tostring(name or ""))
+for i=1,#Prot.FPWords do
+local w=Prot.FPWords[i]
+if string.find(lo,w,1,true) then return w end
+end
+return nil
+end
+Prot.fpBad=fpBad
+function Prot.NeutralizeNames()
+local n=0
+local function fix(o,tag)
+if o and fpBad(o.Name) then P(function() o.Name=tag n=n+1 end) end
+end
+fix(SYS.ScreenGui,"RBX_Overlay")
+fix(SYS.FloatGui,"RBX_Float")
+if SYS.ScreenGui then
+P(function()
+if type(SYS.ScreenGui.GetChildren)=="function" then
+for _,c in ipairs(SYS.ScreenGui:GetChildren()) do
+if fpBad(c.Name) then c.Name="RBX_Panel" n=n+1 end
+end
+end
+end)
+end
+return n
+end
+function Prot.SelfAudit()
+local L={}
+local function A(f,...) L[#L+1]="  "..(select("#",...)>0 and f:format(...) or f) end
+A("=========== CheatMenu 反指纹自检 (G6/G7) ===========")
+local root=SYS.ScreenGui
+if not root then
+A("!! ScreenGui=nil (菜单还没建)")
+else
+local w=fpBad(root.Name)
+A("ScreenGui.Name=%q  可疑词=%s",tostring(root.Name),w or "(无)")
+local par=root.Parent
+local pn="nil"
+if par then
+if par==SYS.PG then pn="PlayerGui (任何脚本都能遍历)"
+elseif SYS.CoreGui and par==SYS.CoreGui then pn="CoreGui (权限更高)"
+else P(function() pn=par:GetFullName() end) end
+end
+A("ScreenGui 父级=%s",pn)
+A("Archivable: ScreenGui=%s  FloatGui=%s  (false=不会被 GetDescendants+Clone 抓走)",
+tostring(root.Archivable),tostring(SYS.FloatGui and SYS.FloatGui.Archivable))
+local subs={}
+P(function()
+local seen={}
+for _,d in ipairs(root:GetDescendants()) do
+local dw=fpBad(d.Name)
+if dw and not seen[d.Name] then
+seen[d.Name]=true
+subs[#subs+1]=("%s<%s>"):format(tostring(d.Name),d.ClassName)
+end
+end
+end)
+if #subs==0 then
+A("GUI 树可疑名: (无)")
+else
+local show=math.min(#subs,12)
+A("GUI 树可疑名 %d 处: %s%s",#subs,table.concat(subs,", ",1,show),#subs>show and " …" or "")
+A("   -> 点「🧹 擦掉 GUI 可疑名」可一键换成中性名(子元素本来就是 t/fr/lab 这类, 不会动)")
+end
+end
+local eg={"getgenv","gethui","getrawmetatable","hookmetamethod","hookfunction","checkcaller",
+"setreadonly","getconnections","firesignal","getscriptbytecode","setfflag",
+"is_sirhurt_closure","syn","KRNL_LOADED","secure_load"}
+local seenG={}
+local G=_G
+for i=1,#eg do
+local ok,v=pcall(function() return G[eg[i]] end)
+if ok and v~=nil then seenG[#seenG+1]=eg[i] end
+end
+A("可见执行器全局 %d 个: %s",#seenG,#seenG>0 and table.concat(seenG,",") or "(无)")
+A("⚠ 边界: 这些全局是执行器注入的, 脚本层删不掉(删了脚本自己也没得用)。")
+A("  能做的只有「少暴露自己」: 中性名 + 少留特征实例 —— 上面已经逐项列出。")
+return L
 end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
@@ -10519,6 +10634,46 @@ UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",
 UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
 "这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
 "纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
+UI.Div(p)
+UI.Section(p,"🚦 移动限速护栏 (开加速但别太离谱)",CY.yellow)
+UI.Switch(p,"🚦 限制最高移速 (默认关)","Prot_SpeedCap",function(on)
+if on then
+SYS.Notify(("🚦 移速护栏已开 —— 所有加速路径最高 %.0f 格/秒"):format(tonumber(SYS.C_.SpeedCap) or 28),SYS.CY.green)
+else
+SYS.Notify("移速护栏已关(恢复原来的倍率)",SYS.CY.sub)
+end
+end)
+UI.Slider(p,"护栏上限 (格/秒)",16,100,1,
+function() return tonumber(SYS.C_.SpeedCap) or 28 end,
+function(v) SYS.C_.SpeedCap=v end,"%.0f")
+UI.Tip(p,"Roblox 默认走路是 16 格/秒; 服务端统计类反作弊最爱看「长期 >30」这种一眼假的数。\n"..
+"打开后, 加速的三种模式(WalkSpeed / BodyVelocity / Linear)【最终写出去的速度】都会被压到上限以内;\n"..
+"飞行、传送、防陷阱的判定基准(「我本来该有多快」)都不受影响 —— 只收窄真正写出去的数。\n"..
+"默认 28: 比正常快一截, 又不至于离谱。想要原汁原味的倍率, 把它关掉即可。",CY.sub)
+UI.Div(p)
+UI.Section(p,"🔎 反指纹自检 (G6/G7)",CY.cyan)
+UI.Btn(p,"🔎 跑一次反指纹自检 (结果打到控制台)",CY.cyan,function()
+local fn=SYS.Prot and SYS.Prot.SelfAudit
+local lines=fn and fn()
+if type(lines)=="table" then
+for _,l in ipairs(lines) do print(l) end
+SYS.Notify(("🔎 自检完成: 共 %d 行, 详见控制台(F9)"):format(#lines),SYS.CY.cyan)
+else
+SYS.Notify("❌ 自检不可用",SYS.CY.red)
+end
+end)
+UI.Btn(p,"🧹 擦掉 GUI 可疑名 (换成中性名)",CY.orange,function()
+local fn=SYS.Prot and SYS.Prot.NeutralizeNames
+local n=(fn and fn()) or 0
+if n>0 then SYS.Notify(("🧹 已把 %d 个可疑名换成中性名"):format(n),SYS.CY.green)
+else SYS.Notify("✔ GUI 名字里没有可疑词, 不用改",SYS.CY.sub) end
+end)
+UI.Tip(p,"只查三样(反作弊找外挂就看这些):\n"..
+"① GUI 名字/层级里有没有 cheat / hack / 外挂 这类词 —— 有就点上面那个「擦掉」;\n"..
+"② ScreenGui 挂在哪个容器: PlayerGui 任何脚本都能遍历, CoreGui 权限更高;\n"..
+"③ 实例是不是 Archivable(能被 GetDescendants + Clone 打包抓走) —— 开「管理员检测绕过」会设成 false。\n"..
+"⚠ 边界: 执行器自己的全局(getgenv / hookfunction 等)是注入的, 脚本层删不掉, 只做如实列出。\n"..
+"  「擦掉」只动名字里真带可疑词的容器, 中性名(名字池里挑的那些)一律不碰。",CY.sub)
 end
 UI.Pages["挂机"]=function(p)
 UI.Label(p,"挂机增强")
@@ -12366,6 +12521,16 @@ A("位置记忆=%s  比例=(%s,%s)  缩放把手=%s",
 tostring(SYS.C_.MenuPosSaved),tostring(SYS.C_.MenuPosX),tostring(SYS.C_.MenuPosY),
 tostring(SYS.CM_Grip~=nil))
 A("菜单开着=%s  用户拖过=%s",tostring(SYS.MenuOpen),tostring(SYS._UserMoved))
+A("防护: AntiAC=%s AntiAdmin=%s AntiTP=%s HideGui=%s  已拦截=%s",
+tostring(SYS.T_.Prot_AntiAC),tostring(SYS.T_.Prot_AntiAdmin),
+tostring(SYS.T_.Prot_AntiTP),tostring(SYS.T_.Prot_HideGui),
+tostring(SYS.Prot and SYS.Prot.Blocked or 0))
+local susName="?"
+if SYS.Prot and SYS.Prot.fpBad then
+susName=(SYS.Prot.fpBad(SYS.ScreenGui and SYS.ScreenGui.Name) and "有可疑词" or "无")
+end
+A("移速护栏=%s 上限=%.0f  屏幕GUI名自检=%s",
+tostring(SYS.T_.Prot_SpeedCap),tonumber(SYS.C_.SpeedCap) or -1,susName)
 local gs=game:GetService("GuiService")
 if gs and gs.GetGuiInset then
 P(function()
