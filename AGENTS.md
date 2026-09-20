@@ -6,7 +6,7 @@
 >
 > 同一份内容也在这些位置 —— **改这份就必须同步那几处**，否则下个智能体读到的是旧规矩：
 > `CLAUDE.md` · `.github/copilot-instructions.md` · `.cursor/rules/cheatmenu.mdc` ·
-> `dist/repo/README.md` 的「开发约定」节 · 源码 `CheatMenu-6.9.1.lua` 的**文件头注释块**。
+> `dist/repo/README.md` 的「开发约定」节 · 源码 `CheatMenu-<版本>.lua` 的**文件头注释块**。
 >
 > ★ **本版按 8.x 现状整篇重写（2026-09-20）。**
 > 旧版里到处是「××旧规则已作废」「只在用户明确要求时才做 —— 这个口子已作废」这类**考古叙述**。
@@ -185,7 +185,9 @@
 ### 5.1 目录（别搞混）
 
 - **本地工作区 `Hy-MT2翻译模型/`**（唯一手改入口）：
-  - `CheatMenu-6.9.1.lua` = **源码**（带注释；**文件名固定，不跟版本号走**；手改只改这里）
+  - `CheatMenu-<版本>.lua` = **源码**（带注释；**文件名跟版本号走** —— 发版时 `push_now.py` 自动改名为
+    `CheatMenu-<版本>.lua`，人不用管；手改只改这里）。
+    ★ 定位源码**一律走 `.workbuddy/build/srcpath.py`**，任何脚本都不许硬编码这个名字。
   - `.workbuddy/build/*.py` = 构建 / 推送 / 同步 / 审计脚本
   - `.workbuddy/memory/` = 项目记忆与每日日志（**不进仓库**）
   - `事件库/` = 抓包清单（**要进仓库**）
@@ -199,7 +201,7 @@
 ### 5.2 发版流程（固定，别自己发挥）
 
 ```
-1. 改源码                     CheatMenu-6.9.1.lua
+1. 改源码                     CheatMenu-<版本>.lua（名字自动跟版本，别手改文件名）
 2. 顶层写 CHANGELOG 条目       dist/repo/CHANGELOG.md   ← 版本号要和 version.txt 对齐
 3. python .workbuddy/build/push_now.py --patch
      · 修 bug 加 --patch；新功能不加（不加就是"次+1"）
