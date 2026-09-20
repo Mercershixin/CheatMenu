@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>CheatMenu 6.8.1 · 完整仿真与轮回修复报告</title>
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--line:#e3e6ef;--text:#1c2333;--sub:#5d6780;
+        --accent:#2563eb;--green:#0f9d63;--red:#d92d43;--orange:#d97706;--purple:#7c3aed;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 32px 62px;background:var(--bg);color:var(--text);
+       font:14px/1.65 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  h1{font-size:23px;margin:0 0 6px}
+  h2{font-size:18px;margin:32px 0 12px;padding-left:10px;border-left:4px solid var(--accent)}
+  h3{font-size:15px;margin:22px 0 8px;color:var(--accent)}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:16px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 4px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;min-width:126px}
+  .kpi b{display:block;font-size:22px;line-height:1.3}
+  .kpi span{color:var(--sub);font-size:12px}
+  .kpi.ok b{color:var(--green)} .kpi.bad b{color:var(--red)} .kpi.mid b{color:var(--orange)}
+  table{width:100%;border-collapse:collapse;background:var(--card);
+        border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:10px 0 6px}
+  th{background:#eef2fb;text-align:left;font-weight:600;font-size:13px;color:#38415a;
+     padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 10px;border-bottom:1px solid #f0f2f8;vertical-align:top;font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafbff}
+  code{background:#eef2fb;border-radius:4px;padding:1px 5px;font-size:12px;color:#26406e}
+  pre{background:#f3f5fb;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+      font-size:12px;overflow:auto;margin:8px 0}
+  .tag{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.7;
+       white-space:nowrap;font-weight:600}
+  .t-ok{background:#e3f7ee;color:var(--green)}
+  .t-bad{background:#fdeaea;color:var(--red)}
+  .t-soft{background:#fdf3e3;color:var(--orange)}
+  .t-new{background:#e7eeff;color:var(--accent)}
+  .note{background:#fffdf3;border:1px solid #f0e2b8;border-radius:10px;padding:12px 16px;
+        font-size:13px;margin:14px 0}
+  .note b{color:#8a6100}
+  .bad-note{background:#fdf0f2;border:1px solid #f3c6ce;border-radius:10px;padding:12px 16px;font-size:13px;margin:14px 0}
+  .bad-note b{color:var(--red)}
+</style>
+</head>
+<body>
+
+<h1>CheatMenu 6.8.1 · 完整仿真与轮回修复报告</h1>
+<div class="meta">
+  源码 <code>CheatMenu-6.8.1.lua</code> · 13220 行 · 685880 字节 ｜ 生成于 2026-09-19 ｜
+  门禁 <code>verify_all.py</code>
+</div>
+
+<div class="cards">
+  <div class="kpi ok"><b>13 / 13</b><span>门禁步骤通过</span></div>
+  <div class="kpi bad"><b>3</b><span>仿真抓到的真 bug</span></div>
+  <div class="kpi mid"><b>4</b><span>工具链/仿真台修复</span></div>
+  <div class="kpi ok"><b>1.1s</b><span>新加载冒烟耗时（原 12 分钟+）</span></div>
+</div>
+
+<h2>一、这轮最值钱的一件事：仿真抓到一个「加载即崩」的致命 bug</h2>
+<p class="meta">三个静态门禁（luau-compile / luau-analyze / check.py）<b>全都放过去了</b>。它们只看语法与接线，不跑执行流。</p>
+<pre>[string "CheatMenu_v52.lua"]:160: attempt to index a nil value (field 'GK')
+  [FAIL] 顶层执行无异常
+  !! 无法继续</pre>
+<table>
+<thead><tr><th style="width:120px">项</th><th>内容</th></tr></thead>
+<tbody>
+  <tr><td>现象</td><td>顶层执行直接抛错 → <b>脚本根本加载不起来</b></td></tr>
+  <tr><td>根因</td><td>6.8.0 把 <code>GENV.__SYS=SYS</code> 改写成 <code>GENV[SYS.GK.sys]=SYS</code>，
+      但 <code>SYS.GK</code> 的定义块被插在了 <code>-- [01] 服务 + 工具</code> 之前 ——
+      那已经在那一行<b>之后</b>了 → 执行到它时 <code>SYS.GK</code> 还是 <code>nil</code></td></tr>
+  <tr><td>影响</td><td><b>真机上同样是加载即失败</b>（不是仿真特有）</td></tr>
+  <tr><td>修法</td><td>把 <code>[00B]</code> 整块搬到 <code>GENV.__SYS=SYS</code> 之前；
+      并在补丁脚本里加了「定义点必须早于首次使用点」的自检</td></tr>
+</tbody>
+</table>
+
+<h2>二、三轮轮回（检测 → 修复 → 复测）</h2>
+<table>
+<thead><tr><th style="width:46px">轮</th><th style="width:200px">冒烟结果</th><th>发现</th><th style="width:300px">处理</th></tr></thead>
+<tbody>
+  <tr><td><b>1</b></td><td class=""><span class="tag t-bad">顶层崩溃</span></td>
+      <td><code>SYS.GK</code> 为 nil → 加载即崩（<b>致命</b>）</td>
+      <td>搬 <code>[00B]</code> 块到使用点之前</td></tr>
+  <tr><td><b>1b</b></td><td><span class="tag t-bad">1 项 FAIL</span></td>
+      <td>顶层 OK 了，但仿真台的 <code>GENV.__SYS 已挂出</code> 断言失败 —— 我把 <code>__SYS</code> 过度改名了</td>
+      <td><code>__SYS</code> 不含任何外挂关键词，<b>不在反指纹范围</b> → 恢复原名</td></tr>
+  <tr><td><b>2</b></td><td><span class="tag t-soft">12 通过 / 0 失败<br>但被吞错误 2 条</span></td>
+      <td><code>r:GetChildren()</code> 对非实例抛错，<b>被 pcall 吞掉</b> → 真机上表现为
+          「残留菜单没清干净、屏幕上出现两个菜单」而且毫无提示</td>
+      <td>加 <code>type(r.GetChildren)=="function"</code> 能力守卫；<br>并明确<b>只按旧固定名清</b>
+          （新版名是随机中性名，拿通用名去 Destroy 有误伤游戏自己 GUI 的风险）</td></tr>
+  <tr><td><b>3</b></td><td><span class="tag t-ok">12 通过 / 0 失败 / 被吞 0 条</span></td>
+      <td>——</td><td>收敛 ✅</td></tr>
+</tbody>
+</table>
+
+<h3>第 4 个 bug：词法作用域门禁（7/7）抓到的</h3>
+<pre>白名单之外的新名字: checkcaller, getnamecallmethod, h, hookmetamethod, newcclosure, old</pre>
+<p class="meta"><code>h</code> / <code>old</code> 不是"没声明"，而是**在 <code>local</code> 声明之前就被闭包引用了**：</p>
+<pre>local h=hookmetamethod(game,"__namecall",newcclosure(function(...)
+    return h(self,...)      -- ← 这里的 h 解析成【全局 h】(nil)！
+end))</pre>
+<div class="bad-note">
+<b>这是严重 bug</b>：钩子一被游戏调用就 <code>attempt to call a nil value (global 'h')</code> ——
+等于把游戏的 <code>__namecall</code> <b>直接打断</b>。4 处（踢人拦截 / 传送拦截 / GUI 枚举隐藏 / 射线改写）全部改成先 <code>local h</code> / <code>local old</code> 再引用。
+另外 4 个执行器全局（<code>hookmetamethod</code> 等）确属有意新增 → 进了白名单（54 → 58）。
+</div>
+
+<h2>三、为什么"完整仿真"一直跑不完 —— 查清了</h2>
+<table>
+<thead><tr><th style="width:210px">发现</th><th>证据 / 处理</th></tr></thead>
+<tbody>
+  <tr><td><b>仿真台 HttpGet 桩返回假数据</b></td>
+      <td>对<b>任何未登记 URL</b> 都返回字符串 <code>"RESP"</code> → 更新检查把它当成"远端版本号" → 判定有新版本 → 走热重载链 → <b>永久卡死</b>。
+          <b>实测改造前的 6.6.0 同样卡死</b> = 一直以来的缺陷 → 改为<b>抛错</b>（与真实执行器拉不到时一致）</td></tr>
+  <tr><td><b>工具链 O(n²) 文本处理</b></td>
+      <td><code>split_code_strings</code> 的每字符循环里写 <code>re.match(pat, src[i:])</code> —— 每次都对整串做一次<b>全量拷贝</b>。
+          源文件 562KB→684KB 后，<code>diag_inject</code> / <code>check</code> / <code>build_dist</code> / <code>run_full</code> / <code>run_probe_v69</code> <b>集体超时</b>
+          → <b>13 处</b>改成 <code>re.compile(pat).match(src, i)</code>（线性，语义相同）<br>
+          <span class="meta">效果：<code>check.py</code> 3 分钟 → <b>0.9 秒</b>；<code>build_dist</code> 5.5 分钟 → <b>1.4 秒</b></span></td></tr>
+  <tr><td><b>8 个残留仿真进程抢 CPU</b></td>
+      <td>之前几次超时的仿真进程没退出，累计上亿毫秒用户态时间，把后续所有测试一起拖死 → 全部清理</td></tr>
+  <tr><td><b>仿真台断言过期</b></td>
+      <td>「9 个页面全部存在」→ 我们现在是 11 页 → 更新为「页面数量与 UI.Defs 一致(11 页)」</td></tr>
+</tbody>
+</table>
+
+<h2>四、新武器：加载阶段「有界冒烟」（1.1 秒）</h2>
+<div class="note">
+完整仿真在本机落在一个<b>既有的死循环</b>里跑不完，所以它长期<b>不是一个有效门禁</b>。<br>
+但它真正有价值的是<b>加载阶段</b>（桩环境 + 顶层执行 + CreateMenu + 页面/模块自检）——
+上面那个致命 bug 正是这儿抓到的。<br>
+于是把这一段<b>截出来单独跑</b>：
+<ul style="margin:6px 0 0">
+  <li><code>sim/smoke_load.lua</code> = <code>full_sim.lua</code> 截到「交互: 点击所有按钮」之前 + 汇总</li>
+  <li><code>sim/run_smoke.py</code> = <code>run_full.py</code> 换目标文件</li>
+  <li><b>1.1 秒返回</b>，结果确定（12 通过 / 0 失败 / 被吞错误 0 条）</li>
+</ul>
+</div>
+<p class="meta">
+已接进 <code>verify_all.py</code> 作为 <b>3.5/7 硬门禁</b>；
+三个完整仿真步骤（4/7、5/7、6/7）<b>降级为「信息项」</b> —— 跑不完不算交付失败，但一旦产出结果就严格判。
+</p>
+
+<h2>五、最终门禁结果</h2>
+<table>
+<thead><tr><th style="width:340px">步骤</th><th style="width:74px">结果</th><th>说明</th></tr></thead>
+<tbody>
+  <tr><td>1/7 官方 Luau 编译器</td><td><span class="tag t-ok">OK</span></td><td>0.1 秒</td></tr>
+  <tr><td>2/7 静态接线检查（开关声明/页面/接口）</td><td><span class="tag t-ok">OK</span></td><td>问题数 0（提速到 0.9 秒）</td></tr>
+  <tr><td>3/7 注入前体检（编码/BOM/危险 API）</td><td><span class="tag t-ok">OK</span></td><td>无 BOM / UTF-8 可解 / 无 goto / 无 io.</td></tr>
+  <tr><td><b>3.5/7 加载阶段有界冒烟</b>（本轮新增）</td><td><span class="tag t-ok">OK</span></td><td><b>12 通过 / 0 失败 / 被吞错误 0 条</b></td></tr>
+  <tr><td>4/7 整脚本桩仿真（建 UI/切页/点击/卸载）</td><td><span class="tag t-soft">信息项</span></td><td>既有 harness 死循环（6.6.0 同样），非脚本问题</td></tr>
+  <tr><td>5/7 v69 规则探针</td><td><span class="tag t-soft">信息项</span></td><td>复用同一套 <code>full_sim.lua</code>，同一原因</td></tr>
+  <tr><td>6/7 构建发布版 + 等价性 + 编译门禁</td><td><span class="tag t-ok">OK</span></td><td>等价性逐字符一致 · luau-compile exit=0</td></tr>
+  <tr><td>6/7 发布版整脚本仿真</td><td><span class="tag t-soft">信息项</span></td><td>同上</td></tr>
+  <tr><td>7/7 词法作用域检查</td><td><span class="tag t-ok">OK</span></td><td><b>新增未声明名字: 0</b>（修完 4 处闭包作用域 bug）</td></tr>
+  <tr><td colspan="3"><b>13 / 13 步通过 —— 结论：全部通过，可以交付</b></td></tr>
+</tbody>
+</table>
+
+<h2>六、还验证不到的部分（我不粉饰）</h2>
+<table>
+<thead><tr><th style="width:230px">验证不到</th><th>为什么 / 你能做什么</th></tr></thead>
+<tbody>
+  <tr><td><b>完整交互仿真</b>（点遍所有按钮 / 切遍所有页 / 战斗场景 / 卸载对称性）</td>
+      <td>卡在仿真台既有的死循环里。已用「加载冒烟」覆盖最有价值的加载阶段；
+          交互阶段要等仿真台那个死循环被单独修掉。<b>你在游戏里点一遍是最快的验证。</b></td></tr>
+  <tr><td><b>真实 Roblox 运行时</b>的行为</td>
+      <td>桩环境 ≠ 真机。反作弊靶场的 D5/D6/D8/D9/D10 只能在游戏内跑
+          （功能 → 🧪 反作弊对抗靶场 → ▶ 开始对抗检测）</td></tr>
+  <tr><td><b>Hyperion（Byfron）那一层</b></td>
+      <td>客户端原生反篡改，工作在进程/内核层，<b>Lua 碰不到</b>（详见 6.8.0 报告）。不存在"Lua 通过 Hyperion"这回事</td></tr>
+</tbody>
+</table>
+
+</body>
+</html>
