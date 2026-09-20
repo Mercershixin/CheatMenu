@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 19:21 sha 55388e4a bytes 477403'):format('2026-09-20 19:21','55388e4a',477403))
+print(('[CheatMenu] build 2026-09-20 19:50 sha faf0bd4e bytes 477767'):format('2026-09-20 19:50','faf0bd4e',477767))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -112,7 +112,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.10.0"
+SYS.BuildVer="8.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6714,7 +6714,11 @@ local SILI_KEY="sk-ooxveeyffgfpxpenjfgybrelrkcdbkxpyakjvoqzwduovdxe"
 local SILI_MODEL="tencent/Hunyuan-MT-7B"
 local SILI_MAXTOK=512
 local SILI_MAXCONC=4
-local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
+local SAMP_TEMP=0.1
+local SAMP_TOP_P=0.6
+local SAMP_TOP_K=20
+local SAMP_REP_PEN=1.05
+local SYS_PROMPT=[[Translate the following game UI text into Chinese.
 Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.
 Preserve the original line breaks and the original number of lines.
 Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears.
@@ -6727,7 +6731,7 @@ Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->�
 Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
 Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
 Currency symbols (\$, €, ¥) must ALWAYS be kept EXACTLY as-is, even standing alone: write "1,500 $", NEVER write "美元"/"欧元"/"人民币". The word Robux is kept as-is too.
-If the text is already ZH or contains CJK characters, output it unchanged.]]
+If the text is already Chinese or contains CJK characters, output it unchanged.]]
 Trans.LANG_PROMPT={en="English",zh="Chinese",ja="Japanese",ko="Korean",th="Thai",ru="Russian",ar="Arabic"}
 local EMOTICONS="qaq|qwq|qoq|awa|owo|uwu|ovo|tvt|o_o|0_0|-_-|^_^|>_<|t_t|u_u|x_x|o3o|:3|:)|:(|:d|:p|xd|orz|otl|233|555|www|hhh|aaa"
 local KEEPW="og|secret|mythic|legendary|epic|rare|uncommon|common|divine|celestial|exclusive|limited|godly|ultra|special|unique|hidden|ancient|eternal|transcendent|op"
@@ -7253,7 +7257,8 @@ prot("%[%*%]")
 prot("`[^`]+`")
 prot("%*%*[^%*]+%*%*")
 prot("%$%w+%$")
-prot("%$[%d%.,]+")
+prot("%$%s*[%d%.,]+")
+prot("[%d%.,]+%s*%$")
 prot("#%x%x%x%x%x%x")
 prot("[@#&!]%w+")
 prot("%d+%.?%d*%%")
@@ -7314,18 +7319,20 @@ local function noteNetOk() NetStreak=0 NetGateUntil=0 end
 Trans.netGateOn=netGateOn
 local function backend()
 if SYS.T_.TransSili==true then
-return SILI_URL,SILI_KEY,SILI_MODEL,SILI_MAXTOK
+return SILI_URL,SILI_KEY,SILI_MODEL,SILI_MAXTOK,{temperature=SAMP_TEMP,top_p=SAMP_TOP_P,top_k=SAMP_TOP_K,repetition_penalty=SAMP_REP_PEN}
 end
-return HOST,KEY,MODEL,(Trans.maxTok or MAX_TOK_FALLBACK)
+return HOST,KEY,MODEL,(Trans.maxTok or MAX_TOK_FALLBACK),{temperature=SAMP_TEMP,top_p=SAMP_TOP_P,top_k=SAMP_TOP_K,repeat_penalty=SAMP_REP_PEN}
 end
 local function rawRequest(body,system,temp,maxTok,noGate)
 if type(request)~="function" then return nil,true end
-local url,key,model,bMaxTok=backend()
+local url,key,model,bMaxTok,samp=backend()
 local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
 model=model,
 messages={ {role="system",content=system}, {role="user",content=masked} },
-temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or bMaxTok or MAX_TOK_FALLBACK, stream=false,
+temperature=temp or samp.temperature, top_p=samp.top_p, top_k=samp.top_k,
+repetition_penalty=samp.repetition_penalty, repeat_penalty=samp.repeat_penalty,
+max_tokens=maxTok or bMaxTok or MAX_TOK_FALLBACK, stream=false,
 })
 local ok,res=pcall(function()
 return request({
@@ -7370,7 +7377,7 @@ end
 local function transPrompt() return SYS_PROMPT end
 function Trans.promptFor(code)
 local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
-return ("You are a game-UI translation engine. Translate the user's text into %s.\n"
+return ("Translate the following game UI text into %s.\n"
 .."Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.\n"
 .."Preserve the original line breaks and the original number of lines.\n"
 .."Some characters in the input are opaque placeholder markers, not words. Copy every non-word marker character exactly as it appears, in its original position, together with the digits attached to it. Never translate, drop, replace, renumber, merge or reorder them.\n"
