@@ -6,41 +6,45 @@
 > **`AGENTS.md`**（正文）· `CLAUDE.md` · `.github/copilot-instructions.md` · `.cursor/rules/cheatmenu.mdc` ·
 > 以及源码 `CheatMenu-*.lua` 的**文件头注释**。
 
-> ## ⛔ 先读这条（换账号 / 换智能体接手必看，用户已强调多次）
+> ## ⛔ 先读这几条（换账号 / 换智能体接手必看）
 >
-> **0. ⛔⛔ 测试手段只有三种（用户 2026-09-20 定稿 · 最高优先级）：
-> ① 静态分析 ② 单元测试 ③ 真云端分发链路验证（`cloud_verify.py`，真拉真字节）。**
-> **「整脚本仿真」与「循环检测」（= 模拟检测循环 / 多轮深度验证）均已【彻底禁用】，没有任何例外。**
-> - 禁跑点名：`sim/run_full.py` · `sim/full_sim.lua` · `sim/run_smoke.py` · `sim/smoke_load.lua` · `sim/run_probe_v69.py`。
-> - **「循环检测」=「模拟 → 修复 → 再模拟 → 再修复」那种反复跑的检测循环。**
->   旧版本这里写"只在用户明确要求时才做"—— **已作废，不许再援引**。
->   用户原话：**「也包括循环检测 也禁用，只能用我说3个测试的 那个」**。
-> - 为什么禁：它是 `lupa 2.8 + Lua 5.5` 的 mock，既不是 Luau 也不是 Roblox，
->   真实物理/复制/服务端权威/执行器 API/UI 一项都没覆盖，却反复把"仿真台自己的坑"算成脚本 bug。
-> - 详见 **`AGENTS.md` §0.1** 与 `.workbuddy/sim/DISABLED.md`。
-> - ⛔ 不要再造第四个 mock 环境来当门禁。
-> - ★ **第三类 = 真云端分发链路验证**（`cloud_verify.py`）：真网络/真 CDN/真字节，验「云端实际发给用户的字节」是否与本地发行产物逐字节一致、能否编译。
->   **不需要真机、也不需要在执行器里跑 Lua 功能**（用户 2026-09-20 定稿：「你就纯分发的真云端就行」）。
+> **0. ⛔⛔ 验证手段只有三种，没有例外：**
+> **① 静态分析**（`luau-compile` / `luau-analyze` / `check_globals.py` / 等价性比对）
+> **② 单元测试**（加载器探针 / `_ballistic_unit.py` 那种"抽真代码 + 真解释器"）
+> **③ 真云端分发链路验证**（`cloud_verify.py`：真网络 / 真 CDN / 真字节，与本地发行产物逐字节比对 + 送编译器）。
+> - **不需要真机，也不需要在执行器里跑 Lua 功能。**
+> - ⛔ **整脚本仿真 / 任何 mock 环境 / 「循环检测」（模拟→修复→再模拟）/ 多轮深度验证 —— 一律禁跑、禁修、禁扩展。**
+>   点名：`sim/run_full.py` · `sim/full_sim.lua` · `sim/run_smoke.py` · `sim/smoke_load.lua` · `sim/run_probe_v69.py`。
+>   原因：它是 `lupa + Lua 5.5` 的 mock，**既不是 Luau 也不是 Roblox**，真实物理/复制/服务端权威/执行器 API/UI
+>   一项都没覆盖，却反复把"仿真台自己的坑"算成脚本 bug。
+> - ⛔ **不要再造第四个 mock 环境来当门禁。**
 >
 > **1. 不要自作主张跑「测试循环」。**
-> `verify_all.py`、`local_sync.py --full`、`check.py`、`check_globals.py`、`luau-compile`、`luau-analyze`、
-> 加载器探针 —— **只在用户明确说"跑一下 / 验证一下 / 测试一下 / 发版"时才跑**。
-> （用户原话：**"我让你做你才做，没让你做你不用做。"**）
+> `verify_all.py` · `check.py` · `check_globals.py` · `luau-compile` · `luau-analyze` · 加载器探针 ——
+> **只在用户明确说"跑一下 / 验证一下 / 测试一下 / 发版"时才跑**；也别为了"确认我没改坏"顺手跑一遍。
+> （用户原话：**"我让你做你才做，没让你做我不做。"**）
+> 发版本身要跑 `push_now.py` —— 那是**交付步骤**，不算额外的验证循环。
 >
 > **2. UI 上标注「不推荐 / 会被拉回 / 有风险」是给用户看的提示，不是让你改行为。**
 > 用户要的是"**标出来，我自己决定用不用**"。**不要**因此删除选项、改默认值、加限制。
 >
-> **3. 同理：不擅自新增功能、不动用户没让你动的地方。** 只做用户明确要求的那一件事。
+> **3. 不要擅自新增功能、不要动用户没让你动的地方。** 只做用户明确要求的那一件事。
+>
+> **3.5 ⛔ 接口红线：单点 `hookfunction` 可以；挂 `__namecall` / `__index` 总入口做关键词搜索绝对不行**
+> （那是所有实例方法调用的总入口，实测就是"开过检测极度卡顿掉帧"的病根）。
 >
 > **4. 发版默认命令 = `python .workbuddy/build/push_now.py --patch`（修 bug）/ 不带 `--patch`（新功能）。**
-> - ★ 2026-09-20 起 **不带 `--fast` 也是一样的** —— 整脚本仿真已彻底禁用，`--fast` 只剩兼容意义。
-> - 改完 = **钉版本号 → `push_now.py`**（动了 README/AGENTS/CLAUDE/.github/.cursor/事件库 再跑 `push_docs.py`），就结束。
+> - 改完 = **钉版本号 → `push_now.py` → `local_sync.py`**（动了 README/AGENTS/CLAUDE/.github/.cursor/事件库 再跑 `push_docs.py`），就结束。
 > - 若日志出现 `!! API 推送失败` → 兜底跑 `python .workbuddy/build/push_api.py`。
+>   ⚠ 这条**几乎每次都是假失败** —— 最终以 **API 回读逐字节比对** 为准。
+>
+> 完整规范（已删功能禁回加清单 / 目录结构 / 输入层约定 / 能力边界 / 结构现状 / 待办）在 **`AGENTS.md`**。
 
 
 ## 这是什么
 
-一个跑在 Roblox 执行器里的多功能 Lua 脚本（**13220 行**），当前主攻 **MachineParty**（权威数据全在 Player 的 `MP*` / `@*` Attribute 那套）。功能覆盖：战斗辅助（索敌/自动瞄准/自动开火）、移动（飞行/加速/穿墙）、视觉（玩家透视/名字/武器标记）、传送、藏身、翻译等。
+一个跑在 Roblox 执行器里的多功能 Lua 脚本（**一万六千余行**，具体以源码为准 —— 别抄行数，每次改动都会漂移）。
+当前主攻 **MachineParty**（权威数据全在 Player 的 `MP*` / `@*` Attribute 那套）。功能覆盖：战斗辅助（索敌/自动瞄准/自动开火）、移动（飞行/加速/穿墙）、视觉（玩家透视/名字/武器标记）、传送、藏身、翻译、**综合扫描（十层）**等。
 
 - **仓库**：`Mercershixin/CheatMenu`，分支 `main`
 - **当前版本**：见 `version.txt`
@@ -55,8 +59,10 @@
 | `CHANGELOG.md` | 更新记录（**发行前先在顶部加本版说明**） |
 | `事件库/` | 游戏 Remote 事件抓包清单，做新功能先来这里查信号 |
 
-> ⚠️ 本地工作区里是**完整源码，带注释**（**文件名跟版本号走**：`CheatMenu-<版本>.lua`，如 `CheatMenu-6.9.1.lua`，
-> 升版用 `.workbuddy/build/rename_version.py` 一键改名）。仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
+> ⚠️ 本地工作区里是**完整源码，带注释**，文件名**固定**为 `CheatMenu-6.9.1.lua`（**不跟版本号走** ——
+> 版本号只在 `version.txt` / `CHANGELOG.md` 顶部 / `build/VERSION` 三处，文件名永远不动）。
+> ⛔ **不要用 `.workbuddy/build/rename_version.py` 改名**（已停用）：`build_dist.py` 的 `SRC` 是硬编码的，
+> 改名会断构建链。仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
 > **改代码要改本地源码，不是直接改仓库产物。**
 
 ## 加载方式
@@ -65,7 +71,7 @@
 
 ## 这个游戏的关键事实（做功能前必读）
 
-从诊断实锤确认（`CheatMenu-6.9.1.lua:4531`），**权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
+从诊断实锤确认（源码里搜 `MPGhost` / `@combatPaused` 那一带的诊断注释），**权威数据大多在 Player 的 Attribute 里，不在标准 Humanoid/Team**：
 
 | 判据 | 位置 | 关键点 |
 |------|------|------|
@@ -73,8 +79,8 @@
 | 状态 | `@State` = `Sprint`/`Slide`/`Stand`/`Dead` | 比 `Humanoid:GetState()` 准（权威状态） |
 | 护盾 | `@Shield` / `@TempShield` | 0 = 无盾 |
 | 换弹/受控 | `@combatPaused` | `true` = 换弹 / 受控 / 无法攻击 |
-| 队伍 | **多信号按序试**：`Team` → `MPTeam` → `MPTeamId` → `team` → `MPFaction` → `MPSide`，最后回退 `Player.Team.Name` | 标准 `Player.Team` 恒为 **nil**；这些可能**全为 nil** → 透视颜色恒定，属已知现象（`CheatMenu-6.9.1.lua:2413`） |
-| **幽灵/隐身态** | `MPGhost == true` | **MachineParty 特有**；本机玩家实测 `MPGhost=true` + `MPWalkSpeed=0` → 透视里单独标**紫色**（`CheatMenu-6.9.1.lua:2426`） |
+| 队伍 | **多信号按序试**：`Team` → `MPTeam` → `MPTeamId` → `team` → `MPFaction` → `MPSide`，最后回退 `Player.Team.Name` | 标准 `Player.Team` 恒为 **nil**；这些可能**全为 nil** → 透视颜色恒定，属已知现象（源码里搜 `TeamKey` / `ateam`） |
+| **幽灵/隐身态** | `MPGhost == true` | **MachineParty 特有**；本机玩家实测 `MPGhost=true` + `MPWalkSpeed=0` → 透视里单独标**紫色**（源码里搜 `MPGhost`） |
 
 - ⚠️ **`MadworkCombat_*` 那套战斗框架在当前游戏里没有**（源码 0 处引用）—— 那是 `事件库/` 里**另一个游戏**的清单，
   别照着写机判。
@@ -89,22 +95,26 @@
    （`python .workbuddy/build/push_now.py --patch`，或 `local_sync.py --patch`，或环境变量 `CM_VER_KIND=patch`）。
    不加 `--patch` 就会把一次 bug 修复发成功能版（例：本该 4.8.1 却发成 4.9.0）。
    **发完记得核对 `version.txt` 与 CHANGELOG 顶部的版本号一致。**
-2. **门禁内容**：`python .workbuddy/build/verify_all.py`（**仅在用户明确要求时才跑**；现已是**静态系**，
-   分母 7 但仿真系四步已打印 `[SKIP]`）：
+2. **门禁内容**：`python .workbuddy/build/verify_all.py`（**仅在用户明确要求"发版 / 验证"时才跑**）：
    **1/7** 官方 Luau 编译器 · **2/7** `check.py` 静态接线 + 回归锁 · **3/7** `diag_inject` 注入前体检（编码/BOM/危险 API）·
-   **6/7** 构建发布版 + 等价性 + 编译门禁 · **7/7** `check_globals` 词法作用域。
-   ★ 原 **3.5/7 加载阶段有界冒烟 · 4/7 整脚本桩仿真 · 5/7 v69 规则探针** 属**仿真系，已按用户要求彻底禁用**，
-   现在只打印 `[SKIP]`（见 `AGENTS.md` §0.1）。
+   **6/7** 构建发布版 + 等价性 + 编译门禁 · **6.5/7** 抛射物弹道解算器**单元测试** · **7/7** `check_globals` 词法作用域。
+   ★ 原 **3.5 加载冒烟 · 4 桩仿真 · 5 v69 探针 · 6b 发布版行为对比** 属**仿真系，已彻底禁用**，
+   永久只打印 `[SKIP]`（见 `AGENTS.md` §0.1）—— 不要"修仿真台让门禁变绿"。
 3. **改文件姿势**：用 `find`+切片+`assert` 唯一命中，**禁止 `re.sub(...,re.S)` 带 `.*`**（会吞行）。
 4. **连接必须经 `T()` 登记进 `SYS.Conns`**；"只挂一次"标记用弱表，别用实例属性（跨代次残留）。
-5. **★ 不要自作主张跑「仿真 / 模拟检测循环 / 多轮深度验证」（= 循环检测）** ——
-   「模拟 → 修复 → 再模拟 → 再修复」的反复循环**已彻底禁用，没有例外**（**不是**"用户要求就能跑"）。
-   ★ 2026-09-20 更正：旧版这里写"只在用户明确要求时才做"—— **已作废**。
-   本项目只认 **① 静态分析 ② 单元测试 ③ 真云端分发链路验证（`cloud_verify.py`）** 三种手段。
+5. **★ 不要自作主张跑「仿真 / 循环检测 / 多轮深度验证」** —— 见本文顶部第 0 条与 `AGENTS.md` §0.1
+   （本项目只认 **① 静态分析 ② 单元测试 ③ 真云端分发链路验证** 三种手段，没有例外）。
    *换账号 / 换智能体接手时，这条同样适用 —— 别每个号都来一遍。*
 6. **UI 上标注「不推荐 / 会被拉回」是给用户看的提示，不是让你改行为** ——
    用户要的是"**标出来我自己决定用不用**"，不是让你把那个选项删掉、改默认值或加限制。
    同理：**不擅自新增功能、不擅自改默认值**，只做用户明确要的那件事。
+7. **定位代码用「名字 / 分节标题」grep，不要把行号抄进文档** ——
+   行号每次改源码都会漂移，抄行号正是旧版残留制造新问题的原因之一。
+   （分节标题形如 `-- [11.5] 战斗模块`；模块地图见 `AGENTS.md` §8.1。）
+8. **改完想自查结构，用三个只读审计脚本**（`.workbuddy/build/`，随时可重跑，不改任何文件）：
+   `_audit_modules.py`（体量 / 隔离 / 重复函数 / `SYS._*` 清单）·
+   `_audit_chunklocals.py`（精确算 chunk 层 local 名额）·
+   `_audit_sysunderscore2.py`（`SYS._*` 的 nil-crash 风险分级）。
 
 
 ## 🔄 本地与远程同步 / 🩺 一键诊断 / 发版（★ 接手必读）
