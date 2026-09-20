@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 00:14 sha 32f6b034 bytes 499697'):format('2026-09-21 00:14','32f6b034',499697))
+print(('[CheatMenu] build 2026-09-21 00:20 sha a838f70f bytes 502440'):format('2026-09-21 00:20','a838f70f',502440))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.8.0"
+SYS.BuildVer="8.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2019,6 +2019,80 @@ local buf={
 for i=1,#(lines or {}) do buf[#buf+1]=tostring(lines[i]) end
 local ok=P(function() writefile(fn,table.concat(buf,"\n")) end)
 return ok and fn or nil
+end
+SYS.ScanOutDir=nil
+SYS.ScanOutWhy=nil
+function SYS.ResolveScanDir()
+if SYS.ScanOutDir then return end
+if type(writefile)~="function" or type(isfile)~="function" then
+SYS.ScanOutWhy="执行器不支持 writefile / isfile"
+return
+end
+local _,nm=SYS.GameInfoLine()
+local rel="CheatMenu\\"..safeFileName(nm)
+local who=tostring((SYS.LP and SYS.LP.Name) or "")
+local cands={
+"C:\\Users\\"..who.."\\Desktop\\"..rel,
+"C:\\Users\\Administrator\\Desktop\\"..rel,
+"C:\\Users\\Public\\Desktop\\"..rel,
+"C:\\Users\\"..who.."\\OneDrive\\Desktop\\"..rel,
+rel,
+}
+for _,dir in ipairs(cands) do
+local ok=P(function()
+if type(makefolder)=="function" then pcall(makefolder,dir) end
+writefile(dir.."\\_probe.txt","ok")
+end)
+if ok and isfile(dir.."\\_probe.txt") then
+SYS.ScanOutDir=dir
+SYS.ScanOutWhy=(dir==rel) and "执行器工作目录（桌面写不进去）" or "桌面"
+return
+end
+end
+SYS.ScanOutWhy="所有候选路径都写不进去"
+end
+function SYS.DumpScanLayers(buf)
+SYS.ResolveScanDir()
+local dir=SYS.ScanOutDir
+if not dir then return nil,SYS.ScanOutWhy end
+local info=SYS.GameInfoLine()
+local head={"-- CheatMenu 综合扫描 · "..tostring(info),
+"-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
+"-- 共 "..tostring(#(buf or {})).." 行",
+"-- 输出目录: "..dir, ""}
+local written={}
+local function body(lines)
+local t={}
+for i=1,#head do t[#t+1]=head[i] end
+for i=1,#(lines or {}) do t[#t+1]=tostring(lines[i]) end
+return table.concat(t,"\n")
+end
+if P(function() writefile(dir.."\\00_全部.txt", body(buf)) end) then
+written[#written+1]="00_全部.txt"
+end
+local NAMES={A="A_通信层",B="B_代码层",C="C_脚本层",D="D_实例层",E="E_数据层",
+F="F_连接层",G="G_环境层",H="H_反查层",I="I_DEX层",J="J_Remote层"}
+local curKey, curLines = nil, nil
+local function flush()
+if curKey and curLines and #curLines>0 then
+local fn=(NAMES[curKey] or curKey)..".txt"
+if P(function() writefile(dir.."\\"..fn, body(curLines)) end) then
+written[#written+1]=fn
+end
+end
+curKey, curLines = nil, nil
+end
+for i=1,#(buf or {}) do
+local s=tostring(buf[i])
+local k=s:match("════════ ([A-J]) ")
+if k then
+flush() curKey=k curLines={}
+elseif curKey then
+curLines[#curLines+1]=s
+end
+end
+flush()
+return written, SYS.ScanOutWhy, dir
 end
 local HudGui, HudLabel, HudHideAt = nil, nil, nil
 if RS and RS.Heartbeat then
@@ -11575,7 +11649,11 @@ if #LAB.Log==0 then out[#out+1]="  (还没有记录 —— 先在 ④ 里填函�
 print(table.concat(out,"\n"))
 SYS.Notify("调用记录已输出",SYS.CY.green)
 end
-local function line(s) print("  "..s) end
+local DumpBuf = {}
+local function line(s)
+print("  "..s)
+DumpBuf[#DumpBuf+1]=tostring(s)
+end
 local function head(s) print(""); print("════════ "..s.." ════════") end
 local SCAN_CAP=80000
 local NET_CLS={
@@ -12025,7 +12103,15 @@ local shared,sharedN,sharedCapped=scanWholeGame()
 P(function() LAB.DexScan(shared,sharedN,sharedCapped) end)
 P(function() LAB.RemoteScan(shared,sharedN,sharedCapped) end)
 print(""); print(("##################  扫描完毕 (%.2fs)  ##################"):format(os.clock()-t0))
-SYS.Notify("综合扫描完成 —— 结果在控制台(F9)",SYS.CY.green)
+local w,why,dir=SYS.DumpScanLayers(DumpBuf)
+if w and #w>0 then
+print(("  ✅ 已落盘 %d 个文件 -> %s"):format(#w,tostring(dir)))
+for i=1,#w do print("       · "..tostring(w[i])) end
+SYS.Notify(("综合扫描完成 —— 全部十层已落盘：\n%s"):format(tostring(dir)),SYS.CY.green)
+else
+print("  ⚠ 落盘失败: "..tostring(why or "未知").."（控制台只显示前 60 条, 其余看不到）")
+SYS.Notify("综合扫描完成 —— 结果在控制台(F9)。落盘失败: "..tostring(why or "?"),SYS.CY.yellow)
+end
 end
 function LAB.Summary()
 local out={"=== CheatMenu 扫描摘要 ===", "时间: "..os.date("%Y-%m-%d %H:%M:%S")}
