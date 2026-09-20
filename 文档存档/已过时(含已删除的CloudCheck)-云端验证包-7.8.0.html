@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CheatMenu 云端验证包 · 7.8.0</title>
+<style>
+:root{--page:#F5F6F7;--line:#E3E5E8;--tx:#1B1D1F;--tx2:#5A6068;--blue:#185FA5;--blue-bg:#E6F1FB;
+--green:#0F6E56;--green-bg:#E1F5EE;--amber:#854F0B;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;
+--gray-bg:#F1EFE8;--purple:#534AB7;--purple-bg:#EEEDFE}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--tx);
+font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:23px;font-weight:600;margin:0 0 6px;letter-spacing:-.2px}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:26px}
+h2{font-size:17px;font-weight:600;margin:36px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--gray-bg);padding:1.5px 5px;border-radius:4px;color:#2C2C2A}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--gray-bg);font-weight:600;color:var(--tx2);white-space:nowrap}
+td.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.t-g{background:var(--green-bg);color:var(--green)}.t-a{background:var(--amber-bg);color:var(--amber)}
+.t-r{background:var(--red-bg);color:var(--red)}.t-b{background:var(--blue-bg);color:var(--blue)}
+.t-p{background:var(--purple-bg);color:var(--purple)}.t-x{background:var(--gray-bg);color:#5F5E5A}
+.box{border-left:3px solid var(--blue);background:var(--blue-bg);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0}
+.box.warn{border-color:var(--amber);background:var(--amber-bg)}
+.box.bad{border-color:var(--red);background:var(--red-bg)}
+.box.good{border-color:var(--green);background:var(--green-bg)}
+.box.p{border-color:var(--purple);background:var(--purple-bg)}
+.box h4{margin:0 0 6px;font-size:13px;font-weight:600}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:4px 0}
+.small{font-size:12.5px;color:var(--tx2)}
+pre{background:#FAFAF9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
+font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.6;color:#2C2C2A;margin:10px 0}
+.step{display:flex;gap:12px;align-items:flex-start;margin:14px 0}
+.num{flex:0 0 26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;
+font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.num.p{background:var(--purple)}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>CheatMenu 云端验证包 · 7.8.0</h1>
+<div class="sub">2026-09-20 · 仓库 <code>Mercershixin/CheatMenu</code> @ <code>main</code> · 目标：把「③ 云端执行（OCALE）」这一环补齐</div>
+
+<div class="box p">
+<h4>这份东西要解决什么</h4>
+<p style="margin-bottom:0">本项目只认三类验证：<b>① 静态分析 ② 单元测试 ③ 云端执行（OCALE）</b>。
+①②已在本机跑完并全绿。<b>③必须在真实执行器 / 云端跑</b>——7.8.0 新增的
+<code>SYS.CloudCheck()</code> 就是为这一环做的：一次点击，产出一段<b>固定格式</b>的
+<code>[PASS]/[FAIL]/[WARN]</code> 清单，你原样发回来我就能逐行比对。</p>
+</div>
+
+<h2>第 1 步 · 云端执行器（跑加载期 + API 层）</h2>
+
+<div class="step"><div class="num">1</div><div>
+<h3>粘贴加载器</h3>
+<p>在云端执行器里跑仓库根目录的 <code>loader.lua</code>（就是那 45 行），或者直接用这一行：</p>
+<pre>loadstring(game:HttpGet("https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"))()</pre>
+<p class="small">加载器内置 8 个下载源兜底（raw → jsDelivr → fastly → gcore → githack → gitmirror → ghproxy → ghfast），
+并带时间戳查询参数绕开 CDN 缓存。</p>
+</div></div>
+
+<div class="step"><div class="num">2</div><div>
+<h3>先确认"跑的是哪一版"（两条指纹）</h3>
+<pre>[CheatMenu] 下载完成 473126 字节 &lt;- https://...
+[CheatMenu] build 2026-09-20 ... sha xxxxxxxx bytes 473126</pre>
+<ul>
+  <li><code>下载完成 N 字节</code> = 加载器拿到的产物大小 → 7.8.0 应为 <b>473126</b>。</li>
+  <li><code>[CheatMenu] build ... sha ... bytes ...</code> = 产物自带横幅（每次发版生成）→ 用它确认不是 CDN 旧缓存。</li>
+</ul>
+<p class="small">若字节数对不上，说明拿到的是缓存/旧版 —— 多跑几次加载器，或换一个下载源。</p>
+</div></div>
+
+<div class="step"><div class="num">3</div><div>
+<h3>打开菜单 → 设置页 → 点「☁ 跑一次云端自检」</h3>
+<p>菜单默认热键 <code>G</code>（右 Shift 始终可用）。按钮在设置页最下方区块
+<b>「☁ 云端执行自检 (OCALE)」</b>。旁边还有 <b>「📋 复制上次自检报告」</b>。</p>
+<p>报告会同时进三处：<b>控制台（F9）</b> · <b><code>cloudcheck.txt</code></b> · <b>剪贴板</b>。</p>
+</div></div>
+
+<div class="step"><div class="num">4</div><div>
+<h3>把这两段发我</h3>
+<ol>
+  <li>上面那两行<b>指纹横幅</b>（<code>下载完成 …</code> 与 <code>build …</code>）；</li>
+  <li>自检的<b>整段输出</b>，至少要有以 <code>[RESULT]</code> 开头的那一行。</li>
+</ol>
+<p><b>判读规则</b>：<code>FAIL=0</code> 即这一环通过；<code>FAIL&gt;0</code> 按下面的签名表对号入座。</p>
+</div></div>
+
+<h3>报告长什么样（示例）</h3>
+<pre>################  CheatMenu 云端执行自检 (OCALE)  ################
+构建: ver=7.8.0  执行器=...  时间=2026-09-20 13:05:11
+环境: 触屏=false  视口=1920x1080
+[PASS] 加载: LocalPlayer 在位(xxx)
+[PASS] 加载: PlayerGui 就绪
+[PASS] 加载: CurrentCamera 就绪
+[WARN] 加载: 菜单未建立(还没打开过菜单)
+[PASS] 能力: 7 项全在(hmm,hf,ncc,gnm,cc,gcs,gmt)
+[PASS] 能力: hookfunction 在(踢人拦截 / 传送拦截可用)
+[WARN] 能力: 没有 gethui(容器回退到 PlayerGui)
+[PASS] 能力: fireproximityprompt 在(快速交互/自动藏身可走服务端认可那条路)
+[PASS] 视线: FindPartOnRay 4 参可用(半透明让路 + 忽略水面 生效)
+[WARN] 护栏: 当前是关的 -&gt; 跳过钳制验证(把它打开再跑一次即可验)
+[PASS] 反指纹: SelfAudit 产出 12 行
+[RESULT] PASS=8 FAIL=0 WARN=4 ver=7.8.0</pre>
+
+<h3>失败 / 警告签名对照表</h3>
+<table>
+<thead><tr><th>看到什么</th><th>含义</th><th>我要什么</th></tr></thead>
+<tbody>
+<tr><td class="mono">[FAIL] 加载: xxx 缺失</td><td>执行器环境异常，脚本可能整体不可用</td><td>完整输出 + 执行器名字</td></tr>
+<tr><td class="mono">所有下载源失败</td><td>该云端环境没有 <code>HttpGet</code> / 出网受限</td><td>最后那行 <code>源 N 不可用: …</code></td></tr>
+<tr><td><span class="tag t-a">WARN</span> 能力: 缺 hmm / gnm …</td><td>精简版执行器 → 依赖它的功能会自动降级，<b>不是 bug</b></td><td>缺了哪几项</td></tr>
+<tr><td><span class="tag t-a">WARN</span> 视线: 已自动降级为 2 参</td><td><b>7.8.0 的保护生效了</b>：该执行器的 <code>FindPartOnRay</code> 不吃 4 参 → 自动退回旧版行为，不会隔墙误锁</td><td>执行器名字（我想知道是哪类执行器）</td></tr>
+<tr><td><span class="tag t-r">FAIL</span> 护栏: 钳制异常</td><td><code>guardSpeed</code> 没生效 → 真 bug</td><td>那两行原样输出</td></tr>
+<tr><td><span class="tag t-r">FAIL</span> 反指纹: SelfAudit 没产出</td><td><code>Prot.SelfAudit</code> 抛错</td><td>控制台里它前面的红字</td></tr>
+<tr><td>加载期就红字报错 / 编译失败</td><td>真 bug（最高优先级）</td><td><b>完整堆栈</b>，别截断</td></tr>
+</tbody>
+</table>
+
+<div class="box warn">
+<h4>云端执行器<b>拿不到</b>什么（别在这条路上问这些）</h4>
+<p style="margin-bottom:0">它只跑 Lua 沙箱，<b>没有 Roblox 渲染管线</b>。所以：画面是否正常、ESP 有没有真的描边、
+菜单在手机上是否点得到、帧率掉不掉、Highlight 有没有被引擎回收 —— <b>在这里全都看不到</b>。
+这些必须在第 2 步的「云真机」看。<b>不要用云端执行器的结果去推断画面表现。</b></p>
+</div>
+
+<h2>第 2 步 · 云真机（唯一能给 G9 出数字的地方）</h2>
+
+<div class="box bad">
+<h4>为什么 G9 只能在这里测</h4>
+<p style="margin-bottom:0"><code>Highlight</code> 的<b>配额与回收发生在 Roblox 客户端的渲染与实例管理层</b>，不在 Lua 沙箱里。
+云端执行器里 <code>Instance.new("Highlight")</code> 只是建了个对象、<b>从不进渲染路径</b>，数出来的数字是假象；
+而且"人多"这个前提要求<b>同一局里真有大量角色</b>，云端执行器通常跑空场景 —— 更假。</p>
+</div>
+
+<div class="step"><div class="num p">1</div><div>
+<h3>场景要求</h3>
+<ul>
+  <li>云真机（Android + Roblox + 执行器），进<b>人多的公共服</b>，同屏 <b>≥10 个角色</b>（越多越好）。</li>
+  <li>脚本用 7.8.0；打开<b>玩家透视</b>（每目标一个 Highlight）+ 需要的话开<b>全图高亮</b>。</li>
+</ul>
+</div></div>
+
+<div class="step"><div class="num p">2</div><div>
+<h3>测什么（三条，逐条记）</h3>
+<ol>
+  <li><b>数量对不对得上</b>：开透视后，实际带 Highlight 的角色数 == 你看到描边的角色数？</li>
+  <li><b>有没有被回收</b：人数继续涨（或持续 60 秒）后，早期目标的描边会不会突然消失？</li>
+  <li><b>帧率拐点</b>：从 1 人 → 10 人 → 20 人，帧率怎么掉。</li>
+</ol>
+</div></div>
+
+<div class="step"><div class="num p">3</div><div>
+<h3>计数与测帧率的控制台小抄</h3>
+<p>Highlight 是挂在<b>角色身上</b>的（<code>h.Parent = 角色</code>，不是固定容器），所以这样数：</p>
+<pre>local n,t=0,0
+for _,pl in ipairs(game:GetService("Players"):GetPlayers()) do
+    local c=pl.Character
+    if c then
+        t=t+1
+        if c:FindFirstChildOfClass("Highlight") then n=n+1 end
+    end
+end
+print(("Highlight=%d / 角色=%d"):format(n,t))</pre>
+<p>测 3 秒平均帧率：</p>
+<pre>local f=0
+local c=game:GetService("RunService").RenderStepped:Connect(function() f=f+1 end)
+task.wait(3) c:Disconnect()
+print(("FPS=%.1f"):format(f/3))</pre>
+<p class="small">建议在 1 人 / 10 人 / 20 人三个时刻各跑一次这两段，把数字发我 —— 这就是 G9 要的量化。</p>
+</div></div>
+
+<h2>第 3 步 · 顺带说清：官方 Open Cloud 与这件事无关</h2>
+<p>Roblox 官方 Open Cloud（DataStore / 资产 / 发布）<b>只能从服务器外部读写数据与发布资产，
+没有任何注入第三方 Lua 脚本的入口</b>。所以它<b>验证不了脚本</b>，跟本项目这三类验证是平行的两条线 ——
+除非以后要做"配置云同步"，否则用不上。</p>
+
+<div class="box good">
+<h4>这一版的边界（我这边如实说明）</h4>
+<ul style="margin-bottom:0">
+  <li>7.8.0 的改动<b>只加了一次性探测 + 一个只读自检函数 + 设置页两个按钮</b>，<b>不碰任何热路径逻辑</b>。</li>
+  <li>「视线 4 参降级」最坏情况 = <b>回到 7.6.1 的 2 参行为</b>，不会更差 —— 这是设计目标，不是妥协。</li>
+  <li><code>SYS.CloudCheck</code> 是<b>只读</b>的：不改配置、不建实例、不动角色。</li>
+  <li>仍然<b>不做</b>整脚本仿真 / 循环检测（按用户要求彻底禁用）。</li>
+</ul>
+</div>
+
+</div></body></html>
