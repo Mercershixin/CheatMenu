@@ -191,11 +191,64 @@ Carnival 37 / Block Cup 38 / Undead 35 / Jungle 40 / Frozen 40
 
 ### 5.5 其它常量（表格形式，按需查）
 
-- **配重 16 档**：`Wooden Stick(PPS2)` → … → `Black Hole Barbell(PPS 3e7)`，价格从 0 到 5e25。
+- **配重 16 档**（`Name` / `PPS` / `Cost`）—— ★ 这 16 个名字也是**识别"举铁道具"的第二判据**：
+
+  | 配重 | PPS | 价格 |
+  |---|---|---|
+  | Wooden Stick | 2 | 0 |
+  | Bone Barbell | 5 | 7,500 |
+  | Stone Block | 10 | 75,000 |
+  | Copper Plate | 50 | 500,000 |
+  | Iron Plate | 150 | 7,250,000 |
+  | Ice Barbell | 400 | 250,000,000 |
+  | Donut Barbell | 1,000 | 5,000,000,000 |
+  | Golden Barbell | 2,500 | 85,000,000,000 |
+  | Heaven Plate | 6,250 | 1,200,000,000,000 |
+  | Mega Golden Barbell | 15,000 | 18,000,000,000,000 |
+  | Neon Pulse | 50,000 | 500,000,000,000,000 |
+  | Giant Gold Star Barbell | 100,000 | 1e16 |
+  | Emerald Barbell | 400,000 | 1e18 |
+  | Planet Barbell | 2,000,000 | 5e20 |
+  | Big Jupiter | 5,000,000 | 1e23 |
+  | Black Hole Barbell | 30,000,000 | 5e25 |
+
 - **踢击风格 14 种**：`Default×1.00` … `Tornado×1.70`，各有 `PerfectLength`（完美判定长度）。
 - **基础槽位升级 20 档**：5e6 → 5e13。
 - **战令经验**：免费轨 1-15 级 500→7500；额外轨 1-5 级 8250→11250。
 - **学校合成 3 个配方**：`Cucumbro Nerdino`(1250) · `Professor Penneroni`(2500) · `Brain Mogger`(7500)。
+
+### 5.6 ★★ 健身房（LiftMachine）—— 做「自动举铁 / 健身房事件」必须知道的
+
+| 事实 | 值 |
+|---|---|
+| 机器怎么找 | **`CollectionService:GetTagged("LiftMachine")`**（★ 标签名确认无误），再过滤 `IsDescendantOf(workspace)` |
+| 举铁道具怎么认 | `tool:HasTag("SquatTool")` **或** 名字命中上面那 16 档配重名（**两个判据都要试**） |
+| 「我被机器认可了吗」 | `LocalPlayer:GetAttribute("liftMachine")` → **> 1 才算进入**（1 = 还没进去） |
+| 机器自身属性 | `Multiplier`（当前倍率）· `Squats`（已做次数）· `Goal`（目标次数） |
+| 倍率读法 | `tonumber(LP:GetAttribute("liftMachine")) or 1` |
+
+**★★ 传送进机器的正确顺序**（照来源客户端代码，顺序错了就会静默失败）：
+
+```
+1. unequipAndUnanchor()      ← ★★ 必须先做: 卸掉工具 + root.Anchored=false + 速度清零
+2. 读 root（此时才不会被 Anchored 挡住）
+3. root.CFrame = CFrame.new(目标点) * (root.CFrame - root.CFrame.Position)   -- 只换位置、保留朝向
+4. 速度清零 → task.wait(0.16)
+5. 装备举铁道具（先 UnequipTools 再 EquipTool, 重试 3 次）
+6. 等 liftMachine 属性 > 1（0.9s；**循环结束后要再查一次**，属性可能在边界那一刻才翻）
+7. 每个落点失败后【也要再 unequipAndUnanchor 一次】再试下一个 ——
+   否则第一次失败留下的锚定状态会让后续所有落点一起失败
+```
+
+⚠ **反面教材（我们原来就是这么写的，所以健身房 TP 不生效）**：
+把守卫写成 `if root.Anchored then return false end` ——
+**角色被 Anchor 住（飞行 / 藏地下隐身 / 被游戏锚定）时直接放弃，而且没有任何日志**。
+正确做法是**先反锚定再传送**，而不是拿 Anchored 当作"放弃条件"。
+
+⚠ **站位落点要挑对**：机器里 `StandingPlatforms` / `Hitboxes` 才是"站的地方"，
+模型本体（`PrimaryPart`）往往不是。落点选择次序：`StandingPlatforms` → `Hitboxes` → 名字含
+`standing/platform/pad/hitbox/zone/squat` 的部件 → 名字含 `lift` 的部件。
+**别把"大范围触发板"当点目标**（会传进板子中心而不是站台）。
 
 ---
 
