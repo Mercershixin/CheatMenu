@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 11:26 sha 4e027679 bytes 460104'):format('2026-09-20 11:26','4e027679',460104))
+print(('[CheatMenu] build 2026-09-20 11:29 sha d699f67c bytes 460104'):format('2026-09-20 11:29','d699f67c',460104))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -105,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.6.0"
+SYS.BuildVer="7.6.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -11663,7 +11663,7 @@ UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍�
 .."   手机 / 平板(纯触屏) 最多放大到 1.75 倍, 小视口 1.35 倍, PC 保持 1.0 倍。\n"
 .."   算法是 sc = min(fit, 上限), fit 已扣掉刘海 / 顶部栏边距 -> 【永远塞得进屏幕】。\n"
 .."★ 还是嫌小就往右拉滑块(会覆盖自动值); 想回到自动点「恢复自动适配」。\n"
-..(TDEV and ("★ 手机 / 平板专属: 上面有 ➖/➕ 微调; 也可以直接拖菜单右下角的 ⤡ 把手改尺寸。\n"
+..(TDEV and ("★ 手机 / 平板专属: 上面有 ➖/➕ 微调; 也可以直接拖菜单右下角的 ◢ 把手改尺寸。\n"
 .."   菜单拖到哪会记住, 下次打开回到原位(拖出屏幕会被自动拉回来)。\n") or "")
 .."⚠ 手动拉得过大(超过 fit)菜单会超出屏幕、边角按钮点不到 —— 拉回来或点恢复自动即可。",CY.sub)
 function SYS.ExportConfig()
@@ -12314,7 +12314,7 @@ if TCH then
 local grip=Instance.new("TextButton")
 grip.Size=UDim2.new(0,38,0,38) grip.Position=UDim2.new(1,-44,1,-78)
 grip.BackgroundColor3=CY.panel grip.BackgroundTransparency=0.35
-grip.Text="⤡" grip.TextColor3=CY.accent grip.TextSize=19
+grip.Text="◢" grip.TextColor3=CY.accent grip.TextSize=19
 grip.Font=Enum.Font.GothamBold grip.BorderSizePixel=0
 grip.AutoButtonColor=false grip.Parent=main
 UI.Round(grip,12) UI.Stroke(grip,CY.accent,1,0.55)
