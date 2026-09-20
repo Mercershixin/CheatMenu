@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CheatMenu 云端验证报告 · 7.8.2（真分发 · 全自动）</title>
+<style>
+:root{--page:#F5F6F7;--line:#E3E5E8;--tx:#1B1D1F;--tx2:#5A6068;--blue:#185FA5;--blue-bg:#E6F1FB;
+--green:#0F6E56;--green-bg:#E1F5EE;--amber:#854F0B;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;
+--gray-bg:#F1EFE8;--purple:#534AB7;--purple-bg:#EEEDFE}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--tx);
+font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1060px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:23px;font-weight:600;margin:0 0 6px;letter-spacing:-.2px}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:26px}
+h2{font-size:17px;font-weight:600;margin:36px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--gray-bg);padding:1.5px 5px;border-radius:4px;color:#2C2C2A}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--gray-bg);font-weight:600;color:var(--tx2);white-space:nowrap}
+td.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.t-g{background:var(--green-bg);color:var(--green)}.t-a{background:var(--amber-bg);color:var(--amber)}
+.t-r{background:var(--red-bg);color:var(--red)}.t-b{background:var(--blue-bg);color:var(--blue)}
+.t-p{background:var(--purple-bg);color:var(--purple)}.t-x{background:var(--gray-bg);color:#5F5E5A}
+.box{border-left:3px solid var(--blue);background:var(--blue-bg);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0}
+.box.warn{border-color:var(--amber);background:var(--amber-bg)}
+.box.bad{border-color:var(--red);background:var(--red-bg)}
+.box.good{border-color:var(--green);background:var(--green-bg)}
+.box.p{border-color:var(--purple);background:var(--purple-bg)}
+.box h4{margin:0 0 6px;font-size:13px;font-weight:600}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:4px 0}
+.small{font-size:12.5px;color:var(--tx2)}
+pre{background:#FAFAF9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
+font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.6;color:#2C2C2A;margin:10px 0}
+.kpi{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+.kpi div{flex:1 1 150px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:20px;line-height:1.25}
+.kpi span{font-size:12px;color:var(--tx2)}
+del{color:var(--tx2)}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>CheatMenu 云端验证报告 · 7.8.2</h1>
+<div class="sub">2026-09-20 · 仓库 <code>Mercershixin/CheatMenu</code> @ <code>main</code><br>
+用户原话：<b>「云端不需要发到实机和在 lua 使用功能，你就纯分发的真云端就行　可以去掉那个功能了　以后都是真云端」</b></div>
+
+<div class="box p">
+<h4>一句话结论</h4>
+<p style="margin-bottom:0">云端这一环<b>已经收口成「真分发」一条路，而且 100% 全自动 —— 没有任何要你手动跑的部分了</b>。<br>
+原先那套「把脚本放进执行器点一下、再把控制台输出发我」的 <code>SYS.CloudCheck()</code> 自检
+<b>已按你的要求整块删除</b>（连带设置页那两个按钮）。现在只需要一条命令，
+验的是「<b>云端实际发给用户的字节</b>」对不对。</p>
+</div>
+
+<div class="kpi">
+  <div><b>1</b><span>条命令跑完（<code>cloud_verify.py</code>）</span></div>
+  <div><b>5</b><span>个源发出与本地<b>逐字节一致</b>的 7.8.2，且云端字节能编译</span></div>
+  <div><b>0</b><span>个需要你手动跑的云端步骤</span></div>
+  <div><b>-7.7KB</b><span>删掉执行器自检后的体积变化</span></div>
+</div>
+
+<h2>一、现在的云端验证只有一条路</h2>
+
+<table>
+<thead><tr><th>路线</th><th>状态</th><th>说明</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>真云端分发链路验证</b><br><span class="small">真网络 → 真 CDN → 真字节</span></td>
+  <td><span class="tag t-g">唯一保留</span></td>
+  <td>验「云端实际发给用户的字节」是否与本地发行产物<b>逐字节一致</b>、能否编译。<b>全自动。</b></td>
+</tr>
+<tr>
+  <td><del>云端执行器自检</del><br><span class="small">把脚本放进执行器跑一遍</span></td>
+  <td><span class="tag t-x">已删除</span></td>
+  <td>你的原话：<b>「不需要……在 lua 使用功能」</b>。对应的 <code>SYS.CloudCheck()</code>、设置页两个按钮、
+      <code>cloudcheck.txt</code> 输出、以及只为它而存在的两处暴露（<code>SYS.SpeedGuard</code> / <code>SYS.RayProbe</code>）全部移除。</td>
+</tr>
+<tr>
+  <td><del>云真机 / 云手机</del><br><span class="small">真 Android + 真 Roblox</span></td>
+  <td><span class="tag t-x">已删除</span></td>
+  <td>你的原话：<b>「不需要发到实机」</b>。G9（Highlight 配额）的量化不再作为交付要求。</td>
+</tr>
+<tr>
+  <td><del>官方 Open Cloud</del><br><span class="small">DataStore / 资产</span></td>
+  <td><span class="tag t-x">无关</span></td>
+  <td>没有注入第三方 Lua 的入口，本来就跟验证脚本无关。</td>
+</tr>
+</tbody>
+</table>
+
+<h2>二、怎么跑（就这一条）</h2>
+
+<pre>python .workbuddy/build/cloud_verify.py            # 生产形态（带 ?t= 时间戳，与加载器完全一致）
+python .workbuddy/build/cloud_verify.py --plain    # 对照：不带查询参数，用来区分「CDN 滞后」和「源真坏」
+python .workbuddy/build/cloud_verify.py --quiet    # 只打结论块，适合塞进门禁</pre>
+<p class="small">退出码：<code>0</code> = 至少一个源与本地逐字节一致且编译通过；<code>2</code> = 没有任何可用源。
+报告自动落盘到 <code>dist/cloud/云端验证-&lt;版本&gt;-&lt;时间戳&gt;.txt</code>。</p>
+
+<h3>它做四件事</h3>
+<ol>
+  <li><b>URL 从加载器里读</b>，不是手写 —— 直接解析 <code>dist/repo/loader.lua</code> 的 <code>URLS</code> 表。
+      <span class="small">加载器改一条，测试自动跟着改，<b>结构上不可能再对不上</b>。</span></li>
+  <li><b>按生产形态真拉</b>：加载器会拼 <code>?t=os.time()</code> 穿缓存，测试拼的完全一样。</li>
+  <li><b>与本地发行产物逐字节比对</b>，并抠出各源的版本横幅（<code>build … sha … bytes …</code>）打进报告。</li>
+  <li><b>把「从云端拉下来的那份字节」直接送进 <code>luau-compile</code></b>。
+      <span class="small">这是关键差异：证明的是「<b>云端发出去的东西</b>能编译」，不是「我本地那份能编译」。</span></li>
+</ol>
+
+<h2>三、★ 7.8.2 实测结果</h2>
+
+<table>
+<thead><tr><th>下载源</th><th>结果</th><th>字节 / sha1</th><th>云端字节编译</th></tr></thead>
+<tbody>
+<tr><td class="mono">ghfast.top</td><td><span class="tag t-g">IDENTICAL</span></td><td class="mono">467747 / da492d70fcf6</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">ghproxy.net</td><td><span class="tag t-g">IDENTICAL</span></td><td class="mono">467747 / da492d70fcf6</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">raw.githubusercontent.com</td><td><span class="tag t-g">IDENTICAL</span></td><td class="mono">467747 / da492d70fcf6</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">gh-proxy.com</td><td><span class="tag t-g">IDENTICAL</span></td><td class="mono">467747 / da492d70fcf6</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">ghpxy.hwinzniej.top</td><td><span class="tag t-g">IDENTICAL</span></td><td class="mono">467747 / da492d70fcf6</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">cdn.jsdelivr.net</td><td><span class="tag t-a">STALE</span> 旧版</td><td class="mono">453533（横幅 10:59）</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">fastly.jsdelivr.net</td><td><span class="tag t-a">STALE</span> 旧版</td><td class="mono">460221（横幅 11:26）</td><td><span class="tag t-g">OK</span></td></tr>
+<tr><td class="mono">gcore.jsdelivr.net</td><td><span class="tag t-b">本次未取到</span></td><td class="mono">连接被重置（抖动）</td><td class="mono">—</td></tr>
+<tr><td class="mono">raw.githack.com</td><td><span class="tag t-r">BROKEN</span></td><td class="mono">本机超时</td><td class="mono">—</td></tr>
+<tr><td class="mono">raw.gitmirror.com</td><td><span class="tag t-r">BROKEN</span></td><td class="mono">本机 DNS 解析失败</td><td class="mono">—</td></tr>
+</tbody>
+</table>
+
+<pre>[IDENTICAL] ghfast.top, ghproxy.net, raw.githubusercontent.com, gh-proxy.com, ghpxy.hwinzniej.top
+[STALE]     cdn.jsdelivr.net, fastly.jsdelivr.net
+[BROKEN]    gcore.jsdelivr.net, raw.githack.com, raw.gitmirror.com
+[版本对齐]  ghfast.top, ghproxy.net, raw.githubusercontent.com, gh-proxy.com, ghpxy.hwinzniej.top
+结论: 云端分发链路正常（产物可拉取·逐字节一致·云端字节可编译·版本对齐）</pre>
+
+<p class="small">原始报告：<code>dist/cloud/云端验证-7.8.2-20260920-133415.txt</code>。
+同目录还有 7.8.0 / 7.8.1 的历史报告可对照（其中两份 12:58 / 12:59 的已标「废弃」，见下）。</p>
+
+<div class="box warn">
+<h4>为什么 jsDelivr 显示 STALE 却不算失败</h4>
+<p style="margin-bottom:0">jsDelivr 对<b>分支名 <code>@main</code></b> 用的是<b>文件级长缓存</b>：
+同一时刻它的 <code>version.txt</code> 已经报 7.8.2，<code>CheatMenu.lua</code> 却还停在几小时前。
+<b>命中它就会静默把旧脚本喂给用户</b>。7.8.1 起已把它从源列表第 2~4 位<b>降到兜底</b>
+（顺序改成「新鲜优先」：raw 系在前）。所以它现在只是「兜底时才可能用到」，
+<b>不是失败，是设计上把它边缘化了</b>。另外实测确认：加载器那个 <code>?t=</code> 参数对 jsDelivr
+<b>无效</b>，救不了它，只能靠排序。</p>
+</div>
+
+<h2>四、这一版还改了什么（顺手做完的收口）</h2>
+
+<h3>1. 🗑 删掉 <code>SYS.CloudCheck()</code> 及全部配套（-7.7KB）</h3>
+<table>
+<thead><tr><th>删掉的东西</th><th>为什么</th></tr></thead>
+<tbody>
+<tr><td>函数本体（含注释头，93 行）</td><td rowspan="5">它的唯一用途是「把脚本放进云端执行器跑一遍看报错」。
+    这条路你已经不要了（「不需要……在 lua 使用功能」），留着就是死代码 + 一个会误导后来人的入口。</td></tr>
+<tr><td>设置页「☁ 云端执行自检 (OCALE)」整块（Section + 2 按钮 + Tip，23 行）</td></tr>
+<tr><td><code>SYS.CloudCheckText</code> / <code>cloudcheck.txt</code> / <code>setclipboard</code> 输出</td></tr>
+<tr><td><code>SYS.SpeedGuard=guardSpeed</code>（唯一用途是自检里的钳制验证）</td></tr>
+<tr><td><code>SYS.RayProbe=rayProbe</code>（唯一用途是自检里的 4 参探测）</td></tr>
+</tbody>
+</table>
+<div class="box good" style="margin-top:8px">
+<h4>刻意保留（它们不是「云端功能」，是运行时自保逻辑）</h4>
+<ul style="margin-bottom:0">
+  <li><code>rayProbe()</code> 本身 —— <code>castVis</code> 首次使用时仍在调它，
+      <b>FindPartOnRay 4 参不支持就永久降级 2 参</b>的静默退化修复照旧生效（否则会隔墙误锁）。</li>
+  <li><code>SYS.RayFull</code> —— 诊断面板（DiagUI）仍在打印「视线射线: FindPartOnRay 4参=…」。</li>
+</ul>
+</div>
+
+<h3>2. 📄 「第三类验证」定义全仓库同步（8 文件 / 18 处）</h3>
+<p>原定义「③ 云端执行（OCALE —— 真实执行器 / 云端跑）」散落在 AGENTS / CLAUDE / copilot / cursor 规则 /
+README / 三个构建脚本里。全部改写为「<b>③ 真云端分发链路验证</b>」。<b>不改的话，下个智能体接手会照旧文档去干一件已经取消的事。</b></p>
+
+<h2>五、门禁与边界（如实说明）</h2>
+
+<div class="box good">
+<h4>本轮门禁</h4>
+<ul style="margin-bottom:0">
+  <li>等价性 <span class="tag t-g">PASS</span>　<code>luau-compile</code> <span class="tag t-g">0 错误</span>　加载器探针 <span class="tag t-g">6 通过 / 0 失败</span>　加载器编译 <span class="tag t-g">通过</span></li>
+  <li>删除后残留检查：<code>CloudCheck</code> / <code>OCALE</code> / <code>RayProbe</code> / <code>SpeedGuard</code> 在源码与文档中<b>均已清零</b>（CHANGELOG 里的历史条目按惯例保留）。</li>
+  <li>静态接线检查 <code>check.py</code>：<b>4 项</b>，与 7.8.0/7.8.1 基线<b>完全相同</b>（历史遗留），<b>本次 0 新增</b>。</li>
+  <li>推送回读：代码 4 件套 + 文档（AGENTS / CLAUDE / copilot / cursor / README）远端<b>逐字节一致</b>。</li>
+  <li>云端链路：<b>5 个源 IDENTICAL + 云端字节编译 OK</b>；版本对齐 7.8.2。</li>
+</ul>
+</div>
+
+<div class="box warn">
+<h4>残留风险（没瞒着）</h4>
+<ul style="margin-bottom:0">
+  <li><b>分发链路验证不执行脚本</b> —— 这是刻意的边界。所以「画面/帧率/物理/Highlight 配额」
+      这一类<b>客户端渲染层</b>的问题，这条链路<b>不管</b>；你已明确不要真机验证，所以这部分<b>不做</b>。</li>
+  <li><b>本机连通性本身是变量</b>：<code>raw</code> 时通时不通（是「抖」不是「死」），所以报告区分
+      <code>BROKEN</code>（当下不通）与 <code>STALE</code>（通但内容旧），不把二者混为一谈。</li>
+  <li><b>jsDelivr 仍在兜底位</b>，理论上仍可能给旧版 —— 但只有前 5 个源<b>全部</b>失败时才会走到那里。</li>
+  <li><b><code>gitmirror</code> / <code>githack</code> 仍留在源列表里</b>（本机实测连不上），保留只为「多一个机会」，已排最末。</li>
+</ul>
+</div>
+
+<div class="box p">
+<h4>仍然不做的事</h4>
+<p style="margin-bottom:0">① 整脚本仿真测试 / 循环检测<b>彻底禁用，没有例外</b>；
+② 被删的 <code>SYS.CloudCheck</code> <b>不要加回来</b>；
+③ 测试只认 <b>① 静态分析 ② 单元测试 ③ 真云端分发链路验证</b>。</p>
+</div>
+
+</div></body></html>
