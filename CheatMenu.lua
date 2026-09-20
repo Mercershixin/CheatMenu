@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 13:27 sha 23d7d848 bytes 467630'):format('2026-09-20 13:27','23d7d848',467630))
+print(('[CheatMenu] build 2026-09-20 15:15 sha 350b34e4 bytes 467644'):format('2026-09-20 15:15','350b34e4',467644))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -87,6 +87,7 @@ ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,
 CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
+CB_ScanMs=33,
 CB_FireDelay=0.08,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
 CB_RingModeVer=0,
@@ -107,7 +108,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.8.2"
+SYS.BuildVer="7.8.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
