@@ -59,10 +59,10 @@
 | `CHANGELOG.md` | 更新记录（**发行前先在顶部加本版说明**） |
 | `事件库/` | 游戏 Remote 事件抓包清单，做新功能先来这里查信号 |
 
-> ⚠️ 本地工作区里是**完整源码，带注释**，文件名**固定**为 `CheatMenu-6.9.1.lua`（**不跟版本号走** ——
-> 版本号只在 `version.txt` / `CHANGELOG.md` 顶部 / `build/VERSION` 三处，文件名永远不动）。
-> ⛔ **不要用 `.workbuddy/build/rename_version.py` 改名**（已停用）：`build_dist.py` 的 `SRC` 是硬编码的，
-> 改名会断构建链。仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
+> ✅ 本地工作区里是**完整源码，带注释**，文件名**跟版本号走** = `CheatMenu-<版本>.lua`。
+> 发版时 `push_now.py` 会**自动改名**（走 `srcpath.py` 自动发现，核心管线零硬编码），人不用管。
+> 仓库里的 `CheatMenu.lua` 是它 minify 后的发行产物。
+> ★ 仓库还同步一份**带注释的源码快照**：`源码快照/CheatMenu-<版本>.lua`（每个版本一份，见该目录 README）。
 > **改代码要改本地源码，不是直接改仓库产物。**
 
 ## 加载方式
@@ -129,8 +129,9 @@ $G reset --hard FETCH_HEAD
 - **绝对不要 `git reset --hard origin/main`** —— 沙箱写不进 `refs/remotes/origin/*`，用 `FETCH_HEAD`。
 - **`fetch` 失败时千万别接着 `reset`**（会把工作区退回旧版，踩过）。
 - 同步后确认：`version.txt` 与 `CHANGELOG.md` 顶部版本号**一致**。
-- 仓库里只放 4 个发行文件 + `README.md` + `事件库/`；**源码（带注释）只在本地**，文件名跟版本号走
-  （`CheatMenu-<版本>.lua`，升版用 `.workbuddy/build/rename_version.py` 改名）。
+- 仓库里放 4 个发行文件 + `README.md` + `事件库/`，**外加 `源码快照/CheatMenu-<版本>.lua`**
+  （带注释的完整源码，每版一份 —— 源码历史进版本库，不再只留本地）。
+  本地源码文件名跟版本号走（`CheatMenu-<版本>.lua`），发版自动改名，见 `AGENTS.md` §5。
 
 ### 2. 遇到"UI 位置 / 拖动 / 显示不对"——先要诊断，不要猜
 在控制台执行 **`SYS.DiagUI()`**（v5.4.2 起界面按钮已按用户要求删除，函数保留）。它会一键把全部事实扫出来：
