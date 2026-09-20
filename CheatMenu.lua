@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 22:15 sha b9335fb4 bytes 492280'):format('2026-09-20 22:15','b9335fb4',492280))
+print(('[CheatMenu] build 2026-09-20 22:27 sha c108312b bytes 494496'):format('2026-09-20 22:27','c108312b',494496))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.3.0"
+SYS.BuildVer="8.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4976,16 +4976,50 @@ end
 end
 end))
 end
+local GymDiag = { tagWarn = false, nameWarn = false, emptyWarn = false, enterFail = false,
+toolWarn = false, recogWarn = false }
+local function gymOnce(key, fmt, ...)
+if GymDiag[key] then return end
+GymDiag[key] = true
+print(("[Gym] " .. fmt):format(...))
+end
+SYS.GymDiag = GymDiag
 local function liveMachines()
 local r = {}
 if not CS then return r end
+local tagN = 0
 local ok, t = pcall(CS.GetTagged, CS, "LiftMachine")
-if not ok or type(t) ~= "table" then return r end
+if ok and type(t) == "table" then
+tagN = #t
 for _, m in ipairs(t) do
 if m and m.Parent and m:IsDescendantOf(WS) then
 table.insert(r, m)
 end
 end
+end
+if #r > 0 then return r end
+local nameHits = {}
+pcall(function()
+local me = LP and LP.Character
+for _, d in ipairs(WS:GetDescendants()) do
+if d:IsA("Model") and d.Parent and d ~= me and not (me and d:IsDescendantOf(me)) then
+local nm = tostring(d.Name):lower()
+if nm:find("liftmachine", 1, true) or nm:find("lift_machine", 1, true)
+or nm:find("lift machine", 1, true) then
+table.insert(nameHits, d)
+end
+end
+end
+end)
+if #nameHits > 0 then
+gymOnce("nameWarn",
+"标签 \"LiftMachine\" 一个都没有(GetTagged 返回 %d 个)，但按【名字】找到 %d 个候选 -> 改用名字兜底。首个: %s",
+tagN, #nameHits, tostring(nameHits[1].Name))
+return nameHits
+end
+gymOnce("emptyWarn",
+"找不到任何健身机器: 标签 \"LiftMachine\" %d 个 / 按名字(liftmachine|lift_machine|lift machine) 0 个。"
+.. "若游戏里确实有机器，请把机器在 Explorer 里的【准确名字/路径】告诉我，我按真名适配。", tagN)
 return r
 end
 local function isDescFolder(o, n)
@@ -5081,7 +5115,12 @@ for _, t in ipairs(bp:GetChildren()) do
 if t:IsA("Tool") and t:HasTag("SquatTool") then target = t break end
 end
 end
-if not target then return nil end
+if not target then
+gymOnce("toolWarn",
+"背包/角色里找不到带 [SquatTool] 标签的工具 -> 传送过去也无法开始举铁。"
+.. "（需要先拿到/装备健身道具；若道具的标签名不是 SquatTool，请告诉我真名）")
+return nil
+end
 pcall(function() hum:UnequipTools() end)
 task.wait(0.08)
 for _ = 1, 3 do
@@ -5089,6 +5128,8 @@ pcall(function() hum:EquipTool(target) end)
 task.wait(0.15)
 if target.Parent == hum.Parent then return target end
 end
+gymOnce("toolWarn", "SquatTool(%s) 找到了，但连试 3 次 EquipTool 都没穿上",
+tostring(target.Name))
 return nil
 end
 local function waitLiftMachineRecognition(timeout)
@@ -5103,20 +5144,33 @@ end
 local function enterGymMachine(machine)
 if not machine or not machine.Parent then return false end
 local candidates = liftMachineCandidateParts(machine)
-if #candidates == 0 then return false end
+if #candidates == 0 then
+gymOnce("enterFail", "机器 %s 里找不到任何可作为落点的 BasePart -> 跳过它",
+tostring(machine.Name))
+return false
+end
 local maximum = math.min(#candidates, 8)
+local lastStage = "未开始"
 for i = 1, maximum do
 local part = candidates[i].Part
-if moveToLiftMachinePart(part) then
-if ensureGymTool() then
-if waitLiftMachineRecognition(0.9) then
+if not moveToLiftMachinePart(part) then
+lastStage = ("第 %d/%d 个落点【传送没成功】(落点=%s; 可能角色被别人/游戏 Anchor 住了)")
+:format(i, maximum, tostring(part.Name))
+else
+local tool = ensureGymTool()
+if not tool then
+lastStage = "传送到位了，但【拿不到举铁道具】-> 无法开始"
+elseif not waitLiftMachineRecognition(0.9) then
+lastStage = "传送 + 装备都成功，但游戏没把 liftMachine 属性置为 >1（= 站位没被认可）"
+else
 print("[Gym] ✅ 已进入 LiftMachine:", machine.Name)
+GymDiag.enterFail = false
 return true
-end
 end
 end
 task.wait(0.05)
 end
+gymOnce("enterFail", "进入 %s 失败，卡在: %s", tostring(machine.Name), lastStage)
 return false
 end
 local GymThread
