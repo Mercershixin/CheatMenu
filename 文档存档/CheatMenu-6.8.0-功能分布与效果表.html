@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>CheatMenu 6.8.0 · 功能分布表 &amp; 效果表</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --line:#e3e6ef; --text:#1c2333; --sub:#5d6780;
+    --accent:#2563eb; --green:#0f9d63; --red:#d92d43; --orange:#d97706; --purple:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 32px 60px;background:var(--bg);color:var(--text);
+       font:14px/1.65 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  h1{font-size:23px;margin:0 0 6px}
+  h2{font-size:18px;margin:34px 0 12px;padding-left:10px;border-left:4px solid var(--accent)}
+  h3{font-size:15px;margin:24px 0 8px;color:var(--accent)}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:16px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 4px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;min-width:126px}
+  .kpi b{display:block;font-size:22px;line-height:1.3}
+  .kpi span{color:var(--sub);font-size:12px}
+  table{width:100%;border-collapse:collapse;background:var(--card);
+        border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:10px 0 6px}
+  th{background:#eef2fb;text-align:left;font-weight:600;font-size:13px;color:#38415a;
+     padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 10px;border-bottom:1px solid #f0f2f8;vertical-align:top;font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafbff}
+  code{background:#eef2fb;border-radius:4px;padding:1px 5px;font-size:12px;color:#26406e}
+  .tag{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11px;line-height:1.7;
+       white-space:nowrap;font-weight:600}
+  .t-new{background:#e3f7ee;color:var(--green)}
+  .t-up{background:#e7eeff;color:var(--accent)}
+  .t-local{background:#eef2fb;color:#4b5570}
+  .t-risk{background:#fdeaea;color:var(--red)}
+  .t-mid{background:#fdf3e3;color:var(--orange)}
+  .t-off{background:#eef1f6;color:#6b7488}
+  .t-on{background:#e3f7ee;color:var(--green)}
+  .note{background:#fffdf3;border:1px solid #f0e2b8;border-radius:10px;padding:12px 16px;
+        font-size:13px;margin:14px 0}
+  .note b{color:#8a6100}
+  .legend{color:var(--sub);font-size:12px;margin:6px 0 0}
+  .pg{font-weight:700;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<h1>CheatMenu 6.8.0 · 功能分布表 &amp; 效果表</h1>
+<div class="meta">
+  源码 <code>CheatMenu-6.8.0.lua</code> · 13202 行 · 684190 字符 ｜ 生成于 2026-09-19 ｜
+  对照基线 <code>6.6.0</code>（9 页 / 171 控件）｜ 反作弊对抗详见 <code>CheatMenu-6.8.0-反作弊对抗报告.html</code>
+</div>
+
+<div class="cards">
+  <div class="kpi"><b>11</b><span>页面（6.6.0 是 9）</span></div>
+  <div class="kpi"><b>35</b><span>分组节（原 13）</span></div>
+  <div class="kpi"><b>292</b><span>控件（原 171）</span></div>
+  <div class="kpi"><b>+121</b><span>本版新增控件</span></div>
+</div>
+
+<h2>一、功能分布表（页面 × 分组）</h2>
+<p class="legend">
+  <span class="tag t-new">新增</span> 本版全新加入 ｜
+  <span class="tag t-up">补强</span> 已有页面加分组 / 改行为 ｜
+  <span class="tag t-local">未动</span> 保持 6.6.0 原样
+</p>
+
+<table>
+<thead><tr><th style="width:96px">页面</th><th style="width:56px">控件</th><th style="width:300px">分组节</th><th>本版变化</th></tr></thead>
+<tbody>
+  <tr><td class="pg">⚔ 战斗</td><td>59</td>
+      <td>一键 · 开战/停战 ｜ 瞄准 · 关闭/自动瞄准 ｜ 开火 · Triggerbot ｜ 打谁 · 选人规则 ｜
+          <b>白名单 / 黑名单</b> ｜ 选人偏好 ｜ <b>⚠ 高风险瞄准</b> ｜ 工具/调试 ｜ 客户端清理 ｜ 诊断</td>
+      <td><span class="tag t-up">补强</span> 瞄准节新增 <b>命中率 %</b> 与 <b>漏打模式</b>（+概率）；<br>
+          <span class="tag t-new">新增</span> <b>白名单 / 黑名单</b>（选人硬规则）<br>
+          <span class="tag t-new">新增</span> <b>静默瞄准 / 子弹穿墙 / 阻挡射线检测</b>（三项默认全关）+ 射线改写统计</td></tr>
+
+  <tr><td class="pg">👤 玩家<br><span class="meta">新页</span></td><td>21</td>
+      <td>选择目标（下拉 + 信息卡）｜ 传送类 ｜ 控制类 ｜ 跟随 / 环绕类 ｜ 好友</td>
+      <td><span class="tag t-new">新增</span> 针对某一个人：传送到他 / 缓动 / 寻路 · 循环跟传 · 拉过来(客户端) · 冻结 · 闪现 · 本地静音 ·
+          坐他头上 · 绕他旋转 · 盯着他 · 行走跟随 · 加/移除好友 · 信息卡（昵称/用户名/ID/账号年龄/距离）</td></tr>
+
+  <tr><td class="pg">😈 整蛊<br><span class="meta">新页</span></td><td>23</td>
+      <td>目标 ｜ 旋转 / 击飞 ｜ 工具环绕 / 附着 ｜ 黑洞 ｜ 近距离击杀</td>
+      <td><span class="tag t-new">新增</span> 甩飞（单个 / 全部 / 持续）· 原地旋转 · 旋转击飞 · 飞行击飞 · 走路击飞 · 隐身击飞 ·
+          环绕工具 / 附着到指定玩家 / 钉在脚下 · 黑洞（范围 / 中心高度 / 吸引力）· 击杀贴着你的人</td></tr>
+
+  <tr><td class="pg">◈ 移动</td><td>19</td>
+      <td>飞行 ｜ 加速 ｜ 穿墙 ｜ 反陷阱免伤 ｜ 跳跃 ｜ 数值锁定（移速 / 跳跃 / 世界重力）</td>
+      <td><span class="tag t-local">未动</span>（数值锁定是 6.6.0 已融合的）</td></tr>
+
+  <tr><td class="pg">◉ 视觉</td><td>45</td>
+      <td>透视 · 标签 · 全亮 · 自由视角 ｜ <b>💡 光照档位包</b> ｜ <b>🎨 滤镜控制器</b> ｜ <b>🔊 音频</b></td>
+      <td><span class="tag t-new">新增</span> 光照 6 档（夜视/超级夜视/随身灯笼/超级光明/禁雾/禁阴影）<br>
+          <span class="tag t-new">新增</span> 滤镜：饱和度·亮度·对比度 + 色盲模拟 + 一键重置 + 5 类后处理逐个隐藏<br>
+          <span class="tag t-new">新增</span> 音频：控制器与检查器<b>合并成一组</b>（列表 / 单条静音 / 复制ID / 总音量 / 响度阈值）</td></tr>
+
+  <tr><td class="pg">✱ 功能</td><td>36</td>
+      <td>综合扫描 · 上帝模式 · 藏地下隐身 · 穿透玩家 · 帧率优化 ｜ <b>☠ 自杀 / 重生点</b> ｜
+          <b>🧰 工具增删</b> ｜ <b>🛡 防护</b> ｜ <b>🧪 反作弊对抗靶场</b></td>
+      <td><span class="tag t-up">补强</span> <b>上帝模式现在自带「防死亡 + 防击倒」</b>（开上帝模式即生效）<br>
+          <span class="tag t-new">新增</span> 强制自杀（抹除 / 虚空抹除）· 原地重生 · 设置/恢复重生点<br>
+          <span class="tag t-new">新增</span> 获取全部工具 / 放回背包 / 移除全部工具<br>
+          <span class="tag t-new">新增</span> 防护：反作弊绕过 · 管理员检测绕过 · 防换服 · 一键全开 · 能力自检<br>
+          <span class="tag t-new">新增</span> <b>反作弊对抗靶场</b>：10 个检测器（D1~D10）自己打自己 + 一键修复 + 采样器<br>
+          <span class="tag t-up">补强</span> <b>反指纹</b>：实例名/GENV 键/落盘文件名/开火节奏全部中性化（见对抗报告）</td></tr>
+
+  <tr><td class="pg">➲ 传送</td><td>19</td>
+      <td>鼠标传送 · 保存点 · 服务器列表 · 玩家列表 ｜ <b>📍 多路径点系统</b></td>
+      <td><span class="tag t-new">新增</span> 多路径点：任意多点 + 备注 + 世界蓝色光柱标记 + 每点支持<b>传送 / 缓动 / 步行</b><br>
+          <span class="tag t-up">补强</span> Ctrl+数字：打开「用于路径点」后，该序号有路径点则<b>优先去路径点</b>，否则回退旧行为</td></tr>
+
+  <tr><td class="pg">🌐 翻译</td><td>17</td>
+      <td>聊天翻译 · 界面翻译 · 缓存 · 本地模型 ｜ <b>📨 聊天接收器</b></td>
+      <td><span class="tag t-new">新增</span> 实时消息列表 + 逐条复制 + 一键复制全部 + 清空（与聊天翻译天然配套）</td></tr>
+
+  <tr><td class="pg">★ 挂机</td><td>13</td><td>挂机防踢 ｜ 训练 ｜ 自动重生 ｜ 健身房 ｜ 自动售卖</td>
+      <td><span class="tag t-local">未动</span></td></tr>
+  <tr><td class="pg">🎮 MachineParty</td><td>9</td><td>小游戏透视 ｜ 小游戏状态 ｜ 敌我诊断 ｜ 瞬间交互</td>
+      <td><span class="tag t-local">未动</span></td></tr>
+  <tr><td class="pg">⚙ 设置</td><td>31</td>
+      <td>热键设置 ｜ 视角 / FOV ｜ <b>📱 界面缩放（手机/平板适配）</b> ｜ 回血 / 复活 / 重生 ｜ 配置导入导出 ｜ 更新 · 卸载</td>
+      <td><span class="tag t-up">补强</span> 新增「界面缩放」分组：手动缩放滑块（0 = 自动）· 恢复自动适配 · 设备与缩放诊断<br>
+          <span class="meta">（用户反馈手机上菜单字体太小 → 已修，见下方效果表最后一行）</span></td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<b>页面顺序（重排后）</b>：⚔ 战斗 → 👤 玩家 → 😈 整蛊 → ◈ 移动 → ◉ 视觉 → ✱ 功能 → ➲ 传送 → ★ 挂机 → 🎮 MachineParty → 🌐 翻译 → ⚙ 设置。<br>
+<b>分类原则</b>：「打人」全部集中在前三页（战斗 = 自动打；玩家 = 针对一个人；整蛊 = 折腾所有人）；
+「看 / 听」归视觉（透视 + 光照 + 滤镜 + 音频）；「我自己与世界」归移动 / 功能；位置类归传送。<br>
+<b>侧栏容量已核算</b>：11 个 tab 布局到底部 y=507，底部搜索框在 y=546，仍余 39px，不会撞。
+</div>
+
+<h2>二、效果表</h2>
+<p class="legend">
+  <span class="tag t-on">默认开</span> 加载即生效 ｜
+  <span class="tag t-off">默认关</span> 需手动打开 ｜
+  <span class="tag t-local">纯本地</span> 不经过服务器 ｜
+  <span class="tag t-mid">有限制</span> 有明确失效场合 ｜
+  <span class="tag t-risk">高风险</span> 会被服务端 / 反作弊注意到
+</p>
+
+<h3>1) 本版全新加入</h3>
+<table>
+<thead><tr><th style="width:118px">功能</th><th>具体效果</th><th style="width:112px">入口</th><th style="width:86px">作用范围</th><th style="width:248px">副作用 / 风险</th><th style="width:62px">默认</th></tr></thead>
+<tbody>
+  <tr><td>🎯 命中率 %</td><td>只有 n% 的帧去转相机；100 = 每帧都瞄（最准），调低后转动有间歇 → 观感更像手操</td>
+      <td>战斗 · 瞄准</td><td><span class="tag t-local">纯本地相机</span></td>
+      <td>调太低会明显跟不上移动目标</td><td><span class="tag t-off">100</span></td></tr>
+  <tr><td>🚫 漏打模式</td><td>开火前按设定概率跳过一枪 → 避免「每枪都爆头」的统计特征</td>
+      <td>战斗 · 瞄准</td><td><span class="tag t-local">纯本地输入</span></td>
+      <td>概率越高 DPS 越低</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>⬜⬛ 白名单 / 黑名单</td><td>黑名单里的玩家<b>永远不被选中</b>；白名单<b>非空</b>时只从白名单里选人</td>
+      <td>战斗 · 白黑名单</td><td><span class="tag t-local">纯本地选人</span></td>
+      <td>白名单非空但那个人不在场时，会「一个人都不打」—— 属预期行为</td><td><span class="tag t-off">空</span></td></tr>
+  <tr><td>🤫 静默瞄准</td><td>改写游戏射线的命中点 → 准星没对上也判定命中</td>
+      <td>战斗 · 高风险</td><td><span class="tag t-risk">改写游戏射线</span></td>
+      <td><b>反检测对抗类</b>。会让游戏自身的视线判定失灵；游戏更新若改射线 API 可能失效</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🧱 子弹穿墙</td><td>同静默，且不要求视线 —— 隔墙也判定命中</td>
+      <td>战斗 · 高风险</td><td><span class="tag t-risk">改写游戏射线</span></td>
+      <td>同上，且「打不到的人突然掉血」更容易被注意到</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🚧 阻挡射线检测</td><td>游戏自己的射线一律返回空 → 它的视线 / 检测逻辑整体失灵</td>
+      <td>战斗 · 高风险</td><td><span class="tag t-risk">改写游戏射线</span></td>
+      <td><b>副作用最大</b>：可能连带游戏自身的交互 / UI / 判定一起出问题，用完建议立刻关</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>💡 光照档位包</td><td>夜视 / 超级夜视 / 随身灯笼（角色发光）/ 超级光明 / 禁用雾效 / 禁用全局阴影 —— 六档独立叠加</td>
+      <td>视觉 · 光照</td><td><span class="tag t-local">纯本地 Lighting</span></td>
+      <td>与已有「全亮」是两套写法，同开时以最后操作者为准；游戏每帧改 Lighting 的图会闪烁</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🎨 滤镜控制器</td><td>饱和度 / 亮度 / 对比度滑块 + 色盲模拟 + 一键重置</td>
+      <td>视觉 · 滤镜</td><td><span class="tag t-local">纯本地后处理</span></td>
+      <td>色盲模拟是「去饱和 + 色调偏移」的<b>近似</b>，非医用</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🖼 后处理隐藏 ×5</td><td>逐个关闭游戏自带的 Blur / Bloom / DepthOfField / SunRays / ColorCorrection</td>
+      <td>视觉 · 滤镜</td><td><span class="tag t-local">纯本地</span></td>
+      <td>关掉后画面观感变化明显；关开关会把原状态写回</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🔊 音频（控制器+检查器）</td><td>总音量(%) + 逐条静音 + 查看响度 + 复制音频 ID，按阈值只看「正在响的」</td>
+      <td>视觉 · 音频</td><td><span class="tag t-local">只改你听到的</span></td>
+      <td>只扫到 4 层以内、最多 60 条；深埋在模型里的音效可能列不出来</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>📨 聊天接收器</td><td>实时列出全部聊天（含显示名 / 账号），逐条复制、一键复制全部、清空</td>
+      <td>翻译 · 聊天接收器</td><td><span class="tag t-local">只读本地消息</span></td>
+      <td>无。和「聊天翻译」配套：一个翻、一个留档</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>📍 多路径点系统</td><td>存任意多个点（带备注）→ 每点支持 <b>传送 / 缓动 / 步行</b> 三种前往方式 + 世界内蓝色光柱标记</td>
+      <td>传送 · 路径点</td><td><span class="tag t-local">本地坐标</span></td>
+      <td>只存在内存里，换服 / 卸载即失效（坐标是本服专用）</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>⌨ Ctrl+数字（路径点）</td><td>前 9 个路径点用 Ctrl+1~9 直达；该序号没有路径点时自动回退到「已保存位置」</td>
+      <td>传送 · 路径点</td><td><span class="tag t-local">本地</span></td>
+      <td>默认关以免误触；与既有「Ctrl+数字 直达保存点」需同开</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>☠ 强制自杀 ×2</td><td>「抹除」= 直接移除自己角色模型；「虚空抹除」= 先挪到 -5000 再判死</td>
+      <td>功能 · 自杀</td><td><span class="tag t-local">只作用自己</span></td>
+      <td>部分游戏对「凭空消失」有额外判定，可能记一笔</td><td>按钮</td></tr>
+  <tr><td>♻ 重生点记账</td><td>原地重生 / 设当前位置为重生点 / 恢复默认</td>
+      <td>功能 · 自杀</td><td><span class="tag t-mid">本地 RespawnLocation</span></td>
+      <td>重生位置若由服务端指定则本地无效 —— 只有「原地重生」按钮立即生效</td><td>按钮</td></tr>
+  <tr><td>🧰 工具增删</td><td>获取游戏内全部工具（复制进背包）/ 把手中工具放回背包 / 移除全部工具</td>
+      <td>功能 · 工具增删</td><td><span class="tag t-local">只影响自己背包</span></td>
+      <td>背包塞太多会被游戏脚本拖帧，用完记得清</td><td>按钮</td></tr>
+  <tr><td>🛡 反作弊绕过</td><td>拦截<b>客户端发起</b>的踢人与角色抹除，并打出「谁踢的 / 拦了几次」</td>
+      <td>功能 · 防护</td><td><span class="tag t-risk">hook __namecall</span></td>
+      <td>只拦客户端自踢；服务端判定违规时拦不住。需执行器支持 hookmetamethod / newcclosure</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🕵 管理员检测绕过</td><td>让 CoreGui 枚举看不到我们的菜单（菜单改名 + 枚举结果过滤）</td>
+      <td>功能 · 防护</td><td><span class="tag t-risk">hook CoreGui 枚举</span></td>
+      <td>管理员脚本若改用内存 / 截图方式查找，仍然可能发现</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>🚫 防换服 / 换游戏</td><td>拦截 TeleportService 的 Teleport / TeleportAsync / TeleportToPlaceInstance 等</td>
+      <td>功能 · 防护</td><td><span class="tag t-risk">hook TeleportService</span></td>
+      <td>开了之后你自己点「加入服务器」也会被拦 —— 换服前先关掉</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>👤 玩家控制页</td><td>针对某一个人：传送 / 缓动 / 寻路过去 · 循环跟传 · 拉过来 · 冻结 · 闪现 · 本地静音 · 坐头上 · 绕他转 · 盯着他 · 行走跟随</td>
+      <td>👤 玩家</td><td><span class="tag t-local">只写本地副本</span></td>
+      <td><b>对方屏幕上不会动、服务端也不认</b> —— 只有你本地看到效果，很快会被拉回。这是引擎机制，不是没生效</td><td><span class="tag t-off">关</span></td></tr>
+  <tr><td>😈 整蛊页</td><td>甩飞（单个 / 全部 / 持续）· 原地旋转 · 旋转击飞 · 飞行击飞 · 走路击飞 · 隐身击飞 · 工具环绕 / 附着 / 钉地 · 黑洞 · 近距离击杀</td>
+      <td>😈 整蛊</td><td><span class="tag t-local">只写本地副本</span></td>
+      <td>同上：<b>只在你本地生效</b>。黑洞 / 击杀会频繁写别人角色的速度与血量，量大时明显掉帧</td><td><span class="tag t-off">关</span></td></tr>
+</tbody>
+</table>
+
+<h3>2) 本版补强（已有功能的行为变化）</h3>
+<table>
+<thead><tr><th style="width:132px">功能</th><th style="width:230px">改动前</th><th>改动后</th><th style="width:190px">你要注意什么</th></tr></thead>
+<tbody>
+  <tr><td>🛡 上帝模式</td><td>只做「血量掉下去立刻补回 + 断关节保护」</td>
+      <td><b>自动带上「防死亡 + 防击倒」</b>：血量 ≤0 立刻恢复满血，倒地 / 摔趴状态自动站起</td>
+      <td>与「反陷阱免伤」同开时仍会互相让位（既有逻辑）；服务端结算的致命伤仍可能生效</td></tr>
+  <tr><td>🎯 自动瞄准</td><td>每帧无条件下转相机</td>
+      <td>受「命中率 / 漏打」两个闸门控制；两闸门默认全放行 → <b>不开新控件时与 6.6.0 手感完全一致</b></td>
+      <td>想要原手感就别动这两项</td></tr>
+  <tr><td>🎯 选人（isEnemy）</td><td>只有队伍 / 无敌盾 / 存活判据</td>
+      <td>最前面加一道白 / 黑名单闸门；两个名单都为空时直接放行 → <b>与 6.6.0 行为一致</b></td>
+      <td>白名单非空但目标不在场时会一个人都不打（预期）</td></tr>
+  <tr><td>⌨ Ctrl+数字 直达</td><td>只索引「已保存位置」</td>
+      <td>若「Ctrl+数字 用于路径点」打开且该序号有路径点 → 优先去路径点，否则回退旧行为</td>
+      <td>默认关，不改变现有手感</td></tr>
+  <tr><td>🧹 卸载（UnloadAll）</td><td>原有 30+ 项还原</td>
+      <td>追加 8 类还原：滤镜 / 光照 / 音频 / 聊天 / 路径点 / 防护 hook / 射线 hook / 玩家控制与整蛊循环</td>
+      <td>卸载后 hook 会真正卸下（射线 hook 关掉最后一个才卸）</td></tr>
+  <tr><td>📱 界面缩放</td><td>上限被写死成 <b>1（只缩不放）</b><br>
+      <span class="meta">v120 为修「菜单超出屏幕 → 右边按钮点不到」加的；但真正的元凶是旧下限 <code>lo=0.75</code></span></td>
+      <td><b>恢复放大能力，按设备给上限</b>：纯触屏(手机/平板) <b>1.75</b> · 小视口 <b>1.35</b> · PC <b>1.0</b>。<br>
+      仍是 <code>sc = min(fit, 上限)</code>，而 fit 已扣掉刘海/顶部栏边距 → <b>永远塞得进屏幕</b>，不会重现「点不到」。<br>
+      另外设置页可手动覆盖（0 = 自动）+ 一键恢复自动 + 设备诊断。</td>
+      <td>手动拉得过大（超过 fit）菜单会超出屏幕 —— 那时拉回来或点「恢复自动适配」。<br>
+      <b>手机/平板上体感变化最明显：菜单整体放大最多 75%，字随之等比放大。</b></td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<b>默认状态总结</b>：本版所有新增开关<b>一律默认关</b>；6.6.0 就有的规矩不变 —— 开关状态<b>不写进配置文件</b>，每次加载都用代码默认值。<br>
+你点名要「加入但默认关闭」的三项 —— <b>静默瞄准 / 子弹穿墙 / 阻挡射线检测</b> —— 都在「战斗 → ⚠ 高风险瞄准」里，需要时手动打开。<br>
+你点名不要的 <b>本地音乐播放器 / 动画播放器</b> 已跳过。<br>
+<b>「粘性瞄准（锁定保持）」没有加回</b>：你早前明确要求删除过，<code>check.py</code> 里带回归锁（<code>lock('CB_Sticky' not in nocmt, ...)</code>）。
+这次只加了「命中率 / 漏打」两项 —— 需要粘性瞄准请单独说一声，我把锁一起改掉再加。
+</div>
+
+</body>
+</html>
