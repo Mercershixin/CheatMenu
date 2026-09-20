@@ -1,0 +1,138 @@
+@echo off
+title Hy-MT2 翻译模型 · 一键开关
+color 0A
+setlocal enabledelayedexpansion
+set "no_proxy=*"
+set "NO_PROXY=*"
+
+set "LLAMA=D:\666\llama\llama-server.exe"
+set "MODEL=D:\666\models\hymt2-7b\Hy-MT2-7B-Q4_K_M.gguf"
+set "PORT=8080"
+
+rem ======================== 判活: 进程 或 端口 ========================
+rem 两个判据取"或" —— 只看进程会漏掉"进程还在但端口已崩";
+rem 只看端口会漏掉"还在加载模型、端口未起"(要等约 20 秒)。
+rem 先跑 tasklist: 查到了就不再跑 netstat, 省一次全连接枚举 + 一次 findstr。
+rem netstat 加 -p TCP 只列 TCP; 用一条正则替掉原先的两级 findstr。
+set "RUNNING="
+tasklist /FI "IMAGENAME eq llama-server.exe" /NH 2>nul | findstr /I /C:"llama-server.exe" >nul
+if not errorlevel 1 set "RUNNING=1"
+if defined RUNNING goto :chkdone
+netstat -ano -p TCP | findstr /R /C:":%PORT% .*LISTENING" >nul
+if not errorlevel 1 set "RUNNING=1"
+:chkdone
+
+echo ============================================================
+echo    HY-MT2 翻译模型  ·  一键开关
+echo    (双击本脚本在 启动 / 停止 之间切换)
+echo    (服务的全部参数都写在本脚本里, 不需要另开别的脚本)
+echo ============================================================
+echo.
+
+if /I "%~1"=="status" goto :statusonly
+if defined RUNNING goto :stop
+goto :start
+
+rem ======================== 状态查询 ========================
+:statusonly
+if defined RUNNING goto :st_on
+echo [状态] 翻译服务: 未运行
+echo.
+exit /b 0
+
+:st_on
+echo [状态] 翻译服务: 正在运行
+echo.
+netstat -ano -p TCP | findstr /R /C:":%PORT% .*LISTENING"
+echo.
+exit /b 0
+
+rem ======================== 停 止 ========================
+:stop
+echo [状态] 翻译服务正在运行  -^>  执行【停止】
+echo.
+taskkill /F /T /IM llama-server.exe >nul 2>&1
+set /a N=0
+
+:waitgone
+tasklist /FI "IMAGENAME eq llama-server.exe" /NH 2>nul | findstr /I /C:"llama-server.exe" >nul
+if errorlevel 1 goto :portfree
+ping -n 2 127.0.0.1 >nul
+set /a N+=1
+if !N! geq 15 goto :portfree
+goto :waitgone
+
+:portfree
+netstat -ano -p TCP | findstr /R /C:":%PORT% .*LISTENING" >nul
+if errorlevel 1 goto :pf_ok
+echo [完成] 进程已结束, 端口正在释放(几秒后自然可用)。
+goto :pf_done
+
+:pf_ok
+echo [完成] 服务已停止, 端口 %PORT% 已释放, 显存已回收。
+
+:pf_done
+echo.
+echo   显卡占用 (已用, 总量 MiB):
+nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader 2>nul
+echo.
+echo   需要再启动时: 直接再双击本脚本。
+echo.
+echo   3 秒后自动关闭窗口 ...
+ping -n 4 127.0.0.1 >nul
+exit /b 0
+
+rem ======================== 启 动 ========================
+:start
+echo [状态] 翻译服务未运行  -^>  执行【启动】
+echo.
+if not exist "%LLAMA%" goto :noexe
+if not exist "%MODEL%" goto :nomodel
+
+echo   模型    : %MODEL%
+echo   接口    : http://127.0.0.1:%PORT%   (32 并发槽 x 每槽 512 上下文)
+echo   显存    : 实测约 5.9 GB
+echo.
+echo   启动前显卡占用 (已用, 总量 MiB):
+nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader 2>nul
+echo   ^(已用接近 8192 时模型会加载失败, 先关掉游戏等吃显存的程序^)
+echo.
+
+echo   正在后台启动(最小化窗口), 不在本窗口等待 ...
+start "Hy-MT2 翻译模型服务" /min /d "D:\666\llama" "%LLAMA%" -m "%MODEL%" -c 16384 -np 32 -b 4096 -ub 1024 --cache-reuse 256 -sps 0.2 -fa on -ngl 99 -t 16 -tb 16 --cache-type-k q4_0 --cache-type-v q4_0 --host 127.0.0.1 --port %PORT% --api-key rk_4a56fc43faa5edb9f7a0cafd4ad3e91f --jinja --temp 0.1 --top-p 0.9 --prio 2 --prio-batch 2 --metrics
+rem v-A: 只做约 2 秒的进程存活确认, 不再等端口就绪 -> 双击后窗口很快退出
+ping -n 3 127.0.0.1 >nul
+tasklist /FI "IMAGENAME eq llama-server.exe" /NH 2>nul | findstr /I /C:"llama-server.exe" >nul
+if errorlevel 1 goto :loadfail
+echo.
+echo [完成] 已在后台启动, 模型正在加载(约 20 秒后可翻译)。
+echo        现在就能开游戏, 不用等本窗口。
+echo        停止服务: 再双击一次本脚本
+echo.
+echo   3 秒后自动关闭窗口 ...
+ping -n 4 127.0.0.1 >nul
+exit /b 0
+
+:loadfail
+echo.
+echo [错误] llama-server 进程没起来(启动后 2 秒内就退出了)。常见原因:
+echo        1) 显存不够 -^> 先关掉游戏等吃显存的程序再试 (看上面的显存数字)
+echo        2) 程序或模型路径不对
+echo        服务窗口若还在(最小化), 点任务栏那个窗口可看到具体报错。
+echo.
+pause
+exit /b 1
+
+:noexe
+echo [错误] 找不到 llama-server.exe:
+echo        %LLAMA%
+echo.
+pause
+exit /b 1
+
+:nomodel
+echo [错误] 找不到模型文件:
+echo        %MODEL%
+echo.
+pause
+exit /b 1
