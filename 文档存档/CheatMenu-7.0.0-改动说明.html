@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CheatMenu 7.0.0 改动说明（可交互透视增强 + 事件监听扩充）</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e3e6ea;--text:#1c2126;--sub:#5b6570;
+        --cyan:#0b8fb5;--cyanbg:#e6f6fb;--green:#1f7a44;--greenbg:#e9f6ee;
+        --red:#c62828;--redbg:#fdecec;--amber:#9a6a00;--amberbg:#fdf4e0;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-size:15px;line-height:1.75;
+       font-family:-apple-system,"Segoe UI","Microsoft YaHei",Roboto,sans-serif;}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 22px 70px;}
+  h1{font-size:24px;margin:0 0 6px;}
+  h2{font-size:18px;margin:32px 0 10px;padding-left:11px;border-left:4px solid var(--cyan);}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:20px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 18px;margin:12px 0;}
+  pre{background:#f2f4f6;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+      overflow-x:auto;font-size:12.5px;line-height:1.6;font-family:Consolas,"Cascadia Mono",monospace;}
+  .del{color:#b3261e;}
+  .add{color:#1f7a44;}
+  code{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px;
+       font-family:Consolas,monospace;color:#b3261e;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--card);}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:#eef1f4;font-weight:600;}
+  .pill{display:inline-block;padding:1px 9px;border-radius:20px;font-size:12px;font-weight:600;}
+  .ok{background:var(--greenbg);color:var(--green);border:1px solid #bfe3cb;}
+  .warn{background:var(--amberbg);color:var(--amber);border:1px solid #efdba6;}
+  .note{background:var(--cyanbg);border:1px solid #bfe6f1;border-radius:8px;padding:12px 15px;margin:14px 0;}
+  .danger{background:var(--redbg);border:1px solid #f0c9c9;border-radius:8px;padding:12px 15px;margin:14px 0;}
+  ul{margin:8px 0 8px 4px;padding-left:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>CheatMenu <b>7.0.0</b> 改动说明</h1>
+<div class="meta">
+  2026-09-19 · 源码 <code>CheatMenu-6.9.1.lua</code> → 发行版 <code>CheatMenu.lua</code>（454,162 字节，压缩 44.1%）<br>
+  仓库 <code>Mercershixin/CheatMenu</code> @ <code>main</code> · 已推送并逐字节回读校验通过
+</div>
+
+<div class="note">
+<b>本轮要解决的三件事</b>：① 截图里那本书没被高亮 ② 事件库里还有一堆信号我们没在听 ③ 其他公开仓库里有没有我们缺的监听/绕过方法。
+<b>遵循你的铁律</b>：没有回加任何「你已移除的功能」。
+</div>
+
+<h2>1 · 可交互透视：支持递归 + 向上爬祖先 <span class="pill ok">已改</span></h2>
+<p>位置：<code>CheatMenu-6.9.1.lua:4355</code> 一带。</p>
+
+<p><b>旧逻辑</b>：只查「自己 / 直接父级 / 直接子级」。</p>
+<pre><span class="del">local function hasI(x)
+    return x and (x:FindFirstChildOfClass("ClickDetector")~=nil
+                or x:FindFirstChildOfClass("ProximityPrompt")~=nil)
+end</span></pre>
+
+<p><b>新逻辑</b>：<code>hasI(x, deep)</code> 支持递归，并且往上爬 1~2 层祖先再递归一次。</p>
+<pre><span class="add">local function hasI(x, deep)
+    if not x then return false end
+    if x:FindFirstChildOfClass("ClickDetector")~=nil
+       or x:FindFirstChildOfClass("ProximityPrompt")~=nil then return true end
+    if deep and (x:IsA("Model") or x:IsA("Folder")) then
+        local ok2, has = P(function()
+            if #x:GetChildren() > 60 then return false end          -- 防爆量
+            return (x:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil)
+                or (x:FindFirstChildWhichIsA("ClickDetector", true) ~= nil)
+        end)
+        if ok2 and has == true then return true end
+    end
+    return false
+end
+...
+    if not ok then
+        local anc=o.Parent
+        for _=1,2 do
+            if not anc then break end
+            if hasI(anc,true) then ok=true break end
+            anc=anc.Parent
+        end
+    end</span></pre>
+
+<p><b>依据（事件库实锤）</b>：MM2 类抓包里书架的真结构是</p>
+<pre>Workspace.Entities.MapModel.SecretBookshelf1.PromptPoint.ProximityPrompt</pre>
+<p>提示在【模型 &gt; PromptPoint &gt; ProximityPrompt】<b>两层</b>下面。旧代码只查直接子级，遇到更深一层时
+只剩那个小 <code>PromptPoint</code> 一个点亮 —— 看起来就像「整本书没亮」。</p>
+
+<div class="note">
+<b>防爆量</b>：递归前先看直接子对象数量，<b>超过 60 个</b>（多半是整张地图的大模型）就直接跳过，
+不会把整张地图一起点亮。
+</div>
+
+<h2>2 · 事件监听（📣 事件预告）关键词扩充 <span class="pill ok">已改</span></h2>
+<p>位置：<code>:2360</code> 的 <code>SYS.EventWatch.keywords</code>。按事件库「未覆盖索引」补 7 族：</p>
+<table>
+  <tr><th style="width:150px">族</th><th>补进去的关键词（举例）</th><th>为什么有用</th></tr>
+  <tr><td>① 经济/购买/领取</td><td><code>purchase</code> / <code>buygamepass</code> / <code>claimreward</code> / <code>claimdaily</code> / <code>dailyreward</code> …</td><td>事件库里未覆盖最多的一族（69 个）</td></tr>
+  <tr><td>② 拾取/收集/掉落</td><td><code>pickup</code> / <code>lootevent</code> / <code>dropcoin</code> / <code>orbpickup</code> …</td><td>58 个</td></tr>
+  <tr><td>③ 对局/回合/匹配</td><td><code>roundstart</code> / <code>roundend</code> / <code>gamestart</code> / <code>matchend</code> …</td><td>提前知道这局开局/结束</td></tr>
+  <tr><td>④ 箱/抽奖</td><td><code>gacha</code> / <code>spin</code> / <code>raffle</code> / <code>secretluck</code> …</td><td>开箱预告</td></tr>
+  <tr><td>⑤ 任务/赛季/排位</td><td><code>quest</code> / <code>seasonchanged</code> / <code>challenge</code> / <code>ranked</code></td><td>赛季/任务变动提示</td></tr>
+  <tr><td>⑥ 死亡/复活</td><td><code>playerdied</code> / <code>revive</code> / <code>resurrect</code> / <code>checkrevive</code></td><td>恐怖/跑图游戏最有用</td></tr>
+  <tr><td>⑦ ★ 反作弊告警</td><td><code>detect</code> / <code>flagged</code> / <code>violation</code> / <code>punish</code> / <code>suspicious</code> …</td><td><b>被盯上时能提前看到，比事后被踢强</b></td></tr>
+</table>
+<p class="meta">HUD 播报本身有 8 秒去重，不会刷屏；开关还是原来的「📣 事件预告」。</p>
+
+<h2>3 ·「封号风险自查」补现代反作弊检测面 <span class="pill ok">已改</span></h2>
+<p>位置：<code>:13934</code>。按 2026-09 公开反作弊清单，把一个「现代反作弊在查什么」的四侧清单写进提示里。
+<b>只做提示、不改任何功能行为</b>（符合你「标出来，我自己决定」的要求）：</p>
+<table>
+  <tr><th style="width:110px">侧</th><th>具体在查什么</th></tr>
+  <tr><td>服务端</td><td>飞行(CFrame/载具/座位) · 移速与速度异常 · 位置/传送校验 · 穿墙碰撞 · 多工具/背包利用 · 角色物理完整性</td></tr>
+  <tr><td>客户端</td><td><code>__namecall/__index/__newindex</code> 被 hook · 元表被改 · 函数被 hook(<code>debug.info/getfenv/hookfunction</code>) · CoreGui 注入 · gcinfo 伪装 · 弱表操纵</td></tr>
+  <tr><td>战斗</td><td>静默瞄准弹道分析 · 命中盒扩张 · 射程/近战超限</td></tr>
+  <tr><td>网络</td><td>Remote 速率限制 · 远程方法 hook 检测 · 挑战-应答令牌</td></tr>
+</table>
+<p>并点明本菜单两条做法是<b>对的、别改回去</b>：<br>
+① 「管理员检测绕过」<b>不 hook <code>__namecall</code></b>，只把菜单挪进隐藏容器；<br>
+② 自动开火间隔带 <b>±20% 抖动</b>（恒定节奏最容易被速率统计抓出来）。</p>
+
+<h2>4 · 验证与发版结果</h2>
+<table>
+  <tr><th style="width:180px">项目</th><th>结果</th></tr>
+  <tr><td>编译门禁</td><td><span class="pill ok">0 错误</span>（发行版与加载器都过）</td></tr>
+  <tr><td>等价性</td><td><span class="pill ok">通过</span>（空白归一化后与源码逐字符一致）</td></tr>
+  <tr><td>加载器探针</td><td><span class="pill ok">6 通过 / 0 失败</span></td></tr>
+  <tr><td>远程产物</td><td><span class="pill ok">逐字节一致</span> CheatMenu.lua 454,162 字节，sha1 <code>e3b67d4d8c43…</code></td></tr>
+  <tr><td>版本对齐</td><td><code>version.txt</code> = <code>CHANGELOG 顶部</code> = <b>7.0.0</b></td></tr>
+  <tr><td>执行器本地版</td><td>已写入 <code>%LOCALAPPDATA%\Real\workspace\CheatMenu.lua</code></td></tr>
+</table>
+
+<div class="danger">
+<b>版本号的坑（记一下）</b>：<code>version.py</code> 的实际规则是「<b>次到 10 之后下一版进位到主号</b>」——
+所以 <code>6.10.9</code> 次+1 = <b>7.0.0</b>，不是 6.11.0。我第一次写 CHANGELOG 头顶时猜成了 6.11.0，
+造成 version.txt 与 CHANGELOG 顶部不一致，已改正并重推。<b>以后先跑构建看实际版本号，别靠猜。</b>
+</div>
+
+<h2>5 · ⛔ 明确没有做的事</h2>
+<ul>
+  <li><b>没有回加任何已移除的功能</b>：穿墙(Noclip) / 快照瞄准 / 反陷阱预警 UI / 一键诊断 / 隔空获取 等，全部保持移除状态。</li>
+  <li><b>没有新增独立开关</b>：本次只增强已有功能内部逻辑与提示文案。</li>
+  <li><b>没有跑用户未要求的测试循环</b>：只走了你规定的默认发版命令 <code>push_now.py --fast</code>（它自带门禁）。</li>
+</ul>
+
+<div class="note">
+<b>如果那本书还是没亮</b>：说明它的交互不是 <code>ProximityPrompt</code>/<code>ClickDetector</code>（可能是自定义 GUI），
+且名字里也没有书籍类关键词。这时控制台会打印
+<code>[ESP] 可交互透视: 找到 N 个候选。名字样本: …</code>，
+把 <b>那本书的实例名</b>（或截图）发我，我按真名加判据 —— 这是最快的一条路。
+</div>
+
+</div>
+</body>
+</html>
