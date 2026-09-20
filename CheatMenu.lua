@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 01:21 sha 5ac141ab bytes 507389'):format('2026-09-21 01:21','5ac141ab',507389))
+print(('[CheatMenu] build 2026-09-21 01:35 sha c4d65408 bytes 507674'):format('2026-09-21 01:35','c4d65408',507674))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.3.0"
+SYS.BuildVer="9.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2107,6 +2107,11 @@ local t={"-- CheatMenu 综合扫描（全部十层 · 单文件）",
 "-- 输出目录: "..dir,
 ""}
 for i=1,#(buf or {}) do t[#t+1]=tostring(buf[i]) end
+pcall(function()
+if type(isfile)=="function" and isfile(dir.."\\"..fn) and type(readfile)=="function" then
+writefile(dir.."\\"..fn..".prev.txt", readfile(dir.."\\"..fn))
+end
+end)
 if P(function() writefile(dir.."\\"..fn,table.concat(t,"\n")) end) then
 return {fn}, SYS.ScanOutWhy, dir
 end
@@ -4869,7 +4874,7 @@ if not list then return end
 for _,t in ipairs(list:GetChildren()) do
 if isEntityTool(t) then
 if not isExclusiveTool(t) then
-local cps=SYS.GetBrainrotBaseCPS(t)
+local cps=SYS.GetBrainrotCPS(t)
 if cps~=nil and cps<th then
 table.insert(picks,{Tool=t,CPS=cps})
 end
@@ -4910,7 +4915,7 @@ round+=1
 local picks=pickLow(force)
 if #picks==0 then
 if round==1 then
-print(("[Sell] 没有【基础 CPS】低于 %d 的脑红"):format(SYS.AFK_Sell.MinCPS))
+print(("[Sell] 没有低于 %d 的脑红（按背包显示的 CPS 判）"):format(SYS.AFK_Sell.MinCPS))
 else
 print(("[Sell] 第 %d 轮: 无更多低 CPS 脑红"):format(round))
 end
@@ -4937,7 +4942,7 @@ task.wait(0.08)
 pcall(function() hum:EquipTool(tool) end)
 task.wait(0.20)
 if tool.Parent==LP.Character then
-print(("[Sell] [%d] %s · 基础CPS=%.0f (当前CPS=%.0f)  ⟵ %s"):format(
+print(("[Sell] [%d] %s · CPS=%.0f  ⟵ %s"):format(
 totalSold+1,tool.Name,e.CPS or 0,
 SYS.GetBrainrotCPS(tool) or 0,
 SYS.DescribeBrainrotCPS and SYS.DescribeBrainrotCPS(tool) or ""))
@@ -4967,6 +4972,22 @@ end
 pcall(function() hum:UnequipTools() end)
 print(("[Sell] ✅ 全部完成 · 共卖 %d 个 · %d 轮"):format(totalSold,round))
 if totalSold>0 then
+if SYS.T_.AutoSell then
+SYS.T_.AutoSell=false
+if SYS.SwitchOnChange and SYS.SwitchOnChange["AutoSell"] then
+pcall(function() SYS.SwitchOnChange["AutoSell"](false) end)
+end
+print("[Sell] ✅ 本轮卖完 -> 已自动关闭「自动售卖」(要再卖请重新打开)")
+end
+if SYS.T_.SellThresholdEnabled then
+SYS.T_.SellThresholdEnabled=false
+pcall(function()
+if SYS.SwitchOnChange and SYS.SwitchOnChange["SellThresholdEnabled"] then
+SYS.SwitchOnChange["SellThresholdEnabled"](false)
+end
+end)
+print("[Sell] ✅ 本轮卖完 -> 已自动关闭「启用 CPS 门槛」")
+end
 QueueSave()
 for _,f in ipairs(SYS.BtnRefs) do P(f) end
 end
@@ -4992,7 +5013,7 @@ if not list then return end
 for _,t in ipairs(list:GetChildren()) do
 if isEntityTool(t) then
 if not isExclusiveTool(t) then
-local cps=SYS.GetBrainrotBaseCPS(t)
+local cps=SYS.GetBrainrotCPS(t)
 if cps and cps<threshold then
 table.insert(picks,{Name=t.Name,CPS=cps})
 end
@@ -5634,6 +5655,72 @@ CB.FallbackConn=nil
 CB.UsingFallback=false
 CB.LastFire=0
 CB.RenderName=SYS.N.Combat
+CB.Srv={}
+local function srvRec(name, ...)
+local e=CB.Srv[name]
+if not e then e={count=0,last="",sample={}} CB.Srv[name]=e end
+e.count=e.count+1
+local args=table.pack(...)
+local parts={}
+for i=1,math.min(args.n,6) do
+local v=args[i]
+local tv
+if typeof(v)=="Instance" then
+tv="<"..v.ClassName..":"..tostring(v.Name)..">"
+elseif type(v)=="table" then
+local n=0 for _ in pairs(v) do n=n+1 end
+tv="{table "..n.." 项}"
+else
+tv=tostring(v)
+end
+if #tv>60 then tv=tv:sub(1,60).."…" end
+parts[#parts+1]=tv
+end
+e.last=table.concat(parts,", ")
+if #e.sample<3 then e.sample[#e.sample+1]=e.last end
+end
+CB.SrvRec=srvRec
+function CB.StartSrvWatch()
+local CH={
+"CombatService.Ammo",
+"CombatService.ActionEvent",
+"EntityService.BeDamagedUnreliable",
+"EntityService.DamageShield",
+"EntityService.DamageImmunity",
+"EntityService.HealUnreliable",
+"EntityService.KnockbackUnreliable",
+"Any.TouchDamage",
+}
+CB.SrvCh={}
+local n=0
+for _,full in ipairs(CH) do
+local ev=SYS.REvent(full)
+if ev then
+n=n+1
+local name=full
+T(ev.OnClientEvent:Connect(function(...) srvRec(name, ...) end))
+end
+end
+print(("[Combat] 服务端战斗数据记录器已启动: 接上 %d/%d 个通道（**只记录, 不改任何行为**）"):format(n,#CH))
+if n>0 then
+print("[Combat] 玩一局后点「📡 看服务端战斗数据」, 把输出发我 -> 我就按真实参数把命中确认/权威盾/弹药接成判据")
+end
+return n
+end
+function CB.DumpSrv()
+local any=false
+for k,e in pairs(CB.Srv) do
+any=true
+print(("  [Srv] %-34s 收到 %d 次"):format(k,e.count))
+print(("        最近参数: %s"):format(e.last))
+for i,s in ipairs(e.sample) do print(("        样本%d   : %s"):format(i,s)) end
+end
+if not any then
+print("  [Srv] 还没收到任何战斗通道数据（这个游戏可能没有这些通道 / 或本局没打过）")
+end
+print("  （用途: 确认「谁有什么参数」—— 拿到后就能把命中确认/权威无敌盾/弹药接成判据）")
+end
+CB.StartSrvWatch()
 local HUMC=setmetatable({},{__mode="k"})
 local BODYC=setmetatable({},{__mode="k"})
 CB.DeadAt={}
@@ -11267,50 +11354,48 @@ row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
 UI.Round(row,10) UI.Stroke(row,CY.line,1,0.85)
 local lb=Instance.new("TextLabel")
 lb.Size=UDim2.new(1,-130,1,0) lb.Position=UDim2.new(0,12,0,0)
-lb.BackgroundTransparency=1 lb.Text="最低基础 CPS 门槛"    lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
+lb.BackgroundTransparency=1 lb.Text="低于此值就卖掉 (可写 80m)"    lb.TextColor3=CY.text lb.Font=Enum.Font.GothamMedium
 lb.TextSize=13 lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
+local function parseCompactStr(v)
+if type(v)=="number" then return v end
+local s=tostring(v or ""):lower():gsub("[,%s]","")
+if s=="" then return nil end
+local num,suf=s:match("^([%d%.]+)([kmbtq]?)$")
+if not num then return nil end
+local n=tonumber(num)
+if not n then return nil end
+local MULT={k=1e3,m=1e6,b=1e9,t=1e12,q=1e15}
+return n*(MULT[suf] or 1)
+end
+local function fmtCompactStr(n)
+n=tonumber(n) or 0
+if n>=1e15 then return ("%.2fq"):format(n/1e15) end
+if n>=1e12 then return ("%.2fT"):format(n/1e12) end
+if n>=1e9  then return ("%.2fB"):format(n/1e9) end
+if n>=1e6  then return ("%.2fM"):format(n/1e6) end
+if n>=1e3  then return ("%.2fK"):format(n/1e3) end
+return tostring(math.floor(n))
+end
+SYS.SellParseCompact=parseCompactStr
+SYS.SellFmtCompact=fmtCompactStr
 local box=Instance.new("TextBox")
 box.Size=UDim2.new(0,110,0,28) box.Position=UDim2.new(1,-122,0.5,-14)
 box.BackgroundColor3=CY.panel box.BackgroundTransparency=0.2
-box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
+box.Text=fmtCompactStr((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
 box.TextColor3=CY.cyan box.Font=Enum.Font.Code
 box.TextSize=13 box.BorderSizePixel=0 box.ClearTextOnFocus=false box.Parent=row
 UI.Round(box,6) UI.Stroke(box,CY.cyan,1,0.7)
 box.FocusLost:Connect(function()
-local v=tonumber(box.Text)
+local v=parseCompactStr(box.Text)
 if v and v>=0 then
 if SYS.AFK_Sell then SYS.AFK_Sell.MinCPS=v end
 if SYS.SyncMinCPS then SYS.SyncMinCPS() end
-box.Text=tostring(math.floor(v))
-print("[Sell] CPS 门槛设为: "..box.Text.." (已保存)")
+box.Text=fmtCompactStr(v)
+print(("[Sell] CPS 门槛设为 %s (%d) —— 低于它的脑红会被卖掉"):format(box.Text,math.floor(v)))
 else
-box.Text=tostring((SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000)
-end
-end)
-local rowL=Instance.new("Frame")
-rowL.Size=UDim2.new(1,0,0,42) rowL.BackgroundColor3=CY.card
-rowL.BackgroundTransparency=0.3 rowL.BorderSizePixel=0 rowL.Parent=p
-UI.Round(rowL,10) UI.Stroke(rowL,CY.line,1,0.85)
-local lbL=Instance.new("TextLabel")
-lbL.Size=UDim2.new(1,-130,1,0) lbL.Position=UDim2.new(0,12,0,0)
-lbL.BackgroundTransparency=1 lbL.Text="等级乘数 (1=不看等级)"
-lbL.TextColor3=CY.text lbL.Font=Enum.Font.GothamMedium
-lbL.TextSize=13 lbL.TextXAlignment=Enum.TextXAlignment.Left lbL.Parent=rowL
-local boxL=Instance.new("TextBox")
-boxL.Size=UDim2.new(0,110,0,28) boxL.Position=UDim2.new(1,-122,0.5,-14)
-boxL.BackgroundColor3=CY.panel boxL.BackgroundTransparency=0.2
-boxL.Text=tostring(tonumber(SYS.C_.SellLvMul) or 1.25)
-boxL.TextColor3=CY.cyan boxL.Font=Enum.Font.Code
-boxL.TextSize=13 boxL.BorderSizePixel=0 boxL.ClearTextOnFocus=false boxL.Parent=rowL
-UI.Round(boxL,6) UI.Stroke(boxL,CY.cyan,1,0.7)
-boxL.FocusLost:Connect(function()
-local v=tonumber(boxL.Text)
-if v and v>0 then
-SYS.C_.SellLvMul=v QueueSave()
-boxL.Text=tostring(v)
-print(("[Sell] 等级乘数设为 %s (1 = 不考虑等级)"):format(boxL.Text))
-else
-boxL.Text=tostring(tonumber(SYS.C_.SellLvMul) or 1.25)
+local keep=(SYS.AFK_Sell and SYS.AFK_Sell.MinCPS) or 100000
+box.Text=fmtCompactStr(keep)
+print(("[Sell] 看不懂 %q, 门槛保持 %s（可写 80m / 1.2b / 500k）"):format(tostring(box.Text),fmtCompactStr(keep)))
 end
 end)
 UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
@@ -11338,13 +11423,13 @@ end
 local preview=table.concat(names,", ")
 if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
 if cnt==0 then
-scanResL.Text=("门槛 %.0f: 无低于该门槛的基础 CPS 脑红"):format(th)
+scanResL.Text=("低于 %.0f 的脑红: 一个都没有"):format(th)
 scanResL.TextColor3=CY.green
 else
-scanResL.Text=("基础CPS门槛 %.0f: 共 %d 个  |  %s"):format(th,cnt,preview)
+scanResL.Text=("低于 %.0f 共 %d 个  |  %s"):format(th,cnt,preview)
 scanResL.TextColor3=CY.cyan
 end
-print(("[Scan] 基础CPS门槛 %.0f · 共 %d 个"):format(th,cnt))
+print(("[Scan] 低于 %.0f 共 %d 个（按背包显示的 CPS 判）"):format(th,cnt))
 else
 scanResL.Text="扫描失败"
 scanResL.TextColor3=CY.red
@@ -11352,71 +11437,6 @@ end
 end
 end)
 end)
-UI.Div(p)
-UI.Section(p,"📈 服务端收益查询",CY.cyan)
-UI.Btn(p,"📈 查询服务端每秒收益 (getCoinsPerDuration)",CY.cyan,function()
-task.spawn(function()
-local rf=SYS.RFunction("getCoinsPerDuration")
-if not rf then SYS.Notify("这个游戏没有 getCoinsPerDuration 通道",SYS.CY.yellow) return end
-local ok,res=pcall(function() return rf:InvokeServer() end)
-if ok then
-print(("[Srv] getCoinsPerDuration 服务端返回: %s"):format(tostring(res)))
-SYS.Notify(("服务端每秒收益: %s"):format(tostring(res)),SYS.CY.green)
-else
-print("[Srv] getCoinsPerDuration 调用失败: "..tostring(res))
-SYS.Notify("调用失败（可能不许客户端直接查）",SYS.CY.yellow)
-end
-end)
-end)
-UI.Div(p)
-UI.Section(p,"💸 快速售卖（实验 · 扫描新发现）",CY.yellow)
-UI.Btn(p,"💸 试一次 B_SellAll（一次全卖 · 实验）",CY.red,function()
-task.spawn(function()
-local rf=SYS.RFunction("B_SellAll")
-if not rf then
-print("[SellAll] 这个游戏没有 ref_B_SellAll")
-SYS.Notify("没有 ref_B_SellAll 通道",SYS.CY.yellow) return
-end
-print("[SellAll] 调用 ref_B_SellAll:InvokeServer() …")
-local ok,res=pcall(function() return rf:InvokeServer() end)
-print(("[SellAll] ok=%s  返回值=%s"):format(tostring(ok),tostring(res)))
-SYS.Notify(("B_SellAll 返回: %s"):format(tostring(res)),(ok and SYS.CY.green or SYS.CY.red))
-end)
-end)
-local sellAllRow=Instance.new("Frame")
-sellAllRow.Size=UDim2.new(1,0,0,42) sellAllRow.BackgroundColor3=CY.card
-sellAllRow.BackgroundTransparency=0.3 sellAllRow.BorderSizePixel=0 sellAllRow.Parent=p
-UI.Round(sellAllRow,10) UI.Stroke(sellAllRow,CY.line,1,0.85)
-local sLb=Instance.new("TextLabel")
-sLb.Size=UDim2.new(1,-140,1,0) sLb.Position=UDim2.new(0,12,0,0)
-sLb.BackgroundTransparency=1 sLb.Text="按稀有度卖 · 填稀有度"
-sLb.TextColor3=CY.text sLb.Font=Enum.Font.GothamMedium
-sLb.TextSize=13 sLb.TextXAlignment=Enum.TextXAlignment.Left sLb.Parent=sellAllRow
-local sBox=Instance.new("TextBox")
-sBox.Size=UDim2.new(0,120,0,28) sBox.Position=UDim2.new(1,-132,0.5,-14)
-sBox.BackgroundColor3=CY.panel sBox.BackgroundTransparency=0.2
-sBox.Text="Common"
-sBox.TextColor3=CY.cyan sBox.Font=Enum.Font.Code
-sBox.TextSize=13 sBox.BorderSizePixel=0 sBox.ClearTextOnFocus=false sBox.Parent=sellAllRow
-UI.Round(sBox,6) UI.Stroke(sBox,CY.cyan,1,0.7)
-UI.Btn(p,"💸 按上面稀有度卖一次 (B_SellAllByRarity · 实验)",CY.red,function()
-task.spawn(function()
-local rf=SYS.RFunction("B_SellAllByRarity")
-if not rf then
-print("[SellAll] 这个游戏没有 ref_B_SellAllByRarity")
-SYS.Notify("没有 ref_B_SellAllByRarity 通道",SYS.CY.yellow) return
-end
-local rar=tostring(sBox.Text or "Common")
-print(("[SellAll] 调用 ref_B_SellAllByRarity:InvokeServer(%q) …"):format(rar))
-local ok,res=pcall(function() return rf:InvokeServer(rar) end)
-print(("[SellAll] 参数=%q  ok=%s  返回值=%s"):format(rar,tostring(ok),tostring(res)))
-SYS.Notify(("按稀有度 %s 卖: %s"):format(rar,tostring(res)),(ok and SYS.CY.green or SYS.CY.red))
-end)
-end)
-UI.Tip(p,"⚠ 这两个是【实验】功能 —— ref_B_SellAll / ref_B_SellAllByRarity 是 2026-09-21 综合扫描新发现的通道,\n"
-.. "参数与副作用【都没实机验证过】。默认稀有度填的 Common(最低档) 相对最安全。\n"
-.. "★ 请先用小号、或身上只留 1 件低价值脑红试一次；调用结果会打印到控制台(F9)，把那两行发我。\n"
-.. "确认行为之后，我再把它接进「自动售卖」流程（那才能真正提速）。",CY.red)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
@@ -11850,6 +11870,13 @@ dump[#dump+1]=("%s  %s"):format(k,p)
 end
 if total>12 then
 line(("        … 还有 %d 个(完整清单见落盘文件)"):format(total-12))
+SYS.ScanBufNote("        ── 以下为完整清单(控制台已省略) ──")
+for i=13,#hits do
+local okp2,path2=P(function() return hits[i]:GetFullName() end)
+local p2=tostring(okp2 and path2 or "?")
+SYS.ScanBufNote(("        %s"):format(p2))
+dump[#dump+1]=("%s  %s"):format(k,p2)
+end
 end
 end
 end
@@ -11913,7 +11940,8 @@ local nameKind=kindIndex()
 local dump={("========== Remote 逐条侦察(共 %d 条, 列前 60) =========="):format(#net)}
 local withRecv=0
 local MAXROW=60
-for i=1,math.min(#net,MAXROW) do
+local function row(s,i) if i<=MAXROW then line(s) else SYS.ScanBufNote(s) end end
+for i=1,#net do
 local r=net[i]
 local cls=r.ClassName
 local okp,path=P(function() return r:GetFullName() end)
@@ -11953,8 +11981,8 @@ else
 recv="(无 getconnections)"
 end
 if type(recv)=="string" and recv~="0" and recv~="?" and recv:find("^%d") then withRecv=withRecv+1 end
-line(("    [%d] %-22s %s"):format(i,cls,p))
-line(("          收向监听: %s%s"):format(tostring(recv),tag))
+row(("    [%d] %-22s %s"):format(i,cls,p),i)
+row(("          收向监听: %s%s"):format(tostring(recv),tag),i)
 dump[#dump+1]=("[%d] %s  %s"):format(i,cls,p)
 dump[#dump+1]=("     收向监听: "..tostring(recv)..tag)
 end
@@ -12000,7 +12028,7 @@ for _,x in ipairs(_banner) do print(x) SYS.ScanBufNote(x) end
 pcall(function() SYS.ResolveScanDir() end)
 SYS.ScanOutExtra=nil
 local _info,_nm,_pid=SYS.GameInfoLine()
-SYS.ScanOutFile=("scan_%s_%s.txt"):format(SYS.SafeAscii(_pid,20),os.date("%Y%m%d_%H%M%S"))
+SYS.ScanOutFile=("scan_%s.txt"):format(SYS.SafeAscii(_pid,20))
 if SYS.ScanOutDir then
 local m1=("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy))
 local m2=("     单文件名: %s   （全部十层都在里面）"):format(tostring(SYS.ScanOutFile))
@@ -12032,8 +12060,10 @@ end
 if #hits>0 then
 local _gh=("  ── %s (%d) ──"):format(g[1],#hits)
 print(_gh) SYS.ScanBufNote(_gh)
-for x=1,math.min(#hits,14) do line(hits[x]) end
-if #hits>14 then line(("... 还有 %d 个"):format(#hits-14)) end
+for x=1,#hits do
+if x<=14 then line(hits[x]) else SYS.ScanBufNote("  "..tostring(hits[x])) end
+end
+if #hits>14 then line(("... 还有 %d 个(文件里有全部)"):format(#hits-14)) end
 gen=gen+#hits
 end
 end
@@ -12644,6 +12674,17 @@ print("[CheatMenu] 射线改写次数: "..tostring(SYS.RayHook.Rewrites)
 .."  hook 已装: "..tostring(SYS.RayHook.Hooked))
 SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
 end)
+UI.Btn(p,"📡 看服务端战斗数据 (控制台)",CY.purple,function()
+print("[Combat] ===== 服务端战斗数据（只记录, 未接判据） =====")
+pcall(function() SYS.Combat.DumpSrv() end)
+SYS.Notify("📡 已打到控制台(F9) —— 把这几行发我，我按真实参数接成判据",SYS.CY.purple)
+end)
+UI.Tip(p,"★ 服务端战斗数据 = 综合扫描新发现的 3 条【权威输入】(FPS 服):\n"
+.. "  · EntityService.BeDamagedUnreliable（命中确认）\n"
+.. "  · EntityService.DamageShield / DamageImmunity（权威无敌盾）\n"
+.. "  · CombatService.Ammo（真实弹药）\n"
+.. "现在【只记录不改行为】—— 因为这三条的参数格式还没实机见过，猜着当判据会把原来能打中的也打不中。\n"
+.. "你玩一局 -> 点上面那个按钮 -> 把控制台几行发我，我就按真实参数把它们接成判据（这才是补强的正确顺序）。",CY.sub)
 UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 同上, 且不要求视线\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
 task.spawn(function()
 local lastScan,lastHud=0,0
