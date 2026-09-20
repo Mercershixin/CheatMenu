@@ -1,3 +1,62 @@
+## 8.5.0 · 2026-09-20
+
+### 🏋 健身房 TP 的真修复：按来源脚本逐条移植（上一版只加了诊断，这版修根因）
+
+上一版（8.4.0）只做了"让失败可见"，这版**顺着那份 Kick a Lucky Block 客户端脚本**
+（用户重新提供的 `1.txt`，里面其实有**完整的健身房实现**）把根因修掉。
+
+**根因（这次是真的找到了，不是猜）**
+
+来源脚本的 `moveToLiftMachinePart` 在传送**之前**先调：
+
+```lua
+local function unequipAndUnanchor()
+    hum:UnequipTools()
+    root.Anchored = false                        -- ★ 反锚定
+    root.AssemblyLinearVelocity  = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+end
+```
+
+而我们的实现**没有这一步**，反而在开头写：
+
+```lua
+if not root or root.Anchored then return false end   -- ← 被 Anchor 住就直接放弃
+```
+
+⇒ **角色一旦被锚定（飞行 / 藏地下隐身 / 被游戏锚定），健身房 TP 就永久静默失效** ——
+这正是"没反应且零日志"的根子：不是没找到机器，是**走到传送那一步被 `Anchored` 挡住了**。
+（上一版加的诊断其实已经能报出"可能被 Anchor 住了"，只是没修。）
+
+**按来源移植了 5 处**
+
+| # | 移植内容 |
+|---|---|
+| 1 | 新增 `gymPrepareRoot()`（= 来源的 `unequipAndUnanchor`），传送前先"卸装 + 反锚定 + 速度清零" |
+| 2 | `moveToLiftMachinePart`：**删掉 `root.Anchored → return false` 硬放弃**，改成"先反锚定、再读 root、只有反锚定后仍 Anchored 才报错返回" |
+| 3 | `enterGymMachine`：**每个落点失败后再 `gymPrepareRoot()` 一次**再试下一个（来源 6773 行的做法 —— 否则第一次失败留下的锚定会连累后面所有落点） |
+| 4 | 记住**上次被游戏认可的那个落点**，下次优先试它（来源 `Gym.Event.LastVerifiedPart`），省掉盲试的来回传送 |
+| 5 | `waitLiftMachineRecognition`：等待循环结束后**再查一次**（属性可能正好在 deadline 那一刻翻过去） |
+
+**附带一处增强**：举铁道具的判据原来只认 `SquatTool` 标签 → 按来源补上
+`hasTag("SquatTool") or 名字命中 16 档配重表`（`Wooden Stick` → `Black Hole Barbell`）。
+
+### 📚 事件库补「健身房」专节
+
+`事件库/2026-09-20_KickALuckyBlock(踢幸运方块).md` 新增 5.6 节：
+机器标签 `LiftMachine`、`liftMachine` 属性、机器属性 `Multiplier/Squats/Goal`、
+**16 档配重表**（名字 / PPS / 价格）、以及**进机器的正确顺序**（含"别把大范围触发板当点目标"的坑）。
+
+> ⚠ 注意：**此前的顺序错了两次** —— 第一次是我 grep 时文件已经不在、把 `FileNotFoundError`
+> 当成"里面没有健身房代码"；第二次才重新读，发现它有完整实现。教训：**读文件失败≠没有内容**。
+
+**验证**
+
+- `luau-compile`（整文件）exit=0；`check.py` 0 问题；`verify_all.py` **6/6 全绿**；
+  `check_globals` **新增未声明名字 0**；等价性 PASS。
+
+---
+
 ## 8.4.0 · 2026-09-20
 
 ### 🏋 修「健身房 TP 没反应，而控制台一个字都不打」
