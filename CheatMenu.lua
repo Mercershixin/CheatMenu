@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 15:15 sha 350b34e4 bytes 467644'):format('2026-09-20 15:15','350b34e4',467644))
+print(('[CheatMenu] build 2026-09-20 15:59 sha bd577476 bytes 472537'):format('2026-09-20 15:59','bd577476',472537))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -38,6 +38,7 @@ TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
 CB_PauseMove=false,CB_Predict=false,CB_Team=false,CB_Wall=true,
+CB_Ballistic=false,
 CB_TgtStrict=false,
 CB_SnapFire=false,
 CB_OnlyAlive=true,
@@ -90,6 +91,7 @@ CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGa
 CB_ScanMs=33,
 CB_FireDelay=0.08,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
+CB_ProjSpeed=100,CB_ProjGrav=196.2,
 CB_RingModeVer=0,
 CB_SnapDelay=0.03,
 CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
@@ -108,7 +110,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.8.3"
+SYS.BuildVer="7.8.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5827,10 +5829,161 @@ end
 SCALP_CACHE[part]={t=now,p=use}
 return use
 end
+local BP_EPS=1e-9
+local function bpIsZero(d) return (d>-BP_EPS and d<BP_EPS) end
+local function bpCbrt(x)
+return (x>0) and (x^(1/3)) or -((-x)^(1/3))
+end
+local function bpQuadric(c0,c1,c2)
+if bpIsZero(c0) then return nil end
+local p=c1/(2*c0)
+local q=c2/c0
+local D=p*p-q
+if bpIsZero(D) then return -p end
+if D<0 then return nil end
+local sd=math.sqrt(D)
+return sd-p,-sd-p
+end
+local function bpCubic(c0,c1,c2,c3)
+if bpIsZero(c0) then return nil end
+local A=c1/c0 local B=c2/c0 local C=c3/c0
+local sqA=A*A
+local p=(1/3)*(-(1/3)*sqA+B)
+local q=0.5*((2/27)*A*sqA-(1/3)*A*B+C)
+local cb_p=p*p*p
+local D=q*q+cb_p
+local s0,s1,s2=0,0,0
+local num=0
+if bpIsZero(D) then
+if bpIsZero(q) then
+s0=0 num=1
+else
+local u=bpCbrt(-q) s0=2*u s1=-u num=2
+end
+elseif D<0 then
+local phi=(1/3)*math.acos(math.clamp(-q/math.sqrt(-cb_p),-1,1))
+local t=2*math.sqrt(-p)
+s0=t*math.cos(phi)
+s1=-t*math.cos(phi+math.pi/3)
+s2=-t*math.cos(phi-math.pi/3)
+num=3
+else
+local sd=math.sqrt(D)
+local u=bpCbrt(sd-q)
+local v=-bpCbrt(sd+q)
+s0=u+v num=1
+end
+local sub=(1/3)*A
+if num>0 then s0=s0-sub else s0=nil end
+if num>1 then s1=s1-sub else s1=nil end
+if num>2 then s2=s2-sub else s2=nil end
+return s0,s1,s2,num
+end
+local function bpQuartic(c0,c1,c2,c3,c4)
+if bpIsZero(c0) then return nil end
+local A=c1/c0 local B=c2/c0 local C=c3/c0 local D=c4/c0
+local sqA=A*A
+local p=-0.375*sqA+B
+local q=0.125*sqA*A-0.5*A*B+C
+local r=-(3/256)*sqA*sqA+0.0625*sqA*B-0.25*A*C+D
+local out={}
+local sub=0.25*A
+if bpIsZero(r) then
+out[#out+1]=-sub
+local a,b,c=bpCubic(1,0,p,q)
+if a then out[#out+1]=a-sub end
+if b then out[#out+1]=b-sub end
+if c then out[#out+1]=c-sub end
+else
+local z=bpCubic(1,-0.5*p,-r,0.5*r*p-0.125*q*q)
+if not z then return nil end
+local u=z*z-r
+local v=2*z-p
+if bpIsZero(u) then u=0 elseif u>0 then u=math.sqrt(u) else return nil end
+if bpIsZero(v) then v=0 elseif v>0 then v=math.sqrt(v) else return nil end
+local a1,a2=bpQuadric(1, q<0 and -v or v, z-u)
+if a1 then out[#out+1]=a1-sub end
+if a2 then out[#out+1]=a2-sub end
+local b1,b2=bpQuadric(1, q<0 and v or -v, z+u)
+if b1 then out[#out+1]=b1-sub end
+if b2 then out[#out+1]=b2-sub end
+end
+if #out==0 then return nil end
+return out
+end
+local function bpSolve(origin,speed,gravity,targetPos,targetVel)
+if not (speed and speed>1) then return nil end
+local disp=targetPos-origin
+local p,q,r=targetVel.X,targetVel.Y,targetVel.Z
+local h,j,k=disp.X,disp.Y,disp.Z
+if not (gravity and gravity>0) then
+local a=p*p+q*q+r*r-speed*speed
+local b=2*(h*p+j*q+k*r)
+local c=h*h+j*j+k*k
+local t=nil
+if math.abs(a)<BP_EPS then
+if math.abs(b)>BP_EPS then
+local t0=-c/b
+if t0>BP_EPS then t=t0 end
+end
+else
+local Dd=b*b-4*a*c
+if Dd>=0 then
+local sd=math.sqrt(Dd)
+local t1=(-b-sd)/(2*a)
+local t2=(-b+sd)/(2*a)
+if t1>BP_EPS and (t==nil or t1<t) then t=t1 end
+if t2>BP_EPS and (t==nil or t2<t) then t=t2 end
+end
+end
+if not t then return nil end
+return origin+Vector3.new((h+p*t)/t,(j+q*t)/t,(k+r*t)/t),t
+end
+local l=-0.5*gravity
+local roots=bpQuartic(
+l*l,
+-2*q*l,
+q*q-2*j*l-speed*speed+p*p+r*r,
+2*j*q+2*h*p+2*k*r,
+j*j+h*h+k*k
+)
+if not roots then return nil end
+local t=nil
+for i=1,#roots do
+local v=roots[i]
+if v>BP_EPS and (t==nil or v<t) then t=v end
+end
+if not t then return nil end
+local d=(h+p*t)/t
+local e=(j+q*t-l*t*t)/t
+local f=(k+r*t)/t
+return origin+Vector3.new(d,e,f),t
+end
+function CB.BallisticPoint(part,base)
+if not part then return nil end
+local cam=SYS.Cam
+local o=cam and cam.CFrame and cam.CFrame.Position
+if not o then return nil end
+local v=part.AssemblyLinearVelocity
+if not v then
+local ok,r2=pcall(function() return part.Velocity end)
+if ok then v=r2 end
+end
+if not v then v=Vector3.zero end
+local speed=tonumber(SYS.C_.CB_ProjSpeed) or 100
+local g=tonumber(SYS.C_.CB_ProjGrav)
+if g==nil then g=(WS and WS.Gravity) or 196.2 end
+local aim=bpSolve(o,speed,g,base or part.Position,v)
+return aim
+end
 local function leadPos()
 local p=CB.TargetPart
 if not p then return nil end
 local pos=visPoint(p)
+if SYS.T_.CB_Ballistic then
+local bp=CB.BallisticPoint(p,pos)
+if bp then return bp end
+end
 if not SYS.T_.CB_Predict then return pos end
 local t=SYS.C_.CB_PredictTime or 0.14
 local v=p.AssemblyLinearVelocity
@@ -11529,6 +11682,14 @@ UI.Switch(p,"📐 预测瞄准 (算目标移动的提前量)","CB_Predict")
 UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
 function() return SYS.C_.CB_PredictTime end,
 function(v) SYS.C_.CB_PredictTime=v end,"%.2f")
+UI.Switch(p,"🏹 抛射物弹道预判 (弓/火箭/手雷等抛物线武器)","CB_Ballistic")
+UI.Slider(p,"抛射物初速 (studs/秒 · 看武器面板)",20,600,10,
+function() return SYS.C_.CB_ProjSpeed end,
+function(v) SYS.C_.CB_ProjSpeed=v QueueSave() end,"%.0f")
+UI.Slider(p,"下坠加速度 (0=不补下坠)",0,400,5,
+function() return SYS.C_.CB_ProjGrav end,
+function(v) SYS.C_.CB_ProjGrav=v QueueSave() end,"%.0f")
+UI.Tip(p,"★ 「抛射物弹道预判」解的是: 子弹要飞多久才追得上目标 + 飞行途中掉多少 —— 两个一起补,\n  所以远距离/高抛不会再打低。初速对着武器面板(或游戏 wiki)填; 下坠填 196.2 是标准重力,\n  填 0 = 只补飞行时间、不补下坠。\n★ 参数填错顶多「解不出交点」, 会自动退回上面的线性提前量, 不会把瞄准弄坏。\n★ 想知道当前地图的重力: 控制台执行 print(workspace.Gravity)。",CY.yellow)
 UI.Slider(p,"跟随速度 (自动瞄准跟得多紧)",0.05,1,0.05,
 function() return SYS.C_.CB_Smooth end,
 function(v) SYS.C_.CB_Smooth=v end,"%.2f")
