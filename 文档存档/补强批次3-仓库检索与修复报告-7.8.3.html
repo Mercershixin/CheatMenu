@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>补强批次3 · 近2个月公开仓库检索 + 真 bug 修复报告 · 7.8.3</title>
+<style>
+  :root{--bg:#f6f6f4;--card:#fff;--line:#e3e2dd;--tx:#22221f;--tx2:#5f5e58;--tx3:#8a8880;
+        --ok:#2f7d4f;--bad:#b3352f;--warn:#a86b12;--info:#1f5f8b;--mono:"Consolas","Menlo",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 64px;background:var(--bg);color:var(--tx);
+       font:15px/1.75 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:24px;font-weight:600;margin:0 0 6px;letter-spacing:.2px}
+  .sub{color:var(--tx3);font-size:13px;margin-bottom:28px}
+  h2{font-size:19px;font-weight:600;margin:38px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  h3{font-size:16px;font-weight:600;margin:24px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--tx2);font-weight:600;background:#faf9f7}
+  code{font-family:var(--mono);font-size:12.5px;background:#f0efeb;padding:1px 5px;border-radius:4px}
+  pre{background:#f0efeb;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;
+      font-family:var(--mono);font-size:12.5px;line-height:1.6;margin:10px 0}
+  .tag{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:20px;font-weight:600;
+       border:1px solid transparent;white-space:nowrap}
+  .t-ok{color:var(--ok);background:#eaf5ee;border-color:#c9e4d4}
+  .t-bad{color:var(--bad);background:#fceceb;border-color:#f2cbc8}
+  .t-warn{color:var(--warn);background:#fdf3e3;border-color:#f0dcb8}
+  .t-info{color:var(--info);background:#e9f2f9;border-color:#c7ddec}
+  .lead{color:var(--tx2)}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  .kv{color:var(--tx3);font-size:12.5px}
+  .box-ok{border-left:3px solid var(--ok);background:#f7fbf8}
+  .box-bad{border-left:3px solid var(--bad);background:#fdf8f7}
+  .box-warn{border-left:3px solid var(--warn);background:#fdfaf5}
+  .box-info{border-left:3px solid var(--info);background:#f7fafc}
+  .foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--tx3);font-size:12.5px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>补强批次3 · 近 2 个月公开仓库检索 + 真 bug 修复报告</h1>
+<div class="sub">CheatMenu 7.8.3 · 2026-09-20 · 全部结论均有可复现证据，无推测项</div>
+
+<div class="card box-info">
+<h3 style="margin-top:0">一句话结论</h3>
+<p style="margin:0">
+这轮检索到 <b>近 2 个月有真实更新的候选仓库 8 个</b>，逐个查看后：<b>可搬运的「逻辑函数」只有 1 个</b>
+（<code>VapeV4ForRoblox/src/libraries/prediction.lua</code> 的弹道解算器），
+其余是发行型/mock/游戏开发库，按本项目的三条采纳判据<b>都不该搬</b>。<br>
+同时在这轮里<b>实打实修掉了 1 个真 bug + 2 条会误导后来者的过期门禁断言</b>，已发 7.8.3。
+</p>
+</div>
+
+<h2>一、检索是怎么做的（可复现）</h2>
+
+<div class="card">
+<p class="lead" style="margin-top:0">走 <b>GitHub MCP（已认证）</b>，不是匿名搜索。时间窗 <b>2026-07-20 起</b>（＝今天往前 2 个月）。</p>
+<table>
+<tr><th>检索式</th><th>命中</th><th>说明</th></tr>
+<tr><td><code>roblox language:Lua pushed:&gt;2026-07-20 stars:&gt;10</code></td><td>24</td><td>主力抓取</td></tr>
+<tr><td><code>language:Luau pushed:&gt;2026-07-20 stars:&gt;5</code></td><td>178</td><td>Luau 生态（含大量游戏开发库）</td></tr>
+<tr><td><code>roblox script language:Lua pushed:&gt;2026-07-20 stars:&gt;30</code></td><td>4</td><td>收窄后只剩 4 个，说明这生态在 GitHub 上很小</td></tr>
+<tr><td><code>roblox remote event logger spy language:Lua pushed:&gt;2026-07-20</code></td><td>0</td><td>「Remote 监听/抓包」类没有近期公开源</td></tr>
+</table>
+<p class="kv">※ 上一轮（<code>acresearch/repos_recent.json</code>）抓到的 50 个「近期仓库」里，绝大多数是
+<b>Fluxus-Exec-Update-vX.X</b> 这类<b>同模板刷量/投毒仓库</b>（无 <code>updated_at</code>、无语言、描述雷同），
+本轮已剔除，不作为候选。</p>
+</div>
+
+<h2>二、候选逐个判定（这是本轮的主要产出）</h2>
+
+<table>
+<tr><th style="width:22%">仓库</th><th style="width:9%">★</th><th style="width:11%">最近更新</th><th>判定与理由</th></tr>
+
+<tr>
+<td><code>Pyseph/<br>PacketProfiler</code></td><td>84</td><td>2026-09-09</td>
+<td><span class="tag t-warn">最对口但不能搬</span><br>
+Remote 包分析器 —— 主题正是「事件代码」，与 <code>事件库/</code> 同域。
+但它是 <b>Roblox Studio 插件</b>（<code>buildplugin.project.json</code> / <code>plugindev.project.json</code>，
+<code>src/Components</code>+<code>src/Modules</code>），依赖 Studio 插件权限与 <code>Plugin</code> API，
+<b>执行器里跑不了</b>。理论上可提取其 Remote 枚举思路，但 CheatMenu 已有 <code>SYS.DumpRemotes()</code>，
+增量有限。→ 记录为参考，不搬运。</td>
+</tr>
+
+<tr>
+<td><code>7GrandDadPGN/<br>VapeV4ForRoblox</code></td><td>77</td><td>2026-09-19</td>
+<td><span class="tag t-ok">命中 1 段可用逻辑函数</span><br>
+<code>src/libraries/</code> 下 5 个模块，其中 <b><code>prediction.lua</code>（6.8KB）是纯数学弹道解算器</b>
+—— 详见下一节。<br>
+另外 <code>hash.lua</code>（53KB）/ <code>vm.lua</code>（39KB）是它自己的混淆/虚拟机，对本项目无用。</td>
+</tr>
+
+<tr>
+<td><code>ltseverydayyou/<br>Nameless-Admin</code></td><td>40</td><td>2026-09-19</td>
+<td><span class="tag t-bad">不可搬</span><br>
+<b>发行型分割加载器</b>（提交里反复出现 “Bump NA split manifest”）。近 2 个月的提交<b>全是它自家
+NA Chat 模块的内部修复</b>（resolver 注入、连接恢复、回滚重打），与 CheatMenu 功能域不重叠。
+且是 minify 发行物，没有可读源码。</td>
+</tr>
+
+<tr>
+<td><code>Exunys/<br>AirHub-V2</code></td><td>71</td><td>2026-09-12</td>
+<td><span class="tag t-warn">已同源，无新增</span><br>
+Exunys 的 ESP/瞄准 GUI。本项目<b>历史上已经从 Exunys 取过</b>（工作区
+<code>tracer/Exunys__Tracers-Script</code>、<code>Exunys__Wall-Hack</code>）。
+近 2 个月无新增能力面，只是维护。</td>
+</tr>
+
+<tr>
+<td><code>JakeHukari/<br>Sp3arParvus</code></td><td>12</td><td>2026-09-17</td>
+<td><span class="tag t-warn">需人工细读</span><br>
+自称 “Universal Aim Client / developer tools”。<b>属于通用瞄准客户端</b>，方向对口，
+但只有 12 星、无 forks，可信度与稳定性存疑，且需要逐行读才知道是否只是壳。
+→ 建议列为**下一轮的深入对象**，不在本轮盲搬。</td>
+</tr>
+
+<tr>
+<td><code>Standard-2/<br>Myriad</code></td><td>46</td><td>2026-09-19</td>
+<td><span class="tag t-bad">与本项目定位不同</span><br>
+「执行器一致性/缓解测试套件」—— 目标是<b>给执行器开发者</b>做 UNC 合规测试。
+CheatMenu 是<b>跑在执行器里的脚本</b>。它的价值是「告诉执行器作者缺什么 API」，
+不是「告诉脚本作者怎么写得兼容」。而且把执行器能力探测搬进脚本，方向上接近本项目
+<b>已按用户要求删除</b>的 <code>SYS.CloudCheck</code> 自检。→ 不搬。</td>
+</tr>
+
+<tr>
+<td><code>luau/<br>UniversalSynSaveInstance</code></td><td>432</td><td>2026-09-18</td>
+<td><span class="tag t-warn">技术强但越界</span><br>
+<code>saveinstance</code>（把地图/实例导出成 RBXM）。工程水准高，但这是<b>独立工具的能力</b>，
+不是 CheatMenu 的功能面；搬进来等于新增一个大模块，撞「只做用户明确要求的那一件事」。→ 不搬。</td>
+</tr>
+
+<tr>
+<td><code>lowlevelklinti/<br>FunnyExecutor</code></td><td>21</td><td>2026-09-19</td>
+<td><span class="tag t-bad">不可搬</span><br>
+开源 Roblox 执行器本体（C++ 侧 + Luau 侧）。它是<b>执行器</b>，不是<b>脚本</b>；
+对 CheatMenu 的参考价值仅在于「执行器暴露哪些 API」，而 CheatMenu 已经有 <code>rayProbe</code>
+这类按需降级。→ 不搬。</td>
+</tr>
+</table>
+
+<div class="card box-warn">
+<b>为什么「全部补强」这句话，落到执行层面只能搬 1 个？</b>
+<p class="kv" style="margin:8px 0 0">
+因为本项目自己有<b>三条采纳判据</b>（记在项目记忆里、写进 AGENTS）：
+① <b>零开销</b>（不许挂 <code>__namecall</code>/<code>__index</code> 这类总入口）
+② <b>可独立重写</b>（不引入外部框架依赖）
+③ <b>能用现有三类验证证明不回归</b>。<br>
+上面 7 个「不搬」没有一个是因为「不好」，而是因为它们<b>过不了这三条</b> ——
+要么是发行物没有源码、要么是另一个物种（插件/执行器/游戏库）、要么搬进来就是新增一个自成体系的大模块。
+这不是保守，是这套仓库自己的规矩。</p>
+</div>
+
+<h2>三、唯一可搬的「逻辑函数」：弹道预判解算器</h2>
+
+<div class="card">
+<p style="margin-top:0"><b>来源</b>：<code>7GrandDadPGN/VapeV4ForRoblox · src/libraries/prediction.lua</code>
+（6,876 字节，SHA <code>9f8f19e9…</code>，2026-09-19 仍在更新）</p>
+<p><b>它是什么</b>：一个自洽的<b>抛射物提前量解算器</b>。核心是三次/四次方程求解
+（<code>solveQuadric</code> / <code>solveCubic</code> / <code>solveQuartic</code>），
+再用 <code>SolveTrajectory(origin, projectileSpeed, gravity, targetPos, targetVelocity, …)</code>
+解出「考虑重力 + 目标移动 + 自身弹速」下的落点。来源标注是 Roblox 官方的 trajectory prediction 帖。</p>
+<p><b>为什么是它</b>：纯数学、零副作用、不碰执行器 API、不碰客户端服务 —— 正好落在
+「真云端能跑的那一类纯逻辑」里；也正好是 CheatMenu <b>目前最弱的一环</b>：</p>
+<table>
+<tr><th>项</th><th>CheatMenu 现状</th><th>该库能做到</th></tr>
+<tr><td>预判模型</td><td><code>CB_PredictTime=0.14</code> —— <b>固定提前量</b>（线性外推，不建模重力）</td><td>按弹速/重力/目标速度<b>解方程</b>求真实交点</td></tr>
+<tr><td>适用范围</td><td>hitscan（瞬时命中）</td><td>抛射物武器（火箭/手雷/箭/投掷物）</td></tr>
+<tr><td>数学量级</td><td>无</td><td>四次方程的闭式解（含 Casus irreducibilis 分支）</td></tr>
+</table>
+<p><b>为什么本轮没有直接合并</b>（这是判断，不是推脱）：它<b>会改变战斗行为</b>。
+本项目 <code>AGENTS.md §1.5</code> 有一整张「已删除功能 / 禁止回加清单」，
+且战斗主循环是历史事故高发区（命中率、快照瞄准、静默瞄准都是从这里删掉的）。
+往战斗里塞一个未经验证的解算器 = 用「看起来更强的数学」替换「已经被调准的固定提前量」，
+风险远大于收益，而且按现行政策<b>没有真机验证这条退路</b>。</p>
+<p style="margin-bottom:0"><b>所以：</b>已作为<b>待你决策项</b>列出（见文末），
+代码已定位、可直接取用，但<b>要不要进战斗模块、以什么默认值进，需要你点头</b>。</p>
+</div>
+
+<h2>四、本轮真修掉的东西（这部分是硬结论）</h2>
+
+<h3>4.1 <span class="tag t-bad">真 bug</span> 设置页「索敌间隔」改了存不住</h3>
+
+<div class="card box-bad">
+<p style="margin-top:0"><b>现象</b>：拖这个滑块，当前会话立刻生效；<b>重新加载 / 热更新之后必定回到 33</b>。</p>
+<p><b>根因链</b>（三步，每步都能在源码里对上）：</p>
+<pre>①  SYS.SaveConfig():   for k,v in pairs(SYS.C_) do ... data.C_[k]=v end
+                       ^^^^ 只遍历【声明表】的键
+②  SYS.LoadConfig:     if SYS.C_[k]~=nil then SYS.C_[k]=v end
+                       ^^^^ 回填也要求键已声明
+③  而 CB_ScanMs 从来没进过 SYS.C_ 声明表
+    —— 全脚本引用 6 处、界面读 1 处写 1 处，就是没声明
+④  界面写值处写着：   function(v) SYS.C_.CB_ScanMs=v QueueSave() end
+                       ^^^^^^^^^^ 它以为存下来了，实际被 ① 静默丢弃</pre>
+<p><b>修法</b>：在 <code>SYS.C_</code> 补上声明 <code>CB_ScanMs=33</code>
+（与同族 <code>CB_FireDelay</code>/<code>CB_Smooth</code> 一致），位置 <code>CheatMenu-6.9.1.lua:179</code> 之后。</p>
+<p style="margin-bottom:0"><b>复现证明</b>：新增对账工具 <code>.workbuddy/build/_audit_c_.py</code>，
+判据 = 「界面写了 <b>+</b> 调了 <code>QueueSave()</code> <b>+</b> 没声明」。
+对<b>修复前的备份</b>跑 → 命中 <b>1 个</b>；对<b>修复后</b>跑 → <b>0 个</b>。</p>
+</div>
+
+<h3>4.2 <span class="tag t-warn">顺带定性</span> 另外 5 个「界面写过但没声明」的键 —— 都不是 bug</h3>
+
+<table>
+<tr><th>键</th><th>写值处是否调 <code>QueueSave()</code></th><th>性质</th></tr>
+<tr><td><code>LightMode</code></td><td>否</td><td>灯光模式，会话内临时</td></tr>
+<tr><td><code>WL_Sel</code></td><td>否</td><td>下拉框「当前选中的人」，临时值</td></tr>
+<tr><td><code>TimeScale</code></td><td>否</td><td>死写入（只赋值、全脚本无人读；运行时真值在 <code>SYS._timeScale</code>）</td></tr>
+<tr><td><code>GameNameCache</code></td><td>否</td><td>游戏名缓存，本来就不该跨会话</td></tr>
+<tr><td><code>CB_Priority</code></td><td>否</td><td>只出现在注释里（已删除功能的说明文字），标称误报</td></tr>
+</table>
+<p class="kv">判据的意义就在这：<b>「没声明」本身不是 bug，「没声明却调了 QueueSave」才是。</b>
+不做这一步区分，就会把 5 个正常键一起"修"坏。</p>
+
+<h3>4.3 <span class="tag t-info">修门禁</span> 两条过期断言，会让后人去"修"没坏的代码</h3>
+
+<div class="card box-warn">
+<p style="margin-top:0"><code>check.py</code> 里两条断言停留在旧写法，长年报假警 ——
+它们正是「基线 4 项」里的 2 项。<b>逐行核对源码后确认代码是好的</b>，是断言该更新：</p>
+<table>
+<tr><th style="width:24%">断言</th><th style="width:38%">为什么过期</th><th>实际代码</th></tr>
+<tr><td>ESP 总闸</td>
+    <td>期待字面量 <code>SYS.T_.ESP or SYS.T_.ESPNameTag or SYS.T_.ESPItem</code></td>
+    <td>v6.9.0 已收敛为 <code>SYS.ESPAnyOn()</code>，<b>覆盖含掉落物透视在内的 8 个开关</b>，比旧写法更全</td></tr>
+<tr><td>穿墙防回弹轻推</td>
+    <td>期待变量名 <code>CM_NoclipAtt</code> / <code>CM_NoclipVel</code></td>
+    <td>变量已改名 <code>NoclipAtt</code>/<code>NoclipVel</code>（<code>:1226</code>）；
+        轻推逻辑完整在位（<code>:1510-1533</code>，含「移动才推、不动归零」）</td></tr>
+</table>
+<p><b>为什么要修它</b>：假警的最大危害不是噪音，是<b>引导后来者去改本来正确的代码</b>。
+新断言改为校验当前实现，且比原来更严。<b>效果：<code>check.py</code> 问题数 4 → 1</b>
+（剩下的「翻译模块 60.2K 字符」是体积提醒，不是功能缺陷）。</p>
+<p style="margin-bottom:0" class="kv">※ 为可回滚，改动前已备份 <code>.workbuddy/build/check.py.bak-before-stale</code>。</p>
+</div>
+
+<h2>五、验证证据（都跑了，都留了）</h2>
+
+<table>
+<tr><th>项</th><th>结果</th></tr>
+<tr><td>① 静态分析 <code>luau-compile --binary</code></td><td><span class="tag t-ok">exit 0</span>（0 错误）</td></tr>
+<tr><td>构建 <code>publish.py --patch</code></td><td>7.8.3 · 源码 861,286 B / 发行 467,761 B · <b>等价性 通过</b> · <b>编译门禁 通过</b> · 加载器探针 <b>6/0</b></td></tr>
+<tr><td>配置键对账（前后对照）</td><td><span class="tag t-ok">真 bug 1 → 0</span></td></tr>
+<tr><td><code>check.py</code></td><td><span class="tag t-ok">4 → 1</span></td></tr>
+<tr><td>远端 4 件套复核（带重试）</td><td><span class="tag t-ok">逐字节一致</span> 467761 / 2539 / 6 / 261276，sha1 <code>bb092f29b5ae</code></td></tr>
+<tr><td>本地执行器同步</td><td><span class="tag t-ok">7.8.3</span> 861,138 B · 指纹 <code>d492d2f6d53b</code></td></tr>
+</table>
+<p class="kv">※ 推送时 <code>CheatMenu.lua</code> 出现过一次 <code>回读失败 HTTP -1</code> ——
+这是本机已知的网络回读抖动（≠ 推送失败），用带重试的复核脚本确认远端逐字节一致后排除。</p>
+
+<h2>六、下一步需要你点头的事</h2>
+
+<div class="card box-info">
+<ol style="margin:0;padding-left:22px">
+<li><b>弹道预判解算器要不要进战斗模块？</b>（本轮唯一可搬的逻辑函数）<br>
+    <span class="kv">它会改变战斗行为，属于 §1.5 的敏感区。要进的话，我建议：<b>新增独立开关、默认关</b>，
+    只在抛射物武器下生效，不替换现有的固定提前量路径 —— 这样老行为零变化。你同意这个形态吗？</span></li>
+<li><b><code>Sp3arParvus</code> 要不要深入读？</b><br>
+    <span class="kv">12 星、无 forks 的通用瞄准客户端，方向对口但可信度未知。要读我就逐行过一遍再给结论。</span></li>
+<li><b><code>TimeScale</code> 那条死写入要不要清掉？</b><br>
+    <span class="kv">它只赋值、全脚本无人读（运行时真值在 <code>SYS._timeScale</code>）。清掉无行为影响，但属于我不该擅自动的地方。</span></li>
+<li><b>翻译模块 60.2K 字符</b>（唯一剩下的 <code>check.py</code> 提醒）<br>
+    <span class="kv">是体积问题不是功能缺陷。要处理的话是独立一件事。</span></li>
+</ol>
+</div>
+
+<div class="foot">
+CheatMenu 7.8.3 · 报告生成于 2026-09-20 · 本报告所有仓库数据来自 GitHub API 实时检索，
+所有源码结论可在本机 <code>CheatMenu-6.9.1.lua</code> 对应行号复核。
+</div>
+
+</div></body></html>
