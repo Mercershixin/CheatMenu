@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 10:59 sha 4e4427e3 bytes 453416'):format('2026-09-20 10:59','4e4427e3',453416))
+print(('[CheatMenu] build 2026-09-20 11:26 sha 4e027679 bytes 460104'):format('2026-09-20 11:26','4e027679',460104))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -93,6 +93,7 @@ CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
 FX_Sat=0,FX_Bri=0,FX_Con=0,FX_CB="关闭",
 UIScaleManual=0,
+MenuPosX=0.5,MenuPosY=0.5,MenuPosSaved=false,
 AudioMaster=100,AudioThr=15,
 CB_HitRate=100,CB_MissRate=0,
 PC_Sel="",PC_Speed=120,PC_Range=8,PC_SpinSpeed=3,
@@ -104,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.5.3"
+SYS.BuildVer="7.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -11624,12 +11625,34 @@ end)
 UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
 UI.Div(p)
 UI.Section(p,"📱 界面缩放 (手机 / 平板适配)",CY.cyan)
-UI.Slider(p,"界面缩放 (0 = 自动适配)",0,2.5,0.05,
+local TDEV=(SYS.DEV and SYS.DEV.anyTouch)==true
+UI.Slider(p,"界面缩放 (0 = 自动适配)",0,(TDEV and 3.0 or 2.5),0.05,
 function() return SYS.C_.UIScaleManual or 0 end,
 function(v)
 SYS.C_.UIScaleManual=v
 if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
 end,"%.2f")
+if TDEV then
+local lb=UI.Label(p,"",CY.accent)
+local function bump(d)
+local cur=tonumber(SYS.C_.UIScaleManual) or 0
+local base=(cur>0) and cur or (tonumber(SYS.LastUIScale) or 1)
+SYS.C_.UIScaleManual=math.clamp(math.floor((base+d)*100+0.5)/100,0.30,3.0)
+if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end
+UI.Btn(p,"➖ 缩小 0.05",CY.panel,function() bump(-0.05) end)
+UI.Btn(p,"➕ 放大 0.05",CY.panel,function() bump(0.05) end)
+SYS.BtnRefs[#SYS.BtnRefs+1]=function()
+local man=tonumber(SYS.C_.UIScaleManual) or 0
+local eff=tonumber(SYS.LastUIScale) or 1
+if man>0 then
+lb.Text=("当前 %.2f×（手动）  可拉到 3.00"):format(eff)
+else
+lb.Text=("当前 %.2f×（自动）  自动上限 %.2f"):format(eff,tonumber(SYS.LastUIScaleAuto) or eff)
+end
+end
+end
 UI.Btn(p,"📐 恢复自动适配",CY.green,function()
 SYS.C_.UIScaleManual=0
 if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
@@ -11640,6 +11663,8 @@ UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍�
 .."   手机 / 平板(纯触屏) 最多放大到 1.75 倍, 小视口 1.35 倍, PC 保持 1.0 倍。\n"
 .."   算法是 sc = min(fit, 上限), fit 已扣掉刘海 / 顶部栏边距 -> 【永远塞得进屏幕】。\n"
 .."★ 还是嫌小就往右拉滑块(会覆盖自动值); 想回到自动点「恢复自动适配」。\n"
+..(TDEV and ("★ 手机 / 平板专属: 上面有 ➖/➕ 微调; 也可以直接拖菜单右下角的 ⤡ 把手改尺寸。\n"
+.."   菜单拖到哪会记住, 下次打开回到原位(拖出屏幕会被自动拉回来)。\n") or "")
 .."⚠ 手动拉得过大(超过 fit)菜单会超出屏幕、边角按钮点不到 —— 拉回来或点恢复自动即可。",CY.sub)
 function SYS.ExportConfig()
 P(function()
@@ -11849,6 +11874,51 @@ main.BorderSizePixel=0 main.ClipsDescendants=true main.Parent=sg
 UI.Round(main,16)
 UI.Grad(main,CY.bg2,CY.bg,90)
 UI.Stroke(main,CY.accent,1,0.72)
+local function vpSize()
+local cam=WS.CurrentCamera
+local vp=cam and cam.ViewportSize or nil
+if not vp or vp.X<10 or vp.Y<10 then return nil end
+return vp
+end
+local function centerOf(sc,vp)
+local px,py=main.Position.X,main.Position.Y
+return vp.X*(px.Scale or 0.5)+sc*(px.Offset or 0),
+vp.Y*(py.Scale or 0.5)+sc*(py.Offset or 0)
+end
+local function menuSizeOf(sc,vp)
+local sz=main.Size
+local w=(tonumber(sz.X.Offset) or W)+(tonumber(sz.X.Scale) or 0)*vp.X
+local h=(tonumber(sz.Y.Offset) or H)+(tonumber(sz.Y.Scale) or 0)*vp.Y
+if w<10 then w=W end
+if h<10 then h=H end
+return w*sc,h*sc
+end
+local function clampCenter(cx,cy,sc,vp)
+vp=vp or vpSize() if not vp then return cx,cy end
+local mw,mh=menuSizeOf(sc,vp)
+local MINV=80
+local TOPKEEP=math.min(mh,54)
+local minX=MINV-mw*0.5
+local maxX=vp.X-MINV+mw*0.5
+local minY=mh*0.5
+local maxY=vp.Y-TOPKEEP+mh*0.5
+if maxX<minX then minX,maxX=vp.X*0.5,vp.X*0.5 end
+if maxY<minY then minY,maxY=vp.Y*0.5,vp.Y*0.5 end
+return math.clamp(cx,minX,maxX), math.clamp(cy,minY,maxY)
+end
+function SYS.ClampMenuPos()
+P(function()
+if SYS.TouchUI~=true then return end
+local vp=vpSize() if not vp then return end
+local sc=tonumber(SYS.LastUIScale) or 1
+if sc<=0 then sc=1 end
+local cx,cy=centerOf(sc,vp)
+local nx,ny=clampCenter(cx,cy,sc,vp)
+if math.abs(nx-cx)<0.5 and math.abs(ny-cy)<0.5 then return end
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,(nx-vp.X*0.5)/sc,0.5,(ny-vp.Y*0.5)/sc)
+end)
+end
 local accentBar=Instance.new("Frame")
 accentBar.Size=UDim2.new(1,0,0,4) accentBar.BackgroundColor3=Color3.new(1,1,1)
 accentBar.BorderSizePixel=0 accentBar.ZIndex=100 accentBar.Parent=main
@@ -11864,6 +11934,8 @@ end)
 print(("[CheatMenu] 设备: 触屏=%s 纯触屏=%s 视口档=%s 小屏适配=%s")
 :format(tostring(DEV.anyTouch),tostring(DEV.touch),DEV.vds,tostring(DEV.small)))
 SYS.DEV=DEV
+SYS.TouchUI=(DEV.anyTouch==true)
+print(("[CheatMenu] 触摸端UI适配=%s"):format(tostring(SYS.TouchUI)))
 local scale=Instance.new("UIScale") scale.Parent=main
 local function ApplyScale()
 P(function()
@@ -11895,6 +11967,7 @@ scale.Scale=sc
 SYS.LastUIScale=sc
 SYS.LastUIScaleFit=fit
 SYS.LastUIScaleAuto=math.min(fit,hi)
+if SYS.TouchUI==true and SYS.ClampMenuPos then SYS.ClampMenuPos() end
 end)
 end
 SYS.ApplyUIScale=ApplyScale
@@ -11906,6 +11979,21 @@ if okS and sig and type(sig.Connect)=="function" then
 local okC,conn=P(function() return sig:Connect(ApplyScale) end)
 if okC and conn then T(conn) end
 end
+end
+if SYS.TouchUI==true and SYS.C_.MenuPosSaved==true then
+P(function()
+if SYS.C_.MenuPosSaved~=true then return end
+local vp=vpSize() if not vp then return end
+local sc=tonumber(SYS.LastUIScale) or 1
+if sc<=0 then sc=1 end
+local cx=(tonumber(SYS.C_.MenuPosX) or 0.5)*vp.X
+local cy=(tonumber(SYS.C_.MenuPosY) or 0.5)*vp.Y
+local nx,ny=clampCenter(cx,cy,sc,vp)
+main.AnchorPoint=Vector2.new(0.5,0.5)
+main.Position=UDim2.new(0.5,(nx-vp.X*0.5)/sc,0.5,(ny-vp.Y*0.5)/sc)
+SYS._UserMoved=true
+if SYS.ClampMenuPos then SYS.ClampMenuPos() end
+end)
 end
 local top=Instance.new("TextButton")
 top.Size=UDim2.new(1,0,0,62) top.BackgroundTransparency=1
@@ -12110,6 +12198,8 @@ foot.Text="G/右Shift 开关菜单    ·    V 切换指定目标"
 foot.TextColor3=CY.sub foot.Font=Enum.Font.GothamMedium foot.TextSize=11
 foot.TextXAlignment=Enum.TextXAlignment.Left foot.Parent=main
 local drg,dS,fS=false,nil,nil
+local rsz,rD0,rSc=false,nil,nil
+local TCH=(SYS.TouchUI==true)
 local function isGrab(i)
 return i.UserInputType==Enum.UserInputType.MouseButton1
 or i.UserInputType==Enum.UserInputType.Touch
@@ -12117,6 +12207,16 @@ end
 local function isMove(i)
 return i.UserInputType==Enum.UserInputType.MouseMovement
 or i.UserInputType==Enum.UserInputType.Touch
+end
+local function sameGrab(i)
+local g=SYS._dragInput
+if not g or not i then return false end
+if i.UserInputType==Enum.UserInputType.Touch then return i==g end
+if i.UserInputType==Enum.UserInputType.MouseMovement
+or i.UserInputType==Enum.UserInputType.MouseButton1 then
+return g.UserInputType==Enum.UserInputType.MouseButton1
+end
+return false
 end
 local function curScale()
 local ok,v=pcall(function() return scale.Scale end)
@@ -12136,29 +12236,104 @@ if inRect(pos,b) then return true end
 end
 return false
 end
+local GPAD=TCH and 14 or 0
+local function inTitle(pos)
+if inRect(pos, top) then return true end
+if GPAD<=0 then return false end
+local ok,ap,asz=pcall(function() return top.AbsolutePosition, top.AbsoluteSize end)
+if not ok or not ap or not asz then return false end
+return pos.X>=(ap.X-GPAD) and pos.X<=(ap.X+asz.X+GPAD)
+and pos.Y>=(ap.Y-GPAD) and pos.Y<=(ap.Y+asz.Y+GPAD)
+end
 T(UIS.InputBegan:Connect(function(input,gp)
 if not input or not input.Position then return end
 P(function()
 if not SYS.MenuOpen then return end
+if SYS._uiGesture and (drg or rsz) then return end
+SYS._uiGesture=nil
 if not isGrab(input) then return end
 local pos=input.Position
-if not inRect(pos, top) then return end
+if not inTitle(pos) then return end
 if onTitleBtn(pos) then return end
 drg=true dS=pos fS=main.Position
+SYS._dragInput=input
+SYS._uiGesture="move"
 SYS._UserMoved=true
 end)
 end))
 T(UIS.InputChanged:Connect(function(input)
-if drg and isMove(input) then
+if not input then return end
+if rsz and SYS._rzInput==input and input.Position then
+P(function()
+local vp=vpSize() if not vp then return end
+local sc0=curScale()
+local cx,cy=centerOf(sc0,vp)
+local d=math.max(24,(input.Position-Vector2.new(cx,cy)).Magnitude)
+local sc=math.clamp(rSc*(d/rD0),0.30,3.0)
+SYS.C_.UIScaleManual=math.floor(sc*100+0.5)/100
+if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
+end)
+return
+end
+if drg and sameGrab(input) and input.Position then
 local d=input.Position-dS
 local sc=curScale()
 main.AnchorPoint=Vector2.new(0.5,0.5)
 main.Position=UDim2.new(fS.X.Scale,fS.X.Offset+d.X/sc,fS.Y.Scale,fS.Y.Offset+d.Y/sc)
+if TCH and SYS.ClampMenuPos then SYS.ClampMenuPos() end
 end
 end))
 T(UIS.InputEnded:Connect(function(input)
-if isGrab(input) then drg=false end
+if not input then return end
+if rsz and SYS._rzInput==input then
+rsz=false SYS._rzInput=nil SYS._uiGesture=nil
+SYS.C_.UIScaleManual=math.floor(curScale()*100+0.5)/100
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+if SYS.SaveMenuState then P(SYS.SaveMenuState) end
+return
+end
+if drg and sameGrab(input) then
+drg=false SYS._dragInput=nil SYS._uiGesture=nil
+if SYS.SaveMenuState then P(SYS.SaveMenuState) end
+end
 end))
+function SYS.SaveMenuState()
+P(function()
+if SYS.TouchUI~=true then return end
+local vp=vpSize() if not vp then return end
+local sc=curScale()
+local cx,cy=centerOf(sc,vp)
+local nx,ny=clampCenter(cx,cy,sc,vp)
+SYS.C_.MenuPosX=math.clamp(nx/vp.X,0,1)
+SYS.C_.MenuPosY=math.clamp(ny/vp.Y,0,1)
+SYS.C_.MenuPosSaved=true
+QueueSave()
+end)
+end
+if TCH then
+local grip=Instance.new("TextButton")
+grip.Size=UDim2.new(0,38,0,38) grip.Position=UDim2.new(1,-44,1,-78)
+grip.BackgroundColor3=CY.panel grip.BackgroundTransparency=0.35
+grip.Text="⤡" grip.TextColor3=CY.accent grip.TextSize=19
+grip.Font=Enum.Font.GothamBold grip.BorderSizePixel=0
+grip.AutoButtonColor=false grip.Parent=main
+UI.Round(grip,12) UI.Stroke(grip,CY.accent,1,0.55)
+SYS.CM_Grip=grip
+T(grip.InputBegan:Connect(function(input)
+if not input or not input.Position then return end
+P(function()
+if not SYS.MenuOpen then return end
+if drg or rsz then return end
+if not isGrab(input) then return end
+local vp=vpSize() if not vp then return end
+local sc0=curScale()
+local cx,cy=centerOf(sc0,vp)
+rsz=true rSc=sc0
+rD0=math.max(24,(input.Position-Vector2.new(cx,cy)).Magnitude)
+SYS._rzInput=input SYS._uiGesture="resize"
+end)
+end))
+end
 local collapseBtn=Instance.new("TextButton")
 collapseBtn.Size=UDim2.new(0,34,0,34) collapseBtn.Position=UDim2.new(1,-96,0.5,-17)
 collapseBtn.BackgroundColor3=CY.panel collapseBtn.BackgroundTransparency=0.25
@@ -12168,9 +12343,11 @@ collapseBtn.Parent=top
 P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=collapseBtn end)
 function SYS.CenterMenu()
 SYS._UserMoved=false
+SYS.C_.MenuPosSaved=false
 main.AnchorPoint=Vector2.new(0.5,0.5)
 main.Position=UDim2.new(0.5,0,0.5,0)
 P(ApplyScale)
+if SYS.TouchUI==true then QueueSave() end
 end
 SYS.CM_TitleBtns={closeBtn,collapseBtn}
 SYS.MenuMain=main
@@ -12182,6 +12359,12 @@ A("版本=%s  时间=%.0f",tostring(SYS.BuildVer),os.time())
 local cam=WS.CurrentCamera
 local vp=cam and cam.ViewportSize or Vector2.new(0,0)
 A("视口=%dx%d  触屏=%s",vp.X,vp.Y,tostring(UIS.TouchEnabled))
+A("触摸端UI适配=%s  当前缩放=%.3f(自动值 %.3f)  手动缩放=%s",
+tostring(SYS.TouchUI),tonumber(SYS.LastUIScale) or -1,
+tonumber(SYS.LastUIScaleAuto) or -1,tostring(SYS.C_.UIScaleManual))
+A("位置记忆=%s  比例=(%s,%s)  缩放把手=%s",
+tostring(SYS.C_.MenuPosSaved),tostring(SYS.C_.MenuPosX),tostring(SYS.C_.MenuPosY),
+tostring(SYS.CM_Grip~=nil))
 A("菜单开着=%s  用户拖过=%s",tostring(SYS.MenuOpen),tostring(SYS._UserMoved))
 local gs=game:GetService("GuiService")
 if gs and gs.GetGuiInset then
