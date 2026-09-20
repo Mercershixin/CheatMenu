@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 00:50 sha bae9e882 bytes 503451'):format('2026-09-21 00:50','bae9e882',503451))
+print(('[CheatMenu] build 2026-09-21 01:04 sha 719d742d bytes 507151'):format('2026-09-21 01:04','719d742d',507151))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -33,6 +33,7 @@ LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=fals
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
 TracerAll=false,
 AntiAFK=true,AutoBonus=false,
+SrvWatch=true,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
@@ -113,7 +114,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.1.0"
+SYS.BuildVer="9.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2077,10 +2078,13 @@ if ok and isfile(dir.."\\_probe.txt") then
 SYS.ScanOutDir=dir
 SYS.ScanOutWhy=(dir:find("\\包\\") and "包目录") or (dir:find("Desktop") and "桌面") or "执行器工作目录"
 pcall(function()
-writefile(dir.."\\服务器名.txt",
-("服务器名: %s\nPlaceId: %s\nGameId: %s\nJobId: %s\n记录时间: %s\n")
+writefile(dir.."\\server_name.txt",
+("server_name: %s\nPlaceId: %s\nGameId: %s\nJobId: %s\ntime: %s\n")
 :format(tostring(nm),tostring(pid),tostring(game.GameId or 0),
 tostring(game.JobId or ""),os.date("%Y-%m-%d %H:%M:%S")))
+end)
+pcall(function()
+if type(delfile)=="function" then delfile(dir.."\\_probe.txt") end
 end)
 return
 end
@@ -5105,6 +5109,54 @@ end
 end
 end))
 end
+local WATCH={
+{ "CoinsMulti",       "💰 金币倍率",   5, true  },
+{ "KickMulti",        "🦵 踢击倍率",   5, true  },
+{ "Weight_Multi",     "🏋 配重倍率",   5, true  },
+{ "CoinsChanged",     "💰 金币变动",   0, false },
+{ "TokensUpdate",     "🎟 Token",      3, false },
+{ "bossStartUpd",     "👹 BOSS 出现",  6, true  },
+{ "bossEndUpd",       "👹 BOSS 结束",  4, true  },
+{ "bossDataUpd",      "👹 BOSS 数据",  0, false },
+{ "IceBossShockwave", "🧊 BOSS 冲击波",3, true  },
+{ "candySpawn",       "🍬 糖果出现",   5, true  },
+{ "candyCollect",     "🍬 收到糖果",   3, false },
+{ "AddedWeather",     "🌦 天气变化",   4, true  },
+{ "RemovedWeather",   "🌦 天气结束",   3, false },
+{ "WeatherUpdate",    "🌦 天气",       0, false },
+{ "PlayMessage",      "📢 服务端消息", 5, false },
+{ "FreezePlayer",     "🧊 你被冻住了", 4, true  },
+{ "FriendsUPD",       "👥 好友更新",   0, false },
+}
+SYS.SrvHits={}
+local function srvShort(v)
+local t=tostring(v)
+if #t>90 then t=t:sub(1,90).."…" end
+return t
+end
+function SYS.StartServerWatch()
+local n=0
+for _,w in ipairs(WATCH) do
+local nm,pfx,secs,pop=w[1],w[2],w[3],w[4]
+local ev=SYS.REvent(nm)
+if ev then
+n=n+1
+T(ev.OnClientEvent:Connect(function(...)
+if not SYS.T_.SrvWatch then return end
+SYS.SrvHits[nm]=(SYS.SrvHits[nm] or 0)+1
+local args=table.pack(...)
+local parts={}
+for i=1,math.min(args.n,4) do parts[i]=srvShort(args[i]) end
+local line=("[Srv] "..pfx..(#parts>0 and (" → "..table.concat(parts,", ")) or ""))
+print(line)
+if pop and secs>0 then pcall(SYS.Hud,line,secs) end
+end))
+end
+end
+print(("[Srv] 服务端播报监听已启动: 接上 %d 个通道（倍率/Boss/糖果/天气/消息/冰冻）"):format(n))
+return n
+end
+SYS.StartServerWatch()
 local GymDiag = { tagWarn = false, nameWarn = false, emptyWarn = false, enterFail = false,
 toolWarn = false, recogWarn = false }
 local function gymOnce(key, fmt, ...)
@@ -11349,6 +11401,31 @@ end
 end
 end)
 end)
+UI.Div(p)
+UI.Section(p,"📡 服务端播报（2026-09-21 综合扫描新发现）",CY.purple)
+UI.Switch(p,"监听 倍率/Boss/糖果/天气/消息/冰冻","SrvWatch")
+UI.Tip(p,"★ v9.2.0 新增: 接上扫描实锤的那批【纯监听】通道 —— 金币/踢击/配重倍率变化、\n"
+.. "Boss 出现与结束、糖果活动、天气变化、服务端播报、被冰冻，都会在 HUD 弹一行 + 控制台留记录。\n"
+.. "纯 OnClientEvent 监听: 不改游戏状态、不发请求, 零副作用。",CY.sub)
+UI.Btn(p,"📈 查询服务端每秒收益 (getCoinsPerDuration)",CY.cyan,function()
+task.spawn(function()
+local rf=SYS.RFunction("getCoinsPerDuration")
+if not rf then SYS.Notify("这个游戏没有 getCoinsPerDuration 通道",SYS.CY.yellow) return end
+local ok,res=pcall(function() return rf:InvokeServer() end)
+if ok then
+print(("[Srv] getCoinsPerDuration 服务端返回: %s"):format(tostring(res)))
+SYS.Notify(("服务端每秒收益: %s"):format(tostring(res)),SYS.CY.green)
+else
+print("[Srv] getCoinsPerDuration 调用失败: "..tostring(res))
+SYS.Notify("调用失败（可能不许客户端直接查）",SYS.CY.yellow)
+end
+end)
+end)
+UI.Btn(p,"📋 看看各通道收到几次 (控制台)",CY.sub,function()
+local n=0
+for k,v in pairs(SYS.SrvHits or {}) do print(("  [Srv] %-16s 收到 %d 次"):format(k,v)); n=n+1 end
+if n==0 then print("  [Srv] 还没收到任何播报（玩一会儿再看, 或本局该玩法没触发）") end
+end)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
@@ -11664,12 +11741,18 @@ if #LAB.Log==0 then out[#out+1]="  (还没有记录 —— 先在 ④ 里填函�
 print(table.concat(out,"\n"))
 SYS.Notify("调用记录已输出",SYS.CY.green)
 end
-local DumpBuf = {}
+SYS.ScanBuf={}
+function SYS.ScanBufNote(s) SYS.ScanBuf[#SYS.ScanBuf+1]=tostring(s) end
+local DumpBuf = SYS.ScanBuf
 local function line(s)
 print("  "..s)
-DumpBuf[#DumpBuf+1]=tostring(s)
+SYS.ScanBufNote("  "..s)
 end
-local function head(s) print(""); print("════════ "..s.." ════════") end
+local function head(s)
+local t="════════ "..s.." ════════"
+print(""); print(t)
+SYS.ScanBufNote(""); SYS.ScanBufNote(t)
+end
 local SCAN_CAP=80000
 local NET_CLS={
 "RemoteEvent","UnreliableRemoteEvent","RemoteFunction",
@@ -11919,20 +12002,23 @@ return #net,withRecv,fn
 end
 function LAB.FullScan()
 local t0=os.clock()
-print(""); print("##################  🔍 综合扫描  ##################")
-print(("时间 %s"):format(os.date("%H:%M:%S")))
-print("")
+SYS.ScanBuf={}
+local _banner={"","##################  🔍 综合扫描  ##################",
+("时间 %s"):format(os.date("%H:%M:%S")),""}
+for _,x in ipairs(_banner) do print(x) SYS.ScanBufNote(x) end
 pcall(function() SYS.ResolveScanDir() end)
 SYS.ScanOutExtra=nil
 local _info,_nm,_pid=SYS.GameInfoLine()
 SYS.ScanOutFile=("scan_%s_%s.txt"):format(SYS.SafeAscii(_pid,20),os.date("%Y%m%d_%H%M%S"))
 if SYS.ScanOutDir then
-print(("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy)))
-print(("     单文件名: %s   （全部十层都在里面）"):format(tostring(SYS.ScanOutFile)))
+local m1=("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy))
+local m2=("     单文件名: %s   （全部十层都在里面）"):format(tostring(SYS.ScanOutFile))
+print(m1) print(m2) SYS.ScanBufNote(m1) SYS.ScanBufNote(m2)
 else
-print(("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy)))
+local m1=("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy))
+print(m1) SYS.ScanBufNote(m1)
 end
-print("")
+print("") SYS.ScanBufNote("")
 head("A · 通信层(游戏接口: 能触发什么)")
 local remotes
 P(function() remotes=SYS.DumpRemotes() end)
@@ -11953,7 +12039,8 @@ if r:find(k,1,true) then hits[#hits+1]=r break end
 end
 end
 if #hits>0 then
-print(("  ── %s (%d) ──"):format(g[1],#hits))
+local _gh=("  ── %s (%d) ──"):format(g[1],#hits)
+print(_gh) SYS.ScanBufNote(_gh)
 for x=1,math.min(#hits,14) do line(hits[x]) end
 if #hits>14 then line(("... 还有 %d 个"):format(#hits-14)) end
 gen=gen+#hits
