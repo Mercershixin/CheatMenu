@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 01:04 sha 719d742d bytes 507151'):format('2026-09-21 01:04','719d742d',507151))
+print(('[CheatMenu] build 2026-09-21 01:21 sha 5ac141ab bytes 507389'):format('2026-09-21 01:21','5ac141ab',507389))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -33,7 +33,6 @@ LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=fals
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
 TracerAll=false,
 AntiAFK=true,AutoBonus=false,
-SrvWatch=true,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
@@ -114,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.2.0"
+SYS.BuildVer="9.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5109,54 +5108,6 @@ end
 end
 end))
 end
-local WATCH={
-{ "CoinsMulti",       "💰 金币倍率",   5, true  },
-{ "KickMulti",        "🦵 踢击倍率",   5, true  },
-{ "Weight_Multi",     "🏋 配重倍率",   5, true  },
-{ "CoinsChanged",     "💰 金币变动",   0, false },
-{ "TokensUpdate",     "🎟 Token",      3, false },
-{ "bossStartUpd",     "👹 BOSS 出现",  6, true  },
-{ "bossEndUpd",       "👹 BOSS 结束",  4, true  },
-{ "bossDataUpd",      "👹 BOSS 数据",  0, false },
-{ "IceBossShockwave", "🧊 BOSS 冲击波",3, true  },
-{ "candySpawn",       "🍬 糖果出现",   5, true  },
-{ "candyCollect",     "🍬 收到糖果",   3, false },
-{ "AddedWeather",     "🌦 天气变化",   4, true  },
-{ "RemovedWeather",   "🌦 天气结束",   3, false },
-{ "WeatherUpdate",    "🌦 天气",       0, false },
-{ "PlayMessage",      "📢 服务端消息", 5, false },
-{ "FreezePlayer",     "🧊 你被冻住了", 4, true  },
-{ "FriendsUPD",       "👥 好友更新",   0, false },
-}
-SYS.SrvHits={}
-local function srvShort(v)
-local t=tostring(v)
-if #t>90 then t=t:sub(1,90).."…" end
-return t
-end
-function SYS.StartServerWatch()
-local n=0
-for _,w in ipairs(WATCH) do
-local nm,pfx,secs,pop=w[1],w[2],w[3],w[4]
-local ev=SYS.REvent(nm)
-if ev then
-n=n+1
-T(ev.OnClientEvent:Connect(function(...)
-if not SYS.T_.SrvWatch then return end
-SYS.SrvHits[nm]=(SYS.SrvHits[nm] or 0)+1
-local args=table.pack(...)
-local parts={}
-for i=1,math.min(args.n,4) do parts[i]=srvShort(args[i]) end
-local line=("[Srv] "..pfx..(#parts>0 and (" → "..table.concat(parts,", ")) or ""))
-print(line)
-if pop and secs>0 then pcall(SYS.Hud,line,secs) end
-end))
-end
-end
-print(("[Srv] 服务端播报监听已启动: 接上 %d 个通道（倍率/Boss/糖果/天气/消息/冰冻）"):format(n))
-return n
-end
-SYS.StartServerWatch()
 local GymDiag = { tagWarn = false, nameWarn = false, emptyWarn = false, enterFail = false,
 toolWarn = false, recogWarn = false }
 local function gymOnce(key, fmt, ...)
@@ -11402,11 +11353,7 @@ end
 end)
 end)
 UI.Div(p)
-UI.Section(p,"📡 服务端播报（2026-09-21 综合扫描新发现）",CY.purple)
-UI.Switch(p,"监听 倍率/Boss/糖果/天气/消息/冰冻","SrvWatch")
-UI.Tip(p,"★ v9.2.0 新增: 接上扫描实锤的那批【纯监听】通道 —— 金币/踢击/配重倍率变化、\n"
-.. "Boss 出现与结束、糖果活动、天气变化、服务端播报、被冰冻，都会在 HUD 弹一行 + 控制台留记录。\n"
-.. "纯 OnClientEvent 监听: 不改游戏状态、不发请求, 零副作用。",CY.sub)
+UI.Section(p,"📈 服务端收益查询",CY.cyan)
 UI.Btn(p,"📈 查询服务端每秒收益 (getCoinsPerDuration)",CY.cyan,function()
 task.spawn(function()
 local rf=SYS.RFunction("getCoinsPerDuration")
@@ -11421,11 +11368,55 @@ SYS.Notify("调用失败（可能不许客户端直接查）",SYS.CY.yellow)
 end
 end)
 end)
-UI.Btn(p,"📋 看看各通道收到几次 (控制台)",CY.sub,function()
-local n=0
-for k,v in pairs(SYS.SrvHits or {}) do print(("  [Srv] %-16s 收到 %d 次"):format(k,v)); n=n+1 end
-if n==0 then print("  [Srv] 还没收到任何播报（玩一会儿再看, 或本局该玩法没触发）") end
+UI.Div(p)
+UI.Section(p,"💸 快速售卖（实验 · 扫描新发现）",CY.yellow)
+UI.Btn(p,"💸 试一次 B_SellAll（一次全卖 · 实验）",CY.red,function()
+task.spawn(function()
+local rf=SYS.RFunction("B_SellAll")
+if not rf then
+print("[SellAll] 这个游戏没有 ref_B_SellAll")
+SYS.Notify("没有 ref_B_SellAll 通道",SYS.CY.yellow) return
+end
+print("[SellAll] 调用 ref_B_SellAll:InvokeServer() …")
+local ok,res=pcall(function() return rf:InvokeServer() end)
+print(("[SellAll] ok=%s  返回值=%s"):format(tostring(ok),tostring(res)))
+SYS.Notify(("B_SellAll 返回: %s"):format(tostring(res)),(ok and SYS.CY.green or SYS.CY.red))
 end)
+end)
+local sellAllRow=Instance.new("Frame")
+sellAllRow.Size=UDim2.new(1,0,0,42) sellAllRow.BackgroundColor3=CY.card
+sellAllRow.BackgroundTransparency=0.3 sellAllRow.BorderSizePixel=0 sellAllRow.Parent=p
+UI.Round(sellAllRow,10) UI.Stroke(sellAllRow,CY.line,1,0.85)
+local sLb=Instance.new("TextLabel")
+sLb.Size=UDim2.new(1,-140,1,0) sLb.Position=UDim2.new(0,12,0,0)
+sLb.BackgroundTransparency=1 sLb.Text="按稀有度卖 · 填稀有度"
+sLb.TextColor3=CY.text sLb.Font=Enum.Font.GothamMedium
+sLb.TextSize=13 sLb.TextXAlignment=Enum.TextXAlignment.Left sLb.Parent=sellAllRow
+local sBox=Instance.new("TextBox")
+sBox.Size=UDim2.new(0,120,0,28) sBox.Position=UDim2.new(1,-132,0.5,-14)
+sBox.BackgroundColor3=CY.panel sBox.BackgroundTransparency=0.2
+sBox.Text="Common"
+sBox.TextColor3=CY.cyan sBox.Font=Enum.Font.Code
+sBox.TextSize=13 sBox.BorderSizePixel=0 sBox.ClearTextOnFocus=false sBox.Parent=sellAllRow
+UI.Round(sBox,6) UI.Stroke(sBox,CY.cyan,1,0.7)
+UI.Btn(p,"💸 按上面稀有度卖一次 (B_SellAllByRarity · 实验)",CY.red,function()
+task.spawn(function()
+local rf=SYS.RFunction("B_SellAllByRarity")
+if not rf then
+print("[SellAll] 这个游戏没有 ref_B_SellAllByRarity")
+SYS.Notify("没有 ref_B_SellAllByRarity 通道",SYS.CY.yellow) return
+end
+local rar=tostring(sBox.Text or "Common")
+print(("[SellAll] 调用 ref_B_SellAllByRarity:InvokeServer(%q) …"):format(rar))
+local ok,res=pcall(function() return rf:InvokeServer(rar) end)
+print(("[SellAll] 参数=%q  ok=%s  返回值=%s"):format(rar,tostring(ok),tostring(res)))
+SYS.Notify(("按稀有度 %s 卖: %s"):format(rar,tostring(res)),(ok and SYS.CY.green or SYS.CY.red))
+end)
+end)
+UI.Tip(p,"⚠ 这两个是【实验】功能 —— ref_B_SellAll / ref_B_SellAllByRarity 是 2026-09-21 综合扫描新发现的通道,\n"
+.. "参数与副作用【都没实机验证过】。默认稀有度填的 Common(最低档) 相对最安全。\n"
+.. "★ 请先用小号、或身上只留 1 件低价值脑红试一次；调用结果会打印到控制台(F9)，把那两行发我。\n"
+.. "确认行为之后，我再把它接进「自动售卖」流程（那才能真正提速）。",CY.red)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
