@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 00:25 sha d38c7116 bytes 502624'):format('2026-09-21 00:25','d38c7116',502624))
+print(('[CheatMenu] build 2026-09-21 00:42 sha b6120a5d bytes 503450'):format('2026-09-21 00:42','b6120a5d',503450))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="8.10.0"
+SYS.BuildVer="9.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2042,19 +2042,38 @@ end
 local _,nm,pid=SYS.GameInfoLine()
 local hint=safeAscii(nm,16)
 local folder=("%s_%s"):format(safeAscii(pid,20),hint)
+local folderCN=("%s_%s"):format(safeAscii(pid,20),safeFileName(nm))
 local pkg="Hy-MT2翻译模型\\包\\"..folder
+local pkgCN="Hy-MT2翻译模型\\包\\"..folderCN
 local who=safeAscii(tostring((SYS.LP and SYS.LP.Name) or ""),24)
 local cands={
+"C:\\Users\\Administrator\\Desktop\\"..pkgCN,
 "C:\\Users\\Administrator\\Desktop\\"..pkg,
+"C:\\Users\\"..who.."\\Desktop\\"..pkgCN,
 "C:\\Users\\"..who.."\\Desktop\\"..pkg,
 "C:\\Users\\"..who.."\\Desktop\\CheatMenu\\"..folder,
 "C:\\Users\\Administrator\\Desktop\\CheatMenu\\"..folder,
 "C:\\Users\\Public\\Desktop\\CheatMenu\\"..folder,
 "CheatMenu\\"..folder,
 }
+local function mkdirp(full)
+if type(makefolder)~="function" then return end
+local parts={}
+for seg in tostring(full):gmatch("[^\\/]+") do parts[#parts+1]=seg end
+local acc=""
+for i=1,#parts do
+if i==1 then
+acc=parts[i]
+else
+acc=acc.."\\"..parts[i]
+end
+pcall(makefolder,acc)
+end
+end
+local tried={}
 for _,dir in ipairs(cands) do
 local ok=P(function()
-if type(makefolder)=="function" then pcall(makefolder,dir) end
+mkdirp(dir)
 writefile(dir.."\\_probe.txt","ok")
 end)
 if ok and isfile(dir.."\\_probe.txt") then
@@ -2068,8 +2087,10 @@ tostring(game.JobId or ""),os.date("%Y-%m-%d %H:%M:%S")))
 end)
 return
 end
+tried[#tried+1]=dir
 end
-SYS.ScanOutWhy="所有候选路径都写不进去"
+SYS.ScanOutTried=tried
+SYS.ScanOutWhy="所有候选路径都写不进去。试过:\n       "..table.concat(tried,"\n       ")
 end
 function SYS.DumpScanAll(buf)
 SYS.ResolveScanDir()
@@ -11903,6 +11924,13 @@ function LAB.FullScan()
 local t0=os.clock()
 print(""); print("##################  🔍 综合扫描  ##################")
 print(("时间 %s"):format(os.date("%H:%M:%S")))
+print("")
+pcall(function() SYS.ResolveScanDir() end)
+if SYS.ScanOutDir then
+print(("  📂 本次落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy)))
+else
+print(("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy)))
+end
 print("")
 head("A · 通信层(游戏接口: 能触发什么)")
 local remotes
