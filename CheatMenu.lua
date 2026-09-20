@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 12:06 sha ee01aa3f bytes 466721'):format('2026-09-20 12:06','ee01aa3f',466721))
+print(('[CheatMenu] build 2026-09-20 12:48 sha 127d6111 bytes 473009'):format('2026-09-20 12:48','127d6111',473009))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -107,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.7.0"
+SYS.BuildVer="7.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1015,6 +1015,7 @@ if cap>0 and v and v>cap then return cap end
 end
 return v
 end
+SYS.SpeedGuard=guardSpeed
 local function wantWalkSpeed()
 local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
@@ -5715,15 +5716,38 @@ end
 end
 local SHOT_CACHE=setmetatable({},{__mode="k"})
 local RAY_HOPS=3
+local RAY_FULL=nil
+local function rayProbe()
+if RAY_FULL~=nil then return RAY_FULL end
+RAY_FULL=false
+local ok=P(function()
+return WS:FindPartOnRay(Ray.new(Vector3.new(0,0,0),Vector3.new(0,0.001,0)),nil,false,true)
+end)
+if ok then RAY_FULL=true end
+SYS.RayFull=RAY_FULL
+if not RAY_FULL then
+warn("[CheatMenu] 本执行器的 Workspace:FindPartOnRay 不接受 4 参形态 -> 视线判定已自动降级为 2 参(与旧版一致)")
+end
+return RAY_FULL
+end
+SYS.RayProbe=rayProbe
 local function castVis(o,d)
 local dir=d.Unit
 local cur=o
 local left=d.Magnitude
+local full=rayProbe()
 for _=1,RAY_HOPS do
 if left<1 then return nil end
-local _,hit,hp=P(function()
+local _,hit,hp
+if full then
+_,hit,hp=P(function()
 return WS:FindPartOnRay(Ray.new(cur,dir*(left-1)),SYS.LP.Character,false,true)
 end)
+else
+_,hit,hp=P(function()
+return WS:FindPartOnRay(Ray.new(cur,dir*(left-1)),SYS.LP.Character)
+end)
+end
 if hit==nil then return nil end
 local tr=0 P(function() tr=hit.Transparency or 0 end)
 if tr<0.25 then return hit end
@@ -9203,6 +9227,80 @@ A("⚠ 边界: 这些全局是执行器注入的, 脚本层删不掉(删了脚�
 A("  能做的只有「少暴露自己」: 中性名 + 少留特征实例 —— 上面已经逐项列出。")
 return L
 end
+function SYS.CloudCheck()
+local L={}
+local nP,nF,nW=0,0,0
+local function A(s) L[#L+1]=s end
+local function OK(f,...) nP=nP+1 A(("[PASS] "..f):format(...)) end
+local function NO(f,...) nF=nF+1 A(("[FAIL] "..f):format(...)) end
+local function WN(f,...) nW=nW+1 A(("[WARN] "..f):format(...)) end
+local function has(v) return type(v)=="function" end
+local function gex(n)
+local ok,v=pcall(function() return _G[n] end)
+return ok and v or nil
+end
+A("################  CheatMenu 云端执行自检 (OCALE)  ################")
+local ex="未知"
+P(function()
+local f=gex("identifyexecutor") or gex("getexecutorname")
+if has(f) then local ok,v=pcall(f) if ok and v then ex=tostring(v) end end
+end)
+local vp=WS.CurrentCamera and WS.CurrentCamera.ViewportSize
+A(("构建: ver=%s  执行器=%s  时间=%s"):format(tostring(SYS.BuildVer),ex,os.date("%Y-%m-%d %H:%M:%S")))
+A(("环境: 触屏=%s  视口=%s"):format(tostring(UIS.TouchEnabled),tostring(vp and (vp.X.."x"..vp.Y) or "?")))
+if LP and LP.Parent then OK("加载: LocalPlayer 在位(%s)",tostring(LP.Name)) else NO("加载: LocalPlayer 缺失") end
+if PG then OK("加载: PlayerGui 就绪") else NO("加载: PlayerGui 缺失") end
+if WS.CurrentCamera then OK("加载: CurrentCamera 就绪") else NO("加载: CurrentCamera 缺失") end
+if SYS.MenuMain then OK("加载: 菜单已建立(main 实例在位)") else WN("加载: 菜单未建立(还没打开过菜单)") end
+local c=(SYS.Prot and SYS.Prot.Caps and SYS.Prot.Caps()) or {}
+local caps={"hmm","hf","ncc","gnm","cc","gcs","gmt"}
+local miss={}
+for i=1,#caps do if not c[caps[i]] then miss[#miss+1]=caps[i] end end
+if #miss==0 then OK("能力: 7 项全在(%s)",table.concat(caps,","))
+else WN("能力: 缺 %s -> 依赖它的功能会自动降级/明确提示",table.concat(miss,",")) end
+if c.hf then OK("能力: hookfunction 在(踢人拦截 / 传送拦截可用)") else NO("能力: hookfunction 不在(防护功能会失败)") end
+if has(gex("gethui")) then OK("能力: gethui 在") else WN("能力: 没有 gethui(容器回退到 PlayerGui)") end
+if has(gex("fireproximityprompt")) then OK("能力: fireproximityprompt 在(快速交互/自动藏身可走服务端认可那条路)")
+else WN("能力: 没有 fireproximityprompt(自动藏身会退到 InputHold 兜底)") end
+local okp,full=P(SYS.RayProbe)
+if SYS.RayFull==true then
+OK("视线: FindPartOnRay 4 参可用(半透明让路 + 忽略水面 生效) ok=%s",tostring(okp))
+elseif SYS.RayFull==false then
+WN("视线: 已自动降级为 2 参(与旧版逐字节同行为, 不会隔墙误锁)")
+else
+NO("视线: 4 参探测没跑出结果(RayProbe 不可用?)")
+end
+if SYS.T_.Prot_SpeedCap then
+local cap=tonumber(SYS.C_.SpeedCap) or -1
+if cap>0 and has(SYS.SpeedGuard) then
+local got=SYS.SpeedGuard(cap+1000)
+if tonumber(got)==cap then OK("护栏: 钳制正确(喂 %.0f -> 出 %.0f)",cap+1000,tonumber(got) or -1)
+else NO("护栏: 钳制异常(喂 %.0f -> 出 %s)",cap+1000,tostring(got)) end
+else NO("护栏: 开着但 SpeedCap / SpeedGuard 异常(cap=%s)",tostring(cap)) end
+else
+WN("护栏: 当前是关的 -> 跳过钳制验证(把它打开再跑一次即可验)")
+end
+if SYS.Prot and SYS.Prot.SelfAudit then
+local ok2,lines=pcall(SYS.Prot.SelfAudit)
+if ok2 and type(lines)=="table" and #lines>0 then
+OK("反指纹: SelfAudit 产出 %d 行",#lines)
+for i=1,math.min(#lines,20) do A("        "..tostring(lines[i])) end
+else NO("反指纹: SelfAudit 没产出(ok=%s)",tostring(ok2)) end
+else NO("反指纹: Prot.SelfAudit 不存在") end
+WN("边界: 云端执行器只能证明加载期与 API 层 —— 画面 / 帧率 / 物理要在【云真机】看")
+A(("[RESULT] PASS=%d FAIL=%d WARN=%d ver=%s"):format(nP,nF,nW,tostring(SYS.BuildVer)))
+local txt=table.concat(L,"\n")
+print("[CheatMenu]"..txt)
+P(function() writefile("cloudcheck.txt",txt) end)
+P(function() setclipboard(txt) end)
+SYS.CloudCheckText=txt
+if nF==0 then
+SYS.Notify(("☁ 云端自检: %d 通过 / %d 警告 / 0 失败 (完整报告看控制台 F9, 已存 cloudcheck.txt)"):format(nP,nW),SYS.CY.green)
+else
+SYS.Notify(("☁ 云端自检: %d 项失败 —— 详见控制台 F9 / cloudcheck.txt"):format(nF),SYS.CY.red)
+end
+return txt
+end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
 Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0
@@ -11866,6 +11964,28 @@ UI.Tip(p,"热重载 = 先保存当前配置(含所有开关) -> 卸载旧实例 
 UI.Switch(p,"🚀 重新加载时先检查新版本","BootUpdateCheck")
 UI.Tip(p,"★ 管的是【刚加载的那一瞬间】: 退出游戏 / 卸载脚本后重新注入时, 先看一眼仓库有没有新脚本。\n有 -> 直接用新版启动(启动后会弹「已更新 x → y」); 没有 -> 正常打开。\n好处: 你永远不会先看到旧版界面再被换掉。检查在界面建立之前完成, 取不到版本号(离线 / 执行器没有 HttpGet)就照常打开, 绝不挡路。",CY.sub)
 UI.Div(p)
+UI.Section(p,"☁ 云端执行自检 (OCALE)",CY.purple)
+UI.Btn(p,"☁ 跑一次云端自检 (控制台 + cloudcheck.txt)",CY.purple,function()
+local fn=SYS.CloudCheck
+if not fn then SYS.Notify("❌ 本机构建里没有云端自检",SYS.CY.red) return end
+local ok,txt=pcall(fn)
+if not ok then SYS.Notify("❌ 云端自检自身报错: "..tostring(txt),SYS.CY.red) end
+end)
+UI.Btn(p,"📋 复制上次自检报告",CY.cyan,function()
+local t=SYS.CloudCheckText
+if not t then SYS.Notify("还没跑过自检 —— 先点上面那个",SYS.CY.yellow) return end
+if setclipboard then
+P(function() setclipboard(t) end)
+SYS.Notify("📋 已复制到剪贴板",SYS.CY.green)
+else
+SYS.Notify("这台执行器没有 setclipboard, 请手动从控制台 F9 复制",SYS.CY.yellow)
+end
+end)
+UI.Tip(p,"为什么要有这个: 本项目只认三类验证 —— ① 静态分析 ② 单元测试 ③ 云端执行(OCALE)。\n"..
+"前两类在本机跑完了; 第三类必须在【真实执行器 / 云端】跑。这个按钮把「哪些能力真的存在」\n"..
+"和「7.7/7.8 的三处新逻辑有没有报错」打成固定格式的 [PASS]/[FAIL]/[WARN] 清单, 跑完把控制台那段发我即可。\n"..
+"⚠ 它只能证明【加载期 + API 层】没问题; 画面 / 帧率 / 物理表现(含 Highlight 配额)必须在【云真机】看 —— 云端执行器没有渲染管线。",CY.sub)
+UI.Div(p)
 UI.Btn(p,"🗑️ 卸载脚本 (干净退出)",CY.red,function()
 SYS.Notify("正在卸载...",CY.red)
 task.delay(0.1,function() P(SYS.UnloadAll) end)
@@ -12531,6 +12651,7 @@ susName=(SYS.Prot.fpBad(SYS.ScreenGui and SYS.ScreenGui.Name) and "有可疑词"
 end
 A("移速护栏=%s 上限=%.0f  屏幕GUI名自检=%s",
 tostring(SYS.T_.Prot_SpeedCap),tonumber(SYS.C_.SpeedCap) or -1,susName)
+A("视线射线: FindPartOnRay 4参=%s (nil=还没探测过)",tostring(SYS.RayFull))
 local gs=game:GetService("GuiService")
 if gs and gs.GetGuiInset then
 P(function()
