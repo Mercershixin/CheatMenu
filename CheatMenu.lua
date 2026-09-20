@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 18:45 sha 026414ec bytes 476037'):format('2026-09-20 18:45','026414ec',476037))
+print(('[CheatMenu] build 2026-09-20 19:21 sha 55388e4a bytes 477403'):format('2026-09-20 19:21','55388e4a',477403))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -60,6 +60,7 @@ CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
+TransSili=false,
 AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 Prot_SpeedCap=false,
@@ -111,7 +112,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.9.0"
+SYS.BuildVer="7.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -6708,6 +6709,11 @@ local HOST="http://127.0.0.1:8080"
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
 local function hostOf() return HOST end
+local SILI_URL="https://api.siliconflow.cn/v1"
+local SILI_KEY="sk-ooxveeyffgfpxpenjfgybrelrkcdbkxpyakjvoqzwduovdxe"
+local SILI_MODEL="tencent/Hunyuan-MT-7B"
+local SILI_MAXTOK=512
+local SILI_MAXCONC=4
 local SYS_PROMPT=[[You are a game-UI translation engine. Translate the user's text into ZH.
 Output ONLY the translation: no explanation, no quotes, no extra words, no added punctuation.
 Preserve the original line breaks and the original number of lines.
@@ -7306,18 +7312,25 @@ if NetStreak>=NET_STREAK_MAX then NetGateUntil=os.clock()+NET_GATE_S end
 end
 local function noteNetOk() NetStreak=0 NetGateUntil=0 end
 Trans.netGateOn=netGateOn
+local function backend()
+if SYS.T_.TransSili==true then
+return SILI_URL,SILI_KEY,SILI_MODEL,SILI_MAXTOK
+end
+return HOST,KEY,MODEL,(Trans.maxTok or MAX_TOK_FALLBACK)
+end
 local function rawRequest(body,system,temp,maxTok,noGate)
 if type(request)~="function" then return nil,true end
+local url,key,model,bMaxTok=backend()
 local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
-model=MODEL,
+model=model,
 messages={ {role="system",content=system}, {role="user",content=masked} },
-temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or MAX_TOK_FALLBACK, stream=false,
+temperature=temp or 0.1, top_p=0.9, max_tokens=maxTok or bMaxTok or MAX_TOK_FALLBACK, stream=false,
 })
 local ok,res=pcall(function()
 return request({
-Url=hostOf().."/v1/chat/completions", Method="POST",
-Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
+Url=url.."/v1/chat/completions", Method="POST",
+Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..key},
 Body=payload, Timeout=REQ_TIMEOUT,
 })
 end)
@@ -7965,6 +7978,7 @@ print(("===== 共 %d 条 ====="):format(n))
 return n
 end
 function Trans.checkLocal()
+if SYS.T_.TransSili==true then return "online" end
 local ok,res=pcall(function()
 return request({Url=hostOf().."/health",Method="GET",Timeout=10})
 end)
@@ -7972,6 +7986,15 @@ if ok and type(res)=="table" and res.StatusCode==200 then return "online" end
 return "offline"
 end
 function Trans.probeServer()
+if SYS.T_.TransSili==true then
+Trans.SlotCtx=32768
+Trans.Slots=SILI_MAXCONC
+Trans.maxTok=SILI_MAXTOK
+Trans.MaxConc=SILI_MAXCONC
+print(("[Trans] 后端=硅基流动(%s): 并发上限 %d, 单次输出上限 %d token")
+:format(SILI_MODEL,Trans.MaxConc,Trans.maxTok))
+return true
+end
 local ok,res=pcall(function() return request({Url=hostOf().."/props",Method="GET",Timeout=10,
 Headers={["Authorization"]="Bearer "..KEY}}) end)
 if not ok or type(res)~="table" or not res.Body then return false end
@@ -10923,6 +10946,16 @@ end)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
+local backOpts={"🖥️ 本地 llama.cpp","☁️ 硅基流动 (云端)"}
+UI.Dropdown(p,"🔀 翻译后端",backOpts,
+function() return SYS.T_.TransSili and backOpts[2] or backOpts[1] end,
+function(v)
+SYS.T_.TransSili=(v==backOpts[2])
+pcall(function() Trans.clearAllFails() end)
+pcall(function() Trans.probeServer() end)
+if Trans.reqOn(false) or Trans.reqOn(true) then P(function() Trans.forceRescan() end) end
+SYS.Notify(SYS.T_.TransSili and "☁️ 已切到硅基流动(云端)翻译" or "🖥️ 已切回本地翻译",SYS.CY.cyan)
+end)
 UI.Switch(p,"💬 聊天翻译","TransChat",function(on)
 if on then Trans.startChatListener() else Trans.stopChatListener() end
 end)
@@ -10999,26 +11032,28 @@ end)
 UI.Switch(p,"📖 本地短语表 (train→训练 这类常见词离线直译)","LocalPhrase")
 UI.Tip(p,"「清空缓存」只清已缓存的译文 + 删除缓存文件, 不动这个内置短语表。\n关掉这个开关 = 完全依赖翻译模型, 模型没开就一个都不翻。",CY.sub)
 UI.Div(p)
-UI.Section(p,"🔌 本地模型状态",CY.cyan)
-local stL=UI.Label(p,"本地模型: ⚪ 检测中...",CY.sub)
+UI.Section(p,"🔌 模型状态",CY.cyan)
+local stL=UI.Label(p,"模型: ⚪ 检测中...",CY.sub)
 local function refresh()
 if not stL or not stL.Parent then return end
 task.spawn(function()
-stL.Text="本地模型: ⚪ 检测中..." stL.TextColor3=CY.sub
+local name=SYS.T_.TransSili and "☁️ 硅基流动(云端)" or "🖥️ 本地模型"
+stL.Text=name..": ⚪ 检测中..." stL.TextColor3=CY.sub
 local s="unknown"
 pcall(function() s=Trans.checkLocal() end)
-if s=="online" then stL.Text="本地模型: 🟢 在线" stL.TextColor3=CY.green
-else stL.Text="本地模型: 🔴 离线" stL.TextColor3=CY.red end
+if s=="online" then stL.Text=name..": 🟢 在线" stL.TextColor3=CY.green
+else stL.Text=name..": 🔴 离线" stL.TextColor3=CY.red end
 end)
 end
 Trans.refreshLocalStatus=refresh
 task.spawn(function() task.wait(0.6) refresh() end)
-UI.Btn(p,"🔄 立即检测本地模型",CY.cyan,refresh)
+UI.Btn(p,"🔄 立即检测模型",CY.cyan,refresh)
 UI.Btn(p,"⚙️ 重新探测服务器槽位与上下文",CY.purple,function()
 task.spawn(function()
 if Trans.probeServer then
 local pok=Trans.probeServer()
 print(pok and "[Trans] ✅ 探测成功" or "[Trans] ❌ 探测失败(服务器没开?)")
+refresh()
 end
 end)
 end)
