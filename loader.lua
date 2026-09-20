@@ -1,18 +1,22 @@
 -- CheatMenu 加载器 · 就是这一小段需要粘贴/保存到执行器里, 主脚本走网络不受长度限制
 local URLS = {
+	"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+	"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+	"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+	"https://ghpxy.hwinzniej.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
 	"https://fastly.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
 	"https://gcore.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
 	"https://raw.githack.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://raw.gitmirror.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 }
--- ★ v5.2.1 防缓存: raw / jsDelivr 对【分支 @main】都有 CDN 缓存(raw≈5分钟, jsDelivr≈12小时),
---   不处理的话重跑加载器拿到的还是【旧文件】-> 用户看到的现象就是"更新不了 / 还是旧版"。
---   加一个【运行时时间戳】查询参数: CDN 会把 query 算进缓存键 -> 每次请求都是新内容。
---   (raw / jsDelivr / ghproxy / ghfast 都忽略未知 query, 不影响下载。)
+-- ★ 防缓存与源顺序(2026-09-20 云端实测后更正):
+--   raw 系(raw.githubusercontent.com 及其透传代理)原生缓存只有约 5 分钟, 推送后稍等即刷新;
+--   jsDelivr 对【分支 @main】是文件级长缓存, 实测【加了下面的 ?t= 也穿不动】——
+--   同一时刻 version.txt 已是新版、CheatMenu.lua 却还停在旧版(就是"更新不了/还是旧版"的来源)。
+--   所以 URLS 的排序是: raw 系在前(新鲜), jsDelivr 三节点压到兜底(命中时可能静默给旧版)。
+--   下面这个时间戳参数对 raw 系有穿透效果, 对 jsDelivr 无效但无害, 保留。
 local TS = "?t=" .. tostring(os.time())
 local function fetch()
 	local last = "?"
