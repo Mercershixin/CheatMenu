@@ -13,22 +13,41 @@
 
 ## 0. 一句话版本
 
-**只做用户明确要求的那一件事**；改完 → 钉版本号 → `push_now.py --fast` → 结束。
-（动了 `README.md` 或 `事件库/` 才额外跑 `push_docs.py`。）
+**只做用户明确要求的那一件事**；改完 → 钉版本号 → `push_now.py` → 结束。
+（动了 `README.md`、`AGENTS.md`、`事件库/` 等文档才额外跑 `push_docs.py`。）
+
+### 0.1 ⛔⛔ 测试只允许三种手段（用户 2026-09-20 定稿 · 最高优先级）
+
+| # | 手段 | 本项目里的对应物 |
+|---|---|---|
+| ① | **静态分析** | `luau-compile`（编译门禁）· `luau-analyze` / `check_globals.py`（词法作用域）· `verify_all.py` 的接线/体检 · `build_dist.py` 的**等价性**比对 |
+| ② | **单元测试** | 加载器探针 `run_probe_loader.py` / `run_probe_localloader.py` · `_equiv371.py` 三方 sha1 复核 |
+| ③ | **云端执行（OCALE）** | 真正的运行时验证：把产物放进**真实执行器 / 云端**跑，看真实报错与真实表现 |
+
+⛔ **整脚本仿真测试已【彻底禁用】—— 不要运行、不要修复、不要扩展。**
+
+- 点名禁跑：`sim/run_full.py` · `sim/full_sim.lua` · `sim/run_smoke.py` · `sim/smoke_load.lua` · `sim/run_probe_v69.py`
+- 原因：它是 `lupa 2.8 + Lua 5.5` 的 **mock 桩环境**，既不是 Luau 也不是 Roblox；
+  真实物理/复制/服务端权威/执行器 API/UI 渲染一项都没覆盖，却**反复把"仿真台自身的坑"算成脚本 bug**，
+  每次都要做改前对照实验才能定性 —— 成本远高于收益，且**永远替代不了实机**。
+- `.workbuddy/sim/` 已**只读封存**，完整说明见 `.workbuddy/sim/DISABLED.md`。
+- 工具链已同步改造：`publish.py` / `local_sync.py` 里的仿真段已删除（`--fast` / `--full` 只剩兼容意义）；
+  `verify_all.py` 原 3.5/4/5/6b 四步已跳过并打印 `[SKIP]`，**静态部分照跑**。
+- ⛔ **不要再造第四个 mock 环境来当门禁。** 用户的运行时验证只认③。
 
 ---
 
 ## 1. ⛔ 绝对不要做（用户已多次强调，踩过就被训）
 
-1. **不要自作主张跑「仿真 / 模拟检测循环 / 多轮深度验证」。**
-   `verify_all.py`、`local_sync.py --full`、`sim/run_full.py`、`sim/run_smoke.py`、
-   `check.py`、`check_globals.py`、`luau-compile`、`luau-analyze` —— 这些**全都算"测试循环"**，
+1. **不要自作主张跑「测试循环 / 多轮深度验证」。**
+   `verify_all.py`、`local_sync.py --full`、`check.py`、`check_globals.py`、`luau-compile`、`luau-analyze`、
+   加载器探针 —— 这些**全都算"测试循环"**，
    **只在用户明确说「跑一下 / 验证一下 / 测试一下 / 发版」时才跑**。
    > 用户原话：**"我让你做你才做，没让你做我不做。"**
 
-   ★ 2026-09-20 补充：**发版流程里的仿真门禁是固定步骤**（见 §4；`publish.py` 不加 `--fast` 就会跑它，
-   用户称「仿真循环检测也是必须的」）。这条规则约束的是**"别自己加戏跑额外验证"**，不是"发版时跳过门禁"。
-   仿真台本身已修成全绿（见 §6.1），**用户明确要求不要绕过它**。
+   ★ 2026-09-20 更正（**本节旧版说"发版必须跑仿真门禁"，那条已作废**）：整脚本仿真**已彻底禁用**（见 §0.1）。
+   现在的发版门禁 = 等价性 + `luau-compile` + 加载器探针，`publish.py` / `push_now.py` **不带 `--fast` 也能过**。
+   ⛔ 不要"顺手跑一次仿真"，也不要"修一下仿真台让门禁变绿"。
 
 2. **UI 上标「不推荐 / 会被拉回 / 有风险」是给用户看的提示，不是让你改行为。**
    用户要的是「**标出来，我自己决定用不用**」——**不要**因此删选项、改默认值、加限制。
@@ -154,13 +173,14 @@
 ```
 1. 改源码                    CheatMenu-6.9.1.lua
 2. 顶层写 CHANGELOG 条目      dist/repo/CHANGELOG.md   ← 版本号要和 version.txt 对齐
-3. python .workbuddy/build/push_now.py --fast --patch
+3. python .workbuddy/build/push_now.py --patch
       · 修 bug 加 --patch；新功能不加（不加就是"次+1"）
       · 退出码 1 ≠ 失败；看日志里有没有 "!! API 推送失败"
+      · ★ 2026-09-20: 不带 --fast 也是一样的(整脚本仿真已彻底禁用, 见 §0.1)
 4. 若第 3 步 API 失败 → python .workbuddy/build/push_api.py   （兜底通道）
-5. python .workbuddy/build/local_sync.py --no-sim-target      （同步执行器本地版）
+5. python .workbuddy/build/local_sync.py                      （同步执行器本地版）
 6. 回读核对： version.txt == CHANGELOG.md 顶部
-7. 动了 README.md / 事件库/ → 再跑 python .workbuddy/build/push_docs.py
+7. 动了 README.md / AGENTS.md / CLAUDE.md / .github/ / .cursor/ / 事件库/ → python .workbuddy/build/push_docs.py
 ```
 
 ---
@@ -184,27 +204,25 @@
 - 事件库清单在 `事件库/`（每个游戏一份，含权威 Attribute / Remote 分类 / 可做功能映射）
 - 详细历史看 `CHANGELOG.md`（很长，搜关键词就行）
 
-### 6.1 仿真台（`.workbuddy/sim/`）—— 2026-09-20 已修成全绿
+### 6.1 仿真台（`.workbuddy/sim/`）—— ⛔ 2026-09-20 起【彻底禁用 · 只读封存】
 
-- 入口：`<lua53 的 python> .workbuddy/sim/run_full.py CheatMenu-6.9.1.lua` → 结果写 `.workbuddy/sim/full_result.txt`
-  （**注意：仿真的 stdout 被 `run_full.py` 捕获进 `full_result.txt`，不要在终端 grep 仿真输出**）
+> **用户 2026-09-20 原话：「彻底禁用仿真测试 …… 现在的测试只能静态分析 单元测试 云端执行（OCALE）」**
+>
+> **不要运行、不要修复、不要扩展。** 只允许的三种验证手段见 **§0.1**。
+> 完整禁用说明（为什么禁 / 谁被点名 / 工具链改了什么）见 `.workbuddy/sim/DISABLED.md`。
+> 下面这些是**历史记录**，留着是为了「别踩同一个坑」，**不是**让你复活它。
+
+- 历史入口（**已禁跑**）：`run_full.py` → `full_result.txt`；`run_smoke.py`；`run_probe_v69.py`
 - 运行时真相：**lupa 2.8 + Lua 5.5**（不是 Luau！所以 Luau 合法的写法在仿真里可能报错，反之亦然）
-- 当前基线：**253 通过 / 0 失败 / 被 pcall 吞掉的错误 0 条**（`publish.py` 不加 `--fast` 现在能一次过）
-- 已修的仿真台自身缺陷（**别再改回去**）：
-  - `advanceTime(sec)` —— `stepAll(dtMax)` **只把虚拟时钟推进到"窗口内确实有事件"的时间点**；
-    队列稀疏时 VT 原地不动，于是 `task.wait(0.5)` 那种协程**永远等不到唤醒**（实测：㉑ 前提用例
-    `SpawnLoop=0` 的根因在仿真台，不在脚本）。要"按真实时间推进"就用 `advanceTime`。
-  - `NO_SUCH_PROP`（真机属性语义）—— 桩原来对未知键一律"能读能写"，于是脚本里"猜某字段存在"的写法
-    在仿真里永远不报错（**假通过**）。现在 `Humanoid.Target/Enemy/Aggro/TargetPlayer/TargetEntity/Hostile`
-    读/写**一律抛错**，与真机一致。
-- 新增永久回归用例 **㉑ 无仇恨**（`full_sim.lua` 末尾）：断言 `tick` 在**本窗口内真的涨**（不是 `>0`，那可能吃旧值）、
-  `scanned>0`、不产生吞错误，另加**结构性断言：源码里不许再出现 `h.Target`**。
-- 已修的关键缺口（**别再改回去**）：
-  - `string.format` shim —— Luau 的 `%d` 会截断浮点，Lua 5.5 会抛 `number has no integer representation`；这一个缺口曾经造出 1400+ 条假错误
-  - `_G.__restoreMe()` —— "点遍所有按钮"会点到「☠ 强制自杀(抹除)」，那个按钮**真的会 `hum:Destroy()`**；真机由引擎重生，仿真台必须等价补上，否则之后所有依赖 `GC()` 的用例静默失效
-  - `__SUPPRESS`/精确豁免 —— 只豁免「HttpGet 未登记 URL」这一种**预期内**失败；**不要**开整段豁免窗口（会把用例真正依赖的错误也吞掉）
-  - 中性键名 —— 启动锁/更新提示是 `SYS.GK.boot` / `SYS.GK.note`（**不是** `CheatBootDone`）；战斗循环绑定名是 `SYS.N.Combat`（**不是** `CheatMenuCombat`）
-  - 执行器桩 —— `newcclosure` / `cloneref` / `setreadonly` / `fireproximityprompt` / `fireclickdetector` / `getconnections` / `getnilinstances` / `checkcaller` / `getreg` / `getgc` / `MarketplaceService`
-  - 设计联动白名单 `PAIRED` —— 8 组（`ESP_Pick`→三类物件、`GodMode`→NoDeath/NoKnock、`Prot_HideGui`→两个防护、`Lantern`/`NoFog`/`NoAggro`、`ESPNameTag`→`ESPWeapon`、`CB_SilentNoTurn`→`CB_SilentAim`）
-- 仿真台**测不到**的东西（别拿它当"实机通过"）：真实物理/碰撞、真实复制与延迟、服务端权威、DataStore、
-  动画、**真实 UI 渲染**（`SIM_NO_WIDGETS=true`，仿真台只注册回调、不建 WindUI 元素）、真实执行器差异
+- 最后一次跑通的基线（**历史值，不再是任何门禁**）：253 通过 / 0 失败 / 0 条吞错误
+- 踩过的坑（**新写测试时别重复**）：
+  - `stepAll(dtMax)` **只把虚拟时钟推进到"窗口内确实有事件"的时间点**；队列稀疏时时钟原地不动，
+    于是 `task.wait(0.5)` 那种协程**永远等不到唤醒**。要"按真实时间推进"得用 `advanceTime`。
+    教训：**别自己写 mock 时钟** —— 这正是仿真台反复误报的根源之一。
+  - 桩对未知键一律"能读能写"，于是脚本里"猜某字段存在"的写法**永远不报错**（假通过）。
+    → 教训：**先去官方 API 文档确认字段存不存在**，别靠推理、更别靠 mock 验证。
+  - 断言"某计数器涨了"时**必须记窗口起点再比差值**（`>0` 会吃到旧值）。
+  - `string.format` 的 `%d` 在 Luau 截断浮点、在 Lua 5.5 抛 `number has no integer representation`。
+  - 精确豁免只该针对**预期的**那一类失败，别开"整段豁免窗口"（会把真正依赖的错误一起吞掉）。
+- 仿真台**天然测不到**的东西（所以它替代不了实机）：真实物理/碰撞、真实复制与延迟、服务端权威、DataStore、
+  动画、**真实 UI 渲染**、真实执行器差异。
