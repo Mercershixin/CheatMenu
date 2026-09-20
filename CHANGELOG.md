@@ -1,3 +1,63 @@
+## 7.9.0 · 2026-09-20
+
+### 🔤 翻译模块 v120 · 分层重写（提示词 / 词表 / 阈值全部收进「数据层」，实现锁全部拆掉）
+
+用户的话：**「翻译里面写的提示词和限制 啥的乱七八糟的太多了 容易导致每次修改 都是屎山代码，
+要不要考虑全部清除掉 然后重新根据 git 公开的和总结的经验 重新写一套新的逻辑」**
+→ 追问后定稿：**「不测试，全面重写 不用限制锁 重新优化调整到完美 这次一步到位」**。
+
+这一版**不改翻译行为**，只改**代码组织方式**与**改动成本**：
+
+| 维度 | 改前 | 改后 |
+|---|---|---|
+| 模块体量 | 1780 行 / 82 486 字节 | **1549 行 / 74 282 字节**（−13% / −10%） |
+| 结构 | 平铺 12 段，数据与逻辑交错 | **11 层**，① 数据层在最上面，逻辑层只用上层 |
+| 提示词 / 词表 / 清单 | 散在各处（SYS_PROMPT、WORD_TABLE、EMOTICONS、KEEPW、mask 正则…） | 全在 **① 数据层** 一处，改行为只看这一段 |
+| 内部 local | 60 个挂 main chunk，逼近「每函数 200 local」上限，新代码只能塞 `do..end` 里 + 走 `Trans.` | 整块包在一个 `do..end` 里 → **不占 main chunk 额度**，以后加东西不会再撞上限 |
+| 门禁实现锁 | `check.py` 里 30+ 条钉字符串/体量的锁 | **全部拆除**（−129 行）；只留合法性/编译/词法作用域检查 |
+
+**做了什么**
+
+1. **整模块包成一个 `do..end`**（只把 `local Trans={}` / `SYS.Trans=Trans` 留在 chunk 层）。
+   这是本版最关键的一处：往里加任何东西都不会再被「too many local variables (200)」卡住 ——
+   上一版就是被这条逼着把新代码塞进 `do..end`、再靠 `Trans.` 互相调，越改越碎。
+2. **数据层集中**：服务地址 / 密钥 / 模型名 / 系统提示词 / 反向翻译语种名 / 颜文字表 / 保留词表 /
+   19 条掩码正则顺序 / 全部阈值（OUTCAP·SELFCAP·DYN_*·FAIL_*·HOOK_*·SCAN_* 等）都在最上面一段。
+3. **词表去重**：原表有大量重复键（后者覆盖前者）。
+   `WORD_TABLE` 421 条 → **358 条**、`PHRASE_TABLE` 58 条 → **50 条**，
+   逐键取**最终生效值**（8 + 3 处覆盖已核对），查表结果与改前**完全一致**。
+4. **`check.py` 拆锁**：删掉翻译模块的 30+ 条实现锁（钉提示词字面量 / 词表条目 / 掩码正则 /
+   `Trans.SlotCtx` 公式 / 模块体量 75K …）。这些锁正是「每次改都要迁就锁、越迁越乱」的来源。
+   保留：换行/符号完整性、开关声明、页面入口、战斗与移动模块的全部回归锁。
+5. **顺手两处修正**（都在数据/流程层，不涉行为判断）：
+   · `clearCache()` 现在连 `Trans.Orig2Trans` 与 `T2O_N` 一起清（改前只清 `Trans2Orig`，留下不一致）；
+   · `transPrompt()` 由**隐式全局**收成**模块内 local**（改前它是个全局函数，污染全局表）。
+
+**对外契约 100% 不变**（UI「翻译」页与 [16.1] 忽略表只认这 25 个，逐个核对过）：
+
+```
+LANGS langName SendLang Stats cacheCount CACHE_FILE IgnoreObjects WaitN
+startUIScan stopUIScan startChatListener stopChatListener forceRescan reqOn
+dumpDyn dumpFails restoreSource checkLocal probeServer saveCache
+clearCache smartSend refreshLocalStatus Unload
+```
+
+**验证**（只走允许的静态手段）
+
+- `luau-compile`：模块单独编译 exit=0；**整文件编译 exit=0**。
+- `check.py`：问题数 **0**。
+- `verify_all.py`：**6/6 全绿**（编译器 / 静态接线 / 注入前体检 / 构建+等价性+编译 / 弹道单元测试 / 词法作用域）。
+- 词法作用域（`check_globals.py`）：**新增未声明名字 0** —— 这一条同时证明了重写后的
+  「local 定义顺序」（如 `verdictOf` 用 `lookupLocal`、`translate` 用 `transPrompt`、
+  `rawRequest` 用 `noteNetFail`）全部正确，没有把原本靠作用域生效的引用打成全局。
+
+**行为等价说明**：迁移的是**组织方式**，不是判据。`shouldTranslate` 的 11 条、
+`verdictOf` 的混排分支、`markOutput`/`Self` 两代轮换、动态文本判定、失败指数退避（3s→300s）、
+全局闸门（连败 3 次停 4s）、并发池（上限=服务器槽位、排队不丢弃）、写回前先标记（技能 §4.7 铁律）
+全部逐条保留。
+
+---
+
 ## 7.8.5 · 2026-09-20
 
 ### 🔤 翻译模块全面优化 + 本地模型参数纠偏 + 开关脚本重写
