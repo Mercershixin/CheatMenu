@@ -106,6 +106,14 @@
 - `SYS.C_` = **参数值**（UI.Slider 驱动）
 - 新增参数时先看代码读的是哪张表（**这个坑踩过**：`TracerMaxDist/TracerMaxN` 一开始加进了 `T_`，而代码读 `C_`）
 
+### F. ⛔ 已删除的**代码路径**（不是功能，是"死路"，别再加回来）
+
+- **`Humanoid.Target`**（原「无仇恨」第 ① 条通道）—— 官方 API 里 **Humanoid 没有 `Target` 属性**
+  （只有 `Vector3` 的 `TargetPoint`），裸读必抛 `Target is not a valid member of Humanoid`。
+  v7.5.1 已整条删除（包 `pcall` 也不行 —— 那只是把异常变成"每个怪每 0.5s 一次"）。
+  无仇恨**只走 Attribute 通道**（`Target|Enemy|Aggro|TargetPlayer|TargetEntity|Hostile`）。
+  仿真台有**结构性断言**盯着源码文本：出现 `h.Target` 立刻判红。
+
 ---
 
 ## 2. 🎨 透视 / 高亮配色规范（用户口径，别再自己加颜色）
@@ -181,7 +189,16 @@
 - 入口：`<lua53 的 python> .workbuddy/sim/run_full.py CheatMenu-6.9.1.lua` → 结果写 `.workbuddy/sim/full_result.txt`
   （**注意：仿真的 stdout 被 `run_full.py` 捕获进 `full_result.txt`，不要在终端 grep 仿真输出**）
 - 运行时真相：**lupa 2.8 + Lua 5.5**（不是 Luau！所以 Luau 合法的写法在仿真里可能报错，反之亦然）
-- 当前基线：**246 通过 / 0 失败 / 被 pcall 吞掉的错误 0 条**（`publish.py` 不加 `--fast` 现在能一次过）
+- 当前基线：**253 通过 / 0 失败 / 被 pcall 吞掉的错误 0 条**（`publish.py` 不加 `--fast` 现在能一次过）
+- 已修的仿真台自身缺陷（**别再改回去**）：
+  - `advanceTime(sec)` —— `stepAll(dtMax)` **只把虚拟时钟推进到"窗口内确实有事件"的时间点**；
+    队列稀疏时 VT 原地不动，于是 `task.wait(0.5)` 那种协程**永远等不到唤醒**（实测：㉑ 前提用例
+    `SpawnLoop=0` 的根因在仿真台，不在脚本）。要"按真实时间推进"就用 `advanceTime`。
+  - `NO_SUCH_PROP`（真机属性语义）—— 桩原来对未知键一律"能读能写"，于是脚本里"猜某字段存在"的写法
+    在仿真里永远不报错（**假通过**）。现在 `Humanoid.Target/Enemy/Aggro/TargetPlayer/TargetEntity/Hostile`
+    读/写**一律抛错**，与真机一致。
+- 新增永久回归用例 **㉑ 无仇恨**（`full_sim.lua` 末尾）：断言 `tick` 在**本窗口内真的涨**（不是 `>0`，那可能吃旧值）、
+  `scanned>0`、不产生吞错误，另加**结构性断言：源码里不许再出现 `h.Target`**。
 - 已修的关键缺口（**别再改回去**）：
   - `string.format` shim —— Luau 的 `%d` 会截断浮点，Lua 5.5 会抛 `number has no integer representation`；这一个缺口曾经造出 1400+ 条假错误
   - `_G.__restoreMe()` —— "点遍所有按钮"会点到「☠ 强制自杀(抹除)」，那个按钮**真的会 `hum:Destroy()`**；真机由引擎重生，仿真台必须等价补上，否则之后所有依赖 `GC()` 的用例静默失效
