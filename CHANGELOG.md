@@ -1,3 +1,64 @@
+## 7.8.1 · 2026-09-20
+
+### ☁ 云端分发链路全自动验证 —— 查出并修掉「用户拿到旧版」的真因
+
+用户原话：**「怎么测试云端　你来全自动」**。
+
+本机没接 ADB 手机、也没有云执行器账号，所以「在真执行器里跑一遍」这步做不了；能全自动做的是
+**【分发链路验证】**：真网络、真 CDN、真字节，验证「云端实际发给用户的东西」到底是什么。
+写成 `.workbuddy/build/cloud_verify.py`：一条命令跑完、自动落盘报告、退出码给门禁用。
+
+---
+
+#### 1. 🔎 测试脚本自己的 bug：URL 拼错，把活源误判成死源
+
+第一版手写 URL 时用了 `"%s/%s/%s" % (SLUG, BR, BR)`，而 `SLUG` 本身含斜杠（`Mercershixin/CheatMenu`）
+→ 拼出 `.../CheatMenu/main/main/CheatMenu.lua` → **404**。于是 `ghproxy / ghfast` 这类**明明是活的**源
+被报成 BROKEN，差点得出「云端全挂」的错误结论。
+
+**修法**：URL 不再手写 —— 直接解析 `dist/repo/loader.lua` 里的 `URLS` 表（**单一真源**），
+加载器改了测试自动跟着改，**结构上不可能再漂移**；请求形态与生产完全一致（带 `?t=`）。
+
+#### 2. 🎯 实测结论：谁在发新版、谁在发旧版
+
+对 7.8.0 产物实测（生产 URL 形态）：
+
+| 源 | 结果 |
+|---|---|
+| ghfast.top / ghproxy.net / gh-proxy.com / ghpxy.hwinzniej.top | **IDENTICAL** —— 与本地逐字节一致，且云端字节能编译 |
+| cdn / fastly / gcore `.jsdelivr.net` | **STALE** —— 三个边缘各自停在**不同的旧版本**（横幅 10:59 / 11:26） |
+| raw.githubusercontent.com / githack / gitmirror | 本机网络不通（超时 / 拒绝连接 / DNS 失败） |
+
+**关键发现**：jsDelivr 对【分支名 `@main`】是**文件级长缓存**。同一时刻它的 `version.txt` 已是 7.8.0、
+`CheatMenu.lua` 却还停在旧版 —— 即**命中 jsDelivr 就会静默把旧脚本喂给用户**，症状正是加载器
+注释里写了很多年的「更新不了 / 还是旧版」。同时实测确认：加载器里那个 `?t=` 时间戳参数
+**对 jsDelivr 无效**（带与不带 query 返回同一份旧字节），它只对 raw 系有效。
+
+#### 3. 🔧 修：源顺序改成「新鲜优先」
+
+`publish.py: raw_urls()` —— **顺序本身就决定用户拿到新版还是旧版**：
+
+- **第一梯队（新鲜，raw 系约 5 分钟刷新）**：`ghfast.top` → `ghproxy.net` → `raw` → `gh-proxy.com` → `ghpxy.hwinzniej.top`
+- **第二梯队（命中可能静默给旧版）**：jsDelivr 三节点 **降为兜底**
+- **第三梯队**：githack / gitmirror（本机实测已死，留最后）
+
+脚本内嵌的【启动自更新候选】（`CheatMenu-6.9.1.lua:487` 起）同步加进 `ghfast.top`，与加载器同一条原则。
+
+#### 4. ⚠️ 顺手堵掉自己刚埋的坑：内嵌地址必须是 raw 规范形式
+
+`{{CM_URL}}` / `{{CM_VERURL}}` / `{{CM_REPO}}` 原先都取 `urls[0]`。源顺序一改，`urls[0]` 就从 raw
+变成了代理地址 —— 而源码 `[00A]` 是用 **`^https://raw%.githubusercontent%.com/` 锚定**解析
+用户 / 仓库 / 分支的；填代理地址会**匹配失败**，自更新会**悄悄退化成单源直连**（代理一挂就再无兜底）。
+新加 `canonical_raw()` 专供这三个占位符：**永远填 raw 规范地址**，与下载源顺序解耦。
+
+---
+
+**门禁**：等价性 PASS · `luau-compile` 0 错误 · 加载器探针 6/0 · 加载器编译通过。
+**云端链路**：推送后 `cloud_verify.py` 复测 → 前四个源 **IDENTICAL + 编译 OK**。
+
+> ⛔ **仍未覆盖**：真执行器运行时自检（`SYS.CloudCheck`）与 **G9（Highlight 配额）** 需要一台
+> 连着真 Roblox 的设备或云手机；本机没有 ADB 设备、也没有执行器账号，这两步留给用户自己跑。
+
 ## 7.8.0 · 2026-09-20
 
 ### ☁ 云端验证包 + 修一处「只在真机才暴露」的静默退化
