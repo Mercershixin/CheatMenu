@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-20 06:08 sha ec478ef1 bytes 453457'):format('2026-09-20 06:08','ec478ef1',453457))
+print(('[CheatMenu] build 2026-09-20 10:21 sha d4d70669 bytes 453416'):format('2026-09-20 10:21','d4d70669',453416))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -104,7 +104,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="7.5.0"
+SYS.BuildVer="7.5.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10136,7 +10136,7 @@ local function otherTarget(pos)
 local best,bd=nil,math.huge
 for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=SYS.LP then
-local r=bodyOf(pl)
+local r=bodyOf(pl.Character)
 if r then
 local d=(r.Position-pos).Magnitude
 if d<bd then bd=d best=r end
@@ -10149,7 +10149,7 @@ local NA_ATTRS={"Target","Enemy","Aggro","TargetPlayer","TargetEntity","Hostile"
 function SYS.NoAggroTick()
 if not SYS.T_.NoAggro then return end
 P(function()
-local me=bodyOf(SYS.LP)
+local me=bodyOf(SYS.LP.Character)
 if not me then return end
 local n,w=0,0
 for _,m in ipairs(WS:GetChildren()) do
@@ -10160,16 +10160,6 @@ if not pl then
 n=n+1
 local root=m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
 local pos=root and root.Position
-if pos then
-local t=h.Target
-if t==m or t==SYS.LP.Character or (typeof(t)=="Instance" and t.Parent==SYS.LP.Character) then
-local newt=otherTarget(pos)
-if newt then
-local ok=P(function() h.Target=newt end)
-if ok then w=w+1 end
-end
-end
-end
 for _,k in ipairs(NA_ATTRS) do
 local ok,av=P(function() return m:GetAttribute(k) end)
 if ok and av~=nil then
@@ -10224,7 +10214,7 @@ UI.Switch(p,"🕊 无仇恨模式 (怪去打别人 · 唯独不打你)","NoAggro
 P(SYS.SetNoAggro,on)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 end)
-UI.Tip(p,"「无仇恨」= 把怪物的目标从你身上【挪到别人身上】。怪物打谁由服务端 AI 决定, 客户端只能: \n① 若它把目标存在客户端可写字段里(Humanoid.Target / Attribute Target|Enemy|Aggro…) -> 直接改写成最近的别的玩家;\n② 改不动 -> 退化成「隐去自己 + 免伤 + 自动躲」(它找不到你, 只能去找别人)。\n诊断: 控制台执行 print(SYS.NoAggroInfo) 看 扫了几个怪 / 改写成功几次。",CY.sub)
+UI.Tip(p,"「无仇恨」= 把怪物的目标从你身上【挪到别人身上】。怪物打谁由服务端 AI 决定, 客户端只能: \n① 若它把目标存在客户端可读写的 Attribute 里(Target|Enemy|Aggro|TargetPlayer…) -> 直接改写成最近的别的玩家;\n② 改不动 -> 退化成「隐去自己 + 免伤 + 自动躲」(它找不到你, 只能去找别人)。\n诊断: 控制台执行 print(SYS.NoAggroInfo) 看 扫了几个怪 / 改写成功几次。",CY.sub)
 UI.Btn(p,"🔎 看看有哪些怪 / 甩仇成功几次 (控制台)",CY.cyan,function()
 P(function()
 local i=SYS.NoAggroInfo or {}
@@ -10235,7 +10225,13 @@ for _,m in ipairs(WS:GetChildren()) do
 local h=m:FindFirstChildOfClass("Humanoid")
 if h and not Players:GetPlayerFromCharacter(m) then
 n=n+1
-print(("   %s  Target=%s"):format(tostring(m.Name),tostring(h.Target)))
+local at={}
+for _,k in ipairs(NA_ATTRS) do
+local av=m:GetAttribute(k)
+if av~=nil then at[#at+1]=k.."="..tostring(av) end
+end
+print(("   %s  %s"):format(tostring(m.Name),
+#at>0 and table.concat(at,"  ") or "(没有任何 Target/Enemy/Aggro 类属性)"))
 end
 end
 if n==0 then print("   (Workspace 里没有非玩家的 Humanoid 模型 —— 这局可能全是玩家)") end
