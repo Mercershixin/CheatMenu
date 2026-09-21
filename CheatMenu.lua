@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 20:23 sha 4fab7c33 bytes 497813'):format('2026-09-21 20:23','4fab7c33',497813))
+print(('[CheatMenu] build 2026-09-21 20:53 sha 78048b9b bytes 501348'):format('2026-09-21 20:53','78048b9b',501348))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.2"
+SYS.BuildVer="9.9.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -602,6 +602,56 @@ end
 function SYS.OnRemote(n,cb)
 local r=SYS.REvent(n) if not r then return end
 T(r.OnClientEvent:Connect(cb))
+end
+end
+do
+local HONEY={"exploiter","exploiters","cheater","cheaters","cheat","cheating","hacker",
+"hackers","hacking","abuser","abusers"}
+local ADMIN={"admin","ban","kick","punish","punishment","report","registercommand",
+"logcommand","updateuserroles","invokeservercommand","createuser"}
+local LOGNET={"log","logs","logging","audit","telemetry","analytics","anticheat","antiheat",
+"detect","detection","integritycheck","monitor"}
+local PHRASE_HONEY={"sticky note","i think i can cheat","my name is"}
+local PHRASE_ADMIN={"register_command","log_command","invoke_server_command",
+"update_user_roles","create_user","run_command"}
+local function toks(name)
+local s=name:gsub("(%l)(%u)","%1 %2")
+s=s:gsub("(%u)(%u)(%l)","%1 %2%3")
+s=s:gsub("_"," "):gsub("%."," "):lower()
+local t={}
+for w in s:gmatch("%w+") do t[#t+1]=w end
+return t
+end
+function SYS.RemoteRisk(name)
+if type(name)~="string" or #name==0 then return nil end
+local low=name:lower()
+for i=1,#PHRASE_HONEY do
+if low:find(PHRASE_HONEY[i],1,true) then
+return "⛔ 蜜罐嫌疑(名字点名开挂/作弊) —— 千万别 FireServer"
+end
+end
+for i=1,#PHRASE_ADMIN do
+if low:find(PHRASE_ADMIN[i],1,true) then
+return "⛔ 后台命令通道(conch/管理类) —— 触发=自报家门"
+end
+end
+local tk=toks(name)
+for i=1,#tk do
+local w=tk[i]
+for j=1,#HONEY do if w==HONEY[j] then
+return "⛔ 蜜罐嫌疑(名字点名开挂/作弊) —— 千万别 FireServer" end end
+end
+for i=1,#tk do
+local w=tk[i]
+for j=1,#ADMIN do if w==ADMIN[j] then
+return "⛔ 管理后台/处罚通道 —— 触发=自报家门" end end
+end
+for i=1,#tk do
+local w=tk[i]
+for j=1,#LOGNET do if w==LOGNET[j] then
+return "⚠ 审计/日志通道 —— 通常被反作弊收集, 不要主动触发" end end
+end
+return nil
 end
 end
 SYS.RemoteAlias = {
@@ -2584,7 +2634,16 @@ SYS.ScanEmit("[Remote] ===== "..info.." =====")
 SYS.ScanEmit("[Remote] 抓包时间: "..os.date("%Y-%m-%d %H:%M:%S"))
 SYS.ScanEmit(("[Remote] ===== 全方位扫描: 网络 RemoteEvent %d + RemoteFunction %d | 本地 BindableEvent %d + BindableFunction %d | 交互 ProximityPrompt %d + ClickDetector %d =====")
 :format(counts.RE,counts.RF,counts.BE,counts.BF,counts.PP,counts.CD))
-for i,r in ipairs(found) do SYS.ScanEmit("  ["..i.."] "..r) end
+local risky=0
+for i,r in ipairs(found) do
+local nm=tostring(r):match("([%w_%.]+)$") or tostring(r)
+local risk=SYS.RemoteRisk(nm)
+if risk then risky=risky+1 end
+SYS.ScanEmit("  ["..i.."] "..r..(risk and ("\n            "..risk) or ""))
+end
+if risky>0 then
+SYS.ScanEmit(("[Remote] ⚠ 上面有 %d 条被判为高风险(蜜罐/后台/审计) —— 只列出来, 不要触发"):format(risky))
+end
 SYS.ScanEmit("[Remote] 扫描完成, 清单在上面")
 local savedFn=SYS.SaveRemotes(found)
 if savedFn then
@@ -11297,15 +11356,33 @@ function LAB.ScanGC()
 local g=gcApi()
 if not g then SYS.Notify("这台执行器没有 getgc",SYS.CY.yellow) return nil end
 local fns,tbls,byScript={},{},{}
+local selfSrc,selfLen=nil,0
+P(function()
+if type(debug)=="table" and type(debug.info)=="function" then
+local s=debug.info(1,"s")
+if type(s)=="string" and #s>0 then selfSrc,selfLen=s,#s end
+end
+end)
+local selfN=0
+local function isSelf(f)
+if not selfSrc then return false end
+local ok,s=P(function() return debug.info(f,"s") end)
+if not ok or type(s)~="string" then return false end
+if #s~=selfLen then return false end
+return s==selfSrc
+end
 local ok,err=P(function()
 for _,v in pairs(g(true)) do
 if type(v)=="function" then
+if isSelf(v) then selfN=selfN+1
+else
 fns[#fns+1]=v
 local own=ownerOf(v)
 if own then
 local k=own.Name or tostring(own)
 byScript[k]=byScript[k] or {n=0}
 byScript[k].n=byScript[k].n+1
+end
 end
 elseif type(v)=="table" then tbls[#tbls+1]=v end
 end
@@ -11316,6 +11393,8 @@ for k,v in pairs(byScript) do rows[#rows+1]=("  %-42s %d 个函数"):format(k:su
 table.sort(rows)
 local out={("========== GC 扫描 =========="),
 ("函数 %d 个 | 表 %d 个"):format(#fns,#tbls),
+selfSrc and ("(已剔除 CheatMenu 自身函数 %d 个 —— 它们不该被当成游戏函数)"):format(selfN)
+or  "(这台执行器取不到 debug.info 的 source, 没能剔除自身函数)",
 "按归属脚本分组(前 25):"}
 for i=1,math.min(#rows,25) do out[#out+1]=rows[i] end
 out[#out+1]="(归属拿不到 = C/引擎侧或匿名函数, hook 不了)"
@@ -11325,10 +11404,14 @@ SYS.Notify(("GC 扫描完成: %d 函数 / %d 表"):format(#fns,#tbls),SYS.CY.gre
 return {fns=#fns,tbls=#tbls}
 end
 local KEY={"damage","hit","hurt","fire","shoot","aim","kill","die","death","health","attack","weapon","bullet"}
+local SIG_LIB={Signal=true,signal=true,GoodSignal=true,MadworkScriptSignal=true,
+FastCastRedux=true,ReplicaController=true,net=true,SimpleSignal=true,
+SignalPlus=true,LemonSignal=true}
+local SIG_NOISE={["fire"]=true,["firesync"]=true,["_fireevent"]=true,["fireserver"]=true}
 function LAB.ListHookable()
 local fns=LAB.LastFns
 if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return end
-local hits={}
+local hits,skipped={},0
 for i=1,#fns do
 local f=fns[i] local nm=nameOf(f)
 if type(nm)=="string" and #nm>1 and #nm<40 then
@@ -11336,7 +11419,12 @@ local low=nm:lower()
 for _,k in ipairs(KEY) do
 if low:find(k,1,true) then
 local own=ownerOf(f)
-hits[#hits+1]=("  %-30s  脚本=%s"):format(nm:sub(1,30),own and (own.Name or "?") or "-")
+local on=own and (own.Name or "?") or "-"
+if SIG_NOISE[low] and SIG_LIB[on] then
+skipped=skipped+1
+break
+end
+hits[#hits+1]=("  %-30s  脚本=%s"):format(nm:sub(1,30),on)
 break
 end
 end
@@ -11345,6 +11433,9 @@ end
 table.sort(hits)
 local out={("========== 名字可疑的函数(可能可 hook) =========="),
 ("命中 %d 个 (关键词: damage/hit/fire/aim/kill/health ...)"):format(#hits)}
+if skipped>0 then
+out[#out+1]=("(另跳过 %d 个信号库的 fire/fireSync —— 那是事件通知不是开火)"):format(skipped)
+end
 for i=1,math.min(#hits,40) do out[#out+1]=hits[i] end
 out[#out+1]="这些只是【候选】—— 想观察哪个, 用 ④ 按名字包一层(只记录, 不改返回值)"
 SYS.ScanEmit(table.concat(out,"\n"))
@@ -11630,6 +11721,7 @@ if not hasGc then
 line("  (这台执行器没有 getconnections —— 跳过「谁在收」, 只列清单与归类)")
 end
 local nameKind=kindIndex()
+local riskyN=0
 local dump={("========== Remote 逐条侦察(共 %d 条, 列前 60) =========="):format(#net)}
 local withRecv=0
 local MAXROW=60
@@ -11641,6 +11733,11 @@ local okp,path=P(function() return r:GetFullName() end)
 local p=tostring(okp and path or "?")
 local tail=(type(r.Name)=="string") and r.Name or "?"
 local tag=nameKind[tail] and ("  ★命中类别: "..tostring(nameKind[tail])) or ""
+local risk=SYS.RemoteRisk(tail)
+if risk then
+riskyN=riskyN+1
+tag=tag.."\n            "..risk
+end
 local recv="?"
 if cls=="RemoteFunction" then
 local ok1,set1=P(function() return r.OnClientInvoke~=nil end)
@@ -11700,6 +11797,9 @@ end
 line(("  ── 功能类别通道对账: 有 %d / 共 %d(其余 %d 个本游戏没有同名通道) ──")
 :format(#have,#kinds,missN))
 for i=1,#have do line(have[i]) end
+if riskyN>0 then
+line(("  ⚠ 另有 %d 条通道被判为高风险(蜜罐/管理后台/审计日志) —— 只在清单里标出, 别触发"):format(riskyN))
+end
 dump[#dump+1]=""
 dump[#dump+1]=("========== 功能类别对账: 有 %d / 共 %d =========="):format(#have,#kinds)
 for i=1,#have do dump[#dump+1]=have[i] end
