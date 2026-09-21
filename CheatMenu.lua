@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 23:27 sha 957a6cef bytes 467847'):format('2026-09-21 23:27','957a6cef',467847))
+print(('[CheatMenu] build 2026-09-22 01:08 sha bc8bb1eb bytes 466666'):format('2026-09-22 01:08','bc8bb1eb',466666))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -57,7 +57,7 @@ CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
-Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
+Prot_AntiAdmin=true,Prot_HideGui=false,
 Prot_SpeedCap=false,
 AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.7"
+SYS.BuildVer="9.9.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -229,7 +229,8 @@ AutoLowPing=true,
 CB_MissMode=true,
 PC_Freeze=true,
 PG_Spin=true, PG_SpinHit=true, PG_FlyHit=true, PG_WalkHit=true,
-PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true }
+PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true,
+Prot_AntiAC=true, Prot_AntiTP=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -1320,7 +1321,14 @@ print("[CheatMenu] 防回退已关闭")
 end
 function SYS.SyncAntiRevert()
 local want=(SYS.T_.Fly==true) or (SYS.T_.Speed==true)
-if want then P(AR.On) else P(AR.Off) end
+if want then
+local ok2,res,err=P(AR.On)
+if ok2 and res==false then
+SYS.Notify("⚠ 防回退没挂上: "..tostring(err or "未知原因").." (飞行/加速照常, 只是位置按真实值上报)", SYS.CY.yellow)
+end
+else
+P(AR.Off)
+end
 end
 end
 do
@@ -2554,7 +2562,9 @@ end
 return IDX.desc or {}
 end
 SYS.MiniArea = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
-"bumpermadness","mppadhost","mpstation","machin"}
+"bumpermadness","mppadhost","mpstation","machin",
+"minefield","trainrace","tablemanners","stablefooting","lethalrebound",
+"spinebreaker","firearmfactory","wrongway","cellbarrier"}
 SYS.MiniAreaCN = {"小游戏","关卡","模式"}
 SYS.KwHostile = {"monster","enemy","hostile","killer","kill","attack","aggro","boss","guard",
 "zombie","mob","hunter","stalker","chaser","demon","ghoul","skeleton","brute",
@@ -2562,6 +2572,18 @@ SYS.KwHostile = {"monster","enemy","hostile","killer","kill","attack","aggro","b
 "jumpscare","cursed","glitch","entity",
 "grumble","firedamp","dread","timothy","goblino","lookman","blitz","giggle","shadow"}
 SYS.KwHostileCN = {"怪","敌","杀手","恶魔","猎","鬼","僵尸","追","凶"}
+function SYS.NewVis(cls)
+local ok,inst=P(function()
+local o=Instance.new(cls)
+o.Archivable=false
+return o
+end)
+if not ok or not inst then return nil end
+P(function()
+if inst.Name==cls then inst.Name=SYS.N.Combat end
+end)
+return inst
+end
 SYS.KwHazard = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
@@ -2665,7 +2687,7 @@ end
 for p,c in pairs(act) do
 local h=HL[p]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=c
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.FillTransparency=0.88
@@ -2811,7 +2833,7 @@ end
 for m in pairs(nact) do
 local h=HN[m]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=m
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.OutlineTransparency=0
@@ -3065,7 +3087,7 @@ end
 for p in pairs(pact) do
 local h=HP[p]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=p
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.OutlineTransparency=0
@@ -3127,12 +3149,43 @@ return false
 end
 local names={}
 P(function()
+local _t0=os.clock()
 for _,o in ipairs(SYS.Index()) do
+if (os.clock()-_t0)>0.12 then break end
 local cn=o.ClassName
 local ok=false
 local soft=false
+local inMini=false
+local isCharPart=false
 if o:IsA("BasePart") or cn=="Model" then
+do
+local a=o
+for _=1,4 do
+if not a then break end
+local rn=a.Name
+if type(rn)=="string" and rn~="" then
+local low=rn:lower()
+for _,kw in ipairs(SYS.MiniArea) do if low:find(kw,1,true) then inMini=true break end end
+if not inMini then
+for _,cw in ipairs(SYS.MiniAreaCN) do if rn:find(cw,1,true) then inMini=true break end end
+end
+end
+if inMini then break end
+a=a.Parent
+end
+if inMini then
+P(function() isCharPart=(o:FindFirstAncestorOfClass("Humanoid")~=nil) end)
+end
+end
 if o:FindFirstChildOfClass("HingeConstraint") or o:FindFirstChildOfClass("Motor6D") then ok=true end
+if not ok and inMini and not isCharPart then
+local CONS={"BallSocketConstraint","NoCollisionConstraint","AnimationConstraint",
+"PrismaticConstraint","CylindricalConstraint"}
+for ci=1,#CONS do
+local okc,has=P(function() return o:FindFirstChildOfClass(CONS[ci])~=nil end)
+if okc and has then ok=true break end
+end
+end
 if not ok then
 local anc=o
 for _=1,4 do
@@ -3192,6 +3245,7 @@ end
 if isFake and isTrap then break end
 anc=anc.Parent
 end
+if not isTrap and inMini then isTrap=true end
 end
 if ok and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and o) or o:FindFirstChildWhichIsA("BasePart")
@@ -3241,7 +3295,7 @@ local DTRAP=SYS._doorTrap or {}
 for p in pairs(dact) do
 local h=HD[p]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=p
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.OutlineTransparency=0
@@ -3343,7 +3397,7 @@ end
 for p in pairs(mact) do
 local h=HM[p]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=p
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.OutlineTransparency=0
@@ -3488,7 +3542,7 @@ end
 for o in pairs(actI) do
 local h=HI[o]
 if not h then
-h=Instance.new("Highlight")
+h=SYS.NewVis("Highlight")
 h.Adornee=o
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 h.FillTransparency=0.88
@@ -8518,7 +8572,11 @@ do
 local NotifyList={}
 function SYS.Notify(text,col)
 local sg=SYS.ScreenGui
-if not sg or not sg.Parent then return end
+local menuVisible = sg and sg.Parent and sg.Enabled ~= false and SYS.MenuOpen
+if not menuVisible then
+P(function() if SYS.Hud then SYS.Hud(text, 4) end end)
+return
+end
 local base=60
 for _,n in ipairs(NotifyList) do
 n.Position=UDim2.new(1,-276,0,n.Position.Y.Offset+52)
@@ -8943,119 +9001,6 @@ t[#t+1]="checkcaller="..tostring(c.cc)
 t[#t+1]="getcallingscript="..tostring(c.gcs)
 return table.concat(t,"  ")
 end
-local function callerName()
-if type(getcallingscript)~="function" then return "未知来源" end
-local ok,s=pcall(getcallingscript)
-if ok and s then
-local ok2,n=pcall(function() return s:GetFullName() end)
-if ok2 and n then return tostring(n) end
-end
-return "未知来源"
-end
-function Prot.InstallKickGuard()
-local c=Prot.Caps()
-if not c.hf then return false,"这台执行器没有 hookfunction" end
-if Prot.Hooks.kick then return true end
-local ok,err=pcall(function()
-local okK,oldK=pcall(function()
-return hookfunction(LP.Kick,newcclosure(function()
-Prot.Blocked=Prot.Blocked+1
-Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截本地 Kick (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
-end))
-end)
-if okK then Prot.Unhook.kick=oldK end
-local okD,oldD=pcall(function() return hookfunction(LP.Destroy,newcclosure(function() end)) end)
-if okD then Prot.Unhook.destroy=oldD end
-local okS,oldS=pcall(function()
-return hookfunction(game.Shutdown,newcclosure(function()
-Prot.Blocked=Prot.Blocked+1 Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截 game:Shutdown (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
-end))
-end)
-if okS then Prot.Unhook.shutdown=oldS end
-local okB,oldB=pcall(function()
-if Players and Players.BanAsync then
-return hookfunction(Players.BanAsync,newcclosure(function()
-Prot.Blocked=Prot.Blocked+1 Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截本地 BanAsync (来源: %s) 第 %d 次"):format(Prot.LastFrom,Prot.Blocked))
-return nil
-end))
-end
-end)
-if okB and oldB then Prot.Unhook.ban=oldB end
-if LP and LP.AncestryChanged then
-local okA,conn=pcall(function()
-return LP.AncestryChanged:Connect(function()
-if not SYS.Unloaded and not LP:IsDescendantOf(Players) then
-print("[CheatMenu] ⚠ 本地玩家已被移出 Players(被踢/被断开) —— 服务端的断开拦不住, 但记录一下")
-end
-end)
-end)
-if okA and conn then T(conn) end
-end
-end)
-if not ok then return false,tostring(err) end
-Prot.Hooks.kick=true
-return true
-end
-function Prot.RemoveKickGuard()
-if not Prot.Hooks.kick then return end
-local c=Prot.Caps()
-if c.hf then
-if Prot.Unhook.kick then P(function() hookfunction(LP.Kick,Prot.Unhook.kick) end) end
-if Prot.Unhook.destroy then P(function() hookfunction(LP.Destroy,Prot.Unhook.destroy) end) end
-if Prot.Unhook.shutdown then P(function() hookfunction(game.Shutdown,Prot.Unhook.shutdown) end) end
-if Prot.Unhook.ban and Players and Players.BanAsync then
-P(function() hookfunction(Players.BanAsync,Prot.Unhook.ban) end)
-end
-end
-Prot.Unhook.kick=nil Prot.Unhook.destroy=nil Prot.Unhook.namecall=nil Prot.Unhook.ban=nil
-Prot.Hooks.kick=nil
-end
-function Prot.InstallTPGuard()
-local c=Prot.Caps()
-if not c.hf then return false,"这台执行器没有 hookfunction" end
-if Prot.Hooks.tp then return true end
-local TS=Svc("TeleportService")
-if not TS then return false,"拿不到 TeleportService" end
-local ok,err=pcall(function()
-local names={"Teleport","TeleportAsync","TeleportToPlaceInstance","TeleportToSpawnByName","TeleportPartyAsync"}
-Prot.Unhook.tp={}
-for i=1,#names do
-local n=names[i]
-local f=TS[n]
-if type(f)=="function" then
-local old
-local ok2=pcall(function()
-old=hookfunction(f,newcclosure(function(...)
-if checkcaller and checkcaller() then return old(...) end
-Prot.Blocked=Prot.Blocked+1
-Prot.LastFrom=callerName()
-print(("[CheatMenu] 🛡 已拦截 TeleportService.%s (来源: %s)"):format(n,Prot.LastFrom))
-return
-end))
-end)
-if ok2 then Prot.Unhook.tp[n]=old end
-end
-end
-end)
-if not ok then return false,tostring(err) end
-Prot.Hooks.tp=true
-return true
-end
-function Prot.RemoveTPGuard()
-if not Prot.Hooks.tp then return end
-local c=Prot.Caps()
-local TS=Svc("TeleportService")
-if c.hf and TS then
-for n,old in pairs(Prot.Unhook.tp or {}) do
-local f=TS[n]
-P(function() if type(f)=="function" then hookfunction(f,old) end end)
-end
-end
-Prot.Unhook.tp={} Prot.Hooks.tp=nil
-end
 function Prot.InstallHideGui()
 if Prot.Hooks.hide then return true end
 if SYS.SafeParentGui and SYS.ScreenGui then
@@ -9444,8 +9389,6 @@ P(function() SYS.SetNoKnock(false) end)
 P(PC.OnHead,false) P(PC.Orbit,false) P(PC.Stare,false)
 P(PC.Follow,false) P(PC.LoopTP,false)
 P(function() SYS.SetLoop("WPTween",false) SYS.SetLoop("WPWalk",false) end)
-P(Prot.RemoveKickGuard)
-P(Prot.RemoveTPGuard)
 P(Prot.RemoveHideGui)
 P(Ray.Remove)
 end
@@ -10204,43 +10147,20 @@ end
 return true
 end
 if on then
-SYS.T_.Prot_AntiAC=true
 SYS.T_.Prot_AntiAdmin=true
-SYS.T_.Prot_AntiTP=true
-setOne("Prot_AntiAC",SYS.Prot.InstallKickGuard)
 setOne("Prot_AntiAdmin",function()
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
 return SYS.Prot.InstallHideGui()
 end)
-setOne("Prot_AntiTP",SYS.Prot.InstallTPGuard)
 setOne("AntiFling",SYS.SetAntiFling)
 SYS.Notify("🛡 全部防护已尝试开启(失败项会单独提示)",SYS.CY.green)
 else
-SYS.T_.Prot_AntiAC=false
 SYS.T_.Prot_AntiAdmin=false
-SYS.T_.Prot_AntiTP=false
-SYS.Prot.RemoveKickGuard()
 SYS.Prot.RemoveHideGui()
-SYS.Prot.RemoveTPGuard()
 P(SYS.SetAntiFling,false)
 SYS.Notify("防护已全部卸下",SYS.CY.sub)
 end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end)
-UI.Switch(p,"反作弊绕过 (只拦本地 Kick · 零开销)","Prot_AntiAC",function(on)
-if on then
-local ok,err=SYS.Prot.InstallKickGuard()
-if not ok then
-SYS.T_.Prot_AntiAC=false
-SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-else
-SYS.Notify("🛡 已装踢人拦截 · 被拦次数看控制台",SYS.CY.green)
-end
-else
-SYS.Prot.RemoveKickGuard()
-SYS.Notify("已卸下踢人拦截",SYS.CY.sub)
-end
 end)
 UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
 if on then
@@ -10257,20 +10177,19 @@ else
 SYS.Prot.RemoveHideGui()
 end
 end)
-UI.Switch(p,"防止被换服 / 换游戏 (拦截 TeleportService)","Prot_AntiTP",function(on)
-if on then
-local ok,err=SYS.Prot.InstallTPGuard()
-if not ok then
-SYS.T_.Prot_AntiTP=false
-SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-else
-SYS.Notify("🛡 已拦截 TeleportService",SYS.CY.green)
-end
-else
-SYS.Prot.RemoveTPGuard()
-end
-end)
+UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
+"· 管理员检测绕过【已默认开启】= ① `protect_gui`(在支持它的执行器上, 游戏脚本完全看不到这个 GUI)\n"..
+"    ② `Archivable=false`(反作弊用 GetDescendants+Clone 打包可疑实例时, 它 Clone 不出来)\n"..
+"    ③ 擦掉实例名里的可疑词。⇒ 对抗的就是反作弊真会看的三样: GUI 名字、容器、能不能被打包。\n"..
+"    ✅ 只动【我们自己的】实例, 不碰游戏 UI、不改任何按键绑定; 菜单仍留在 PlayerGui ⇒ 位置不受影响。\n"..
+"    ⚠ 对「逐帧遍历 PlayerGui/gethui 找可疑 GUI」的检测【防不住】—— 那种本来也拦不住。\n"..
+"    ⚠ 也【挡不住】遍历 Workspace 找 Highlight/多出来的 Part —— 那是透视类功能的固有代价。\n"..
+"· 🎈 防甩飞 = 纯本地速度清零, 不 hook 任何函数。\n"..
+"★ 共同原则: 【只做零开销的改名与本地处理, 绝不挂 __namecall / __index】。\n"..
+"❌ 已删除(2026-09-22): 「反作弊绕过(hook 本地 Kick/BanAsync)」与「防止被换服(拦 TeleportService)」——\n"..
+"   真实踢/封/传送都由服务端发出, 客户端拦不到; 而且 **hook 本身就是可被检测的特征**\n"..
+"   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
+"📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
 UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",SYS.SetAntiFling)
 UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
 "这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
@@ -10757,7 +10676,6 @@ local t="════════ "..s.." ════════"
 print(""); print(t)
 SYS.ScanBufNote(""); SYS.ScanBufNote(t)
 end
-local SCAN_CAP=80000
 local NET_CLS={
 "RemoteEvent","UnreliableRemoteEvent","RemoteFunction",
 }
@@ -10775,21 +10693,46 @@ SurfaceGui={"Enabled","Face","LightInfluence","AlwaysOnTop","MaxDistance"},
 Script={"Enabled","RunContext"},
 LocalScript={"Enabled"},
 }
-local function scanWholeGame()
-local out={game}
-local i,n,capped=1,0,false
-local ok=P(function()
-while i<=#out do
-local inst=out[i] i=i+1
-local ch=inst:GetChildren()
-for k=1,#ch do
-out[#out+1]=ch[k]
-n=n+1
-if n>=SCAN_CAP then capped=true return end
+local SCAN_EMERGENCY=800000
+local SCAN={q=nil,i=0,n=0,done=false,capped=false}
+local function scanBegin()
+SCAN.q={game} SCAN.i=1 SCAN.n=0 SCAN.done=false SCAN.capped=false
 end
+local function scanStep(budget)
+if SCAN.done then return true end
+if not SCAN.q then scanBegin() end
+local out=SCAN.q
+local t0=os.clock()
+while SCAN.i<=#out do
+local inst=out[SCAN.i] SCAN.i=SCAN.i+1
+local okc,ch=P(function() return inst:GetChildren() end)
+if okc and type(ch)=="table" then
+local m=#out
+for k=1,#ch do m=m+1 out[m]=ch[k] end
+SCAN.n=SCAN.n+#ch
+if SCAN.n>=SCAN_EMERGENCY then
+SCAN.capped=true SCAN.done=true return true
+end
+end
+if (os.clock()-t0)>=budget then return false end
+end
+SCAN.done=true
+return true
+end
+local function scanWholeGame()
+scanBegin()
+local yieldOK=false
+P(function()
+if type(coroutine)=="table" and type(coroutine.isyieldable)=="function" then
+yieldOK=coroutine.isyieldable()
 end
 end)
-return out,n,capped,ok
+if yieldOK then
+while not scanStep(0.008) do task.wait() end
+else
+while not scanStep(0.05) do end
+end
+return SCAN.q,SCAN.n,SCAN.capped,true
 end
 local function snapProps(inst, names)
 local got={}
@@ -10833,8 +10776,8 @@ table.sort(rows,function(a,b)
 if a[2]~=b[2] then return a[2]>b[2] end
 return a[1]<b[1]
 end)
-line(("全图实例 %d 个(遍历上限 %d%s) · 共 %d 种 ClassName")
-:format(n,SCAN_CAP,capped and " · 已达上限" or "",#rows))
+line(("全图实例 %d 个%s · 共 %d 种 ClassName")
+:format(n, capped and " · 已达应急上限(数据可能不全)" or "", #rows))
 line("  ── 类名 TOP 30 ──")
 for i=1,math.min(#rows,30) do
 line(("    %-9d %s"):format(rows[i][2],rows[i][1]))
