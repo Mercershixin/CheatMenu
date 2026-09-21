@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 12:22 sha 465f7e2b bytes 516006'):format('2026-09-21 12:22','465f7e2b',516006))
+print(('[CheatMenu] build 2026-09-21 15:43 sha ffc201b3 bytes 497335'):format('2026-09-21 15:43','ffc201b3',497335))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -46,37 +46,27 @@ CB_OnlyAlive=true,
 CB_SkipFF=true,
 CB_Melee=false,
 TrapImmune=false,
-LockSpeed=false,LockJump=false,LockGravity=false,
 PathKey=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
-FX_Enable=false,
 NightVision=false,NightVisionPro=false,Lantern=false,SuperLight=false,
 NoFog=false,NoShadow=false,
-WPShow=false,WPKey=false,
 NoDeath=false,NoKnock=false,
-CB_MissMode=false,
 CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
 CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
-AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 Prot_SpeedCap=false,
 AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
-PC_Freeze=false,
-PG_Spin=false,PG_SpinHit=false,PG_FlyHit=false,
-PG_WalkHit=false,PG_HideHit=false,PG_OrbitTool=false,PG_BlackHole=false,
-PG_KillNear=false,
 },
 C_={
 FlySpeed=3,FlyMode="BodyVelocity",
 SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=2,
 SpeedCap=28,
-Gravity=196.2,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
 TracerMaxDist=500,TracerMaxN=12,
@@ -98,22 +88,16 @@ CB_RingModeVer=0,
 CB_SnapDelay=0.03,
 CB_SnapMinGap=0.08,CB_SnapMaxAngle=360,
 Key_Menu="G",Key_CycleTarget="V",Key_Teleport="T",
-FX_Sat=0,FX_Bri=0,FX_Con=0,FX_CB="关闭",
 UIScaleManual=0,
 MenuPosX=0.5,MenuPosY=0.5,MenuPosSaved=false,
-AudioMaster=100,AudioThr=15,
-CB_HitRate=100,CB_MissRate=0,
-PC_Sel="",PC_Speed=120,PC_Range=8,PC_SpinSpeed=3,
+PC_Sel="",PC_Range=8,PC_SpinSpeed=3,
 PC_Mode="off",
-PG_SpinSpeed=8,PG_OrbitRange=8,PG_OrbitSpeed=60,PG_OrbitMode=1,
-PG_BH_Range=40,PG_BH_Height=30,PG_BH_Speed=6,PG_BH_Pull=120,
-PG_KillDist=13,PG_Target="",
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.8.1"
+SYS.BuildVer="9.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -237,7 +221,15 @@ end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
 FootstepESP=true,
 AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true,
-TransSili=true }
+TransSili=true,
+LockSpeed=true, LockJump=true, LockGravity=true,
+WPShow=true, WPKey=true,
+FX_Enable=true,
+AutoLowPing=true,
+CB_MissMode=true,
+PC_Freeze=true,
+PG_Spin=true, PG_SpinHit=true, PG_FlyHit=true, PG_WalkHit=true,
+PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -1170,47 +1162,6 @@ pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
 end
 end)
 end
-local LOCK_EPS=0.35
-local function lockOrigJump(hum)
-if SYS.Orig.JumpPower==nil then
-local ok1,jp=pcall(function() return hum.JumpPower end)
-SYS.Orig.JumpPower=(ok1 and tonumber(jp)) or 50
-local ok2,jh=pcall(function() return hum.JumpHeight end)
-SYS.Orig.JumpHeight=(ok2 and tonumber(jh)) or nil
-end
-end
-function SYS.LockTick()
-local _,hum,root=GC()
-if hum and root then
-if SYS.T_.LockSpeed then
-local base=SYS.Orig.WalkSpeed or 16
-local want=base
-if SYS.T_.Speed then want=guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
-if math.abs((hum.WalkSpeed or 0)-want)>LOCK_EPS then hum.WalkSpeed=want end
-end
-if SYS.T_.LockJump then
-lockOrigJump(hum)
-local jm=SYS.C_.JumpMult or 1
-if SYS.Orig.JumpPower then
-local wp=SYS.Orig.JumpPower*jm
-if math.abs((hum.JumpPower or 0)-wp)>LOCK_EPS then P(function() hum.JumpPower=wp end) end
-end
-if SYS.Orig.JumpHeight then
-local wh=SYS.Orig.JumpHeight*jm
-if math.abs((hum.JumpHeight or 0)-wh)>LOCK_EPS then P(function() hum.JumpHeight=wh end) end
-end
-end
-end
-if SYS.T_.LockGravity then
-local g=tonumber(SYS.C_.Gravity)
-if g and g>=0 and math.abs((WS.Gravity or 196.2)-g)>0.05 then P(function() WS.Gravity=g end) end
-end
-end
-function SYS.SetLocks()
-SYS.SetLoop("Locks",
-(SYS.T_.LockSpeed or SYS.T_.LockJump or SYS.T_.LockGravity) and true or false,
-SYS.PhysicsStep,SYS.LockTick)
-end
 local PathKeyConn=nil
 local NUM_NAME={One=1,Two=2,Three=3,Four=4,Five=5,Six=6,Seven=7,Eight=8,Nine=9}
 function SYS.SetPathKey(on)
@@ -1223,10 +1174,6 @@ local nm=tostring(input.KeyCode):match("KeyCode%.(%w+)$")
 if not nm then return end
 local idx=NUM_NAME[nm] or NUM_NAME[(nm:gsub("^Keypad",""))]
 if not idx then return end
-if SYS.T_.WPKey==true and SYS.WP and SYS.WP.List[idx] then
-P(function() SYS.WP.Goto(idx,"tp") end)
-return
-end
 local s=SYS.SavedPos[idx]
 if not s then
 P(function()
@@ -1236,45 +1183,6 @@ return
 end
 P(function() SYS.TPTo(s.position+Vector3.new(0,2,0)) end)
 end)
-end
-function SYS.FetchServers()
-if type(game.HttpGet)~="function" then return nil,"这台执行器没有 HttpGet" end
-if not game.PlaceId then return nil,"读不到 PlaceId" end
-local ok,body=pcall(function()
-return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"):format(game.PlaceId))
-end)
-if not ok or type(body)~="string" or body=="" then return nil,"拉列表失败(网络不通 / 执行器限制)" end
-local list
-P(function()
-local hs=game:GetService("HttpService")
-local d=hs and hs:JSONDecode(body)
-if d and type(d.data)=="table" then list=d.data end
-end)
-if type(list)~="table" then return nil,"列表解析失败(接口字段变了?)" end
-local out={}
-for _,v in ipairs(list) do
-if type(v)=="table" and type(v.id)=="string" then
-out[#out+1]={id=v.id,playing=tonumber(v.playing) or 0,
-max=tonumber(v.maxPlayers) or 0,cur=(v.id==game.JobId)}
-end
-end
-return out,nil
-end
-function SYS.JoinServer(jobId)
-if type(jobId)~="string" or jobId=="" then return false end
-local TS=game:GetService("TeleportService")
-if not (TS and TS.TeleportToPlaceInstance and game.PlaceId) then
-SYS.Notify("跳服不可用(拿不到 TeleportService)",SYS.CY.red) return false
-end
-local url=tostring(SYS.BuildURL or "")
-if url:sub(1,4)=="http" and type(queue_on_teleport)=="function" then
-P(function() queue_on_teleport(('loadstring(game:HttpGet("%s"))()'):format(url)) end)
-else
-SYS.Notify("⚠️ 本地版没有网络地址 -> 跳过去后【脚本不会自动回来】, 要重新执行一次加载器。",SYS.CY.yellow)
-end
-SYS.Notify("🚀 正在加入所选服务器...",SYS.CY.cyan)
-task.delay(0.5,function() P(function() TS:TeleportToPlaceInstance(game.PlaceId,jobId,LP) end) end)
-return true
 end
 local TrapConns,TrapOn=nil,false
 local TRAP_WIN  = 0.45
@@ -1839,107 +1747,6 @@ end
 SYS.Notify(("📣 事件预告已开: 挂上 %d 条信号"):format(#E.conns),
 #E.conns > 0 and SYS.CY.green or SYS.CY.yellow)
 print(("[CheatMenu] 事件预告: 命中 %d 条 -> %s"):format(n, table.concat(names, ", ")))
-end
-function SYS.GetPingMs()
-local ms
-P(function()
-local ok,v=pcall(function() return LP:GetNetworkPing() end)
-if ok and type(v)=="number" and v>0 then ms=math.floor(v*1000+0.5) end
-end)
-if not ms then
-P(function()
-local st=game:GetService("Stats")
-local it=st.Network.ServerStatsItem["Data Ping"]
-if it then ms=math.floor(it:GetValue()+0.5) end
-end)
-end
-return ms
-end
-local LowLatSaved=nil
-function SYS.SetLowLatency(on)
-local LT=game:GetService("Lighting")
-if on then
-if not LowLatSaved then
-LowLatSaved={}
-P(function() LowLatSaved.Shadows=LT.GlobalShadows LT.GlobalShadows=false end)
-P(function() LowLatSaved.Soft=LT.ShadowSoftness LT.ShadowSoftness=0 end)
-P(function() LowLatSaved.EnvD=LT.EnvironmentDiffuseScale LT.EnvironmentDiffuseScale=0 end)
-P(function() LowLatSaved.EnvS=LT.EnvironmentSpecularScale LT.EnvironmentSpecularScale=0 end)
-end
-P(function() if SYS.SetPerf then SYS.SetPerf(true) end end)
-SYS.Notify("🚀 低延迟模式已开: 关阴影/环境反射(压帧时间) —— 注意这降的是【帧时间】, 不是 ping",SYS.CY.green)
-else
-if LowLatSaved then
-P(function() if LowLatSaved.Shadows~=nil then LT.GlobalShadows=LowLatSaved.Shadows end end)
-P(function() if LowLatSaved.Soft~=nil then LT.ShadowSoftness=LowLatSaved.Soft end end)
-P(function() if LowLatSaved.EnvD~=nil then LT.EnvironmentDiffuseScale=LowLatSaved.EnvD end end)
-P(function() if LowLatSaved.EnvS~=nil then LT.EnvironmentSpecularScale=LowLatSaved.EnvS end end)
-LowLatSaved=nil
-end
-end
-end
-function SYS.HopLowPing(reason)
-if SYS._Hopping then return false end
-local maxTry=tonumber(SYS.C_.HopMaxTry) or 4
-local n=tonumber(_G and _G.CM_HOPN) or 0
-if n>=maxTry then
-SYS.Notify(("已跳 %d 次仍未达标, 停止(避免一直跳) —— 当前 ping %s ms")
-:format(n,tostring(SYS.GetPingMs())),SYS.CY.yellow)
-return false
-end
-local TS=game:GetService("TeleportService")
-if not (TS and TS.TeleportToPlaceInstance and game.PlaceId) then
-SYS.Notify("跳服不可用(拿不到 TeleportService)",SYS.CY.red) return false
-end
-local okH,body=pcall(function()
-return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true"):format(game.PlaceId))
-end)
-if not okH or type(body)~="string" or body=="" then
-SYS.Notify("拉服务器列表失败(执行器没有 HttpGet / 网络不通) -> 不跳",SYS.CY.red); return false
-end
-local list=nil
-P(function()
-local hs=game:GetService("HttpService")
-local d=hs and hs:JSONDecode(body)
-if d and d.data then list=d.data end
-end)
-if type(list)~="table" then SYS.Notify("服务器列表解析失败 -> 不跳",SYS.CY.red); return false end
-local tried=SYS.HopTried or {} SYS.HopTried=tried
-local pick=nil
-for _,v in ipairs(list) do
-local id=(type(v)=="table") and v.id or nil
-local pl=tonumber((type(v)=="table") and v.playing) local mx=tonumber((type(v)=="table") and v.maxPlayers)
-if type(id)=="string" and id~=game.JobId and not tried[id] and pl and mx and pl<mx then
-pick=id break
-end
-end
-if not pick then SYS.Notify("没有可跳的服务器(都满了 / 都试过了)",SYS.CY.yellow); return false end
-tried[pick]=true
-SYS._Hopping=true
-local url=tostring(SYS.BuildURL or "")
-local canReinject=(url:sub(1,4)=="http") and (type(queue_on_teleport)=="function")
-if canReinject then
-P(function()
-queue_on_teleport(('_G.CM_HOPN=%d loadstring(game:HttpGet("%s"))()'):format(n+1,url))
-end)
-else
-SYS.Notify("⚠️ 本地版没有网络地址 -> 跳过去后【脚本不会自动回来】, 要重新执行一次加载器。\n(网络版/加载器版会自动重注入)",SYS.CY.yellow)
-end
-SYS.Notify(("🚀 跳到下一个服务器找低延迟(第 %d/%d 次) reason=%s"):format(n+1,maxTry,tostring(reason or "")),SYS.CY.cyan)
-task.delay(0.8,function() P(function() TS:TeleportToPlaceInstance(game.PlaceId,pick,LP) end) end)
-return true
-end
-function SYS.AutoHopCheck(tag)
-if not SYS.T_.AutoLowPing then return end
-local limit=tonumber(SYS.C_.HopPingLimit) or 120
-local ms=SYS.GetPingMs()
-if not ms then return end
-if ms>limit then
-SYS.Notify(("📡 当前 ping %d ms > 阈值 %d ms -> 自动找低延迟服务器"):format(ms,limit),SYS.CY.yellow)
-P(function() SYS.HopLowPing(tag or "auto") end)
-else
-SYS.Notify(("✅ 当前服务器 ping %d ms, 低于阈值 %d ms, 保持不动"):format(ms,limit),SYS.CY.green)
-end
 end
 local SpectateConn=nil
 function SYS.Spectate(pl)
@@ -6203,6 +6010,7 @@ end
 SCALP_CACHE[part]={t=now,p=use}
 return use
 end
+CB.HitPoint=visPoint
 local BP_EPS=1e-9
 local function bpIsZero(d) return (d>-BP_EPS and d<BP_EPS) end
 local function bpCbrt(x)
@@ -6360,8 +6168,9 @@ if bp then return bp end
 end
 if not SYS.T_.CB_Predict then return pos end
 local base=SYS.C_.CB_PredictTime or 0.14
-local p2=CB.TargetPart and CB.TargetPart.Position
-local dist=(p2 and (p2-pos).Magnitude) or 0
+local me=bodyOf(SYS.LP.Character)
+local myPos=(me and me.Position) or (SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position)
+local dist=(myPos and (pos-myPos).Magnitude) or 0
 local t=base*math.clamp(1+dist/500,1,3.0)
 local v=p.AssemblyLinearVelocity
 if not v then
@@ -7052,7 +6861,8 @@ end
 end))
 T(RS.Heartbeat:Connect(function()
 if SYS.Unloaded then return end
-if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire then
+if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
+or SYS.T_.CB_SilentAim or SYS.T_.CB_SilentNoTurn then
 CB.Start()
 else
 CB.Stop()
@@ -7084,7 +6894,8 @@ print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向�
 end
 P(CB.MigrateV72)
 P(hookDeathEvents,0)
-if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire then
+if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
+or SYS.T_.CB_SilentAim or SYS.T_.CB_SilentNoTurn then
 CB.Start()
 end
 print("[CheatMenu] 战斗模块已加载 (菜单战斗页: 一键开战/停战 + 各开关 · 按 V 切换指定目标)")
@@ -9247,72 +9058,6 @@ for _,c in ipairs(f:GetChildren()) do
 if c:IsA("Frame") or c:IsA("TextLabel") then P(function() c:Destroy() end) end
 end
 end
-local FX={} SYS.FX=FX
-local FXEff=nil
-local FXHidden={}
-local CB_MODES={
-["关闭"]         ={sat=0,    bri=0,   con=0,   tint=Color3.new(1,1,1)},
-["红色盲(近似)"]  ={sat=-0.65,bri=0.02,con=0.12,tint=Color3.fromRGB(190,255,205)},
-["绿色盲(近似)"]  ={sat=-0.65,bri=0.02,con=0.12,tint=Color3.fromRGB(255,205,195)},
-["蓝色盲(近似)"]  ={sat=-0.60,bri=0.02,con=0.10,tint=Color3.fromRGB(255,245,185)},
-["全色盲(灰)"]    ={sat=-1,   bri=0.04,con=0.18,tint=Color3.new(1,1,1)},
-}
-FX.Modes={"关闭","红色盲(近似)","绿色盲(近似)","蓝色盲(近似)","全色盲(灰)"}
-local function fxEff()
-if FXEff and FXEff.Parent then return FXEff end
-if not LT then return nil end
-local ok,e=pcall(function()
-local x=Instance.new("ColorCorrectionEffect")
-x.Name=SYS.N.FX x.Saturation=0 x.Brightness=0 x.Contrast=0
-x.Enabled=false x.Parent=LT
-return x
-end)
-FXEff=(ok and e) or nil
-return FXEff
-end
-function FX.Apply()
-local e=fxEff() if not e then return end
-if SYS.T_.FX_Enable~=true then
-P(function() e.Enabled=false end) return
-end
-local mode=SYS.C_.FX_CB or "关闭"
-local m=CB_MODES[mode] or CB_MODES["关闭"]
-local sat,bri,con=(SYS.C_.FX_Sat or 0),(SYS.C_.FX_Bri or 0),(SYS.C_.FX_Con or 0)
-if mode~="关闭" then sat,bri,con=m.sat,m.bri,m.con end
-P(function()
-e.Saturation=math.clamp(sat,-1,1)
-e.Brightness=math.clamp(bri,-1,1)
-e.Contrast=math.clamp(con,-1,1)
-e.TintColor=(mode~="关闭") and m.tint or Color3.new(1,1,1)
-e.Enabled=true
-end)
-end
-function FX.HidePost(cls,on)
-if not LT then return end
-local key=tostring(cls)
-FXHidden[key]=FXHidden[key] or {}
-for _,e in ipairs(LT:GetChildren()) do
-if e:IsA(cls) and e.Name~="CheatMenu_FX" then
-if on then
-if FXHidden[key][e]==nil then FXHidden[key][e]=e.Enabled end
-P(function() e.Enabled=false end)
-else
-local o=FXHidden[key][e]
-P(function() if e.Parent then e.Enabled=(o~=false) end end)
-FXHidden[key][e]=nil
-end
-end
-end
-end
-function FX.RestoreAll()
-for key,t in pairs(FXHidden) do
-for e,o in pairs(t) do
-P(function() if e and e.Parent then e.Enabled=(o~=false) end end)
-end
-FXHidden[key]={}
-end
-P(function() if FXEff and FXEff.Parent then FXEff.Enabled=false end end)
-end
 local LanternLight=nil
 local LTExtra=nil
 local function ltExtra()
@@ -9572,58 +9317,6 @@ ChatLog.Msgs={}
 if SYS.ChatLogRender then P(SYS.ChatLogRender) end
 end
 local WP={} SYS.WP=WP
-WP.List={} WP.Marks={}
-function WP.Add(name)
-local _,_,root=GC()
-if not root then SYS.Notify("没有角色, 存不了路径点",SYS.CY.red) return nil end
-local nm=tostring(name or "")
-if nm=="" then nm="路径点 "..(#WP.List+1) end
-WP.List[#WP.List+1]={name=nm,pos=root.Position}
-if SYS.WPRender then P(SYS.WPRender) end
-return WP.List[#WP.List]
-end
-function WP.Remove(i)
-if not WP.List[i] then return end
-table.remove(WP.List,i)
-WP.UnmarkAll() WP.RefreshMarks()
-if SYS.WPRender then P(SYS.WPRender) end
-end
-function WP.Mark(i)
-local w=WP.List[i] if not w then return end
-if WP.Marks[i] and WP.Marks[i].Parent then return end
-local ok,m=pcall(function()
-local p=Instance.new("Part")
-p.Name=SYS.N.WP p.Anchored=true p.CanCollide=false
-p.CanQuery=false p.CanTouch=false p.Transparency=0.55
-p.Size=Vector3.new(4,8,4) p.Position=w.pos
-p.Color=Color3.fromRGB(56,180,255)
-p.Material=Enum.Material.ForceField
-p.Parent=WS
-local bb=Instance.new("BillboardGui")
-bb.Size=UDim2.new(0,150,0,30) bb.AlwaysOnTop=true
-bb.StudsOffset=Vector3.new(0,7,0) bb.Parent=p
-local l=Instance.new("TextLabel")
-l.Size=UDim2.new(1,0,1,0) l.BackgroundTransparency=1
-l.Text=tostring(i)..". "..tostring(w.name)
-l.TextColor3=Color3.fromRGB(56,180,255)
-l.Font=Enum.Font.GothamBold l.TextSize=13
-l.TextStrokeTransparency=0.2 l.Parent=bb
-return p
-end)
-if ok then WP.Marks[i]=m end
-end
-function WP.Unmark(i)
-local m=WP.Marks[i] WP.Marks[i]=nil
-if m then P(function() if m.Parent then m:Destroy() end end) end
-end
-function WP.UnmarkAll()
-for i in pairs(WP.Marks) do WP.Unmark(i) end
-WP.Marks={}
-end
-function WP.RefreshMarks()
-if SYS.T_.WPShow~=true then WP.UnmarkAll() return end
-for i=1,#WP.List do WP.Mark(i) end
-end
 function WP.TweenTo(dest,secs)
 local _,_,root=GC()
 if not root then return end
@@ -9654,18 +9347,6 @@ SYS.SetLoop("WPWalk",false) return
 end
 pcall(function() h2:MoveTo(dest) end)
 end)
-end
-function WP.Goto(i,mode)
-local w=WP.List[i]
-if not w then SYS.Notify("路径点 "..tostring(i).." 不存在",SYS.CY.sub) return end
-local dest=w.pos+Vector3.new(0,3,0)
-if mode=="tween" then WP.TweenTo(dest,1.2)
-elseif mode=="walk" then WP.WalkTo(dest,25)
-else P(function() SYS.TPTo(dest) end) end
-end
-function WP.Stop()
-SYS.SetLoop("WPTween",false)
-SYS.SetLoop("WPWalk",false)
 end
 function SYS.ForceSuicide(mode)
 local ch=LP.Character
@@ -9775,19 +9456,6 @@ local hasWL=false
 for _ in pairs(WL.White) do hasWL=true break end
 if hasWL and not WL.White[name] then return false end
 return true
-end
-local Aim={} SYS.AimEx=Aim
-function Aim.HitGate()
-local r=tonumber(SYS.C_.CB_HitRate)
-if not r or r>=100 then return true end
-if r<=0 then return false end
-return (math.random()*100)<=r
-end
-function Aim.MissGate()
-if SYS.T_.CB_MissMode~=true then return true end
-local r=tonumber(SYS.C_.CB_MissRate) or 0
-if r<=0 then return true end
-return (math.random()*100)>r
 end
 local Prot={} SYS.Prot=Prot
 Prot.Hooks={} Prot.Unhook={} Prot.Blocked=0 Prot.LastFrom=""
@@ -10047,6 +9715,51 @@ end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
 Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0
+Ray.Busy=false
+local HC={t=0,part=nil,pos=nil,nrm=nil}
+local function castChar(origin,dir,ch)
+if not ch or not (RayCtor and RayCtor.new) then return nil end
+if typeof(origin)~="Vector3" or typeof(dir)~="Vector3" or dir.Magnitude<0.001 then return nil end
+Ray.Busy=true
+local ok,p,n=pcall(function()
+local a,b,c=WS:FindPartOnRayWithWhitelist(RayCtor.new(origin,dir),{ch},false)
+if a then return b,c end
+end)
+Ray.Busy=false
+if ok and p then return p,n end
+return nil
+end
+local function hitOf(origin,rdir,tp)
+local now=os.clock()
+if HC.part~=tp or (now-HC.t)>0.04 then
+HC.part,HC.t,HC.pos,HC.nrm=tp,now,nil,nil
+local ch=tp.Parent
+if typeof(origin)=="Vector3" and typeof(rdir)=="Vector3" and rdir.Magnitude>0.001 then
+local fwd=tp.Position-origin
+if fwd.Magnitude>0.001 and rdir.Unit:Dot(fwd.Unit)>0.2 then
+local p,n=castChar(origin,rdir,ch)
+if p then HC.pos,HC.nrm=p,n end
+end
+end
+if not HC.pos and typeof(origin)=="Vector3" then
+local p,n=castChar(origin,tp.Position-origin,ch)
+if p then HC.pos,HC.nrm=p,n end
+end
+if not HC.pos then
+Ray.Busy=true
+local ok2,hp=pcall(function()
+return (SYS.Combat and SYS.Combat.HitPoint and SYS.Combat.HitPoint(tp)) or tp.Position
+end)
+Ray.Busy=false
+HC.pos=(ok2 and hp) or tp.Position
+end
+if not HC.nrm and typeof(origin)=="Vector3" then
+local d=HC.pos-origin
+if d.Magnitude>0.001 then HC.nrm=-d.Unit end
+end
+end
+return HC.pos,(HC.nrm or Vector3.new(0,1,0))
+end
 function Ray.Target()
 if not SYS.Combat or not SYS.Combat.TargetPart then return nil end
 return SYS.Combat.TargetPart
@@ -10060,6 +9773,7 @@ local h
 h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
 if checkcaller and checkcaller() then return h(self,...) end
 if self~=WS then return h(self,...) end
+if Ray.Busy then return h(self,...) end
 local m=getnamecallmethod()
 if m then
 local lm=m
@@ -10074,24 +9788,20 @@ if SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true then
 local tp=Ray.Target()
 if tp then
 Ray.Rewrites=Ray.Rewrites+1
-local pos = tp.Position
-local nrm = (res and res.Normal) or Vector3.new(0,1,0)
-local mat = (res and res.Material) or (tp.Material or Enum.Material.Plastic)
-local dist = (res and res.Distance) or 0
-if not res then
-local cam=WS.CurrentCamera
-if cam then dist=(cam.CFrame.Position-pos).Magnitude end
+local pos,nrm=hitOf(a1,a2,tp)
+local dist=0
+if typeof(a1)=="Vector3" then dist=(pos-a1).Magnitude end
+local rayObj=nil
+if typeof(a1)=="Vector3" and typeof(a2)=="Vector3"
+and a2.Magnitude>0.001 and RayCtor and RayCtor.new then
+rayObj=RayCtor.new(a1,a2)
 end
-local rayObj=(res and res.Ray) or nil
-if not rayObj and RayCtor and RayCtor.new
-and (typeof(a1)=="Vector3") and (typeof(a2)=="Vector3") then
-P(function() rayObj=RayCtor.new(a1, a2*(dist>0 and dist or 1)) end)
-end
+if not rayObj and res then rayObj=res.Ray end
 return {
 Instance = tp,
 Position = pos,
 Normal   = nrm,
-Material = mat,
+Material = (tp.Material or Enum.Material.Plastic),
 Distance = dist,
 Ray      = rayObj,
 }
@@ -10109,9 +9819,11 @@ if SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true then
 local tp=Ray.Target()
 if tp then
 Ray.Rewrites=Ray.Rewrites+1
-return tp, tp.Position,
-(c or Vector3.new(0,1,0)),
-(d or (tp.Material or Enum.Material.Plastic))
+local o,dv
+if typeof(a)=="Ray" then o,dv=a.Origin,a.Direction
+elseif typeof(a)=="Vector3" then o,dv=a,b end
+local pos,nrm=hitOf(o,dv,tp)
+return tp,pos,nrm,(tp.Material or Enum.Material.Plastic)
 end
 end
 return a,b,c,d
@@ -10132,6 +9844,8 @@ if c.hmm and Ray.Unhook then
 P(function() hookmetamethod(game,"__namecall",Ray.Unhook) end)
 end
 Ray.Unhook=nil Ray.Hooked=false
+Ray.Busy=false
+HC.part=nil HC.pos=nil HC.nrm=nil HC.t=0
 end
 function SYS.GiveAllTools()
 local bp=LP:FindFirstChildOfClass("Backpack")
@@ -10196,59 +9910,6 @@ local _,_,mine=GC()
 if not mine then return end
 P(function() r.CFrame=CFrame.new(mine.Position+Vector3.new(0,3,0)) end)
 SYS.Notify("（客户端）已把 "..tostring(tgt and tgt.Name).." 拉过来 —— 服务端不认可, 很快会被拉回",SYS.CY.yellow)
-end
-function PC.Freeze(on)
-local tgt=PC.Get()
-local r=PC.Root(tgt)
-if not r then SYS.Notify("目标没有角色",SYS.CY.sub) return end
-PC._frozen=PC._frozen or {}
-if on then
-if PC._frozen[r]==nil then
-local ok,v=pcall(function() return r.Anchored end)
-PC._frozen[r]=ok and v or false
-end
-P(function() r.Anchored=true end)
-SYS.SetLoop("PCFrozen",true,RS.Heartbeat,function()
-if SYS.T_.PC_Freeze~=true then SYS.SetLoop("PCFrozen",false) return end
-for rr in pairs(PC._frozen or {}) do
-P(function() if rr.Parent then rr.Anchored=true end end)
-end
-end)
-SYS.Notify("🧊 已冻结 "..tostring(tgt and tgt.Name).."(客户端)",SYS.CY.cyan)
-else
-SYS.SetLoop("PCFrozen",false)
-for rr,v in pairs(PC._frozen or {}) do
-P(function() if rr.Parent then rr.Anchored=v end end)
-end
-PC._frozen={}
-SYS.Notify("🔥 已解冻",SYS.CY.sub)
-end
-end
-function PC.Blink(secs)
-local tgt=PC.Get()
-local ch=tgt and tgt.Character
-if not ch then return end
-local saved={}
-P(function()
-for _,d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then
-saved[d]=d.LocalTransparencyModifier
-d.LocalTransparencyModifier=1
-elseif d:IsA("Decal") then
-saved[d]=d.Transparency d.Transparency=1
-end
-end
-end)
-task.delay(tonumber(secs) or 0.5,function()
-P(function()
-for d,v in pairs(saved) do
-if d.Parent then
-if d:IsA("BasePart") then d.LocalTransparencyModifier=v
-else d.Transparency=v end
-end
-end
-end)
-end)
 end
 function PC.OnHead(on)
 SYS.T_.PC_OnHead=on==true
@@ -10377,228 +10038,15 @@ end)
 SYS.Notify((on and "🔇 已本地静音 " or "🔊 已解除静音 ")
 ..tostring(tgt and tgt.Name)..(" (%d 个声音)"):format(n).."\n⚠ 客户端无法静音他人语音, 这只能静音他角色里的音效",SYS.CY.yellow)
 end
-local PG={} SYS.Prank=PG
-function PG.Target()
-local n=SYS.C_.PG_Target
-if n and n~="" then
-local pl=Players:FindFirstChild(n)
-if pl then return pl end
-end
-return SYS.C_.PC_Sel and Players:FindFirstChild(SYS.C_.PC_Sel) or nil
-end
-function PG.AllPlayers()
-local t={}
-for _,pl in ipairs(Players:GetPlayers()) do
-if pl~=LP and pl.Character and PC.Root(pl) then t[#t+1]=pl end
-end
-return t
-end
-function PG.Fling(pl)
-local r=PC.Root(pl)
-if not r then return false end
-P(function()
-local v=Vector3.new((math.random()-0.5)*2,(math.random()*0.8+0.6),(math.random()-0.5)*2)
-local ok=pcall(function() r.AssemblyLinearVelocity=v*800 end)
-if not ok then
-pcall(function() r.Velocity=v*800 end)
-end
-end)
-return true
-end
-function PG.FlingAll()
-local n=0
-for _,pl in ipairs(PG.AllPlayers()) do
-if PG.Fling(pl) then n=n+1 end
-end
-SYS.Notify(("🌀 已甩飞 %d 个玩家(本地)"):format(n),SYS.CY.orange)
-end
-function PG.Spin(on)
-SYS.T_.PG_Spin=on==true
-if not on then SYS.SetLoop("PGSpin",false) PG.spinConn=nil return end
-local a=0
-SYS.SetLoop("PGSpin",true,RS.RenderStepped,function(dt)
-if SYS.T_.PG_Spin~=true then return end
-a=a+(dt or 0.016)*(SYS.C_.PG_SpinSpeed or 8)
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r then
-P(function()
-r.CFrame=CFrame.new(r.Position)*CFrame.Angles(0,a,0)
-end)
-end
-end
-end)
-end
-function PG.SpinHit(on)
-SYS.T_.PG_SpinHit=on==true
-if not on then SYS.SetLoop("PGSpinHit",false) return end
-SYS.SetLoop("PGSpinHit",true,RS.Heartbeat,function()
-if SYS.T_.PG_SpinHit~=true then return end
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r then P(function() r.AssemblyLinearVelocity=Vector3.new(0,60,0)+Vector3.new(math.random()-0.5,0,math.random()-0.5)*60 end) end
-end
-end)
-end
-function PG.FlyHit(on)
-SYS.T_.PG_FlyHit=on==true
-if not on then SYS.SetLoop("PGFlyHit",false) return end
-SYS.SetLoop("PGFlyHit",true,RS.Heartbeat,function()
-if SYS.T_.PG_FlyHit~=true then return end
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r then P(function() r.AssemblyLinearVelocity=Vector3.new(0,140,0) end) end
-end
-end)
-end
-function PG.WalkHit(on)
-SYS.T_.PG_WalkHit=on==true
-if not on then SYS.SetLoop("PGWalkHit",false) return end
-SYS.SetLoop("PGWalkHit",true,RS.Heartbeat,function()
-if SYS.T_.PG_WalkHit~=true then return end
-local _,_,mine=GC()
-if not mine then return end
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r and (r.Position-mine.Position).Magnitude<12 then PG.Fling(pl) end
-end
-end)
-end
-function PG.HideHit(on)
-SYS.T_.PG_HideHit=on==true
-if not on then
-SYS.SetLoop("PGHideHit",false)
-local ch=LP.Character
-if ch then
-P(function()
-for _,d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then d.LocalTransparencyModifier=0 end
-end
-end)
-end
-return
-end
-SYS.SetLoop("PGHideHit",true,RS.Heartbeat,function(dt)
-if SYS.T_.PG_HideHit~=true then return end
-local ch=LP.Character
-if ch then
-P(function()
-for _,d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then d.LocalTransparencyModifier=1 end
-end
-end)
-end
-local _,_,mine=GC()
-if not mine then return end
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r and (r.Position-mine.Position).Magnitude<12 then PG.Fling(pl) end
-end
-end)
-end
-function PG.OrbitTool(on)
-SYS.T_.PG_OrbitTool=on==true
-if not on then SYS.SetLoop("PGOrbitTool",false) PG.toolOrig=nil return end
-local a=0
-SYS.SetLoop("PGOrbitTool",true,RS.RenderStepped,function(dt)
-if SYS.T_.PG_OrbitTool~=true then return end
-local ch=LP.Character
-if not ch then return end
-local tool=ch:FindFirstChildOfClass("Tool")
-if not tool then return end
-local handle=tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart")
-if not handle then return end
-if PG.toolOrig==nil then PG.toolOrig=handle.Anchored end
-a=a+(dt or 0.016)*(SYS.C_.PG_OrbitSpeed or 60)
-local _,_,root=GC()
-if not root then return end
-local rad=SYS.C_.PG_OrbitRange or 8
-local p=root.Position+Vector3.new(math.cos(math.rad(a))*rad,1,math.sin(math.rad(a))*rad)
-P(function()
-handle.Anchored=true
-handle.CFrame=CFrame.new(p)
-end)
-end)
-end
-function PG.AttachToolTo(name)
-local pl=Players:FindFirstChild(tostring(name or ""))
-local r=PC.Root(pl)
-local ch=LP.Character
-local tool=ch and ch:FindFirstChildOfClass("Tool")
-local handle=tool and (tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart"))
-if not r or not handle then SYS.Notify("缺目标角色或手里没工具",SYS.CY.sub) return end
-P(function()
-handle.Anchored=true
-handle.CFrame=CFrame.new(r.Position+Vector3.new(0,3,0))
-end)
-SYS.Notify("🧲 工具已附着到 "..tostring(pl and pl.Name).."(本地)",SYS.CY.cyan)
-end
-function PG.BlackHole(on)
-SYS.T_.PG_BlackHole=on==true
-if not on then SYS.SetLoop("PGBlackHole",false) PG.bhMark=nil return end
-local _,_,root0=GC()
-if root0 then PG.bhMark=root0.CFrame end
-SYS.SetLoop("PGBlackHole",true,RS.Heartbeat,function()
-if SYS.T_.PG_BlackHole~=true then return end
-local _,_,mine=GC()
-if not mine then return end
-local center=SYS.C_.PG_BH_Height and (mine.Position+Vector3.new(0,SYS.C_.PG_BH_Height or 30,0)) or mine.Position
-local rad=SYS.C_.PG_BH_Range or 40
-local pull=SYS.C_.PG_BH_Pull or 120
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r and (r.Position-center).Magnitude<=rad then
-P(function()
-local d=(center-r.Position)
-if d.Magnitude>0.1 then
-r.AssemblyLinearVelocity=d.Unit*pull
-end
-end)
-end
-end
-end)
-end
-function PG.KillNear(on)
-SYS.T_.PG_KillNear=on==true
-if not on then SYS.SetLoop("PGKillNear",false) return end
-SYS.SetLoop("PGKillNear",true,RS.Heartbeat,function()
-if SYS.T_.PG_KillNear~=true then return end
-local _,_,mine=GC()
-if not mine then return end
-local dist=SYS.C_.PG_KillDist or 13
-local nm=tostring(SYS.C_.PG_Target or "")
-for _,pl in ipairs(PG.AllPlayers()) do
-local r=PC.Root(pl)
-if r and (r.Position-mine.Position).Magnitude<=dist then
-if nm=="" or pl.Name==nm then
-local hum=pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
-if hum then P(function() hum.Health=0 end) end
-end
-end
-end
-end)
-end
-function PG.StopAll()
-SYS.SetLoop("PGSpin",false) SYS.SetLoop("PGSpinHit",false)
-SYS.SetLoop("PGFlyHit",false) SYS.SetLoop("PGWalkHit",false)
-SYS.SetLoop("PGHideHit",false) SYS.SetLoop("PGOrbitTool",false)
-SYS.SetLoop("PGBlackHole",false) SYS.SetLoop("PGKillNear",false)
-end
 function SYS.FuseClean()
-P(FX.RestoreAll)
 P(SYS.RestoreLight)
 P(Audio.RestoreAll)
 P(ChatLog.Stop)
-P(WP.Stop) P(WP.UnmarkAll)
 P(function() SYS.SetNoDeath(false) end)
 P(function() SYS.SetNoKnock(false) end)
-P(PC.Freeze,false)
 P(PC.OnHead,false) P(PC.Orbit,false) P(PC.Stare,false)
 P(PC.Follow,false) P(PC.LoopTP,false)
-P(PG.StopAll)
-P(function() SYS.SetLoop("PGFlingAll",false) end)
 P(function() SYS.SetLoop("WPTween",false) SYS.SetLoop("WPWalk",false) end)
-P(PG.OrbitTool,false)
 P(Prot.RemoveKickGuard)
 P(Prot.RemoveTPGuard)
 P(Prot.RemoveHideGui)
@@ -10866,9 +10314,6 @@ end
 ren(SYS.ScreenGui,SYS.N.Gui)
 ren(SYS.FloatGui,SYS.N.Float)
 ren(SYS._f3Gui,SYS.N.F3)
-if SYS.WP and SYS.WP.Marks then
-for _,m in pairs(SYS.WP.Marks) do ren(m,SYS.N.WP) end
-end
 pcall(function()
 local ch=LP.Character
 local root=ch and ch:FindFirstChild("HumanoidRootPart")
@@ -10876,12 +10321,6 @@ if root then
 for _,c in ipairs(root:GetChildren()) do
 if c.Name==SYS.N.OldLantern or c.Name=="CheatMenu_Lantern" then ren(c,SYS.N.Lantern) end
 end
-end
-end)
-pcall(function()
-if not LT then return end
-for _,c in ipairs(LT:GetChildren()) do
-if c.Name=="CheatMenu_FX" then ren(c,SYS.N.FX) end
 end
 end)
 return ok
