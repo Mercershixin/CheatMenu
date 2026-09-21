@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 20:53 sha 78048b9b bytes 501348'):format('2026-09-21 20:53','78048b9b',501348))
+print(('[CheatMenu] build 2026-09-21 21:32 sha 37fc739a bytes 502387'):format('2026-09-21 21:32','37fc739a',502387))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.3"
+SYS.BuildVer="9.9.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3392,6 +3392,44 @@ end
 end
 return nil
 end
+local function deepHasI(root)
+local stack, budget = {root}, 4000
+local depth = {[root]=0}
+while #stack>0 and budget>0 do
+local n=stack[#stack] stack[#stack]=nil
+budget=budget-1
+local d=depth[n] or 0
+if d<8 then
+local ok,kids=P(function() return n:GetChildren() end)
+if ok and type(kids)=="table" then
+local containers
+for i=1,#kids do
+local c=kids[i]
+if c:FindFirstChildOfClass("ProximityPrompt")~=nil
+or c:FindFirstChildOfClass("ClickDetector")~=nil then
+return true
+end
+local cc=c.ClassName
+if c:IsA("Model") or cc=="Folder"
+or c:IsA("Attachment") or c:IsA("Accoutrement") then
+containers=containers or {}
+containers[#containers+1]=c
+elseif c:IsA("BasePart") then
+depth[c]=d+1
+stack[#stack+1]=c
+end
+end
+if containers then
+for i=1,#containers do
+depth[containers[i]]=d+1
+stack[#stack+1]=containers[i]
+end
+end
+end
+end
+end
+return false
+end
 if SYS.T_.ESP_Pick then
 SYS._pickN=(SYS._pickN or 0)+1
 local _now=os.clock()
@@ -3406,17 +3444,14 @@ for _,o in ipairs(SYS.Index()) do
 local cn=o.ClassName
 local ok=false
 if cn=="Tool" then ok=true
-elseif o:IsA("BasePart") or o:IsA("Model") or cn=="Folder" then
+elseif o:IsA("BasePart") or o:IsA("Model") or cn=="Folder"
+or o:IsA("Attachment") or o:IsA("Accoutrement") then
 local function hasI(x, deep)
 if not x then return false end
 if x:FindFirstChildOfClass("ClickDetector")~=nil
 or x:FindFirstChildOfClass("ProximityPrompt")~=nil then return true end
 if deep and (x:IsA("Model") or x:IsA("Folder")) then
-local ok2, has = P(function()
-if #x:GetChildren() > 60 then return false end
-return (x:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil)
-or (x:FindFirstChildWhichIsA("ClickDetector", true) ~= nil)
-end)
+local ok2, has = P(function() return deepHasI(x) end)
 if ok2 and has == true then return true end
 end
 return false
@@ -3465,6 +3500,19 @@ end
 end
 if (ok or kind) and o.Parent and o~=LP.Character then
 local part=o.PrimaryPart or (cn~="Model" and cn~="Folder" and o) or o:FindFirstChildWhichIsA("BasePart")
+if part and not (part:IsA("BasePart") or part:IsA("Model")) then
+local a, up = part.Parent, nil
+for _=1,4 do
+if not a then break end
+if a:IsA("BasePart") then up=a break end
+if a:IsA("Model") then
+up=a.PrimaryPart or a:FindFirstChildWhichIsA("BasePart")
+if up then break end
+end
+a=a.Parent
+end
+part=up
+end
 if part and part.Position then
 local d=camPos and (part.Position-camPos).Magnitude or 0
 if not camPos or d<=MAXD then
