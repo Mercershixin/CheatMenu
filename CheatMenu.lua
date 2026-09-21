@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 22:45 sha 7b1b8a09 bytes 466344'):format('2026-09-21 22:45','7b1b8a09',466344))
+print(('[CheatMenu] build 2026-09-21 23:27 sha 957a6cef bytes 467847'):format('2026-09-21 23:27','957a6cef',467847))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -31,7 +31,7 @@ Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
-TracerAll=false,
+TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.6"
+SYS.BuildVer="9.9.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -631,6 +631,26 @@ for j=1,#LOGNET do if w==LOGNET[j] then
 return "⚠ 审计/日志通道 —— 通常被反作弊收集, 不要主动触发" end end
 end
 return nil
+end
+function SYS.IsHoneypot(obj)
+local o=obj
+for _=1,4 do
+if not o then break end
+local nm=o.Name
+if type(nm)=="string" and nm~="" then
+local low=nm:lower()
+for i=1,#PHRASE_HONEY do
+if low:find(PHRASE_HONEY[i],1,true) then return true end
+end
+local tk=toks(nm)
+for j=1,#tk do
+local w=tk[j]
+for k=1,#HONEY do if w==HONEY[k] then return true end end
+end
+end
+o=o.Parent
+end
+return false
 end
 end
 SYS.RemoteAlias = {
@@ -2536,6 +2556,12 @@ end
 SYS.MiniArea = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
 "bumpermadness","mppadhost","mpstation","machin"}
 SYS.MiniAreaCN = {"小游戏","关卡","模式"}
+SYS.KwHostile = {"monster","enemy","hostile","killer","kill","attack","aggro","boss","guard",
+"zombie","mob","hunter","stalker","chaser","demon","ghoul","skeleton","brute",
+"seek","rush","ambush","figure","halt","screech","eyes","dupe","snare","spider",
+"jumpscare","cursed","glitch","entity",
+"grumble","firedamp","dread","timothy","goblino","lookman","blitz","giggle","shadow"}
+SYS.KwHostileCN = {"怪","敌","杀手","恶魔","猎","鬼","僵尸","追","凶"}
 SYS.KwHazard = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
@@ -2609,7 +2635,7 @@ return hl
 end
 SYS.EspEnemyHolder=espEnemyHolder
 function SYS.ESPTick()
-if SYS.T_.ESPWeapon and not SYS.T_.ESPNameTag then SYS.T_.ESPNameTag=true end
+if SYS.T_.ESPNameTag ~= SYS.T_.ESPWeapon then SYS.T_.ESPWeapon=SYS.T_.ESPNameTag end
 if not SYS.ESPAnyOn() then
 SYS.ClearESP()
 return
@@ -2730,11 +2756,8 @@ local _now=os.clock()
 if (SYS._npcN%25==1 and (not SYS._npcAt or _now-SYS._npcAt>1)) or not SYS._npcList then
 SYS._npcAt=_now
 local list={}
-local HOST_KW={"monster","enemy","hostile","killer","kill","attack","aggro","boss","guard",
-"zombie","mob","hunter","stalker","chaser","demon","ghoul","skeleton","brute",
-"seek","rush","ambush","figure","halt","screech","eyes","dupe","snare","spider",
-"jumpscare","cursed","glitch","entity"}
-local HOST_CN={"怪","敌","杀手","恶魔","猎","鬼","僵尸","追","凶"}
+local HOST_KW=SYS.KwHostile
+local HOST_CN=SYS.KwHostileCN
 local HOST={}
 local function isHostile(m)
 for _,k in ipairs({"Hostile","Enemy","IsEnemy","Aggro","Dangerous","Killer"}) do
@@ -2918,7 +2941,10 @@ local names={}
 local camPos=SYS.Cam and SYS.Cam.CFrame and SYS.Cam.CFrame.Position
 local MAXD=tonumber(SYS.C_.PickDist) or 1200
 P(function()
+local _t0=os.clock()
+local _budget=0.12
 for _,o in ipairs(SYS.Index()) do
+if os.clock()-_t0>_budget then break end
 local cn=o.ClassName
 local ok=false
 if cn=="Tool" then ok=true
@@ -3479,6 +3505,7 @@ elseif next(HI) then
 for _,h in pairs(HI) do P(function() h:Destroy() end) end HI={}
 end
 if SYS.T_.ESPWeapon then
+local wpnN=0
 for p,c in pairs(act) do
 local wpn=nil
 local ok1,ks=pcall(function() return c:GetChildren() end)
@@ -3518,8 +3545,14 @@ LW[p]=lw
 end
 local tl=LWL[p]
 if tl then tl.Text="🔫 "..wpn end
+wpnN=wpnN+1
 end
 end
+end
+if not SYS._wpnLogged then
+SYS._wpnLogged=true
+print(("[ESP] 头顶武器标记: 本轮检测到 %d 人有武器 (别人的背包 Roblox 不复制给客户端, 所以只看得到【拿在手上】的)")
+:format(wpnN))
 end
 elseif next(LW) then
 for _,l in pairs(LW) do P(function() l:Destroy() end) end LW={} LWL={}
@@ -3620,6 +3653,7 @@ if type(f) ~= "function" then P(function() f = getfenv()[n] end) end
 return type(f) == "function" and f or nil
 end
 local function fireObj(obj)
+if SYS.IsHoneypot and SYS.IsHoneypot(obj) then return false end
 if obj:IsA("ProximityPrompt") then
 local fp = _globalFn("fireproximityprompt")
 if fp then P(function() fp(obj) end) end
@@ -3811,19 +3845,39 @@ end
 end
 do
 local line=nil
-local function tracerOrigin()
-local ch=SYS.LP and SYS.LP.Character
-local root=ch and ch:FindFirstChild("HumanoidRootPart")
-local hd=ch and ch:FindFirstChild("Head")
+local RFT=(function()
+local ok,v=P(function() return Enum.RaycastFilterType.Exclude end)
+if ok and v then return v end
+return Enum.RaycastFilterType.Blacklist
+end)()
+local function aimOf(ch,isSelf)
+if not ch then return nil,nil end
+local hd=ch:FindFirstChild("Head")
+local root=ch:FindFirstChild("HumanoidRootPart") or ch.PrimaryPart
+local o=(hd and hd.Position) or (root and (root.Position+Vector3.new(0,1.5,0)))
+if not o then return nil,nil end
+local d
+if isSelf then
 local cam=WS.CurrentCamera
-local dir
-if cam and cam.CFrame then dir=cam.CFrame.LookVector
-elseif root then dir=root.CFrame.LookVector end
-local eye
-if hd then eye=hd.Position
-elseif root then eye=root.Position+Vector3.new(0,1.5,0)
-elseif cam and cam.CFrame then eye=cam.CFrame.Position end
-return eye,dir
+d=(cam and cam.CFrame and cam.CFrame.LookVector)
+or (hd and hd.CFrame.LookVector) or (root and root.CFrame.LookVector)
+else
+d=(hd and hd.CFrame.LookVector) or (root and root.CFrame.LookVector)
+end
+if not d or d.Magnitude<0.001 then return nil,nil end
+return o,d.Unit
+end
+local function aimEnd(o,d,maxD,owner)
+local len=(maxD and maxD>0) and maxD or 500
+local ok,hit=P(function()
+local pa=RaycastParams.new()
+pa.FilterType=RFT
+pa.FilterDescendantsInstances={owner or LP.Character}
+pcall(function() pa.IgnoreWater=true end)
+return WS:Raycast(o,d*len,pa)
+end)
+if ok and hit and hit.Position then return hit.Position end
+return o+d*len
 end
 local TPL={}
 local function tracerDrop(p)
@@ -3834,87 +3888,74 @@ function SYS.TracerHide()
 if line then P(function() line:Destroy() end) line=nil end
 for p in pairs(TPL) do tracerDrop(p) end
 end
-local function tracerDraw(key,o,endP)
+local function newTracer(col)
+local ok,pt=P(function()
+local q=Instance.new("Part")
+q.Anchored=true q.CanCollide=false q.CastShadow=false
+q.CanQuery=false q.CanTouch=false
+q.Material=Enum.Material.Neon q.Transparency=0.4
+q.Color=col
+q.Archivable=false
+q.Parent=WS
+return q
+end)
+return (ok and pt) or nil
+end
+local function setTracer(q,o,endP)
+if not q then return end
 local d=endP-o
 local len=d.Magnitude
 if len<2 then return end
-local q=TPL[key]
-if not q then
-local ok,pt=P(function()
-local w=Instance.new("Part")
-w.Anchored=true w.CanCollide=false w.CastShadow=false
-w.CanQuery=false w.CanTouch=false
-w.Material=Enum.Material.Neon w.Transparency=0.4
-w.Color=Color3.fromRGB(140,255,170)
-w.Archivable=false
-w.Parent=WS
-return w
-end)
-if not ok or not pt then return end
-q=pt TPL[key]=q
-end
 P(function()
 q.Size=Vector3.new(0.07,0.07,len)
 q.CFrame=CFrame.lookAt(o+d*0.5,endP)
 end)
+end
+local SELF_COL=Color3.fromRGB(120,255,180)
+local OTHER_COL=Color3.fromRGB(255,190,60)
+local function tracerDraw(key,o,endP)
+local q=TPL[key]
+if not q then
+q=newTracer(OTHER_COL)
+if not q then return end
+TPL[key]=q
+end
+setTracer(q,o,endP)
 end
 function SYS.TracerTick()
 if not SYS.T_.Tracer then
 if line or next(TPL) then SYS.TracerHide() end
 return
 end
-local o,dir=tracerOrigin()
-if not o or not dir then return end
 local maxD=tonumber(SYS.C_.TracerMaxDist) or 500
 local cap=tonumber(SYS.C_.TracerMaxN) or 12
 local all=SYS.T_.TracerAll and true or false
-if all then
-if line then P(function() line:Destroy() end) line=nil end
-elseif next(TPL) then
-for p in pairs(TPL) do tracerDrop(p) end
+local myO
+do
+local o,d=aimOf(LP.Character,true)
+if o and d then
+myO=o
+if not line then line=newTracer(SELF_COL) end
+setTracer(line,o,aimEnd(o,d,maxD,LP.Character))
+elseif line then
+P(function() line:Destroy() end) line=nil
+end
 end
 if all then
 local used,n={},0
 for _,pl in ipairs(Players:GetPlayers()) do
 if pl~=LP and n<cap then
-local c=pl.Character
-local rp=c and (c.PrimaryPart or c:FindFirstChild("HumanoidRootPart"))
-if rp and rp.Position then
-local dd=(rp.Position-o).Magnitude
-if maxD<=0 or dd<=maxD then
+local o,d=aimOf(pl.Character,false)
+if o and d and (not myO or maxD<=0 or (o-myO).Magnitude<=maxD) then
 used[pl]=true n=n+1
-tracerDraw(pl,o,rp.Position)
-end
+tracerDraw(pl,o,aimEnd(o,d,maxD,pl.Character))
 end
 end
 end
 for p in pairs(TPL) do if not used[p] then tracerDrop(p) end end
-return
+elseif next(TPL) then
+for p in pairs(TPL) do tracerDrop(p) end
 end
-local tp=SYS.Combat and SYS.Combat.TargetPart
-local endP
-if tp and tp.Position then endP=tp.Position else endP=o+dir*200 end
-local d=endP-o
-local len=d.Magnitude
-if len<2 then return end
-if not line then
-local ok,pt=P(function()
-local q=Instance.new("Part")
-q.Anchored=true q.CanCollide=false q.CastShadow=false
-q.CanQuery=false q.CanTouch=false
-q.Material=Enum.Material.Neon q.Transparency=0.4
-q.Color=Color3.fromRGB(140,255,170)
-q.Archivable=false
-q.Parent=WS
-return q
-end)
-if not ok or not pt then return end
-line=pt
-end
-P(function()
-line.Size=Vector3.new(0.07,0.07,len)
-line.CFrame=CFrame.lookAt(o+d*0.5,endP)
-end)
 end
 T(RS.RenderStepped:Connect(function() P(SYS.TracerTick) end))
 end
@@ -9608,8 +9649,7 @@ end
 end
 do
 local AH_KW=SYS.KwHidePrompt
-local HOST_KW2={"monster","enemy","hostile","killer","seek","rush","ambush","figure","halt","screech","eyes",
-"dupe","snare","spider","jumpscare","zombie","mob","hunter","chaser","怪","敌","杀手","鬼"}
+local HOST_KW2=SYS.KwHostile
 local QI_ORIG={}
 local function nearestEnemyDist()
 local _,_,root=GC()
@@ -9709,6 +9749,10 @@ function SYS.AutoHideNow()
 local pr,d=findHidePrompt()
 if not pr then
 SYS.Notify("🏃 自动藏身: 没找到藏身点(名字/动作里没有 hide/closet/wardrobe/bed…)", SYS.CY.yellow)
+return false
+end
+if SYS.IsHoneypot and SYS.IsHoneypot(pr) then
+SYS.Notify("⛔ 自动藏身: 那个藏身点名字像蜜罐, 已跳过(绝不替你按)", SYS.CY.yellow)
 return false
 end
 local ok=false
@@ -10023,15 +10067,15 @@ UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n
 "💡 小游戏区域透视已并入本开关 —— MachineParty 页不再单独提供。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
-local TR_MODES={"关闭","只锁定的目标","全部玩家"}
-UI.Cycle(p,"子弹射线 (只画线, 不改弹道)",TR_MODES,
+local TR_MODES={"关闭","只看自己","自己+其他玩家"}
+UI.Cycle(p,"子弹射线 (每个人自己的准心线)",TR_MODES,
 function()
 if not SYS.T_.Tracer then return "关闭" end
-return SYS.T_.TracerAll and "全部玩家" or "只锁定的目标"
+return SYS.T_.TracerAll and "自己+其他玩家" or "只看自己"
 end,
 function(v)
 SYS.T_.Tracer=(v~="关闭")
-SYS.T_.TracerAll=(v=="全部玩家")
+SYS.T_.TracerAll=(v=="自己+其他玩家")
 if not SYS.T_.Tracer then P(SYS.TracerHide) end
 end)
 UI.Slider(p,"射线最远距离 (格 · 0=不限)",0,2000,50,
@@ -10040,10 +10084,13 @@ function(v) SYS.C_.TracerMaxDist=v end,"%.0f")
 UI.Slider(p,"射线最多几条 (人多时防卡)",1,24,1,
 function() return SYS.C_.TracerMaxN or 12 end,
 function(v) SYS.C_.TracerMaxN=v end,"%.0f")
-UI.Tip(p,"从一个挂点(枪口 / 手 / 头, 都取不到就退回相机)画一条 Neon 细线。\n"..
-"· 只锁定的目标 = 画到【战斗页当前锁定的目标】身上; 没有目标就沿朝向画 200 格(原行为)\n"..
-"· 全部玩家 = 给每个其他玩家各画一条 —— 池化复用(每人一条常驻, 只改位置/长度, 不每帧新建),\n"..
-"  谁在哪、谁在朝我这边, 一眼就有数。「最远距离」「最多几条」两道上限防几十人局画满屏。\n"..
+UI.Tip(p,"从每个人【自己的头部】沿【他自己瞄准的方向】伸一条线; 撞到东西就停在那面墙上。\n"..
+"· 只看自己 = 一条, 用相机视线 —— 那就是你的准星, 精确。\n"..
+"· 自己+其他玩家 = 每个人都有一条; 别人的用【他的头部朝向】。\n"..
+"⚠ 客户端读不到别人的鼠标/相机, 所以别人的线是「他的身体/头朝哪边」—— 第三人称游戏多数会让\n"..
+"  身体转向瞄准方向, 够用; 他若开自由视角就会对不上。拿不到的不编。\n"..
+"🎨 自己 = 亮青绿 · 别人 = 橙。线是 3D 物体, 第一人称/第三人称都看得见;\n"..
+"  池化复用(每条常驻, 只改位置/长度), 「最远距离」「最多几条」两道上限防人多时画满屏。\n"..
 "纯视觉: 只画线, 不改弹道、不改命中判定。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
