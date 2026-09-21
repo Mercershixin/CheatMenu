@@ -81,6 +81,7 @@
 | 自动选队伍 / 角色 | `AutoTeam` / `SYS.AutoTeamTick` |
 | 自动表情 | `AutoEmote` |
 | 落脚点指示 | `SYS.SetFootstep` / `FSMark`（后端也已删除，不只是藏了入口） |
+| **重生点记账**（原地重生 / 设置当前位置为重生点 / 恢复默认重生点） | `SYS.SpawnRec` / `SYS.SetSpawnHere` / `SYS.ClearSpawnHere` / `SYS.RespawnHere` + `SYS.SetLoop("SpawnHere",…)` + `SYS.FuseClean` 里的调用 + 「☠ 自杀 / 重生点」里那 3 个按钮。用户 2026-09-21 原话：**「原地重生 出生地设置 恢复默认重生 删除吧 没用」** —— 重生位置由服务端决定时，本地写 `RespawnLocation` 根本无效。⚠ **不要**与 `SYS.GetSpawnRec` / `SYS.SetSpawnRec`（传送系记"默认出生点"的另一套）搞混，**那两个是保留的**。 |
 | **翻译云端后端**（硅基流动） | `TransSili` 配置键 + `SILI_URL` / `SILI_KEY` / `SILI_MODEL` / `SILI_MAXTOK` / `SILI_MAXCONC` + `backend()` 的云端分支 + 翻译页「🔀 翻译后端」下拉；**一律不要加回来** —— 用户 2026-09-21 实测「api 翻译也慢」后定稿**只走本机 llama.cpp**（同一条文本云端 hot 0.32s / cold 1.38s，本地 hot 0.05s；云端还被免费档限流卡在并发 4）。⚠ 别拿"能吃云端就不用开本机模型"当理由恢复它。 |
 
 ★ **`SYS.REMOVED_FEATURES` 黑名单必须留着** —— 删掉配置键之后它反而更重要：挡住老存档把这些键复活。
@@ -365,8 +366,14 @@
 **J Remote**（每条通道能不能用：收向监听几条 + 谁在收 + 命中哪个功能类别 + 34 个类别通道对账）。
 
 - ★ **I / J 共用一次 `scanWholeGame()` 全图遍历** —— 这就是"融合成一个功能"的落点，**别再拆成两个按钮**。
-- ★ I / J 的完整清单自动落盘（`DEX_` / `Remote_` 开头，带游戏名 + PlaceId + 时间戳，走 `SYS.SaveDump`），
-  控制台只列前若干条。
+- ★ **十层全部进【一个】 txt**（`SYS.SaveDump` 在扫描期间只登记、不单独落盘；内容靠 `line()/head()`
+  的缓冲在结尾由 `SYS.DumpScanAll` 一次写出）。`DEX_*.txt` / `Remote_*.txt` 那套**早已废弃**。
+- ⛔ **落盘缓冲的别名陷阱（2026-09-21 真 bug，用户报"综合扫描失效了，就扫描几个东西"）**：
+  模块级 `local DumpBuf = SYS.ScanBuf` 在**加载时**就绑定了那张表。若在 `FullScan` 里写
+  `SYS.ScanBuf = {}`（**换新表**），写入落到了新表、而结尾 `SYS.DumpScanAll(DumpBuf)` 仍拿旧表
+  ⇒ 落盘文件只剩文件头、`-- 共 0 行`；控制台又只显示前 60 行 ⇒ 看起来"只扫到几个东西"。
+  **正确做法：`table.clear(SYS.ScanBuf)`（清空同一张表），永远不要在这里重新赋一张新表。**
+  教训：**任何"持有一张表作缓冲"的地方，清空必须用 `table.clear`，不能用 `= {}`。**
 
 ---
 
