@@ -1,3 +1,72 @@
+## 9.9.3 · 2026-09-21
+
+你问「这些里面能有哪些可以做成功能的 和补强一下」—— 我把 DOORS 那份扫描里**所有 264 个通道名**逐个过了
+一遍，先给结论，再说做了什么。
+
+### 🧭 结论：这一局里**没有值得做成新功能**的，价值全在补强
+
+| 候选通道 | 能不能做成功能 | 为什么 |
+|---|---|---|
+| `JournalUnlock` / `JournalDiscover` / `JournalRead` / `JournalRefresh` / `AchievementDisplay` | ❌ 做不了 | 图鉴/成就是**服务端权威**的。客户端 `FireServer` 发过去不会真解锁，只在本地演一下；而且这一发是**记录在案**的 |
+| `MinigameControl` / `MonumentEvent` / `Firedamp.Remote` | ❌ 不建议 | 都是"进度信号"类通道，客户端主动发＝伪造进度，反作弊最爱的特征 |
+| `Unstick` | ⚠ 勉强 | 是"请求解卡"，服务端决定给不给。卡住时手点一下可以；做成**自动**会不停刷请求，反而难看 |
+| `conch_networking.*`（register_command / log_command / invoke_server_command）· `AdminPanelRunCommand` | ⛔ 绝对不碰 | 后台/审计通道，触发＝自报家门 |
+| `DroneStickyNoteMyNameIsExploiterAndIThinkICanCheatWithThis` | ⛔ 蜜罐 | 名字直接写着"我是开挂的，我以为用这个能作弊"—— 谁发谁被记录 |
+| 已命中的那 11 类（doors / doorshop / pickup / itemuse / revive / teleport / respawn / equip / inventory / chat / deathfx） | ✅ 已有功能本来就能用 | 不用再做 |
+
+⇒ 所以这次做的是**补强**：让扫描结果**可信**、且**不会把你送去踩蜜罐**。
+
+---
+
+### 🛡️ 补强① ⛔ 蜜罐 / 后台 / 审计通道：扫描清单里直接标出来，不再跟正常通道混着列
+
+新增 `SYS.RemoteRisk(名字)`（只读，不做任何网络动作），A 层与 J 层**逐条**标注。三档：
+
+- `⛔ 蜜罐嫌疑(名字点名开挂/作弊)` —— 触发＝被记录/当场封
+- `⛔ 后台命令 / 管理后台·处罚通道` —— 触发＝自报家门
+- `⚠ 审计/日志通道` —— 通常被反作弊收集，别主动触发
+
+拿你这份真实扫描跑的结果（264 个通道名）：
+
+| 档 | 命中 |
+|---|---|
+| ⛔ 蜜罐 | **1** — `DroneStickyNoteMyNameIsExploiterAndIThinkICanCheatWithThis` |
+| ⛔ 后台 | **2** — `AdminPanelRunCommand`、`conch_networking` 那批命令通道 |
+| ⚠ 审计 | 6 — `log` / `log_command` / `ServerLog` / `SendErrorLog` + 2 个 Roblox 统计上报 |
+| 判为正常 | **256** |
+
+⚠ 中途踩到一个坑，已修：一开始按**子串**匹配，结果 `SetDialogInUse` 因为里面含 "dia**log**" 被误判成审计
+通道、`AnalyticsSender` 这类 Roblox 自己的统计也跟着误报。改成**先拆词再比**（拆 camelCase + 下划线，
+只比整词），误报归零，蜜罐那条照样命中。
+
+### 🧹 补强② B 层 GC 扫描：把 **CheatMenu 自己的函数**剔掉（这条最要紧）
+
+你那份扫描的「名字可疑的函数」57 个里，抽查 23 个有 **21 个是 CheatMenu 自己的**：
+
+```
+AutoHitScan   fireTick   aimTick      SetNoDeath     fire_create_user
+ClaimAllDaily ClaimEverything  UseItem  ToggleEquip  RangedGrab
+OpenAllBoxes  DumpInventory    SetCamFov  SetCamZoom  Invoke / REventU
+```
+
+（自有函数一共 601 个，上面每一个都在里面。）两个后果：
+
+1. **误导** —— 看着像"游戏里有这些函数可以 hook"，其实全是本脚本的，照着去 hook 会 hook 到自己；
+2. **更糟的是外泄** —— 落盘的 txt 等于把自己的内部函数名交出去，跟全局中性化的口径是反的。
+
+**修法**：同一份 `loadstring` 出来的函数共享同一个 `debug.info(f,"s")`。
+先比**长度**再比串（长度不符一下就刷掉，7000 多个函数也不慢），命中就从 GC 结果里剔除，
+并在扫描输出里如实写一行「已剔除 CheatMenu 自身函数 N 个」；取不到 source 的执行器也会说明没剔。
+
+### 🔇 补强③ 可疑函数清单：信号库的 `fire` 不再混进来
+
+原清单里 `Fire` 一口气出现 6 次，全部是**信号库**的 Fire（`Signal` / `GoodSignal` /
+`MadworkScriptSignal` / `FastCastRedux` / `ReplicaController` / `net`）—— 那是事件通知，跟"开火"毫无关系。
+现在按「**名字** + **所属脚本**」双重判定跳过，并注明跳过多少条。
+`ProjectileHandler.FireProjectile`（真·武器）这类不受影响，照常列出。
+
+---
+
 ## 9.9.2 · 2026-09-21
 
 拿你在 **DOORS（PlaceId 6516141723）** 里跑出来的那一份综合扫描（`scan_6516141723.txt`，1445 行）逐层核了一遍，
