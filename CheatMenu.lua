@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 10:22 sha 21e1b2e8 bytes 509383'):format('2026-09-21 10:22','21e1b2e8',509383))
+print(('[CheatMenu] build 2026-09-21 11:14 sha 76365c1f bytes 516800'):format('2026-09-21 11:14','76365c1f',516800))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -61,7 +61,6 @@ CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
-TransSili=false,
 AutoLowPing=false,
 Prot_AntiAC=false,Prot_AntiAdmin=false,Prot_AntiTP=false,Prot_HideGui=false,
 Prot_SpeedCap=false,
@@ -114,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.5.0"
+SYS.BuildVer="9.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -237,7 +236,8 @@ end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
 FootstepESP=true,
-AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true }
+AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true,
+TransSili=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -7089,11 +7089,6 @@ local HOST="http://127.0.0.1:8080"
 local KEY="rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 local MODEL="hymt2-7b"
 local function hostOf() return HOST end
-local SILI_URL="https://api.siliconflow.cn/v1"
-local SILI_KEY="sk-ooxveeyffgfpxpenjfgybrelrkcdbkxpyakjvoqzwduovdxe"
-local SILI_MODEL="tencent/Hunyuan-MT-7B"
-local SILI_MAXTOK=512
-local SILI_MAXCONC=4
 local SAMP_TEMP=0.1
 local SAMP_TOP_P=0.6
 local SAMP_TOP_K=20
@@ -7295,6 +7290,16 @@ if p1 and c1 and c1~="" then return p1,c1 end
 local p3,c3=text:match("^(.-[:：]%s*)([^/%s].*)$")
 if p3 and c3 and c3~="" and #p3<=40 and not text:match("^%a[%w%+%-%.]*://") then return p3,c3 end
 return "",text
+end
+local function splitPrefixRich(raw)
+if type(raw)~="string" then return "",raw or "" end
+local p1,c1=raw:match("^(<font[^>]*>.-:</font>%s*)(.+)$")
+if p1 and c1 and c1~="" then return p1,c1 end
+if not raw:find("<",1,true) then
+local p3,c3=raw:match("^(.-[:：]%s*)([^/%s].*)$")
+if p3 and c3 and c3~="" and #p3<=40 and not raw:match("^%a[%w%+%-%.]*://") then return p3,c3 end
+end
+return "",raw
 end
 local function normalizeKey(text)
 if type(text)~="string" then return text end
@@ -7531,27 +7536,28 @@ if VerdictN>=VERDICT_CAP then Trans.Verdict={} VerdictN=0 end
 Trans.Verdict[key]=v VerdictN=VerdictN+1
 return v
 end
-local core=select(2,splitPrefix(plain))
-if core~="" then plain=stripRich(core) end
-if plain=="" then
+local pre,core=splitPrefixRich(raw)
+local corePlain=stripRich(core)
+v.pre=pre v.core=core v.tagged=(core~=corePlain)
+if corePlain=="" then
 v.skip=true
-elseif hasChinese(plain) then
-local segs=splitSegments(plain)
+elseif hasChinese(corePlain) then
+local segs=splitSegments(corePlain)
 local hasF=false
 for _,seg in ipairs(segs) do
 if not seg.han and Trans.shouldTranslate(seg.text,isChat) then hasF=true break end
 end
 if hasF then
-v.mixed=true v.segs=segs v.plain=plain v.nk=normalizeKey(plain)
+v.mixed=true v.segs=segs v.plain=corePlain v.nk=normalizeKey(corePlain)
 else
 v.skip=true
 end
-elseif not Trans.shouldTranslate(plain,isChat) then
+elseif not Trans.shouldTranslate(corePlain,isChat) then
 v.skip=true
 else
-v.plain=plain
-v.nk=normalizeKey(plain)
-v.loc=lookupLocal(plain)
+v.plain=corePlain
+v.nk=normalizeKey(corePlain)
+if not v.tagged then v.loc=lookupLocal(corePlain) end
 end
 if VerdictN>=VERDICT_CAP then Trans.Verdict={} VerdictN=0 end
 Trans.Verdict[key]=v VerdictN=VerdictN+1
@@ -7633,6 +7639,7 @@ end
 function Trans.clearCache()
 Cache={} Trans.cacheCount=0
 Trans.Verdict={} VerdictN=0
+if Trans.clearRichCache then Trans.clearRichCache() end
 Trans.Trans2Orig={} Trans.Orig2Trans={} T2O_N=0
 Trans.Outputs={} Trans.OutputsOld={} Trans.OutputsN=0
 Trans.Self={} Trans.SelfOld={} Trans.SelfN=0
@@ -7651,11 +7658,12 @@ print("[Trans] 缓存已重置(内存+磁盘)")
 task.spawn(function() pcall(Trans.forceRescan) end)
 return true
 end
+local SENT_L,SENT_R="〖","〗"
 local function maskSpecials(s)
 if type(s)~="string" or s=="" then return s,{},0 end
 local tok={} local n=0
 local function prot(pat)
-s=s:gsub(pat,function(m) n=n+1 tok[n]=m return "▮"..n.."▮" end)
+s=s:gsub(pat,function(m) n=n+1 tok[n]=m return SENT_L..n..SENT_R end)
 end
 prot("{{[^{}]-}}")
 prot("{[^{}]-}")
@@ -7683,13 +7691,25 @@ Trans.maskSpecials=maskSpecials
 local function unmask(s,tok,n)
 if type(s)~="string" then return s end
 if tok and n and n>0 then
-s=s:gsub("▮%s*(%d+)%s*▮",function(d) local i=tonumber(d) return (i and tok[i]) or "" end)
+s=s:gsub(SENT_L.."%s*(%d+)%s*"..SENT_R,function(d) local i=tonumber(d) return (i and tok[i]) or "" end)
 end
-s=s:gsub("▮%s*%d+",""):gsub("%d+%s*▮","")
-s=s:gsub("▮[^▮]*▮",""):gsub("▮","")
+s=s:gsub(SENT_L.."%s*%d+",""):gsub("%d+%s*"..SENT_R,"")
+s=s:gsub(SENT_L,""):gsub(SENT_R,"")
 return s
 end
 Trans.unmask=unmask
+local function sentinelsOk(raw,n)
+if not n or n<=0 then return true end
+if type(raw)~="string" then return false end
+local seen={}
+for d in raw:gmatch(SENT_L.."%s*(%d+)%s*"..SENT_R) do
+local i=tonumber(d)
+if i then seen[i]=(seen[i] or 0)+1 end
+end
+for i=1,n do if seen[i]~=1 then return false end end
+return true
+end
+Trans.sentinelsOk=sentinelsOk
 Trans.Fail={}
 Trans.FailN=0
 local function failCool(key)
@@ -7721,29 +7741,54 @@ local function clearAllFails() Trans.Fail={} Trans.FailN=0 end
 Trans.inCool=inCool Trans.clearFail=clearFail Trans.clearAllFails=clearAllFails
 local NetStreak,NetGateUntil=0,0
 local function netGateOn() return os.clock()<NetGateUntil end
+local _offNotifyAt=0
+function Trans.offlineHint(force)
+local now=os.clock()
+if not force and now-_offNotifyAt<90 then return end
+_offNotifyAt=now
+Trans._wasOffline=true
+local msg="⚠️ 连不上本地翻译服务(127.0.0.1:8080) —— 先双击桌面「翻译模型开关.bat」把模型跑起来"
+print("[Trans] "..msg)
+pcall(function()
+if SYS and SYS.Notify then SYS.Notify(msg,(SYS.CY and SYS.CY.yellow) or nil) end
+end)
+end
 local function noteNetFail()
 NetStreak=NetStreak+1
-if NetStreak>=NET_STREAK_MAX then NetGateUntil=os.clock()+NET_GATE_S end
+if NetStreak>=NET_STREAK_MAX then
+NetGateUntil=os.clock()+NET_GATE_S
+Trans.offlineHint(false)
 end
-local function noteNetOk() NetStreak=0 NetGateUntil=0 end
+end
+local function noteNetOk()
+NetStreak=0 NetGateUntil=0
+if Trans._wasOffline then
+Trans._wasOffline=false
+pcall(function()
+if SYS and SYS.Notify then SYS.Notify("✅ 本地翻译服务已恢复",(SYS.CY and SYS.CY.green) or nil) end
+end)
+end
+end
 Trans.netGateOn=netGateOn
 local function backend()
-if SYS.T_.TransSili==true then
-return SILI_URL,SILI_KEY,SILI_MODEL,SILI_MAXTOK,{temperature=SAMP_TEMP,top_p=SAMP_TOP_P,top_k=SAMP_TOP_K,repetition_penalty=SAMP_REP_PEN}
-end
 return HOST,KEY,MODEL,(Trans.maxTok or MAX_TOK_FALLBACK),{temperature=SAMP_TEMP,top_p=SAMP_TOP_P,top_k=SAMP_TOP_K,repeat_penalty=SAMP_REP_PEN}
 end
+local function noteLat(dt)
+Trans._adL=(Trans._adL or 0)+dt
+Trans._adN=(Trans._adN or 0)+1
+end
 local function rawRequest(body,system,temp,maxTok,noGate)
-if type(request)~="function" then return nil,true end
+if type(request)~="function" then return nil,true,false end
 local url,key,model,bMaxTok,samp=backend()
 local masked,tok,tokN=maskSpecials(body)
 local payload=HS:JSONEncode({
 model=model,
 messages={ {role="system",content=system}, {role="user",content=masked} },
 temperature=temp or samp.temperature, top_p=samp.top_p, top_k=samp.top_k,
-repetition_penalty=samp.repetition_penalty, repeat_penalty=samp.repeat_penalty,
+repeat_penalty=samp.repeat_penalty,
 max_tokens=maxTok or bMaxTok or MAX_TOK_FALLBACK, stream=false,
 })
+local t0=os.clock()
 local ok,res=pcall(function()
 return request({
 Url=url.."/v1/chat/completions", Method="POST",
@@ -7754,23 +7799,25 @@ end)
 if not ok or type(res)~="table" or not res.Body then
 Trans.Stats.netfail=Trans.Stats.netfail+1
 if not noGate then noteNetFail() end
-return nil,true
+return nil,true,false
 end
+noteLat(os.clock()-t0)
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then
 Trans.Stats.netfail=Trans.Stats.netfail+1
 if not noGate then noteNetFail() end
-return nil,true
+return nil,true,false
 end
 if not noGate then noteNetOk() end
 local ch=d.choices
 local c=type(ch)=="table" and ch[1]
 local m=c and c.message
 local v=m and m.content
-if type(v)~="string" then return nil,false end
+if type(v)~="string" then return nil,false,false end
+local lossy=not sentinelsOk(v,tokN)
 v=trim(unmask(v,tok,tokN))
-if v=="" then return nil,false end
-return v,false
+if v=="" then return nil,false,false end
+return v,false,lossy
 end
 local function tidy(res,src)
 res=trim(stripRich(res))
@@ -7784,6 +7831,97 @@ if not hasChinese(src) and res:lower()==src:lower() then return nil end
 if #src>=24 and #res>#src*3+60 then return nil end
 return res
 end
+Trans.RichCache={}
+local RichN=0
+local RICH_CAP=4000
+local function storeRich(core,val)
+Trans.RichCache[core]=val
+RichN=RichN+1
+if RichN>RICH_CAP then Trans.RichCache={} RichN=0 end
+end
+function Trans.clearRichCache() Trans.RichCache={} RichN=0 end
+local function tagNames(s)
+local t={}
+for tag in s:gmatch("<[^>]*>") do
+local nm=tag:match("^</?%s*([%a!][%w%-_:]*)")
+if nm then nm=nm:lower() t[nm]=(t[nm] or 0)+1 end
+end
+return t
+end
+local function tagNamesEq(a,b)
+local A,B=tagNames(a),tagNames(b)
+for k,v in pairs(A) do if B[k]~=v then return false end end
+for k,v in pairs(B) do if A[k]~=v then return false end end
+return true
+end
+Trans.tagNamesEq=tagNamesEq
+local function tagsBalanced(s)
+if type(s)~="string" then return false end
+local stack={}
+for tag in s:gmatch("<[^>]*>") do
+local nm=tag:match("^</?%s*([%a!][%w%-_:]*)")
+if nm then
+nm=nm:lower()
+if tag:match("^</") then
+if stack[#stack]~=nm then return false end
+stack[#stack]=nil
+else
+local selfClosed=(tag:sub(-2)=="/>") or (nm=="br") or (nm=="img") or (nm=="hr")
+if not selfClosed then stack[#stack+1]=nm end
+end
+end
+end
+return #stack==0
+end
+Trans.tagsBalanced=tagsBalanced
+local function tidyRich(res,src)
+if type(res)~="string" then return nil end
+res=trim(res)
+if res=="" then return nil end
+res=res:gsub("^%s*[Tt]ranslation%s*[:：]%s*","")
+res=res:gsub("^%s*[Hh]ere is[^\n:：]*[:：]%s*","")
+res=res:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*","")
+res=trim(res)
+if res=="" then return nil end
+local sp,rp=stripRich(src),stripRich(res)
+if sp=="" then return nil end
+if not hasChinese(sp) and rp:lower()==sp:lower() then return nil end
+if #sp>=24 and #rp>#sp*3+60 then return nil end
+return res
+end
+local function textRuns(s)
+local runs={}
+local i,n=1,#s
+while i<=n do
+local lt=s:find("<",i,true)
+if not lt then runs[#runs+1]={i,n} break end
+if lt>i then runs[#runs+1]={i,lt-1} end
+local gt=s:find(">",lt,true)
+if not gt then break end
+i=gt+1
+end
+return runs
+end
+local function translateRuns(s)
+local runs=textRuns(s)
+if #runs==0 then return nil end
+local out=s
+local changed=false
+for i=#runs,1,-1 do
+local a,b=runs[i][1],runs[i][2]
+local frag=s:sub(a,b)
+if Trans.shouldTranslate(frag,false) then
+local tr=Trans.translate(frag,3)
+if tr and tr~="" and tr~=frag then
+out=out:sub(1,a-1)..tr..out:sub(b+1)
+changed=true
+end
+end
+end
+if changed and out~=s then return out end
+return nil
+end
+Trans.translateRuns=translateRuns
 local function transPrompt() return SYS_PROMPT end
 function Trans.promptFor(code)
 local name=Trans.LANG_PROMPT[code] or Trans.langName(code)
@@ -7813,8 +7951,8 @@ if Cache[nk] then Cache[text]=Cache[nk] Trans.Stats.hit=Trans.Stats.hit+1 return
 if type(request)~="function" or not HS then return nil end
 if inCool(nk) or netGateOn() then return nil end
 local t0=os.clock()
-local res,netFail=rawRequest(text,transPrompt(),0.1,Trans.maxTok or MAX_TOK_FALLBACK)
-if res then
+local res,netFail,lossy=rawRequest(text,transPrompt(),0.1,Trans.maxTok or MAX_TOK_FALLBACK)
+if res and not lossy then
 local v=tidy(res,text)
 if v then
 Cache[text]=v Cache[nk]=v
@@ -7844,8 +7982,8 @@ local key=c.."\1"..normalizeKey(text)
 local hit=Trans.RvCache[key]
 if hit then return hit end
 if inCool(key) or netGateOn() then return nil end
-local res=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or MAX_TOK_FALLBACK,true)
-if not res then
+local res,_,lossy=rawRequest(text,Trans.promptFor(c),0.1,Trans.maxTok or MAX_TOK_FALLBACK,true)
+if not res or lossy then
 markFail(key)
 return nil
 end
@@ -7862,11 +8000,11 @@ Trans.InflightN=0
 Trans.WaitN=0
 local Inflight={}
 local WaitQ={}
-local function runJob(key,text,prio,cbs)
+local function runJob(key,fn,cbs)
 Inflight[key]=cbs or {}
 Trans.InflightN=Trans.InflightN+1
 task.spawn(function()
-local r=Trans.translate(text,prio)
+local r=fn()
 Trans.InflightN=Trans.InflightN-1
 local q=Inflight[key] Inflight[key]=nil
 if q then for i=1,#q do pcall(q[i],r) end end
@@ -7879,8 +8017,26 @@ local k,w=nil,nil
 for kk,ww in pairs(WaitQ) do k,w=kk,ww break end
 if not k then return end
 WaitQ[k]=nil Trans.WaitN=Trans.WaitN-1
-runJob(k,w.text,w.prio,w.cbs)
+runJob(k,w.fn,w.cbs)
 if Trans.WaitN>0 and Trans.InflightN<Trans.MaxConc then Trans.pumpQueue() end
+end
+function Trans.adaptTick()
+local now=os.clock()
+local t=Trans._adT
+if not t then Trans._adT=now Trans._adL=0 Trans._adN=0 return end
+if now-t<5 then return end
+local n=Trans._adN or 0
+local l=Trans._adL or 0
+Trans._adT=now Trans._adL=0 Trans._adN=0
+if n<4 then return end
+local avg=l/n
+local cap=Trans.MaxConcCap or Trans.MaxConc or 8
+local minc=Trans.MinConc or 1
+if avg>1.5 and Trans.MaxConc>minc then
+Trans.MaxConc=math.max(minc,Trans.MaxConc-1)
+elseif avg<0.45 and Trans.MaxConc<cap then
+Trans.MaxConc=Trans.MaxConc+1
+end
 end
 function Trans.request(text,prio,cb)
 if Trans.Unloaded or type(text)~="string" or text=="" then
@@ -7924,13 +8080,63 @@ if w then
 if cb then w.cbs[#w.cbs+1]=cb end
 return
 end
+local fn=function() return Trans.translate(text,prio) end
 if Trans.InflightN>=Trans.MaxConc then
-WaitQ[nk]={text=text,prio=prio,cbs=(cb and {cb}) or {}}
+WaitQ[nk]={fn=fn,prio=prio,cbs=(cb and {cb}) or {}}
 Trans.WaitN=Trans.WaitN+1
 Trans.Stats.wait=Trans.WaitN
 return
 end
-runJob(nk,text,prio,(cb and {cb}) or {})
+runJob(nk,fn,(cb and {cb}) or {})
+end
+function Trans.requestRich(core,prio,cb,isMixed)
+if Trans.Unloaded or type(core)~="string" or core=="" then
+if cb then pcall(cb,nil) end return
+end
+if not isMixed and not Trans.shouldTranslate(stripRich(core),false) then
+if cb then pcall(cb,nil) end return
+end
+local rk="\2R\2"..normalizeKey(core)
+local hit=Trans.RichCache[core]
+if hit then Trans.Stats.hit=Trans.Stats.hit+1 if cb then pcall(cb,hit) end return end
+if inCool(rk) or netGateOn() then if cb then pcall(cb,nil) end return end
+local q=Inflight[rk]
+if q then if cb then q[#q+1]=cb end return end
+local w=WaitQ[rk]
+if w then if cb then w.cbs[#w.cbs+1]=cb end return end
+local fn=function() return Trans.translateRichCore(core,isMixed) end
+if Trans.InflightN>=Trans.MaxConc then
+WaitQ[rk]={fn=fn,prio=prio,cbs=(cb and {cb}) or {}}
+Trans.WaitN=Trans.WaitN+1 Trans.Stats.wait=Trans.WaitN
+return
+end
+runJob(rk,fn,(cb and {cb}) or {})
+end
+function Trans.translateRichCore(core,isMixed)
+if Trans.Unloaded or type(core)~="string" or core=="" then return nil end
+local rk="\2R\2"..normalizeKey(core)
+if inCool(rk) or netGateOn() then return nil end
+if not isMixed then
+local res,netFail,lossy=rawRequest(core,transPrompt(),0.1,Trans.maxTok or MAX_TOK_FALLBACK)
+if res and not lossy then
+local v=tidyRich(res,core)
+if v and tagNamesEq(core,v) and tagsBalanced(v) then
+storeRich(core,v) clearFail(rk) markOutput(v)
+return v
+end
+end
+if netFail then
+markFail(rk)
+return nil
+end
+end
+local v2=translateRuns(core)
+if v2 then
+storeRich(core,v2) clearFail(rk) markOutput(v2)
+return v2
+end
+markFail(rk)
+return nil
 end
 Trans.Trans2Orig={}
 Trans.Orig2Trans={}
@@ -8086,6 +8292,31 @@ if not SYS.T_.TransBilingual then return hit end
 if (not plain) or plain=="" or plain==hit then return hit end
 return tostring(hit).." ("..tostring(plain)..")"
 end
+function Trans.processRichLabel(obj,field,cur,v,isChat)
+if not obj or not obj.Parent or Trans.Unloaded then return end
+field=field or "Text"
+local core,pre,pl=v.core,v.pre,v.plain
+local hit=Trans.RichCache[core]
+if hit then
+local tr=biText(pl,hit)
+local newText=pre..tr
+if writeProp(obj,field,cur,newText) then
+Trans.Stats.hit=Trans.Stats.hit+1
+remember(cur,newText,pl,stripRich(tr))
+end
+return
+end
+if not Trans.reqOn(isChat) then return end
+Trans.requestRich(core,isChat and 1 or 3,function(res)
+if not res or res=="" then return end
+if not obj or not obj.Parent or Trans.Unloaded then return end
+local ok2,now=pcall(function() return obj[field] end)
+if not ok2 or now~=cur then return end
+local tr=biText(pl,res)
+local newText=pre..tr
+if writeProp(obj,field,cur,newText) then remember(cur,newText,pl,stripRich(tr)) end
+end,v.mixed)
+end
 function Trans.processLabel(obj,source)
 if not obj or not obj.Parent or Trans.Unloaded then return end
 if Trans.isIgnored(obj) then return end
@@ -8095,6 +8326,10 @@ Trans.dynNote(obj,cur)
 local isChat=(source=="chat")
 local v=verdictOf(cur,isChat)
 if v.skip then return end
+if v.tagged then
+Trans.processRichLabel(obj,"Text",cur,v,isChat)
+return
+end
 if v.mixed then
 Trans.processMixed(obj,"Text",cur,v,isChat)
 return
@@ -8139,7 +8374,9 @@ for _,f in ipairs(PROMPT_FIELDS) do
 local ok,t=pcall(function() return p[f] end)
 if ok and type(t)=="string" and t~="" then
 local v=verdictOf(t,false)
-if v.mixed then
+if v.tagged then
+Trans.processRichLabel(p,f,t,v,false)
+elseif v.mixed then
 Trans.processMixed(p,f,t,v,false)
 elseif not v.skip then
 local plain=v.plain
@@ -8229,6 +8466,7 @@ uiLoop=task.spawn(function()
 while Trans.UIScanActive and not Trans.Unloaded do
 task.wait(SCAN_GAP)
 if Trans.UIScanActive then
+pcall(Trans.adaptTick)
 local before=Trans.Stats.hit+Trans.Stats.replaced
 local n=0
 n=scanRoot(SYS.PG,n)
@@ -8418,27 +8656,52 @@ end
 print(("===== 共 %d 条 ====="):format(n))
 return n
 end
+function Trans.warmSlots()
+local n=math.min(Trans.Slots or 0,8)
+if n<=0 or type(request)~="function" or not HS then return end
+if Trans._warmOn then return end
+Trans._warmOn=true
+task.spawn(function()
+local okN=0
+for i=1,n do
+if Trans.Unloaded then break end
+local ok=pcall(function()
+return request({
+Url=hostOf().."/v1/chat/completions", Method="POST",
+Headers={["Content-Type"]="application/json",["Authorization"]="Bearer "..KEY},
+Body=HS:JSONEncode({model=MODEL,
+messages={{role="system",content=SYS_PROMPT},{role="user",content="OK"}},
+max_tokens=1,stream=false}), Timeout=20,
+})
+end)
+if ok then okN=okN+1 end
+task.wait(0.05)
+end
+Trans._warmOn=false
+print(("[Trans] 槽位预热完成 (%d/%d)"):format(okN,n))
+end)
+end
 function Trans.checkLocal()
-if SYS.T_.TransSili==true then return "online" end
 local ok,res=pcall(function()
 return request({Url=hostOf().."/health",Method="GET",Timeout=10})
 end)
-if ok and type(res)=="table" and res.StatusCode==200 then return "online" end
+if ok and type(res)=="table" and res.StatusCode==200 then
+if Trans._wasOffline then
+Trans._wasOffline=false
+pcall(function() if SYS and SYS.Notify then SYS.Notify("✅ 本地翻译服务已恢复",(SYS.CY and SYS.CY.green) or nil) end end)
+end
+return "online"
+end
+Trans.offlineHint(false)
 return "offline"
 end
 function Trans.probeServer()
-if SYS.T_.TransSili==true then
-Trans.SlotCtx=32768
-Trans.Slots=SILI_MAXCONC
-Trans.maxTok=SILI_MAXTOK
-Trans.MaxConc=SILI_MAXCONC
-print(("[Trans] 后端=硅基流动(%s): 并发上限 %d, 单次输出上限 %d token")
-:format(SILI_MODEL,Trans.MaxConc,Trans.maxTok))
-return true
-end
 local ok,res=pcall(function() return request({Url=hostOf().."/props",Method="GET",Timeout=10,
 Headers={["Authorization"]="Bearer "..KEY}}) end)
-if not ok or type(res)~="table" or not res.Body then return false end
+if not ok or type(res)~="table" or not res.Body then
+Trans.offlineHint(false)
+return false
+end
 local okd,d=pcall(function() return HS:JSONDecode(res.Body) end)
 if not okd or type(d)~="table" then return false end
 local slots=tonumber(d.total_slots) or 8
@@ -8446,9 +8709,12 @@ local ctx=tonumber(d.default_generation_settings and d.default_generation_settin
 Trans.SlotCtx=ctx
 Trans.Slots=slots
 Trans.maxTok=math.max(128,math.min(512,ctx-512))
-Trans.MaxConc=math.max(2,math.min(16,slots-2))
+Trans.MaxConcCap=math.max(2,math.min(16,slots-2))
+Trans.MaxConc=Trans.MaxConcCap
+Trans.MinConc=1
 print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx  ->  并发上限 %d, 单次输出上限 %d token")
 :format(slots,ctx,Trans.MaxConc,Trans.maxTok))
+Trans.warmSlots()
 return true
 end
 function Trans.sendToChat(text)
@@ -8487,7 +8753,7 @@ pcall(Trans.saveCache)
 end
 pcall(loadCache)
 pcall(function() Trans.probeServer() end)
-print("[Trans] ✅ 翻译模块 v120(分层重写) 已加载, 缓存="..tostring(Trans.cacheCount).." 条")
+print("[Trans] ✅ 翻译模块 v120.2(纯本地 + 富文本保护 + 自适应并发) 已加载, 缓存="..tostring(Trans.cacheCount).." 条")
 end
 local CY={
 bg=Color3.fromRGB(8,10,18), bg2=Color3.fromRGB(16,19,32),
@@ -11470,16 +11736,8 @@ end)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
-local backOpts={"🖥️ 本地 llama.cpp","☁️ 硅基流动 (云端)"}
-UI.Dropdown(p,"🔀 翻译后端",backOpts,
-function() return SYS.T_.TransSili and backOpts[2] or backOpts[1] end,
-function(v)
-SYS.T_.TransSili=(v==backOpts[2])
-pcall(function() Trans.clearAllFails() end)
-pcall(function() Trans.probeServer() end)
-if Trans.reqOn(false) or Trans.reqOn(true) then P(function() Trans.forceRescan() end) end
-SYS.Notify(SYS.T_.TransSili and "☁️ 已切到硅基流动(云端)翻译" or "🖥️ 已切回本地翻译",SYS.CY.cyan)
-end)
+UI.Label(p,"🖥️ 翻译后端: 本机 llama.cpp (Hy-MT2-7B · 127.0.0.1:8080)",CY.sub)
+UI.Tip(p,"翻译走本机模型, 不需要联网。模型没跑起来时界面翻译不会生效 ——\n双击桌面「翻译模型开关.bat」一键启动(开/关各一个), 起来后会自动重试, 不用重开脚本。",CY.sub)
 UI.Switch(p,"💬 聊天翻译","TransChat",function(on)
 if on then Trans.startChatListener() else Trans.stopChatListener() end
 end)
@@ -11561,12 +11819,16 @@ local stL=UI.Label(p,"模型: ⚪ 检测中...",CY.sub)
 local function refresh()
 if not stL or not stL.Parent then return end
 task.spawn(function()
-local name=SYS.T_.TransSili and "☁️ 硅基流动(云端)" or "🖥️ 本地模型"
+local name="🖥️ 本机模型"
 stL.Text=name..": ⚪ 检测中..." stL.TextColor3=CY.sub
 local s="unknown"
 pcall(function() s=Trans.checkLocal() end)
-if s=="online" then stL.Text=name..": 🟢 在线" stL.TextColor3=CY.green
-else stL.Text=name..": 🔴 离线" stL.TextColor3=CY.red end
+if s=="online" then
+stL.Text=name..": 🟢 在线" stL.TextColor3=CY.green
+else
+stL.Text=name..": 🔴 离线 —— 双击「翻译模型开关.bat」启动模型"
+stL.TextColor3=CY.red
+end
 end)
 end
 Trans.refreshLocalStatus=refresh
