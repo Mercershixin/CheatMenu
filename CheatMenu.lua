@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 22:09 sha bab3f9de bytes 503167'):format('2026-09-21 22:09','bab3f9de',503167))
+print(('[CheatMenu] build 2026-09-21 22:45 sha 7b1b8a09 bytes 466344'):format('2026-09-21 22:45','7b1b8a09',466344))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.5"
+SYS.BuildVer="9.9.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -483,20 +483,6 @@ task.wait(0.5)
 end
 end))
 SYS.CamOrig=SYS.CamOrig or {}
-function SYS.SetCamFov(v)
-local cam=SYS.Cam or WS.CurrentCamera
-if not cam then return end
-if SYS.CamOrig.fov==nil then P(function() SYS.CamOrig.fov=cam.FieldOfView end) end
-local n=tonumber(v) or 70
-P(function() cam.FieldOfView=n end)
-end
-function SYS.SetCamZoom(v)
-if SYS.CamOrig.zoom==nil then P(function() SYS.CamOrig.zoom=LP.CameraMaxZoomDistance end) end
-local n=tonumber(v) or 20
-if n<1 then n=1 end
-P(function() LP.CameraMaxZoomDistance=n end)
-if SYS.C_.ForceCam=="third" and SYS.SetForceCam then P(SYS.SetForceCam,"third") end
-end
 function SYS.RestoreCamOpts()
 P(function() if SYS.CamOrig.fov and (SYS.Cam or WS.CurrentCamera) then (SYS.Cam or WS.CurrentCamera).FieldOfView=SYS.CamOrig.fov end end)
 P(function() if SYS.CamOrig.zoom then LP.CameraMaxZoomDistance=SYS.CamOrig.zoom end end)
@@ -587,13 +573,6 @@ return nil
 end
 function SYS.REvent(n) return findRemote(n,"RemoteEvent") end
 function SYS.RFunction(n) return findRemote(n,"RemoteFunction") end
-function SYS.Invoke(n,...)
-local r=SYS.RFunction(n) if not r then return false,nil end
-local a=table.pack(...)
-local ok,res=P(function() return r:InvokeServer(table.unpack(a,1,a.n)) end)
-return ok,res
-end
-function SYS.REventU(n) return findRemote(n,"UnreliableRemoteEvent") end
 function SYS.Fire(n,...)
 local r=SYS.REvent(n) if not r then return false end
 local a=table.pack(...)
@@ -831,114 +810,6 @@ end
 return r,name,how
 end
 local Fire=SYS.Fire local OnRemote=SYS.OnRemote
-local function _fireEvent(kind, pl)
-local tried = {}
-local cands = {}
-local list = SYS.RemoteAlias and SYS.RemoteAlias[kind]
-if list then
-for _, n in ipairs(list) do
-local r = SYS.REvent(n)
-if r then cands[#cands+1] = { r = r, name = n } end
-end
-end
-if #cands == 0 then
-local r, name, how = SYS.FindEvent(kind)
-if r then cands[#cands+1] = { r = r, name = tostring(name) .. "[" .. tostring(how) .. "]" } end
-end
-if #cands == 0 then return false, nil, 0 end
-local anyOk, lastName = false, nil
-for _, c in ipairs(cands) do
-if not tried[c.name] then
-tried[c.name] = true
-local ok = false
-if pl then
-ok = P(function() c.r:FireServer(pl) end)
-if not ok then ok = P(function() c.r:FireServer(pl.Name) end) end
-end
-if not ok then ok = P(function() c.r:FireServer() end) end
-if ok then anyOk = true end
-lastName = c.name
-end
-end
-return anyOk, lastName, #cands
-end
-function SYS.HealSelf(pl)
-pl = pl or LP
-local ok,name=_fireEvent("heal", pl)
-SYS.Notify(ok and ("🩹 已发送回血请求 -> "..tostring(pl and pl.Name).."  ·  remote="..tostring(name))
-or "回血失败: 本游戏没找到回血 remote（可按 F9 看 SYS.ProbeEvent(\"heal\") 的结果）",
-ok and SYS.CY.green or SYS.CY.yellow)
-return ok
-end
-function SYS.ReviveSelf(pl)
-pl = pl or LP
-local ok,name=_fireEvent("revive", pl)
-if not ok then ok,name=_fireEvent("respawn", pl) end
-SYS.Notify(ok and ("✨ 已发送复活请求 -> "..tostring(pl and pl.Name).."  ·  remote="..tostring(name))
-or "复活失败: 本游戏没找到 Revive/Respawn",
-ok and SYS.CY.green or SYS.CY.yellow)
-return ok
-end
-function SYS.RespawnSelf(pl)
-pl = pl or LP
-local ok,name=_fireEvent("respawn", pl)
-SYS.Notify(ok and ("♻ 已发送重生请求 -> "..tostring(pl and pl.Name).."  ·  remote="..tostring(name))
-or "重生失败: 本游戏没找到 Respawn",
-ok and SYS.CY.green or SYS.CY.yellow)
-return ok
-end
-function SYS.HealSelected()
-local pl=SYS.PC and SYS.PC.Get()
-return SYS.HealSelf(pl or LP)
-end
-function SYS.ReviveSelected()
-local pl=SYS.PC and SYS.PC.Get()
-return SYS.ReviveSelf(pl or LP)
-end
-function SYS.RespawnSelected()
-local pl=SYS.PC and SYS.PC.Get()
-return SYS.RespawnSelf(pl or LP)
-end
-function SYS.FreeSweep()
-local n0, bought = 0, 0
-local mps = game:GetService("MarketplaceService")
-local r = SYS.FindEvent("buy")
-if not r then
-SYS.Notify("⛔ 本游戏没找到 buy 类 remote", SYS.CY.yellow)
-return 0
-end
-local ids = {}
-pcall(function()
-for _, d in ipairs(WS:GetDescendants()) do
-local pid = d:GetAttribute("ProductId") or d:GetAttribute("productId")
-or d:GetAttribute("GamepassId") or d:GetAttribute("gamepassId")
-if type(pid) == "number" and not ids[pid] then ids[pid] = true end
-end
-end)
-for pid in pairs(ids) do
-local ok, info = pcall(function() return mps:GetProductInfo(pid) end)
-if ok and info then
-n0 = n0 + 1
-if (info.PriceInRobux or 0) == 0 then
-local okFire = P(function() r:FireServer(pid) end)
-if okFire then bought = bought + 1 end
-end
-end
-end
-SYS.Notify(("🔎 0 元扫货: 扫到 %d 个商品, 其中免费并已尝试购买 %d 个"):format(n0, bought),
-bought > 0 and SYS.CY.green or SYS.CY.yellow)
-return bought
-end
-function SYS.HealReviveAuto()
-local pl=SYS.PC and SYS.PC.Get()
-pl = pl or LP
-local a=SYS.HealSelf(pl)
-local b=SYS.ReviveSelf(pl)
-local c=SYS.RespawnSelf(pl)
-SYS.Notify(("自动尝试: 回血=%s 复活=%s 重生=%s"):format(tostring(a),tostring(b),tostring(c)),
-(a or b or c) and SYS.CY.green or SYS.CY.yellow)
-return a or b or c
-end
 do
 local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
 local SpeedAtt,SpeedLV=false,false
@@ -1742,62 +1613,6 @@ keywords = {"monster","fake","real","boss","wave","round","event","spawn","alert
 "detect","detected","violation","flagged","punish","suspicious","antich","automod","report"},
 conns = {}, seen = {},
 }
-function SYS.EventWatchScan()
-local roots = {}
-local r1 = RStorage:FindFirstChild("Remote")
-if r1 then roots[#roots+1] = r1 end
-roots[#roots+1] = RStorage
-local n, names, seen = 0, {}, {}
-pcall(function()
-for _, root in ipairs(roots) do
-for _, c in ipairs(root:GetDescendants()) do
-local ln = string.lower(tostring(c.Name))
-for _, k in ipairs(SYS.EventWatch.keywords) do
-if ln:find(k, 1, true) and not seen[c.Name] then
-seen[c.Name] = true
-n = n + 1 names[#names+1] = c.Name break
-end
-end
-end
-end
-end)
-return n, names, RStorage
-end
-function SYS.SetEventWatch(on)
-SYS.T_.EventWatch = on and true or false
-local E = SYS.EventWatch
-for _, c in ipairs(E.conns) do P(function() c:Disconnect() end) end
-E.conns = {}
-if not SYS.T_.EventWatch then return end
-local n, names, rel = SYS.EventWatchScan()
-for _, nm in ipairs(names) do
-local inst = rel and rel:FindFirstChild(nm, true)
-if inst then
-pcall(function()
-E.conns[#E.conns+1] = inst.OnClientEvent:Connect(function(...)
-if not SYS.T_.EventWatch then return end
-local a = table.pack(...)
-local parts = {}
-for i = 1, math.min(a.n, 3) do
-local tv = type(a[i])
-if tv == "string" or tv == "number" or tv == "boolean" then
-parts[#parts+1] = tostring(a[i])
-end
-end
-local d = table.concat(parts, " · ")
-local key = nm .. "|" .. d
-local now = os.clock()
-if E.seen[key] and now - E.seen[key] < 8 then return end
-E.seen[key] = now
-P(function() SYS.Hud("📣 " .. nm .. (d ~= "" and ("  →  " .. d) or ""), 6) end)
-end)
-end)
-end
-end
-SYS.Notify(("📣 事件预告已开: 挂上 %d 条信号"):format(#E.conns),
-#E.conns > 0 and SYS.CY.green or SYS.CY.yellow)
-print(("[CheatMenu] 事件预告: 命中 %d 条 -> %s"):format(n, table.concat(names, ", ")))
-end
 local SpectateConn=nil
 function SYS.Spectate(pl)
 local hum=pl and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid")
@@ -1839,13 +1654,6 @@ local jid=tostring(game.JobId or "")
 local cid=tostring(game.CreatorId or 0)
 return ("游戏: %s | PlaceId: %s | GameId: %s | CreatorId: %s | JobId: %s")
 :format(nm,pid,gid,cid,jid), nm, pid
-end
-local function safeFileName(s)
-local r=tostring(s or ""):gsub('[\\/:*?"<>|]',"_")
-r=r:gsub("%s+","_")
-if #r>40 then r=r:sub(1,40) end
-if r=="" then r="unknown" end
-return r
 end
 local function safeAscii(s, maxLen)
 local r=tostring(s or "")
@@ -1976,178 +1784,12 @@ return {fn}, SYS.ScanOutWhy, dir
 end
 return nil, "写入失败("..fn..")", dir
 end
-local function tryMany(kind)
-local list = SYS.RemoteAlias[kind] or {}
-local okN, hit = 0, {}
-for _, n in ipairs(list) do
-local r = SYS.REvent(n)
-if r then
-if P(function() r:FireServer() end) then
-okN = okN + 1
-hit[#hit + 1] = n
-end
-end
-end
-return okN, hit
-end
-function SYS.ClaimEverything()
-local total, names = 0, {}
-for _, kind in ipairs({"daily", "mail", "friend", "milestone", "claim", "stall", "loot"}) do
-local n, hit = tryMany(kind)
-total = total + n
-for _, h in ipairs(hit) do names[#names + 1] = h end
-end
-local msg = ("🎁 一键全领: 发出 %d 条 · %s"):format(total, table.concat(names, ", "):sub(1, 110))
-SYS.Notify(msg, total > 0 and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(msg, 7)
-return total
-end
-function SYS.OpenAllBoxes()
-local n, hit = tryMany("box")
-local msg = ("📦 一键开箱: 发出 %d 条 · %s"):format(n, table.concat(hit, ", "):sub(1, 90))
-SYS.Notify(msg, n > 0 and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(msg, 6)
-return n
-end
-function SYS.DumpInventory()
-local out = {}
-local rel = RStorage:FindFirstChild("Remote")
-local got = false
-for _, kind in ipairs({"inventory"}) do
-for _, n in ipairs(SYS.RemoteAlias[kind] or {}) do
-local rel = RStorage:FindFirstChild("Remote")
-local rf = rel and rel:FindFirstChild(n, true)
-if rf and rf:IsA("RemoteFunction") then
-local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok and res ~= nil then
-out[#out + 1] = "[" .. n .. "] -> " .. tostring(res):sub(1, 800)
-got = true
-break
-end
-end
-end
-end
-pcall(function()
-local ch = LP.Character
-local bp = LP:FindFirstChildOfClass("Backpack") or LP:FindFirstChild("Backpack")
-if bp then
-local names = {}
-for _, t in ipairs(bp:GetChildren()) do
-if t:IsA("Tool") then names[#names + 1] = t.Name end
-end
-out[#out + 1] = ("[背包(本地Tool)] %d 件: %s"):format(#names, table.concat(names, ", "):sub(1, 500))
-end
-if ch then
-local held = ch:FindFirstChildOfClass("Tool")
-out[#out + 1] = "[手持] " .. (held and held.Name or "无")
-end
-for _, g in ipairs(LP.PlayerGui:GetChildren()) do
-local ln = string.lower(tostring(g.Name))
-if ln:find("backpack") or ln:find("inventory") then
-local kids = {}
-for _, c in ipairs(g:GetDescendants()) do
-if c:IsA("TextLabel") and c.Text and c.Text ~= "" then kids[#kids + 1] = c.Text end
-if #kids > 40 then break end
-end
-out[#out + 1] = ("[%s] %s"):format(g.Name, table.concat(kids, " | "):sub(1, 700))
-end
-end
-end)
-if not got then out[#out + 1] = "(服务端没返回背包远程数据, 上面是本地可见的部分)" end
-local txt = table.concat(out, "\n")
-print("[CheatMenu][背包]\n" .. txt)
-SYS.Hud("🎒 背包信息已打到控制台(F9)", 6)
-return txt
-end
-function SYS.DumpServerList()
-local out = {}
-for _, kind in ipairs({"server"}) do
-for _, n in ipairs(SYS.RemoteAlias[kind] or {}) do
-local rel = RStorage:FindFirstChild("Remote")
-local rf = rel and rel:FindFirstChild(n, true)
-if rf and rf:IsA("RemoteFunction") then
-local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok and res ~= nil then
-out[#out + 1] = "[" .. n .. "] -> " .. tostring(res):sub(1, 1200)
-end
-end
-end
-end
-pcall(function()
-for _, g in ipairs(LP.PlayerGui:GetChildren()) do
-local ln = string.lower(tostring(g.Name))
-if ln:find("server") then
-local t = {}
-for _, c in ipairs(g:GetDescendants()) do
-if c:IsA("TextLabel") and c.Text and c.Text ~= "" then t[#t + 1] = c.Text end
-if #t > 60 then break end
-end
-out[#out + 1] = ("[UI %s] %s"):format(g.Name, table.concat(t, " | "):sub(1, 900))
-end
-end
-end)
-local txt = #out > 0 and table.concat(out, "\n") or "(没拿到服务器列表)"
-print("[CheatMenu][服务器]\n" .. txt)
-SYS.Notify("🖥 服务器列表已打到控制台(F9)", SYS.CY.cyan)
-SYS.Hud("🖥 服务器列表见控制台(F9)", 6)
-return txt
-end
-function SYS.JoinNextServer()
-for _, n in ipairs({"JoinAny", "JoinLater", "TeleportToServer", "TeleportToJobId"}) do
-local r = SYS.REvent(n)
-if r then
-if P(function() r:FireServer() end) then
-SYS.Notify("🖥 已发出换服请求 (" .. n .. ")", SYS.CY.green)
-SYS.Hud("🖥 已发出换服请求", 5)
-return true
-end
-end
-end
-SYS.Notify("⛔ 本游戏没找到换服通道(先跑「读服务器列表」看看)", SYS.CY.yellow)
-return false
-end
 SYS._realClock = SYS._realClock or os.clock
 SYS._realTime  = SYS._realTime  or os.time
 SYS._timeScale = 1
 SYS._timeAcc   = 0
 SYS._timeLast  = SYS._realClock()
 local _tsHooked = false
-function SYS.SetTimeScale(scale)
-scale = tonumber(scale) or 1
-if scale < 1 then scale = 1 end
-if scale > 50 then scale = 50 end
-SYS._timeScale = scale
-SYS.C_.TimeScale = scale
-if scale <= 1 then
-SYS.Notify("⏱ 冷却加速: 关", SYS.CY.sub)
-SYS.Hud("⏱ 冷却加速已关闭", 4)
-return
-end
-if not _tsHooked then
-local rc, rt = SYS._realClock, SYS._realTime
-local ok = pcall(function()
-os.clock = newcclosure(function()
-local real = rc()
-local d = real - SYS._timeLast
-if d > 0 then
-SYS._timeAcc = SYS._timeAcc + d * (SYS._timeScale - 1)
-SYS._timeLast = real
-end
-return real + SYS._timeAcc
-end)
-os.time = newcclosure(function(...)
-return rt(...) + math.floor(SYS._timeAcc)
-end)
-end)
-if not ok then
-SYS.Notify("⛔ 本执行器不支持 hook 时间函数, 冷却加速不可用", SYS.CY.yellow)
-return
-end
-_tsHooked = true
-end
-SYS.Notify(("⏱ 冷却加速: %.1fx (只对客户端判定的冷却有效) "):format(scale), SYS.CY.green)
-SYS.Hud(("⏱ 冷却加速 %.1fx 已开"):format(scale), 5)
-end
 function SYS.ProbeTrapWatch()
 local rel = RStorage:FindFirstChild("Remote")
 local names = {"TouchDamage","DamageDenyInform","StatusService","PlayState",
@@ -2163,59 +1805,6 @@ print(("[CheatMenu] 陷阱/状态信号 有 %d: %s"):format(#have, table.concat(
 print(("[CheatMenu] 陷阱/状态信号 无 %d: %s"):format(#miss, table.concat(miss, ", ")))
 SYS.Hud(("信号探测: 有 %d / 无 %d (详见 F9)"):format(#have, #miss), 6)
 return have, miss
-end
-function SYS.UseItem(arg)
-local r, nm = SYS.FindEvent("itemuse")
-if not r then
-SYS.Notify("⛔ 本游戏没找到使用类 remote", SYS.CY.yellow)
-SYS.Hud("⛔ 本游戏没找到使用类 remote", 6)
-return false
-end
-local ok = false
-if arg ~= nil then
-ok = P(function() r:FireServer(arg) end)
-if not ok then ok = P(function() r:FireServer(arg.Name) end) end
-end
-if not ok then ok = P(function() r:FireServer() end) end
-local msg = ("🎒 使用道具: %s · remote=%s"):format(tostring(ok), tostring(nm))
-SYS.Notify(msg, ok and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(msg, 5)
-return ok
-end
-function SYS.ToggleEquip(on, arg)
-local kind = on and "equip" or "unequip"
-local r, nm = SYS.FindEvent(kind)
-if not r then
-local m = ("⛔ 本游戏没找到%s类 remote"):format(on and "装备" or "卸下")
-SYS.Notify(m, SYS.CY.yellow)
-SYS.Hud(m, 6)
-return false
-end
-local ok = false
-if arg ~= nil then
-ok = P(function() r:FireServer(arg) end)
-if not ok then ok = P(function() r:FireServer(arg.Name) end) end
-end
-if not ok then ok = P(function() r:FireServer() end) end
-local msg = ("⚔ %s: %s · remote=%s"):format(on and "装备" or "卸下", tostring(ok), tostring(nm))
-SYS.Notify(msg, ok and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(msg, 5)
-return ok
-end
-function SYS.ClaimAllDaily()
-local list = SYS.RemoteAlias.daily or {}
-local done, hit = 0, {}
-for _, n in ipairs(list) do
-local r = SYS.REvent(n)
-if r then
-local ok = P(function() r:FireServer() end)
-if ok then done = done + 1 hit[#hit + 1] = n end
-end
-end
-local msg = ("🎁 一键领取: 命中 %d 条并已发出 · %s"):format(done, table.concat(hit, ", "):sub(1, 100))
-SYS.Notify(msg, done > 0 and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(msg, 6)
-return done
 end
 function SYS.FindGrabbables(limit)
 limit = limit or 400
@@ -2242,46 +1831,6 @@ end
 end
 end)
 return out
-end
-function SYS.RangedGrab(mode)
-local r, nm = SYS.FindEvent("pickup")
-if not r then
-SYS.Notify("⛔ 本游戏没找到 pickup/collect 类 remote —— 隔空获取用不了", SYS.CY.yellow)
-SYS.Hud("⛔ 本游戏没有可用的拾取 remote", 6)
-return 0
-end
-local list = SYS.FindGrabbables()
-if #list == 0 then
-SYS.Notify("附近/场景里没找到可拾取物", SYS.CY.yellow)
-return 0
-end
-local targets = list
-if mode == "one" then
-local mine = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-local best, bestD = nil, math.huge
-if mine then
-for _, d in ipairs(list) do
-local p = d.Position or (d.Parent and d.Parent.Position)
-if p then
-local dd = (p - mine.Position).Magnitude
-if dd < bestD then bestD, best = dd, d end
-end
-end
-end
-targets = { best or list[1] }
-end
-local done = 0
-for _, d in ipairs(targets) do
-local sent = P(function() r:FireServer(d) end)
-if not sent then sent = P(function() r:FireServer(d.Name) end) end
-if not sent then sent = P(function() r:FireServer() end) end
-if sent then done = done + 1 end
-end
-local tip = ("🧺 隔空获取(%s): 目标 %d 个 · 已发 %d 次 · remote=%s")
-:format(mode == "all" and "全部" or "单独", #targets, done, tostring(nm))
-SYS.Notify(tip, done > 0 and SYS.CY.green or SYS.CY.yellow)
-SYS.Hud(tip, 6)
-return done
 end
 local HudGui, HudLabel, HudHideAt = nil, nil, nil
 function SYS.Hud(text, secs)
@@ -2347,76 +1896,6 @@ end
 local s = { name = name, fn = fn, desc = desc or "" }
 SYS.Scanners[#SYS.Scanners + 1] = s
 return s
-end
-local function copyText(t)
-local fns = { setclipboard, toclipboard, set_clipboard }
-for _, f in ipairs(fns) do
-if type(f) == "function" then
-local ok = pcall(function() f(t) end)
-if ok then return true end
-end
-end
-return false
-end
-function SYS.ScanAll(opts)
-opts = opts or {}
-local L = {}
-local function add(s) L[#L + 1] = s end
-add("################  CheatMenu 统一扫描  ################")
-add(SYS.GameInfoLine())
-add("扫描时间: " .. os.date("%Y-%m-%d %H:%M:%S"))
-add(("执行器能力: %s"):format((SYS.Prot and SYS.Prot.CapsText and SYS.Prot.CapsText()) or "?"))
-if SYS.Prot and SYS.Prot.SelfAudit then
-local ok2,lines=pcall(SYS.Prot.SelfAudit)
-if ok2 and type(lines)=="table" then
-for _,l in ipairs(lines) do add(l) end
-end
-end
-add("")
-local ran, skipped = 0, 0
-for _, s in ipairs(SYS.Scanners) do
-add(("---------- [%d] %s ----------"):format(#L, tostring(s.name)))
-local ok, res = pcall(s.fn)
-if ok then
-ran = ran + 1
-if type(res) == "table" then
-for _, line in ipairs(res) do add(tostring(line)) end
-elseif type(res) == "string" then
-for line in tostring(res):gmatch("[^\n]+") do add(line) end
-else
-add("(无输出)")
-end
-else
-skipped = skipped + 1
-add("!! 该项失败: " .. tostring(res))
-end
-add("")
-end
-local txt = table.concat(L, "\n")
-local expected = #L
-local actual = select(2, txt:gsub("\n", "\n")) + 1
-add("=======================================================")
-add(("扫描项 %d 个(成功 %d / 失败 %d) · 行数自检 %d/%d %s")
-:format(#SYS.Scanners, ran, skipped, expected, actual,
-expected == actual and "一致 ✓" or "!! 不一致(有内容丢失)"))
-txt = table.concat(L, "\n")
-print(txt)
-local fn = nil
-if opts.file ~= false and writefile then
-local mm, pid = SYS.GameTag()
-local safe = function(s) return (tostring(s or ""):gsub('[\\/:*?"<>|]', "_")) end
-fn = ("Scan_%s_%s_%s.txt"):format(safe(mm), safe(pid), os.date("%Y%m%d_%H%M"))
-if not P(function() writefile(fn, txt) end) then fn = nil end
-end
-local copied = false
-if opts.copy ~= false then copied = copyText(txt) end
-local msg = ("🔍 扫描完成: %d 项 · %d 行%s%s")
-:format(#SYS.Scanners, actual,
-fn and (" · 已存 " .. fn) or " · 未存文件",
-copied and " · 已复制到剪贴板" or " · 未复制")
-SYS.Notify(msg, SYS.CY.green)
-SYS.Hud(msg, 8)
-return txt, fn, copied
 end
 SYS.RegisterScanner("游戏信息 / 执行器能力", function()
 return {
@@ -3054,7 +2533,6 @@ return d
 end
 return IDX.desc or {}
 end
-function SYS.IndexDrop() IDX.desc=nil IDX.t=0 end
 SYS.MiniArea = {"duck hunt","duckhunt","chisel","gauntlet","rightofway","blindout","crushhour",
 "bumpermadness","mppadhost","mpstation","machin"}
 SYS.MiniAreaCN = {"小游戏","关卡","模式"}
@@ -6563,7 +6041,6 @@ root.CFrame = (spd>=1) and rwant or root.CFrame:Lerp(rwant,math.clamp(spd,0.02,1
 end
 end
 end
-function CB.InstallHook() CB.HookOK=false return false end
 local function crosshairOnEnemy()
 local cam=SYS.Cam
 if not cam then return false end
@@ -6824,59 +6301,6 @@ for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
 CB.Say("⚡ 一键开战: 自动瞄准 + 自动开火 + 预测 + 锁头 + 优先链(正在瞄我的→指定→最近→屏幕中心)",SYS.CY.green)
 print("[Combat] ⚡ 一键开战: 自动瞄准 + 自动开火 0.04s + 预测 + 锁头 + 优先链 1")
-end
-function CB.TestOnce()
-local L={}
-local function add(s) L[#L+1]=s end
-add("========== 战斗: 立即测试一次 ==========")
-if not CB.RenderBound then
-CB.Start()
-add("循环本来没在跑 -> 已经重新启动")
-end
-local list=CB.Enemies()
-add(("可选敌人: %d 个"):format(#list))
-CB.Moving = SYS.T_.CB_PauseMove and movingNow() or false
-local t,p=pickTarget()
-CB.Target=t CB.TargetPart=p
-add(("选人结果: %s / 瞄准部位: %s")
-:format(t and t.Name or "无", p and tostring(p.Name) or "无"))
-local cam=SYS.Cam
-if cam then
-add(("相机类型: %s"):format(tostring(cam.CameraType)))
-end
-if SYS.T_.CB_Aim then
-local before=cam and cam.CFrame
-aimTick()
-local moved=(cam and before and cam.CFrame~=before)
-add(("自动瞄准: 开 -> 相机%s")
-:format(moved and "已转向目标" or "没有变化(没有目标? 或正按着移动键暂停了?)"))
-else
-add("自动瞄准: 关 —— 打开「自动瞄准」开关才会转视角")
-end
-if SYS.T_.CB_Silent then
-CB.InstallHook()
-add(("静默瞄准: 开 -> hook %s")
-:format(CB.HookOK and "已安装" or "装不上(这台执行器没有 hookfunction)"))
-add("          只在游戏用【客户端射线】判定时有效; 服务端判定表现为'看着中了但不掉血'")
-else
-add("静默瞄准: 关")
-end
-if SYS.T_.CB_Fire then
-local on=crosshairOnEnemy()
-add(("自动开火: 开 -> 准星压在敌人身上=%s %s")
-:format(tostring(on),
-on and "" or "—— 瞄准关着时要求准星真压在敌人身上; 想无视准星就打开「自动瞄准」"))
-else
-add("自动开火: 关")
-end
-add("瞄准方式: "..(SYS.T_.CB_Aim and "自动瞄准(每帧把准星转到目标)" or "关闭")
-.."   (静默瞄准 / 快照瞄准 已删除)")
-add(("tick 错误计数: %d %s")
-:format(CBERR, (CBERR>0 and (", 最后一条: "..tostring(CB.LASTERR)) or "")))
-CB.Say(("测试: 可选敌人 %d · 选人 %s · tick错误 %d"):format(#list,t and t.Name or "无",CBERR),SYS.CY.cyan)
-local txt=table.concat(L,"\n")
-print(txt)
-return txt
 end
 function CB.Diag()
 local L={}
@@ -8374,15 +7798,6 @@ end
 return count
 end
 Trans.scanRoot=scanRoot
-function Trans.worldNode(o)
-if not o then return end
-local cls=o.ClassName
-if cls=="TextLabel" or cls=="TextButton" then
-if not uiBlocked(o) then P(Trans.HookText,o) Trans.processLabel(o,"ui") end
-elseif cls=="ProximityPrompt" then
-processPrompt(o)
-end
-end
 function Trans.forceRescan()
 Trans.Verdict={} VerdictN=0
 Trans.clearAllFails()
@@ -8567,7 +7982,6 @@ Trans.Trans2Orig={} T2O_N=0
 print("[Trans] 已还原原文 "..n.." 条")
 return n
 end
-function Trans.restoreChatLive() return Trans.restoreSource("chat") end
 function Trans.dumpFails()
 local n,now=0,os.clock()
 print("===== 翻译失败/退避清单 =====")
@@ -8587,17 +8001,6 @@ local n=0
 print("===== 已判定为动态文本(不再翻译) =====")
 for k in pairs(Trans.Dyn) do n=n+1 print(("  [%d] %s"):format(n,k)) end
 print(("===== 共 %d 类 ====="):format(n))
-return n
-end
-function Trans.dumpPairs()
-local n=0
-print("===== 翻译对照表 (原文 -> 译文) =====")
-for og,tr in pairs(Trans.Orig2Trans) do
-n=n+1
-print("["..n.."] "..tostring(og))
-print("     -> "..tostring(tr))
-end
-print(("===== 共 %d 条 ====="):format(n))
 return n
 end
 function Trans.warmSlots()
@@ -8969,28 +8372,6 @@ UI.Hover(row,CY.card2,CY.card)
 SYS.BtnRefs[#SYS.BtnRefs+1]=refresh
 return row
 end
-function UI.Input(parent,label,placeholder,get,set)
-local row=Instance.new("Frame")
-row.Size=UDim2.new(1,0,0,_TOUCH and 50 or 44) row.BackgroundColor3=CY.card
-row.BackgroundTransparency=0.18 row.BorderSizePixel=0 row.Parent=parent
-UI.Round(row,10) UI.Stroke(row,CY.line,1,0.75)
-local lb=Instance.new("TextLabel")
-lb.Size=UDim2.new(0.42,0,1,0) lb.Position=UDim2.new(0,14,0,0)
-lb.BackgroundTransparency=1 lb.Text=label lb.TextColor3=CY.text
-lb.Font=Enum.Font.GothamMedium lb.TextSize=13
-lb.TextXAlignment=Enum.TextXAlignment.Left lb.Parent=row
-local tb=Instance.new("TextBox")
-tb.Size=UDim2.new(0.58,-22,1,-14) tb.Position=UDim2.new(0.42,8,0.5,-7)
-tb.BackgroundColor3=CY.panel tb.BackgroundTransparency=0.1
-tb.TextColor3=CY.text tb.PlaceholderColor3=CY.sub
-tb.PlaceholderText=placeholder or ""
-tb.Text=tostring(get() or "") tb.Font=Enum.Font.Code tb.TextSize=13
-tb.TextScaled=false tb.ClearTextOnFocus=false tb.BorderSizePixel=0 tb.Parent=row
-UI.Round(tb,8) UI.Stroke(tb,CY.accent,1,0.6)
-T(tb.FocusLost:Connect(function(enter) if enter then P(set,tb.Text) end end))
-UI.Hover(row,CY.card2,CY.card)
-return row,tb
-end
 function UI.Cycle(parent,label,opts,get,set)
 if not parent then return end
 local row=Instance.new("Frame")
@@ -9130,61 +8511,6 @@ do
 local function Svc(n) local ok,v=pcall(function() return game:GetService(n) end) return ok and v or nil end
 local SoundService=Svc("SoundService")
 local UserGS=Svc("UserSettings")
-function SYS.MiniBtn(parent,text,col,fn,w)
-local b=Instance.new("TextButton")
-b.Size=UDim2.new(0,w or 54,1,-4) b.BackgroundColor3=col or SYS.CY.card2
-b.BackgroundTransparency=0.25 b.TextColor3=SYS.CY.text
-b.Text=text b.Font=Enum.Font.GothamBold b.TextSize=11
-b.AutoButtonColor=false b.BorderSizePixel=0 b.Parent=parent
-pcall(function()
-local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,4) c.Parent=b
-end)
-b.MouseButton1Click:Connect(function() P(fn) end)
-return b
-end
-function SYS.MiniRow(parent,h)
-local r=Instance.new("Frame")
-r.Size=UDim2.new(1,-12,0,h or 26) r.BackgroundColor3=SYS.CY.panel
-r.BackgroundTransparency=0.3 r.BorderSizePixel=0 r.Parent=parent
-pcall(function()
-local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,5) c.Parent=r
-end)
-return r
-end
-function SYS.MiniText(parent,txt,size,col)
-local l=Instance.new("TextLabel")
-l.BackgroundTransparency=1 l.Text=tostring(txt or "")
-l.TextColor3=col or SYS.CY.text l.Font=Enum.Font.GothamMedium
-l.TextSize=size or 11 l.TextXAlignment=Enum.TextXAlignment.Left
-l.Parent=parent
-return l
-end
-function SYS.MiniList(parent,h)
-local f=Instance.new("ScrollingFrame")
-f.Size=UDim2.new(1,0,0,h or 160) f.BackgroundColor3=SYS.CY.card
-f.BackgroundTransparency=0.3 f.BorderSizePixel=0 f.Parent=parent
-f.ClipsDescendants=true
-pcall(function()
-f.CanvasSize=UDim2.new(0,0,0,0)
-f.AutomaticCanvasSize=Enum.AutomaticSize.Y
-f.ScrollBarThickness=6 f.ScrollBarImageColor3=SYS.CY.accent
-f.ScrollingDirection=Enum.ScrollingDirection.Y
-f.ElasticBehavior=Enum.ElasticBehavior.Never
-local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,8) c.Parent=f
-end)
-local lay=Instance.new("UIListLayout")
-lay.Padding=UDim.new(0,4) lay.Parent=f
-local pad=Instance.new("UIPadding")
-pad.PaddingTop=UDim.new(0,6) pad.PaddingLeft=UDim.new(0,6)
-pad.PaddingRight=UDim.new(0,6) pad.Parent=f
-return f
-end
-function SYS.MiniClear(f)
-if not f then return end
-for _,c in ipairs(f:GetChildren()) do
-if c:IsA("Frame") or c:IsA("TextLabel") then P(function() c:Destroy() end) end
-end
-end
 local LanternLight=nil
 local LTExtra=nil
 local function ltExtra()
@@ -9361,32 +8687,6 @@ local ch=LP.Character
 if ch then walk(ch,0) end
 return out
 end
-function Audio.Mute(s,on)
-if not s then return end
-if on then
-if Audio.OrigVol[s]==nil then
-local ok,v=pcall(function() return s.Volume end)
-Audio.OrigVol[s]=ok and v or 0.5
-end
-Audio.Muted[s]=true
-P(function() s.Volume=0 end)
-else
-local o=Audio.OrigVol[s]
-Audio.Muted[s]=nil
-P(function() if s.Parent then s.Volume=(o~=nil) and o or 0.5 end end)
-Audio.OrigVol[s]=nil
-end
-end
-function Audio.IsMuted(s) return Audio.Muted[s]==true end
-function Audio.OrigOf(s) return Audio.OrigVol[s] end
-function Audio.SetMaster(pct)
-if not UserGS then return false end
-return pcall(function()
-local ug=UserGS:GetService("UserGameSettings")
-if Audio.SavedMaster==nil then Audio.SavedMaster=ug.MasterVolume end
-ug.MasterVolume=math.clamp((tonumber(pct) or 100)/100*10,0,10)
-end)
-end
 function Audio.RestoreMaster()
 if Audio.SavedMaster==nil then return end
 local v=Audio.SavedMaster Audio.SavedMaster=nil
@@ -9438,10 +8738,6 @@ end
 function ChatLog.Stop()
 if ChatLog.C1 then DS(ChatLog.C1) ChatLog.C1=nil end
 if ChatLog.C2 then DS(ChatLog.C2) ChatLog.C2=nil end
-end
-function ChatLog.Clear()
-ChatLog.Msgs={}
-if SYS.ChatLogRender then P(SYS.ChatLogRender) end
 end
 local WP={} SYS.WP=WP
 function WP.TweenTo(dest,secs)
@@ -9572,10 +8868,6 @@ if white then WL.White[name]=true WL.Black[name]=nil
 else WL.Black[name]=true WL.White[name]=nil end
 return true
 end
-function WL.Del(name,white)
-local t=white and WL.White or WL.Black
-t[tostring(name or "")]=nil
-end
 function WL.Allow(name)
 name=tostring(name or "")
 if WL.Black[name] then return false end
@@ -9618,19 +8910,6 @@ local ok2,n=pcall(function() return s:GetFullName() end)
 if ok2 and n then return tostring(n) end
 end
 return "未知来源"
-end
-function Prot.DetectAdonis()
-if not RStorage then return false end
-local ok,found=pcall(function()
-for _,o in ipairs(RStorage:GetDescendants()) do
-if o:IsA("RemoteEvent") then
-local f=o:FindFirstChildWhichIsA("RemoteFunction")
-if f and f.Name=="__FUNCTION" then return true end
-end
-end
-return false
-end)
-return (ok and found) or false
 end
 function Prot.InstallKickGuard()
 local c=Prot.Caps()
@@ -9974,41 +9253,6 @@ Ray.Unhook=nil Ray.Hooked=false
 Ray.Busy=false
 HC.part=nil HC.pos=nil HC.nrm=nil HC.t=0
 end
-function SYS.GiveAllTools()
-local bp=LP:FindFirstChildOfClass("Backpack")
-if not bp then SYS.Notify("没有 Backpack",SYS.CY.sub) return 0 end
-local n=0
-local ok,err=pcall(function()
-for _,o in ipairs(game:GetDescendants()) do
-if o:IsA("Tool") and o.Parent~=bp and o.Parent~=LP.Character then
-local c=o:Clone()
-c.Parent=bp n=n+1
-if n>=200 then break end
-end
-end
-end)
-SYS.Notify(("🧰 已复制 %d 个工具到背包%s"):format(n,(not ok) and " (中途出错)" or ""),SYS.CY.green)
-return n
-end
-function SYS.RemoveAllTools()
-local n=0
-P(function()
-local bp=LP:FindFirstChildOfClass("Backpack")
-if bp then
-for _,c in ipairs(bp:GetChildren()) do
-if c:IsA("Tool") then c:Destroy() n=n+1 end
-end
-end
-local ch=LP.Character
-if ch then
-for _,c in ipairs(ch:GetChildren()) do
-if c:IsA("Tool") then c:Destroy() n=n+1 end
-end
-end
-end)
-SYS.Notify(("🧹 已移除 %d 个工具"):format(n),SYS.CY.orange)
-return n
-end
 local PC={} SYS.PC=PC
 function PC.Get()
 local n=SYS.C_.PC_Sel
@@ -10150,21 +9394,6 @@ if k~=cur and SYS.T_[k]==true then SYS.T_[k]=false end
 end
 end
 end
-function PC.MuteVoice(on)
-local tgt=PC.Get()
-local ch=tgt and tgt.Character
-if not ch then SYS.Notify("目标没有角色",SYS.CY.sub) return end
-local n=0
-P(function()
-for _,d in ipairs(ch:GetDescendants()) do
-if d:IsA("Sound") then
-Audio.Mute(d,on) n=n+1
-end
-end
-end)
-SYS.Notify((on and "🔇 已本地静音 " or "🔊 已解除静音 ")
-..tostring(tgt and tgt.Name)..(" (%d 个声音)"):format(n).."\n⚠ 客户端无法静音他人语音, 这只能静音他角色里的音效",SYS.CY.yellow)
-end
 function SYS.FuseClean()
 P(SYS.RestoreLight)
 P(Audio.RestoreAll)
@@ -10227,10 +9456,6 @@ local d=(cam.CFrame.Position-root.Position).Magnitude
 if d>AC.CamMax then AC.CamMax=d end
 end
 end)
-end
-function AC.ResetSampler()
-AC.PosMax=0 AC.CamMax=0 AC.LastP=nil
-SYS.SetLoop("ACSample",false) AC.SamplerOn=nil
 end
 local function d1()
 local found={}
@@ -10358,75 +9583,6 @@ AC.List={
 {"D9","hook 自检",d9},
 {"D10","外部状态键",d10},
 }
-function AC.RunAll(quiet)
-AC.Results={}
-local pass=0
-local out={"","=== CheatMenu 反作弊对抗靶场 · 自检结果 ==="}
-out[#out+1]=("被测: 本脚本 v%s   时间 %s"):format(tostring(SYS.BuildVer or "?"),os.date("%Y-%m-%d %H:%M:%S"))
-out[#out+1]="说明: 对手 = 游戏侧反作弊脚本(Lua 可见层)。Hyperion 是原生层, Lua 碰不到(见脚本头注释)。"
-out[#out+1]=string.rep("-",72)
-for i=1,#AC.List do
-local id,nm,fn=AC.List[i][1],AC.List[i][2],AC.List[i][3]
-local ok,res,detail=pcall(fn)
-local p=(ok and res==true)
-if p then pass=pass+1 end
-AC.Results[#AC.Results+1]={id=id,name=nm,pass=p,detail=tostring(detail or (ok and "" or res))}
-out[#out+1]=("%s %-4s %-18s %s"):format(p and "[通过]" or "[未通过]",id,nm,tostring(detail or ""))
-end
-out[#out+1]=string.rep("-",72)
-out[#out+1]=("通过 %d / %d"):format(pass,#AC.List)
-if not quiet then
-print(table.concat(out,"\n"))
-SYS.Notify(("🧪 对抗靶场: 通过 %d/%d"):format(pass,#AC.List),
-pass==#AC.List and SYS.CY.green or SYS.CY.orange)
-end
-AC.Pass=pass AC.Total=#AC.List
-if SYS.ACRender then P(SYS.ACRender) end
-return pass,#AC.List
-end
-function AC.FixAll()
-local done={}
-if SYS.ApplyNeutralNames then
-local n=P(SYS.ApplyNeutralNames)
-done[#done+1]=n and "实例名已中性化" or "实例名中性化失败"
-end
-if SYS.Prot and SYS.Prot.InstallHideGui then
-local ok,err=SYS.Prot.InstallHideGui()
-if ok then SYS.T_.Prot_AntiAdmin=true done[#done+1]="CoreGui 枚举隐藏已开"
-else done[#done+1]="枚举隐藏失败: "..tostring(err) end
-end
-local cleared={}
-local legacy={LEG_LOADED,LEG_UNLOAD,LEG_BOOT,LEG_NOTE}
-for i=1,#legacy do
-if GENV[legacy[i]]~=nil then
-pcall(function() GENV[legacy[i]]=nil end)
-cleared[#cleared+1]=legacy[i]
-end
-end
-done[#done+1]=(#cleared>0) and ("已清旧状态键: "..table.concat(cleared,",")) or "无旧状态键需清"
-if type(delfile)=="function" then
-local dl={}
-local list={SYS.N.OldCfg,SYS.N.OldCfg..".bak",SYS.N.OldDiag}
-for i=1,#list do
-local okf,v=pcall(isfile,list[i])
-if okf and v then
-local okd=pcall(delfile,list[i])
-if okd then dl[#dl+1]=list[i] end
-end
-end
-done[#done+1]=(#dl>0) and ("已删旧文件: "..table.concat(dl,",")) or "无旧文件需删"
-else
-done[#done+1]="这台执行器没有 delfile(旧文件要手动删)"
-end
-if (SYS.C_.CB_FireDelay or 0.06)<0.08 then
-SYS.C_.CB_FireDelay=0.08
-done[#done+1]="开火间隔已抬到 0.08s(人类下限)"
-end
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-print("[CheatMenu] 对抗靶场 · 一键修复: "..table.concat(done," · "))
-SYS.Notify("🔧 修复完成, 重新测一次看通过率",SYS.CY.green)
-P(function() AC.RunAll(true) end)
-end
 function SYS.ApplyNeutralNames()
 local ok=true
 local function ren(o,n)
@@ -11398,19 +10554,6 @@ modules = has("getloadedmodules"),
 }
 end
 local function gcApi() if type(getgc)=="function" then return getgc end if type(_G.getGC)=="function" then return getGC end return nil end
-local function hookApi()
-if type(hookfunction)=="function" then return hookfunction end
-if type(_G.hookfunc)=="function" then return hookfunc end
-if type(_G.replaceclosure)=="function" then return replaceclosure end
-if type(_G.replacefunc)=="function" then return replacefunc end
-return nil
-end
-local function restoreApi()
-if type(restorefunction)=="function" then return restorefunction end
-if type(_G.restorefunc)=="function" then return restorefunc end
-if type(_G.restoreclosure)=="function" then return restoreclosure end
-return nil
-end
 local function ownerOf(f)
 local ok,s=P(function()
 if type(getfenv)=="function" then
@@ -11548,64 +10691,6 @@ end
 end)
 SYS.ScanEmit(table.concat(out,"\n"))
 SYS.Notify("脚本清单已输出到控制台",SYS.CY.green)
-end
-function LAB.Watch(name,limit)
-if type(name)~="string" or name=="" then SYS.Notify("先填函数名",SYS.CY.yellow) return false end
-local hf=hookApi()
-if not hf then SYS.Notify("这台执行器没有 hookfunction",SYS.CY.yellow) return false end
-local fns=LAB.LastFns
-if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return false end
-local target
-for i=1,#fns do if nameOf(fns[i])==name then target=fns[i] break end end
-if not target then SYS.Notify("没找到函数: "..name,SYS.CY.yellow) return false end
-if LAB.Hooks[name] then SYS.Notify("已经在观察 "..name,SYS.CY.yellow) return true end
-limit=tonumber(limit) or 50
-local cnt=0
-local ok,old=P(function()
-return hf(target,function(...)
-cnt=cnt+1
-if cnt<=limit then
-local a=table.pack(...)
-local parts={}
-for i=1,math.min(a.n,4) do
-local v=a[i]
-parts[#parts+1]=(type(v)=="Instance") and ("Instance:"..tostring(v.Name)) or tostring(v)
-end
-LAB.Log[#LAB.Log+1]=("  [%s] #%d (%d 参) %s"):format(name,cnt,a.n,table.concat(parts,", "):sub(1,90))
-if #LAB.Log>LAB.MaxLog then table.remove(LAB.Log,1) end
-end
-return target(...)
-end)
-end)
-if not ok then SYS.Notify("hook 失败(局部/匿名函数 hook 不了): "..tostring(old):sub(1,50),SYS.CY.red) return false end
-LAB.Hooks[name]=old
-SYS.Notify("正在观察 "..name.." (最多记录 "..limit.." 次)",SYS.CY.green)
-return true
-end
-function LAB.Unwatch(name)
-local old=LAB.Hooks[name]
-if not old then return false end
-local rf=restoreApi()
-local hf=hookApi()
-local ok=P(function()
-if rf then rf(old)
-elseif hf then hf(old,old) end
-end)
-LAB.Hooks[name]=nil
-SYS.Notify("已停止观察 "..name,ok and SYS.CY.green or SYS.CY.red)
-return ok
-end
-function LAB.UnwatchAll()
-local ks={} for k in pairs(LAB.Hooks) do ks[#ks+1]=k end
-for _,k in ipairs(ks) do LAB.Unwatch(k) end
-return #ks
-end
-function LAB.DumpLog()
-local out={"========== 调用记录 (最近 "..#LAB.Log.." 条) =========="}
-for i=math.max(1,#LAB.Log-60),#LAB.Log do out[#out+1]=LAB.Log[i] end
-if #LAB.Log==0 then out[#out+1]="  (还没有记录 —— 先在 ④ 里填函数名开始观察)" end
-print(table.concat(out,"\n"))
-SYS.Notify("调用记录已输出",SYS.CY.green)
 end
 SYS.ScanBuf={}
 function SYS.ScanBufNote(s) SYS.ScanBuf[#SYS.ScanBuf+1]=tostring(s) end
@@ -12157,31 +11242,6 @@ end)
 if ok then SYS.Notify("摘要已复制到剪贴板",SYS.CY.green) else print(txt) SYS.Notify("无剪贴板, 已打到控制台") end
 return txt
 end
-function LAB.WhoCalls(name)
-local fns=LAB.LastFns
-if not fns then SYS.Notify("先点① GC 扫描",SYS.CY.yellow) return end
-local target
-for i=1,#fns do if nameOf(fns[i])==name then target=fns[i] break end end
-if not target then SYS.Notify("没找到函数: "..tostring(name),SYS.CY.yellow) return end
-local info=function(lv)
-local ok,r=P(function()
-if type(getinfo)=="function" then return getinfo(lv) end
-if type(debug)=="table" and type(debug.getinfo)=="function" then return debug.getinfo(lv) end
-return nil
-end)
-return ok and r or nil
-end
-local _,res=P(function() return target() end)
-local me=info(1) local caller=info(2) local up=info(3)
-local out={"========== 调用链探测: "..tostring(name).." ==========",
-("  本帧   : %s"):format(me and (me.name or me.short_src or "?") or "?"),
-("  调用者 : %s"):format(caller and (caller.name or caller.short_src or "?") or "? (顶层/匿名)"),
-("  再上层 : %s"):format(up and (up.name or up.short_src or "?") or "?"),
-("  返回值 : %s"):format(tostring(res):sub(1,80)),
-"  ^ 这就是 pcall + immediate caller: 能看出「谁在调这个函数」"}
-print(table.concat(out,"\n"))
-SYS.Notify("调用链已输出到控制台",SYS.CY.green)
-end
 end
 UI.Pages["传送"]=function(p)
 UI.Section(p,"🖱 鼠标传送 · 快速跳转",CY.accent)
@@ -12717,38 +11777,6 @@ UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍�
 ..(TDEV and ("★ 手机 / 平板专属: 上面有 ➖/➕ 微调; 也可以直接拖菜单右下角的 ◢ 把手改尺寸。\n"
 .."   菜单拖到哪会记住, 下次打开回到原位(拖出屏幕会被自动拉回来)。\n") or "")
 .."⚠ 手动拉得过大(超过 fit)菜单会超出屏幕、边角按钮点不到 —— 拉回来或点恢复自动即可。",CY.sub)
-function SYS.ExportConfig()
-P(function()
-local parts={}
-for k,v in pairs(SYS.C_ or {}) do parts[#parts+1]=("%s=%s"):format(k,tostring(v)) end
-table.sort(parts)
-local str="CheatMenuCfg|"..table.concat(parts,";")
-if setclipboard then setclipboard(str) SYS.Notify("📤 配置已复制到剪贴板",SYS.CY.green)
-else print(str) SYS.Notify("📤 已打到控制台(这台没有 setclipboard)",SYS.CY.yellow) end
-end)
-end
-function SYS.ImportConfig(str)
-P(function()
-if type(str)~="string" or not str:find("CheatMenuCfg|",1,true) then
-SYS.Notify("📥 配置串不合法(缺少 CheatMenuCfg| 前缀)",SYS.CY.red) return
-end
-local body=str:sub(select(2,str:find("CheatMenuCfg|",1,true))+#"CheatMenuCfg|")
-local n=0
-for pair in body:gmatch("[^;]+") do
-local k,v=pair:match("^([^=]+)=(.*)$")
-if k and k~="" and SYS.C_[k]~=nil then
-local num=tonumber(v)
-if num~=nil then SYS.C_[k]=num
-elseif v=="true" then SYS.C_[k]=true
-elseif v=="false" then SYS.C_[k]=false
-else SYS.C_[k]=v end
-n=n+1
-end
-end
-P(SYS.SaveConfig)
-SYS.Notify(("📥 已导入 %d 项(切页/重载菜单后生效)"):format(n),SYS.CY.green)
-end)
-end
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
@@ -13399,99 +12427,8 @@ collapseBtn.Text="▬" collapseBtn.TextSize=18 collapseBtn.TextColor3=CY.text
 collapseBtn.Font=Enum.Font.GothamBold collapseBtn.BorderSizePixel=0
 collapseBtn.Parent=top
 P(function() local r=Instance.new("UICorner") r.CornerRadius=UDim.new(1,0) r.Parent=collapseBtn end)
-function SYS.CenterMenu()
-SYS._UserMoved=false
-SYS.C_.MenuPosSaved=false
-main.AnchorPoint=Vector2.new(0.5,0.5)
-main.Position=UDim2.new(0.5,0,0.5,0)
-P(ApplyScale)
-if SYS.TouchUI==true then QueueSave() end
-end
 SYS.CM_TitleBtns={closeBtn,collapseBtn}
 SYS.MenuMain=main
-function SYS.DiagUI()
-local L={}
-local function A(f,...) L[#L+1]="  "..(select("#",...)>0 and f:format(...) or f) end
-A("=========== CheatMenu UI 诊断 ===========")
-A("版本=%s  时间=%.0f",tostring(SYS.BuildVer),os.time())
-local cam=WS.CurrentCamera
-local vp=cam and cam.ViewportSize or Vector2.new(0,0)
-A("视口=%dx%d  触屏=%s",vp.X,vp.Y,tostring(UIS.TouchEnabled))
-A("触摸端UI适配=%s  当前缩放=%.3f(自动值 %.3f)  手动缩放=%s",
-tostring(SYS.TouchUI),tonumber(SYS.LastUIScale) or -1,
-tonumber(SYS.LastUIScaleAuto) or -1,tostring(SYS.C_.UIScaleManual))
-A("位置记忆=%s  比例=(%s,%s)  缩放把手=%s",
-tostring(SYS.C_.MenuPosSaved),tostring(SYS.C_.MenuPosX),tostring(SYS.C_.MenuPosY),
-tostring(SYS.CM_Grip~=nil))
-A("菜单开着=%s  用户拖过=%s",tostring(SYS.MenuOpen),tostring(SYS._UserMoved))
-A("防护: AntiAC=%s AntiAdmin=%s AntiTP=%s HideGui=%s  已拦截=%s",
-tostring(SYS.T_.Prot_AntiAC),tostring(SYS.T_.Prot_AntiAdmin),
-tostring(SYS.T_.Prot_AntiTP),tostring(SYS.T_.Prot_HideGui),
-tostring(SYS.Prot and SYS.Prot.Blocked or 0))
-local susName="?"
-if SYS.Prot and SYS.Prot.fpBad then
-susName=(SYS.Prot.fpBad(SYS.ScreenGui and SYS.ScreenGui.Name) and "有可疑词" or "无")
-end
-A("移速护栏=%s 上限=%.0f  屏幕GUI名自检=%s",
-tostring(SYS.T_.Prot_SpeedCap),tonumber(SYS.C_.SpeedCap) or -1,susName)
-A("视线射线: FindPartOnRay 4参=%s (nil=还没探测过)",tostring(SYS.RayFull))
-local gs=game:GetService("GuiService")
-if gs and gs.GetGuiInset then
-P(function()
-local t,b=gs:GetGuiInset()
-A("GuiInset: top=%d bottom=%d",t and t.Y or -1,(b and b.Y) or -1)
-end)
-else
-A("GuiInset: (该环境没有 GuiService:GetGuiInset)")
-end
-local s=SYS.ScreenGui
-if not s then A("!! ScreenGui=nil") else
-P(function() A("ScreenGui: 父=%s Enabled=%s IgnoreGuiInset=%s ScreenInsets=%s",
-tostring(s.Parent and s.Parent:GetFullName() or "nil"),tostring(s.Enabled),
-tostring(s.IgnoreGuiInset),tostring(s.ScreenInsets)) end)
-P(function() A("ScreenGui: 尺寸=%dx%d 位置=%d,%d",s.AbsoluteSize.X,s.AbsoluteSize.Y,
-s.AbsolutePosition.X,s.AbsolutePosition.Y) end)
-end
-local m=SYS.MenuMain
-if not m then A("!! main=nil") else
-P(function()
-A("main: 位置=%d,%d 尺寸=%dx%d 锚点=%.2f,%.2f 可见=%s",
-m.AbsolutePosition.X,m.AbsolutePosition.Y,m.AbsoluteSize.X,m.AbsoluteSize.Y,
-m.AnchorPoint.X,m.AnchorPoint.Y,tostring(m.Visible))
-A("居中校验: 期望=(%d,%d) 实际=(%d,%d)  [两者一致=居中正确]",
-(vp.X-m.AbsoluteSize.X)*0.5,(vp.Y-m.AbsoluteSize.Y)*0.5,
-m.AbsolutePosition.X,m.AbsolutePosition.Y)
-end)
-end
-P(function() A("UIScale=%.3f (挂在 %s 上)",scale.Scale,tostring(scale.Parent and scale.Parent.Name or "nil")) end)
-P(function()
-if not top then return end
-A("拖动把手: 类=%s Active=%s 可见=%s 位置=%d,%d 尺寸=%dx%d",
-top.ClassName,tostring(top.Active),tostring(top.Visible),
-top.AbsolutePosition.X,top.AbsolutePosition.Y,top.AbsoluteSize.X,top.AbsoluteSize.Y)
-local cx=top.AbsolutePosition.X+top.AbsoluteSize.X*0.5
-local cy=top.AbsolutePosition.Y+top.AbsoluteSize.Y*0.5
-local names={}
-if not PG.GetGuiObjectsAtPosition then
-A("命中测试: (该环境没有 PlayerGui:GetGuiObjectsAtPosition, 跳过)")
-else
-P(function()
-local objs=PG:GetGuiObjectsAtPosition(cx,cy)
-if objs then
-for i=1,math.min(#objs,6) do
-names[#names+1]=("%s(%s)"):format(tostring(objs[i].Name),tostring(objs[i].ClassName))
-end
-end
-end)
-A("命中测试(%d,%d) 最上层: %s",cx,cy,#names>0 and table.concat(names," > ") or "(该点没有任何 GUI)")
-end
-end)
-local txt=table.concat(L,"\n")
-print("[CheatMenu]"..txt)
-local ok=pcall(function() writefile(SYS.N.Diag,txt) end)
-SYS.Notify(ok and ("🩺 诊断已输出: 控制台 + "..SYS.N.Diag) or "🩺 诊断已输出到控制台(该执行器不能写文件)",SYS.CY.green)
-return txt
-end
 function SYS.SetMenuCollapsed(v)
 SYS.Collapsed=v and true or false
 for _,c in ipairs(main:GetChildren()) do
