@@ -44,5 +44,8 @@ alwaysApply: true
   同理别再删：**防甩飞 `AntiFling`**、**无限跳**、**Ctrl+数字 路径点直达**。
 - 已按用户要求**合并过**的开关形态**不要拆开**（见 `AGENTS.md` §2-D）；
   刻意**没有**合并的两处（藏身点判据分两份、自动躲避不能用 `KwGate`）**也不要"顺手"合**。
-- 「残键」（`CB_MissMode` / `CB_SnapFire` / `CB_Silent*` 等）**不要顺手删** —— 战斗主循环仍在读它们，
+- 「残键」（`CB_Silent` / `CB_SnapFire` / `CB_360` 等）**不要顺手删** —— 战斗主循环仍在读它们，
   删键要先改主循环，**风险另评**（见 `AGENTS.md` §2-B）。
+  ★ 2026-09-21 v9.9.0 已把「零界面入口 + 零活调用方」的那一批（`CB_MissMode` / `WPShow` / `WPKey` /
+  `FX_Enable` / `AutoLowPing` / `PC_Freeze` / `Lock*` / `PG_*`）**连同后端一起删干净了**，
+  它们现在是【已删】、不要再当"还在的残键"处理。
