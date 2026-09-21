@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 01:35 sha c4d65408 bytes 507674'):format('2026-09-21 01:35','c4d65408',507674))
+print(('[CheatMenu] build 2026-09-21 10:22 sha 21e1b2e8 bytes 509383'):format('2026-09-21 10:22','21e1b2e8',509383))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -38,6 +38,7 @@ TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
 CB_PauseMove=false,CB_Predict=true,CB_Team=false,CB_Wall=true,
+CB_Stealth=false,
 CB_Ballistic=false,
 CB_TgtStrict=false,
 CB_SnapFire=false,
@@ -113,7 +114,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.4.0"
+SYS.BuildVer="9.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4406,6 +4407,18 @@ if SYS.FCPrevIcon~=nil then SYS.MenuPrevMouseIcon=SYS.FCPrevIcon end
 end
 SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
+function SYS.SyncFreeCam()
+if SYS.Unloaded then return end
+local want=SYS.T_.FreeCam==true
+if want==SYS.FreeCamActive then return end
+if want then
+local _,h=GC()
+if not h or not SYS.Cam then return end
+SYS.StartFreeCam()
+else
+SYS.StopFreeCam()
+end
+end
 end
 do
 local line=nil
@@ -5008,13 +5021,17 @@ end
 function SYS.scanLowCPSCount(threshold)
 threshold=tonumber(threshold) or (tonumber(SYS.AFK_Sell.MinCPS) or 0)
 local picks={}
+local all={}
 local function scan(list)
 if not list then return end
 for _,t in ipairs(list:GetChildren()) do
 if isEntityTool(t) then
 if not isExclusiveTool(t) then
 local cps=SYS.GetBrainrotCPS(t)
-if cps and cps<threshold then
+local base=SYS.GetBrainrotBaseCPS(t)
+local pass=(cps~=nil and cps<threshold)
+all[#all+1]={Name=t.Name,CPS=cps or 0,Base=base or 0,Pass=pass}
+if pass then
 table.insert(picks,{Name=t.Name,CPS=cps})
 end
 end
@@ -5024,7 +5041,8 @@ end
 scan(LP.Character)
 scan(LP:FindFirstChild("Backpack"))
 table.sort(picks,function(a,b) return a.CPS<b.CPS end)
-return picks,threshold
+table.sort(all,function(a,b) return a.CPS<b.CPS end)
+return picks,threshold,all
 end
 TT(task.spawn(function()
 while not SYS.Unloaded do
@@ -6627,7 +6645,8 @@ if not cam then return end
 local vp=cam.ViewportSize
 local canFire
 local zeroScan=(tonumber(SYS.C_.CB_ScanMs) or 33)<=0
-local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire or zeroScan)
+local silo=(SYS.T_.CB_Silent or SYS.T_.CB_SilentAim or SYS.T_.CB_360 or SYS.T_.CB_SnapFire
+or (zeroScan and not SYS.T_.CB_Stealth))
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire or SYS.T_.CB_360 then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
@@ -6644,7 +6663,8 @@ canFire = crosshairOnEnemy()
 end
 if not canFire then return end
 local noTurn=SYS.T_.CB_SilentNoTurn
-if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire or (SYS.T_.CB_Aim and SYS.T_.CB_Fire)) and not noTurn then
+if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire or (SYS.T_.CB_Aim and SYS.T_.CB_Fire))
+and not noTurn and not SYS.T_.CB_Stealth then
 local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if ap2 then
 P(function() cam.CFrame=CFrame.lookAt(cam.CFrame.Position,ap2) end)
@@ -11409,9 +11429,9 @@ task.spawn(function()
 if scanResL and scanResL.Parent then
 scanResL.Text="扫描中..." scanResL.TextColor3=CY.yellow
 end
-local picks,th=0,0
+local picks,th,all=0,0,nil
 pcall(function()
-picks,th=SYS.scanLowCPSCount()
+picks,th,all=SYS.scanLowCPSCount()
 end)
 if scanResL and scanResL.Parent then
 if type(picks)=="table" then
@@ -11430,6 +11450,16 @@ scanResL.Text=("低于 %.0f 共 %d 个  |  %s"):format(th,cnt,preview)
 scanResL.TextColor3=CY.cyan
 end
 print(("[Scan] 低于 %.0f 共 %d 个（按背包显示的 CPS 判）"):format(th,cnt))
+local fc=SYS.SellFmtCompact or tostring
+print(("[Scan] 门槛 = %s (%d)   —— 判定规则: 背包显示值 < 门槛 就卖"):format(fc(th),math.floor(th)))
+print(("  %-30s %12s %12s   %s"):format("物品","背包显示值","表里基础值","判定"))
+for i=1,math.min(#(all or {}),25) do
+local it=all[i]
+print(("  %-30s %12s %12s   %s"):format(
+tostring(it.Name):sub(1,30), fc(it.CPS), fc(it.Base),
+it.Pass and "★卖" or "留"))
+end
+if all and #all>25 then print(("  … 还有 %d 件"):format(#all-25)) end
 else
 scanResL.Text="扫描失败"
 scanResL.TextColor3=CY.red
@@ -12606,6 +12636,12 @@ UI.Tip(p,"★ v8.7.0 修：这条【不再被「索敌间隔」影响】。\n"..
 "以前把索敌间隔设成 0（每帧秒锁）会连带【不判视线】→ 隔墙也会锁人。现在两件事解耦：\n"..
 "间隔只管「扫多快」，视线只看这个开关。真要无视墙请用「子弹穿墙」或「360 无死角」。",CY.sub)
 UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
+UI.Switch(p,"🙈 隐蔽模式 (不做开火前瞬时对准)","CB_Stealth")
+UI.Tip(p,"★ 两者是【命中率 ↔ 不显眼】的取舍, 你按需要选:\n"
+.. "  关(默认) = 扣扳机那一帧把相机瞬时对准目标 -> 命中率高, 但相机会有一次跳变。\n"
+.. "  开       = 不跳, 改成「等准星自己压上去才开火」-> 少一次机器特征, 命中率略降。\n"
+.. "★ 为什么要给这个开关: 本脚本的反指纹自检里 D8「相机行为」和 D7「开火节奏」\n"
+.. "  正是在盯「相机有没有异常跳变 / 开火间隔是不是太规律」—— 想稳就把隐蔽模式打开。",CY.sub)
 UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
 UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是「不穿墙」)。\n背身/360° 转身照样锁得到 —— 判定按实时相机走, 只要你和目标之间没有墙。\n关掉 = 隔墙的人也选(会对着墙开枪, 基本没用)。",CY.yellow)
 UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF')
@@ -13740,6 +13776,7 @@ if ok and type(v)=="number" and v>0 then ping=math.floor(v*1000+0.5)
 elseif Stats then ping=math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()+0.5) end
 end)
 if SYS.StatusL and SYS.StatusL.Parent then SYS.StatusL.Text="Ping "..ping end
+P(SYS.SyncFreeCam)
 end
 end)
 SYS.SpawnLoop(function()
