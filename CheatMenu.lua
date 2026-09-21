@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 15:43 sha ffc201b3 bytes 497335'):format('2026-09-21 15:43','ffc201b3',497335))
+print(('[CheatMenu] build 2026-09-21 19:44 sha 6c084ed3 bytes 496948'):format('2026-09-21 19:44','6c084ed3',496948))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.0"
+SYS.BuildVer="9.9.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1925,15 +1925,6 @@ if P(function() writefile(path,text) end) then
 return {fn}, SYS.ScanOutWhy, dir
 end
 return nil, "写入失败("..fn..")", dir
-end
-local HudGui, HudLabel, HudHideAt = nil, nil, nil
-if RS and RS.Heartbeat then
-T(RS.Heartbeat:Connect(function()
-if HudHideAt and os.clock() >= HudHideAt then
-HudHideAt = nil
-P(function() if HudGui then HudGui.Enabled = false end end)
-end
-end))
 end
 local function tryMany(kind)
 local list = SYS.RemoteAlias[kind] or {}
@@ -6935,6 +6926,7 @@ local DYN_WIN=12
 local DYN_HITS=4
 local DYN_LEN=60
 local T2O_CAP=2000
+local T2O_N=0
 local RV_CAP=2000
 local FAIL_BASE,FAIL_CAP,FAIL_MAXN=3,300,4000
 local NET_STREAK_MAX,NET_GATE_S=3,4
@@ -7957,7 +7949,6 @@ return nil
 end
 Trans.Trans2Orig={}
 Trans.Orig2Trans={}
-local T2O_N=0
 local function remember(raw,newText,plain,newPlain)
 if newPlain=="" or plain=="" or newPlain==plain then return end
 Trans.markSelf(newPlain) Trans.markSelf(newText)
@@ -10167,9 +10158,6 @@ local okJ,jp=pcall(function() return hum.JumpPower end)
 if okJ and jp and jp>80 then bad[#bad+1]=("JumpPower=%.0f (默认50)"):format(jp) end
 local okH,hh=pcall(function() return hum.HipHeight end)
 if okH and hh and math.abs(hh-2)>4 then bad[#bad+1]=("HipHeight=%.1f (默认2)"):format(hh) end
-if SYS.T_.LockGravity and math.abs((WS.Gravity or 196.2)-196.2)>0.5 then
-bad[#bad+1]=("Gravity=%.1f (默认196.2)"):format(WS.Gravity)
-end
 if #bad==0 then return true,"角色数值全在正常范围内" end
 return false,("服务端可测到的异常: "..table.concat(bad," · ").."  (这类遮不住, 建议用时再开)")
 end
