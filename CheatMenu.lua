@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 21:32 sha 37fc739a bytes 502387'):format('2026-09-21 21:32','37fc739a',502387))
+print(('[CheatMenu] build 2026-09-21 22:09 sha bab3f9de bytes 503167'):format('2026-09-21 22:09','bab3f9de',503167))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.4"
+SYS.BuildVer="9.9.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -5466,19 +5466,46 @@ do
 local Spawn=Vector3.new(0,10,0)
 local Rec=false
 local autoIn={} local autoCool={}
-local function tpStepChain(root,from,dir,total,n)
+local function tpStepChain(root,from,dir,total,n,pos)
 local i=0
 local function one()
 if not root or not root.Parent then return end
 i=i+1
 local target = (i>=n) and (from+dir*total) or (from+dir*(total*i/n))
 root.CFrame=CFrame.new(target)
-task.delay(i>=n and 0.05 or 0.02,function()
+if i<n then
+task.delay(0.02,one)
+else
+task.delay(0.05,function()
 if root.Parent then root.CFrame=CFrame.new(target) end
 end)
-if i<n then task.delay(0.02,one) end
+if pos then
+task.delay(0.16,function()
+if root and root.Parent and (root.Position-pos).Magnitude>8 then
+root.CFrame=CFrame.new(pos)
+end
+end)
+end
+end
 end
 one()
+end
+local function groundSnap(pos)
+local ok,hit=P(function()
+local pa=RaycastParams.new()
+local okFT,ft=pcall(function()
+return Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
+end)
+pa.FilterType=(okFT and ft) or Enum.RaycastFilterType.Blacklist
+local ch=LP.Character
+if ch then pa.FilterDescendantsInstances={ch} end
+return WS:Raycast(pos+Vector3.new(0,6,0),Vector3.new(0,-40,0),pa)
+end)
+if ok and hit and hit.Position then
+local g=hit.Position+Vector3.new(0,3,0)
+if math.abs(g.Y-pos.Y)>4 then return g end
+end
+return pos
 end
 function SYS.TPTo(pos)
 local _,hum,root=GC() if not root then return false end
@@ -5486,7 +5513,8 @@ if SYS.C_.TPMethod~="CFrame" then
 if hum then P(function() hum:MoveTo(pos) end) end
 return true
 end
-local STEP=SYS.C_.TPMaxStep or 300
+pos=groundSnap(pos)
+local STEP=math.max(20,tonumber(SYS.C_.TPMaxStep) or 300)
 local from=root.Position
 local d=pos-from
 local dist=d.Magnitude
@@ -5494,7 +5522,8 @@ if dist<=STEP or dist<=0 then
 root.CFrame=CFrame.new(pos)
 task.delay(0.05,function() if root.Parent then root.CFrame=CFrame.new(pos) end end)
 else
-tpStepChain(root,from,d.Unit,dist,4)
+local n=math.min(200,math.max(2,math.ceil(dist/STEP)))
+tpStepChain(root,from,d.Unit,dist,n,pos)
 end
 return true
 end
