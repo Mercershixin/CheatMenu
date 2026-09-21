@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 19:44 sha 6c084ed3 bytes 496948'):format('2026-09-21 19:44','6c084ed3',496948))
+print(('[CheatMenu] build 2026-09-21 20:23 sha 4fab7c33 bytes 497813'):format('2026-09-21 20:23','4fab7c33',497813))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.1"
+SYS.BuildVer="9.9.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1907,7 +1907,7 @@ local t={"-- CheatMenu 综合扫描（全部十层 · 单文件）",
 "-- "..tostring(info),
 "-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid),
 "-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
-"-- 共 "..tostring(#(buf or {})).." 行",
+"-- 共 "..tostring(#(buf or {})).." 行(缓冲条目数; 部分条目自身含换行, 文件物理行数会更多)",
 "-- 输出目录: "..dir,
 ""}
 for i=1,#(buf or {}) do t[#t+1]=tostring(buf[i]) end
@@ -11902,29 +11902,51 @@ P(function()
 if type(getcallingscript)=="function" then
 local ok2,s=P(function() return getcallingscript() end)
 line(("getcallingscript(): %s"):format(ok2 and tostring(s and s:GetFullName() or s) or "?"))
+if ok2 and s==nil then
+line("  (只有在 hook 回调内部调用才有调用者; 这里是扫描线程, nil 属正常)")
+end
 else line("(这台执行器没有 getcallingscript)") end
 local fns=LAB.LastFns
 if fns and #fns>0 then
 local f=fns[1]
-local ok2=pcall(function()
+local src=""
+P(function()
+if type(debug)=="table" and type(debug.info)=="function" then
+src=tostring(debug.info(f,"s") or "")
+end
+end)
+line(("  被查函数: %s%s"):format(tostring(f),
+(src~="" and src~="nil") and ("   来源="..src) or ""))
+local okU=P(function()
 if type(debug)=="table" and type(debug.getupvalue)=="function" then
-local i=1
-local cnt=0
+local i,cnt=1,0
 while true do
-local nm,val=debug.getupvalue(f,i)
-if nm==nil then break end
+local ok,first,second=pcall(function()
+return debug.getupvalue(f,i)
+end)
+if not ok then
+line(("    (第 %d 个读取失败: %s)"):format(i,tostring(first)))
+break
+end
+if first==nil and second==nil then break end
+local nm,val=first,second
+if type(nm)~="string" then nm,val=nil,first end
 cnt=cnt+1
 if cnt<=12 then
 local vs=tostring(val)
 if #vs>60 then vs=vs:sub(1,60).."…" end
-line(("    upvalue[%d] %-20s = %s"):format(i,tostring(nm),vs))
+line(("    upvalue[%d] %-26s = %s"):format(i,
+nm or "(执行器不暴露名字)", vs))
 end
 i=i+1
+if i>60 then line("    (upvalue 超过 60 个, 到此为止)") break end
 end
 line(("(该函数共 %d 个 upvalue)"):format(cnt))
-end
+else line("(这台执行器没有 debug.getupvalue)") end
 end)
-if not ok2 then line("(读 upvalue 失败)") end
+if not okU then line("(读 upvalue 失败)") end
+else
+line("(LAB GC 扫描没有留下可选的函数)")
 end
 end)
 local shared,sharedN,sharedCapped=scanWholeGame()
