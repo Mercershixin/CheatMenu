@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 12:05 sha 62bf50db bytes 515597'):format('2026-09-21 12:05','62bf50db',515597))
+print(('[CheatMenu] build 2026-09-21 12:22 sha 465f7e2b bytes 516006'):format('2026-09-21 12:22','465f7e2b',516006))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.8.0"
+SYS.BuildVer="9.8.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2003,6 +2003,7 @@ end
 SYS.SafeAscii=safeAscii
 function SYS.SaveRemotes(found)
 if not writefile then return nil end
+if SYS.ScanOutFile then return SYS.ScanOutFile end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M")
 local fn=("remotes_%s_%s.txt"):format(safeAscii(pid,20),stamp)
@@ -2050,6 +2051,7 @@ end
 local _,nm,pid=SYS.GameInfoLine()
 local folder=("%s_%s"):format(safeAscii(pid,20),safeAscii(nm,16))
 local cands={
+"CheatMenu",
 "CheatMenu\\"..folder,
 folder,
 ".",
@@ -2078,12 +2080,6 @@ if ok and isfile(dir.."\\_probe.txt") then
 SYS.ScanOutDir=dir
 SYS.ScanOutWhy=(dir:find("\\包\\") and "包目录") or (dir:find("Desktop") and "桌面") or "执行器工作目录"
 pcall(function()
-writefile(dir.."\\server_name.txt",
-("server_name: %s\nPlaceId: %s\nGameId: %s\nJobId: %s\ntime: %s\n")
-:format(tostring(nm),tostring(pid),tostring(game.GameId or 0),
-tostring(game.JobId or ""),os.date("%Y-%m-%d %H:%M:%S")))
-end)
-pcall(function()
 if type(delfile)=="function" then delfile(dir.."\\_probe.txt") end
 end)
 return
@@ -2108,12 +2104,17 @@ local t={"-- CheatMenu 综合扫描（全部十层 · 单文件）",
 "-- 输出目录: "..dir,
 ""}
 for i=1,#(buf or {}) do t[#t+1]=tostring(buf[i]) end
+local text=table.concat(t,"\n")
+local path=dir.."\\"..fn
 pcall(function()
-if type(isfile)=="function" and isfile(dir.."\\"..fn) and type(readfile)=="function" then
-writefile(dir.."\\"..fn..".prev.txt", readfile(dir.."\\"..fn))
+if type(isfile)=="function" and isfile(path) and type(readfile)=="function" then
+local old=readfile(path)
+if old~=text and type(writefile)=="function" then
+writefile(path..".prev.txt", old)
+end
 end
 end)
-if P(function() writefile(dir.."\\"..fn,table.concat(t,"\n")) end) then
+if P(function() writefile(path,text) end) then
 return {fn}, SYS.ScanOutWhy, dir
 end
 return nil, "写入失败("..fn..")", dir
@@ -2780,17 +2781,22 @@ if cg then scan(cg,"CoreGui",0) end
 end)
 table.sort(found)
 local info,nm,fn_hint=SYS.GameInfoLine()
-print("[Remote] ===== "..info.." =====")
-print("[Remote] 抓包时间: "..os.date("%Y-%m-%d %H:%M:%S"))
-print(("[Remote] ===== 全方位扫描: 网络 RemoteEvent %d + RemoteFunction %d | 本地 BindableEvent %d + BindableFunction %d | 交互 ProximityPrompt %d + ClickDetector %d =====")
+SYS.ScanEmit("========== 【A 通信层】游戏接口完整清单(Remote / Bindable / 交互) ==========")
+SYS.ScanEmit("[Remote] ===== "..info.." =====")
+SYS.ScanEmit("[Remote] 抓包时间: "..os.date("%Y-%m-%d %H:%M:%S"))
+SYS.ScanEmit(("[Remote] ===== 全方位扫描: 网络 RemoteEvent %d + RemoteFunction %d | 本地 BindableEvent %d + BindableFunction %d | 交互 ProximityPrompt %d + ClickDetector %d =====")
 :format(counts.RE,counts.RF,counts.BE,counts.BF,counts.PP,counts.CD))
-for i,r in ipairs(found) do print("  ["..i.."] "..r) end
-print("[Remote] 扫描完成, 清单在上面")
+for i,r in ipairs(found) do SYS.ScanEmit("  ["..i.."] "..r) end
+SYS.ScanEmit("[Remote] 扫描完成, 清单在上面")
 local savedFn=SYS.SaveRemotes(found)
 if savedFn then
-print("[Remote] ✅ 已保存: "..savedFn.."   （即工作目录）")
+if SYS.ScanOutFile then
+print("[Remote] (清单已并入本次综合扫描的那【一个】txt, 不再另存文件)")
 else
-print("[Remote] (这台执行器不能写文件, 请手动复制上面的清单; 建议文件名带上游戏名)")
+print("[Remote] ✅ 已保存: "..savedFn.."   （即工作目录）")
+end
+else
+print("[Remote] (这台执行器不能写文件, 请手动复制上面的清单)")
 end
 SYS.Notify(savedFn
 and (("扫描完成: 网络 %d · 本地 %d · 交互 %d → 已存 %s")
@@ -11364,7 +11370,7 @@ P(function() SYS.ProbeEvent("pickup") end)
 P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n★ I/J 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ I/J 的完整清单会自动落盘(DEX_/Remote_ 开头, 带游戏名与时间戳), 控制台只列前若干条。",CY.sub)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n★ I/J 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
@@ -11887,7 +11893,7 @@ local out={("========== GC 扫描 =========="),
 for i=1,math.min(#rows,25) do out[#out+1]=rows[i] end
 out[#out+1]="(归属拿不到 = C/引擎侧或匿名函数, hook 不了)"
 LAB.LastFns=fns
-print(table.concat(out,"\n"))
+SYS.ScanEmit(table.concat(out,"\n"))
 SYS.Notify(("GC 扫描完成: %d 函数 / %d 表"):format(#fns,#tbls),SYS.CY.green)
 return {fns=#fns,tbls=#tbls}
 end
@@ -11914,7 +11920,7 @@ local out={("========== 名字可疑的函数(可能可 hook) =========="),
 ("命中 %d 个 (关键词: damage/hit/fire/aim/kill/health ...)"):format(#hits)}
 for i=1,math.min(#hits,40) do out[#out+1]=hits[i] end
 out[#out+1]="这些只是【候选】—— 想观察哪个, 用 ④ 按名字包一层(只记录, 不改返回值)"
-print(table.concat(out,"\n"))
+SYS.ScanEmit(table.concat(out,"\n"))
 SYS.Notify(("找到 %d 个候选函数"):format(#hits),SYS.CY.green)
 end
 function LAB.ListScripts()
@@ -11945,7 +11951,7 @@ end
 out[#out+1]=("已加载模块 %d 个(只列前 20)"):format(m)
 end
 end)
-print(table.concat(out,"\n"))
+SYS.ScanEmit(table.concat(out,"\n"))
 SYS.Notify("脚本清单已输出到控制台",SYS.CY.green)
 end
 function LAB.Watch(name,limit)
@@ -12008,6 +12014,12 @@ SYS.Notify("调用记录已输出",SYS.CY.green)
 end
 SYS.ScanBuf={}
 function SYS.ScanBufNote(s) SYS.ScanBuf[#SYS.ScanBuf+1]=tostring(s) end
+function SYS.ScanEmit(s)
+print(s)
+if SYS.ScanOutFile and SYS.ScanBuf then
+SYS.ScanBuf[#SYS.ScanBuf+1]=tostring(s)
+end
+end
 local DumpBuf = SYS.ScanBuf
 local function line(s)
 print("  "..s)
