@@ -461,6 +461,16 @@
      （`Bind(character)` 重绑 `cChar/cHum/cRoot`，回调就该看到"当前"那一套），不是陈旧捕获。
 - **本机 66 处 `task.wait` / 0 处裸 `wait()`**，`gsub` 多返回值全部靠括号或 `local` 截断 ——
   这两类老惯用法已经是干净的，别再花时间去搜。
+- ★ **GC 扫描（`getgc`）会连 CheatMenu 自己的函数一起扫进来**（同一份 loadstring、同一进程）。
+  v9.9.3 前 B 层"名字可疑的函数"57 个里有 21 个其实是我们自己的（`AutoHitScan` / `fireTick` /
+  `aimTick` / `ClaimEverything` …）⇒ 既误导，又把内部函数名写进落盘 txt。
+  判据：`debug.info(f,"s")` 同一份 loadstring 共享同一个 source，**先比长度再比串**即可剔除。
+  ⇒ 以后往 B 层加分析前，先确认有没有把自身算进去。
+- ★ **扫描清单必须标蜜罐/后台/审计通道**（`SYS.RemoteRisk`）。DOORS 里实打实存在
+  `ReplicatedStorage.RemotesFolder.DroneStickyNoteMyNameIsExploiterAndIThinkICanCheatWithThis`
+  这种"名字直接点名开挂"的诱饵；`conch_networking.*` / `AdminPanelRunCommand` 是后台审计。
+  ⚠ 匹配要**先拆词再比整词**（拆 camelCase + 下划线）—— 按子串匹配会把 `SetDialogInUse` 里的
+  "dia**log**" 当成日志通道误报。
   （同型判据见 §6.3：那是"故意不判"，不是 bug。）
 
 ### 9.2 待办候选（**批次5 评估结论 · 按 收益÷风险 排序**）
