@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 11:34 sha 2eef9984 bytes 517242'):format('2026-09-21 11:34','2eef9984',517242))
+print(('[CheatMenu] build 2026-09-21 12:01 sha 62bf50db bytes 515597'):format('2026-09-21 12:01','62bf50db',515597))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.7.1"
+SYS.BuildVer="9.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -9742,48 +9742,6 @@ SYS.SetLoop("AntiFling",false)
 SYS.Notify("🎈 防甩飞: 已关",SYS.CY.sub)
 end
 end
-local SpawnRec={}
-function SYS.SpawnRec()
-if SpawnRec.def==nil then
-local ok,v=pcall(function() return LP.RespawnLocation end)
-SpawnRec.def=ok and v or false
-end
-return SpawnRec
-end
-function SYS.SetSpawnHere()
-local _,_,root=GC()
-if not root then return end
-SYS.SpawnRec()
-P(function() LP.RespawnLocation=nil end)
-SpawnRec.here=root.CFrame
-SYS.SetLoop("SpawnHere",true,RS.Heartbeat,function()
-if not SpawnRec.here then return end
-local ch=LP.Character
-local hum=ch and ch:FindFirstChildOfClass("Humanoid")
-if hum and hum.Health<=0 then
-P(function() ch:PivotTo(SpawnRec.here) end)
-end
-end)
-SYS.Notify("📍 已把当前位置设为本地重生点",SYS.CY.green)
-end
-function SYS.ClearSpawnHere()
-SYS.SetLoop("SpawnHere",false)
-SpawnRec.here=nil
-local d=SpawnRec.def
-P(function() LP.RespawnLocation=(d~=false) and d or nil end)
-SYS.Notify("♻ 已恢复默认重生点",SYS.CY.sub)
-end
-function SYS.RespawnHere()
-local ch=LP.Character
-local hum=ch and ch:FindFirstChildOfClass("Humanoid")
-if not hum then return end
-local pos=SpawnRec.here or (ch and ch:GetPivot())
-P(function()
-if pos then ch:PivotTo(pos) end
-hum.Health=hum.MaxHealth
-end)
-SYS.Notify("♻ 原地重生",SYS.CY.green)
-end
 local WL={} SYS.WL=WL
 WL.White={} WL.Black={}
 function WL.List(white)
@@ -10628,7 +10586,6 @@ P(ChatLog.Stop)
 P(WP.Stop) P(WP.UnmarkAll)
 P(function() SYS.SetNoDeath(false) end)
 P(function() SYS.SetNoKnock(false) end)
-P(function() SYS.ClearSpawnHere() end)
 P(PC.Freeze,false)
 P(PC.OnHead,false) P(PC.Orbit,false) P(PC.Stare,false)
 P(PC.Follow,false) P(PC.LoopTP,false)
@@ -11452,14 +11409,10 @@ UI.Section(p,"⚡ 帧率优化 (强化版)",CY.cyan)
 UI.Switch(p,"帧率优化 (一键)","PerfBoost",SYS.SetPerf)
 UI.Slider(p,"剔除距离",30,500,10,function() return SYS.C_.PerfCull end,function(v) SYS.C_.PerfCull=v end,"%.0f")
 UI.Div(p)
-UI.Section(p,"☠ 自杀 / 重生点",CY.red)
+UI.Section(p,"☠ 自杀",CY.red)
 UI.Btn(p,"☠ 强制自杀 (抹除)",CY.red,function() SYS.ForceSuicide("erase") end)
 UI.Btn(p,"🕳 强制自杀 (虚空抹除)",CY.red,function() SYS.ForceSuicide("void") end)
 UI.Tip(p,"「抹除」= 直接移除你自己的角色模型; 「虚空抹除」= 先把角色挪到 -5000 高度再判死(某些游戏对出界的处理不同)。\n两条【只作用于你自己】。",CY.sub)
-UI.Btn(p,"♻ 原地重生 (满血 + 回到当前点)",CY.green,function() SYS.RespawnHere() end)
-UI.Btn(p,"📍 设置当前位置为重生点",CY.cyan,function() SYS.SetSpawnHere() end)
-UI.Btn(p,"↩️ 恢复默认重生点",CY.orange,function() SYS.ClearSpawnHere() end)
-UI.Tip(p,"重生点记账是【纯本地】的(写本地 RespawnLocation + 死了把你挪回去)。\n若这个游戏的重生位置由服务端决定, 本地改无效 —— 那时只有「原地重生」按钮能立即生效。",CY.sub)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
@@ -12322,7 +12275,8 @@ return #net,withRecv,fn
 end
 function LAB.FullScan()
 local t0=os.clock()
-SYS.ScanBuf={}
+if type(table.clear)=="function" then table.clear(SYS.ScanBuf)
+else for i=#SYS.ScanBuf,1,-1 do SYS.ScanBuf[i]=nil end end
 local _banner={"","##################  🔍 综合扫描  ##################",
 ("时间 %s"):format(os.date("%H:%M:%S")),""}
 for _,x in ipairs(_banner) do print(x) SYS.ScanBufNote(x) end
