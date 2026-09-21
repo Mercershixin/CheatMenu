@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 01:13 sha bc8bb1eb bytes 466666'):format('2026-09-22 01:13','bc8bb1eb',466666))
+print(('[CheatMenu] build 2026-09-22 01:30 sha 3299c4b5 bytes 471039'):format('2026-09-22 01:30','3299c4b5',471039))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -97,7 +97,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.8"
+SYS.BuildVer="9.9.9"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1789,7 +1789,7 @@ if not dir then return nil,SYS.ScanOutWhy end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M%S")
 local fn=SYS.ScanOutFile or ("scan_%s_%s.txt"):format(safeAscii(pid,20),stamp)
-local t={"-- CheatMenu 综合扫描（全部十层 · 单文件）",
+local t={"-- CheatMenu 综合扫描（全部十一层 · 单文件）",
 "-- "..tostring(info),
 "-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid),
 "-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
@@ -10068,8 +10068,8 @@ UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处�
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
-UI.Section(p,"🔍 综合扫描 (十层一次扫完)",CY.green)
-UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/DEX/Remote 十层一次扫完)",CY.green,function()
+UI.Section(p,"🔍 综合扫描 (十一层一次扫完)",CY.green)
+UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/值对象/DEX/Remote 十一层一次扫完)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
@@ -10079,7 +10079,7 @@ P(function() SYS.ProbeEvent("pickup") end)
 P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n★ I/J 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十一层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n★ I/J/K 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
@@ -10778,8 +10778,8 @@ return a[1]<b[1]
 end)
 line(("全图实例 %d 个%s · 共 %d 种 ClassName")
 :format(n, capped and " · 已达应急上限(数据可能不全)" or "", #rows))
-line("  ── 类名 TOP 30 ──")
-for i=1,math.min(#rows,30) do
+line("  ── 类名 TOP 60 ──")
+for i=1,math.min(#rows,60) do
 line(("    %-9d %s"):format(rows[i][2],rows[i][1]))
 end
 local want={}
@@ -10788,8 +10788,8 @@ for i=1,#list do
 local w=want[list[i].ClassName]
 if w and #w<40 then w[#w+1]=list[i] end
 end
-local dump={"========== 类名 TOP 30 =========="}
-for i=1,math.min(#rows,30) do dump[#dump+1]=("%-9d %s"):format(rows[i][2],rows[i][1]) end
+local dump={("========== 类名全量(共 %d 种) =========="):format(#rows)}
+for i=1,#rows do dump[#dump+1]=("%-9d %s"):format(rows[i][2],rows[i][1]) end
 dump[#dump+1]=""
 dump[#dump+1]="========== 关键类全路径 =========="
 line("  ── 关键类清单(路径可直接复制进执行器) ──")
@@ -10977,7 +10977,7 @@ local _info,_nm,_pid=SYS.GameInfoLine()
 SYS.ScanOutFile=("scan_%s.txt"):format(SYS.SafeAscii(_pid,20))
 if SYS.ScanOutDir then
 local m1=("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy))
-local m2=("     单文件名: %s   （全部十层都在里面）"):format(tostring(SYS.ScanOutFile))
+local m2=("     单文件名: %s   （全部十一层都在里面）"):format(tostring(SYS.ScanOutFile))
 print(m1) print(m2) SYS.ScanBufNote(m1) SYS.ScanBufNote(m2)
 else
 local m1=("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy))
@@ -11050,7 +11050,37 @@ line(("  · %-22s %s"):format(tostring(cls),tostring(nm)))
 shown=shown+1
 end
 end
-else line("(这台执行器没有 getnilinstances)") end
+else
+local g=_G.getgc or _G.getGC
+if type(g)=="function" then
+local found=0
+local shownN=0
+local t0=os.clock()
+P(function()
+for _,v in pairs(g(true)) do
+if os.clock()-t0>1.5 then break end
+if typeof(v)=="Instance" then
+local par=nil
+pcall(function() par=v.Parent end)
+if par==nil then
+found=found+1
+if shownN<18 then
+local cls,nm="?","?"
+pcall(function() cls=v.ClassName end)
+pcall(function() nm=v.Name end)
+line(("  · %-22s %s"):format(tostring(cls),tostring(nm)))
+shownN=shownN+1
+end
+end
+end
+end
+end)
+line(("getgc 兜底: 找到 %d 个【父级为 nil 的实例】(getnilinstances 不可用时的替代)"):format(found))
+if found>shownN then line(("  ... 其余 %d 个(完整属性要看的话用它自己的 GetFullName 已不可用, 只能看类名/名字)"):format(found-shownN)) end
+else
+line("(没有 getnilinstances, 也没有 getgc —— 这一层拿不到)")
+end
+end
 end)
 if not okD then line("!! 实例层扫描异常") end
 P(function()
@@ -11100,8 +11130,96 @@ line(("    %-18s = %s"):format(v.Name,tostring(v.Value)))
 end
 else line("(没有 leaderstats)") end
 end
+P(function()
+local shown,scanned,found=0,0,0
+local AKEY={"stage","phase","state","hp","health","damage","team","owner","target",
+"objective","round","wave","locked","open","active","timer","spawn",
+"阶段","状态","血","倒计"}
+local _t=os.clock()
+for _,v in ipairs(SYS.Index()) do
+if os.clock()-_t>0.6 then break end
+local c=v.ClassName
+if c=="Model" or v:IsA("BasePart") then
+scanned=scanned+1
+local okA,attrs=P(function() return v:GetAttributes() end)
+if okA and type(attrs)=="table" then
+local ks={}
+for k,_ in pairs(attrs) do ks[#ks+1]=k end
+if #ks>0 then
+local nm=type(v.Name)=="string" and v.Name:lower() or ""
+local hot=false
+for i=1,#AKEY do
+local kw=AKEY[i]
+if nm:find(kw,1,true) then hot=true break end
+for j=1,#ks do
+if tostring(ks[j]):lower():find(kw,1,true) then hot=true break end
+end
+if hot then break end
+end
+if hot then
+found=found+1
+table.sort(ks)
+local okp,path=P(function() return v:GetFullName() end)
+local hdr=("  · %s"):format(tostring(okp and path or v.Name))
+if shown<40 then line(hdr) shown=shown+1 else SYS.ScanBufNote(hdr) end
+for j=1,#ks do
+local kv,av=P(function() return v:GetAttribute(ks[j]) end)
+local r=("      %-18s = %s"):format(tostring(ks[j]),tostring(kv and av or "?"))
+if shown<=40 then line(r) else SYS.ScanBufNote(r) end
+end
+end
+end
+end
+end
+end
+line(("非玩家实例带 Attribute 的命中 %d 个(扫了 %d 个 Model/BasePart; 耗时 %.2fs; 控制台显示前 40)"):format(found,scanned,os.clock()-_t))
+end)
 end)
 if not okE then line("!! 数据层扫描异常") end
+head("K · 值对象层(Value 对象里的游戏状态)")
+local okK=P(function()
+local VCLS={IntValue=1,NumberValue=1,StringValue=1,BoolValue=1,Vector3Value=1,
+CFrameValue=1,ObjectValue=1,Color3Value=1,BrickColorValue=1,RayValue=1}
+local KEY={"stage","phase","state","timer","time","round","wave","score","point","coin",
+"cash","money","hp","health","damage","target","objective","level","progress",
+"count","left","remain","spawn","door","room","阶段","计时","分数","目标","血","倒计"}
+local rows,byCls,all,hot= {}, {}, 0, 0
+local _t0=os.clock()
+for _,v in ipairs(SYS.Index()) do
+if os.clock()-_t0>0.6 then break end
+local c=v.ClassName
+if VCLS[c] then
+all=all+1
+byCls[c]=(byCls[c] or 0)+1
+local nm=type(v.Name)=="string" and v.Name or ""
+local low=nm:lower()
+local hit=false
+for i=1,#KEY do if low:find(KEY[i],1,true) then hit=true break end end
+if hit or c=="ObjectValue" then
+hot=hot+1
+local okv,val=P(function() return v.Value end)
+local s=tostring(okv and val or "?")
+if #s>64 then s=s:sub(1,64).."…" end
+local okp,path=P(function() return v:GetFullName() end)
+rows[#rows+1]=("  %-14s %-26s = %s"):format(c,nm:sub(1,26),s)
+rows[#rows+1]=("        @ "..tostring(okp and path or "(取不到完整路径)"))
+end
+end
+end
+local cs={}
+for k,n in pairs(byCls) do cs[#cs+1]=("%s×%d"):format(k,n) end
+table.sort(cs)
+line(("值对象共 %d 个 · 分类: %s   [扫完耗时 %.2fs ｜ 超过 0.6s 会被截断, 看这个数就知道全不全]"):format(all,table.concat(cs," · "),os.clock()-_t0))
+line(("名字命中状态关键字的 %d 个(下列全量落盘, 控制台只显示前 40 条):"):format(hot))
+if hot==0 then
+line("(没有名字命中状态关键字的值对象 —— 这游戏的内部状态可能不在 Value 里, 或用了中性名)")
+else
+for i=1,#rows do
+if i<=40 then line(rows[i]) else SYS.ScanBufNote(rows[i]) end
+end
+end
+end)
+if not okK then line("!! 值对象层扫描异常") end
 head("F · 连接层(游戏自己挂了哪些监听)")
 P(function()
 local gc2=_G.getconnections
@@ -11208,7 +11326,7 @@ print(""); print(("##################  扫描完毕 (%.2fs)  ##################"
 local w,why,dir=SYS.DumpScanAll(DumpBuf)
 if w and #w>0 then
 local full=tostring(dir).."\\"..tostring(w[1])
-print("  ✅ 已落盘（单个 txt，含全部十层）: "..full)
+print("  ✅ 已落盘（单个 txt，含全部十一层）: "..full)
 SYS.Notify(("综合扫描完成 —— 全部内容已写进一个 txt：\n%s"):format(full),SYS.CY.green)
 else
 print("  ⚠ 落盘失败: "..tostring(why or "未知").."（控制台只显示前 60 条, 其余看不到）")
