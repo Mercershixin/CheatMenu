@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-21 11:16 sha 76365c1f bytes 516800'):format('2026-09-21 11:16','76365c1f',516800))
+print(('[CheatMenu] build 2026-09-21 11:34 sha 2eef9984 bytes 517242'):format('2026-09-21 11:34','2eef9984',517242))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.7.0"
+SYS.BuildVer="9.7.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -8032,9 +8032,9 @@ if n<4 then return end
 local avg=l/n
 local cap=Trans.MaxConcCap or Trans.MaxConc or 8
 local minc=Trans.MinConc or 1
-if avg>1.5 and Trans.MaxConc>minc then
+if avg>1.2 and Trans.MaxConc>minc then
 Trans.MaxConc=math.max(minc,Trans.MaxConc-1)
-elseif avg<0.45 and Trans.MaxConc<cap then
+elseif avg<0.6 and Trans.MaxConc<cap then
 Trans.MaxConc=Trans.MaxConc+1
 end
 end
@@ -8709,11 +8709,12 @@ local ctx=tonumber(d.default_generation_settings and d.default_generation_settin
 Trans.SlotCtx=ctx
 Trans.Slots=slots
 Trans.maxTok=math.max(128,math.min(512,ctx-512))
-Trans.MaxConcCap=math.max(2,math.min(16,slots-2))
+local reserve=(slots>=4) and 2 or 1
+Trans.MaxConcCap=math.max(1,math.min(32,slots-reserve))
 Trans.MaxConc=Trans.MaxConcCap
 Trans.MinConc=1
-print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx  ->  并发上限 %d, 单次输出上限 %d token")
-:format(slots,ctx,Trans.MaxConc,Trans.maxTok))
+print(("[Trans] 服务器: %d 槽 × 每槽 %d ctx  ->  并发区间 %d~%d(当前 %d), 单次输出上限 %d token")
+:format(slots,ctx,Trans.MinConc,Trans.MaxConcCap,Trans.MaxConc,Trans.maxTok))
 Trans.warmSlots()
 return true
 end
@@ -11793,16 +11794,24 @@ UI.Div(p)
 UI.Section(p,"💾 缓存 · "..tostring(Trans.CACHE_FILE or SYS.N.Cache),CY.cyan)
 local statL=UI.Label(p,("已缓存 %d 条"):format(Trans.cacheCount or 0),CY.green)
 local statConcurrent = UI.Label(p, "命中 0 | 本地 0 | 失败 0 | 跳过扫 0 | 均 0ms", CY.cyan)
+local statConc = UI.Label(p, "并发: -", CY.purple)
 task.spawn(function()
 while not SYS.Unloaded do
 task.wait(0.5)
 if statL and statL.Parent then statL.Text=("已缓存 %d 条"):format(Trans.cacheCount or 0) end
 if statConcurrent and statConcurrent.Parent then
 local st=Trans.Stats or {}
-local avg=(st.latN and st.latN>0) and (st.lat/st.latN) or 0
+local avg=((st.latN and st.latN>0) and (st.lat/st.latN) or 0)*1000
 statConcurrent.Text = ("命中 %d | 本地 %d | 失败 %d | 跳过扫 %d | 均 %.0fms | 动态 %d | 排队 %d"):format(
 st.hit or 0, st.loc or 0, st.fail or 0, st.sweepSkip or 0, avg, st.dyn or 0, Trans.WaitN or 0
 )
+end
+if statConc and statConc.Parent then
+local lo=Trans.MinConc or 1
+local hi=Trans.MaxConcCap or Trans.MaxConc or 8
+local cur=Trans.MaxConc or hi
+statConc.Text=("并发: %d 在途 / 当前上限 %d  (区间 %d~%d, 服务器 %d 槽)"):format(
+Trans.InflightN or 0, cur, lo, hi, Trans.Slots or 0)
 end
 end
 end)
