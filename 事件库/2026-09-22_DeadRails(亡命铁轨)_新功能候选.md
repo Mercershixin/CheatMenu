@@ -241,4 +241,19 @@ Dead Rails 是**合作生存 + 火车推进 + 随机城镇搜刮**那一类。�
 - 卸载：`SYS.UnloadAll` 补 `SYS.DRHp.UnloadAll()`（断连接 + 还原 3 个状态 + `BreakJointsOnDeath=true`）。
 - 全纯客户端，零 hook、不 FireServer。`luau-compile` 通过；开关接线对账 97 个 / 86 有入口（新增 2 个均已在入口）。
 
+---
+
+## 八 · v10.10.0 之后：**「防攻击」专题**（2026-09-23 · 起因「防攻击呢 敌对npc生物之类的 不会攻击我 伤害打不到我」）
+
+用户问的是**"敌对生物不攻击我 / 伤害打不到我"** —— 这**不是** §七 的"回血"，是**更高一档**的需求。已单独立档：
+
+➡ **`事件库/2026-09-23_防攻击(敌人不攻击我_伤害打不到我)_可行性与候选.md`**
+
+**结论一句话**：**⛔ "打不到我"做不到**（服务端算伤害 + 客户端**没有血量面** —— 全图 `Health` 只有 `Ore.*`，
+玩家 23 个 Attribute 里没有 Health + 无上行通道 ⇒ 三条占满）。
+能做的是 **"看得见 / 躲得开 / 扛得住"**：近身预警、敌人伤害值显示、受伤感知、受击即补（都是只读或本地）。
+★ **唯一还留着的口子** = `ClientHitRegistration` / `HitRegistration` / `replicatedProjectileClientHandlers`
+（**需先只读探针 + 真机验证**，探针写法同 `DeadRails_AimProbe`）。
+★ 公开项目（15+ 个 Dead Rails hub）**全混淆、无一可读**，且它们自己的功能表就写着 **`God Mode (Limited Versions)`**。
+
 
