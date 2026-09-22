@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 20:11 sha 0fa0a49a bytes 550373'):format('2026-09-22 20:11','0fa0a49a',550373))
+print(('[CheatMenu] build 2026-09-22 20:31 sha d83b767e bytes 559948'):format('2026-09-22 20:31','d83b767e',559948))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -33,6 +33,7 @@ LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=fals
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
 HUD_Info=false,
 SpiderSense=false,
+DeadOn_Freeze=false,DeadOn_NoBlow=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoGym=false,AutoTrain=false,
@@ -108,7 +109,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.5.3"
+SYS.BuildVer="10.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2437,6 +2438,252 @@ P(SP.Unhook)
 SYS.Notify("🕷 蜘蛛感知: 已关(函数已还原)",SYS.CY.sub)
 end
 end
+end
+do
+local DO={} SYS.DeadOnTime=DO
+DO.Script="MachinePartyDeadOnTime"
+DO.Ready=false DO.Found={} DO.Hooked={} DO.Orig={} DO.Note=""
+DO.Gui=nil DO.Lab=nil DO.Next=0
+DO.Cnt={} DO.T={}
+DO.FREEZE={"redraw","writeBar"}
+DO.NOBLOW={"blowDynamite"}
+DO.WATCH ={"igniteFuse","perfectPress","tryPress"}
+DO.fuseAt=0 DO.blowAt=0 DO.blocked=0 DO.frozen=0
+local function doAPI(n)
+local ok,v=pcall(function() return _G[n] end)
+if ok and type(v)=="function" then return v end
+return nil
+end
+local function doScript(f)
+local gfe=doAPI("getfenv")
+if not gfe then return nil end
+local ok,e=pcall(gfe,f)
+if not ok or type(e)~="table" then return nil end
+local sc=e.script
+if not sc then return nil end
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+return nil
+end
+local function doName(f)
+local g=doAPI("getinfo")
+if g then
+local ok,n=pcall(g,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if type(debug)=="table" and type(debug.info)=="function" then
+local ok,n=pcall(debug.info,f,"n")
+if ok and type(n)=="string" and n~="" then return n end
+end
+return nil
+end
+function DO.Probe()
+local HF=doAPI("hookfunction") or doAPI("hookfunc") or doAPI("replaceclosure")
+if not HF then DO.Note="本机没有 hookfunction —— 函数层用不了"; return false end
+if not (doAPI("getgc") or doAPI("getGC")) then DO.Note="本机没有 getgc —— 找不到 DeadOnTime 的函数"; return false end
+local function dummy(a) return a end
+local ok,o=pcall(HF,dummy,function(...) return ... end)
+if not ok or type(o)~="function" then
+DO.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
+return false
+end
+return true
+end
+function DO.Scan()
+if DO.Ready then return #DO.Found end
+local G=doAPI("getgc") or doAPI("getGC")
+if not G then return 0 end
+local ok,list=pcall(G,true)
+if not ok or type(list)~="table" then DO.Note="getgc(true) 没返回表"; return 0 end
+local want={}
+for _,k in ipairs(DO.FREEZE) do want[k]=true end
+for _,k in ipairs(DO.NOBLOW) do want[k]=true end
+for _,k in ipairs(DO.WATCH)  do want[k]=true end
+local budget=os.clock()+4
+local n=0
+for _,v in ipairs(list) do
+if os.clock()>budget then DO.Note="(扫描超 4 秒已截断)"; break end
+if type(v)=="function" then
+local nm=doName(v)
+if nm and want[nm] and not DO.Found[nm] then
+if doScript(v)==DO.Script then DO.Found[nm]=v n=n+1 end
+end
+end
+end
+DO.Ready=true
+return n
+end
+local function doWant()
+local w={}
+if SYS.T_.DeadOn_Freeze then
+for _,k in ipairs(DO.FREEZE) do w[k]=true end
+end
+if SYS.T_.DeadOn_NoBlow then
+for _,k in ipairs(DO.NOBLOW) do w[k]=true end
+end
+if next(w)~=nil then
+for _,k in ipairs(DO.WATCH) do w[k]=true end
+end
+return w
+end
+local function doHookOne(nm,f)
+local HF=doAPI("hookfunction") or doAPI("hookfunc") or doAPI("replaceclosure")
+local NCC=doAPI("newcclosure")
+if not HF or DO.Hooked[nm] then return false end
+local orig
+local body=function(...)
+DO.Cnt[nm]=(DO.Cnt[nm] or 0)+1
+DO.T[nm]=os.clock()
+if nm=="igniteFuse" then DO.fuseAt=os.clock() end
+if nm=="blowDynamite" then DO.blowAt=os.clock() end
+if SYS.T_.DeadOn_Freeze and (nm=="redraw" or nm=="writeBar") then
+DO.frozen=DO.frozen+1
+return nil
+end
+if SYS.T_.DeadOn_NoBlow and nm=="blowDynamite" then
+DO.blocked=DO.blocked+1
+return nil
+end
+if type(orig)~="function" then return nil end
+return orig(...)
+end
+local ok,o=pcall(HF,f,NCC and NCC(body) or body)
+if ok and type(o)=="function" then
+orig=o DO.Hooked[nm]=f DO.Orig[nm]=o return true
+end
+return false
+end
+local function doUnhookOne(nm)
+local f=DO.Hooked[nm]
+if not f then return false end
+local HF=doAPI("hookfunction") or doAPI("hookfunc") or doAPI("replaceclosure")
+local RF=doAPI("restorefunction") or doAPI("restorefunc")
+local ok=false
+if RF then ok=pcall(RF,f) end
+if not ok and HF and type(DO.Orig[nm])=="function" then ok=pcall(HF,f,DO.Orig[nm]) end
+if ok then DO.Hooked[nm]=nil DO.Orig[nm]=nil return true end
+return false
+end
+function DO.Sync()
+if not DO.Probe() then return 0 end
+if not DO.Ready then P(DO.Scan) end
+if next(DO.Found)==nil then
+DO.Note="没找到 DeadOnTime 的函数(现在没在这个小游戏里?)"
+return 0
+end
+local want=doWant()
+local n=0
+for nm,f in pairs(DO.Found) do
+if want[nm] and not DO.Hooked[nm] then
+if doHookOne(nm,f) then n=n+1 end
+elseif (not want[nm]) and DO.Hooked[nm] then
+doUnhookOne(nm)
+end
+end
+DO.Note=("已挂 %d 个函数"):format(n)
+return n
+end
+function DO.UnhookAll()
+for nm,_ in pairs(DO.Hooked) do doUnhookOne(nm) end
+DO.Hooked={} DO.Orig={}
+end
+function DO.Clear()
+if DO.Gui then P(function() DO.Gui:Destroy() end) end
+DO.Gui=nil DO.Lab=nil
+end
+function DO.Tick()
+if not (SYS.T_.DeadOn_Freeze or SYS.T_.DeadOn_NoBlow) then
+if DO.Gui then DO.Clear() end
+return
+end
+local now=os.clock()
+if now<(DO.Next or 0) then return end
+DO.Next=now+0.2
+local L={"⏱ 死亡倒计时 (DeadOnTime)"}
+if SYS.T_.DeadOn_Freeze then
+L[#L+1]=("🧊 冻住倒计时: 生效中 (已停 %d 次重绘)"):format(DO.frozen or 0)
+else
+L[#L+1]="🧊 冻住倒计时: 关"
+end
+if SYS.T_.DeadOn_NoBlow then
+L[#L+1]=("🛡 到点不炸: 生效中 (已拦 %d 次爆炸)"):format(DO.blocked or 0)
+else
+L[#L+1]="🛡 到点不炸: 关"
+end
+if DO.fuseAt>0 then L[#L+1]=("🔸 引信已点火 (%.1f 秒前)"):format(now-DO.fuseAt) end
+local c={}
+for _,k in ipairs(DO.WATCH) do
+local v=DO.Cnt[k] or 0
+if v>0 then c[#c+1]=("%s×%d"):format(k,v) end
+end
+if #c>0 then L[#L+1]="观测: "..table.concat(c,"  ") end
+if next(DO.Hooked)==nil then L[#L+1]="⚠ 没挂上函数(看控制台说明)" end
+local txt=table.concat(L,"\n")
+P(function()
+if not DO.Gui then
+local pg=(SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
+if not pg then return end
+local g=Instance.new("ScreenGui")
+g.Name=SYS.N.Info
+P(function() g.Archivable=false end)
+g.ResetOnSpawn=false
+g.IgnoreGuiInset=true
+g.DisplayOrder=999993
+P(function() if syn and syn.protect_gui then syn.protect_gui(g) end end)
+local fr=Instance.new("Frame")
+fr.Name="Box"
+fr.AnchorPoint=Vector2.new(1,0)
+fr.Position=UDim2.new(1,-14,0,132)
+fr.Size=UDim2.new(0,318,0,104)
+fr.BackgroundColor3=Color3.fromRGB(12,14,20)
+fr.BackgroundTransparency=0.18
+fr.BorderSizePixel=0
+fr.Parent=g
+local rc=Instance.new("UICorner") rc.CornerRadius=UDim.new(0,8) rc.Parent=fr
+local t=Instance.new("TextLabel")
+t.Size=UDim2.new(1,-16,1,-10) t.Position=UDim2.new(0,8,0,5)
+t.BackgroundTransparency=1
+t.Font=Enum.Font.Code
+t.TextSize=13
+t.TextColor3=Color3.fromRGB(235,240,250)
+t.TextXAlignment=Enum.TextXAlignment.Left
+t.TextYAlignment=Enum.TextYAlignment.Top
+t.TextWrapped=true
+t.Parent=fr
+g.Parent=pg
+DO.Gui=g DO.Lab=t
+end
+if DO.Lab and DO.Lab.Text~=txt then DO.Lab.Text=txt end
+DO.Gui.Enabled=true
+end)
+end
+function SYS.SetDeadOn(kind,on)
+on=on and true or false
+if kind=="freeze" then SYS.T_.DeadOn_Freeze=on else SYS.T_.DeadOn_NoBlow=on end
+local both=(SYS.T_.DeadOn_Freeze or SYS.T_.DeadOn_NoBlow)
+if both then
+P(DO.Sync)
+DO.Next=0
+SYS.SetLoop("DeadOn",true,RS.Heartbeat,DO.Tick)
+P(DO.Tick)
+else
+DO.UnhookAll()
+DO.Clear()
+SYS.SetLoop("DeadOn",false,RS.Heartbeat,DO.Tick)
+end
+if on then
+print(("[CheatMenu] 死亡倒计时(%s): %s"):format(kind,tostring(DO.Note)))
+print(("      已挂函数: %s"):format((function()
+local a={} for k in pairs(DO.Hooked) do a[#a+1]=k end
+table.sort(a) return (#a>0) and table.concat(a,", ") or "(无)"
+end)()))
+end
+local nm=(kind=="freeze") and "🧊 冻住倒计时" or "🛡 到点不炸"
+SYS.Notify(nm..(on and ": 已开" or ": 已关").." · "..tostring(DO.Note),
+on and SYS.CY.green or SYS.CY.sub)
+end
+function SYS.SetDeadOnFreeze(on) SYS.SetDeadOn("freeze",on) end
+function SYS.SetDeadOnNoBlow(on) SYS.SetDeadOn("blow",on) end
 end
 SYS.Scanners = SYS.Scanners or {}
 function SYS.RegisterScanner(name, fn, desc)
@@ -13780,6 +14027,19 @@ UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷
 "  ★ 想自己掐时机(切割台/凿子那类「看准了再切」的考验), 看准这块小牌 —— 关掉本开关就完全不按键。\n"..
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
+UI.Section(p,"⏱ 死亡倒计时 · 引信 (机器派对 · DeadOnTime)",CY.accent)
+UI.Switch(p,"🧊 冻住倒计时 (计时条/数字停在当前帧, 不再重绘 —— 纯显示层)","DeadOn_Freeze",SYS.SetDeadOnFreeze)
+UI.Switch(p,"🛡 到点不炸 (引信烧到头也不爆炸 = 不判死 —— 断的是致死那一步)","DeadOn_NoBlow",SYS.SetDeadOnNoBlow)
+UI.Tip(p,"针对机器派对的【引信计时】小游戏(`MachinePartyDeadOnTime` —— 点引信 → 计时条 → 你要在给定时间按空格 → 没贴合就炸)。\n"..
+"★ 函数名不是猜的: 2026-09-22 的机器派对全量扫描里, 这个脚本的 44 个函数是【实名】列出来的 ——\n"..
+"  `igniteFuse`(点引信) / `redraw`·`writeBar`(画计时条) / `perfectPress`·`tryPress`(贴合按键) / `blowDynamite`(爆炸判死)。\n"..
+"  ⇒ 🧊 包的是 `redraw`+`writeBar`(不重绘 = 条停住); 🛡 包的是 `blowDynamite`(不炸 = 不死)。\n"..
+"★ 两档是【并列】的, 想只冻显示就只开 🧊, 想根本不死就开 🛡, 两个都开 = 双保险:\n"..
+"  · 🧊 只动画面, 一个字节都不写游戏状态(最低风险);\n"..
+"  · 🛡 断的是「爆炸」这一步 —— 如果这游戏的判死是【服务端】算的, 客户端拦不住(那你会看到条冻住了但照样死)。\n"..
+"★ 开了会在屏幕右侧显示状态(关掉菜单也看得见): 两档谁生效、拦了几次、引信有没有点火。\n"..
+"★ 开着的时候控制台(F9)会打一份【已挂函数清单】—— 要是没效果, 把 F9 那几行发我, 我按实际调用改判据。\n"..
+"★ 没有 `getgc` / `hookfunction` 的执行器会直接说不支持, 不会静默失败; 关掉开关 = 把游戏函数【原样还原】, 不留 hook。",CY.sub)
 UI.Section(p,"🕷 蜘蛛感知 (机器派对 · 蜘蛛扑上身)",CY.accent)
 UI.Switch(p,"🕷 蜘蛛感知 (蜘蛛头顶显示 索敌/抓住/扑杀 的已持续时长)","SpiderSense",SYS.SetSpiderSense)
 UI.Tip(p,"只观测, 不动手: 按名字把 SpiderRig 的 6 个函数包一层, 一律 `return orig(...)` ——\n"..
@@ -14880,6 +15140,7 @@ P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
 P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
+P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
