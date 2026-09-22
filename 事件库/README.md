@@ -14,6 +14,10 @@
 | `2026-09-19_MachineParty_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出（168 条） | 168 |
 | `2026-09-19_DOORS(门).md` | **DOORS**：`门 (游戏)`（PlaceId 6839171747，恐怖跑图 + 门/假门 + 复活 + 商店） | 按功能分类 + **门/假门实例结构** + Attribute 权威数据 + **别碰的蜜罐** + 可做功能映射。★ 已接进主脚本 6.10.1 | RemoteEvent 172 + RemoteFunction 19 + BindableEvent 116 + BindableFunction 5 + Prompt 50 |
 | `2026-09-19_DOORS(门)_原始抓包.txt` | 同上 | `SYS.DumpRemotes()` 原始输出（362 条） | 362 |
+| ★ `2026-09-23_防攻击(敌人不攻击我_伤害打不到我)_可行性与候选.md` | **跨游戏专题**（Dead Rails / FFA / MM2 / 机器派对 / DOORS） | 「敌对生物不攻击我 / 伤害打不到我」可行性 + **伤害权威矩阵** + **公开项目（GitHub/聚合站）调研** + 候选 P1~P4 / 只读探针 Q1~Q5 | — |
+
+> ★ 最后一行是**专题文档**（不属某个游戏的 Remote 清单）：起因是用户问"防攻击"。
+> 结论：**服务端算伤害的游戏里「伤害打不到我」做不到**（Dead Rails 客户端连血量面都没有）；能做的是"看得见/躲得开/扛得住"。
 
 > ★ 这份还专门记了**非 remote 的判定数据**：敌我容器 `Workspace.Highlight.Enemy.HighlightHolder.<玩家名>`、
 > Player 的 Attribute 清单、场景物件路径 —— 这类"游戏自己的判定数据"往往比 remote 更有用（6.9.22 已接进索敌）。
