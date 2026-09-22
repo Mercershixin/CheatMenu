@@ -1,3 +1,46 @@
+## 10.7.1 · 2026-09-22
+
+**修复「卸载不干净」** —— `SYS.SpiderSense`（🕷 蜘蛛感知）漏在卸载清单外。
+
+### 症状（潜在，不报错，所以一直没被发现）
+开着「🕷 蜘蛛感知」时，脚本会**按名字替换游戏脚本 `SpiderRig` 的 6 个函数**（用来数"索敌 / 抓住 / 扑杀"持续了多久）。
+但**「卸载脚本」这条路没有把这 6 个函数还原** ⇒ 卸载后它们**永久停留在替换体**
+（hook 是跨脚本生效的，重载脚本也救不回来）。
+
+### 根因
+这与 `SYS.Gun`（无后坐力）· `SYS.AntiRevert`（位置上报伪装）是**完全同一个坑**，
+那两个在 **v9.10.0** 就补过卸载还原，`SYS.SpiderSense` 是**同一批里唯一漏掉的一条**。
+（它自己的注释写着"按名包 `SpiderRig` 六个函数"，但 `UnloadAll` 里当时只有
+`SYS.Gun.Sync` / `SYS.SyncAntiRevert` / `SYS.DeadOnTime.UnhookAll`。）
+
+### 修法
+`SYS.UnloadAll` 里补一行（紧接 `SYS.DeadOnTime` 那条之后）：
+
+```lua
+P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
+```
+
+★ **直接调 `SP.Clear()` + `SP.Unhook()`，不走 `SYS.SetSpiderSense(false)`** ——
+后者会再弹一条通知，而卸载阶段界面正在拆（没必要，也避免在卸载路上重建 GUI）。
+Tick 循环由 `UnloadAll` 末尾的 `for _,c in pairs(SYS.Loops)` 统一清掉，不用另办。
+
+### 顺便做了一次全库同类审计（结论：一条不漏了）
+把所有 **替换了游戏自身函数**（`hookfunction`）的模块逐个对了一遍卸载清单：
+
+| 模块 | 还原入口 | 是否在卸载清单 |
+|---|---|---|
+| `SYS.Gun`（无后坐力） | `G.Sync` / `G.UnhookAll` | ✅ v9.10.0 起 |
+| `SYS.AntiRevert`（位置上报伪装） | `AR.Off` / `SyncAntiRevert` | ✅ v9.10.0 起 |
+| `SYS.DeadOnTime`（死亡倒计时） | `DO.UnhookAll` | ✅ v10.6.0 起 |
+| `SYS.RayHook`（射线改写） | `Ray.Remove` | ✅ 经 `SYS.FuseClean` |
+| **`SYS.SpiderSense`（蜘蛛感知）** | `SP.Unhook` | ❌ → **本版补上** |
+
+### 边界
+- 只影响**卸载**路径；**关开关那条路本来就是对的**（`SP.Unhook` 早就实现好了）。
+- **不改任何游戏内行为**：开着时照旧工作，只是"退出时把借来的函数还回去"。
+
+---
+
 ## 10.7.0 · 2026-09-22
 
 **新增「🧱 隔墙/不隔墙 两种高亮形态自动区分」** —— 视觉页一个开关，覆盖**全部**透视高亮。
