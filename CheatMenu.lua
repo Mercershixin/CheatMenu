@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 23:59 sha 102bf955 bytes 570845'):format('2026-09-22 23:59','102bf955',570845))
+print(('[CheatMenu] build 2026-09-23 00:33 sha 2864168c bytes 576656'):format('2026-09-23 00:33','2864168c',576656))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -36,6 +36,7 @@ HUD_Info=false,
 SpiderSense=false,
 DeadOn_Freeze=false,DeadOn_NoBlow=false,
 DeadRails_HitMark=false,DeadRails_AimProbe=false,
+DeadRails_LockHp=false,DeadRails_NoFlop=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoGym=false,AutoTrain=false,
@@ -111,7 +112,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.8.0"
+SYS.BuildVer="10.9.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2885,6 +2886,126 @@ if DR.HitConn then P(function() DS(DR.HitConn) end) DR.HitConn=nil end
 if DR.Gui then P(function() DR.Gui:Destroy() end) end
 DR.Gui=nil DR.X=nil DR.Lab=nil
 for i=1,#DR.Found do pcall(drUnhookOne,i) end
+end
+end
+do
+local H={} SYS.DRHp=H
+H.HP=nil H.Added=nil
+local function curHum()
+local _c,h=GC()
+return h
+end
+local function armLife(h)
+if not h then return end
+P(function()
+h:SetStateEnabled(Enum.HumanoidStateType.Dead,false)
+h.BreakJointsOnDeath=false
+end)
+end
+local function disarmLife(h)
+if not h then return end
+P(function()
+h:SetStateEnabled(Enum.HumanoidStateType.Dead,true)
+h.BreakJointsOnDeath=true
+end)
+end
+local function armStand(h)
+if not h then return end
+P(function()
+h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
+h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
+end)
+end
+local function disarmStand(h)
+if not h then return end
+P(function()
+h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
+h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
+end)
+end
+local function fixStand(h)
+if not h then return end
+P(function()
+local st=h:GetState()
+if st==Enum.HumanoidStateType.FallingDown
+or st==Enum.HumanoidStateType.Ragdoll
+or st==Enum.HumanoidStateType.Physics then
+h:ChangeState(Enum.HumanoidStateType.Running)
+end
+if h.PlatformStand then h.PlatformStand=false end
+if h.Sit then h.Sit=false end
+end)
+end
+local function bindHp()
+local h=curHum()
+if not h then return end
+armLife(h)
+if H.HP then P(function() DS(H.HP) end) H.HP=nil end
+H.HP=T(h.HealthChanged:Connect(function(v)
+if SYS.T_.DeadRails_LockHp~=true then return end
+if v<h.MaxHealth then P(function() h.Health=h.MaxHealth end) end
+end))
+end
+function SYS.SetDRLockHp(on)
+on=on and true or false
+SYS.T_.DeadRails_LockHp=on
+if on then
+bindHp()
+if not H.Added then
+H.Added=T(LP.CharacterAdded:Connect(function()
+task.wait(0.4)
+if SYS.T_.DeadRails_LockHp==true then bindHp() end
+end))
+end
+SYS.SetLoop("DRLockHp",true,RS.Heartbeat,function()
+if SYS.T_.DeadRails_LockHp~=true then return end
+local hh=curHum()
+if hh and hh.Health<hh.MaxHealth then P(function() hh.Health=hh.MaxHealth end) end
+end)
+SYS.Notify("🔒 Dead Rails 锁血: 已开(本地补血 · 服务端判死仍会死)",SYS.CY.green)
+else
+if H.HP then P(function() DS(H.HP) end) H.HP=nil end
+if H.Added then P(function() DS(H.Added) end) H.Added=nil end
+SYS.SetLoop("DRLockHp",false)
+disarmLife(curHum())
+SYS.Notify("🔒 Dead Rails 锁血: 已关(Dead 状态已还原)",SYS.CY.sub)
+end
+end
+function SYS.SetDRNoFlop(on)
+on=on and true or false
+SYS.T_.DeadRails_NoFlop=on
+if on then
+SYS.SetLoop("DRNoFlop",true,RS.Heartbeat,function()
+if SYS.T_.DeadRails_NoFlop~=true then return end
+local hh=curHum()
+armStand(hh)
+fixStand(hh)
+end)
+SYS.Notify("🧍 Dead Rails 防击倒/防布娃娃: 已开",SYS.CY.green)
+else
+SYS.SetLoop("DRNoFlop",false)
+disarmStand(curHum())
+SYS.Notify("🧍 Dead Rails 防击倒/防布娃娃: 已关(状态已还原)",SYS.CY.sub)
+end
+end
+function H.Refill()
+local h=curHum()
+if not h then SYS.Notify("💚 回满血: 没找到角色(没进局?)",SYS.CY.yellow) return end
+local mx=h.MaxHealth
+P(function()
+h.Health=mx
+if h:GetState()~=Enum.HumanoidStateType.Running then
+h:ChangeState(Enum.HumanoidStateType.Running)
+end
+if h.PlatformStand then h.PlatformStand=false end
+end)
+SYS.Notify(("💚 已回满血 (%.0f/%.0f)"):format(mx,mx),SYS.CY.green)
+end
+function H.UnloadAll()
+if H.HP then P(function() DS(H.HP) end) H.HP=nil end
+if H.Added then P(function() DS(H.Added) end) H.Added=nil end
+local h=curHum()
+disarmLife(h) disarmStand(h)
 end
 end
 SYS.Scanners = SYS.Scanners or {}
@@ -12167,6 +12288,27 @@ SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
 UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十一层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n★ I/J/K 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
+UI.Section(p,"🔒 Dead Rails 锁血 · 补血 · 防击倒",CY.green)
+UI.Switch(p,"🔒 锁血 + 补血 (血被扣就同一帧顶回满)","DeadRails_LockHp",SYS.SetDRLockHp)
+UI.Switch(p,"🧍 防击倒 / 防布娃娃 (被打倒或被摆布娃娃时立刻站起来)","DeadRails_NoFlop",SYS.SetDRNoFlop)
+UI.Btn(p,"💚 立即回满血",CY.green,function() P(SYS.DRHp and SYS.DRHp.Refill) end)
+UI.Tip(p,"针对【Dead Rails(亡命铁轨)】的「血」这一块。三条都**只作用于你自己**、纯客户端(只写自己的 Humanoid), 零 hook、不 FireServer。\n"..
+"★ 🔒 锁血 + 补血: 挂 `Humanoid.HealthChanged`, **血一被扣就在同一帧写回 `MaxHealth`** ——\n"..
+"  它**没有**「只处理掉到 0」那种前置, 掉到 0 也照顶; 另加 Heartbeat 兜底守护。\n"..
+"  附: 禁 `Dead` 状态 + `BreakJointsOnDeath=false`。角色重生(换命/复活)会自动重绑。\n"..
+"★ 🧍 防击倒 / 防布娃娃: 禁 `FallingDown` / `Ragdoll` 两个状态, 并每帧把 `FallingDown` / `Ragdoll` / `Physics`\n"..
+"  纠回 `Running`, 同时解 `PlatformStand` 和 `Sit`(被强制坐下)。\n"..
+"  ★ 这一档**最可能真的有效** —— 据扫描, 管击倒的 `ClientPlayerFlopHandler` 是跑在**客户端**的。\n"..
+"★ 💚 立即回满血: 不看上面两个开关, 点一下立刻写满 + 让你站起来。\n"..
+"★★ 诚实边界(必须知道, 别把它当「无敌」): Dead Rails 的**玩家伤害是服务端算的** ——\n"..
+"  我把全部 220 个 remote 过了一遍, 跟血量有关的只有 `bandage.Use` / `snake_oil.Use` / `RevivePlayer`,\n"..
+"  **没有任何「我掉血了」的客户端上行通道**。所以锁血的实际表现是**血条先掉、再被顶回** ——\n"..
+"  当服务端自己把血扣到 0 并判死时, 客户端**拦不住**: 你会看到「血条是满的却突然死」。\n"..
+"  真·无敌做不到的原因: 这游戏用 `Replica`(服务端→客户端状态复制) + `jecs`(ECS), 还有\n"..
+"  `validateLivingCharacter` / `traffic_check` / `DeathFlowTelemetry` 三道校验上报, Player 上还挂着\n"..
+"  **服务端 Attribute `HasDied`** —— 这三样客户端改不动。\n"..
+"★ 想回**真血**: 吃游戏自己的绷带 / 蛇油(`Assets.Tools.Medical.bandage` / `snake_oil`, 走 `.Use` remote)\n"..
+"  —— 那条是服务端认的。",CY.sub)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
@@ -15404,6 +15546,7 @@ P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
 P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
 P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
 P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
+P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
