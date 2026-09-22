@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 17:09 sha 3e11faed bytes 534455'):format('2026-09-22 17:09','3e11faed',534455))
+print(('[CheatMenu] build 2026-09-22 17:23 sha 99464734 bytes 530849'):format('2026-09-22 17:23','99464734',530849))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -58,7 +58,6 @@ Gun_NoCooldown=false,Gun_InfItem=false,
 Gun_AimStable=false,
 Gun_NoSpread=false,
 CB_360=false,CB_SilentNoTurn=false,
-Key_Auto=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
@@ -85,9 +84,6 @@ ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,SellLvMul=1.25,
 CB_AimPart=1,CB_Smooth=1,CB_Fov=600,CB_MaxDist=2000,CB_MeleeDist=25,CB_MeleeGap=0.10,
-Key_Which="W",
-Key_Mode=1,
-Key_Gap=0.05,
 DodgeDist=15,
 DodgeDepth=2,
 DodgeCap=80,
@@ -110,7 +106,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.0.0"
+SYS.BuildVer="10.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -269,7 +265,8 @@ CB_MissMode=true,
 PC_Freeze=true,
 PG_Spin=true, PG_SpinHit=true, PG_FlyHit=true, PG_WalkHit=true,
 PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true,
-Prot_AntiAC=true, Prot_AntiTP=true }
+Prot_AntiAC=true, Prot_AntiTP=true,
+Key_Auto=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -3956,77 +3953,6 @@ function SYS.SetAutoHitMinigame(on)
 SYS.T_.AutoHitMinigame = on and true or false
 SYS.SetLoop("AutoHitMinigame", on, RS.Heartbeat, SYS.AutoHitTick)
 if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 24 个, 不再同帧连点)", SYS.CY.green) end
-end
-local K={} SYS.Keys=K
-K.Held={}
-K.LastTap=0
-K.Stat={press=0}
-local function keyEnum(name)
-local ok,c=pcall(function() return Enum.KeyCode[name] end)
-return (ok and c) or nil
-end
-function K.Has()
-local vim=SYS.VIM
-return (vim and type(vim.SendKeyEvent)=="function") and true or false
-end
-function K.Set(name,down)
-local c=keyEnum(name)
-if not c then return false end
-local vim=SYS.VIM
-if not (vim and type(vim.SendKeyEvent)=="function") then return false end
-local ok=P(function() vim:SendKeyEvent(down and true or false,c,false,game) end)
-if ok then
-if down then K.Held[name]=true K.Stat.press=K.Stat.press+1 else K.Held[name]=nil end
-end
-return ok
-end
-function K.ReleaseAll()
-for name in pairs(K.Held) do K.Set(name,false) end
-K.Held={}
-end
-function K.Tick()
-if not SYS.T_.Key_Auto then
-if next(K.Held)~=nil then K.ReleaseAll() end
-return
-end
-local want={}
-for part in string.gmatch(tostring(SYS.C_.Key_Which or "W"),"[^+%s]+") do
-if keyEnum(part) then want[#want+1]=part end
-end
-if #want==0 then return end
-local keep={}
-for i=1,#want do keep[want[i]]=true end
-for name in pairs(K.Held) do
-if not keep[name] then K.Set(name,false) end
-end
-local mode=tonumber(SYS.C_.Key_Mode) or 1
-if mode==1 then
-for i=1,#want do
-if not K.Held[want[i]] then K.Set(want[i],true) end
-end
-return
-end
-local gap=tonumber(SYS.C_.Key_Gap) or 0.05
-local now=os.clock()
-if now-(K.LastTap or 0)<gap then return end
-K.LastTap=now
-for i=1,#want do K.Set(want[i],true) end
-local hold=math.min(0.02,gap*0.5)
-task.delay(hold,function()
-for i=1,#want do K.Set(want[i],false) end
-end)
-end
-function SYS.SetKeyAuto(on)
-SYS.T_.Key_Auto=on and true or false
-SYS.SetLoop("KeyAuto",on,RS.Heartbeat,SYS.Keys.Tick)
-if not on then SYS.Keys.ReleaseAll() end
-if on then
-local w=tostring(SYS.C_.Key_Which or "W")
-local m=((tonumber(SYS.C_.Key_Mode) or 1)==1) and "按住" or "连按"
-SYS.Notify(("⌨ 按键自动化已开: %s (%s中)"):format(w,m),SYS.CY.green)
-else
-SYS.Notify("⌨ 按键自动化已关(按着的键已全部松开)",SYS.CY.sub)
-end
 end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
@@ -13336,25 +13262,6 @@ UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷
 "★ 节奏(2026-09-22 放宽, 用户口径「不需要压制」): 同一目标 0.6 秒即可重复触发; 每帧最多 24 个(原 3 秒 / 6 个)。\n"..
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
-UI.Section(p,"⌨ 自动按键 (输入型小游戏 · WASD / 方向键)",CY.orange)
-UI.Dropdown(p,"要按的键 (可用 + 组合, 如 W+D 斜向)", {"W","A","S","D","W+D","W+A","S+D","S+A",
-"Up","Down","Left","Right","Up+Left","Up+Right","Down+Left","Down+Right","Space"},
-function() return SYS.C_.Key_Which or "W" end,
-function(v) SYS.C_.Key_Which=v end)
-UI.Cycle(p,"按法", {"按住不放","连按(点一下)"},
-function() return ((SYS.C_.Key_Mode or 1)==1) and "按住不放" or "连按(点一下)" end,
-function(v) SYS.C_.Key_Mode=(v=="按住不放") and 1 or 2 end)
-UI.Slider(p,"连按间隔(秒)",0.02,0.5,0.01,
-function() return SYS.C_.Key_Gap or 0.05 end,
-function(v) SYS.C_.Key_Gap=v QueueSave() end,"%.2f")
-UI.Switch(p,"⌨ 自动按键 开/关","Key_Auto",SYS.SetKeyAuto)
-UI.Tip(p,"用法: 选好键和按法 -> 打开开关。\n"..
-"★ 「按住不放」= 电梯/攀爬那类(替你一直按住 W 或 Up)。关掉时脚本会先松开所有键, 不会把键盘卡住。\n"..
-"★ 「连按」= 点按式(按一下松一下), 间隔可调。\n"..
-"⛔ 边界(必须说清): 它只负责【按键】, 不负责【判断该按什么】。\n"..
-"  「看闪电提示再按对应方向」那种需要先知道【提示在哪】—— 而当前的综合扫描只统计了\n"..
-"  74 个 InputBinding 的数量, 【没列路径】, 所以现在猜着按就是碰运气。\n"..
-"  正确顺序(本项目铁律): 先把扫描的 InputBinding/InputAction 路径补上 -> 重扫一次 -> 拿到真实按键定义, 再接自动响应。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
