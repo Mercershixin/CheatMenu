@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 14:29 sha 327a6b6e bytes 529818'):format('2026-09-22 14:29','327a6b6e',529818))
+print(('[CheatMenu] build 2026-09-22 17:09 sha 3e11faed bytes 534455'):format('2026-09-22 17:09','3e11faed',534455))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -88,6 +88,11 @@ CB_AimPart=1,CB_Smooth=1,CB_Fov=600,CB_MaxDist=2000,CB_MeleeDist=25,CB_MeleeGap=
 Key_Which="W",
 Key_Mode=1,
 Key_Gap=0.05,
+DodgeDist=15,
+DodgeDepth=2,
+DodgeCap=80,
+DodgeScanSec=0.6,
+DodgeStep=0.35,
 CB_ScanMs=0,
 CB_FireDelay=0.02,CB_HpThr=0,CB_PrioMode=1,
 CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.22,
@@ -105,7 +110,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.10.0"
+SYS.BuildVer="10.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3757,14 +3762,33 @@ local part = o.PrimaryPart or (cn ~= "Model" and o) or o:FindFirstChildWhichIsA(
 if part and part.Position then list[#list+1] = part end
 end
 end
+local depth=math.floor(tonumber(SYS.C_.DodgeDepth) or 2)
+if depth<1 then depth=1 elseif depth>8 then depth=8 end
+local cap=math.floor(tonumber(SYS.C_.DodgeCap) or 80)
+if cap<10 then cap=10 elseif cap>400 then cap=400 end
+local queue={}
 for _, o in ipairs(WS:GetChildren()) do
+queue[#queue+1]=o
 consider(o)
-local ok, kids = P(function() return o:GetChildren() end)
+end
+local lvl=1
+while lvl<depth do
+local nextQ={}
+for i=1,#queue do
+local ok, kids = P(function() return queue[i]:GetChildren() end)
 if ok and type(kids)=="table" then
 local n = #kids
-if n > 80 then n = 80 end
-for i = 1, n do consider(kids[i]) end
+if n > cap then n = cap end
+for j = 1, n do
+local k=kids[j]
+nextQ[#nextQ+1]=k
+consider(k)
 end
+end
+end
+queue=nextQ
+if #queue==0 then break end
+lvl=lvl+1
 end
 end)
 return list
@@ -3774,7 +3798,9 @@ if not SYS.T_.AutoDodge then return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 local now = os.clock()
-if (now - (SYS._dodgeAt or 0)) > 2 or not SYS._dodgeList then
+local rescan=tonumber(SYS.C_.DodgeScanSec) or 0.6
+if rescan<0.1 then rescan=0.1 elseif rescan>5 then rescan=5 end
+if (now - (SYS._dodgeAt or 0)) > rescan or not SYS._dodgeList then
 SYS._dodgeAt = now
 local l = SYS.AutoDodgeScan()
 SYS._dodgeList = l
@@ -3793,7 +3819,9 @@ if nearest and nd < thr then
 local away = root.Position - nearest.Position
 away = Vector3.new(away.X, 0, away.Z)
 if away.Magnitude < 0.001 then away = Vector3.new(1, 0, 0) end
-local step = math.min(0.35, math.max(0.06, (thr - nd) * 0.25))
+local maxStep=tonumber(SYS.C_.DodgeStep) or 0.35
+if maxStep<0.05 then maxStep=0.05 elseif maxStep>1.2 then maxStep=1.2 end
+local step = math.min(maxStep, math.max(0.06, (thr - nd) * 0.25))
 local dir = away.Unit
 P(function()
 local rp = root.Position
@@ -3961,22 +3989,32 @@ if not SYS.T_.Key_Auto then
 if next(K.Held)~=nil then K.ReleaseAll() end
 return
 end
-local which=SYS.C_.Key_Which or "W"
+local want={}
+for part in string.gmatch(tostring(SYS.C_.Key_Which or "W"),"[^+%s]+") do
+if keyEnum(part) then want[#want+1]=part end
+end
+if #want==0 then return end
+local keep={}
+for i=1,#want do keep[want[i]]=true end
 for name in pairs(K.Held) do
-if name~=which then K.Set(name,false) end
+if not keep[name] then K.Set(name,false) end
 end
 local mode=tonumber(SYS.C_.Key_Mode) or 1
 if mode==1 then
-if not K.Held[which] then K.Set(which,true) end
+for i=1,#want do
+if not K.Held[want[i]] then K.Set(want[i],true) end
+end
 return
 end
 local gap=tonumber(SYS.C_.Key_Gap) or 0.05
 local now=os.clock()
 if now-(K.LastTap or 0)<gap then return end
 K.LastTap=now
-K.Set(which,true)
+for i=1,#want do K.Set(want[i],true) end
 local hold=math.min(0.02,gap*0.5)
-task.delay(hold,function() K.Set(which,false) end)
+task.delay(hold,function()
+for i=1,#want do K.Set(want[i],false) end
+end)
 end
 function SYS.SetKeyAuto(on)
 SYS.T_.Key_Auto=on and true or false
@@ -9661,7 +9699,7 @@ local ln=string.lower(nm)
 for k=1,#kw do if string.find(ln,kw[k],1,true) then hitKw=kw[k] break end end
 end
 if hitKw or hitsc then
-if #Ray.FnCands<24 then
+if #Ray.FnCands<40 then
 if hitsc and not hitKw then byScript=byScript+1 end
 Ray.FnCands[#Ray.FnCands+1]={f=v,name=nm or ("(匿名@"..tostring(sc)..")"),
 kw=hitKw or ("脚本:"..tostring(hitsc))}
@@ -10007,7 +10045,7 @@ local sAim   =isScriptOf(sl,S_AIM)
 local sSkill =isScriptOf(sl,S_SKILL)
 local relevant=(sWeapon or sRec or sAmmo or sAim or sSkill)
 if (ln and isRecName(ln)) or (sRec and ln and isRecExtra(ln)) then
-if #Cands.recoil<24 then
+if #Cands.recoil<40 then
 Cands.recoil[#Cands.recoil+1]={f=v,name=nm or ("(匿名@"..tostring(snl)..")"),fromScript=sRec}
 end
 end
@@ -11684,7 +11722,7 @@ selfSrc and ("(已剔除 CheatMenu 自身函数 %d 个 —— 它们不该被当
 or  "(这台执行器取不到 debug.info 的 source, 没能剔除自身函数)",
 ("归属脚本 %d 个 · 其中 ★武器/战斗/命中相关 %d 个(下面 ★ 开头就是它们; 按相关度排序, 控制台前 25, 其余落盘):")
 :format(#rows,nRel)}
-local SHOWN=25
+local SHOWN=60
 for i=1,#rows do
 local tag=(rows[i].r==1 and "★ " or (rows[i].r==3 and "  " or "· "))
 local ss=("  %s%-40s %d 个函数"):format(tag,rows[i].k:sub(1,40),rows[i].n)
@@ -11812,10 +11850,10 @@ for j=1,#g.list do
 local e=g.list[j]
 local line1=("    %s   upvalue: %s"):format(e.nm,
 (#e.uv>0) and table.concat(e.uv," · ") or "(无)")
-if j<=30 then
+if j<=60 then
 out[#out+1]=line1
-elseif j==31 then
-out[#out+1]=("    … 另有 %d 个函数(完整清单见落盘文件)"):format(#g.list-30)
+elseif j==61 then
+out[#out+1]=("    … 另有 %d 个函数(完整清单见落盘文件)"):format(#g.list-60)
 SYS.ScanBufNote(line1)
 else
 SYS.ScanBufNote(line1)
@@ -11987,7 +12025,7 @@ local want={}
 for _,k in ipairs(DEX_KEY) do want[k]={} end
 for i=1,#list do
 local w=want[list[i].ClassName]
-if w and #w<40 then w[#w+1]=list[i] end
+if w and #w<200 then w[#w+1]=list[i] end
 end
 local dump={("========== 类名全量(共 %d 种) =========="):format(#rows)}
 for i=1,#rows do dump[#dump+1]=("%-9d %s"):format(rows[i][2],rows[i][1]) end
@@ -12063,6 +12101,60 @@ dump[#dump+1]=s
 end
 else
 line("    (读取失败 —— 该执行器不让读 Workspace 的直接子对象)")
+end
+line("")
+line("  ── 小游戏区域内的绿色物件(可能就是安全点 / 绿灯) ──")
+dump[#dump+1]=""
+dump[#dump+1]="========== 小游戏区域内的绿色物件 =========="
+local gn=0
+do
+local roots={}
+if okw and type(wsKids)=="table" then
+for i=1,#wsKids do
+local okn,nm2=P(function() return wsKids[i].Name end)
+if okn and type(nm2)=="string" and nm2~="" then
+local nl=nm2:lower()
+for j=1,#SYS.MiniArea do
+if nl:find(SYS.MiniArea[j],1,true) then roots[#roots+1]=wsKids[i] break end
+end
+end
+end
+end
+if #roots==0 then
+line("    (这张图的 Workspace 顶层没有命中(小游戏区域词表)的对象 —— 换个场景再看)")
+else
+line(("    小游戏区域根对象 %d 个, 逐个看它们的后代:"):format(#roots))
+for ri=1,#roots do
+local root=roots[ri]
+local okr,desc=P(function() return root:GetDescendants() end)
+local cnt=0
+if okr and type(desc)=="table" then
+for i=1,#desc do
+local o=desc[i]
+local okcol,col=P(function() return o.Color end)
+if okcol and type(col)=="Color3" then
+local r,g,b=col.R,col.G,col.B
+if g>0.35 and g>r*1.35 and g>b*1.35 then
+cnt=cnt+1
+if cnt<=200 then
+local okp,path=P(function() return o:GetFullName() end)
+local s=("    %-13s %-26s RGB=%.2f,%.2f,%.2f"):format(
+tostring(o.ClassName),tostring(o.Name):sub(1,26),r,g,b)
+line(s)
+dump[#dump+1]=s.."   @ "..tostring(okp and path or "?")
+end
+end
+end
+end
+end
+gn=gn+cnt
+line(("      · %s  → 绿色物件 %d 个"):format(tostring(root.Name),cnt))
+end
+if gn==0 then
+line("    (小游戏区域里没有明显绿色的物件 —— 绿灯可能不是靠颜色表示:")
+line("     试试看它的名字/材质(Neon)/贴图, 或者是一个 Value(看上面 K 层的小游戏区值对象))")
+end
+end
 end
 local fn=SYS.SaveDump("DEX",dump)
 if fn then line("  ✅ 完整清单已落盘: "..fn)
@@ -12411,7 +12503,7 @@ local AKEY={"stage","phase","state","hp","health","damage","team","owner","targe
 local _t=os.clock()
 local cut=false
 for _,v in ipairs(SYS.Index()) do
-if os.clock()-_t>0.6 then cut=true break end
+if os.clock()-_t>1.5 then cut=true break end
 local c=v.ClassName
 if c=="Model" or v:IsA("BasePart") then
 scanned=scanned+1
@@ -12450,7 +12542,7 @@ end
 end
 line(("非玩家实例带 Attribute 的命中 %d 个(扫了 %d 个 Model/BasePart; 耗时 %.2fs%s; 控制台显示前 40 条)")
 :format(found,scanned,os.clock()-_t,
-cut and " · ⚠ 碰 0.6s 上限已截断, 数据不全" or " · 全图扫完, 未截断"))
+cut and " · ⚠ 碰 1.5s 上限已截断, 数据不全(可再跑一次, 通常第二次更快)" or " · 全图扫完, 未截断"))
 end)
 end)
 if not okE then line("!! 数据层扫描异常") end
@@ -12479,7 +12571,7 @@ end
 end
 end)
 for _,v in ipairs(SYS.Index()) do
-if os.clock()-_t0>0.6 then cut=true break end
+if os.clock()-_t0>1.5 then cut=true break end
 local c=v.ClassName
 if VCLS[c] then
 all=all+1
@@ -13212,6 +13304,28 @@ UI.Pages["MachineParty"]=function(p)
 UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Tip(p,"🎮 小游戏区域透视已并入【视觉页 -> 🔍 物件透视】(判据合并, 一个开关一起亮)。",CY.sub)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
+UI.Slider(p,"躲避触发距离 (格 · 越早开始退)",3,60,1,
+function() return SYS.C_.DodgeDist or 15 end,
+function(v) SYS.C_.DodgeDist=v QueueSave() end,"%.0f")
+UI.Slider(p,"扫描深度 (层 · 机关藏在 Model 里就调大)",1,8,1,
+function() return SYS.C_.DodgeDepth or 2 end,
+function(v) SYS.C_.DodgeDepth=v QueueSave() end,"%.0f")
+UI.Slider(p,"每层上限 (防大图卡顿)",20,400,10,
+function() return SYS.C_.DodgeCap or 80 end,
+function(v) SYS.C_.DodgeCap=v QueueSave() end,"%.0f")
+UI.Slider(p,"重扫间隔 (秒 · 越小越早发现新机关)",0.2,3,0.1,
+function() return SYS.C_.DodgeScanSec or 0.6 end,
+function(v) SYS.C_.DodgeScanSec=v QueueSave() end,"%.1f")
+UI.Slider(p,"退避速度 (格/帧 · 0.35≈21 格/秒)",0.10,1.20,0.05,
+function() return SYS.C_.DodgeStep or 0.35 end,
+function(v) SYS.C_.DodgeStep=v QueueSave() end,"%.2f")
+UI.Tip(p,"★ 2026-09-22 补强: 这五项原来都调不了(距离是后端读的但没界面, 其余写死)。\n"..
+"  · 触发距离: 陷阱进到几格内开始退。对「跑得快」的机关(火车那类)要调大才有提前量。\n"..
+"  · 扫描深度: 原来固定两层 ⇒ 藏在 Model 更深处的机关扫不到。调 3~4 层能扫到, 代价是每次扫描更慢。\n"..
+"  · 重扫间隔: 原来固定 2 秒 ⇒ 新出现的机关最多 2 秒后才被认识(快速机关就是这时候撞上的)。\n"..
+"  · 退避速度: 原来固定 0.35 格/帧。调大退得更快, 但别拉到底 —— 再快就是瞬移位移, 会被服务端判异常。\n"..
+"★ 它只会「沿直线远离危险物」。所以对「进安全点躲火车」那种玩法**不对症** ——\n"..
+"  那种要的是「按信号进/出固定安全点」, 目前还没有(缺绿灯位置的证据, 见扫描补的绿色物件探测)。",CY.yellow)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n"..
 "自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n"..
@@ -13223,7 +13337,8 @@ UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
 UI.Section(p,"⌨ 自动按键 (输入型小游戏 · WASD / 方向键)",CY.orange)
-UI.Dropdown(p,"要按的键", {"W","A","S","D","Up","Down","Left","Right","Space"},
+UI.Dropdown(p,"要按的键 (可用 + 组合, 如 W+D 斜向)", {"W","A","S","D","W+D","W+A","S+D","S+A",
+"Up","Down","Left","Right","Up+Left","Up+Right","Down+Left","Down+Right","Space"},
 function() return SYS.C_.Key_Which or "W" end,
 function(v) SYS.C_.Key_Which=v end)
 UI.Cycle(p,"按法", {"按住不放","连按(点一下)"},
