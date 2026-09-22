@@ -91,6 +91,14 @@
 | **整蛊工具**（甩飞 / 旋转 / 黑洞 / 就近击杀…） | 8 个开关键 `PG_Spin` / `PG_SpinHit` / `PG_FlyHit` / `PG_WalkHit` / `PG_HideHit` / `PG_OrbitTool` / `PG_BlackHole` / `PG_KillNear` + 参数键 `PG_SpinSpeed` / `PG_OrbitRange` / `PG_OrbitSpeed` / `PG_OrbitMode` / `PG_BH_*` / `PG_KillDist` / `PG_Target` + **整个 `SYS.Prank`**（`local PG={} SYS.Prank=PG` 与 `PG.*` 全部函数）+ 卸载里的 `PG.StopAll` / `PG.OrbitTool`。整蛊页 6.9.6 就删了（全是"只改本地副本，对方看不到、服务端不认"）。 |
 | **邻居冻结 / 眨眼**（玩家控制里的两条残留） | `PC_Freeze` 键 + `PC.Freeze()`（整蛊工具，同族）+ `PC.Blink()`（全文件 **0 调用**）+ `SYS.FuseClean` 里的 `P(PC.Freeze,false)`。⚠ **保留**「跟随 / 环绕」那五态（`PC_LoopTP` / `PC_OnHead` / `PC_Orbit` / `PC_Stare` / `PC_Follow`）—— 它们由互斥下拉 `PC.ApplyFollowMode` 驱动，是活的。 |
 | **命中率 / 漏打闸门**（瞄准补强） | 键 `CB_MissMode` + `C_.CB_HitRate` / `C_.CB_MissRate` + `SYS.AimEx`（`HitGate` / `MissGate`）。**两个闸门函数从来没有调用方** ⇒ 危害不是"会打偏"，而是【老存档能把 `CB_MissMode=true` 复活成一个没有界面的假开关】。 |
+| **通用按键自动化**（自动按键） | 键 `Key_Auto`(T_) + `Key_Which` / `Key_Mode` / `Key_Gap`(C_) + **整个 `SYS.Keys`**（`K.Set` / `K.Tick` / `K.ReleaseAll` / `K.Has` / `keyEnum`）+ `SYS.SetKeyAuto` + 循环登记 `SYS.SetKeyAuto("KeyAuto",…)` + 挂机页「⌨ 自动按键」整区。★ **10.1.0**（2026-09-22）用户原话：**「去掉自动按键功能」**。⚠ **没有一起删**：近战补刀按 F（`CB_Melee`，自己发 `SendKeyEvent`，从没走 `SYS.Keys`）、`SYS.VIM`。 |
+| **自动重生**（挂机页「📈 进度」区） | 键 `AutoRebirth`(T_) / `RebirthCheck`(C_) + 后端 `SYS.StartReb` / `SYS.StopReb` / `RebThread` / `lastRebFire` / `SYS.CurReb()` + `OnRemote("RebirthUpdate",…)` 监听 + `AFK.Reb` 字段 + 卸载里的 `P(SYS.StopReb)` + 该页「进度」整区。★ **10.3.0**（2026-09-22）用户原话：**「自动重生功能删了」**。⚠⚠ **不要与上面第一小段的 `AutoRespawn`（死亡自动重生）混为一谈 —— 两个是不同功能，只是名字像**。⚠ **特意保留**：`SYS.CurKick` / `AFK.Kick` / `KickData` 监听 / `SYS.FindHUD`（通用「当前 Kick 数值」读取器，与重生无关）。 |
+| **一键开启全部防护** | 键 `Prot_HideGui`。★ **10.4.0**（2026-09-22）用户原话：**「一键防护全开不需要了」**。它只是个**批量开关的壳**（一次把 `Prot_AntiAdmin` + `AntiFling` 打开），自身没有一行独立逻辑 ⇒ 删壳。⚠ **两个单项开关都保留、不许删**：「管理员检测绕过」`Prot_AntiAdmin`（默认开）与「🎈 防甩飞」`AntiFling`（见 §2 C）；后端 `SYS.Prot.InstallHideGui` / `RemoveHideGui` 也保留。 |
+
+★ **10.1.0 / 10.3.0 / 10.4.0 新增的上面 3 行同样已核验**：`Key_Auto` / `AutoRebirth` / `RebirthCheck` / `Prot_HideGui`
+在当前源码里**只出现在 `SYS.REMOVED_FEATURES` 黑名单中**，界面入口与后端确实都没了。
+★ **这 3 行是 2026-09-22 补录的**：本文件成文于 2026-09-20，晚于它的删除原先没进表 ——
+**以后再有删除，删完当场就往这张表补一行**，别攒着。
 
 ★ **`SYS.REMOVED_FEATURES` 黑名单必须留着** —— 删掉配置键之后它反而更重要：挡住老存档把这些键复活。
 （9.9.0 核验：上表这些键在当前源码里**只出现在 `REMOVED_FEATURES` 黑名单中**，后端确实没有了。
