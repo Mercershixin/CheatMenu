@@ -218,3 +218,27 @@ Dead Rails 是**合作生存 + 火车推进 + 随机城镇搜刮**那一类。�
 **发版**：`10.8.0`（新功能 ⇒ 次+1）· 编译门禁 0 错误 · 等价性通过 · 加载器探针 6/0 ·
 发行版 `CheatMenu.lua` 570962 B · 源码 `CheatMenu-10.8.0.lua`（20141 行）。
 
+---
+
+## 七 · v10.9.0 追加：锁血 / 补血 / 防击倒（2026-09-23 · 起因「还有无敌锁血能做到吗 恢复血」）
+
+用户多选 **锁血+补血+一键回满血** 与 **防击倒/防布娃娃**（**只读血量面板 未选**）。
+
+### ★★ 取证结论（这决定"无敌"能到什么程度）
+| 问题 | 结论 | 证据 |
+|---|---|---|
+| 玩家血量存在哪 | `Humanoid.Health` | 玩家角色 **Model 的 23 个 Attribute 里没有 Health**（只有 `ArrowAmmo`/`CurrentStamina=100`/`InCombat`…） |
+| 伤害谁算的 | **服务端** | **220 个 remote 里与玩家血量相关的只有 3 条**：`Assets.Tools.Medical.bandage.Use` · `...snake_oil.Use` · `Remotes.RevivePlayer` ⇒ **无「我掉血了」的客户端上行通道** |
+| 真无敌可能吗 | **⛔ 不能** | `Replica`(服务端→客户端状态复制) + `jecs`(ECS) + `validateLivingCharacter` + `traffic_check` + `DeathFlowTelemetry` + 服务端 Attribute **`HasDied`** |
+| 唯一可能真有效 | **防击倒** | `ClientPlayerFlopHandler`(3 函数) **跑在客户端** |
+
+⇒ **补血 ✅ · 锁血 ⚠️（血条回弹，服务端判死仍死）· 真无敌 ⛔**。
+
+### 落地（`[08E] SYS.DRHp`，入口在「功能」页「上帝模式」上方）
+- 🔒 锁血+补血 `DeadRails_LockHp`（`SYS.SetDRLockHp`）：`HealthChanged` **同帧**写回 `MaxHealth`（**无 `v>0` 前置**）+ Heartbeat 兜底 + 禁 `Dead` + `BreakJointsOnDeath=false` + 重生自动重绑。
+- 🧍 防击倒/防布娃娃 `DeadRails_NoFlop`（`SYS.SetDRNoFlop`）：禁 `FallingDown`/`Ragdoll`，每帧纠 `FallingDown`/`Ragdoll`/`Physics`→`Running`，解 `PlatformStand`/`Sit`。
+- 💚 立即回满血（`UI.Btn` → `SYS.DRHp.Refill`）。
+- 卸载：`SYS.UnloadAll` 补 `SYS.DRHp.UnloadAll()`（断连接 + 还原 3 个状态 + `BreakJointsOnDeath=true`）。
+- 全纯客户端，零 hook、不 FireServer。`luau-compile` 通过；开关接线对账 97 个 / 86 有入口（新增 2 个均已在入口）。
+
+
