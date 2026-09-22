@@ -1,3 +1,42 @@
+## 10.2.0 · 2026-09-22
+
+**按 2026-09-22 的三份实机综合扫描做的第一轮补强** —— 只挑【实锤路径 + 零写入】的两项，绕过一个都没碰。
+
+### 🛰 新增「战况面板」（视觉页 · 独立 HUD，关掉菜单也看得见）
+以前这些状态要么得自己盯着游戏 HUD，要么根本没有；现在一个常驻小面板（2.5 次/秒刷新，默认关）：
+- 🏁 **回合** = 游戏自己的 `Workspace.Room.<房间号>.Data`：`Round` / `Rounds` / `RoundState` / `GameTime`；
+- 🧍 **战绩** = 你 Player 上的 Attribute：血量 · 护盾 · 击杀 · 阵亡 · 最高连杀 · 等级 · 资产；
+- 👹 **在场实体 / 🚪 当前房间** = DOORS(门) 那类游戏的 `Workspace.LiveEntities` / `Workspace.CurrentRooms`。
+
+⛔ 三条自我约束（防止它变成一个"假信息源"）：
+1. **不推算** —— `GameTime` / `Time` 在扫描里都是 unix 时间戳形态、语义**没有定论**，所以**原值直显**，
+   不自己算"还剩几秒"。算错 = 往界面上写假信息，比不显示更坏。
+2. **拿不到就整块隐藏** —— 换游戏/换服后这些路径可能不存在，那就什么都不显示，
+   绝不留一块写着 0 的假面板（更不能出假预警）。
+3. **只读** —— 一次都不 FireServer、不写 Attribute、不写 Value 对象。
+
+★ 位置：PC 左下角 / 手机·平板左上角（各自避开最常用的控件）。★ `LiveEntities` 的子对象结构在
+大厅态是空的（还没证实），所以**只列名字和个数，不做"是否危险/是否逼近"的判断** —— 先取证，再接判据。
+
+### 🎯 头顶标签改用【权威血量】
+- 血量从 `Humanoid.Health/MaxHealth` 改成 **Player Attribute `@Health` / `@MaxHealth` 优先**，
+  拿不到才回退 Humanoid —— 本地 Humanoid 会被复制延迟 / 免伤打成假值，Attribute 才是游戏自己的权威值
+  （战斗模块 `alive()` / `hasShield()` 早就这么判了，标签这块之前没跟上）。
+- 顺带把**本来就有、只是没显示**的字段标出来：**🛡 护盾量**（`Shield` + `TempShield`）、
+  **☠**（权威 `State == "Dead"`，名字转灰）。
+- 新增共享读取器 `SYS.AttrRaw` / `SYS.AttrNum` / `SYS.ValOf`（Attribute 与值对象层的统一读法，
+  免得每处各写一份 pcall 导致判定口径不一致）。
+
+### 没做的（写清楚，免得下次误以为是漏了）
+- **绕过类一律没接**：`GameStarterService.Bypass*` · `ByteNet*` · `CHRONO_BLINK_*` · `EntityService.PitchYaw` ·
+  DOORS 的 `ChangeFlagsEvent` / `SetFlagsEvent` / `ChangeModuleVariable` / `UsePowerup` ·
+  机器派对 `MPWalkSpeed` / `MPJumpPower` —— 全是**名字推测、参数未取证**。按本项目铁律（先拿真参数再接判据），
+  猜着接不是"没效果"，而是会把**原本能生效的功能一起弄坏**。
+- **位置上报伪装不是新功能**：`SYS.AntiRevert` 早就 hook 了 `ClientReplicateCFrame.FireServer`（开飞行/加速自动挂）。
+- **弹药 / 换弹 / 后坐力 / 弹道也不是新的**：`SYS.Gun`（B7.5 射击增强）已覆盖，别再当新功能重做。
+
+---
+
 ## 10.1.0 · 2026-09-22
 
 **去掉「自动按键」功能**（用户口径：「去掉自动按键功能」）。
