@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 18:35 sha 0e3b174e bytes 536007'):format('2026-09-22 18:35','0e3b174e',536007))
+print(('[CheatMenu] build 2026-09-22 19:05 sha 9577a31e bytes 544415'):format('2026-09-22 19:05','9577a31e',544415))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -32,6 +32,7 @@ GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
 HUD_Info=false,
+SpiderSense=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoGym=false,AutoTrain=false,
@@ -107,7 +108,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.4.0"
+SYS.BuildVer="10.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2200,6 +2201,241 @@ SYS.Notify("🛰 战况面板: 已开(回合 / 战绩 / 在场实体 · 关掉�
 else
 SYS.Info.Clear()
 SYS.Notify("🛰 战况面板: 已关",SYS.CY.sub)
+end
+end
+do
+local SP={} SYS.SpiderSense=SP
+SP.Ready=false SP.Found={} SP.Hooked={} SP.Orig={} SP.Note=""
+SP.Gui=nil SP.Lab=nil SP.Next=0
+SP.Cnt={} SP.T={}
+SP.ON={"AimHead","GripTarget","CarryTarget","PoseAttached","PoseKill","Relax"}
+SP.EV={GripTarget="grip",CarryTarget="grip",PoseAttached="grip",PoseKill="kill",Relax="relax"}
+SP.gripAt=0 SP.relaxAt=0 SP.killAt=0
+local function spAPI(n)
+local ok,v=pcall(function() return _G[n] end)
+if ok and type(v)=="function" then return v end
+return nil
+end
+local function spScript(f)
+local gfe=spAPI("getfenv")
+if not gfe then return nil end
+local ok,e=pcall(gfe,f)
+if not ok or type(e)~="table" then return nil end
+local sc=e.script
+if not sc then return nil end
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+return nil
+end
+local function spName(f)
+local g=spAPI("getinfo")
+if g then
+local ok,n=pcall(g,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if type(debug)=="table" and type(debug.info)=="function" then
+local ok,n=pcall(debug.info,f,"n")
+if ok and type(n)=="string" and n~="" then return n end
+end
+return nil
+end
+function SP.Probe()
+local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
+if not HF then SP.Note="本机没有 hookfunction —— 函数层用不了"; return false end
+local G=spAPI("getgc") or spAPI("getGC")
+if not G then SP.Note="本机没有 getgc —— 找不到 SpiderRig 的函数"; return false end
+local function dummy(a) return a end
+local ok,o=pcall(HF,dummy,function(...) return ... end)
+if not ok or type(o)~="function" then
+SP.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
+return false
+end
+return true
+end
+function SP.Scan()
+if SP.Ready then return #SP.Found end
+local G=spAPI("getgc") or spAPI("getGC")
+if not G then return 0 end
+local ok,list=pcall(G,true)
+if not ok or type(list)~="table" then SP.Note="getgc(true) 没返回表"; return 0 end
+local want={}
+for _,k in ipairs(SP.ON) do want[k]=true end
+local budget=os.clock()+4
+local n=0
+for _,v in ipairs(list) do
+if os.clock()>budget then SP.Note="(扫描超 4 秒已截断)"; break end
+if type(v)=="function" then
+local nm=spName(v)
+if nm and want[nm] and not SP.Found[nm] then
+if spScript(v)=="SpiderRig" then SP.Found[nm]=v n=n+1 end
+end
+end
+end
+SP.Ready=true
+return n
+end
+function SP.Hook()
+if next(SP.Hooked)~=nil then return 0 end
+local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
+local NCC=spAPI("newcclosure")
+if not HF then return 0 end
+local n=0
+for nm,f in pairs(SP.Found) do
+local orig
+local body=function(...)
+SP.Cnt[nm]=(SP.Cnt[nm] or 0)+1
+SP.T[nm]=os.clock()
+local ev=SP.EV[nm]
+if ev=="grip" then SP.gripAt=os.clock()
+elseif ev=="kill" then SP.killAt=os.clock()
+elseif ev=="relax" then SP.relaxAt=os.clock() end
+if type(orig)~="function" then return end
+return orig(...)
+end
+local ok,o=pcall(HF,f,NCC and NCC(body) or body)
+if ok and type(o)=="function" then
+orig=o SP.Hooked[nm]=f SP.Orig[nm]=o n=n+1
+end
+end
+return n
+end
+function SP.Unhook()
+local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
+local RF=spAPI("restorefunction") or spAPI("restorefunc")
+if not HF then return 0 end
+local n=0
+for nm,f in pairs(SP.Hooked) do
+local ok=false
+if RF then ok=pcall(RF,f) end
+if not ok and type(SP.Orig[nm])=="function" then ok=pcall(HF,f,SP.Orig[nm]) end
+if ok then n=n+1 end
+end
+SP.Hooked={}
+return n
+end
+function SP.FindSpider()
+if SP.Model and SP.Model.Parent then
+local hd2=SP.Model:FindFirstChild("Head") or SP.Model:FindFirstChildWhichIsA("BasePart")
+if hd2 then return SP.Model,hd2 end
+end
+SP.Model=nil
+local now=os.clock()
+if SP.At and (now-SP.At)<1.0 then return nil end
+SP.At=now
+local function hit(m)
+local n=m.Name
+if type(n)~="string" or n=="" then return nil end
+if not n:lower():find("spider",1,true) then return nil end
+return m:FindFirstChild("Head") or m:FindFirstChildWhichIsA("BasePart")
+end
+local ok,kids=P(function() return WS:GetChildren() end)
+if not ok or type(kids)~="table" then return nil end
+local q={} local seen=0
+for i=1,#kids do q[#q+1]={kids[i],1} end
+local head=1
+while head<=#q and seen<2000 do
+local it=q[head] head=head+1
+local o,lv=it[1],it[2]
+seen=seen+1
+if o:IsA("Model") then
+local hd=hit(o)
+if hd then SP.Model=o return o,hd end
+end
+if lv<3 and #q<2500 then
+local ok2,cs=P(function() return o:GetChildren() end)
+if ok2 and type(cs)=="table" then
+for j=1,#cs do q[#q+1]={cs[j],lv+1} end
+end
+end
+end
+return nil
+end
+function SP.Clear()
+if SP.Gui then P(function() SP.Gui:Destroy() end) end
+SP.Gui=nil SP.Lab=nil
+end
+function SP.Tick()
+if not SYS.T_.SpiderSense then
+if SP.Gui then SP.Clear() end
+return
+end
+local now=os.clock()
+if now<(SP.Next or 0) then return end
+SP.Next=now+0.2
+local ok,model,hd=P(SP.FindSpider)
+if not ok or model==nil or hd==nil then
+if SP.Gui then SP.Clear() end
+return
+end
+local L={"🕷 蜘蛛"}
+if SP.killAt>0 and (now-SP.killAt)<5 then
+L[#L+1]=("⚠ 扑杀 %.1f 秒前"):format(now-SP.killAt)
+elseif SP.gripAt>SP.relaxAt and SP.gripAt>0 and (now-SP.gripAt)<300 then
+L[#L+1]=("抓住目标 已 %.1f 秒"):format(now-SP.gripAt)
+elseif SP.T.AimHead and (now-SP.T.AimHead)<1 then
+L[#L+1]="索敌中"
+else
+L[#L+1]="待机"
+end
+if SP.relaxAt>0 then L[#L+1]=("脱身 %.1f 秒前"):format(now-SP.relaxAt) end
+local c={}
+for _,k in ipairs(SP.ON) do
+local v=SP.Cnt[k] or 0
+if v>0 then c[#c+1]=("%s×%d"):format(k,v) end
+end
+if #c>0 then L[#L+1]="观测: "..table.concat(c,"  ") end
+local txt=table.concat(L,"\n")
+P(function()
+if not SP.Gui then
+local g=Instance.new("BillboardGui")
+g.Name=SYS.N.Spider
+g.Size=UDim2.new(0,300,0,60)
+g.AlwaysOnTop=true
+g.Adornee=hd
+g.Parent=hd
+local t=Instance.new("TextLabel")
+t.Size=UDim2.fromScale(1,1)
+t.BackgroundTransparency=1
+t.TextColor3=Color3.fromRGB(255,130,60)
+t.TextScaled=true
+t.Font=Enum.Font.Code
+t.TextStrokeTransparency=0.4
+t.Parent=g
+SP.Gui=g SP.Lab=t
+end
+local g=SP.Gui
+if not g then return end
+if g.Adornee~=hd then g.Adornee=hd g.Parent=hd end
+local off=6
+local okb,a,b=P(function() local x,y=model:GetBoundingBox() return x,y end)
+if okb and a and b and hd.Position then
+off=(a.Position.Y+b.Y*0.5-hd.Position.Y)+2.0
+end
+if g.StudsOffsetWorldSpace.Y~=off then g.StudsOffsetWorldSpace=Vector3.new(0,off,0) end
+if SP.Lab and SP.Lab.Text~=txt then SP.Lab.Text=txt end
+g.Enabled=true
+end)
+end
+function SYS.SetSpiderSense(on)
+on=on and true or false
+SYS.T_.SpiderSense=on
+SYS.SetLoop("Spider",on,RS.Heartbeat,SP.Tick)
+if on then
+if next(SP.Hooked)==nil then
+if SP.Probe() then
+P(SP.Scan)
+local okh,n2=P(SP.Hook)
+SP.Note=("已挂 %d/%d 个函数"):format((type(n2)=="number") and n2 or 0,#SP.ON)
+end
+end
+SP.Next=0
+P(SP.Tick)
+SYS.Notify("🕷 蜘蛛感知: "..tostring(SP.Note),SYS.CY.green)
+else
+SP.Clear()
+P(SP.Unhook)
+SYS.Notify("🕷 蜘蛛感知: 已关(函数已还原)",SYS.CY.sub)
+end
 end
 end
 SYS.Scanners = SYS.Scanners or {}
@@ -13392,6 +13628,21 @@ UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷
 "★ 节奏(2026-09-22 放宽, 用户口径「不需要压制」): 同一目标 0.6 秒即可重复触发; 每帧最多 24 个(原 3 秒 / 6 个)。\n"..
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
+UI.Section(p,"🕷 蜘蛛感知 (机器派对 · 蜘蛛扑上身)",CY.accent)
+UI.Switch(p,"🕷 蜘蛛感知 (蜘蛛头顶显示 索敌/抓住/扑杀 的已持续时长)","SpiderSense",SYS.SetSpiderSense)
+UI.Tip(p,"只观测, 不动手: 按名字把 SpiderRig 的 6 个函数包一层, 一律 `return orig(...)` ——\n"..
+"  不改返回值、不改入参、不碰任何游戏状态。关掉开关【会把被包的函数还原】, 不留在游戏里空转。\n"..
+"★ 它能告诉你什么(实锤, 来自 2026-09-22 17:19 机器派对综合扫描):\n"..
+"  · AimHead 被调用        = 蜘蛛开始锁头(最早的来袭信号)\n"..
+"  · GripTarget / PoseAttached / CarryTarget = 抓住目标 / 附着 / 带着走\n"..
+"  · PoseKill              = 扑杀姿态(标签会变 ⚠ 并标出距今多久)\n"..
+"  · Relax                 = 脱身\n"..
+"★ 它【不能】告诉你什么(诚实边界, 别当它是倒计时):\n"..
+"  · 「还要多久才脱身」—— 游戏没把这个总时长给客户端, 我们算不出来, 也不猜。\n"..
+"  · 蜘蛛【什么时候会来】—— 那份扫描里场上没有蜘蛛场(Workspace 顶层 60 个场景里没它),\n"..
+"    拿不到预告字段。现在最早只能靠 AimHead 一开始被调用 来当来袭信号。\n"..
+"★ 想把它做成真正的倒计数: 让蜘蛛正在场时用「综合扫描」再扫一次,\n"..
+"  如果它自己画了倒计时数字(像 MachinePartyDoorRefusal 那种 mm:ss 标签), 我就改成直读镜像, 零风险。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
