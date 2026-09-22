@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 21:09 sha b48e7b9d bytes 560979'):format('2026-09-22 21:09','b48e7b9d',560979))
+print(('[CheatMenu] build 2026-09-22 23:55 sha 102bf955 bytes 570845'):format('2026-09-22 23:55','102bf955',570845))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -35,6 +35,7 @@ ESP_WallWise=true,
 HUD_Info=false,
 SpiderSense=false,
 DeadOn_Freeze=false,DeadOn_NoBlow=false,
+DeadRails_HitMark=false,DeadRails_AimProbe=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoGym=false,AutoTrain=false,
@@ -110,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.7.1"
+SYS.BuildVer="10.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2686,6 +2687,206 @@ end
 function SYS.SetDeadOnFreeze(on) SYS.SetDeadOn("freeze",on) end
 function SYS.SetDeadOnNoBlow(on) SYS.SetDeadOn("blow",on) end
 end
+do
+local DR={} SYS.DRCombat=DR
+DR.HitPath={"Shared","Universe","Network","RemoteEvent","Hitmarker"}
+DR.AimScripts={"aimAssist","aimAssistADSBoost","AimAssistMode","setAimAssistResources",
+"ControllerAimAssistHandler","ZoomController"}
+DR.Gui=nil DR.X=nil DR.Lab=nil DR.HitN=0 DR.XAt=0 DR.HitConn=nil
+DR.Ready=false DR.Found={} DR.FoundNM={} DR.Hooked={} DR.Orig={} DR.Note=""
+DR.Cnt={}
+local function drAPI(n)
+local ok,v=pcall(function() return _G[n] end)
+if ok and type(v)=="function" then return v end
+return nil
+end
+local function drScript(f)
+local gfe=drAPI("getfenv")
+if not gfe then return nil end
+local ok,e=pcall(gfe,f)
+if not ok or type(e)~="table" then return nil end
+local sc=e.script
+if not sc then return nil end
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+return nil
+end
+local function drGui()
+P(function()
+if DR.Gui and DR.Gui.Parent then return end
+local pg=(SYS.SafeParentGui and SYS.ScreenGui) or PG
+if not pg then return end
+local g=SYS.NewVis and SYS.NewVis("ScreenGui")
+if not g then return end
+g.ResetOnSpawn=false g.IgnoreGuiInset=true g.DisplayOrder=999997
+P(function() if syn and syn.protect_gui then syn.protect_gui(g) end end)
+local x=Instance.new("TextLabel")
+x.AnchorPoint=Vector2.new(0.5,0.5) x.Position=UDim2.new(0.5,0,0.5,0)
+x.Size=UDim2.new(0,70,0,70) x.BackgroundTransparency=1
+x.Font=Enum.Font.GothamBlack x.TextSize=46 x.Text="✕"
+x.TextColor3=Color3.fromRGB(255,70,70)
+x.TextStrokeColor3=Color3.fromRGB(0,0,0) x.TextStrokeTransparency=0.15
+x.Visible=false x.Parent=g
+local fr=Instance.new("Frame")
+fr.AnchorPoint=Vector2.new(0.5,1) fr.Position=UDim2.new(0.5,0,1,-134)
+fr.Size=UDim2.new(0,300,0,24)
+fr.BackgroundColor3=Color3.fromRGB(12,14,20) fr.BackgroundTransparency=0.22
+fr.BorderSizePixel=0 fr.Parent=g
+local rc=Instance.new("UICorner") rc.CornerRadius=UDim.new(0,8) rc.Parent=fr
+local lab=Instance.new("TextLabel")
+lab.Size=UDim2.new(1,-12,1,0) lab.Position=UDim2.new(0,6,0,0)
+lab.BackgroundTransparency=1 lab.Font=Enum.Font.GothamMedium
+lab.TextSize=14 lab.TextColor3=Color3.fromRGB(235,240,250)
+lab.TextXAlignment=Enum.TextXAlignment.Center lab.Text="🎯 命中 0"
+lab.Parent=fr
+g.Parent=pg
+DR.Gui=g DR.X=x DR.Lab=lab
+end)
+end
+function DR.ShowHit()
+drGui()
+P(function()
+if not (DR.X and DR.X.Parent) then return end
+DR.X.Visible=true DR.XAt=os.clock()+0.22
+DR.HitN=(DR.HitN or 0)+1
+if DR.Lab then DR.Lab.Text=("🎯 命中 %d"):format(DR.HitN) end
+task.delay(0.22,function()
+if DR.X and DR.X.Parent and os.clock()>=DR.XAt then DR.X.Visible=false end
+end)
+end)
+end
+function SYS.SetDRHit(on)
+on=on and true or false
+SYS.T_.DeadRails_HitMark=on
+if on then
+if not DR.HitConn then
+local ev=SYS.RStorage
+for _,seg in ipairs(DR.HitPath) do
+if not ev then break end
+ev=(P(function() return ev:FindFirstChild(seg) end))
+end
+if ev and ev.OnClientEvent then
+DR.HitConn=T(ev.OnClientEvent:Connect(function() DR.ShowHit() end))
+DR.Note="已监听 Hitmarker 通道"
+else
+DR.Note="没找到 Hitmarker 通道(这个游戏 / 这局可能没有)"
+end
+end
+drGui()
+SYS.Notify("🎯 命中标记: 已开 · "..tostring(DR.Note),SYS.CY.green)
+else
+if DR.HitConn then P(function() DS(DR.HitConn) end) DR.HitConn=nil end
+if DR.Gui then P(function() DR.Gui:Destroy() end) end
+DR.Gui=nil DR.X=nil DR.Lab=nil
+SYS.Notify("🎯 命中标记: 已关(监听已断开)",SYS.CY.sub)
+end
+end
+function DR.Probe()
+local HF=drAPI("hookfunction") or drAPI("hookfunc") or drAPI("replaceclosure")
+if not HF then DR.Note="本机没有 hookfunction —— 函数层用不了"; return false end
+if not (drAPI("getgc") or drAPI("getGC")) then DR.Note="本机没有 getgc —— 找不到瞄准脚本的函数"; return false end
+local function dummy(a) return a end
+local ok,o=pcall(HF,dummy,function(...) return ... end)
+if not ok or type(o)~="function" then
+DR.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
+return false
+end
+return true
+end
+function DR.Scan()
+if DR.Ready then return #DR.Found end
+local G=drAPI("getgc") or drAPI("getGC")
+if not G then return 0 end
+local ok,list=pcall(G,true)
+if not ok or type(list)~="table" then DR.Note="getgc(true) 没返回表"; return 0 end
+local want={}
+for _,nm in ipairs(DR.AimScripts) do want[nm]=true end
+local t0=os.clock()
+local fnd,nms={},{}
+for i=1,#list do
+if os.clock()-t0>4 then break end
+local v=list[i]
+if type(v)=="function" then
+local sn=drScript(v)
+if sn and want[sn] then fnd[#fnd+1]=v nms[#nms+1]=sn end
+end
+end
+DR.Found=fnd DR.FoundNM=nms DR.Ready=true
+return #fnd
+end
+local function drHookOne(idx)
+local f=DR.Found[idx]
+if not f or DR.Hooked[idx] then return false end
+local HF=drAPI("hookfunction") or drAPI("hookfunc") or drAPI("replaceclosure")
+local NCC=drAPI("newcclosure")
+if not HF then return false end
+local sn=DR.FoundNM[idx] or "?"
+local orig
+local body=function(...)
+DR.Cnt[sn]=(DR.Cnt[sn] or 0)+1
+if type(orig)~="function" then return nil end
+return orig(...)
+end
+local ok,o=pcall(HF,f,NCC and NCC(body) or body)
+if ok and type(o)=="function" then
+orig=o DR.Hooked[idx]=true DR.Orig[idx]=o return true
+end
+return false
+end
+local function drUnhookOne(idx)
+if not DR.Hooked[idx] then return false end
+local f=DR.Found[idx]
+local HF=drAPI("hookfunction") or drAPI("hookfunc") or drAPI("replaceclosure")
+local RF=drAPI("restorefunction") or drAPI("restorefunc")
+local ok=false
+if RF and f then ok=pcall(RF,f) end
+if not ok and HF and f and type(DR.Orig[idx])=="function" then ok=pcall(HF,f,DR.Orig[idx]) end
+if ok then DR.Hooked[idx]=nil DR.Orig[idx]=nil return true end
+return false
+end
+function DR.Summary()
+local t={} local tot=0
+for sn,c in pairs(DR.Cnt) do t[#t+1]=("%s=%d"):format(sn,c) tot=tot+c end
+table.sort(t)
+return ("瞄准层调用累计 %d 次: %s"):format(tot, (#t>0 and table.concat(t," · ") or "还没调用过"))
+end
+function SYS.SetDRAim(on)
+on=on and true or false
+SYS.T_.DeadRails_AimProbe=on
+if on then
+if not DR.Probe() then
+SYS.T_.DeadRails_AimProbe=false
+SYS.Notify("🔭 开镜探针: 开不了 · "..tostring(DR.Note),SYS.CY.red)
+return
+end
+if not DR.Ready then P(DR.Scan) end
+local n=0
+if #DR.Found==0 then
+DR.Note="没找到瞄准层的函数(现在没在 Dead Rails 对局里?)"
+else
+for i=1,#DR.Found do if drHookOne(i) then n=n+1 end end
+DR.Note=("已挂 %d/%d 个函数(只记录, 不改行为)"):format(n,#DR.Found)
+end
+print("[CheatMenu][DRCombat] "..tostring(DR.Note))
+for _,sn in ipairs(DR.AimScripts) do
+if DR.Cnt[sn] then print(("  · %s 命中时会被计数"):format(sn)) end
+end
+SYS.Notify("🔭 开镜探针: 已开 · "..tostring(DR.Note),SYS.CY.cyan)
+else
+local n=0
+for i=1,#DR.Found do if drUnhookOne(i) then n=n+1 end end
+print("[CheatMenu][DRCombat] "..DR.Summary())
+DR.Note=("已还原 %d 个函数"):format(n)
+SYS.Notify("🔭 开镜探针: 已关(函数已还原)",SYS.CY.sub)
+end
+end
+function DR.UnloadAll()
+if DR.HitConn then P(function() DS(DR.HitConn) end) DR.HitConn=nil end
+if DR.Gui then P(function() DR.Gui:Destroy() end) end
+DR.Gui=nil DR.X=nil DR.Lab=nil
+for i=1,#DR.Found do pcall(drUnhookOne,i) end
+end
+end
 SYS.Scanners = SYS.Scanners or {}
 function SYS.RegisterScanner(name, fn, desc)
 for _, s in ipairs(SYS.Scanners) do
@@ -3357,6 +3558,8 @@ SYS.KwHostile = {"monster","enemy","hostile","killer","kill","attack","aggro","b
 "jumpscare","cursed","glitch","entity",
 "grumble","firedamp","dread","timothy","goblino","lookman","blitz","giggle","shadow"}
 SYS.KwHostileCN = {"怪","敌","杀手","恶魔","猎","鬼","僵尸","追","凶"}
+SYS.DRHostileMount = {Horse=true, War=true}
+SYS.DRHostileRoots = {"RuntimeEntities","NightEnemies"}
 function SYS.NewVis(cls)
 local ok,inst=P(function()
 local o=Instance.new(cls)
@@ -3564,8 +3767,29 @@ SYS._npcAt=_now
 local list={}
 local HOST_KW=SYS.KwHostile
 local HOST_CN=SYS.KwHostileCN
+local drRoots={}
+for _,rn in ipairs(SYS.DRHostileRoots or {}) do
+local r=P(function() return WS:FindFirstChild(rn) end)
+if r then drRoots[#drRoots+1]=r end
+end
 local HOST={}
+local function drHostile(m)
+local en=P(function() return m:GetAttribute("EntityName") end)
+if type(en)=="string" and en~="" then
+return (SYS.DRHostileMount and SYS.DRHostileMount[en]~=true)
+end
+for i=1,#drRoots do
+local r=drRoots[i]
+local isd=P(function() return m:IsDescendantOf(r) end)
+if isd==true then
+local nm=(type(m.Name)=="string" and m.Name:lower()) or ""
+if not nm:find("horse",1,true) and not nm:find("mount",1,true) then return true end
+end
+end
+return false
+end
 local function isHostile(m)
+if drHostile(m) then return true end
 for _,k in ipairs({"Hostile","Enemy","IsEnemy","Aggro","Dangerous","Killer"}) do
 local ok,v=pcall(function() return m:GetAttribute(k) end)
 if ok and v==true then return true end
@@ -3648,6 +3872,9 @@ SYS.PickKinds = {
 kws = {"chest","crate","locker","cabinet","vault","safe","coffer","stash","case","box","container",
 "drawer","dresser","desk","table","knobs","cupboard","bookcase","checkout","wardrobe",
 "宝箱","箱子","柜","收纳","棺材","抽屉","桌"} },
+{ name = "矿石/矿脉", color = Color3.fromRGB(0,200,255),
+kws = {"coalore","goldore","silverore","copperore","ironore","orevein","ore_vein","orenode",
+"矿石","矿脉","矿"} },
 { name = "拾取物", color = Color3.fromRGB(0,200,255),
 kws = {"pickup","drop","loot","reward","token","orb","collect","coin","cash","gem","item","scrap",
 "money","cash","orb","star","card","key","gold","coin",
@@ -3668,7 +3895,8 @@ kws = {"ladder","truss","climb","rope","vine","wallrun","grapple",
 "梯","爬","绳","藤"} },
 { name = "按钮/机关", color = Color3.fromRGB(0,200,255),
 kws = {"button","switch","lever","panel","console","puzzle","mechanism","trigger","valve","terminal",
-"按钮","机关","开关","拉杆","控制"} },
+"altar","shrine","offering","sacrifice","totem",
+"按钮","机关","开关","拉杆","控制","祭坛","献祭" } },
 { name = "传送/入口", color = Color3.fromRGB(0,200,255),
 kws = {"portal","warp","teleport","gateway","exit","entrance","door","gate","elevator","stairs",
 "传送","入口","出口","楼梯","电梯"} },
@@ -14073,6 +14301,21 @@ UI.Tip(p,"只观测, 不动手: 按名字把 SpiderRig 的 6 个函数包一层,
 "    拿不到预告字段。现在最早只能靠 AimHead 一开始被调用 来当来袭信号。\n"..
 "★ 想把它做成真正的倒计数: 让蜘蛛正在场时用「综合扫描」再扫一次,\n"..
 "  如果它自己画了倒计时数字(像 MachinePartyDoorRefusal 那种 mm:ss 标签), 我就改成直读镜像, 零风险。",CY.yellow)
+UI.Section(p,"🔫 Dead Rails 战斗增强 (命中标记 / 开镜探针)",CY.accent)
+UI.Switch(p,"🎯 命中标记 (监听 Hitmarker 通道 —— 打中就闪 ✕ + 计数)","DeadRails_HitMark",SYS.SetDRHit)
+UI.Switch(p,"🔭 开镜/瞄准探针 (只把瞄准层调用记到控制台, 绝不改行为)","DeadRails_AimProbe",SYS.SetDRAim)
+UI.Tip(p,"针对【Dead Rails(亡命铁轨)】这一局的战斗增强 —— 两个开关互相独立、默认都关。\n"..
+"★ 🎯 命中标记: 听游戏自己发给客户端的 `ReplicatedStorage...RemoteEvent.Hitmarker`(实锤路径),\n"..
+"  每响一次 = 你打中一次 -> 准星处闪一个大号 ✕ + 屏幕下方累计计数; 菜单关着也看得见。\n"..
+"  ★ 它【不替换任何函数】, 只挂一个事件监听, 关掉即断开 —— 没有「卸载不还原」的坑。\n"..
+"★ 🔭 开镜/瞄准探针: 这游戏的瞄准辅助在扫描里【只有模块名】(aimAssist / AimAssistMode /\n"..
+"  ZoomController 等), 里面函数叫什么名、参数什么形状, 扫描里都没有 ——\n"..
+"  ⇒ 按「先取证再动手」的铁律, 这一档【只把调用次数打到控制台(F9)】, 不做任何真增强;\n"..
+"  拿到 F9 输出后, 下一版再按真实字段做「真瞄准辅助」。\n"..
+"  ★ 为什么现在不硬改: 这游戏自带 CrosshairHud / CrosshairManager / crosshairTargetingSystem,\n"..
+"    乱动瞄准层 = 重演「开镜准星没了」那个事故。\n"..
+"★ 探针需要执行器有 getgc / hookfunction, 没有会直接说不支持(不静默失败);\n"..
+"  关掉探针 = 把被包的函数【原样还原】, 不留在游戏里空转。",CY.sub)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
@@ -15160,6 +15403,7 @@ P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
 P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
 P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
+P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
