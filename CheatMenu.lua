@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 01:30 sha 3299c4b5 bytes 471039'):format('2026-09-22 01:30','3299c4b5',471039))
+print(('[CheatMenu] build 2026-09-22 13:09 sha 58598aec bytes 518665'):format('2026-09-22 13:09','58598aec',518665))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -53,6 +53,9 @@ NightVision=false,NightVisionPro=false,Lantern=false,SuperLight=false,
 NoFog=false,NoShadow=false,
 NoDeath=false,NoKnock=false,
 CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
+Gun_NoRecoil=false,Gun_InfAmmo=false,Gun_InstantReload=false,Gun_NoDrop=false,
+Gun_NoCooldown=false,Gun_InfItem=false,
+Gun_AimStable=false,
 CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
@@ -97,7 +100,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.9"
+SYS.BuildVer="9.9.10"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -162,7 +165,33 @@ FogEnd=LT and LT.FogEnd or 1000,FogColor=LT and LT.FogColor or Color3.new(0.5,0.
 do
 local function T_(c) if c and type(c.Disconnect)=="function" then SYS.Conns[#SYS.Conns+1]=c end return c end
 local function TT_(co) if co then SYS.Threads[#SYS.Threads+1]=co end return co end
-local function P_(f,...) if type(f)~="function" then return false end return pcall(f,...) end
+SYS.Errors = SYS.Errors or {}
+SYS.ErrN = SYS.ErrN or 0
+SYS.ErrPrintN = SYS.ErrPrintN or 0
+SYS.ErrSlot = SYS.ErrSlot or 0
+local function P_(f,...)
+if type(f)~="function" then return false end
+local ok,a,b = pcall(f,...)
+if not ok then
+SYS.ErrN = SYS.ErrN + 1
+local msg = tostring(a)
+if #msg > 160 then msg = msg:sub(1,160) end
+local e = SYS.Errors[msg]
+if e then
+e.n = e.n + 1
+elseif SYS.ErrSlot < 60 then
+SYS.ErrSlot = SYS.ErrSlot + 1
+SYS.Errors[msg] = {n=1,t=os.clock()}
+if SYS.ErrPrintN < 30 then
+SYS.ErrPrintN = SYS.ErrPrintN + 1
+print("[CheatMenu] ⚠ 内部错误(已记账, 设置页 🩺 可查): "..msg)
+end
+else
+SYS.ErrOther = (SYS.ErrOther or 0) + 1
+end
+end
+return ok,a,b
+end
 local function DS_(c)
 if not c then return end
 pcall(function()
@@ -285,9 +314,12 @@ pending=true
 task.delay(1.0,function() pending=false SYS.SaveConfig() end)
 end
 function SYS.SetLoop(k,on,sig,fn)
+if on then
 if not sig then return end
-if on and not SYS.Loops[k] then SYS.Loops[k]=T(sig:Connect(fn))
-elseif not on and SYS.Loops[k] then SYS.Loops[k]:Disconnect() SYS.Loops[k]=nil end
+if not SYS.Loops[k] then SYS.Loops[k]=T(sig:Connect(fn)) end
+elseif SYS.Loops[k] then
+SYS.Loops[k]:Disconnect() SYS.Loops[k]=nil
+end
 end
 function SYS.SpawnLoop(fn)
 local co=task.spawn(function()
@@ -524,6 +556,7 @@ end
 end)
 end)
 local RRemoteCache={}
+local NEGC={}
 local function findRemote(n,wantCls)
 if typeof(n)=="Instance" and n:IsA(wantCls) then return n end
 if type(n)~="string" or n=="" then return nil end
@@ -570,9 +603,41 @@ if r6 then RRemoteCache[ck]=r6 return r6 end
 local r7=ok2(NetRoot:FindFirstChild(pre..tostring(n):gsub("%.","_")))
 if r7 then RRemoteCache[ck]=r7 return r7 end
 end
+local key2="G"..ck
+local neg=NEGC[key2]
+if neg and (os.clock()-neg)<8 then return nil end
+local want=tostring(n)
+local leaf=want:match("([^%.]+)$") or want
+local q,qt,dep,nodes={ RStorage },1,{ [RStorage]=0 },0
+local qh,found=1,nil
+local budget2=6000
+while qh<=qt and budget2>0 do
+local node=q[qh] qh=qh+1
+nodes=nodes+1 budget2=budget2-1
+local d=dep[node] or 0
+if d<6 then
+local ok4,kids=pcall(function() return node:GetChildren() end)
+if ok4 and type(kids)=="table" then
+for i=1,#kids do
+local c=kids[i]
+if c.Name==want or c.Name==leaf then
+local r=ok2(c)
+if r then found=r break end
+end
+if c:IsA("Folder") or c:IsA("Configuration") then
+dep[c]=d+1 qt=qt+1 q[qt]=c
+end
+end
+end
+end
+if found then break end
+end
+if found then RRemoteCache[ck]=found return found end
+NEGC[key2]=os.clock()
 return nil
 end
 function SYS.REvent(n) return findRemote(n,"RemoteEvent") end
+function SYS.REventU(n) return findRemote(n,"UnreliableRemoteEvent") end
 function SYS.RFunction(n) return findRemote(n,"RemoteFunction") end
 function SYS.Fire(n,...)
 local r=SYS.REvent(n) if not r then return false end
@@ -580,18 +645,35 @@ local a=table.pack(...)
 return P(function() r:FireServer(table.unpack(a,1,a.n)) end)
 end
 function SYS.OnRemote(n,cb)
-local r=SYS.REvent(n) if not r then return end
+local r=SYS.REvent(n) or SYS.REventU(n)
+if not r then return end
 T(r.OnClientEvent:Connect(cb))
 end
 end
 do
 local HONEY={"exploiter","exploiters","cheater","cheaters","cheat","cheating","hacker",
-"hackers","hacking","abuser","abusers"}
-local ADMIN={"admin","ban","kick","punish","punishment","report","registercommand",
-"logcommand","updateuserroles","invokeservercommand","createuser"}
+"hackers","hacking","abuser","abusers",
+"hack","hacks","wallhack","wallhacks","aimbot","aimbots","triggerbot",
+"silentaim","noclip","godmode","godmodeon","speedhack","flyhack",
+"infammo","infiniteammo","autofarm","autoclicker","espuser","flyexploit"}
+local ADMIN={"admin","punish","punishment","registercommand","logcommand",
+"updateuserroles","invokeservercommand","createuser"}
+local ADMIN_WEAK={"ban","unban","kick","report"}
+local ADMIN_CTX={"player","players","user","users","account","accounts","client",
+"member","members","name","id","moderator","staff"}
+local PHRASE_ADMIN_WEAK={"banplayer","banuser","unbanplayer","unbanuser","kickplayer",
+"kickuser","banhammer","banlist","bannedusers","bannedplayer",
+"playerreport","reportplayer","reportuser","ban_player","ban_user",
+"unban_player","unban_user","kick_player","kick_user",
+"report_player","report_user","ban_list","moderateplayer"}
 local LOGNET={"log","logs","logging","audit","telemetry","analytics","anticheat","antiheat",
-"detect","detection","integritycheck","monitor"}
-local PHRASE_HONEY={"sticky note","i think i can cheat","my name is"}
+"detect","detection","monitor"}
+local PHRASE_BUILTIN={"integritycheck","robloxreplicatedstorage","robloxgui","coregui",
+"corepackages","robloxscriptservice",
+"serverauthority","playermodule"}
+local PHRASE_HONEY={"sticky note","i think i can cheat","my name is",
+"godmode","triggerbot","infiniteammo","autofarm","silentaim",
+"wallhack","speedhack","flyhack","autoclicker","no clip"}
 local PHRASE_ADMIN={"register_command","log_command","invoke_server_command",
 "update_user_roles","create_user","run_command"}
 local function toks(name)
@@ -602,20 +684,30 @@ local t={}
 for w in s:gmatch("%w+") do t[#t+1]=w end
 return t
 end
+local function flat(s) return (tostring(s):gsub("[%s_%.%-]","")) end
 function SYS.RemoteRisk(name)
 if type(name)~="string" or #name==0 then return nil end
 local low=name:lower()
-for i=1,#PHRASE_HONEY do
-if low:find(PHRASE_HONEY[i],1,true) then
+local lf=flat(low)
+local function phr(list) for i=1,#list do if lf:find(flat(list[i]),1,true) then return true end end return false end
+if phr(PHRASE_BUILTIN) then
+return "ℹ Roblox 官方自带(与游戏无关) —— 不是游戏的反作弊, 无需刻意避开"
+end
+if phr(PHRASE_HONEY) then
 return "⛔ 蜜罐嫌疑(名字点名开挂/作弊) —— 千万别 FireServer"
 end
-end
-for i=1,#PHRASE_ADMIN do
-if low:find(PHRASE_ADMIN[i],1,true) then
+if phr(PHRASE_ADMIN) then
 return "⛔ 后台命令通道(conch/管理类) —— 触发=自报家门"
 end
+if phr(PHRASE_ADMIN_WEAK) then
+return "⛔ 管理后台/处罚通道(ban/kick/report 固定搭配) —— 触发=自报家门"
 end
 local tk=toks(name)
+local isRoblox=false
+for i=1,#tk do if tk[i]=="roblox" then isRoblox=true break end end
+if isRoblox then
+return "ℹ Roblox 官方自带(与游戏无关) —— 不是游戏的反作弊, 无需刻意避开"
+end
 for i=1,#tk do
 local w=tk[i]
 for j=1,#HONEY do if w==HONEY[j] then
@@ -625,6 +717,18 @@ for i=1,#tk do
 local w=tk[i]
 for j=1,#ADMIN do if w==ADMIN[j] then
 return "⛔ 管理后台/处罚通道 —— 触发=自报家门" end end
+end
+local hasCtx=false
+for i=1,#tk do
+for j=1,#ADMIN_CTX do if tk[i]==ADMIN_CTX[j] then hasCtx=true break end end
+if hasCtx then break end
+end
+if hasCtx then
+for i=1,#tk do
+local w=tk[i]
+for j=1,#ADMIN_WEAK do if w==ADMIN_WEAK[j] then
+return "⛔ 管理后台/处罚通道(含 ban/kick/report + 玩家词) —— 触发=自报家门" end end
+end
 end
 for i=1,#tk do
 local w=tk[i]
@@ -640,8 +744,9 @@ if not o then break end
 local nm=o.Name
 if type(nm)=="string" and nm~="" then
 local low=nm:lower()
+local lf=flat(low)
 for i=1,#PHRASE_HONEY do
-if low:find(PHRASE_HONEY[i],1,true) then return true end
+if lf:find(flat(PHRASE_HONEY[i]),1,true) then return true end
 end
 local tk=toks(nm)
 for j=1,#tk do
@@ -2916,13 +3021,13 @@ end
 return nil
 end
 local function deepHasI(root)
-local stack, budget = {root}, 4000
+local stack, budget = {root}, 9000
 local depth = {[root]=0}
 while #stack>0 and budget>0 do
 local n=stack[#stack] stack[#stack]=nil
 budget=budget-1
 local d=depth[n] or 0
-if d<8 then
+if d<11 then
 local ok,kids=P(function() return n:GetChildren() end)
 if ok and type(kids)=="table" then
 local containers
@@ -3048,7 +3153,7 @@ local _n=0
 for _,ch in ipairs(o:GetChildren()) do
 if ch:IsA("BasePart") and ch.Position then
 _n=_n+1
-if _n>12 then break end
+if _n>40 then break end
 list[#list+1]=ch
 PK[ch]=kk
 end
@@ -3747,6 +3852,30 @@ end
 end)
 return list
 end
+function SYS.InterKey(obj)
+local okn,nm=P(function() return obj and obj.Name end)
+if not okn or type(nm)~="string" or nm=="" then return nil end
+local host=nil
+local okc,cur=P(function() return obj.Parent end)
+if not okc then cur=nil end
+for _=1,4 do
+if not cur then break end
+local okm,ism=P(function() return cur:IsA("Model") end)
+if okm and ism then
+local ok2,h=P(function() return cur.Name end)
+if ok2 and type(h)=="string" and h~="" then host=h end
+break
+end
+local ok3,par=P(function() return cur.Parent end)
+cur=ok3 and par or nil
+end
+if not host then
+local ok4,hp=P(function() return (obj.Parent and obj.Parent.Name) or nil end)
+host=(ok4 and type(hp)=="string" and hp~="") and hp or "?"
+end
+return tostring(host).."#"..nm
+end
+SYS._hitStat = SYS._hitStat or {fired=0, capped=0, dup=0}
 function SYS.AutoHitTick()
 if not SYS.T_.AutoHitMinigame then return end
 local _, _, root = GC()
@@ -3755,13 +3884,35 @@ local now = os.clock()
 if (now - (SYS._hitAt or 0)) > 0.5 or not SYS._hitList then
 SYS._hitAt = now
 SYS._hitList = SYS.AutoHitScan()
+if not SYS._hitLogged and #SYS._hitList > 0 then
+SYS._hitLogged = true
+local keys,dup = {}, 0
+for _, it in ipairs(SYS._hitList) do
+local k = SYS.InterKey(it.obj)
+if k then
+if keys[k] then dup = dup + 1 else keys[k] = true end
+end
+end
+SYS._hitStat.dup = dup
+print(("[CheatMenu] 自动小游戏: 本轮目标 %d 个, 其中 %d 个是【同一物件上的重复交互件】"
+.." —— 已按【宿主+交互件名】合并, 每 3 秒只触发一次(不再同帧连点)"):format(#SYS._hitList, dup))
+end
 end
 local thr = tonumber(SYS.C_.HitDist) or 30
+local BURST = 6
+local fired = 0
 for _, it in ipairs(SYS._hitList or {}) do
 local p = it.part
 if p and p.Parent and (p.Position - root.Position).Magnitude < thr then
-if not SYS._hitSeen[it.obj] or now - SYS._hitSeen[it.obj] > 3 then
-SYS._hitSeen[it.obj] = now
+local key = SYS.InterKey(it.obj) or it.obj
+if not SYS._hitSeen[key] or now - SYS._hitSeen[key] > 3 then
+if fired >= BURST then
+SYS._hitStat.capped = SYS._hitStat.capped + 1
+break
+end
+SYS._hitSeen[key] = now
+fired = fired + 1
+SYS._hitStat.fired = SYS._hitStat.fired + 1
 fireObj(it.obj)
 end
 end
@@ -3770,7 +3921,7 @@ end
 function SYS.SetAutoHitMinigame(on)
 SYS.T_.AutoHitMinigame = on and true or false
 SYS.SetLoop("AutoHitMinigame", on, RS.Heartbeat, SYS.AutoHitTick)
-if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(小游戏区域里的按钮/可交互物自动触发)", SYS.CY.green) end
+if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 6 个, 不再同帧连点)", SYS.CY.green) end
 end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
@@ -9106,7 +9257,7 @@ return L
 end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
-Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0
+Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0 Ray.ThruN=0
 Ray.Busy=false
 local HC={t=0,part=nil,pos=nil,nrm=nil}
 local function castChar(origin,dir,ch)
@@ -9156,6 +9307,61 @@ function Ray.Target()
 if not SYS.Combat or not SYS.Combat.TargetPart then return nil end
 return SYS.Combat.TargetPart
 end
+function Ray.IsCharPart(part)
+if not part then return false end
+local ch=nil
+pcall(function()
+ch=part:IsA("Model") and part or part:FindFirstAncestorOfClass("Model")
+end)
+if not ch or not ch.Parent then return false end
+local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(ch) end)
+return (ok and pl~=nil) or false
+end
+function Ray.Through(origin,dir)
+if typeof(origin)~="Vector3" or typeof(dir)~="Vector3" or dir.Magnitude<0.001 then return nil end
+local me=SYS.LP
+local list={}
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=me and pl.Character then list[#list+1]=pl.Character end
+end
+if #list==0 then return nil end
+Ray.Busy=true
+local ok,r=pcall(function()
+local p=RaycastParams.new()
+p.FilterType=Enum.RaycastFilterType.Include
+p.FilterDescendantsInstances=list
+p.IgnoreWater=true
+return WS:Raycast(origin,dir,p)
+end)
+Ray.Busy=false
+if ok and r then return r.Instance end
+return nil
+end
+function Ray.CastArgs(m,...)
+local origin,dir
+if m=="Raycast" then
+origin,dir=select(1,...)
+elseif m=="Spherecast" then
+origin=select(1,...) dir=select(3,...)
+elseif m=="Blockcast" then
+local cf=select(1,...)
+dir=select(3,...)
+if typeof(cf)=="CFrame" then origin=cf.Position end
+end
+if typeof(origin)~="Vector3" or typeof(dir)~="Vector3" then
+local n=select("#",...)
+local v1,v2
+for i=1,n do
+local v=select(i,...)
+if typeof(v)=="Vector3" then
+if not v1 then v1=v elseif not v2 then v2=v end
+end
+end
+if typeof(origin)~="Vector3" then origin=v1 end
+if typeof(dir)~="Vector3" then dir=v2 end
+end
+return origin,dir
+end
 function Ray.Install()
 local c=Prot.Caps()
 if not c.hmm or not c.gnm then return false,"这台执行器没有 hookmetamethod/getnamecallmethod" end
@@ -9169,24 +9375,28 @@ if Ray.Busy then return h(self,...) end
 local m=getnamecallmethod()
 if m then
 local lm=m
-if lm=="Raycast" then
+if lm=="Raycast" or lm=="Spherecast" or lm=="Blockcast" then
 if SYS.T_.CB_BlockRay==true then
 Ray.Rewrites=Ray.Rewrites+1
 return nil
 end
-local a1,a2=...
+local o,dv=Ray.CastArgs(lm,...)
 local res=h(self,...)
 if SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true then
 local tp=Ray.Target()
+if not tp and SYS.T_.CB_BulletWall==true and o and dv then
+tp=Ray.Through(o,dv)
+if tp then Ray.ThruN=Ray.ThruN+1 end
+end
 if tp then
 Ray.Rewrites=Ray.Rewrites+1
-local pos,nrm=hitOf(a1,a2,tp)
+local pos,nrm=hitOf(o,dv,tp)
 local dist=0
-if typeof(a1)=="Vector3" then dist=(pos-a1).Magnitude end
+if typeof(o)=="Vector3" then dist=(pos-o).Magnitude end
 local rayObj=nil
-if typeof(a1)=="Vector3" and typeof(a2)=="Vector3"
-and a2.Magnitude>0.001 and RayCtor and RayCtor.new then
-rayObj=RayCtor.new(a1,a2)
+if typeof(o)=="Vector3" and typeof(dv)=="Vector3"
+and dv.Magnitude>0.001 and RayCtor and RayCtor.new then
+rayObj=RayCtor.new(o,dv)
 end
 if not rayObj and res then rayObj=res.Ray end
 return {
@@ -9208,12 +9418,16 @@ return nil,nil
 end
 local a,b,c,d=h(self,...)
 if SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true then
-local tp=Ray.Target()
-if tp then
-Ray.Rewrites=Ray.Rewrites+1
 local o,dv
 if typeof(a)=="Ray" then o,dv=a.Origin,a.Direction
 elseif typeof(a)=="Vector3" then o,dv=a,b end
+local tp=Ray.Target()
+if not tp and SYS.T_.CB_BulletWall==true and o and dv then
+tp=Ray.Through(o,dv)
+if tp then Ray.ThruN=Ray.ThruN+1 end
+end
+if tp then
+Ray.Rewrites=Ray.Rewrites+1
 local pos,nrm=hitOf(o,dv,tp)
 return tp,pos,nrm,(tp.Material or Enum.Material.Plastic)
 end
@@ -9227,9 +9441,15 @@ Ray.Unhook=h
 end)
 if not ok then return false,tostring(err) end
 Ray.Hooked=true
+task.spawn(function()
+local n=Ray.HookFns()
+SYS.Notify(("🧷 射线函数层: 挂上 %d 个(候选 %d)%s")
+:format(n,#Ray.FnCands,(Ray.FnNote~="" and (" · "..Ray.FnNote)) or ""),SYS.CY.cyan)
+end)
 return true
 end
 function Ray.Remove()
+P(Ray.UnhookFns)
 if not Ray.Hooked then return end
 local c=Prot.Caps()
 if c.hmm and Ray.Unhook then
@@ -9238,6 +9458,699 @@ end
 Ray.Unhook=nil Ray.Hooked=false
 Ray.Busy=false
 HC.part=nil HC.pos=nil HC.nrm=nil HC.t=0
+end
+local function RAPI(n)
+local ok,v=pcall(function() return _G[n] end)
+if ok and type(v)=="function" then return v end
+return nil
+end
+local function RSCRIPTNAME(f)
+local gfe=RAPI("getfenv")
+if not gfe then return nil end
+local ok,e=pcall(gfe,f)
+if not ok or type(e)~="table" then return nil end
+local sc=e.script
+if not sc then return nil end
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+return nil
+end
+local function RFNNAME(f)
+local g=RAPI("getinfo")
+if g then
+local ok,n=pcall(g,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if type(debug)=="table" then
+if type(debug.getinfo)=="function" then
+local ok,n=pcall(debug.getinfo,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if type(debug.info)=="function" then
+local ok,n=pcall(debug.info,f,"n")
+if ok and type(n)=="string" and n~="" then return n end
+end
+end
+return nil
+end
+Ray.FnHooked={} Ray.FnN=0 Ray.FnRewrites=0 Ray.FnCands={}
+Ray.FnScanned=false Ray.FnNote="" Ray.FnStats=nil
+function Ray.DigRay(...)
+local n=select("#",...)
+local o,dv
+for i=1,n do
+local v=select(i,...)
+local tv=typeof(v)
+if tv=="Ray" then return v.Origin,v.Direction end
+if tv=="Vector3" then
+if not o then o=v elseif not dv then dv=v end
+elseif tv=="CFrame" and not o then o=v.Position end
+end
+return o,dv
+end
+function Ray.ScanFns()
+if Ray.FnScanned then return true end
+local g=RAPI("getgc") or RAPI("getGC")
+if not g then
+Ray.FnNote="本机没有 getgc —— 函数层用不了(只走路 A/C)"
+Ray.FnScanned=true return false
+end
+local ok,list=pcall(g,true)
+if not ok or type(list)~="table" then
+Ray.FnNote="getgc(true) 没返回表"
+Ray.FnScanned=true return false
+end
+local kw={"raycast","spherecast","blockcast","lineofsight","cansee","isvisible",
+"hasvision","rayhit","castray","hitscan"}
+local sRay={"raycast","ballistic","projectile","raycastmodule"}
+local budget=os.clock()+8
+local nf,named,byScript=0,0,0
+for _,v in ipairs(list) do
+if os.clock()>budget then Ray.FnNote="(函数层扫描超 8 秒已截断)" break end
+if type(v)=="function" then
+nf=nf+1
+if nf>150000 then Ray.FnNote="(函数超过 15 万个已截断)" break end
+local hitsc=nil
+local sc=RSCRIPTNAME(v)
+if sc then
+local sl=string.lower(sc)
+for k=1,#sRay do if string.find(sl,sRay[k],1,true) then hitsc=sc break end end
+end
+local nm=RFNNAME(v)
+if nm then named=named+1 end
+local hitKw=nil
+if nm then
+local ln=string.lower(nm)
+for k=1,#kw do if string.find(ln,kw[k],1,true) then hitKw=kw[k] break end end
+end
+if hitKw or hitsc then
+if #Ray.FnCands<24 then
+if hitsc and not hitKw then byScript=byScript+1 end
+Ray.FnCands[#Ray.FnCands+1]={f=v,name=nm or ("(匿名@"..tostring(sc)..")"),
+kw=hitKw or ("脚本:"..tostring(hitsc))}
+end
+end
+end
+end
+Ray.FnScanned=true
+Ray.FnStats={fn=nf,named=named,byScript=byScript}
+if named==0 and byScript==0 then
+Ray.FnNote="本机取不到函数名、也拿不到归属脚本 —— 按红线函数层不动手(只走路 A/C)"
+end
+return #Ray.FnCands>0
+end
+function Ray.HookFns()
+local HF=RAPI("hookfunction") or RAPI("hookfunc") or RAPI("replaceclosure")
+if not HF then
+Ray.FnNote="本机没有 hookfunction —— 函数层用不了(只走路 A/C)"
+return 0
+end
+Ray.ScanFns()
+local n=0
+for i=1,#Ray.FnCands do
+local e=Ray.FnCands[i]
+if not Ray.FnHooked[e.f] then
+local orig
+local ok
+ok,orig=pcall(HF,e.f,newcclosure(function(...)
+local res=orig(...)
+if not (SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true) then return res end
+if Ray.Busy then return res end
+if typeof(res)=="Instance" and Ray.IsCharPart(res) then return res end
+local o,dv=Ray.DigRay(...)
+if not o or not dv then return res end
+local tp=Ray.Target()
+if not tp and SYS.T_.CB_BulletWall==true then
+tp=Ray.Through(o,dv)
+if tp then Ray.ThruN=Ray.ThruN+1 end
+end
+if not tp then return res end
+Ray.FnRewrites=Ray.FnRewrites+1
+local d=tp.Position-o
+local nrm=(d.Magnitude>0.001) and -d.Unit or Vector3.new(0,1,0)
+if typeof(res)=="Instance" then return tp end
+if type(res)=="table" and rawget(res,"Instance")~=nil then
+return {Instance=tp,Position=tp.Position,Normal=nrm,
+Material=(tp.Material or Enum.Material.Plastic),
+Distance=d.Magnitude,Ray=res.Ray}
+end
+return res
+end))
+if ok then Ray.FnHooked[e.f]=orig n=n+1 Ray.FnN=Ray.FnN+1 end
+end
+end
+return n
+end
+function Ray.UnhookFns()
+if next(Ray.FnHooked)==nil then return end
+local HF=RAPI("hookfunction") or RAPI("hookfunc") or RAPI("replaceclosure")
+local RF=RAPI("restorefunction") or RAPI("restorefunc")
+for f,orig in pairs(Ray.FnHooked) do
+if RF then pcall(RF,f)
+elseif HF then pcall(HF,f,orig) end
+end
+Ray.FnHooked={} Ray.FnN=0
+end
+do
+local G={} SYS.Gun=G
+local Cands={recoil={}}
+local maxNums=90
+G.Cands=Cands
+G.Nums={} G.Tables={} G.TAttr={} G.Items={}
+G.Hooked={} G.HookN=0 G.Rewrites=0
+G.Scanned=false G.Scanning=false G.Note="" G.Stats={}
+local acc=0
+local function APIfn(n)
+local ok,v=pcall(function() return _G[n] end)
+if ok and type(v)=="function" then return v end
+return nil
+end
+local function has(n) return APIfn(n)~=nil end
+local DBG=(type(debug)=="table") and debug or nil
+G.Caps=function()
+return {
+gc    = has("getgc") or has("getGC"),
+upval = (DBG and type(DBG.getupvalue)=="function") or has("getupvalue"),
+setup = (DBG and type(DBG.setupvalue)=="function") or has("setupvalue"),
+hook  = has("hookfunction") or has("hookfunc") or has("replaceclosure"),
+name  = has("getinfo") or (DBG and (type(DBG.getinfo)=="function" or type(DBG.info)=="function")),
+}
+end
+local function gcList()
+local f=APIfn("getgc") or APIfn("getGC")
+if not f then return nil end
+local ok,t=pcall(f,true)
+if ok and type(t)=="table" then return t end
+return nil
+end
+local function FNNAME(f)
+local g=APIfn("getinfo")
+if g then
+local ok,n=pcall(g,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if DBG then
+if type(DBG.getinfo)=="function" then
+local ok,n=pcall(DBG.getinfo,f)
+if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
+end
+if type(DBG.info)=="function" then
+local ok,n=pcall(DBG.info,f,"n")
+if ok and type(n)=="string" and n~="" then return n end
+end
+end
+return nil
+end
+local function UVAL(f,i)
+local g=(DBG and DBG.getupvalue) or APIfn("getupvalue")
+if not g then return nil end
+local ok,nm,v=pcall(g,f,i)
+if ok and nm~=nil then return v end
+return nil
+end
+local function SUV(f,i,v)
+local g=(DBG and DBG.setupvalue) or APIfn("setupvalue")
+if not g then return false end
+return (pcall(g,f,i,v))
+end
+local function upNames(f)
+local g=(DBG and DBG.getupvalue) or APIfn("getupvalue")
+if not g then return nil end
+local t,n={},1
+while n<=24 do
+local ok,nm=pcall(g,f,n)
+if not ok or nm==nil then break end
+t[n]=nm n=n+1
+end
+return t
+end
+local AM_M={ammo=true,mag=true,magazine=true,clip=true,currentammo=true,ammoinclip=true,
+ammocount=true,bullets=true,rounds=true,currentmag=true,magcount=true}
+local AM_R={storedammo=true,reserve=true,reserveammo=true,totalammo=true,ammopool=true,
+spareammo=true,ammoreserve=true,inventoryammo=true}
+local AM_X={maxammo=true,magsize=true,magcapacity=true,maxclip=true,capacity=true,clipsize=true}
+local function hasKW(s,k) return string.find(s,k,1,true)~=nil end
+local function LOW(s) return type(s)=="string" and string.lower(s) or "" end
+local function isMag(lk)
+lk=LOW(lk)
+if AM_M[lk] then return true end
+if AM_X[lk] or AM_R[lk] then return false end
+return hasKW(lk,"ammo")
+end
+local function isRes(lk)
+lk=LOW(lk)
+if AM_R[lk] then return true end
+return hasKW(lk,"reserve") or hasKW(lk,"storedammo")
+end
+local function isMax(lk)
+lk=LOW(lk)
+if AM_X[lk] then return true end
+return hasKW(lk,"maxammo") or hasKW(lk,"magsize")
+end
+local function isRecName(lk) lk=LOW(lk) return hasKW(lk,"recoil") end
+local function isRelNum(lk)
+lk=LOW(lk)
+return hasKW(lk,"reloadtime") or hasKW(lk,"reloaddelay") or hasKW(lk,"reloadduration")
+or hasKW(lk,"reloadspeed") or hasKW(lk,"reloadt")
+end
+local function isBalNum(lk)
+lk=LOW(lk)
+return lk=="gravity" or lk=="drag" or lk=="bulletspeed" or lk=="projectilespeed"
+or hasKW(lk,"bulletdrop") or hasKW(lk,"bulletgravity") or hasKW(lk,"dragcoeff")
+or hasKW(lk,"airdrag") or hasKW(lk,"ballisticcoeff") or hasKW(lk,"gravityscale")
+end
+local function isWpnFn(lk)
+lk=LOW(lk)
+return hasKW(lk,"bullet") or hasKW(lk,"projectile") or hasKW(lk,"ballistic")
+or hasKW(lk,"gun") or hasKW(lk,"weapon") or hasKW(lk,"fire") or hasKW(lk,"shoot")
+end
+function G.ScriptName(f)
+local gfe=APIfn("getfenv")
+if not gfe then return nil end
+local ok,e=pcall(gfe,f)
+if not ok or type(e)~="table" then return nil end
+local sc=e.script
+if not sc then return nil end
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+return nil
+end
+local S_WEAPON={"shootable","weapon","firecomponent","clientweapon","gun","firearm",
+"projectile","bullet","raycast","combat","shoot","ballistic","hitscan"}
+local S_RECOIL={"aimadjuster","recoil","camerashake","weaponkick","viewkick","gunpunch"}
+local S_AMMO  ={"ammomodel","ammo","magazine","clip","reload","ammohandler"}
+local S_AIM   ={"aimable","aimadjuster","crosshair","scope","aim"}
+local S_SKILL ={"skill","ability","perk","cooldown"}
+local function isScriptOf(sl,set)
+if not sl then return false end
+for i=1,#set do if hasKW(sl,set[i]) then return true end end
+return false
+end
+local REC_EXTRA={"recoil","kick","shake","sway","punch","climb","jolt"}
+local function isRecExtra(lk)
+lk=LOW(lk)
+for i=1,#REC_EXTRA do if hasKW(lk,REC_EXTRA[i]) then return true end end
+return false
+end
+local AIM_T={"aimspeed","aimtime","aimsensitivity","aimfov","zoomfov","adsspeed","adstime",
+"aimdelay","aimlerp","aimalpha","adslerp"}
+local AIM_Z={"aimshake","aimsway","weaponbob","viewbob","camerabob","aimoffset",
+"aimdeviation","recoilshake"}
+local function isAimNum(lk)
+lk=LOW(lk)
+for i=1,#AIM_T do if lk==AIM_T[i] then return true end end
+for i=1,#AIM_Z do if lk==AIM_Z[i] then return true end end
+return false
+end
+local function isAimFast(lk)
+lk=LOW(lk)
+for i=1,#AIM_T do if lk==AIM_T[i] then return true end end
+return false
+end
+local HOT={"Ammo","ammo","StoredAmmo","storedAmmo","Mag","mag",
+"Clip","clip","CurrentAmmo","currentAmmo","Reserve","reserve"}
+local MORE={"Ammo","ammo","StoredAmmo","storedAmmo","Reserve","reserve","ReserveAmmo","reserveAmmo",
+"Mag","mag","Magazine","magazine","Clip","clip","CurrentAmmo","currentAmmo",
+"AmmoInClip","ammoInClip","ClipAmmo","clipAmmo","CurrentMag","currentMag",
+"MagCount","magCount","AmmoCount","ammoCount","Bullets","bullets","Rounds","rounds",
+"TotalAmmo","totalAmmo","AmmoPool","ammoPool","SpareAmmo","spareAmmo",
+"InventoryAmmo","inventoryAmmo","MaxAmmo","maxAmmo","MagSize","magSize",
+"MagCapacity","magCapacity","MaxClip","maxClip","Capacity","capacity","ClipSize","clipSize"}
+function G.ProbeAmmoTable(v)
+local hit=false
+for h=1,#HOT do if rawget(v,HOT[h])~=nil then hit=true break end end
+if not hit then return nil end
+local mk,rk,xk=nil,nil,nil
+for h=1,#MORE do
+local k=MORE[h]
+local val=rawget(v,k)
+if type(val)=="number" then
+local lk=string.lower(k)
+if not xk and isMax(lk) then xk=k
+elseif not rk and isRes(lk) then rk=k
+elseif not mk and isMag(lk) then mk=k end
+end
+end
+if not (mk or rk) then return nil end
+return {t=v,mk=mk,rk=rk,xk=xk}
+end
+function G.FillOne(e)
+if e.mk then
+local cur=rawget(e.t,e.mk)
+if type(cur)=="number" then
+local full=e.xk and rawget(e.t,e.xk) or nil
+if type(full)~="number" then
+if not e.seen or cur>e.seen then e.seen=cur end
+full=e.seen
+end
+if type(full)=="number" and cur<full then e.t[e.mk]=full end
+end
+end
+if e.rk then
+local r=rawget(e.t,e.rk)
+if type(r)=="number" and r<9999 then e.t[e.rk]=9999 end
+end
+end
+local function isCD(lk)
+lk=LOW(lk)
+return hasKW(lk,"cooldown") or hasKW(lk,"cdtime") or hasKW(lk,"skillcd")
+or hasKW(lk,"itemcd") or hasKW(lk,"attackcd") or hasKW(lk,"castcd")
+or hasKW(lk,"cooldowntime")
+end
+local function isRate(lk)
+lk=LOW(lk)
+return hasKW(lk,"firerate") or hasKW(lk,"fireinterval") or hasKW(lk,"shotinterval")
+or hasKW(lk,"attackinterval") or hasKW(lk,"attackdelay") or hasKW(lk,"autodelay")
+or hasKW(lk,"attackcooldown") or hasKW(lk,"reloadspeedmult")
+end
+local ITEM_C={"Count","Amount","Quantity","Qty","Num","Stack","Stacks","Left","Remain","Owned"}
+local ITEM_I={"Id","ID","Name","ItemId","ItemID","Item","Key","Type","ItemName","ItemKey"}
+local function hasAny(v,list,wantStr)
+for i=1,#list do
+local x=rawget(v,list[i])
+if wantStr then
+if type(x)=="string" and x~="" then return list[i] end
+elseif type(x)=="number" then
+return list[i]
+end
+end
+return nil
+end
+function G.ProbeItemTable(v)
+local ck=hasAny(v,ITEM_C,false)
+if not ck then return nil end
+local ik=hasAny(v,ITEM_I,true)
+if not ik then return nil end
+return {t=v,ck=ck,ik=ik}
+end
+function G.FillItem(e)
+local cur=rawget(e.t,e.ck)
+if type(cur)~="number" then return end
+if not e.seen or cur>e.seen then e.seen=cur end
+if e.seen and cur<e.seen then e.t[e.ck]=e.seen end
+end
+local function addNum(f,i,un,kind)
+if #G.Nums>=maxNums then return end
+for k=1,#G.Nums do
+local e=G.Nums[k]
+if e.f==f and e.i==i then return end
+end
+G.Nums[#G.Nums+1]={f=f,i=i,un=un,kind=kind,lk=LOW(un)}
+end
+function G.Scan()
+local caps=G.Caps()
+if not caps.gc then return false,"这台执行器没有 getgc —— 定位不到武器逻辑(射击增强的前提)" end
+local list=gcList()
+if not list then return false,"getgc(true) 没有返回表" end
+local nF,nT,named,tabs,items,deep,skipFn=0,0,0,0,0,0,0
+local budget=os.clock()+8
+local okAll,errAll=pcall(function()
+for _,v in ipairs(list) do
+if os.clock()>budget then G.Note="  ⚠ 扫描超 6 秒已截断, 结果可能不全" break end
+if type(v)=="function" then
+nF=nF+1
+if nF>150000 then G.Note="  ⚠ 函数超过 15 万个已截断" break end
+local nm=caps.name and FNNAME(v) or nil
+local ln=nm and string.lower(nm) or nil
+if ln then named=named+1 end
+local snl=G.ScriptName(v)
+local sl=snl and string.lower(snl) or nil
+local sWeapon=isScriptOf(sl,S_WEAPON)
+local sRec   =isScriptOf(sl,S_RECOIL)
+local sAmmo  =isScriptOf(sl,S_AMMO)
+local sAim   =isScriptOf(sl,S_AIM)
+local sSkill =isScriptOf(sl,S_SKILL)
+local relevant=(sWeapon or sRec or sAmmo or sAim or sSkill)
+if (ln and isRecName(ln)) or (sRec and ln and isRecExtra(ln)) then
+if #Cands.recoil<24 then
+Cands.recoil[#Cands.recoil+1]={f=v,name=nm or ("(匿名@"..tostring(snl)..")"),fromScript=sRec}
+end
+end
+local worth=relevant or (ln and (isRecName(ln) or isRelNum(ln) or isCD(ln) or isRate(ln)))
+or (not sl and ln and isWpnFn(ln))
+if worth and caps.upval then
+deep=deep+1
+local names=upNames(v)
+if names then
+local wfn=ln and isWpnFn(ln) or false
+for i=1,#names do
+local un=names[i]
+if type(un)=="string" and un~="" then
+local lk=LOW(un)
+if isRecName(lk) or (sRec and isRecExtra(lk)) then addNum(v,i,un,"recoil")
+elseif isRelNum(lk) then addNum(v,i,un,"reload")
+elseif isAimNum(lk) or (sAim and (hasKW(lk,"shake") or hasKW(lk,"sway") or hasKW(lk,"bob"))) then addNum(v,i,un,"aim")
+elseif isMag(lk) or isRes(lk) or isMax(lk) then
+if sAmmo or sWeapon then addNum(v,i,un,"ammo") end
+elseif isCD(lk) then addNum(v,i,un,"cd")
+elseif isRate(lk) then addNum(v,i,un,"rate")
+elseif wfn and isBalNum(lk) then addNum(v,i,un,"ballis") end
+end
+end
+end
+elseif caps.upval then
+skipFn=skipFn+1
+end
+elseif type(v)=="table" then
+nT=nT+1
+if #G.Tables<60 then
+local e=G.ProbeAmmoTable(v)
+if e then
+tabs=tabs+1
+G.Tables[#G.Tables+1]=e
+elseif #G.Items<40 then
+local it=G.ProbeItemTable(v)
+if it then
+items=items+1
+G.Items[#G.Items+1]=it
+end
+end
+end
+end
+end
+end)
+G.Stats={fn=nF,tbl=nT,named=named,tabs=tabs,items=items,deep=deep,skip=skipFn}
+G.Scanned=true
+if not okAll then G.Note="  ⚠ 扫描中途出错(已拿到部分结果): "..tostring(errAll) end
+if named==0 and caps.name then
+G.Note=(G.Note~="" and G.Note.."\n" or "")..
+"  ⚠ 一个函数名都取不到 —— 本执行器给不了 debug.getinfo().name,\n"..
+"     而『只 hook 名字明确的函数』是本项目的硬红线, 所以无后坐力这项在本机不会挂任何东西。"
+end
+return true
+end
+function G.HookRecoil()
+local HF=APIfn("hookfunction") or APIfn("hookfunc") or APIfn("replaceclosure")
+if not HF then
+G.Note=(G.Note~="" and G.Note.."\n" or "").."  ⚠ 本机没有 hookfunction —— 无后坐力挂不上"
+return
+end
+for i=1,#Cands.recoil do
+local e=Cands.recoil[i]
+if not G.Hooked[e.f] then
+local ok,orig=pcall(HF,e.f,newcclosure(function() return nil end))
+if ok then G.Hooked[e.f]=orig G.HookN=G.HookN+1 end
+end
+end
+end
+function G.UnhookAll()
+local HF=APIfn("hookfunction") or APIfn("hookfunc") or APIfn("replaceclosure")
+local RF=APIfn("restorefunction") or APIfn("restorefunc")
+local any=false
+for f,orig in pairs(G.Hooked) do
+any=true
+if RF then pcall(RF,f)
+elseif HF then pcall(HF,f,orig) end
+end
+if any then G.Hooked={} G.HookN=0 end
+end
+function G.ApplyNums()
+for i=1,#G.Nums do
+local u=G.Nums[i]
+local want
+if u.kind=="recoil"     and SYS.T_.Gun_NoRecoil==true     then want=0
+elseif u.kind=="reload" and SYS.T_.Gun_InstantReload==true then want=0.01
+elseif u.kind=="ballis" and SYS.T_.Gun_NoDrop==true       then want=0
+elseif (u.kind=="cd" or u.kind=="rate") and SYS.T_.Gun_NoCooldown==true then want=0.01
+elseif u.kind=="aim" and SYS.T_.Gun_AimStable==true then
+want=isAimFast(u.lk) and 0.01 or 0
+elseif u.kind=="ammo" and SYS.T_.Gun_InfAmmo==true then
+local cur=UVAL(u.f,u.i)
+if type(cur)=="number" then
+if not u.seen or cur>u.seen then u.seen=cur end
+want=u.seen
+end
+end
+if want~=nil then
+if u.orig==nil then u.orig=UVAL(u.f,u.i) end
+if SUV(u.f,u.i,want) then u.iv=1 end
+end
+end
+end
+function G.RestoreNums()
+for i=1,#G.Nums do
+local u=G.Nums[i]
+if u.iv==1 then
+if u.orig~=nil then SUV(u.f,u.i,u.orig) end
+u.iv=nil
+end
+end
+end
+function G.FillAmmo()
+for i=1,#G.Tables do G.FillOne(G.Tables[i]) end
+local ch=SYS.LP and SYS.LP.Character
+local tool=ch and ch:FindFirstChildOfClass("Tool")
+if not tool then return end
+pcall(function()
+for _,a in ipairs(tool:GetAttributes()) do
+local lk=string.lower(tostring(a))
+if isMag(lk) or isMax(lk) then
+local v=tool:GetAttribute(a)
+if type(v)=="number" then
+local k="A|"..a
+if not G.TAttr[k] or v>G.TAttr[k] then G.TAttr[k]=v end
+if v<G.TAttr[k] then tool:SetAttribute(a,G.TAttr[k]) end
+end
+elseif isRes(lk) then
+local v=tool:GetAttribute(a)
+if type(v)=="number" and v<9999 then tool:SetAttribute(a,9999) end
+end
+end
+for _,c in ipairs(tool:GetDescendants()) do
+if c:IsA("IntValue") or c:IsA("NumberValue") then
+local lk=string.lower(c.Name)
+if isMag(lk) or isMax(lk) then
+local k="V|"..c.Name
+if not G.TAttr[k] or c.Value>G.TAttr[k] then G.TAttr[k]=c.Value end
+if c.Value<G.TAttr[k] then c.Value=G.TAttr[k] end
+elseif isRes(lk) and c.Value<9999 then
+c.Value=9999
+end
+end
+end
+end)
+end
+function G.Active()
+return SYS.T_.Gun_NoRecoil==true or SYS.T_.Gun_InfAmmo==true
+or SYS.T_.Gun_InstantReload==true or SYS.T_.Gun_NoDrop==true
+or SYS.T_.Gun_NoCooldown==true or SYS.T_.Gun_InfItem==true
+or SYS.T_.Gun_AimStable==true
+end
+function G.Tick()
+local t=os.clock()
+if t-acc<0.1 then return end
+acc=t
+if not G.Active() then return end
+G.Rewrites=G.Rewrites+1
+if SYS.T_.Gun_InfAmmo==true then
+local ok,err=pcall(G.FillAmmo)
+if not ok then G.Err=tostring(err) end
+end
+if SYS.T_.Gun_InfItem==true then
+for i=1,#G.Items do pcall(G.FillItem,G.Items[i]) end
+end
+G.ApplyNums()
+end
+function G.Apply()
+if SYS.T_.Gun_NoRecoil==true then G.HookRecoil() else G.UnhookAll() end
+G.ApplyNums()
+end
+function G.NumCount(kind)
+local n=0
+for i=1,#G.Nums do if G.Nums[i].kind==kind then n=n+1 end end
+return n
+end
+function G.Summary()
+local s=G.Stats or {}
+return ("扫了 %d 函数(有名字 %d) / %d 表 → 后坐力候选 %d(挂上 %d) · 弹药表 %d · 物品表 %d · 数值槽 %d(后座 %d/瞄准 %d/弹药 %d/换弹 %d/CD %d/射速 %d/弹道 %d)")
+:format(s.fn or 0,s.named or 0,s.tbl or 0,#Cands.recoil,G.HookN,#G.Tables,#G.Items,#G.Nums,
+G.NumCount("recoil"),G.NumCount("aim"),G.NumCount("ammo"),G.NumCount("reload"),
+G.NumCount("cd"),G.NumCount("rate"),G.NumCount("ballis"))
+end
+function G.Probe()
+local c=G.Caps()
+local L={}
+L[#L+1]="[射击增强] 扫描结果（只读, 未改任何东西）"
+L[#L+1]=("执行器能力: getgc=%s  debug.getupvalue=%s  debug.setupvalue=%s  hookfunction=%s  函数名=%s")
+:format(tostring(c.gc),tostring(c.upval),tostring(c.setup),tostring(c.hook),tostring(c.name))
+L[#L+1]=G.Summary()
+local st=G.Stats or {}
+L[#L+1]=("★ 扫描范围(v9.10.0 按归属脚本收窄): 共看 %d 个函数, 其中 %d 个属于武器/瞄准/弹药/技能脚本(深度读过 upvalue), 跳过 %d 个无关函数")
+:format(st.fn or 0,st.deep or 0,st.skip or 0)
+if G.Note~="" then L[#L+1]=G.Note end
+L[#L+1]=""
+L[#L+1]="── 后坐力函数候选(会被 hook 成空函数) ──"
+if #Cands.recoil==0 then L[#L+1]="  (一个都没找到 —— 本游戏的后坐力可能不是独立函数, 而是直接写相机 CFrame)"
+else
+for i=1,#Cands.recoil do L[#L+1]="  "..Cands.recoil[i].name end
+end
+L[#L+1]=""
+L[#L+1]="── 弹药表(会被定时写满) ──"
+if #G.Tables==0 then L[#L+1]="  (一个都没找到 —— 本游戏的弹药可能只在服务端, 本地没有可写的表)"
+else
+for i=1,#G.Tables do
+local e=G.Tables[i]
+L[#L+1]=("  弹匣键 %s / 备弹键 %s / 上限键 %s")
+:format(tostring(e.mk),tostring(e.rk),tostring(e.xk))
+end
+end
+L[#L+1]=""
+L[#L+1]="── 物品堆栈表(会被定时写回数量) ──"
+if #G.Items==0 then L[#L+1]="  (一个都没找到 —— 本游戏的物品数量可能只在服务端)"
+else
+for i=1,#G.Items do
+local e=G.Items[i]
+L[#L+1]=("  数量键 %s / 标识键 %s"):format(tostring(e.ck),tostring(e.ik))
+end
+end
+L[#L+1]=""
+L[#L+1]="── 数值 upvalue 槽 ──"
+if #G.Nums==0 then L[#L+1]="  (一个都没找到)"
+else
+for i=1,#G.Nums do
+local u=G.Nums[i]
+L[#L+1]=("  [%s] %s  (槽位 %d)"):format(u.kind,u.un,u.i)
+end
+end
+for i=1,#L do print(L[i]) end
+return #G.Tables,#Cands.recoil,#G.Nums
+end
+function G.Sync()
+if not G.Active() then
+SYS.SetLoop("GunTick",false)
+G.UnhookAll()
+G.RestoreNums()
+return
+end
+if not G.Scanned then
+if G.Scanning then return end
+G.Scanning=true
+local c=G.Caps()
+if not c.gc then
+G.Scanning=false
+SYS.Notify("❌ 射击增强: 本机没有 getgc, 定位不到武器逻辑",SYS.CY.red)
+SYS.T_.Gun_NoRecoil=false SYS.T_.Gun_InfAmmo=false
+SYS.T_.Gun_InstantReload=false SYS.T_.Gun_NoDrop=false
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+return
+end
+SYS.Notify("🔧 射击增强: 首次使用, 正在扫描武器逻辑(约 1~3 秒)…",SYS.CY.cyan)
+task.spawn(function()
+local ok,msg=G.Scan()
+G.Scanning=false
+if not ok then
+SYS.Notify("❌ 射击增强扫描失败: "..tostring(msg),SYS.CY.red)
+return
+end
+G.Apply()
+SYS.SetLoop("GunTick",true,RS.Heartbeat,G.Tick)
+SYS.Notify("✅ 射击增强就绪: "..G.Summary(),SYS.CY.green)
+end)
+return
+end
+G.Apply()
+SYS.SetLoop("GunTick",true,RS.Heartbeat,G.Tick)
+end
 end
 local PC={} SYS.PC=PC
 function PC.Get()
@@ -10008,6 +10921,47 @@ UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n
 "· 小游戏区域: 名字或 3 层祖先命中区域名(duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost / machin) 或含「小游戏/关卡/模式」\n"..
 "🎨 颜色统一: 普通物件 + 普通门 + 小游戏里的东西 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。\n"..
 "💡 小游戏区域透视已并入本开关 —— MachineParty 页不再单独提供。",CY.sub)
+UI.Btn(p,"🩺 高亮彻底性自检 (控制台)",CY.cyan,function()
+P(function()
+print("[CheatMenu] ===== 物件透视 · 彻底性自检 =====")
+local d=SYS.Index()
+print(("· 本轮 Workspace 实例: %d 个 (透视只看得到有父级的实例)"):format(#d))
+print(("· 本轮真正挂上高亮的载体: %d 个 (池里 %d)"):format(SYS._doorN or 0,#(SYS._doorList or {})))
+local gi=_G.getnilinstances
+if type(gi)=="function" then
+local ok,l2=pcall(gi)
+if ok and type(l2)=="table" then
+local n=0
+for i=1,#l2 do
+local o=l2[i]
+if typeof(o)=="Instance" then
+local ok2,isInt=pcall(function()
+return o:IsA("ProximityPrompt") or o:IsA("ClickDetector") or o:IsA("BasePart")
+end)
+if ok2 and isInt then n=n+1 end
+end
+end
+print(("· 游戏【藏起来】的实例: %d 个(父级为空) —— 其中可交互/部件类 %d 个")
+:format(#l2,n))
+print("  ⇒ 这些【引擎层面画不出来】(Highlight 的 Adornee 必须在 DataModel 里),\n"..
+"     所以不是判据漏了, 是画不了。游戏会在该出现的时候把它们放回来。\n")
+end
+else
+print("· 本机没有 getnilinstances —— 查不到「被藏起来的实例」有几件")
+end
+local hs=SYS._hitStat
+if hs then
+print(("· 自动小游戏: 已触发 %d 次 · 因【同一物件重复交互件】合并掉的 %d 个 · 因每帧上限推迟的 %d 次")
+:format(hs.fired or 0,hs.dup or 0,hs.capped or 0))
+end
+print("怎么读:")
+print("  · 载体数 0 而实例数很大 -> 判据/预算出了问题, 把这张图的名字发我")
+print("  · 载体数正常但你还是没看到某类物件 -> 把那个物件的完整路径发我, 我按路径加判据")
+print("  · 「合并掉的」不为 0 是正常的: 同一物件(如商店人偶)身上往往挂十几个同名交互件,")
+print("    它们本来就该只触发一次 —— 合并是为了【不让同一帧飞出去十几个请求】。")
+SYS.Notify("🩺 自检已打到控制台(F9)",SYS.CY.cyan)
+end)
+end)
 UI.Div(p)
 UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
 local TR_MODES={"关闭","只看自己","自己+其他玩家"}
@@ -10574,15 +11528,42 @@ elseif type(v)=="table" then tbls[#tbls+1]=v end
 end
 end)
 if not ok then SYS.Notify("getgc 遍历失败: "..tostring(err):sub(1,60),SYS.CY.red) return nil end
+local REL1={"shootable","weapon","fire","gun","ammo","aim","recoil","bullet","projectile",
+"ballistic","combat","hitbox","damage","hitscan","raycast","crosshair","scope",
+"shoot","frag","grenade","magazine","reload"}
+local REL2={"mini","party","room","round","match","arena","shop","store","inventory",
+"item","player","humanoid","character","vehicle","mover","game","mode","map"}
+local ENG={"coregui","corepackages","robloxgui","robloxreplicated","playermodule","animate",
+"camera","chat","sound","gui","localization","asset","teleportservice","vr"}
+local function relScore(nm)
+local sl=string.lower(nm)
+for i=1,#ENG do if string.find(sl,ENG[i],1,true) then return 3 end end
+for i=1,#REL1 do if string.find(sl,REL1[i],1,true) then return 1 end end
+for i=1,#REL2 do if string.find(sl,REL2[i],1,true) then return 2 end end
+return 2.5
+end
 local rows={}
-for k,v in pairs(byScript) do rows[#rows+1]=("  %-42s %d 个函数"):format(k:sub(1,42),v.n) end
-table.sort(rows)
+for k,v in pairs(byScript) do rows[#rows+1]={k=k,n=v.n,r=relScore(k)} end
+table.sort(rows,function(a,b)
+if a.r~=b.r then return a.r<b.r end
+if a.n~=b.n then return a.n>b.n end
+return a.k<b.k
+end)
+local nRel=0
+for i=1,#rows do if rows[i].r==1 then nRel=nRel+1 end end
 local out={("========== GC 扫描 =========="),
 ("函数 %d 个 | 表 %d 个"):format(#fns,#tbls),
 selfSrc and ("(已剔除 CheatMenu 自身函数 %d 个 —— 它们不该被当成游戏函数)"):format(selfN)
 or  "(这台执行器取不到 debug.info 的 source, 没能剔除自身函数)",
-"按归属脚本分组(前 25):"}
-for i=1,math.min(#rows,25) do out[#out+1]=rows[i] end
+("归属脚本 %d 个 · 其中 ★武器/战斗/命中相关 %d 个(下面 ★ 开头就是它们; 按相关度排序, 控制台前 25, 其余落盘):")
+:format(#rows,nRel)}
+local SHOWN=25
+for i=1,#rows do
+local tag=(rows[i].r==1 and "★ " or (rows[i].r==3 and "  " or "· "))
+local ss=("  %s%-40s %d 个函数"):format(tag,rows[i].k:sub(1,40),rows[i].n)
+if i<=SHOWN then out[#out+1]=ss else SYS.ScanBufNote(ss) end
+end
+out[#out+1]="  (标记: ★=武器/战斗/命中相关 · =玩法/系统   无标记=引擎自带(排最后, 一般不用看))"
 out[#out+1]="(归属拿不到 = C/引擎侧或匿名函数, hook 不了)"
 LAB.LastFns=fns
 SYS.ScanEmit(table.concat(out,"\n"))
@@ -10867,10 +11848,13 @@ end
 line(("网络通道 RemoteEvent %d · UnreliableRemoteEvent %d · RemoteFunction %d   |   本地 BindableEvent %d · BindableFunction %d")
 :format(byCls.RemoteEvent or 0,byCls.UnreliableRemoteEvent or 0,byCls.RemoteFunction or 0,
 byCls.BindableEvent or 0,byCls.BindableFunction or 0))
+line(("本层遍历到实例 %d 个%s"):format(n,
+capped and " · ⚠ 已达应急上限(数据可能不全)" or " · 全图走完"))
 local gi=_G.getconnections
 local hasGc=(type(gi)=="function")
 if not hasGc then
-line("  (这台执行器没有 getconnections —— 跳过「谁在收」, 只列清单与归类)")
+line("  (这台执行器没有 getconnections ⇒ 下面「收向监听」整列打「—」= 【本机测不了】,")
+line("   不代表没人监听 —— 只列清单与归类。)")
 end
 local nameKind=kindIndex()
 local riskyN=0
@@ -10920,7 +11904,7 @@ else
 recv="读不到 OnClientEvent"
 end
 else
-recv="(无 getconnections)"
+recv="—"
 end
 if type(recv)=="string" and recv~="0" and recv~="?" and recv:find("^%d") then withRecv=withRecv+1 end
 row(("    [%d] %-22s %s"):format(i,cls,p),i)
@@ -10946,15 +11930,53 @@ end
 if found then have[#have+1]=("    ✅ %-12s → %s"):format(kind,found)
 else missN=missN+1 end
 end
-line(("  ── 功能类别通道对账: 有 %d / 共 %d(其余 %d 个本游戏没有同名通道) ──")
+line(("  ── 别名表同名通道对账: 命中 %d / 共 %d 个类别(其余 %d 个本游戏没有【同名】通道) ──")
 :format(#have,#kinds,missN))
 for i=1,#have do line(have[i]) end
+if #have==0 then
+line("     ⚠ 怎么读: 0 不代表本游戏没有通道 —— 只说明它没有【与别名表同名】的通道。")
+line("       常见原因: ① 单通道多路复用(所有操作挤一个 Event, 靠参数区分; 如 MachineParty.Event)")
+line("                 ② 自定义命名(RemotesFolder.* / MP_Customization.Remotes.*)")
+line("       ⇒ 真正的通道清单在上面「逐条侦察」与 A 层里, 已全部落盘。")
+end
 if riskyN>0 then
 line(("  ⚠ 另有 %d 条通道被判为高风险(蜜罐/管理后台/审计日志) —— 只在清单里标出, 别触发"):format(riskyN))
 end
 dump[#dump+1]=""
-dump[#dump+1]=("========== 功能类别对账: 有 %d / 共 %d =========="):format(#have,#kinds)
+dump[#dump+1]=("========== 别名表同名通道对账: 命中 %d / 共 %d =========="):format(#have,#kinds)
 for i=1,#have do dump[#dump+1]=have[i] end
+end
+local okP,prs=P(function()
+local byParent={}
+for i=1,#net do
+local r=net[i]
+local par=r.Parent
+local pn=par and (par:GetFullName()) or "(无父级)"
+byParent[pn]=(byParent[pn] or 0)+1
+end
+local t={}
+for k,v in pairs(byParent) do t[#t+1]={k,v} end
+table.sort(t,function(a,b)
+if a[2]~=b[2] then return a[2]>b[2] end
+return a[1]<b[1]
+end)
+return t
+end)
+if okP and prs and #prs>0 then
+line(("  ── 本游戏通道按容器归类(%d 个容器; 控制台前 12, 完整落盘) ──"):format(#prs))
+local top=prs[1]
+if top and top[2]>=8 and #prs<=3 then
+line(("     ⚠ 看出没: %d 条通道全挤在【%s】下 —— 这是「单通道多路复用」架构, 靠参数区分操作。")
+:format(top[2],top[1]))
+line("       这类游戏想发请求, 必须先摸清那个通道的参数协议(脚本不替你瞎试)。")
+end
+for i=1,#prs do
+local ss=("    %-4d %s"):format(prs[i][2],prs[i][1])
+if i<=12 then line(ss) else SYS.ScanBufNote(ss) end
+end
+dump[#dump+1]=""
+dump[#dump+1]=("========== 本游戏通道按容器归类(全量) ==========")
+for i=1,#prs do dump[#dump+1]=("    %-4d %s"):format(prs[i][2],prs[i][1]) end
 end
 local fn=SYS.SaveDump("Remote",dump)
 if fn then line("  ✅ 完整清单已落盘: "..fn)
@@ -10995,12 +12017,16 @@ local GROUPS={
 {"👥 社交/交易",{"Trade","Friend","Postie","Social","Vote"}},
 {"🏃 角色/移动",{"Character","Teleport","Respawn","Spawn","Jump","Move","AFK","Suicide"}},
 }
-local gen=0
+local gen,seenN,uq=0,{},0
 for _,g in ipairs(GROUPS) do
 local hits={}
 for _,r in ipairs(remotes) do
 for _,k in ipairs(g[2]) do
-if r:find(k,1,true) then hits[#hits+1]=r break end
+if r:find(k,1,true) then
+hits[#hits+1]=r
+if not seenN[r] then seenN[r]=true uq=uq+1 end
+break
+end
 end
 end
 if #hits>0 then
@@ -11013,7 +12039,8 @@ if #hits>14 then line(("... 还有 %d 个(文件里有全部)"):format(#hits-14)
 gen=gen+#hits
 end
 end
-line(("→ 命中可做功能的关键词 %d 个 / Remote 总数 %d(完整清单见上)"):format(gen,#remotes))
+line(("→ 命中可做功能的通道 %d 个【不同】(按类别累计 %d 次 —— 同一通道可能同时属于多个类别) / Remote 总数 %d")
+:format(uq,gen,#remotes))
 else line("!! Remote 扫描失败") end
 head("B · 代码层(游戏函数: 怎么实现的)")
 LAB.ScanGC()
@@ -11136,8 +12163,9 @@ local AKEY={"stage","phase","state","hp","health","damage","team","owner","targe
 "objective","round","wave","locked","open","active","timer","spawn",
 "阶段","状态","血","倒计"}
 local _t=os.clock()
+local cut=false
 for _,v in ipairs(SYS.Index()) do
-if os.clock()-_t>0.6 then break end
+if os.clock()-_t>0.6 then cut=true break end
 local c=v.ClassName
 if c=="Model" or v:IsA("BasePart") then
 scanned=scanned+1
@@ -11161,10 +12189,12 @@ found=found+1
 table.sort(ks)
 local okp,path=P(function() return v:GetFullName() end)
 local hdr=("  · %s"):format(tostring(okp and path or v.Name))
-if shown<40 then line(hdr) shown=shown+1 else SYS.ScanBufNote(hdr) end
+shown=shown+1
+if shown<=40 then line(hdr) else SYS.ScanBufNote(hdr) end
 for j=1,#ks do
 local kv,av=P(function() return v:GetAttribute(ks[j]) end)
 local r=("      %-18s = %s"):format(tostring(ks[j]),tostring(kv and av or "?"))
+shown=shown+1
 if shown<=40 then line(r) else SYS.ScanBufNote(r) end
 end
 end
@@ -11172,7 +12202,9 @@ end
 end
 end
 end
-line(("非玩家实例带 Attribute 的命中 %d 个(扫了 %d 个 Model/BasePart; 耗时 %.2fs; 控制台显示前 40)"):format(found,scanned,os.clock()-_t))
+line(("非玩家实例带 Attribute 的命中 %d 个(扫了 %d 个 Model/BasePart; 耗时 %.2fs%s; 控制台显示前 40 条)")
+:format(found,scanned,os.clock()-_t,
+cut and " · ⚠ 碰 0.6s 上限已截断, 数据不全" or " · 全图扫完, 未截断"))
 end)
 end)
 if not okE then line("!! 数据层扫描异常") end
@@ -11183,10 +12215,11 @@ CFrameValue=1,ObjectValue=1,Color3Value=1,BrickColorValue=1,RayValue=1}
 local KEY={"stage","phase","state","timer","time","round","wave","score","point","coin",
 "cash","money","hp","health","damage","target","objective","level","progress",
 "count","left","remain","spawn","door","room","阶段","计时","分数","目标","血","倒计"}
-local rows,byCls,all,hot= {}, {}, 0, 0
+local rows,byCls,all,hot,skip= {}, {}, 0, 0, 0
 local _t0=os.clock()
+local cut=false
 for _,v in ipairs(SYS.Index()) do
-if os.clock()-_t0>0.6 then break end
+if os.clock()-_t0>0.6 then cut=true break end
 local c=v.ClassName
 if VCLS[c] then
 all=all+1
@@ -11196,21 +12229,32 @@ local low=nm:lower()
 local hit=false
 for i=1,#KEY do if low:find(KEY[i],1,true) then hit=true break end end
 if hit or c=="ObjectValue" then
-hot=hot+1
+local okp,path=P(function() return v:GetFullName() end)
+local fp=tostring(okp and path or "")
+local lp=fp:lower()
 local okv,val=P(function() return v.Value end)
 local s=tostring(okv and val or "?")
+local empty=(c=="StringValue" and s=="")
+if empty or lp:find("animate",1,true) or lp:find("animsaves",1,true)
+or lp:find("anim test",1,true) then
+skip=skip+1
+else
+hot=hot+1
 if #s>64 then s=s:sub(1,64).."…" end
-local okp,path=P(function() return v:GetFullName() end)
 rows[#rows+1]=("  %-14s %-26s = %s"):format(c,nm:sub(1,26),s)
-rows[#rows+1]=("        @ "..tostring(okp and path or "(取不到完整路径)"))
+rows[#rows+1]=("        @ "..(fp~="" and fp or "(取不到完整路径)"))
+end
 end
 end
 end
 local cs={}
 for k,n in pairs(byCls) do cs[#cs+1]=("%s×%d"):format(k,n) end
 table.sort(cs)
-line(("值对象共 %d 个 · 分类: %s   [扫完耗时 %.2fs ｜ 超过 0.6s 会被截断, 看这个数就知道全不全]"):format(all,table.concat(cs," · "),os.clock()-_t0))
-line(("名字命中状态关键字的 %d 个(下列全量落盘, 控制台只显示前 40 条):"):format(hot))
+line(("值对象共 %d 个 · 分类: %s   [扫完耗时 %.2fs%s]")
+:format(all,table.concat(cs," · "),os.clock()-_t0,
+cut and " · ⚠ 碰 0.6s 上限已截断, 数据不全" or " · 全图扫完, 未截断"))
+line(("名字命中状态关键字的 %d 个(下列全量落盘, 控制台只显示前 40 条); 另有 %d 个命中动画容器/空值已跳过%s)")
+:format(hot,skip,skip>hot*2 and " —— ⚠ 本次跳过的比留下的多很多, 说明状态关键词撞上了动画辅助值" or ""))
 if hot==0 then
 line("(没有名字命中状态关键字的值对象 —— 这游戏的内部状态可能不在 Value 里, 或用了中性名)")
 else
@@ -11736,10 +12780,38 @@ elseif SYS.T_.CB_SilentAim~=true and SYS.T_.CB_BulletWall~=true then
 SYS.RayHook.Remove()
 end
 end)
-UI.Btn(p,"🧪 射线改写统计 (控制台)",CY.cyan,function()
-print("[CheatMenu] 射线改写次数: "..tostring(SYS.RayHook.Rewrites)
-.."  hook 已装: "..tostring(SYS.RayHook.Hooked))
-SYS.Notify("🧪 结果已打到控制台(F9)",SYS.CY.cyan)
+UI.Btn(p,"🩺 穿墙自检 + 射线改写统计 (控制台)",CY.cyan,function()
+P(function()
+local R=SYS.RayHook
+print("[CheatMenu] ===== 穿墙自检（三条路各干了多少活）=====")
+print(("路 A · namecall 层 : hook 已装=%s   改写 %d 次")
+:format(tostring(R.Hooked),R.Rewrites or 0))
+print(("路 C · 只打玩家    : 命中「墙后面的人」%d 次   ← 这条不依赖锁定目标")
+:format(R.ThruN or 0))
+print(("路 B · 函数层      : 已包 %d 个函数   改写 %d 次")
+:format(R.FnN or 0,R.FnRewrites or 0))
+if R.FnStats then
+print(("  函数层扫描: 看过 %d 个函数（能取到名字 %d 个）→ 候选 %d 个")
+:format(R.FnStats.fn,R.FnStats.named,#R.FnCands))
+print(("    其中【按归属脚本收窄】收进来的 %d 个（脚本名带 raycast/ballistic/projectile）")
+:format(R.FnStats.byScript or 0))
+end
+if R.FnNote and R.FnNote~="" then print("  备注: "..R.FnNote) end
+for i=1,#R.FnCands do
+if i<=12 then
+print("  候选函数: "..R.FnCands[i].name.."   (命中关键词 "..R.FnCands[i].kw..")")
+end
+end
+local tp=R.Target()
+print("当前锁定目标: "..(tp and (tp.Name or tostring(tp)) or "（没有 —— 此时靠路 C 沿准星方向自己找墙后的人）"))
+print("")
+print("怎么读这三行:")
+print("  · 只要【任意一条】在涨, 穿墙就是活的; 另外两条是它的冗余备份。")
+print("  · 三个都是 0 = 这游戏的命中判定完全不经过客户端射线")
+print("    （典型: 命中由服务端自己重算, 客户端改射线它不认）-> 客户端的穿墙对它无效。")
+print("  · 路 B 为 0 且备注写着『取不到函数名』-> 是本机执行器限制, 不是脚本坏了。")
+SYS.Notify("🩺 自检已打到控制台(F9)",SYS.CY.cyan)
+end)
 end)
 UI.Btn(p,"📡 看服务端战斗数据 (控制台)",CY.purple,function()
 print("[Combat] ===== 服务端战斗数据（只记录, 未接判据） =====")
@@ -11752,7 +12824,72 @@ UI.Tip(p,"★ 服务端战斗数据 = 综合扫描新发现的 3 条【权威输
 .. "  · CombatService.Ammo（真实弹药）\n"
 .. "现在【只记录不改行为】—— 因为这三条的参数格式还没实机见过，猜着当判据会把原来能打中的也打不中。\n"
 .. "你玩一局 -> 点上面那个按钮 -> 把控制台几行发我，我就按真实参数把它们接成判据（这才是补强的正确顺序）。",CY.sub)
-UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 同上, 且不要求视线\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
+UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 只打人、不打墙(下面详述)\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
+UI.Tip(p,"🎯 子弹穿墙 v9.10.0 重做 —— 原来那条为什么穿不过去, 以及现在的三条路:\n"..
+"  【旧版的三个硬前提, 缺一个就整条失效, 界面却仍显示『已开』】\n"..
+"   ① 必须先在战斗页【锁定一个目标】: 没锁定就一行都不改写;\n"..
+"   ② 游戏必须写 `workspace:Raycast(...)`: 很多游戏会把 `workspace.Raycast` 存进局部变量再调,\n"..
+"      那是 __index + 普通调用, 我们的 __namecall hook 根本看不见;\n"..
+"   ③ 只接了 Raycast, 没接 Spherecast / Blockcast(现代 FPS 常用这两个做命中判定)。\n"..
+"  【现在三条路一起用, 互为冗余】\n"..
+"   · 路 A(namecall 层) —— 三个 cast 方法全接;\n"..
+"   · 路 C(真穿墙 · 不依赖锁定目标) —— 不再用游戏的过滤表, 我们自己开一条\n"..
+"     【只列玩家角色】的射线: 墙压根不在候选里, 命中点必然落在墙后面那个人身上;\n"..
+"   · 路 B(函数层) —— 用 getgc 找名字带 raycast/cast/lineofsight/cansee 的函数,\n"..
+"     直接包【函数对象】, 所以游戏缓存了引用也拦得住;\n"..
+"     ⚠ 红线: 只认名字取得出来且带上述关键词的函数, 取不到名字就这条路不动手。\n"..
+"  🩺 点上面的「穿墙自检」就能看到三条路各改写了几次 ——\n"..
+"     三个都是 0 = 这游戏的命中由【服务端重算】, 客户端改射线它不认(那就是真做不到)。",CY.sub)
+UI.Section(p,"🔧 射击增强 (弹药 / 换弹 / 后坐力 / 弹道)",CY.orange)
+local function gunOn() P(SYS.Gun.Sync) end
+UI.Switch(p,"♾ 无限子弹 (本地弹匣/备弹写满)","Gun_InfAmmo",gunOn)
+UI.Switch(p,"⚡ 瞬间换弹 (换弹时长压到 0.01)","Gun_InstantReload",gunOn)
+UI.Switch(p,"🎯 无后坐力 (hook 掉后坐力函数 · 纯本地)","Gun_NoRecoil",gunOn)
+UI.Switch(p,"➡ 子弹无阻力 / 无下坠 (弹道类游戏才有效)","Gun_NoDrop",gunOn)
+UI.Switch(p,"⏱ 道具/技能/武器 无冷却 (CD 压到 0.01 · 客户端 CD 才有效)","Gun_NoCooldown",gunOn)
+UI.Switch(p,"🧪 免费消耗道具 (数量不减 · 客户端数量才有效)","Gun_InfItem",gunOn)
+UI.Switch(p,"🎯 瞄准补强 (开镜更快 + 准星不飘)","Gun_AimStable",gunOn)
+UI.Btn(p,"🔍 扫描武器逻辑 + 打印诊断 (控制台)",CY.cyan,function()
+if not SYS.Gun.Scanned then
+SYS.Notify("🔧 还没扫过 —— 先开上面任意一个开关, 扫描会自动进行",SYS.CY.yellow)
+return
+end
+P(function()
+SYS.Gun.Probe()
+SYS.Notify("🔍 诊断已打到控制台(F9) —— 候选函数名/弹药表键名/数值槽全在里面",SYS.CY.cyan)
+end)
+end)
+UI.Tip(p,"这四项改的是【游戏自己的武器逻辑】(hook 函数 / 改 upvalue), 不是纯视觉 —— 属行为可见类, 默认全关。\n"..
+"· 首次打开任意一项会先【扫描一次】(约 1~3 秒), 扫完把结果打在控制台;\n"..
+"· 🎯 无后坐力 = hook 掉名字里带 recoil 的函数(公开脚本的标准做法, 一行搞定);\n"..
+"   ⚠ 只对【名字取得出来、且明确带 recoil】的函数动手 —— 认不出名字就一个都不挂\n"..
+"     (宁可不做, 也不改坏游戏: 对认不出的函数 hook 成空是能把游戏打坏的);\n"..
+"· ♾ 无限子弹 = 找 GC 里带弹匣键的表(Ammo/Mag/Clip…)定时写满, 另加 Tool 属性/NumberValue 兜底;\n"..
+"   ⚠ 弹药若由【服务端权威下发】(已确认的几款 FPS 服都是), 本地写只影响你自己看到的数字,\n"..
+"     真开火仍受服务端限制 —— 这条我在任何游戏上都不打包票, 以进游戏的实际效果为准;\n"..
+"· ⚡ 瞬间换弹 = ReloadTime 类数值压到 0.01 + 弹匣不消耗 ⇒ 基本进不了换弹状态机;\n"..
+"· ➡ 无下坠 = 把弹道类的 gravity/drag 数值归零;\n"..
+"   ⚠ 判定走【射线】的游戏(AsyncRaycast 那类)本来就没有下坠 —— 这项对它们天然无效, 不是坏了;\n"..
+"   ⚠ 弹道类的 upvalue 只在【所属函数名带 bullet/projectile/gun/weapon/fire/shoot】时才认,\n"..
+"     否则会把相机脚本自己的 gravity 一起归零(那才是真会改坏东西的改法)。\n"..
+"🎯 穿墙命中不在这里 —— 是上面「高风险瞄准」里的【子弹穿墙】(走射线改写, v6.11 就有)。\n"..
+"· ⏱ 无冷却 = 找 upvalue 名带 cooldown/cdtime/attackcd… 的数值槽压到 0.01;\n"..
+"· 🧪 免费消耗道具 = 找【同时有数量键(Count/Amount/Qty…)与标识键(Id/Name…)的表】,\n"..
+"   把数量写回「见过的最满值」(和弹匣同一个思路);\n"..
+"   ⚠ 这两条的边界与弹药一样: 【只在 CD / 数量存在客户端时有效】;\n"..
+"     服务端自己算 CD、自己扣数量的话, 本地改的是你自己看到的那份。\n"..
+"⛔ 【免费购买 / 0 元扫货 / 改余额】做不到, 所以这里没有这个开关 ——\n"..
+"   商店那批 `*Purchase` 都在【服务端查余额】, 客户端没有任何东西能改服务端账本。\n"..
+"   说能做到的都是编的; 要做只能人工摸清 remote 参数协议, 那一步我不瞎试。\n"..
+"🎯 瞄准补强 = 开镜速度快 + 准星不飘(镜头抖动/摆动归零) —— 与「无后坐力」分开, 想单独要哪个都行。\n"..
+"★★ 本版最重要的改动【按归属脚本收窄扫描】:\n"..
+"   旧版是在【全部 GC 函数】里瞎找 —— 实测 FFA 对战服有 13 万个函数, 6 秒预算必然截断,\n"..
+"   结果就是「6 个开关全开着、一个都没挂上」。\n"..
+"   现在先用 getfenv(f).script 拿到【这个函数属于哪个脚本】(B 层早就证明这条路能走),\n"..
+"   只对名字带 shootable/weapon/fire/ammo/aim/recoil/bullet… 的脚本做深度扫描,\n"..
+"   其余一律跳过 ⇒ 既不截断, 又不会被无关脚本的数值槽误伤。\n"..
+"   🔍 诊断里会打出来「共看多少函数 / 深度扫了多少 / 跳过了多少」—— 对不上就说明这台环境有问题。\n"..
+"🔍 想知道到底扫到了什么, 点上面那个按钮 —— 候选函数名 / 弹药表键名 / 物品表键名 / 数值槽会全部列出来。",CY.sub)
 task.spawn(function()
 local lastScan,lastHud=0,0
 while card.Parent do
@@ -11795,12 +12932,101 @@ UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
 UI.Tip(p,"🎮 小游戏区域透视已并入【视觉页 -> 🔍 物件透视】(判据合并, 一个开关一起亮)。",CY.sub)
 UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
 UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
-UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。",CY.sub)
+UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n"..
+"自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n"..
+"★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
+"  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次, 每 3 秒只触发一次。\n"..
+"★ 每帧最多触发 6 个, 其余留到下一轮(0.5 秒) —— 避免一帧几十个请求那种一眼假的动作。\n"..
+"两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
+"想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
 UI.Tip(p,"开关改动会自动保存, 下次加载脚本时自动生效(无需手动操作)。",CY.sub)
+UI.Section(p,"🩺 内部错误台账 (把「静默失败」变成能看的数字)",CY.cyan)
+UI.Tip(p,"脚本里所有「安全调用」走的是同一个包装 —— 它现在会【记账】:\n"..
+"· 同一条错误只打印第一次(避免每帧刷屏、掉帧);\n"..
+"· 最多记 60 条不同错误, 最多打印 30 条;\n"..
+"· 想知道到底出过什么错, 点下面按钮看全部。\n"..
+"📌 这里【空着】才是好消息 —— 有内容说明某个功能在静默失败(那正是最难查的 bug 类型)。",CY.sub)
+UI.Btn(p,"🩺 查看内部错误台账 (控制台)",CY.cyan,function()
+P(function()
+local E=SYS.Errors or {}
+local rows={}
+for m,e in pairs(E) do rows[#rows+1]={m,e.n,e.t or 0} end
+table.sort(rows,function(a,b)
+if a[2]~=b[2] then return a[2]>b[2] end
+return a[3]<b[3]
+end)
+print("[CheatMenu] ===== 内部错误台账 =====")
+print(("总失败次数: %d · 不同错误: %d 条%s")
+:format(SYS.ErrN or 0,#rows,
+(SYS.ErrOther and SYS.ErrOther>0) and ("(另有 "..SYS.ErrOther.." 次因超出 60 条上限未记)") or ""))
+if #rows==0 then
+print("  ✅ 空 —— 没有静默失败。")
+else
+for i=1,#rows do
+print(("  [%d] ×%-5d %s"):format(i,rows[i][2],rows[i][1]))
+end
+print("  ⚠ 上面每条都对应一个「功能没反应」的现场 —— 把编号发我即可定位。")
+end
+end)
+SYS.Notify("🩺 台账已打到控制台(F9)",SYS.CY.cyan)
+end)
+UI.Section(p,"🪝 Hook 实况 + 网络所有权 (回答「为什么有时灵有时不灵」)",CY.yellow)
+UI.Btn(p,"🪝 打印 hook 实况 / 网络所有权",CY.yellow,function()
+P(function()
+print("[CheatMenu] ===== hook 实况 =====")
+local function st(name,on)
+print(("  %-28s %s"):format(name, on and "已挂" or "未挂"))
+end
+local AR=SYS.AntiRevert
+st("防回退(位置上报伪装)", AR and AR.on and true or false)
+if AR and AR.on then print("      改写的上报次数: "..tostring(AR.fixed or 0)) end
+local RH=SYS.RayHook
+st("射线改写(__namecall)", RH and RH.Hooked and true or false)
+if RH then
+print("      改写次数: "..tostring(RH.Rewrites or 0)
+.." · 函数层已包: "..tostring(RH.HookN or 0).." 个")
+end
+local G=SYS.Gun
+if G then
+local n=0
+for _ in pairs(G.Hooked or {}) do n=n+1 end
+print(("  %-28s %s(已包 %d 个游戏函数)"):format("射击: 后坐力函数", n>0 and "已挂" or "未挂", n))
+st("射击: 数值槽改写", (G.Nums and #G.Nums>0) and true or false)
+end
+print("  说明: 上面每一个「已挂」都必须是【可还原】的; 点卸载会走各模块自己的还原入口。")
+print("")
+print("[CheatMenu] ===== 网络所有权(决定「移动类功能能不能生效」) =====")
+local ch=SYS.LP and SYS.LP.Character
+local hrp=ch and ch:FindFirstChild("HumanoidRootPart")
+if not hrp then
+print("  ⏳ 角色还没加载出来, 稍后再看")
+return
+end
+local ok,owner=pcall(function() return hrp:GetNetworkOwner() end)
+local lpn=SYS.LP and SYS.LP.Name
+if not ok then
+print("  ⚠ 本机执行器读不到 GetNetworkOwner —— 只能靠实测(飞一下看会不会被拉回)")
+elseif owner==nil then
+print("  ⚠ 网络所有权 = 服务端(或没有主人) ⇒ **这台服是服务器权威移动**。")
+print("     后果: 飞行/加速/TP/穿墙(改自己位置那类)会被服务端覆盖或拉回。")
+print("     这不是脚本坏了 —— 客户端改不动服务端模拟的位置。")
+elseif tostring(owner.Name)==tostring(lpn) then
+print("  ✅ 网络所有权在你身上 ⇒ 飞行/加速/TP 【原理上有效】(服务端接受你报的位置)。")
+print("     仍可能被【游戏自己的位置校验】拉回 —— 那种情况开「防回退」能缓解一部分。")
+else
+print("  ⚠ 网络所有权在别人身上: "..tostring(owner.Name))
+end
+end)
+SYS.Notify("🪝 结果已打到控制台(F9)",SYS.CY.yellow)
+end)
+UI.Btn(p,"🧹 清空台账 (改完再看新的)",CY.sub,function()
+SYS.Errors={} SYS.ErrN=0 SYS.ErrSlot=0 SYS.ErrPrintN=0 SYS.ErrOther=0
+SYS.Notify("台账已清空(计数也会归零, 方便对照改动前后)",SYS.CY.green)
+end)
 UI.Div(p)
 UI.Section(p,"⌨ 热键设置 (点一下再按新键)",CY.cyan)
 local function keyRow(label,field)
@@ -12016,21 +13242,6 @@ if gui.Parent then return "PlayerGui" end
 local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
 if ok2 and gui.Parent then return "CoreGui(兜底)" end
 return "失败"
-end
-function SYS.TryAntiKick()
-if SYS.KickHooked then return "已启用" end
-if type(hookfunction)~="function" then return "不可用(执行器没提供 hookfunction)" end
-local ok=pcall(function()
-local lp=SYS.LP
-if not lp then return end
-hookfunction(lp.Kick,function() return nil end)
-SYS.KickHooked=true
-end)
-if ok and SYS.KickHooked then
-print("[CheatMenu] 防踢已启用(只拦本地 Kick; 服务端踢人拦不住)")
-return "已启用"
-end
-return "不可用"
 end
 local function CreateMenuLegacy()
 print("[CheatMenu] CreateMenu 开始")
@@ -12584,7 +13795,7 @@ end) end
 ShowTab("战斗")
 P(function()
 local where=SYS.SafeParentGui(sg)
-print("[CheatMenu] 菜单挂载: "..tostring(where).." · 防踢: "..tostring(SYS.TryAntiKick()))
+print("[CheatMenu] 菜单挂载: "..tostring(where))
 end)
 sg.Enabled=true SYS.MenuOpen=true
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
@@ -12819,6 +14030,8 @@ P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
 P(function() if SYS.SetNoclip then SYS.SetNoclip(false) end end)
 P(function() if SYS.FuseClean then SYS.FuseClean() end end)
+P(function() if SYS.Gun and SYS.Gun.Sync then SYS.Gun.Sync() end end)
+P(SYS.SyncAntiRevert)
 for _,c in ipairs(SYS.NoclipConns or {}) do DS(c) end SYS.NoclipConns={}
 if CAS then P(function() CAS:UnbindAction(SYS.N.CAS) end) end
 P(SYS.EnablePlayerControls)
