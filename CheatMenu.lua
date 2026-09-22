@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 00:33 sha 2864168c bytes 576656'):format('2026-09-23 00:33','2864168c',576656))
+print(('[CheatMenu] build 2026-09-23 00:55 sha 80aeae9c bytes 575450'):format('2026-09-23 00:55','80aeae9c',575450))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -68,7 +68,6 @@ NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
 Prot_AntiAdmin=true,
-Prot_SpeedCap=false,
 AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 },
@@ -76,7 +75,6 @@ C_={
 FlySpeed=6,FlyMode="BodyVelocity",
 SpeedMult=6,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=6,
-SpeedCap=150,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
 FreeCamSpeed=140,FreeCamSens=0.3,PerfCull=300,
 TracerMaxDist=3000,TracerMaxN=40,
@@ -112,7 +110,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.9.0"
+SYS.BuildVer="10.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -275,7 +273,8 @@ PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true,
 Prot_AntiAC=true, Prot_AntiTP=true,
 Key_Auto=true,
 AutoRebirth=true, RebirthCheck=true,
-Prot_HideGui=true }
+Prot_HideGui=true,
+Prot_SpeedCap=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -1073,13 +1072,7 @@ local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed then return base*(SYS.C_.SpeedMult or 1) end
 return base
 end
-local function guardSpeed(v)
-if SYS.T_.Prot_SpeedCap then
-local cap=tonumber(SYS.C_.SpeedCap) or 0
-if cap>0 and v and v>cap then return cap end
-end
-return v
-end
+local function guardSpeed(v) return v end
 local function wantWalkSpeed()
 local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
@@ -7882,13 +7875,13 @@ P(CB.MigrateV72)
 SYS.MAXPARAMS={
 CB_AimPart=1, CB_Smooth=1, CB_Fov=600, CB_MaxDist=2000, CB_MeleeDist=25, CB_MeleeGap=0.10,
 CB_ScanMs=0, CB_FireDelay=0.02, CB_PredictTime=0.22,
-FlySpeed=6, SpeedMult=6, JumpMult=6, SpeedCap=150,
+FlySpeed=6, SpeedMult=6, JumpMult=6,
 FreeCamSpeed=140, TracerMaxDist=3000, TracerMaxN=40, PickDist=3000,
 }
 SYS.MIGOLDDEFAULTS={
 CB_AimPart=2, CB_Smooth=0.28, CB_Fov=200, CB_MaxDist=1200, CB_MeleeDist=9, CB_MeleeGap=0.35,
 CB_ScanMs=33, CB_FireDelay=0.08, CB_PredictTime=0.14,
-FlySpeed=3, SpeedMult=2, JumpMult=2, SpeedCap=28,
+FlySpeed=3, SpeedMult=2, JumpMult=2,
 FreeCamSpeed=60, TracerMaxDist=500, TracerMaxN=12, PickDist=1200,
 }
 function SYS.MaxParams(force)
@@ -12391,22 +12384,6 @@ UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",
 UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
 "这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
 "纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
-UI.Div(p)
-UI.Section(p,"🚦 移动限速护栏 (开加速但别太离谱)",CY.yellow)
-UI.Switch(p,"🚦 限制最高移速 (默认关)","Prot_SpeedCap",function(on)
-if on then
-SYS.Notify(("🚦 移速护栏已开 —— 所有加速路径最高 %.0f 格/秒"):format(tonumber(SYS.C_.SpeedCap) or 28),SYS.CY.green)
-else
-SYS.Notify("移速护栏已关(恢复原来的倍率)",SYS.CY.sub)
-end
-end)
-UI.Slider(p,"护栏上限 (格/秒)",16,100,1,
-function() return tonumber(SYS.C_.SpeedCap) or 28 end,
-function(v) SYS.C_.SpeedCap=v end,"%.0f")
-UI.Tip(p,"Roblox 默认走路是 16 格/秒; 服务端统计类反作弊最爱看「长期 >30」这种一眼假的数。\n"..
-"打开后, 加速的三种模式(WalkSpeed / BodyVelocity / Linear)【最终写出去的速度】都会被压到上限以内;\n"..
-"飞行、传送、防陷阱的判定基准(「我本来该有多快」)都不受影响 —— 只收窄真正写出去的数。\n"..
-"默认 28: 比正常快一截, 又不至于离谱。想要原汁原味的倍率, 把它关掉即可。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔎 反指纹自检 (G6/G7)",CY.cyan)
 UI.Btn(p,"🔎 跑一次反指纹自检 (结果打到控制台)",CY.cyan,function()
