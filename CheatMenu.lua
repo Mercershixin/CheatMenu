@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 17:57 sha ab28a247 bytes 538238'):format('2026-09-22 17:57','ab28a247',538238))
+print(('[CheatMenu] build 2026-09-22 18:25 sha fabe6afc bytes 536913'):format('2026-09-22 18:25','fabe6afc',536913))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -34,7 +34,7 @@ ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=
 HUD_Info=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
-AutoRebirth=false,AutoGym=false,AutoTrain=false,
+AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
 CB_Aim=false,CB_Silent=false,CB_Fire=false,
@@ -82,7 +82,7 @@ AutoHideDist=40,
 DeepHideDepth=120,
 DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
-AutoTrainSec=5,RebirthCheck=3,
+AutoTrainSec=5,
 SellMinCPS=100000,SellLvMul=1.25,
 CB_AimPart=1,CB_Smooth=1,CB_Fov=600,CB_MaxDist=2000,CB_MeleeDist=25,CB_MeleeGap=0.10,
 DodgeDist=15,
@@ -107,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.2.0"
+SYS.BuildVer="10.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -268,7 +268,8 @@ PC_Freeze=true,
 PG_Spin=true, PG_SpinHit=true, PG_FlyHit=true, PG_WalkHit=true,
 PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true,
 Prot_AntiAC=true, Prot_AntiTP=true,
-Key_Auto=true }
+Key_Auto=true,
+AutoRebirth=true, RebirthCheck=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -4920,12 +4921,11 @@ end
 return tonumber(tx:match("[-+]?[%d%.]+"))
 end
 SYS.FindHUD=FindHUD
-local AFK={Kick=nil,Reb=nil,LastBonus=0,BonusWin=0,WTool=nil,WToolT=0}
+local AFK={Kick=nil,LastBonus=0,BonusWin=0,WTool=nil,WToolT=0}
 SYS.AFK=AFK
 task.spawn(function()
 task.wait(2)
 OnRemote("KickData",function(v) if typeof(v)=="number" then AFK.Kick=v end end)
-OnRemote("RebirthUpdate",function(v) if typeof(v)=="number" then AFK.Reb=v end end)
 end)
 local kt,kv=0,0
 function SYS.CurKick()
@@ -4940,19 +4940,6 @@ local lb=kl and kl:FindFirstChild("TextLabel")
 if lb and lb:IsA("TextLabel") then kv=ParseNum(lb.Text) or 0 end
 return kv
 end
-local rt,rv=0,0
-function SYS.CurReb()
-if type(AFK.Reb)=="number" then return AFK.Reb end
-local now=os.clock()
-if now-rt<0.5 then return rv end
-rt=now
-local f=PG:FindFirstChild("Frames")
-local r=f and f:FindFirstChild("Rebirth")
-local l=r and r:FindFirstChild("RebirthLevel")
-if l and l:IsA("TextLabel") then rv=math.max(0,math.floor(ParseNum(l.Text) or 0)) end
-return rv
-end
-local CurKick=SYS.CurKick local CurReb=SYS.CurReb
 local TrainThread
 function SYS.StopTrain() if TrainThread then task.cancel(TrainThread) TrainThread=nil end end
 function SYS.StartTrain()
@@ -4977,24 +4964,6 @@ end
 end
 end
 task.wait(math.max(0.5,SYS.C_.AutoTrainSec))
-end
-end))
-end
-local RebThread
-local lastRebFire=0
-function SYS.StopReb() if RebThread then task.cancel(RebThread) RebThread=nil end end
-function SYS.StartReb()
-SYS.StopReb()
-RebThread=TT(task.spawn(function()
-while not SYS.Unloaded and SYS.T_.AutoRebirth do
-task.wait(SYS.C_.RebirthCheck)
-if SYS.Unloaded or not SYS.T_.AutoRebirth then break end
-local lv=CurReb() local pw=CurKick()
-local now=os.clock()
-if lv<10 and pw>=(10^(lv+3)) and now-(lastRebFire or 0)>5 then
-lastRebFire=now
-Fire("RebirthRequest") task.wait(2)
-end
 end
 end))
 end
@@ -11489,12 +11458,6 @@ if on then SYS.StartTrain() else SYS.StopTrain() end
 end)
 UI.Slider(p,"训练循环间隔(秒)",1,30,0.5,function() return SYS.C_.AutoTrainSec end,function(v) SYS.C_.AutoTrainSec=v end,"%.1f")
 UI.Div(p)
-UI.Label(p,"进度")
-UI.Switch(p,"自动重生","AutoRebirth",function(on)
-if on then SYS.StartReb() else SYS.StopReb() end
-end)
-UI.Slider(p,"重生检查间隔(秒)",1,15,0.5,function() return SYS.C_.RebirthCheck end,function(v) SYS.C_.RebirthCheck=v end,"%.1f")
-UI.Div(p)
 UI.Label(p,"训练加成")
 UI.Switch(p,"自动领取训练加成","AutoBonus")
 UI.Div(p)
@@ -14546,7 +14509,7 @@ P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
-P(SYS.StopTrain) P(SYS.StopReb) P(SYS.StopGym)
+P(SYS.StopTrain) P(SYS.StopGym)
 P(function() if SYS.CleanTrapGuard then SYS.CleanTrapGuard() end end)
 P(function() if SYS.Combat then SYS.Combat.Stop() end end)
 P(function() if SYS.SetNoclip then SYS.SetNoclip(false) end end)
