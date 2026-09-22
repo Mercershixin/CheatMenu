@@ -1,3 +1,43 @@
+## 10.9.0 · 2026-09-23
+
+**新增「Dead Rails 锁血 · 补血 · 防击倒/防布娃娃」** —— 玩家视角「血」这一块（新模块 `SYS.DRHp`，两个开关 + 一个按钮，默认全关）。
+
+### 先说边界（这版最重要的一句）
+Dead Rails 的**玩家伤害是服务端算的** —— 我把全部 **220 个 remote** 过了一遍，跟玩家血量有关的**只有三条**：
+`Assets.Tools.Medical.bandage.Use` · `...snake_oil.Use` · `Remotes.RevivePlayer`，
+**没有任何「我掉血了」的客户端上行通道** ⇒ 客户端只能**本地补血**。
+再加这游戏用了 `Replica`(服务端→客户端状态复制) + `jecs`(ECS) + `validateLivingCharacter` / `traffic_check` /
+`DeathFlowTelemetry`，Player 上还挂着服务端 Attribute `HasDied` ⇒
+**补血 = 能 · 锁血 = 能顶回血条但不保命 · 真·无敌 = 做不到**
+（服务端判死时客户端拦不住，表现是「血条是满的却突然死」）。**这条已写进 UI 提示，别当它是无敌。**
+
+### 新增（`[08E] SYS.DRHp`，入口在「功能」页「上帝模式」上方）
+- 🔒 **锁血 + 补血**（`DeadRails_LockHp` → `SYS.SetDRLockHp`）：挂 `Humanoid.HealthChanged`，
+  **血一被扣就在同一帧写回 `MaxHealth`**。
+  ★ 与「上帝模式」的关键差别：它**没有** `v>0` 前置（掉到 0 也照顶），另加 Heartbeat 兜底守护；
+  附带禁 `Dead` 状态 + `BreakJointsOnDeath=false`；角色重生自动重绑。
+- 🧍 **防击倒 / 防布娃娃**（`DeadRails_NoFlop` → `SYS.SetDRNoFlop`）：禁 `FallingDown` / `Ragdoll`，
+  每帧把 `FallingDown` / `Ragdoll` / `Physics` 纠回 `Running`，并解 `PlatformStand` / `Sit`。
+  ★ 这是本版**最可能真的有效**的一档 —— 据扫描，管击倒的 `ClientPlayerFlopHandler` 跑在**客户端**。
+- 💚 **立即回满血**（按钮）：不看开关，点一下立刻写满 + 让你站起来。
+
+### 为什么单独做一档，不复用「上帝模式」
+① 上帝模式是**全局**开关，这档是 **Dead Rails 专用**；
+② 上帝模式的 `HealthChanged` 带 `v>0` 前置（掉到 0 靠 Heartbeat 循环兜，慢一帧），这档**同帧**顶回（含 0）；
+③ 防布娃娃比现有「防击倒」更全（多了 `Ragdoll` / `Physics` / `Sit`）。
+
+### 卸载
+`SYS.UnloadAll` 补 `SYS.DRHp.UnloadAll()`：断 `HealthChanged` / `CharacterAdded` 连接，
+并把 `SetStateEnabled(Dead/FallingDown/Ragdoll)=true`、`BreakJointsOnDeath=true` 还原（Heartbeat 循环由统一清理兜）。
+
+### 安全
+全部**纯客户端**：只写自己 `Humanoid` 的属性 / 状态，**零 hook、不 FireServer、不碰服务端数据**。
+
+### 验证
+`luau-compile` 通过；开关接线对账（`SYS.T_` 布尔开关 97 个，本轮新增 2 个**均已在界面入口**）。
+
+---
+
 ## 10.8.0 · 2026-09-22
 
 **新增「Dead Rails（亡命铁轨）」一局支持** —— 敌我判定补强 · 透视补类 · 战斗增强（新游戏接入口）。
