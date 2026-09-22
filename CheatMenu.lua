@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 19:40 sha a8493c84 bytes 545150'):format('2026-09-22 19:40','a8493c84',545150))
+print(('[CheatMenu] build 2026-09-22 20:11 sha 0fa0a49a bytes 550373'):format('2026-09-22 20:11','0fa0a49a',550373))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -108,7 +108,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.5.2"
+SYS.BuildVer="10.5.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4329,6 +4329,134 @@ host=(ok4 and type(hp)=="string" and hp~="") and hp or "?"
 end
 return tostring(host).."#"..nm
 end
+local HITMK_MAX = 8
+local HITMK_SEC = 1.2
+SYS._hitMk      = SYS._hitMk      or {}
+SYS._hitMkAt    = SYS._hitMkAt    or {}
+SYS._hitMkIdx   = SYS._hitMkIdx   or 0
+SYS._hitMkCount = 0
+local function _hitLabel(obj)
+local ok,nm = P(function() return obj and obj.Name end)
+nm = (ok and type(nm)=="string" and nm~="") and nm or "交互件"
+if #nm > 22 then nm = nm:sub(1,22).."…" end
+return nm
+end
+local function _hitParentGui()
+local ok,pg = P(function()
+return (SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
+end)
+return (ok and pg) or nil
+end
+function SYS.HitMark(part, text, col)
+if SYS._hitMkOff or not part then return end
+P(function()
+if not part.Parent then return end
+SYS._hitMkIdx = (SYS._hitMkIdx % HITMK_MAX) + 1
+local i  = SYS._hitMkIdx
+local mk = SYS._hitMk[i]
+if not mk or not mk.gui or not mk.gui.Parent then
+local gui = SYS.NewVis and SYS.NewVis("BillboardGui")
+if not gui then return end
+gui.Size = UDim2.new(0, 190, 0, 22)
+gui.StudsOffsetWorldSpace = Vector3.new(0, 2.4, 0)
+gui.AlwaysOnTop = true
+gui.MaxDistance = 300
+gui.LightInfluence = 0
+local lab = Instance.new("TextLabel")
+lab.Size = UDim2.new(1, 0, 1, 0)
+lab.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
+lab.BackgroundTransparency = 0.12
+lab.BorderSizePixel = 0
+lab.Font = Enum.Font.GothamBold
+lab.TextSize = 13
+lab.TextColor3 = Color3.fromRGB(235, 240, 250)
+lab.TextStrokeTransparency = 0.55
+lab.Parent = gui
+local rc = Instance.new("UICorner") rc.CornerRadius = UDim.new(0, 6) rc.Parent = lab
+mk = { gui = gui, lab = lab }
+SYS._hitMk[i] = mk
+end
+local pg = _hitParentGui()
+if pg and mk.gui.Parent ~= pg then mk.gui.Parent = pg end
+if not mk.gui.Parent then return end
+mk.gui.Adornee = part
+mk.lab.Text      = tostring(text or "🎯 自动触发")
+mk.lab.TextColor3 = col or Color3.fromRGB(160, 255, 200)
+mk.gui.Enabled = true
+SYS._hitMkAt[i] = os.clock() + HITMK_SEC
+end)
+end
+function SYS.HitMarkHud(text, secs)
+if SYS._hitMkOff then return end
+P(function()
+local pg = _hitParentGui()
+if not pg then return end
+local gui = SYS._hitHudGui
+if not gui or not gui.Parent then
+gui = SYS.NewVis and SYS.NewVis("ScreenGui")
+if not gui then return end
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999995
+P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
+local fr = Instance.new("Frame")
+fr.Name = "Box"
+fr.AnchorPoint = Vector2.new(0.5, 1)
+fr.Position = UDim2.new(0.5, 0, 1, -104)
+fr.Size = UDim2.new(0, 460, 0, 26)
+fr.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
+fr.BackgroundTransparency = 0.2
+fr.BorderSizePixel = 0
+fr.Parent = gui
+local rc = Instance.new("UICorner") rc.CornerRadius = UDim.new(0, 8) rc.Parent = fr
+local lab = Instance.new("TextLabel")
+lab.Size = UDim2.new(1, -16, 1, 0) lab.Position = UDim2.new(0, 8, 0, 0)
+lab.BackgroundTransparency = 1
+lab.Font = Enum.Font.GothamMedium
+lab.TextSize = 14
+lab.TextColor3 = Color3.fromRGB(235, 240, 250)
+lab.TextXAlignment = Enum.TextXAlignment.Center
+lab.Parent = fr
+gui.Parent = pg
+SYS._hitHudGui, SYS._hitHudLab = gui, lab
+end
+local s = tostring(text or "")
+if SYS._hitHudLab.Text ~= s then SYS._hitHudLab.Text = s end
+gui.Enabled = true
+SYS._hitHudAt = (secs and secs > 0) and (os.clock() + secs) or nil
+end)
+end
+function SYS.HitMarkTick()
+local now = os.clock()
+for i, mk in pairs(SYS._hitMk or {}) do
+if mk.gui and mk.gui.Parent and mk.gui.Enabled then
+local at = SYS._hitMkAt[i]
+if at and now >= at then mk.gui.Enabled = false end
+end
+end
+if SYS._hitHudGui and SYS._hitHudGui.Parent and SYS._hitHudGui.Enabled then
+local at = SYS._hitHudAt
+if at and now >= at then SYS._hitHudAt = nil SYS._hitHudGui.Enabled = false end
+end
+end
+function SYS.HitMarkClear(off)
+SYS._hitMkOff = off and true or false
+for i, mk in pairs(SYS._hitMk or {}) do
+if mk.gui then P(function() mk.gui.Enabled = false mk.gui.Adornee = nil end) end
+SYS._hitMkAt[i] = nil
+end
+if SYS._hitHudGui then P(function() SYS._hitHudGui.Enabled = false end) end
+SYS._hitHudAt = nil
+end
+function SYS.HitMarkDestroy()
+for i, mk in pairs(SYS._hitMk or {}) do
+if mk.gui then P(function() mk.gui:Destroy() end) end
+SYS._hitMk[i] = nil SYS._hitMkAt[i] = nil
+end
+if SYS._hitHudGui then P(function() SYS._hitHudGui:Destroy() end) end
+SYS._hitHudGui, SYS._hitHudLab, SYS._hitHudAt = nil, nil, nil
+SYS._hitMkCount = 0
+end
 SYS._hitStat = SYS._hitStat or {fired=0, capped=0, dup=0}
 function SYS.AutoHitTick()
 if not SYS.T_.AutoHitMinigame then return end
@@ -4349,7 +4477,7 @@ end
 end
 SYS._hitStat.dup = dup
 print(("[CheatMenu] 自动小游戏: 本轮目标 %d 个, 其中 %d 个是【同一物件上的重复交互件】"
-.." —— 已按【宿主+交互件名】合并, 每 3 秒只触发一次(不再同帧连点)"):format(#SYS._hitList, dup))
+.." —— 已按【宿主+交互件名】合并, 同一目标最快 0.6 秒触发一次(不再同帧连点)"):format(#SYS._hitList, dup))
 end
 end
 local thr = tonumber(SYS.C_.HitDist) or 30
@@ -4367,15 +4495,26 @@ end
 SYS._hitSeen[key] = now
 fired = fired + 1
 SYS._hitStat.fired = SYS._hitStat.fired + 1
-fireObj(it.obj)
+local lbl = _hitLabel(it.obj)
+local okFire = fireObj(it.obj)
+SYS._hitMkCount = (SYS._hitMkCount or 0) + 1
+if okFire == false then
+SYS.HitMark(p, "⛔ 跳过(蜜罐) · "..lbl, Color3.fromRGB(255, 150, 150))
+SYS.HitMarkHud(("🎯 自动触发: 跳过蜜罐 · %s (累计 %d)"):format(lbl, SYS._hitMkCount), 1.6)
+else
+SYS.HitMark(p, "🎯 自动触发 · "..lbl, Color3.fromRGB(160, 255, 200))
+SYS.HitMarkHud(("🎯 自动触发: %s (累计 %d)"):format(lbl, SYS._hitMkCount), 1.6)
 end
 end
 end
+end
+SYS.HitMarkTick()
 end
 function SYS.SetAutoHitMinigame(on)
 SYS.T_.AutoHitMinigame = on and true or false
 SYS.SetLoop("AutoHitMinigame", on, RS.Heartbeat, SYS.AutoHitTick)
-if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 24 个, 不再同帧连点)", SYS.CY.green) end
+if SYS.HitMarkClear then SYS.HitMarkClear(not on) end
+if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 24 个; 被触发的物件上会贴「🎯 自动触发」小牌, 屏幕下方显示累计次数)", SYS.CY.green) end
 end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
@@ -13633,10 +13772,12 @@ UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可�
 UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n"..
 "自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n"..
 "★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
-"  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次, 每 3 秒只触发一次。\n"..
-"★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
 "  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次。\n"..
 "★ 节奏(2026-09-22 放宽, 用户口径「不需要压制」): 同一目标 0.6 秒即可重复触发; 每帧最多 24 个(原 3 秒 / 6 个)。\n"..
+"★ 自动触发标记(2026-09-22 加): 它替你按了什么, 现在【看得见】——\n"..
+"  · 被触发的物件上方贴一块小牌「🎯 自动触发 · 交互件名」(约 1.2 秒); 被蜜罐闸门拦下的改红字「⛔ 跳过(蜜罐)」。\n"..
+"  · 屏幕下方一行显示最近一次自动触发 + 本局累计次数(关掉菜单也看得见), 关开关即一并收起。\n"..
+"  ★ 想自己掐时机(切割台/凿子那类「看准了再切」的考验), 看准这块小牌 —— 关掉本开关就完全不按键。\n"..
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
 UI.Section(p,"🕷 蜘蛛感知 (机器派对 · 蜘蛛扑上身)",CY.accent)
@@ -14738,6 +14879,7 @@ P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
 P(function() if SYS.Info then SYS.Info.Clear() end end)
+P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
