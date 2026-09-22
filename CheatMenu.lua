@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 20:54 sha 7a68b749 bytes 560884'):format('2026-09-22 20:54','7a68b749',560884))
+print(('[CheatMenu] build 2026-09-22 21:09 sha b48e7b9d bytes 560979'):format('2026-09-22 21:09','b48e7b9d',560979))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -110,7 +110,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.7.0"
+SYS.BuildVer="10.7.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -15159,6 +15159,7 @@ P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS
 P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
 P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
+P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
