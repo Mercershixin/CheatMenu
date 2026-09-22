@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 13:09 sha 58598aec bytes 518665'):format('2026-09-22 13:09','58598aec',518665))
+print(('[CheatMenu] build 2026-09-22 14:21 sha 327a6b6e bytes 529818'):format('2026-09-22 14:21','327a6b6e',529818))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -56,7 +56,9 @@ CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
 Gun_NoRecoil=false,Gun_InfAmmo=false,Gun_InstantReload=false,Gun_NoDrop=false,
 Gun_NoCooldown=false,Gun_InfItem=false,
 Gun_AimStable=false,
+Gun_NoSpread=false,
 CB_360=false,CB_SilentNoTurn=false,
+Key_Auto=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
@@ -66,15 +68,15 @@ AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 },
 C_={
-FlySpeed=3,FlyMode="BodyVelocity",
-SpeedMult=2,TPMethod="CFrame",SpeedMode="Linear",
-JumpMult=2,
-SpeedCap=28,
+FlySpeed=6,FlyMode="BodyVelocity",
+SpeedMult=6,TPMethod="CFrame",SpeedMode="Linear",
+JumpMult=6,
+SpeedCap=150,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
-FreeCamSpeed=60,FreeCamSens=0.3,PerfCull=300,
-TracerMaxDist=500,TracerMaxN=12,
+FreeCamSpeed=140,FreeCamSens=0.3,PerfCull=300,
+TracerMaxDist=3000,TracerMaxN=40,
 ESPNameH=0,
-PickDist=1200,
+PickDist=3000,
 QuickRange=60,
 AutoHideDist=40,
 DeepHideDepth=120,
@@ -82,10 +84,13 @@ DeepHideMode="down",DeepHideOffX=0,DeepHideOffZ=0,
 ForceCam="off",
 AutoTrainSec=5,RebirthCheck=3,
 SellMinCPS=100000,SellLvMul=1.25,
-CB_AimPart=2,CB_Smooth=0.28,CB_Fov=200,CB_MaxDist=1200,CB_MeleeDist=9,CB_MeleeGap=0.35,
-CB_ScanMs=33,
-CB_FireDelay=0.08,CB_HpThr=0,CB_PrioMode=1,
-CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.14,
+CB_AimPart=1,CB_Smooth=1,CB_Fov=600,CB_MaxDist=2000,CB_MeleeDist=25,CB_MeleeGap=0.10,
+Key_Which="W",
+Key_Mode=1,
+Key_Gap=0.05,
+CB_ScanMs=0,
+CB_FireDelay=0.02,CB_HpThr=0,CB_PrioMode=1,
+CB_TargetMode=1,CB_TargetName="",CB_RingMode=1,CB_PredictTime=0.22,
 CB_ProjSpeed=100,CB_ProjGrav=196.2,
 CB_RingModeVer=0,
 CB_SnapDelay=0.03,
@@ -100,7 +105,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="9.9.10"
+SYS.BuildVer="9.10.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -2692,7 +2697,8 @@ end
 SYS.KwHazard = {"door","gate","trap","trapdoor","hatch","portal","hazard","damage","damaging","kill","lava",
 "spike","spikes","pit","void","saw","blade","crusher","crush","piston","hammer","press",
 "fire","burn","acid","poison","zap","electric","deadly","spider","rig","bumper","chisel","gauntlet",
-"obstacle","mine","landmine","bomb","tnt","explosive"}
+"obstacle","mine","landmine","bomb","tnt","explosive",
+"train","trains","locomotive","minecart"}
 SYS.KwGateExtra = {"exit","entrance","entry","doorway","doorframe","threshold","archway","passage","corridor",
 "tunnel","stairs","stair","elevator","lift","teleport","warp","fake","decoy","false",
 "trick","danger","death","fatal","hurt","ouch"}
@@ -3899,13 +3905,13 @@ print(("[CheatMenu] 自动小游戏: 本轮目标 %d 个, 其中 %d 个是【同
 end
 end
 local thr = tonumber(SYS.C_.HitDist) or 30
-local BURST = 6
+local BURST = 24
 local fired = 0
 for _, it in ipairs(SYS._hitList or {}) do
 local p = it.part
 if p and p.Parent and (p.Position - root.Position).Magnitude < thr then
 local key = SYS.InterKey(it.obj) or it.obj
-if not SYS._hitSeen[key] or now - SYS._hitSeen[key] > 3 then
+if not SYS._hitSeen[key] or now - SYS._hitSeen[key] > 0.6 then
 if fired >= BURST then
 SYS._hitStat.capped = SYS._hitStat.capped + 1
 break
@@ -3921,7 +3927,68 @@ end
 function SYS.SetAutoHitMinigame(on)
 SYS.T_.AutoHitMinigame = on and true or false
 SYS.SetLoop("AutoHitMinigame", on, RS.Heartbeat, SYS.AutoHitTick)
-if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 6 个, 不再同帧连点)", SYS.CY.green) end
+if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 24 个, 不再同帧连点)", SYS.CY.green) end
+end
+local K={} SYS.Keys=K
+K.Held={}
+K.LastTap=0
+K.Stat={press=0}
+local function keyEnum(name)
+local ok,c=pcall(function() return Enum.KeyCode[name] end)
+return (ok and c) or nil
+end
+function K.Has()
+local vim=SYS.VIM
+return (vim and type(vim.SendKeyEvent)=="function") and true or false
+end
+function K.Set(name,down)
+local c=keyEnum(name)
+if not c then return false end
+local vim=SYS.VIM
+if not (vim and type(vim.SendKeyEvent)=="function") then return false end
+local ok=P(function() vim:SendKeyEvent(down and true or false,c,false,game) end)
+if ok then
+if down then K.Held[name]=true K.Stat.press=K.Stat.press+1 else K.Held[name]=nil end
+end
+return ok
+end
+function K.ReleaseAll()
+for name in pairs(K.Held) do K.Set(name,false) end
+K.Held={}
+end
+function K.Tick()
+if not SYS.T_.Key_Auto then
+if next(K.Held)~=nil then K.ReleaseAll() end
+return
+end
+local which=SYS.C_.Key_Which or "W"
+for name in pairs(K.Held) do
+if name~=which then K.Set(name,false) end
+end
+local mode=tonumber(SYS.C_.Key_Mode) or 1
+if mode==1 then
+if not K.Held[which] then K.Set(which,true) end
+return
+end
+local gap=tonumber(SYS.C_.Key_Gap) or 0.05
+local now=os.clock()
+if now-(K.LastTap or 0)<gap then return end
+K.LastTap=now
+K.Set(which,true)
+local hold=math.min(0.02,gap*0.5)
+task.delay(hold,function() K.Set(which,false) end)
+end
+function SYS.SetKeyAuto(on)
+SYS.T_.Key_Auto=on and true or false
+SYS.SetLoop("KeyAuto",on,RS.Heartbeat,SYS.Keys.Tick)
+if not on then SYS.Keys.ReleaseAll() end
+if on then
+local w=tostring(SYS.C_.Key_Which or "W")
+local m=((tonumber(SYS.C_.Key_Mode) or 1)==1) and "按住" or "连按"
+SYS.Notify(("⌨ 按键自动化已开: %s (%s中)"):format(w,m),SYS.CY.green)
+else
+SYS.Notify("⌨ 按键自动化已关(按着的键已全部松开)",SYS.CY.sub)
+end
 end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
@@ -6172,10 +6239,15 @@ local p=CB.PickVisiblePart(pl,mode)
 if p then
 local d=(p.Position-camPos).Magnitude
 local _sh=hasShield(pl)
-if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD then
-local sp,on=cam:WorldToViewportPoint(p.Position)
+local fovPx=tonumber(SYS.C_.CB_Fov) or 600
+local sp0,on0=cam:WorldToViewportPoint(p.Position)
+local dd0=(on0 and sp0.Z>0) and math.sqrt((sp0.X-cx)^2+(sp0.Y-cy)^2) or 1e7
+local fovOK=(dd0<=fovPx) or SYS.T_.CB_360==true or SYS.T_.CB_BulletWall==true
+or SYS.T_.CB_SilentAim==true or SYS.T_.CB_SilentNoTurn==true
+if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD and fovOK then
+local sp,on=sp0,on0
 local inView=on and sp.Z>0
-local dd=inView and math.sqrt((sp.X-cx)^2+(sp.Y-cy)^2) or 1e7
+local dd=dd0
 local aiming=false
 local fc=bodyOf(pl.Character)
 if fc and myRoot then
@@ -6303,7 +6375,7 @@ if not SYS.T_.CB_Fire then return end
 if SYS.MenuOpen then return end
 local now=os.clock()
 local fd=tonumber(SYS.C_.CB_FireDelay) or 0.06
-local fireGap=(fd<=0) and 0 or (fd*(0.8+math.random()*0.4))
+local fireGap=(fd<=0) and 0 or fd
 if now-CB.LastFire<fireGap then return end
 local cam=SYS.Cam
 if not cam then return end
@@ -6315,7 +6387,7 @@ or (zeroScan and not SYS.T_.CB_Stealth))
 if SYS.T_.CB_Silent or SYS.T_.CB_Aim or SYS.T_.CB_SnapFire or SYS.T_.CB_360 then
 local ap=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if not ap then return end
-if silo or (SYS.C_.CB_Smooth or 0.25)>=1 then
+if silo or (SYS.C_.CB_Smooth or 0.25)>=1 or CB.Moving then
 canFire=true
 else
 local sp,on=cam:WorldToViewportPoint(ap)
@@ -6328,7 +6400,8 @@ canFire = crosshairOnEnemy()
 end
 if not canFire then return end
 local noTurn=SYS.T_.CB_SilentNoTurn
-if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire or (SYS.T_.CB_Aim and SYS.T_.CB_Fire))
+local aligned=false
+if (SYS.T_.CB_360 or SYS.T_.CB_SnapFire or (SYS.T_.CB_Aim and SYS.T_.CB_Fire) or CB.Moving)
 and not noTurn and not SYS.T_.CB_Stealth then
 local ap2=CB.TargetPart and (leadPos() or CB.TargetPart.Position)
 if ap2 then
@@ -6340,6 +6413,7 @@ if (ap2-rp).Magnitude>0.01 then
 P(function() root2.CFrame=CFrame.lookAt(rp,ap2) end)
 end
 end
+aligned=true
 end
 end
 local thr=SYS.C_.CB_HpThr or 0
@@ -6349,13 +6423,21 @@ if not h or h.Health>thr then return end
 end
 CB.LastFire=now
 local x,y=math.floor(vp.X/2),math.floor(vp.Y/2)
-local function doFire()
-P(function() VIM:SendMouseButtonEvent(x,y,0,true,game,0) end)
-task.delay(0.02,function()
+local hold=math.min(0.02,(fireGap>0 and fireGap*0.5) or 0.008)
+local function send()
+P(function()
+VIM:SendMouseMoveEvent(x,y,game)
+VIM:SendMouseButtonEvent(x,y,0,true,game,0)
+end)
+task.delay(hold,function()
 P(function() VIM:SendMouseButtonEvent(x,y,0,false,game,0) end)
 end)
 end
-doFire()
+if aligned then
+task.delay(0.008,send)
+else
+send()
+end
 end
 local MOVING={[Enum.KeyCode.W]=true,[Enum.KeyCode.A]=true,[Enum.KeyCode.S]=true,[Enum.KeyCode.D]=true}
 local moveHeld={}
@@ -6540,8 +6622,13 @@ SYS.T_.CB_Aim=true SYS.T_.CB_Fire=true
 SYS.T_.CB_SnapFire=false SYS.T_.CB_Silent=false
 SYS.T_.CB_Predict=true
 SYS.C_.CB_PrioMode=1
-SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.08
+SYS.C_.CB_Smooth=1 SYS.C_.CB_FireDelay=0.02
 SYS.C_.CB_AimPart=1
+SYS.C_.CB_ScanMs=0
+SYS.C_.CB_Fov=600
+SYS.C_.CB_MaxDist=2000
+SYS.C_.CB_PredictTime=0.22
+SYS.C_.CB_MeleeDist=25
 P(SYS.QueueSave)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 CB.Start()
@@ -6690,6 +6777,36 @@ print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向�
 :format(SYS.C_.CB_SnapMinGap,SYS.C_.CB_SnapDelay,SYS.C_.CB_FireDelay))
 end
 P(CB.MigrateV72)
+SYS.MAXPARAMS={
+CB_AimPart=1, CB_Smooth=1, CB_Fov=600, CB_MaxDist=2000, CB_MeleeDist=25, CB_MeleeGap=0.10,
+CB_ScanMs=0, CB_FireDelay=0.02, CB_PredictTime=0.22,
+FlySpeed=6, SpeedMult=6, JumpMult=6, SpeedCap=150,
+FreeCamSpeed=140, TracerMaxDist=3000, TracerMaxN=40, PickDist=3000,
+}
+SYS.MIGOLDDEFAULTS={
+CB_AimPart=2, CB_Smooth=0.28, CB_Fov=200, CB_MaxDist=1200, CB_MeleeDist=9, CB_MeleeGap=0.35,
+CB_ScanMs=33, CB_FireDelay=0.08, CB_PredictTime=0.14,
+FlySpeed=3, SpeedMult=2, JumpMult=2, SpeedCap=28,
+FreeCamSpeed=60, TracerMaxDist=500, TracerMaxN=12, PickDist=1200,
+}
+function SYS.MaxParams(force)
+local n=0
+for k,v in pairs(SYS.MAXPARAMS) do
+local cur=SYS.C_[k]
+if force or cur==nil or cur==SYS.MIGOLDDEFAULTS[k] then
+if cur~=v then SYS.C_[k]=v n=n+1 end
+end
+end
+P(SYS.QueueSave)
+return n
+end
+function CB.MigrateMax()
+local n=SYS.MaxParams(false)
+if n>0 then
+print(("[Combat] v9.10.1 最暴力档迁移: 已升级 %d 个参数(只升级等于旧默认值的项, 你手动调过的一律没动)"):format(n))
+end
+end
+P(CB.MigrateMax)
 P(hookDeathEvents,0)
 if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
 or SYS.T_.CB_SilentAim or SYS.T_.CB_SilentNoTurn then
@@ -9823,6 +9940,14 @@ return hasKW(lk,"firerate") or hasKW(lk,"fireinterval") or hasKW(lk,"shotinterva
 or hasKW(lk,"attackinterval") or hasKW(lk,"attackdelay") or hasKW(lk,"autodelay")
 or hasKW(lk,"attackcooldown") or hasKW(lk,"reloadspeedmult")
 end
+local SPREAD_KW={"inaccuracy","spread","bloom","deviation","cone","jitter",
+"recoilspread","spreadmult","spreadscale","spreadamount",
+"inaccuratemult","hipfireinaccuracy","movinginaccuracy","jumpinaccuracy"}
+local function isSpread(lk)
+lk=LOW(lk)
+for i=1,#SPREAD_KW do if hasKW(lk,SPREAD_KW[i]) then return true end end
+return false
+end
 local ITEM_C={"Count","Amount","Quantity","Qty","Num","Stack","Stacks","Left","Remain","Owned"}
 local ITEM_I={"Id","ID","Name","ItemId","ItemID","Item","Key","Type","ItemName","ItemKey"}
 local function hasAny(v,list,wantStr)
@@ -9897,7 +10022,8 @@ for i=1,#names do
 local un=names[i]
 if type(un)=="string" and un~="" then
 local lk=LOW(un)
-if isRecName(lk) or (sRec and isRecExtra(lk)) then addNum(v,i,un,"recoil")
+if isSpread(lk) then addNum(v,i,un,"spread")
+elseif isRecName(lk) or (sRec and isRecExtra(lk)) then addNum(v,i,un,"recoil")
 elseif isRelNum(lk) then addNum(v,i,un,"reload")
 elseif isAimNum(lk) or (sAim and (hasKW(lk,"shake") or hasKW(lk,"sway") or hasKW(lk,"bob"))) then addNum(v,i,un,"aim")
 elseif isMag(lk) or isRes(lk) or isMax(lk) then
@@ -9969,6 +10095,7 @@ for i=1,#G.Nums do
 local u=G.Nums[i]
 local want
 if u.kind=="recoil"     and SYS.T_.Gun_NoRecoil==true     then want=0
+elseif u.kind=="spread" and SYS.T_.Gun_NoSpread==true     then want=0
 elseif u.kind=="reload" and SYS.T_.Gun_InstantReload==true then want=0.01
 elseif u.kind=="ballis" and SYS.T_.Gun_NoDrop==true       then want=0
 elseif (u.kind=="cd" or u.kind=="rate") and SYS.T_.Gun_NoCooldown==true then want=0.01
@@ -10034,7 +10161,7 @@ function G.Active()
 return SYS.T_.Gun_NoRecoil==true or SYS.T_.Gun_InfAmmo==true
 or SYS.T_.Gun_InstantReload==true or SYS.T_.Gun_NoDrop==true
 or SYS.T_.Gun_NoCooldown==true or SYS.T_.Gun_InfItem==true
-or SYS.T_.Gun_AimStable==true
+or SYS.T_.Gun_AimStable==true or SYS.T_.Gun_NoSpread==true
 end
 function G.Tick()
 local t=os.clock()
@@ -11567,6 +11694,7 @@ out[#out+1]="  (标记: ★=武器/战斗/命中相关 · =玩法/系统   无�
 out[#out+1]="(归属拿不到 = C/引擎侧或匿名函数, hook 不了)"
 LAB.LastFns=fns
 SYS.ScanEmit(table.concat(out,"\n"))
+P(LAB.DumpMiniScripts)
 SYS.Notify(("GC 扫描完成: %d 函数 / %d 表"):format(#fns,#tbls),SYS.CY.green)
 return {fns=#fns,tbls=#tbls}
 end
@@ -11607,6 +11735,95 @@ for i=1,math.min(#hits,40) do out[#out+1]=hits[i] end
 out[#out+1]="这些只是【候选】—— 想观察哪个, 用 ④ 按名字包一层(只记录, 不改返回值)"
 SYS.ScanEmit(table.concat(out,"\n"))
 SYS.Notify(("找到 %d 个候选函数"):format(#hits),SYS.CY.green)
+end
+local MINI_SCRIPT_KW={"machin","minigame","rightofway","blindout","crushhour","bumpermadness",
+"duckhunt","duck hunt","chisel","gauntlet","minefield","trainrace","stablefooting",
+"spinebreaker","wrongway","cellbarrier","firearmfactory","tablemanners","lethalrebound",
+"spiderrig","mpserver","mppad","mpstation","beans","race"}
+function LAB.DumpMiniScripts()
+local fns=LAB.LastFns
+if not fns then return end
+local UV=(debug and type(debug.getupvalue)=="function") and debug.getupvalue or nil
+if not UV then
+local g=rawget(_G,"getupvalue")
+if type(g)=="function" then UV=g end
+end
+local groups,nScript,nFn={},0,0
+for i=1,#fns do
+local f=fns[i]
+local own=ownerOf(f)
+local on=own and own.Name or nil
+if type(on)=="string" and on~="" then
+local ol=on:lower()
+local isMini=false
+for j=1,#MINI_SCRIPT_KW do
+if ol:find(MINI_SCRIPT_KW[j],1,true) then isMini=true break end
+end
+if isMini then
+local nm=nameOf(f)
+local g=groups[on]
+if not g then g={list={}} groups[on]=g nScript=nScript+1 end
+nFn=nFn+1
+local uvs={}
+if UV then
+for j=1,10 do
+local ok2,un,uv=P(function() return UV(f,j) end)
+if not ok2 or un==nil then break end
+local tv
+local t=type(uv)
+if t=="number" or t=="boolean" or t=="string" then
+tv=tostring(uv)
+if #tv>40 then tv=tv:sub(1,40).."…" end
+elseif t=="table" then
+local n=0
+P(function() for _ in pairs(uv) do n=n+1 end end)
+tv="{table "..n.." 项}"
+else
+local oki,isI=P(function() return typeof(uv)=="Instance" end)
+if oki and isI then
+tv="<"..uv.ClassName..":"..tostring(uv.Name)..">"
+else
+tv="("..t..")"
+end
+end
+uvs[#uvs+1]=("%s=%s"):format(tostring(un),tv)
+end
+end
+g.list[#g.list+1]={nm=tostring(nm or "(匿名)"),uv=uvs}
+end
+end
+end
+local out={("========== 小游戏脚本 · 函数 + upvalue(答案常藏在这里) ==========")}
+if nScript==0 then
+out[#out+1]="  (没有脚本名命中(小游戏词表) —— 可能本机拿不到归属脚本名, 或这张图没有小游戏)"
+else
+out[#out+1]=("命中 %d 个小游戏相关脚本 / %d 个函数%s"):format(nScript,nFn,
+UV and "" or "   ⚠ 本机没有 debug.getupvalue -> 只能列函数名, upvalue 读不到")
+local names={}
+for k in pairs(groups) do names[#names+1]=k end
+table.sort(names)
+for i=1,#names do
+local sn=names[i]
+local g=groups[sn]
+out[#out+1]=""
+out[#out+1]=("── 脚本 %s  (%d 个函数) ──"):format(sn,#g.list)
+table.sort(g.list,function(a,b) return a.nm<b.nm end)
+for j=1,#g.list do
+local e=g.list[j]
+local line1=("    %s   upvalue: %s"):format(e.nm,
+(#e.uv>0) and table.concat(e.uv," · ") or "(无)")
+if j<=30 then
+out[#out+1]=line1
+elseif j==31 then
+out[#out+1]=("    … 另有 %d 个函数(完整清单见落盘文件)"):format(#g.list-30)
+SYS.ScanBufNote(line1)
+else
+SYS.ScanBufNote(line1)
+end
+end
+end
+end
+SYS.ScanEmit(table.concat(out,"\n"))
 end
 function LAB.ListScripts()
 local out={"========== 已加载脚本 / 模块 =========="}
@@ -11665,10 +11882,13 @@ local DEX_KEY={
 "BindableEvent","BindableFunction",
 "Script","LocalScript","ModuleScript",
 "ProximityPrompt","ClickDetector","Highlight","SurfaceGui",
+"InputBinding","InputAction",
 }
 local DEX_PROPS={
 ProximityPrompt={"ActionText","ObjectText","HoldDuration","MaxActivationDistance","Enabled","RequiresLineOfSight"},
 ClickDetector={"MaxActivationDistance"},
+InputBinding={"KeyCode","Pressed","Released","UIButton"},
+InputAction={"Enabled","Type","Value"},
 Highlight={"Enabled","FillColor","OutlineColor","FillTransparency","OutlineTransparency","DepthMode"},
 SurfaceGui={"Enabled","Face","LightInfluence","AlwaysOnTop","MaxDistance"},
 Script={"Enabled","RunContext"},
@@ -11817,6 +12037,32 @@ end
 end
 if not anySnap then
 line("    (本图没有可快照的关键类实例, 或该执行器读不到这些属性)")
+end
+line("")
+line("  ── Workspace 顶层子对象(小游戏区域通常就在这一层) ──")
+dump[#dump+1]=""
+dump[#dump+1]="========== Workspace 顶层子对象 =========="
+local okws,wsSvc=P(function() return game:GetService("Workspace") end)
+local okw,wsKids=false,nil
+if okws and wsSvc then okw,wsKids=P(function() return wsSvc:GetChildren() end) end
+if okw and type(wsKids)=="table" then
+line(("    共 %d 个(按名字排序)"):format(#wsKids))
+local rows2={}
+for i=1,#wsKids do
+local o=wsKids[i]
+local okn,nm=P(function() return o.Name end)
+local okc,cn=P(function() return o.ClassName end)
+local okz,nz=P(function() return #o:GetChildren() end)
+rows2[#rows2+1]={tostring(okn and nm or "?"),tostring(okc and cn or "?"),(okz and nz) or 0}
+end
+table.sort(rows2,function(a,b) return a[1]<b[1] end)
+for i=1,#rows2 do
+local s=("    %-30s %-14s 子对象 %d"):format(rows2[i][1],rows2[i][2],rows2[i][3])
+line(s)
+dump[#dump+1]=s
+end
+else
+line("    (读取失败 —— 该执行器不让读 Workspace 的直接子对象)")
 end
 local fn=SYS.SaveDump("DEX",dump)
 if fn then line("  ✅ 完整清单已落盘: "..fn)
@@ -12218,6 +12464,20 @@ local KEY={"stage","phase","state","timer","time","round","wave","score","point"
 local rows,byCls,all,hot,skip= {}, {}, 0, 0, 0
 local _t0=os.clock()
 local cut=false
+local miniRoots={}
+P(function()
+local kids=game:GetService("Workspace"):GetChildren()
+for i=1,#kids do
+local o=kids[i]
+local nm=o.Name
+if type(nm)=="string" and nm~="" then
+local nl=nm:lower()
+for j=1,#SYS.MiniArea do
+if nl:find(SYS.MiniArea[j],1,true) then miniRoots[#miniRoots+1]=o break end
+end
+end
+end
+end)
 for _,v in ipairs(SYS.Index()) do
 if os.clock()-_t0>0.6 then cut=true break end
 local c=v.ClassName
@@ -12228,20 +12488,30 @@ local nm=type(v.Name)=="string" and v.Name or ""
 local low=nm:lower()
 local hit=false
 for i=1,#KEY do if low:find(KEY[i],1,true) then hit=true break end end
-if hit or c=="ObjectValue" then
+local inMini=false
+if not hit then
+for j=1,#miniRoots do
+local okd,d=P(function() return v:IsDescendantOf(miniRoots[j]) end)
+if okd and d then inMini=true break end
+end
+end
+if hit or c=="ObjectValue" or inMini then
 local okp,path=P(function() return v:GetFullName() end)
 local fp=tostring(okp and path or "")
 local lp=fp:lower()
 local okv,val=P(function() return v.Value end)
 local s=tostring(okv and val or "?")
 local empty=(c=="StringValue" and s=="")
-if empty or lp:find("animate",1,true) or lp:find("animsaves",1,true)
-or lp:find("anim test",1,true) then
+if empty then
+skip=skip+1
+elseif (lp:find("animate",1,true) or lp:find("animsaves",1,true)
+or lp:find("anim test",1,true)) and not inMini then
 skip=skip+1
 else
 hot=hot+1
 if #s>64 then s=s:sub(1,64).."…" end
-rows[#rows+1]=("  %-14s %-26s = %s"):format(c,nm:sub(1,26),s)
+rows[#rows+1]=("  %-14s %-26s = %s%s"):format(c,nm:sub(1,26),s,
+inMini and "   ★小游戏区内" or "")
 rows[#rows+1]=("        @ "..(fp~="" and fp or "(取不到完整路径)"))
 end
 end
@@ -12541,6 +12811,16 @@ UI.Section(p,"⚔ 一键开战 / 停战",CY.green)
 UI.Btn(p,"⚡ 一键开战 (秒锁秒开枪 · 移动中也准)",CY.green,function()
 if SYS.Combat and SYS.Combat.QuickMode then SYS.Combat.QuickMode() end
 end)
+UI.Btn(p,"⚡ 参数全部拉满 (战斗 + 移动 + 视觉 一次到底)",CY.orange,function()
+local ok,n=P(SYS.MaxParams,true)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+SYS.Combat.Say(("⚡ 最暴力档: 已强制拉满 %s 个参数(含移动/视觉, 不管开关开没开)")
+:format(ok and tostring(n) or "?"),SYS.CY.orange)
+end)
+UI.Tip(p,"★ 默认就已经是最暴力档(v9.10.1): 锁头 / 瞬时跟随 / 每帧索敌 / 开火间隔 0.02s / 提前量 0.22s。\n"..
+"只有【你手动调过】的那几项不会被默认覆盖 —— 想一次全部推回最强, 点上面那个按钮。\n"..
+"⚠ 移动类(飞行/移速/跳跃倍率)停在「快但不瞬移」那条线上: 再往上就是 Illegal Teleport, 会被服务端踢,\n"..
+"  那不是「更强」。要更极端的话自己拧移动页滑块, 但踢了别怪脚本。",CY.yellow)
 UI.Btn(p,"🛑 一键停战 (关掉全部开关 + 恢复视角与控制)",CY.red,function()
 if SYS.Combat then
 P(SYS.Combat.DisableAll)
@@ -12849,6 +13129,7 @@ UI.Switch(p,"➡ 子弹无阻力 / 无下坠 (弹道类游戏才有效)","Gun_No
 UI.Switch(p,"⏱ 道具/技能/武器 无冷却 (CD 压到 0.01 · 客户端 CD 才有效)","Gun_NoCooldown",gunOn)
 UI.Switch(p,"🧪 免费消耗道具 (数量不减 · 客户端数量才有效)","Gun_InfItem",gunOn)
 UI.Switch(p,"🎯 瞄准补强 (开镜更快 + 准星不飘)","Gun_AimStable",gunOn)
+UI.Switch(p,"🌪 无扩散 (移动/跳跃中也不偏 · 客户端算扩散才有效)","Gun_NoSpread",gunOn)
 UI.Btn(p,"🔍 扫描武器逻辑 + 打印诊断 (控制台)",CY.cyan,function()
 if not SYS.Gun.Scanned then
 SYS.Notify("🔧 还没扫过 —— 先开上面任意一个开关, 扫描会自动进行",SYS.CY.yellow)
@@ -12936,9 +13217,29 @@ UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷
 "自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n"..
 "★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
 "  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次, 每 3 秒只触发一次。\n"..
-"★ 每帧最多触发 6 个, 其余留到下一轮(0.5 秒) —— 避免一帧几十个请求那种一眼假的动作。\n"..
+"★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
+"  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次。\n"..
+"★ 节奏(2026-09-22 放宽, 用户口径「不需要压制」): 同一目标 0.6 秒即可重复触发; 每帧最多 24 个(原 3 秒 / 6 个)。\n"..
 "两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
 "想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
+UI.Section(p,"⌨ 自动按键 (输入型小游戏 · WASD / 方向键)",CY.orange)
+UI.Dropdown(p,"要按的键", {"W","A","S","D","Up","Down","Left","Right","Space"},
+function() return SYS.C_.Key_Which or "W" end,
+function(v) SYS.C_.Key_Which=v end)
+UI.Cycle(p,"按法", {"按住不放","连按(点一下)"},
+function() return ((SYS.C_.Key_Mode or 1)==1) and "按住不放" or "连按(点一下)" end,
+function(v) SYS.C_.Key_Mode=(v=="按住不放") and 1 or 2 end)
+UI.Slider(p,"连按间隔(秒)",0.02,0.5,0.01,
+function() return SYS.C_.Key_Gap or 0.05 end,
+function(v) SYS.C_.Key_Gap=v QueueSave() end,"%.2f")
+UI.Switch(p,"⌨ 自动按键 开/关","Key_Auto",SYS.SetKeyAuto)
+UI.Tip(p,"用法: 选好键和按法 -> 打开开关。\n"..
+"★ 「按住不放」= 电梯/攀爬那类(替你一直按住 W 或 Up)。关掉时脚本会先松开所有键, 不会把键盘卡住。\n"..
+"★ 「连按」= 点按式(按一下松一下), 间隔可调。\n"..
+"⛔ 边界(必须说清): 它只负责【按键】, 不负责【判断该按什么】。\n"..
+"  「看闪电提示再按对应方向」那种需要先知道【提示在哪】—— 而当前的综合扫描只统计了\n"..
+"  74 个 InputBinding 的数量, 【没列路径】, 所以现在猜着按就是碰运气。\n"..
+"  正确顺序(本项目铁律): 先把扫描的 InputBinding/InputAction 路径补上 -> 重扫一次 -> 拿到真实按键定义, 再接自动响应。",CY.yellow)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
