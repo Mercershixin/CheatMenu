@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 20:31 sha d83b767e bytes 559948'):format('2026-09-22 20:31','d83b767e',559948))
+print(('[CheatMenu] build 2026-09-22 20:54 sha 7a68b749 bytes 560884'):format('2026-09-22 20:54','7a68b749',560884))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -31,6 +31,7 @@ Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP_WallWise=true,
 HUD_Info=false,
 SpiderSense=false,
 DeadOn_Freeze=false,DeadOn_NoBlow=false,
@@ -109,7 +110,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.6.0"
+SYS.BuildVer="10.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3323,6 +3324,17 @@ end
 ESP_WALL_CACHE[part]={t=now,ok=ok}
 return ok
 end
+local HL_SOLID = 0.35
+local HL_LINE  = 0.93
+local function espFill(h, wall)
+if not h then return end
+if SYS.T_.ESP_WallWise == false then
+h.FillTransparency = wall and 0.93 or 0.88
+else
+h.FillTransparency = wall and HL_LINE or HL_SOLID
+end
+h.OutlineTransparency = 0
+end
 local IDX={ t=0, desc=nil }
 function SYS.Index()
 local now=os.clock()
@@ -3464,8 +3476,7 @@ if not h then
 h=SYS.NewVis("Highlight")
 h.Adornee=c
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
-h.FillTransparency=0.88
-h.OutlineTransparency=0
+espFill(h,false)
 h.Parent=c
 HL[p]=h
 elseif h.Parent~=c then
@@ -3526,8 +3537,7 @@ if tot>=3 and n/tot>=0.7 then ghost=true end
 end)
 end
 local wall=espWall(tagPart(c) or c.PrimaryPart)
-local fillT=wall and 0.93 or 0.88
-h.FillTransparency=fillT
+espFill(h,wall)
 if ghost then
 h.FillColor   =Color3.fromRGB(190,60,255)
 h.OutlineColor=Color3.fromRGB(160,40,230)
@@ -3618,7 +3628,7 @@ P(function() h.Parent=m end)
 end
 local part=m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
 local wall=espWall(part)
-h.FillTransparency=wall and 0.93 or 0.88
+espFill(h,wall)
 if (SYS._npcHostile and SYS._npcHostile[m])==true then
 h.FillColor   =Color3.fromRGB(255,30,30)
 h.OutlineColor=Color3.fromRGB(255,0,0)
@@ -3873,7 +3883,7 @@ end
 local wall=espWall(p)
 local kk=PK[p]
 local kc=(kk and kk.color) or Color3.fromRGB(0,200,255)
-h.FillTransparency=wall and 0.93 or 0.88
+espFill(h,wall)
 h.FillColor=kc
 h.OutlineColor=kc
 end
@@ -4079,7 +4089,7 @@ elseif h.Parent~=p then
 P(function() h.Parent=p end)
 end
 local wall=espWall(p)
-h.FillTransparency=wall and 0.93 or 0.88
+espFill(h,wall)
 h.OutlineTransparency=0
 if DTRAP[p]==true then
 h.FillColor   =Color3.fromRGB(255,30,30)
@@ -4181,7 +4191,7 @@ elseif h.Parent~=p then
 P(function() h.Parent=p end)
 end
 local wall=espWall(p)
-h.FillTransparency=wall and 0.93 or 0.88
+espFill(h,wall)
 h.FillColor   =Color3.fromRGB(0,200,255)
 h.OutlineColor=Color3.fromRGB(0,170,230)
 end
@@ -4328,7 +4338,7 @@ if not h then
 h=SYS.NewVis("Highlight")
 h.Adornee=o
 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
-h.FillTransparency=0.88
+espFill(h,false)
 h.OutlineTransparency=0
 h.FillColor=Color3.fromRGB(0,200,255)
 h.OutlineColor=Color3.fromRGB(0,170,230)
@@ -4337,6 +4347,8 @@ HI[o]=h
 elseif h.Parent~=o then
 P(function() h.Parent=o end)
 end
+local dp=(o:IsA("BasePart") and o) or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
+espFill(h, espWall(dp))
 end
 elseif next(HI) then
 for _,h in pairs(HI) do P(function() h:Destroy() end) end HI={}
@@ -11757,7 +11769,13 @@ UI.Tip(p,"把所有【活物】都点亮。🎨 配色: 玩家 = 队友绿 / 敌
 "或 Attribute Hostile / Enemy / Aggro 为 true。\n"..
 "拿不准一律算【中立橙】—— 与玩家透视「拿不到队伍 = 队友绿」同一个保守口径, 不误标红。\n"..
 "藏身/幽灵态(Humanoid.Health 被游戏打成 0)照样亮 —— 透视本来就该看得见「藏起来的」。\n"..
-"全 Workspace 扫描已节流, 并与其它透视共用同一次扫描; 隔墙时填充更透。",CY.sub)
+"全 Workspace 扫描已节流, 并与其它透视共用同一次扫描; 隔墙/可见 的填充形态见下方「隔墙高亮形态」。",CY.sub)
+UI.Switch(p,"🧱 隔墙高亮形态 (隔墙=只留描边 / 不隔墙=全身实心)","ESP_WallWise")
+UI.Tip(p,"按【隔墙与否】自动换高亮形态, 本页所有透视通用(玩家 / 生物 / 物件 / 门·陷阱 / 小游戏 / 掉落物):\n"..
+"🧱 在墙后(视线先打到遮挡物) → 只留描边: 填充近全透, 身体内部不高亮, 隔着墙只看得到轮廓;\n"..
+"👤 看得见 → 全身实心: 整个人 / 整个物件是实色的。\n"..
+"两种都【仍然穿墙可见】(深度模式一律 AlwaysOnTop) —— 墙后的目标不会消失; 颜色一个都不动。\n"..
+"关掉 = 恢复旧观感(两种都是淡填充, 只留轮廓)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🪧 头顶标签 (名字 / 武器标记)",CY.accent)
 UI.Switch(p,"🪧 头顶标签 (名字+血量+距离 · 有武器就标红)","ESPNameTag",function(on)
