@@ -94,10 +94,12 @@
 | **通用按键自动化**（自动按键） | 键 `Key_Auto`(T_) + `Key_Which` / `Key_Mode` / `Key_Gap`(C_) + **整个 `SYS.Keys`**（`K.Set` / `K.Tick` / `K.ReleaseAll` / `K.Has` / `keyEnum`）+ `SYS.SetKeyAuto` + 循环登记 `SYS.SetKeyAuto("KeyAuto",…)` + 挂机页「⌨ 自动按键」整区。★ **10.1.0**（2026-09-22）用户原话：**「去掉自动按键功能」**。⚠ **没有一起删**：近战补刀按 F（`CB_Melee`，自己发 `SendKeyEvent`，从没走 `SYS.Keys`）、`SYS.VIM`。 |
 | **自动重生**（挂机页「📈 进度」区） | 键 `AutoRebirth`(T_) / `RebirthCheck`(C_) + 后端 `SYS.StartReb` / `SYS.StopReb` / `RebThread` / `lastRebFire` / `SYS.CurReb()` + `OnRemote("RebirthUpdate",…)` 监听 + `AFK.Reb` 字段 + 卸载里的 `P(SYS.StopReb)` + 该页「进度」整区。★ **10.3.0**（2026-09-22）用户原话：**「自动重生功能删了」**。⚠⚠ **不要与上面第一小段的 `AutoRespawn`（死亡自动重生）混为一谈 —— 两个是不同功能，只是名字像**。⚠ **特意保留**：`SYS.CurKick` / `AFK.Kick` / `KickData` 监听 / `SYS.FindHUD`（通用「当前 Kick 数值」读取器，与重生无关）。 |
 | **一键开启全部防护** | 键 `Prot_HideGui`。★ **10.4.0**（2026-09-22）用户原话：**「一键防护全开不需要了」**。它只是个**批量开关的壳**（一次把 `Prot_AntiAdmin` + `AntiFling` 打开），自身没有一行独立逻辑 ⇒ 删壳。⚠ **两个单项开关都保留、不许删**：「管理员检测绕过」`Prot_AntiAdmin`（默认开）与「🎈 防甩飞」`AntiFling`（见 §2 C）；后端 `SYS.Prot.InstallHideGui` / `RemoveHideGui` 也保留。 |
+| **移动限速护栏**（「限制最高移速」/「护栏上限」） | 键 `Prot_SpeedCap`(T_，默认关) + 参数 `C_.SpeedCap`（原默认 150）+ 防护页「🚦 移动限速护栏」整区（Section / Switch / Slider / 两段 Tip）+ `SYS.MAXPARAMS` / `SYS.MIGOLDDEFAULTS` 里的 `SpeedCap` 项。★ **10.10.0**（2026-09-23）用户原话：**「删除移动限速护栏」**。⚠ **刻意保留** `guardSpeed(v)` 为**同名直通函数**（`return v`）—— 它仍是 `wantWalkSpeed` / `SpeedTick` 的收口调用点，改直通免得散改三处，**别把 `guardSpeed` 当残留删掉**。⚠ 键已进 `SYS.REMOVED_FEATURES` 挡老存档复活。⚠ 加速主功能（飞行 / 移动加速 / 穿墙 / 免伤 / 跳跃）与此无关、一个都没动。 |
 
-★ **10.1.0 / 10.3.0 / 10.4.0 新增的上面 3 行同样已核验**：`Key_Auto` / `AutoRebirth` / `RebirthCheck` / `Prot_HideGui`
-在当前源码里**只出现在 `SYS.REMOVED_FEATURES` 黑名单中**，界面入口与后端确实都没了。
-★ **这 3 行是 2026-09-22 补录的**：本文件成文于 2026-09-20，晚于它的删除原先没进表 ——
+★ **10.1.0 / 10.3.0 / 10.4.0 / 10.10.0 新增的上面 4 行同样已核验**：`Key_Auto` / `AutoRebirth` / `RebirthCheck` / `Prot_HideGui` / `Prot_SpeedCap`
+在当前源码里**只出现在 `SYS.REMOVED_FEATURES` 黑名单中**（`SpeedCap` 已从配置键与 MAXPARAMS 同时摘除），界面入口与后端确实都没了。
+★ **`guardSpeed` 是唯一「留名不留功能」的例外** —— 直通函数，见上表末行，别当残留。
+★ **10.1.0 / 10.3.0 / 10.4.0 是 2026-09-22 补录的**：本文件成文于 2026-09-20，晚于它的删除原先没进表 ——
 **以后再有删除，删完当场就往这张表补一行**，别攒着。
 
 ★ **`SYS.REMOVED_FEATURES` 黑名单必须留着** —— 删掉配置键之后它反而更重要：挡住老存档把这些键复活。
