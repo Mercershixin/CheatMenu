@@ -1,3 +1,44 @@
+## 10.7.2 · 2026-09-22
+
+**新增「Dead Rails（亡命铁轨）」一局支持** —— 敌我判定补强 · 透视补类 · 战斗增强（新游戏接入口）。
+
+### 背景（为什么要补）
+用户给了 `Dead Rails`（PlaceId `70876832253163`）的全量扫描 —— 这游戏**不在事件库里**，是新的一局。
+核对发现一个硬伤：现有 `SYS.KwHostile`（monster / enemy / spider … 关键词）**一个都匹配不到** Dead Rails 的敌人
+—— 它们叫 `Model_Runner` / `Model_Acolyte` / `Model_Vampire` / `Model_Walker` / `Model_RifleSoldier` / `Model_Summoner` / `Model_CovenantKnight` …
+⇒ **整类敌人被当「中立」渲染成橙色**（不是漏判一两个，是整类漏判）。
+
+### ① 敌我判定补强（`SYS.DRHostileRoots` / `SYS.DRHostileMount`）
+Dead Rails 的敌人身上带一个 `EntityName` Attribute（扫描实锤），且住在
+`Workspace.RuntimeEntities` / `Workspace.NightEnemies` 两个容器里。现在 ESP 的 `isHostile` **最先**查这两条：
+- 有 `EntityName` 且**不在坐骑白名单**（`Horse` / `War`）→ 判敌；
+- 落在 `RuntimeEntities` / `NightEnemies` 里、且名字不含 `horse` / `mount` → 判敌。
+★ **坐骑（马）绝不标红**：它们也带 `EntityName`，但值是 `Horse` / `War`，是坐骑不是敌人。
+★ 纯**新增**判据，原有关键词逻辑一字未动 —— 对别的游戏零影响。
+
+### ② 透视补类（`SYS.PickKinds` 分类表）
+- 新增**「矿石/矿脉」**类别（`CoalOre` / `GoldOre` / `SilverOre` / … 青色高亮）——
+  放在「拾取物」**之前**，否则 `GoldOre` 会被 gold 关键词先吃掉、错归到「拾取物」。
+- 「按钮/机关」类别补 altar / shrine / sacrifice / totem（Sterling 教堂的 `OfferingTable` 那类献祭台）。
+
+### ③ 战斗增强（`SYS.DRCombat`，两个开关，默认都关）
+- 🎯 **命中标记**（`DeadRails_HitMark`）：听游戏自己发给客户端的 `...RemoteEvent.Hitmarker`（实锤路径），
+  每响一次 = 打中一次 → 准星处闪一个大号 ✕ + 屏幕下方累计计数，**菜单关着也看得见**。
+  ★ 它**不替换任何函数**，只挂一个事件监听，关掉即断开 —— 没有「卸载不还原」的坑。
+- 🔭 **开镜/瞄准探针**（`DeadRails_AimProbe`）：这游戏的瞄准辅助在扫描里**只有模块名**
+  （`aimAssist` / `AimAssistMode` / `ZoomController` …）、**没有函数名** ⇒ 按项目铁律「先取证再动手，别猜字段」，
+  这一档**只把调用次数打到控制台（F9）**，**不做任何真增强**；拿到 F9 输出后，下一版再按真实字段做真的。
+  ★ 为什么不硬改：这游戏自带 `CrosshairHud`(35 函数) / `CrosshairManager`(17) / `crosshairTargetingSystem`(4),
+    乱动瞄准层 = 重演「开镜准星没了」那个事故。
+
+### 卸载
+`SYS.UnloadAll` 补一行 `SYS.DRCombat.UnloadAll()`（断监听 + 销毁命中标记 GUI + 还原探针挂的函数）。
+
+### 验证
+`luau-compile` 通过；开关接线对账（`SYS.T_` 布尔开关 95 个，本轮新增 2 个**均已在界面入口**）。
+
+---
+
 ## 10.7.1 · 2026-09-22
 
 **修复「卸载不干净」** —— `SYS.SpiderSense`（🕷 蜘蛛感知）漏在卸载清单外。
