@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 19:05 sha 9577a31e bytes 544415'):format('2026-09-22 19:05','9577a31e',544415))
+print(('[CheatMenu] build 2026-09-22 19:17 sha a2f210c9 bytes 545123'):format('2026-09-22 19:17','a2f210c9',545123))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -108,7 +108,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.5.0"
+SYS.BuildVer="10.5.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10224,10 +10224,15 @@ lk=LOW(lk)
 for i=1,#REC_EXTRA do if hasKW(lk,REC_EXTRA[i]) then return true end end
 return false
 end
-local AIM_T={"aimspeed","aimtime","aimsensitivity","aimfov","zoomfov","adsspeed","adstime",
-"aimdelay","aimlerp","aimalpha","adslerp"}
+local AIM_T={"aimspeed","aimtime","adsspeed","adstime","aimdelay"}
 local AIM_Z={"aimshake","aimsway","weaponbob","viewbob","camerabob","aimoffset",
 "aimdeviation","recoilshake"}
+local NEVER_NUM={"crosshair","reticle","scope","sight","准星","准心"}
+local function isNeverNum(lk)
+lk=LOW(lk)
+for i=1,#NEVER_NUM do if hasKW(lk,NEVER_NUM[i]) then return true end end
+return false
+end
 local function isAimNum(lk)
 lk=LOW(lk)
 for i=1,#AIM_T do if lk==AIM_T[i] then return true end end
@@ -10361,7 +10366,7 @@ local sAmmo  =isScriptOf(sl,S_AMMO)
 local sAim   =isScriptOf(sl,S_AIM)
 local sSkill =isScriptOf(sl,S_SKILL)
 local relevant=(sWeapon or sRec or sAmmo or sAim or sSkill)
-if (ln and isRecName(ln)) or (sRec and ln and isRecExtra(ln)) then
+if ln and not isNeverNum(ln) and (isRecName(ln) or (sRec and isRecExtra(ln))) then
 if #Cands.recoil<40 then
 Cands.recoil[#Cands.recoil+1]={f=v,name=nm or ("(匿名@"..tostring(snl)..")"),fromScript=sRec}
 end
@@ -13547,6 +13552,11 @@ UI.Tip(p,"这四项改的是【游戏自己的武器逻辑】(hook 函数 / 改 
 "   商店那批 `*Purchase` 都在【服务端查余额】, 客户端没有任何东西能改服务端账本。\n"..
 "   说能做到的都是编的; 要做只能人工摸清 remote 参数协议, 那一步我不瞎试。\n"..
 "🎯 瞄准补强 = 开镜速度快 + 准星不飘(镜头抖动/摆动归零) —— 与「无后坐力」分开, 想单独要哪个都行。\n"..
+"   ⛔ 它**只动时长/速度**(aimspeed/aimtime/adsspeed/adstime/aimdelay):\n"..
+"     视场角(aimfov/zoomfov)、镜面透明度(aimalpha)、开镜灵敏度(aimsensitivity) 一律【不碰】\n"..
+"     —— 这几个量纲不是时间, 压小会出现「开镜后视野塌成一个点 / 镜面全透明」(2026-09-22 已收紧)。\n"..
+"   ⛔ 另外: 变量名带 crosshair / reticle / scope / sight 的数值, 本区**所有开关一个都不写**\n"..
+"     —— 那是准星/镜自己的参数, 碰它就会「开镜准星没了」。\n"..
 "★★ 本版最重要的改动【按归属脚本收窄扫描】:\n"..
 "   旧版是在【全部 GC 函数】里瞎找 —— 实测 FFA 对战服有 13 万个函数, 6 秒预算必然截断,\n"..
 "   结果就是「6 个开关全开着、一个都没挂上」。\n"..
