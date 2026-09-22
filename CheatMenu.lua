@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 18:25 sha fabe6afc bytes 536913'):format('2026-09-22 18:25','fabe6afc',536913))
+print(('[CheatMenu] build 2026-09-22 18:35 sha 0e3b174e bytes 536007'):format('2026-09-22 18:35','0e3b174e',536007))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -62,7 +62,7 @@ CB_360=false,CB_SilentNoTurn=false,
 NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
-Prot_AntiAdmin=true,Prot_HideGui=false,
+Prot_AntiAdmin=true,
 Prot_SpeedCap=false,
 AntiFling=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
@@ -107,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.3.0"
+SYS.BuildVer="10.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -269,7 +269,8 @@ PG_Spin=true, PG_SpinHit=true, PG_FlyHit=true, PG_WalkHit=true,
 PG_HideHit=true, PG_OrbitTool=true, PG_BlackHole=true, PG_KillNear=true,
 Prot_AntiAC=true, Prot_AntiTP=true,
 Key_Auto=true,
-AutoRebirth=true, RebirthCheck=true }
+AutoRebirth=true, RebirthCheck=true,
+Prot_HideGui=true }
 function SYS.LoadConfig()
 if not HAS_FS or not HS then return end
 P(function()
@@ -11342,37 +11343,6 @@ UI.Tip(p,"「抹除」= 直接移除你自己的角色模型; 「虚空抹除」
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
-UI.Switch(p,"🛡 一键开启全部防护","Prot_HideGui",function(on)
-local function setOne(k,f)
-if type(f)~="function" then
-SYS.T_[k]=false
-SYS.Notify("❌ "..k.." 开启失败: 这个功能在本机不可用",SYS.CY.red)
-return false
-end
-local ok,err=f(on)
-if not ok and on then
-SYS.T_[k]=false
-SYS.Notify("❌ "..k.." 开启失败: "..tostring(err),SYS.CY.red)
-return false
-end
-return true
-end
-if on then
-SYS.T_.Prot_AntiAdmin=true
-setOne("Prot_AntiAdmin",function()
-if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
-return SYS.Prot.InstallHideGui()
-end)
-setOne("AntiFling",SYS.SetAntiFling)
-SYS.Notify("🛡 全部防护已尝试开启(失败项会单独提示)",SYS.CY.green)
-else
-SYS.T_.Prot_AntiAdmin=false
-SYS.Prot.RemoveHideGui()
-P(SYS.SetAntiFling,false)
-SYS.Notify("防护已全部卸下",SYS.CY.sub)
-end
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end)
 UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
 if on then
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
