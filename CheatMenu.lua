@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-22 17:23 sha 99464734 bytes 530849'):format('2026-09-22 17:23','99464734',530849))
+print(('[CheatMenu] build 2026-09-22 17:57 sha ab28a247 bytes 538238'):format('2026-09-22 17:57','ab28a247',538238))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -31,6 +31,7 @@ Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
 ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
+HUD_Info=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
 AutoRebirth=false,AutoGym=false,AutoTrain=false,
@@ -106,7 +107,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.1.0"
+SYS.BuildVer="10.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -119,6 +120,7 @@ SYS.N={
 Gui    = ({"App","MainGui","Interface","CorePack","UiRoot","HudRoot","PanelRoot"})[math.random(1,7)],
 Float  = "FloatingButton",
 Hud    = ({"HudRoot","Interface","UiRoot"})[math.random(1,3)],
+Info   = ({"Status","Info","Overlay"})[math.random(1,3)],
 F3     = "Stats",
 Combat = "Render",
 CAS    = "CoreAction_".._rands(4),
@@ -2024,6 +2026,180 @@ P(function() if HudGui then HudGui.Enabled = false end end)
 end
 end))
 end
+local IP={} SYS.Info=IP
+IP.Gui=nil IP.Lab=nil IP.Next=0
+function SYS.AttrRaw(inst,k)
+if inst==nil then return nil end
+local ok,v=pcall(function() return inst:GetAttribute(k) end)
+if ok then return v end
+return nil
+end
+function SYS.AttrNum(inst,k)
+local v=SYS.AttrRaw(inst,k)
+if type(v)=="number" then return v end
+return nil
+end
+function SYS.ValOf(inst,cls,name)
+if inst==nil then return nil end
+local ok,c=pcall(function() return inst:FindFirstChild(name) end)
+if not ok or c==nil then return nil end
+local ok2,is=pcall(function() return c:IsA(cls) end)
+if not ok2 or not is then return nil end
+local ok3,v=pcall(function() return c.Value end)
+if ok3 then return v end
+return nil
+end
+local function ipNum(v)
+if type(v)=="number" and v==v and v~=math.huge and v~=-math.huge then return math.floor(v+0.5) end
+return nil
+end
+local function ipRoomData()
+local r=WS:FindFirstChild("Room")
+if not r then return nil end
+local ok,kids=pcall(function() return r:GetChildren() end)
+if not ok or type(kids)~="table" or #kids==0 then return nil end
+local ok2,d=pcall(function() return kids[1]:FindFirstChild("Data") end)
+if ok2 then return d end
+return nil
+end
+function IP.Snapshot()
+local L={}
+local d=ipRoomData()
+if d then
+local b1={}
+local rd=ipNum(SYS.ValOf(d,"IntValue","Round"))
+local rt=ipNum(SYS.ValOf(d,"IntValue","Rounds"))
+if rd then b1[#b1+1]=("第 %d 回合"):format(rd) end
+if rt then b1[#b1+1]=("共 %d"):format(rt) end
+local st=SYS.ValOf(d,"StringValue","RoundState") or SYS.ValOf(d,"StringValue","State")
+if type(st)=="string" and st~="" then b1[#b1+1]=st end
+local gt=ipNum(SYS.ValOf(d,"NumberValue","GameTime"))
+if gt then b1[#b1+1]=("局时 %d"):format(gt) end
+if #b1>0 then L[#L+1]="🏁 "..table.concat(b1,"  ") end
+end
+local b2={}
+local hp=ipNum(SYS.AttrRaw(LP,"Health"))
+local mx=ipNum(SYS.AttrRaw(LP,"MaxHealth"))
+if hp==nil then
+local h=LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+if h then hp=ipNum(h.Health) mx=ipNum(h.MaxHealth) end
+end
+if hp then b2[#b2+1]=("血量 %d/%d"):format(hp,mx or 0) end
+local sh=ipNum(SYS.AttrRaw(LP,"Shield")) or 0
+local ts=ipNum(SYS.AttrRaw(LP,"TempShield")) or 0
+if sh>0 or ts>0 then b2[#b2+1]=("护盾 %d"):format(sh+ts) end
+local kil=ipNum(SYS.AttrRaw(LP,"Killed"))
+if kil then b2[#b2+1]=("击杀 %d"):format(kil) end
+local dth=ipNum(SYS.AttrRaw(LP,"Death"))
+if dth then b2[#b2+1]=("阵亡 %d"):format(dth) end
+local ks=ipNum(SYS.AttrRaw(LP,"MaxKillStreak"))
+if ks and ks>0 then b2[#b2+1]=("最高连杀 %d"):format(ks) end
+local lv=ipNum(SYS.AttrRaw(LP,"Level"))
+if lv then b2[#b2+1]=("Lv%d"):format(lv) end
+local nw=ipNum(SYS.AttrRaw(LP,"NetWorth"))
+if nw then b2[#b2+1]=("资产 %d"):format(nw) end
+if #b2>0 then L[#L+1]="🧍 "..table.concat(b2,"  ") end
+local le=WS:FindFirstChild("LiveEntities")
+if le then
+local ok,kids=pcall(function() return le:GetChildren() end)
+if ok and type(kids)=="table" and #kids>0 then
+local nm={}
+for i=1,#kids do
+if #nm>=4 then nm[#nm+1]="…" break end
+nm[#nm+1]=tostring(kids[i].Name)
+end
+L[#L+1]=("👹 在场实体 %d: %s"):format(#kids,table.concat(nm,", "))
+end
+end
+local cr=WS:FindFirstChild("CurrentRooms")
+if cr then
+local ok,kids=pcall(function() return cr:GetChildren() end)
+if ok and type(kids)=="table" and #kids>0 then
+L[#L+1]=("🚪 当前房间 %d 个"):format(#kids)
+end
+end
+return L
+end
+function IP.Clear()
+if IP.Gui then P(function() IP.Gui:Destroy() end) end
+IP.Gui=nil IP.Lab=nil IP.Next=0
+end
+function IP.Tick()
+if not SYS.T_.HUD_Info then
+if IP.Gui then IP.Clear() end
+return
+end
+local now=os.clock()
+if now<(IP.Next or 0) then return end
+IP.Next=now+0.4
+local ok,L=P(IP.Snapshot)
+if not ok or type(L)~="table" then return end
+if #L==0 then
+if IP.Gui then IP.Clear() end
+return
+end
+local txt=table.concat(L,"\n")
+local nl=select(2,txt:gsub("\n",""))+1
+P(function()
+if not IP.Gui then
+local pg=(SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
+if not pg then return end
+local gui=Instance.new("ScreenGui")
+gui.Name=SYS.N.Info
+gui.ResetOnSpawn=false
+gui.IgnoreGuiInset=true
+gui.DisplayOrder=999998
+P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
+local fr=Instance.new("Frame")
+fr.Name="Box"
+if _TOUCH then
+fr.AnchorPoint=Vector2.new(0,0)
+fr.Position=UDim2.new(0,12,0,60)
+else
+fr.AnchorPoint=Vector2.new(0,1)
+fr.Position=UDim2.new(0,12,1,-12)
+end
+fr.Size=UDim2.new(0,320,0,64)
+fr.BackgroundColor3=Color3.fromRGB(12,14,20)
+fr.BackgroundTransparency=0.25
+fr.BorderSizePixel=0
+fr.Parent=gui
+local r=Instance.new("UICorner") r.CornerRadius=UDim.new(0,9) r.Parent=fr
+local lab=Instance.new("TextLabel")
+lab.Size=UDim2.new(1,-16,1,-10)
+lab.Position=UDim2.new(0,8,0,5)
+lab.BackgroundTransparency=1
+lab.Font=Enum.Font.Code
+lab.TextSize=14
+lab.TextColor3=Color3.fromRGB(235,240,250)
+lab.TextXAlignment=Enum.TextXAlignment.Left
+lab.TextYAlignment=Enum.TextYAlignment.Top
+lab.TextWrapped=true
+lab.Parent=fr
+gui.Parent=pg
+IP.Gui,IP.Lab=gui,lab
+end
+if not IP.Gui then return end
+if IP.Lab and IP.Lab.Text~=txt then IP.Lab.Text=txt end
+local fr=IP.Gui:FindFirstChild("Box")
+local want=14+nl*18
+if fr and fr.Size.Y.Offset~=want then fr.Size=UDim2.new(0,320,0,want) end
+IP.Gui.Enabled=true
+end)
+end
+function SYS.SetHUDInfo(on)
+on=on and true or false
+SYS.T_.HUD_Info=on
+SYS.SetLoop("Info",on,RS.Heartbeat,SYS.Info.Tick)
+if on then
+SYS.Info.Next=0
+P(SYS.Info.Tick)
+SYS.Notify("🛰 战况面板: 已开(回合 / 战绩 / 在场实体 · 关掉菜单也看得见)",SYS.CY.green)
+else
+SYS.Info.Clear()
+SYS.Notify("🛰 战况面板: 已关",SYS.CY.sub)
+end
+end
 SYS.Scanners = SYS.Scanners or {}
 function SYS.RegisterScanner(name, fn, desc)
 for _, s in ipairs(SYS.Scanners) do
@@ -3558,8 +3734,13 @@ else
 l.StudsOffsetWorldSpace=Vector3.new(0,off,0)
 end
 local hh=c:FindFirstChildOfClass("Humanoid")
-local hp=hh and math.floor(hh.Health+0.5) or 0
-local mx=hh and math.floor(hh.MaxHealth+0.5) or 0
+local aHp=SYS.AttrNum(p,"Health")
+local aMx=SYS.AttrNum(p,"MaxHealth")
+local hp=(aHp~=nil) and math.floor(aHp+0.5) or (hh and math.floor(hh.Health+0.5) or 0)
+local mx=(aMx~=nil) and math.floor(aMx+0.5) or (hh and math.floor(hh.MaxHealth+0.5) or 0)
+local aSt=SYS.AttrRaw(p,"State")
+local _sh=(SYS.AttrNum(p,"Shield") or 0)+(SYS.AttrNum(p,"TempShield") or 0)
+local _dead=(type(aSt)=="string" and aSt=="Dead")
 local tl=LBL[p] or (LB[p] and LB[p]:FindFirstChildOfClass("TextLabel"))
 if tl then
 local _dist=""
@@ -3569,8 +3750,12 @@ local mr=me and me:FindFirstChild("HumanoidRootPart")
 local tp2=tagPart(c) or c.PrimaryPart
 if mr and tp2 and tp2.Position then _dist=("  %d格"):format((tp2.Position-mr.Position).Magnitude) end
 end)
-tl.Text=(p.DisplayName or p.Name).."  "..hp.."/"..mx.._dist
-if mx>0 and hp<=mx*0.3 then tl.TextColor3=Color3.fromRGB(255,80,80)
+local _ext=""
+if _sh>0 then _ext=_ext..("  🛡%d"):format(math.floor(_sh+0.5)) end
+if _dead then _ext=_ext.."  ☠" end
+tl.Text=(p.DisplayName or p.Name).."  "..hp.."/"..mx.._ext.._dist
+if _dead then tl.TextColor3=Color3.fromRGB(140,145,155)
+elseif mx>0 and hp<=mx*0.3 then tl.TextColor3=Color3.fromRGB(255,80,80)
 elseif mx>0 and hp<=mx*0.6 then tl.TextColor3=Color3.fromRGB(255,190,80)
 else tl.TextColor3=Color3.new(1,1,1) end
 end
@@ -10985,7 +11170,19 @@ UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
 function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
 UI.Tip(p,"标签内容 = 名字(优先 DisplayName) + 当前/最大血量 + 离你几格; 血量低于 60% 转橙、低于 30% 转红。\n"..
 "有武器(手上或背包里, 标准 Backpack 属性)就在下方再标一行 🔫 武器名(红字)。\n"..
-"挂点自动回退 Head -> UpperTorso -> Torso -> HumanoidRootPart, 名字高度再按角色包围盒自动贴顶。",CY.sub)
+"挂点自动回退 Head -> UpperTorso -> Torso -> HumanoidRootPart, 名字高度再按角色包围盒自动贴顶。\n"..
+"★ v10.2.0 起血量改读【权威 Attribute】(@Health / @MaxHealth, 拿不到才回退 Humanoid), "..
+"并顺带标出 🛡 护盾量与 ☠(权威状态 = 死)。",CY.sub)
+UI.Div(p)
+UI.Section(p,"🛰 战况面板 (回合 / 战绩 / 在场实体)",CY.accent)
+UI.Switch(p,"🛰 战况面板 (回合 · 战绩 · 在场实体 · 关掉菜单也看得见)","HUD_Info",SYS.SetHUDInfo)
+UI.Tip(p,"独立小面板(不占菜单、菜单关掉照样显示), 2.5 次/秒刷新, 全部【只读】:\n"..
+"🏁 回合 = 游戏自己的 Workspace.Room.<房间号>.Data 里的 Round / Rounds / RoundState / GameTime;\n"..
+"🧍 战绩 = 你自己 Player 上的 Attribute: 血量 · 护盾 · 击杀 · 阵亡 · 最高连杀 · 等级 · 资产;\n"..
+"👹 在场实体 / 🚪 当前房间 = DOORS(门)那类游戏的 Workspace.LiveEntities / Workspace.CurrentRooms。\n"..
+"★ 拿不到的字段【整块不显示】—— 换游戏不会留一块写着 0 的假面板, 也不会出假预警。\n"..
+"★ GameTime 等时间字段【按原值直显】: 扫描里它的语义没有定论, 所以不自己算\"还剩几秒\"。\n"..
+"★ 位置: PC 在左下角, 手机/平板在左上角(各自避开最常用的控件)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
 UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
@@ -14345,6 +14542,7 @@ P(function() WS.Gravity=SYS.Orig.Gravity end)
 P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
+P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
