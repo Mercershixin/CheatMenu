@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 00:55 sha 80aeae9c bytes 575450'):format('2026-09-23 00:55','80aeae9c',575450))
+print(('[CheatMenu] build 2026-09-23 14:10 sha 53339f1d bytes 588169'):format('2026-09-23 14:10','53339f1d',588169))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -69,6 +69,7 @@ TransBilingual=false,
 TransDyn=true,
 Prot_AntiAdmin=true,
 AntiFling=false,
+Prot_Stealth=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 },
 C_={
@@ -110,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="10.10.0"
+SYS.BuildVer="11.0.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1903,7 +1904,7 @@ if not dir then return nil,SYS.ScanOutWhy end
 local info,nm,pid=SYS.GameInfoLine()
 local stamp=os.date("%Y%m%d_%H%M%S")
 local fn=SYS.ScanOutFile or ("scan_%s_%s.txt"):format(safeAscii(pid,20),stamp)
-local t={"-- CheatMenu 综合扫描（全部十一层 · 单文件）",
+local t={"-- CheatMenu 综合扫描（全部十二层 · 单文件）",
 "-- "..tostring(info),
 "-- 服务器名: "..tostring(nm).."    PlaceId: "..tostring(pid),
 "-- 时间: "..os.date("%Y-%m-%d %H:%M:%S"),
@@ -2251,10 +2252,8 @@ return true
 end
 function SP.Scan()
 if SP.Ready then return #SP.Found end
-local G=spAPI("getgc") or spAPI("getGC")
-if not G then return 0 end
-local ok,list=pcall(G,true)
-if not ok or type(list)~="table" then SP.Note="getgc(true) 没返回表"; return 0 end
+local list,why=SYS.GCList()
+if not list then SP.Note=why or "getgc(true) 没返回表"; return 0 end
 local want={}
 for _,k in ipairs(SP.ON) do want[k]=true end
 local budget=os.clock()+4
@@ -2264,8 +2263,24 @@ if os.clock()>budget then SP.Note="(扫描超 4 秒已截断)"; break end
 if type(v)=="function" then
 local nm=spName(v)
 if nm and want[nm] and not SP.Found[nm] then
-if spScript(v)=="SpiderRig" then SP.Found[nm]=v n=n+1 end
+if spScript(v)=="SpiderRig" then
+SP.Found[nm]=v n=n+1
+if SYS.FP then SYS.FP.Record("SpiderRig",nm,v) end
 end
+end
+end
+end
+if n==0 and SYS.FP then
+local fi=0
+for _,k in ipairs(SP.ON) do
+if not SP.Found[k] then
+local spec=SYS.FP.Lookup("SpiderRig",k)
+local v=spec and SYS.FP.FindIn(list,spec)
+if v then SP.Found[k]=v n=n+1 fi=fi+1 end
+end
+end
+if fi>0 then
+SP.Note=(SP.Note~="" and (SP.Note.." · ") or "")..("🧬结构指纹回退命中 %d 个"):format(fi)
 end
 end
 SP.Ready=true
@@ -2487,14 +2502,13 @@ return true
 end
 function DO.Scan()
 if DO.Ready then return #DO.Found end
-local G=doAPI("getgc") or doAPI("getGC")
-if not G then return 0 end
-local ok,list=pcall(G,true)
-if not ok or type(list)~="table" then DO.Note="getgc(true) 没返回表"; return 0 end
+local list,why=SYS.GCList()
+if not list then DO.Note=why or "getgc(true) 没返回表"; return 0 end
 local want={}
-for _,k in ipairs(DO.FREEZE) do want[k]=true end
-for _,k in ipairs(DO.NOBLOW) do want[k]=true end
-for _,k in ipairs(DO.WATCH)  do want[k]=true end
+local want_list={}
+for _,k in ipairs(DO.FREEZE) do want[k]=true want_list[#want_list+1]=k end
+for _,k in ipairs(DO.NOBLOW) do want[k]=true want_list[#want_list+1]=k end
+for _,k in ipairs(DO.WATCH)  do want[k]=true want_list[#want_list+1]=k end
 local budget=os.clock()+4
 local n=0
 for _,v in ipairs(list) do
@@ -2502,9 +2516,23 @@ if os.clock()>budget then DO.Note="(扫描超 4 秒已截断)"; break end
 if type(v)=="function" then
 local nm=doName(v)
 if nm and want[nm] and not DO.Found[nm] then
-if doScript(v)==DO.Script then DO.Found[nm]=v n=n+1 end
+if doScript(v)==DO.Script then
+DO.Found[nm]=v n=n+1
+if SYS.FP then SYS.FP.Record(DO.Script,nm,v) end
 end
 end
+end
+end
+if n==0 and SYS.FP then
+local fi=0
+for _,k in ipairs(want_list) do
+if not DO.Found[k] then
+local spec=SYS.FP.Lookup(DO.Script,k)
+local v=spec and SYS.FP.FindIn(list,spec)
+if v then DO.Found[k]=v n=n+1 fi=fi+1 end
+end
+end
+if fi>0 then DO.Note=(DO.Note~="" and (DO.Note.." · ") or "")..("🧬结构指纹回退命中 %d 个"):format(fi) end
 end
 DO.Ready=true
 return n
@@ -2789,21 +2817,31 @@ return true
 end
 function DR.Scan()
 if DR.Ready then return #DR.Found end
-local G=drAPI("getgc") or drAPI("getGC")
-if not G then return 0 end
-local ok,list=pcall(G,true)
-if not ok or type(list)~="table" then DR.Note="getgc(true) 没返回表"; return 0 end
+local list,why=SYS.GCList()
+if not list then DR.Note=why or "getgc(true) 没返回表"; return 0 end
 local want={}
 for _,nm in ipairs(DR.AimScripts) do want[nm]=true end
 local t0=os.clock()
 local fnd,nms={},{}
+local fpcnt=0
 for i=1,#list do
 if os.clock()-t0>4 then break end
 local v=list[i]
 if type(v)=="function" then
 local sn=drScript(v)
-if sn and want[sn] then fnd[#fnd+1]=v nms[#nms+1]=sn end
+if sn and want[sn] then
+fnd[#fnd+1]=v nms[#nms+1]=sn
+if SYS.FP then SYS.FP.Record("DRAim",sn,v) end
 end
+end
+end
+if #fnd==0 and SYS.FP then
+for _,sn in ipairs(DR.AimScripts) do
+local spec=SYS.FP.Lookup("DRAim",sn)
+local v=spec and SYS.FP.FindIn(list,spec)
+if v then fnd[#fnd+1]=v nms[#nms+1]=sn fpcnt=fpcnt+1 end
+end
+if fpcnt>0 then DR.Note=(DR.Note~="" and (DR.Note.." · ") or "")..("🧬结构指纹回退命中 %d 个"):format(fpcnt) end
 end
 DR.Found=fnd DR.FoundNM=nms DR.Ready=true
 return #fnd
@@ -3002,6 +3040,139 @@ disarmLife(h) disarmStand(h)
 end
 end
 SYS.Scanners = SYS.Scanners or {}
+SYS.GC_TTL = 20
+function SYS.GCList(force)
+local now=os.clock()
+if SYS._GCTable and not force and (now-(SYS._GCAt or 0)) < SYS.GC_TTL then
+SYS._GCHit=(SYS._GCHit or 0)+1
+return SYS._GCTable
+end
+local f=(type(getgc)=="function" and getgc) or (type(_G.getGC)=="function" and _G.getGC)
+if not f then return nil,"本机没有 getgc" end
+local ok,t=pcall(f,true)
+if not ok or type(t)~="table" then return nil,"getgc(true) 没返回表" end
+SYS._GCTable=t SYS._GCAt=now SYS._GCTake=(SYS._GCTake or 0)+1
+return t
+end
+function SYS.GCStat()
+return { take=SYS._GCTake or 0, hit=SYS._GCHit or 0, n=(SYS._GCTable and #SYS._GCTable) or 0 }
+end
+function SYS.GCScript(f)
+local ok,env=pcall(getfenv,f)
+if ok and type(env)=="table" then
+local sc=env.script
+if sc then
+local ok2,nm=pcall(function() return sc.Name end)
+if ok2 and type(nm)=="string" and nm~="" then return nm end
+end
+end
+return nil
+end
+SYS.FP={ _memo={} }
+local _DBG=(type(debug)=="table") and debug or nil
+function SYS.FP.Describe(f)
+if type(f)~="function" then return nil end
+local d={}
+local nup=nil
+if _DBG and type(_DBG.getupvalues)=="function" then
+local ok,u=pcall(_DBG.getupvalues,f)
+if ok and type(u)=="table" then nup=#u end
+end
+if not nup and _DBG and type(_DBG.getupvalue)=="function" then
+local ok,c=pcall(function()
+local i=0
+while i<400 do
+local nm=_DBG.getupvalue(f,i+1)
+if nm==nil then break end
+i=i+1
+end
+return i
+end)
+if ok then nup=c end
+end
+d.nup=nup
+if _DBG and type(_DBG.info)=="function" then
+local okL,l=pcall(_DBG.info,f,"l") if okL and type(l)=="number" then d.line=l end
+local okS,s=pcall(_DBG.info,f,"s") if okS and type(s)=="string" then d.src=s end
+end
+d.script=SYS.GCScript(f)
+return d
+end
+function SYS.FP.Record(script,name,f)
+if not (script and name and type(f)=="function") then return nil end
+local d=SYS.FP.Describe(f)
+if d then SYS.FP._memo[script.."/"..name]=d end
+return d
+end
+function SYS.FP.Lookup(script,name)
+return (script and name) and SYS.FP._memo[script.."/"..name] or nil
+end
+function SYS.FP.FindIn(list,spec)
+if type(list)~="table" or type(spec)~="table" then return nil end
+for i=1,#list do
+local v=list[i]
+if type(v)=="function" then
+local d=SYS.FP.Describe(v)
+if d
+and (spec.script==nil or d.script==spec.script)
+and (spec.nup==nil or d.nup==spec.nup)
+and (spec.line==nil or d.line==spec.line) then
+return v,d
+end
+end
+end
+return nil
+end
+function SYS.HookAPI()
+local names={"hookfunction","hookfunc","replaceclosure"}
+for i=1,#names do
+local f=rawget(_G,names[i])
+if type(f)=="function" then return f end
+end
+return nil
+end
+SYS._Hooks={}
+function SYS.SafeHook(target,wrapper,tag)
+if type(target)~="function" then return nil,"目标不是函数" end
+local rec=SYS._Hooks[target]
+if rec then return rec.orig end
+local HF=SYS.HookAPI()
+if not HF then return nil,"本机没有 hookfunction" end
+local ok,orig=pcall(HF,target,wrapper)
+if not ok or type(orig)~="function" then return nil,"hookfunction 不返回原函数(按红线不动手)" end
+SYS._Hooks[target]={orig=orig,tag=tag or "?"}
+return orig
+end
+function SYS.SafeUnhook(target)
+local rec=SYS._Hooks[target]
+if not rec then return false end
+if type(restorefunction)=="function" then
+pcall(restorefunction,target)
+else
+local HF=SYS.HookAPI()
+if HF then pcall(HF,target,rec.orig) end
+end
+SYS._Hooks[target]=nil
+return true
+end
+function SYS.UnhookAllSafe()
+local n=0
+for t in pairs(SYS._Hooks) do if SYS.SafeUnhook(t) then n=n+1 end end
+return n
+end
+function SYS.ScanAll()
+local out={}
+for _,s in ipairs(SYS.Scanners) do
+out[#out+1]=("── %s ──"):format(tostring(s.name))
+local ok,lines=pcall(s.fn)
+if ok and type(lines)=="table" then
+for i=1,#lines do out[#out+1]="  "..tostring(lines[i]) end
+else
+out[#out+1]="  (该项扫描失败)"
+end
+end
+return out
+end
 function SYS.RegisterScanner(name, fn, desc)
 for _, s in ipairs(SYS.Scanners) do
 if s.name == name then
@@ -10465,7 +10636,120 @@ end
 A("可见执行器全局 %d 个: %s",#seenG,#seenG>0 and table.concat(seenG,",") or "(无)")
 A("⚠ 边界: 这些全局是执行器注入的, 脚本层删不掉(删了脚本自己也没得用)。")
 A("  能做的只有「少暴露自己」: 中性名 + 少留特征实例 —— 上面已经逐项列出。")
+local hk={}
+if SYS._Hooks then for _,r in pairs(SYS._Hooks) do hk[#hk+1]=tostring(r.tag or "?") end end
+A("已登记 hook %d 个: %s",#hk,#hk>0 and table.concat(hk,", ") or "(无)")
+if #hk>0 then
+A("  ⚠ 这些全是【函数替换】—— 反作弊若比较函数身份, 或用 debug.info 扫「非 C 闭包」, 就能看见。")
+A("  -> 想遮: 开「🫥 hook 隐身」(只把【我方闭包】的 debug.info 报成 C 函数, 别人函数原样返回)。")
+local stb=SYS.Stealth
+if stb and stb.On then A("  当前「🫥 hook 隐身」= 已开(累计遮了 %d 次)",stb.Cnt)
+else A("  当前「🫥 hook 隐身」= 关") end
+end
 return L
+end
+SYS.Stealth={ On=false, Ours={}, Cnt=0, Note="" }
+local ST=SYS.Stealth
+function ST.Mark(f) if type(f)=="function" then ST.Ours[f]=true end return f end
+function ST.Harvest()
+local n=0
+local function markDict(t, keyed)
+if type(t)~="table" then return end
+for k,v in pairs(t) do
+if keyed then
+if type(k)=="function" then ST.Mark(k) n=n+1 end
+else
+if type(v)=="function" then ST.Mark(v) n=n+1 end
+end
+end
+end
+markDict(SYS._Hooks,true)
+if SYS.SpiderSense then markDict(SYS.SpiderSense.Found) end
+if SYS.DeadOnTime  then markDict(SYS.DeadOnTime.Found)  end
+if SYS.DRCombat then
+markDict(SYS.DRCombat.Found)
+local H=SYS.DRCombat.Hooked
+if type(H)=="table" and type(SYS.DRCombat.Found)=="table" then
+for i in pairs(H) do ST.Mark(SYS.DRCombat.Found[i]) n=n+1 end
+end
+end
+if SYS.RayHook then markDict(SYS.RayHook.FnHooked,true) end
+if SYS.Gun and type(SYS.Gun.Nums)=="table" then
+for i=1,#SYS.Gun.Nums do
+local e=SYS.Gun.Nums[i]
+if e and type(e.f)=="function" then ST.Mark(e.f) n=n+1 end
+end
+end
+return n
+end
+function ST.Install()
+if ST.On then return true end
+if type(debug)~="table" or type(debug.info)~="function" then
+ST.Note="本机没有 debug.info —— 隐身用不了"; return false,"本机没有 debug.info"
+end
+if type(checkcaller)~="function" then
+ST.Note="本机没有 checkcaller —— 装了会误伤本脚本自己, 故不开"; return false,"本机没有 checkcaller"
+end
+if type(SYS.HookAPI)~="function" or not SYS.HookAPI() then
+ST.Note="本机没有 hookfunction —— 隐身用不了"; return false,"本机没有 hookfunction"
+end
+local DI=debug.info
+local function spoof(f,opt)
+if type(checkcaller)=="function" and checkcaller() then return DI(f,opt) end
+if type(f)=="function" and ST.Ours[f] then
+ST.Cnt=ST.Cnt+1
+local o=tostring(opt or "")
+if o=="s" then return "[C]" end
+if o=="n" then return "" end
+if o=="l" then return -1 end
+if o=="a" then return 0 end
+return "[C]"
+end
+return DI(f,opt)
+end
+local orig,err=SYS.SafeHook(DI,spoof,"debug.info")
+if not orig then ST.Note=tostring(err); return false,err end
+ST.Orig=orig ST.On=true ST.Note=""
+return true
+end
+function ST.Remove()
+if not ST.On then return end
+if SYS.SafeUnhook then SYS.SafeUnhook(debug.info) end
+ST.On=false ST.Orig=nil
+end
+function ST.Clear() ST.Remove() ST.Ours={} ST.Cnt=0 end
+function ST.Report()
+local n=0 for _ in pairs(ST.Ours) do n=n+1 end
+return {
+("已开启: %s   已登记(需隐身)闭包: %d   被遮次数: %d"):format(tostring(ST.On),n,ST.Cnt),
+("备注: %s"):format(tostring(ST.Note~="" and ST.Note or "(无)")),
+"原理: 只把【我方登记闭包】的 debug.info 报成 [C]/name 空; 别人函数原样返回; 我们自己调用直通。",
+}
+end
+function SYS.SetStealth(on)
+if on then
+if SYS._Hooks then for t in pairs(SYS._Hooks) do ST.Mark(t) end end
+local got=ST.Harvest()
+local ok,err=ST.Install()
+if not ok then
+SYS.T_.Prot_Stealth=false
+SYS.Notify("❌ hook 隐身开启失败: "..tostring(err),SYS.CY.red)
+return false
+end
+if SYS.Prot and SYS.Prot.NeutralizeNames then P(function() SYS.Prot.NeutralizeNames() end) end
+P(function()
+if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
+if SYS.FloatGui then SYS.FloatGui.Archivable=false end
+end)
+SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n对 debug.info 显示成 C 函数, 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
+else
+ST.Remove()
+SYS.Notify("🫥 hook 隐身已关(debug.info 已还原)",SYS.CY.sub)
+end
+return true
+end
+if SYS.RegisterScanner then
+SYS.RegisterScanner("🫥 hook 隐身 (debug.info 伪装)", ST.Report)
 end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
@@ -10722,14 +11006,9 @@ return o,dv
 end
 function Ray.ScanFns()
 if Ray.FnScanned then return true end
-local g=RAPI("getgc") or RAPI("getGC")
-if not g then
-Ray.FnNote="本机没有 getgc —— 函数层用不了(只走路 A/C)"
-Ray.FnScanned=true return false
-end
-local ok,list=pcall(g,true)
-if not ok or type(list)~="table" then
-Ray.FnNote="getgc(true) 没返回表"
+local list,why=SYS.GCList()
+if not list then
+Ray.FnNote=tostring(why or "getgc(true) 没返回表").." —— 函数层用不了(只走路 A/C)"
 Ray.FnScanned=true return false
 end
 local kw={"raycast","spherecast","blockcast","lineofsight","cansee","isvisible",
@@ -10849,6 +11128,10 @@ name  = has("getinfo") or (DBG and (type(DBG.getinfo)=="function" or type(DBG.in
 }
 end
 local function gcList()
+if SYS and SYS.GCList then
+local t=SYS.GCList()
+if t then return t end
+end
 local f=APIfn("getgc") or APIfn("getGC")
 if not f then return nil end
 local ok,t=pcall(f,true)
@@ -12268,8 +12551,8 @@ UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处�
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
-UI.Section(p,"🔍 综合扫描 (十一层一次扫完)",CY.green)
-UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/值对象/DEX/Remote 十一层一次扫完)",CY.green,function()
+UI.Section(p,"🔍 综合扫描 (十二层一次扫完)",CY.green)
+UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/值对象/总扫描/DEX/Remote 十二层一次扫完)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
@@ -12279,7 +12562,7 @@ P(function() SYS.ProbeEvent("pickup") end)
 P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十一层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n★ I/J/K 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十二层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n  L 总扫描层 = 统一扫描器注册的探测器 + 各模块扫描状态(SP/DO/DR/Ray/Gun) + GC 快照复用统计\n★ I/J/K/L 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔒 Dead Rails 锁血 · 补血 · 防击倒",CY.green)
 UI.Switch(p,"🔒 锁血 + 补血 (血被扣就同一帧顶回满)","DeadRails_LockHp",SYS.SetDRLockHp)
@@ -12381,6 +12664,14 @@ UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
 "   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
 "📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
 UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",SYS.SetAntiFling)
+UI.Switch(p,"🫥 hook 隐身 (我方 hook 对 debug.info 显示成 C 函数)","Prot_Stealth",SYS.SetStealth)
+UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查 debug.info 的 source ——\n"..
+"  游戏自己的 Lua 闭包会报出脚本名, 被执行器 hook 过的会露馅。\n"..
+"本开关把【我方登记过的闭包】一律报成 `[C]`(假装是 C 函数)、name 报空; 别人的函数原样返回,\n"..
+"  我们自己调用时(checkcaller)直接直通, 所以【不影响本脚本自己的函数定位与扫描】。\n"..
+"★ 多层叠用: 开它会顺手把「中性名 + Archivable=false」也做一遍(多一道保险)。\n"..
+"⚠ 诚实边界: 只挡「debug.info 找非 C 闭包」这一类; 逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 /\n"..
+"  服务端侧判定 —— 一律无效。开了也可能被更强的检测看穿。默认关。",CY.sub)
 UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
 "这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
 "纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
@@ -13373,6 +13664,49 @@ SYS.Notify(("Remote 层完成: 网络通道 %d 条, 其中有收向监听 %d 条
 LAB.LastRemote={net=#net,recv=withRecv}
 return #net,withRecv,fn
 end
+do
+local function dictN(t) local n=0 if type(t)=="table" then for _ in pairs(t) do n=n+1 end end return n end
+SYS.RegisterScanner("🕷 蜘蛛感知扫描 (SpiderRig 函数层)", function()
+local M=SYS.SpiderSense
+if not M then return {"(本版本没有 SpiderSense)"} end
+return { ("已扫描: %s   已定位函数: %d"):format(tostring(M.Ready==true),dictN(M.Found)),
+("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
+end)
+SYS.RegisterScanner("⏱ 死亡倒计时扫描 (DeadOnTime 函数层)", function()
+local M=SYS.DeadOnTime
+if not M then return {"(本版本没有 DeadOnTime)"} end
+return { ("已扫描: %s   已定位函数: %d"):format(tostring(M.Ready==true),dictN(M.Found)),
+("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
+end)
+SYS.RegisterScanner("🚂 亡命铁轨战斗扫描 (瞄准脚本函数层)", function()
+local M=SYS.DRCombat
+if not M then return {"(本版本没有 DRCombat)"} end
+return { ("已扫描: %s   已定位函数: %d"):format(tostring(M.Ready==true),(M.Found and #M.Found) or 0),
+("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
+end)
+SYS.RegisterScanner("🎯 射击增强扫描 (武器逻辑函数层)", function()
+local M=SYS.Gun
+if not M then return {"(本版本没有 SYS.Gun)"} end
+return { ("已扫描: %s   数值槽: %d"):format(tostring(M.Scanned==true),(M.Nums and #M.Nums) or 0),
+("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
+end)
+SYS.RegisterScanner("🧷 射线函数层扫描", function()
+local M=SYS.RayHook
+if not M then return {"(本版本没有 SYS.RayHook)"} end
+return { ("已扫描: %s   候选: %d   已挂: %d"):format(tostring(M.FnScanned==true),
+(M.FnCands and #M.FnCands) or 0, M.FnN or 0),
+("备注: %s"):format(tostring(M.FnNote~="" and M.FnNote or "(无)")) }
+end)
+SYS.RegisterScanner("🧬 总扫描共享层 (GC 快照复用 / 结构指纹 / 已登记 hook)", function()
+local st=SYS.GCStat()
+local mn=0 for _ in pairs(SYS.FP._memo) do mn=mn+1 end
+local hn=0 for _ in pairs(SYS._Hooks) do hn=hn+1 end
+return { ("GC 共享快照: 取过 %d 次 / 复用 %d 次 / 表内 %d 个对象(缓存 %ds)")
+:format(st.take,st.hit,st.n,SYS.GC_TTL),
+("结构指纹记忆: %d 条   已登记 hook: %d 个"):format(mn,hn),
+"★ 各模块扫描(SP/DO/DR/Ray/Gun)现在共用这一份 GC 表, 不再各自 getgc。" }
+end)
+end
 function LAB.FullScan()
 local t0=os.clock()
 if type(table.clear)=="function" then table.clear(SYS.ScanBuf)
@@ -13386,7 +13720,7 @@ local _info,_nm,_pid=SYS.GameInfoLine()
 SYS.ScanOutFile=("scan_%s.txt"):format(SYS.SafeAscii(_pid,20))
 if SYS.ScanOutDir then
 local m1=("  📂 落盘目录: %s   （%s）"):format(tostring(SYS.ScanOutDir),tostring(SYS.ScanOutWhy))
-local m2=("     单文件名: %s   （全部十一层都在里面）"):format(tostring(SYS.ScanOutFile))
+local m2=("     单文件名: %s   （全部十二层都在里面）"):format(tostring(SYS.ScanOutFile))
 print(m1) print(m2) SYS.ScanBufNote(m1) SYS.ScanBufNote(m2)
 else
 local m1=("  ⚠ 落盘目录暂时定不下来: %s"):format(tostring(SYS.ScanOutWhy))
@@ -13774,6 +14108,15 @@ else
 line("(LAB GC 扫描没有留下可选的函数)")
 end
 end)
+head("L · 总扫描层(统一扫描器 + 各模块扫描状态)")
+P(function()
+local okAll,lines=pcall(SYS.ScanAll)
+if not okAll or type(lines)~="table" then
+line("  (统一扫描器执行失败: "..tostring(lines)..")")
+else
+for i=1,#lines do line(lines[i]) end
+end
+end)
 local shared,sharedN,sharedCapped=scanWholeGame()
 P(function() LAB.DexScan(shared,sharedN,sharedCapped) end)
 P(function() LAB.RemoteScan(shared,sharedN,sharedCapped) end)
@@ -13781,7 +14124,7 @@ print(""); print(("##################  扫描完毕 (%.2fs)  ##################"
 local w,why,dir=SYS.DumpScanAll(DumpBuf)
 if w and #w>0 then
 local full=tostring(dir).."\\"..tostring(w[1])
-print("  ✅ 已落盘（单个 txt，含全部十一层）: "..full)
+print("  ✅ 已落盘（单个 txt，含全部十二层）: "..full)
 SYS.Notify(("综合扫描完成 —— 全部内容已写进一个 txt：\n%s"):format(full),SYS.CY.green)
 else
 print("  ⚠ 落盘失败: "..tostring(why or "未知").."（控制台只显示前 60 条, 其余看不到）")
@@ -15524,6 +15867,8 @@ P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Cl
 P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
 P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
 P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
+P(function() if SYS.Stealth then SYS.Stealth.Clear() end end)
+P(function() if SYS.UnhookAllSafe then SYS.UnhookAllSafe() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
