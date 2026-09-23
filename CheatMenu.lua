@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 16:59 sha 24883793 bytes 592419'):format('2026-09-23 16:59','24883793',592419))
+print(('[CheatMenu] build 2026-09-23 17:16 sha 1e7e05d5 bytes 595873'):format('2026-09-23 17:16','1e7e05d5',595873))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -71,6 +71,7 @@ Prot_AntiAdmin=true,
 AntiFling=false,
 Prot_Stealth=false,
 Prot_RayNamecall=false,
+Prot_UImask=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 },
 C_={
@@ -112,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.2.1"
+SYS.BuildVer="11.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10586,23 +10587,91 @@ end
 return nil
 end
 Prot.fpBad=fpBad
+Prot.UIWords={"外挂","作弊","开挂","透视","自瞄","自动瞬瞄","瞄瞄","上帝","无敌","穿墙","锁血",
+"瞬移","传送","飞行","无后坐力","无限子弹","自动开火","脚本"}
+local function txBad(s)
+local lo=string.lower(tostring(s or ""))
+for i=1,#Prot.UIWords do if string.find(lo,Prot.UIWords[i],1,true) then return Prot.UIWords[i] end end
+return nil
+end
+Prot.txBad=txBad
 function Prot.NeutralizeNames()
 local n=0
-local function fix(o,tag)
-if o and fpBad(o.Name) then P(function() o.Name=tag n=n+1 end) end
-end
-fix(SYS.ScreenGui,"RBX_Overlay")
-fix(SYS.FloatGui,"RBX_Float")
-if SYS.ScreenGui then
+local function fixDeep(root,tag)
+if not root then return end
 P(function()
-if type(SYS.ScreenGui.GetChildren)=="function" then
-for _,c in ipairs(SYS.ScreenGui:GetChildren()) do
-if fpBad(c.Name) then c.Name="RBX_Panel" n=n+1 end
+if fpBad(root.Name) then root.Name=tag n=n+1 end
+if type(root.GetDescendants)=="function" then
+local ok,ds=pcall(function() return root:GetDescendants() end)
+if ok and ds then
+for i=1,#ds do
+local d=ds[i]
+if d and fpBad(d.Name) then P(function() d.Name=tag n=n+1 end) end
+end
 end
 end
 end)
 end
+fixDeep(SYS.ScreenGui,"RBX_Panel")
+fixDeep(SYS.FloatGui,"RBX_Float")
 return n
+end
+SYS.UIMask={ On=false, Saved=nil, Placeholder="Info" }
+local UM=SYS.UIMask
+local function umRoots()
+local r={}
+if SYS.ScreenGui then r[#r+1]=SYS.ScreenGui end
+if SYS.FloatGui then r[#r+1]=SYS.FloatGui end
+return r
+end
+function UM.Build()
+local saved={}
+for _,root in ipairs(umRoots()) do
+P(function()
+local list={root}
+local ok,ds=pcall(function() return root:GetDescendants() end)
+if ok and ds then for i=1,#ds do list[#list+1]=ds[i] end end
+for i=1,#list do
+local o=list[i]
+if o then
+local ok2,t=pcall(function() return o.Text end)
+if ok2 and type(t)=="string" and t~="" then saved[o]=t end
+end
+end
+end)
+end
+UM.Saved=saved
+return saved
+end
+function UM.Apply()
+if not UM.Saved then UM.Build() end
+local n=0
+for o in pairs(UM.Saved or {}) do
+P(function()
+if o.Parent then pcall(function() o.Text=UM.Placeholder end) n=n+1 end
+end)
+end
+return n
+end
+function UM.Restore()
+local n=0
+if UM.Saved then
+for o,t in pairs(UM.Saved) do
+P(function()
+if o.Parent then pcall(function() o.Text=t end) n=n+1 end
+end)
+end
+end
+return n
+end
+function SYS.SetUIMask(on)
+UM.On=on and true or false
+if on then
+UM.Build()
+if SYS.ScreenGui and SYS.MenuOpen==false then P(UM.Apply) end
+else
+P(UM.Restore)
+end
 end
 function Prot.SelfAudit()
 local L={}
@@ -10641,6 +10710,28 @@ else
 local show=math.min(#subs,12)
 A("GUI 树可疑名 %d 处: %s%s",#subs,table.concat(subs,", ",1,show),#subs>show and " …" or "")
 A("   -> 点「🧹 擦掉 GUI 可疑名」可一键换成中性名(子元素本来就是 t/fr/lab 这类, 不会动)")
+end
+local txt={}
+P(function()
+local ok,ds=pcall(function() return root:GetDescendants() end)
+if ok and ds then
+for i=1,#ds do
+local d=ds[i]
+local ok2,t2=pcall(function() return d.Text end)
+if ok2 and type(t2)=="string" and t2~="" then
+local hit=txBad(t2)
+if hit and #txt<40 then txt[#txt+1]=("%s<%s>"):format(tostring(t2),hit) end
+end
+end
+end
+end)
+if #txt==0 then
+A("GUI 文字可疑词: (无)")
+else
+local sh=math.min(#txt,8)
+A("⚠ GUI 文字可疑词 %d 处: %s%s",#txt,table.concat(txt," | ",1,sh),#txt>sh and " …" or "")
+A("   -> 文字不能中性化(否则你看不懂)。想降低暴露窗口: 开「🧐 UI 文字脱敏」")
+A("      (菜单【关闭】时把全部文字换成中性占位, 打开时还原)。")
 end
 end
 local eg={"getgenv","gethui","getrawmetatable","hookmetamethod","hookfunction","checkcaller",
@@ -12772,6 +12863,13 @@ UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查
 "⚠ 诚实边界: 只挡「debug.info 找非 C 闭包」这一类; 逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 /\n"..
 "  服务端侧判定 —— 一律无效。开了也可能被更强的检测看穿。默认关。",CY.sub)
 UI.Switch(p,"🧷 射线总入口 hook 路A (⛔不推荐·有风险: 掉帧+易检测)","Prot_RayNamecall",SYS.SetRayNamecall)
+UI.Switch(p,"🧐 UI 文字脱敏 (菜单关闭时把界面文字换成中性占位)","Prot_UImask",SYS.SetUIMask)
+UI.Tip(p,"反作弊找外挂常做的一件事: 遍历 PlayerGui, 读每个 TextLabel/TextButton 的 .Text。\n"..
+"我们的标签写着「自动瞄瞄 / 透视 / 上帝模式 / 无后坐力」—— 名字能中性化, **文字不能**(文字是给你看的)。\n"..
+"本开关: 菜单【关闭】时, 把界面里所有文字换成中性占位(Info); 【打开】时原样还原。\n"..
+"★ 效果: 你正常游戏(菜单关着)时, 别人/反作弊扫到的就是一堆无意义的 Info, 而不是功能名。\n"..
+"⚠ 诚实边界: 菜单【开着】时文字必须是真的, 那一瞬间扫到照样认得出来; 逐帧遍历 GUI 也拦不住。\n"..
+"  这是「降低暴露窗口」, 不是隐形。默认关。",CY.sub)
 UI.Tip(p,"背景: 静默瞄准 / 子弹穿墙 / 阻挡射线 原本靠两条腿 ——\n"..
 "  · 路 A: hookmetamethod(game,\"__namecall\") 拦 workspace:Raycast(...);\n"..
 "  · 路 B: 函数层(单点 hookfunction, 只认名字带 raycast/cast/lineofsight… 的函数)。\n"..
@@ -15784,6 +15882,9 @@ if not ok then warn("[CheatMenu] CreateMenu 失败:",tostring(err)) end
 return
 end
 SYS.MenuOpen=not (SYS.ScreenGui.Enabled==true)
+if SYS.T_.Prot_UImask and SYS.UIMask then
+if SYS.MenuOpen then P(SYS.UIMask.Restore) else P(SYS.UIMask.Apply) end
+end
 SYS.ScreenGui.Enabled=SYS.MenuOpen
 if SYS.MenuOpen then
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
@@ -15975,6 +16076,7 @@ P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unh
 P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
 P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
 P(function() if SYS.Stealth then SYS.Stealth.Clear() end end)
+P(function() if SYS.UIMask and SYS.UIMask.Restore then SYS.UIMask.Restore() end end)
 P(function() if SYS.UnhookAllSafe then SYS.UnhookAllSafe() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
