@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 14:13 sha 53339f1d bytes 588169'):format('2026-09-23 14:13','53339f1d',588169))
+print(('[CheatMenu] build 2026-09-23 16:12 sha 68364207 bytes 589649'):format('2026-09-23 16:12','68364207',589649))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -111,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.0.0"
+SYS.BuildVer="11.1.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3055,7 +3055,7 @@ SYS._GCTable=t SYS._GCAt=now SYS._GCTake=(SYS._GCTake or 0)+1
 return t
 end
 function SYS.GCStat()
-return { take=SYS._GCTake or 0, hit=SYS._GCHit or 0, n=(SYS._GCTable and #SYS._GCTable) or 0 }
+return { take=SYS._GCTake or 0, hit=SYS._GCHit or 0, fg=SYS._FGHit or 0, n=(SYS._GCTable and #SYS._GCTable) or 0 }
 end
 function SYS.GCScript(f)
 local ok,env=pcall(getfenv,f)
@@ -3101,14 +3101,32 @@ end
 function SYS.FP.Record(script,name,f)
 if not (script and name and type(f)=="function") then return nil end
 local d=SYS.FP.Describe(f)
-if d then SYS.FP._memo[script.."/"..name]=d end
+if d then d.name=name SYS.FP._memo[script.."/"..name]=d end
 return d
 end
 function SYS.FP.Lookup(script,name)
 return (script and name) and SYS.FP._memo[script.."/"..name] or nil
 end
+function SYS.FindFn(name,wantAll)
+if type(name)~="string" or name=="" then return nil end
+local fg=rawget(_G,"filtergc")
+if type(fg)=="function" then
+local ok,res=pcall(fg,"function",{Name=name},true)
+if ok and type(res)=="table" and #res>0 then
+SYS._FGHit=(SYS._FGHit or 0)+1
+if wantAll then return res,"filtergc" end
+return res[1],"filtergc"
+end
+end
+return nil
+end
 function SYS.FP.FindIn(list,spec)
-if type(list)~="table" or type(spec)~="table" then return nil end
+if type(spec)~="table" then return nil end
+if spec.name and SYS.FindFn then
+local v=SYS.FindFn(spec.name)
+if type(v)=="function" then return v,SYS.FP.Describe(v) end
+end
+if type(list)~="table" then return nil end
 for i=1,#list do
 local v=list[i]
 if type(v)=="function" then
@@ -10709,12 +10727,40 @@ return DI(f,opt)
 end
 local orig,err=SYS.SafeHook(DI,spoof,"debug.info")
 if not orig then ST.Note=tostring(err); return false,err end
-ST.Orig=orig ST.On=true ST.Note=""
+ST.Orig=orig ST.Extra={}
+pcall(function()
+if type(getrenv)~="function" then return end
+local genv=getrenv(); if type(genv)~="table" then return end
+local gdi=genv.debug and genv.debug.info
+if type(gdi)=="function" and gdi~=DI then
+if SYS.SafeHook(gdi,spoof,"getrenv.debug.info") then ST.Extra[#ST.Extra+1]=gdi end
+end
+local gfe=genv.getfenv
+if type(gfe)=="function" then
+local base=gfe
+local function fespoof(l)
+if type(checkcaller)=="function" and checkcaller() then return base(l) end
+if type(l)=="number" and l>=1 and l<=10 then
+ST.Cnt=ST.Cnt+1
+return base(10)
+end
+return base(l)
+end
+if SYS.SafeHook(base,fespoof,"getrenv.getfenv") then ST.Extra[#ST.Extra+1]=base end
+end
+end)
+ST.On=true ST.Note=""
 return true
 end
 function ST.Remove()
 if not ST.On then return end
-if SYS.SafeUnhook then SYS.SafeUnhook(debug.info) end
+if SYS.SafeUnhook then
+SYS.SafeUnhook(debug.info)
+if type(ST.Extra)=="table" then
+for i=1,#ST.Extra do SYS.SafeUnhook(ST.Extra[i]) end
+end
+end
+ST.Extra=nil
 ST.On=false ST.Orig=nil
 end
 function ST.Clear() ST.Remove() ST.Ours={} ST.Cnt=0 end
@@ -10723,6 +10769,7 @@ local n=0 for _ in pairs(ST.Ours) do n=n+1 end
 return {
 ("已开启: %s   已登记(需隐身)闭包: %d   被遮次数: %d"):format(tostring(ST.On),n,ST.Cnt),
 ("备注: %s"):format(tostring(ST.Note~="" and ST.Note or "(无)")),
+("层数: 全局 debug.info + 游戏环境 debug.info/getfenv 共 %d 个 hook 点(多层叠用)"):format(1+(ST.Extra and #ST.Extra or 0)),
 "原理: 只把【我方登记闭包】的 debug.info 报成 [C]/name 空; 别人函数原样返回; 我们自己调用直通。",
 }
 end
@@ -10741,7 +10788,7 @@ P(function()
 if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
 if SYS.FloatGui then SYS.FloatGui.Archivable=false end
 end)
-SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n对 debug.info 显示成 C 函数, 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
+SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n多层: 全局 debug.info + 游戏环境 debug.info/getfenv; 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
 else
 ST.Remove()
 SYS.Notify("🫥 hook 隐身已关(debug.info 已还原)",SYS.CY.sub)
