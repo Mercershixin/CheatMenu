@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 17:16 sha 1e7e05d5 bytes 595873'):format('2026-09-23 17:16','1e7e05d5',595873))
+print(('[CheatMenu] build 2026-09-23 18:39 sha ac5720b0 bytes 597834'):format('2026-09-23 18:39','ac5720b0',597834))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -113,7 +113,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.3.0"
+SYS.BuildVer="11.3.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -240,7 +240,7 @@ if withT then
 for k,v in pairs(SYS.T_) do
 if type(v)=="boolean" then data.T_[k]=v end
 end
-data._resumeT = true
+data._resumeT = os.time()
 end
 for k,v in pairs(SYS.C_) do
 if k~="CB_TargetName" and k~="CB_TargetMode" then
@@ -289,7 +289,8 @@ if _TOUCH then
 if SYS.T_.PerfBoost==false then SYS.T_.PerfBoost=true end
 if SYS.T_.AntiAFK==false then SYS.T_.AntiAFK=true end
 end
-if data._resumeT == true and type(data.T_) == "table" then
+local _rt = tonumber(data._resumeT) or 0
+if _rt > 0 and (os.time() - _rt) <= 60 and type(data.T_) == "table" then
 local n = 0
 for k, v in pairs(data.T_) do
 if SYS.T_[k] ~= nil and type(v) == "boolean" and not (SYS.REMOVED_FEATURES and SYS.REMOVED_FEATURES[k]) then
@@ -334,9 +335,22 @@ end
 function SYS.SetLoop(k,on,sig,fn)
 if on then
 if not sig then return end
-if not SYS.Loops[k] then SYS.Loops[k]=T(sig:Connect(fn)) end
+local rec=SYS._LoopRec and SYS._LoopRec[k]
+if rec and (rec.sig~=sig or rec.fn~=fn) then
+pcall(function() if rec.conn then rec.conn:Disconnect() end end)
+SYS.Loops[k]=nil
+if SYS._LoopRec then SYS._LoopRec[k]=nil end
+rec=nil
+end
+if not SYS.Loops[k] then
+local conn=T(sig:Connect(fn))
+SYS.Loops[k]=conn
+SYS._LoopRec=SYS._LoopRec or {}
+SYS._LoopRec[k]={sig=sig,fn=fn,conn=conn}
+end
 elseif SYS.Loops[k] then
 SYS.Loops[k]:Disconnect() SYS.Loops[k]=nil
+if SYS._LoopRec then SYS._LoopRec[k]=nil end
 end
 end
 function SYS.SpawnLoop(fn)
@@ -901,6 +915,7 @@ doorshop= {"prerunshop","requestshop","purchaseshopitem","inventoryshop","shopco
 }
 local function scanRemoteByKeywords(kws, wantCls)
 if not RStorage then return nil end
+local budget=os.clock()+0.05
 local roots={}
 local r1=RStorage:FindFirstChild("Remote")
 if r1 then roots[#roots+1]=r1 end
@@ -908,10 +923,11 @@ roots[#roots+1]=RStorage
 local found=nil
 local function dig(root,d)
 if found or d>6 then return end
+if os.clock()>budget then return end
 local ok,cs=pcall(function() return root:GetChildren() end)
 if not ok or not cs then return end
 for _,c in ipairs(cs) do
-if found then return end
+if found or os.clock()>budget then return end
 local ln=string.lower(tostring(c.Name))
 for _,k in ipairs(kws) do
 if ln:find(k,1,true) then
@@ -1385,7 +1401,7 @@ local n=select("#",...)
 if n==0 then return AR.orig(self,...) end
 local now=os.clock()
 local dt=now-(AR.lastT or now)
-local maxStep=math.max(3,(SYS.C_.WalkSpeed or 22)*3*math.min(dt,0.5))
+local maxStep=math.max(3,(SYS.Orig.WalkSpeed or 22)*3*math.min(dt,0.5))
 local a={...}
 local touched=false
 for i=1,n do
@@ -2144,7 +2160,7 @@ end
 local txt=table.concat(L,"\n")
 local nl=select(2,txt:gsub("\n",""))+1
 P(function()
-if not IP.Gui then
+if not (IP.Gui and IP.Gui.Parent) then
 local pg=(SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
 if not pg then return end
 local gui=Instance.new("ScreenGui")
@@ -2182,8 +2198,8 @@ lab.Parent=fr
 gui.Parent=pg
 IP.Gui,IP.Lab=gui,lab
 end
-if not IP.Gui then return end
-if IP.Lab and IP.Lab.Text~=txt then IP.Lab.Text=txt end
+if not (IP.Gui and IP.Gui.Parent) then return end
+if IP.Gui and IP.Gui.Parent and IP.Lab and IP.Lab.Text~=txt then IP.Lab.Text=txt end
 local fr=IP.Gui:FindFirstChild("Box")
 local want=14+nl*18
 if fr and fr.Size.Y.Offset~=want then fr.Size=UDim2.new(0,320,0,want) end
@@ -2400,7 +2416,7 @@ end
 if #c>0 then L[#L+1]="观测: "..table.concat(c,"  ") end
 local txt=table.concat(L,"\n")
 P(function()
-if not SP.Gui then
+if not (SP.Gui and SP.Gui.Parent) then
 local g=Instance.new("BillboardGui")
 g.Name=SYS.N.Spider
 g.Size=UDim2.new(0,300,0,60)
@@ -2418,7 +2434,7 @@ t.Parent=g
 SP.Gui=g SP.Lab=t
 end
 local g=SP.Gui
-if not g then return end
+if not (g and g.Parent) then return end
 if g.Adornee~=hd then g.Adornee=hd g.Parent=hd end
 local off=6
 local okb,a,b=P(function() local x,y=model:GetBoundingBox() return x,y end)
@@ -2426,7 +2442,7 @@ if okb and a and b and hd.Position then
 off=(a.Position.Y+b.Y*0.5-hd.Position.Y)+2.0
 end
 if g.StudsOffsetWorldSpace.Y~=off then g.StudsOffsetWorldSpace=Vector3.new(0,off,0) end
-if SP.Lab and SP.Lab.Text~=txt then SP.Lab.Text=txt end
+if g and g.Parent and SP.Lab and SP.Lab.Text~=txt then SP.Lab.Text=txt end
 g.Enabled=true
 end)
 end
@@ -2646,7 +2662,7 @@ if #c>0 then L[#L+1]="观测: "..table.concat(c,"  ") end
 if next(DO.Hooked)==nil then L[#L+1]="⚠ 没挂上函数(看控制台说明)" end
 local txt=table.concat(L,"\n")
 P(function()
-if not DO.Gui then
+if not (DO.Gui and DO.Gui.Parent) then
 local pg=(SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
 if not pg then return end
 local g=Instance.new("ScreenGui")
@@ -2679,7 +2695,7 @@ t.Parent=fr
 g.Parent=pg
 DO.Gui=g DO.Lab=t
 end
-if DO.Lab and DO.Lab.Text~=txt then DO.Lab.Text=txt end
+if DO.Gui and DO.Gui.Parent and DO.Lab and DO.Lab.Text~=txt then DO.Lab.Text=txt end
 DO.Gui.Enabled=true
 end)
 end
@@ -5255,6 +5271,14 @@ if not SYS.T_.AutoHitMinigame then return end
 local _, _, root = GC()
 if not root then return end
 local now = os.clock()
+SYS._hitSeenN = (SYS._hitSeenN or 0) + 1
+if SYS._hitSeenN >= 600 then
+SYS._hitSeenN = 0
+local cut = now - 60
+for k, t in pairs(SYS._hitSeen) do
+if type(t)=="number" and t < cut then SYS._hitSeen[k] = nil end
+end
+end
 if (now - (SYS._hitAt or 0)) > 0.5 or not SYS._hitList then
 SYS._hitAt = now
 SYS._hitList = SYS.AutoHitScan()
@@ -8139,9 +8163,10 @@ local T2O_N=0
 local RV_CAP=2000
 local FAIL_BASE,FAIL_CAP,FAIL_MAXN=3,300,4000
 local NET_STREAK_MAX,NET_GATE_S=3,4
-local HOOK_MAX=1500
-local HOOK_PER_SEC=40
-local RETRY_MAX=5
+local HOOK_MAX=6000
+local HOOK_PER_SEC=200
+local RETRY_WIN=1.0
+local RETRY_WIN_N=20
 local RETRY_GAP=0.1
 local SCAN_GAP=0.5
 local SCAN_IDLE=1
@@ -8481,6 +8506,8 @@ end
 local function dynNote(obj,text)
 if SYS.T_.TransDyn==false then return end
 if not obj or type(text)~="string" or text=="" or #text>DYN_LEN then return end
+if Trans.isSelf(text) or Trans.alreadyOurs(text) then return end
+if Trans.Orig2Trans and Trans.Orig2Trans[text] then return end
 local now=os.clock()
 local e=DynByObj[obj]
 if not e then DynByObj[obj]={last=text,t=now,n=0,keys={}} return end
@@ -9266,9 +9293,9 @@ end
 return false
 end
 local TextHooked=setmetatable({},{__mode="k"})
-local TextRetry=setmetatable({},{__mode="k"})
 local TextLastAt=setmetatable({},{__mode="k"})
 local TextHookedN=0
+local TextWin = setmetatable({}, {__mode="k"})
 local function onTextChanged(obj)
 if Trans.Unloaded or not Trans.UIScanActive then return end
 local okc,c0=pcall(function() return obj.Text end)
@@ -9277,9 +9304,13 @@ local now=os.clock()
 local last=TextLastAt[obj]
 if last and now-last<RETRY_GAP then return end
 TextLastAt[obj]=now
-local n=(TextRetry[obj] or 0)+1
-TextRetry[obj]=n
-if n>RETRY_MAX then return end
+local w=TextWin[obj]
+if not w or now-w.t>RETRY_WIN then
+TextWin[obj]={t=now,n=1}
+else
+w.n=w.n+1
+if w.n>RETRY_WIN_N then return end
+end
 task.defer(function()
 if Trans.Unloaded or not Trans.UIScanActive then return end
 P(Trans.processLabel,obj,"ui")
@@ -9503,10 +9534,13 @@ print("[Trans] 界面翻译已停止")
 end
 local function isChatLabel(o)
 local p=o
-for _=1,8 do
+for _=1,12 do
 if not p then break end
 local n=tostring(p.Name):lower()
-if n:find("chat") or n:find("bubble") or n:find("message") then return true end
+if n:find("chat") or n:find("bubble") or n:find("message")
+or n:find("textchat") or n:find("chatwindow") or n:find("chatscroll") then
+return true
+end
 p=p.Parent
 end
 return false
@@ -9515,6 +9549,7 @@ function Trans.scanChatOnce()
 if not Trans.ChatActive or Trans.Unloaded then return 0 end
 local n=0
 local roots={SYS.PG,SYS.CoreGui}
+pcall(function() if gethui then roots[#roots+1]=gethui() end end)
 for _,r in ipairs(roots) do
 if r then
 local ok,ds=pcall(function() return r:GetDescendants() end)
@@ -9571,7 +9606,7 @@ end
 end
 task.spawn(function()
 while Trans.ChatActive and not Trans.Unloaded do
-task.wait(1.0)
+task.wait(0.4)
 if Trans.ChatActive then pcall(Trans.scanChatOnce) end
 end
 end)
@@ -9863,6 +9898,7 @@ l.Size=UDim2.new(1,0,0,30) l.BackgroundTransparency=1
 l.Text=text or "" l.TextColor3=col or CY.sub
 l.Font=Enum.Font.GothamMedium l.TextSize=11
 l.TextXAlignment=Enum.TextXAlignment.Left l.TextWrapped=true l.Parent=parent
+l.AutomaticSize=Enum.AutomaticSize.Y
 return l
 end
 function UI.Stat(parent,label,value,valCol)
@@ -10823,7 +10859,7 @@ return DI(f,opt)
 end
 local orig,err=SYS.SafeHook(DI,spoof,"debug.info")
 if not orig then ST.Note=tostring(err); return false,err end
-ST.Orig=orig ST.Extra={}
+ST.Orig=orig ST.Extra={} ST.DI=DI
 pcall(function()
 if type(getrenv)~="function" then return end
 local genv=getrenv(); if type(genv)~="table" then return end
@@ -10880,13 +10916,17 @@ return true
 end
 function ST.Remove()
 if not ST.On then return end
-if SYS.SafeUnhook then
-SYS.SafeUnhook(debug.info)
-if type(ST.Extra)=="table" then
+local restored = false
+if SYS.SafeUnhook and ST.DI then restored = SYS.SafeUnhook(ST.DI) end
+if not restored and ST.DI and ST.Orig and type(SYS.HookAPI)=="function" then
+local HF = SYS.HookAPI()
+if HF then pcall(HF, ST.DI, ST.Orig) end
+end
+if SYS.SafeUnhook and type(ST.Extra)=="table" then
 for i=1,#ST.Extra do SYS.SafeUnhook(ST.Extra[i]) end
 end
-end
 ST.Extra=nil
+ST.DI=nil
 ST.On=false ST.Orig=nil
 end
 function ST.Clear() ST.Remove() ST.Ours={} ST.Cnt=0 end
@@ -10997,7 +11037,10 @@ if #list==0 then return nil end
 Ray.Busy=true
 local ok,r=pcall(function()
 local p=RaycastParams.new()
-p.FilterType=Enum.RaycastFilterType.Include
+local okFT, ft = pcall(function()
+return Enum.RaycastFilterType.Include or Enum.RaycastFilterType.Whitelist
+end)
+p.FilterType = (okFT and ft) or Enum.RaycastFilterType.Whitelist
 p.FilterDescendantsInstances=list
 p.IgnoreWater=true
 return WS:Raycast(origin,dir,p)
@@ -11612,12 +11655,12 @@ skipFn=skipFn+1
 end
 elseif type(v)=="table" then
 nT=nT+1
-if #G.Tables<60 then
+if #G.Tables<200 then
 local e=G.ProbeAmmoTable(v)
 if e then
 tabs=tabs+1
 G.Tables[#G.Tables+1]=e
-elseif #G.Items<40 then
+elseif #G.Items<120 then
 local it=G.ProbeItemTable(v)
 if it then
 items=items+1
@@ -11843,7 +11886,9 @@ SYS.Notify("❌ 射击增强扫描失败: "..tostring(msg),SYS.CY.red)
 return
 end
 G.Apply()
+if G.Active() then
 SYS.SetLoop("GunTick",true,RS.Heartbeat,G.Tick)
+end
 SYS.Notify("✅ 射击增强就绪: "..G.Summary(),SYS.CY.green)
 end)
 return
@@ -13171,7 +13216,7 @@ UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSou
 UI.Div(p)
 end
 do
-local LAB={Hooks={}, Log={}, MaxLog=200}
+local LAB={Hooks={}, Log={}}
 SYS.Lab=LAB
 local function has(n) return type(_G[n])=="function" end
 LAB.Caps=function()
@@ -14344,7 +14389,6 @@ out[#out+1]=("执行器: getgc=%s hook=%s restore=%s getscripts=%s")
 if LAB.LastFns then out[#out+1]=("GC 函数数: %d"):format(#LAB.LastFns) end
 if LAB.LastDex then out[#out+1]=("DEX: 全图 %d 个实例 / %d 种类名"):format(LAB.LastDex.inst,LAB.LastDex.classes) end
 if LAB.LastRemote then out[#out+1]=("Remote: 网络通道 %d 条(其中有收向监听 %d)"):format(LAB.LastRemote.net,LAB.LastRemote.recv) end
-if #LAB.Log>0 then out[#out+1]=("调用记录 %d 条, 最近: %s"):format(#LAB.Log,LAB.Log[#LAB.Log]) end
 local txt=table.concat(out,"\n")
 local ok=P(function()
 if type(setclipboard)=="function" then setclipboard(txt)
@@ -15288,6 +15332,7 @@ if ok2 and gui.Parent then return "CoreGui(兜底)" end
 return "失败"
 end
 local function CreateMenuLegacy()
+SYS.BtnRefs={}
 print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
 local sg=Instance.new("ScreenGui")
@@ -15548,6 +15593,17 @@ warn(("[CheatMenu] 页面 %s 构建失败(切走再切回会重试): %s"):format
 else
 print("[CheatMenu] 页面 "..name.." OK")
 end
+else
+warn(("[CheatMenu] 页面 %s 没有对应的 UI.Pages 实现 —— 显示占位提示"):format(tostring(name)))
+local okP=pcall(function()
+local t=Instance.new("TextLabel")
+t.Size=UDim2.new(1,0,0,60) t.BackgroundTransparency=1
+t.Text=("页面「%s」暂未实现"):format(tostring(name))
+t.TextColor3=CY.sub t.Font=Enum.Font.GothamMedium t.TextSize=14
+t.TextXAlignment=Enum.TextXAlignment.Center
+t.Parent=pg
+end)
+if not okP then built[name]=false end
 end
 end
 SYS.EnsurePage=ensurePage
@@ -15914,10 +15970,14 @@ SYS.MenuPrevMouseBehav=nil SYS.MenuPrevMouseIcon=nil
 SYS.FCPrevBehav=nil SYS.FCPrevIcon=nil
 end
 end
-local IGNORE_LIST="A_Timer|ActualPower|All|Amount|AreaName|B_Timer|BossName|BrainrotChance|BrainrotName|Brainrots|C_Timer|Cancel|Cash|Chance|ChanceLabel|Charging|ClaimButton|ClickRegion|Close|CoinLabel|Console|ConsoleModifierLabel|Count|CountLabel|CP/s|CPS|CPSLabel|CurrencyLabel|Day|DebounceFrame|Description|Discount|DiscountedPrice|DiscountLabel|DisplayName|EventTitle|Exp|Favorite|Favorites|Field|FreeSpinLabel|FriendsLabel|Gift|GiftButton|GiftingTo|GuideLabel|Header|Header1|Header2|Header3|HereText|IconLabel|Info|InfoLabel|InfoText|ItemName|KickPower|Label|LabelContent|Level|LevelLabel|Limited|LockedText|Lucky Blocks|Lvl|Message|Mobile|Mutation|MutationChance|MutationLabel|Name|NameLabel|New|Next|NoPlayers|Now|Odds|One|OP|OreName|Owned|PC|Percentage|Pity|PlayerName|Plus|Plus1|Plus2|Points|PowerLabel|Prevoius|Price|PriceLabel|Progress|ProgressBar|Rarity|RarityLabel|Reached|RebirthLevel|RefreshLabel|RewardLabel|RobuxLabel|S_Timer|SelectedLabel|SlotNum|SpinsLabel|StatusLabel|Stock|StockUpdateLabel|SubHeader|Suggest|SunHeader|TaskLabel|TextButton|TextLabel|Three|Tier|TimeLabel|TimeLeft|Timer|TimerLabel|TItle|Title|TitleDown|TitleLabel|TitleUp|TotalLuckLabel|TradeLimit|Two|Txt|Txt1|Txt2|Txt3|Type|Typed|UnlockedLabel|UnlockLabel|Value|ValueLabel|WeatherName|WeightLabel|WorldName"
+local IGNORE_LIST="A_Timer|ActualPower|All|Amount|AreaName|B_Timer|BossName|BrainrotChance|BrainrotName|Brainrots|C_Timer|Cancel|Cash|Chance|ChanceLabel|Charging|ClaimButton|ClickRegion|Close|CoinLabel|Console|ConsoleModifierLabel|Count|CountLabel|CP/s|CPS|CPSLabel|CurrencyLabel|Day|DebounceFrame|Description|Discount|DiscountedPrice|DiscountLabel|DisplayName|EventTitle|Exp|Favorite|Favorites|Field|FreeSpinLabel|FriendsLabel|Gift|GiftButton|GiftingTo|GuideLabel|Header|Header1|Header2|Header3|HereText|IconLabel|ItemName|KickPower|LabelContent|Level|LevelLabel|Limited|LockedText|Lucky Blocks|Lvl|Mobile|Mutation|MutationChance|MutationLabel|New|Next|NoPlayers|Now|Odds|One|OP|OreName|Owned|PC|Percentage|Pity|PlayerName|Plus|Plus1|Plus2|Points|PowerLabel|Prevoius|Price|PriceLabel|Progress|ProgressBar|Rarity|RarityLabel|Reached|RebirthLevel|RefreshLabel|RewardLabel|RobuxLabel|S_Timer|SelectedLabel|SlotNum|SpinsLabel|StatusLabel|Stock|StockUpdateLabel|SubHeader|Suggest|SunHeader|TaskLabel|Three|Tier|TimeLabel|TimeLeft|Timer|TimerLabel|TotalLuckLabel|TradeLimit|Two|Txt|Txt1|Txt2|Txt3|Type|Typed|UnlockedLabel|UnlockLabel|Value|ValueLabel|WeatherName|WeightLabel|WorldName"
 Trans.IgnoreObjects={}
 for w in IGNORE_LIST:gmatch("[^|]+") do Trans.IgnoreObjects[w]=true end
-print("[Trans] 忽略控件表已装载: "..tostring(#IGNORE_LIST).." 字符")
+do
+local n = 0
+for _ in pairs(Trans.IgnoreObjects) do n = n + 1 end
+print("[Trans] 忽略控件表已装载: "..tostring(n).." 项")
+end
 do
 local fps,fT=0,os.clock()
 T(RS.Heartbeat:Connect(function()
