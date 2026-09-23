@@ -1,3 +1,87 @@
+## 11.4.0 · 2026-09-23
+
+**A–L 反检测增强大单（阻断反作弊通信 / 属性欺骗 / 隐身补强 / 只读监听 / 诊断 / 移动反检测 / 框架识别 / 会话指纹）**
+
+> 用户给的 A~L 共 13 步落地单（自带红线：只单点 `hookfunction`、禁 `__namecall/__index` 关键词搜索、
+> 禁整脚本仿真、不新增 `getrawmetatable/setreadonly`），要求逐段实现后推送。
+
+### A · 阻断反作弊通信（最高优先级）
+- 🛡 **`ACBlock`（新开关 · 默认开）**：把 `SYS.EventWatch.keywords` 落地成「候选通道名」表，拦下**发往这些通道的上行**。
+- ★★ **重要实现事实**：Roblox 里**所有 RemoteEvent 的 `FireServer` 是同一个 C 函数**（实例方法取自共享类表）
+  ⇒ 单子里「逐个 remote 各 hook 一次」**根本做不到**（`SafeHook` 会去重成一次、且只捕获第一个实例）。
+  实现改为**只 hook 共享的 `FireServer` 一次**，调用时按 `self.Name` 判断；RF 同理走 `InvokeServer`。
+- ★ **收窄**：候选名命中关键词 **且** `RemoteRisk` 判定像反作弊/审计/后台 **才拦** —— 否则
+  `purchase/claim/pickup/gacha` 这类正常通道会被一起拦掉（商店/领奖/拾取失效）。
+- 🔀 **`SYS.Fire` 统一闸 + 开火抖动**：`ACBlock` 开的且名字被判风险 ⇒ 不发、返回 false、计数；
+  所有上行加 `0 ~ SYS.C_.FireJitter(0.03s)` 随机延迟（UI 滑块 0–0.1）。
+
+### B · 属性欺骗 / 移动上报
+- 🔀 **`AntiRevert` 扩为移动上报批量登记器**：`RemoteAlias.move` 9 条里**剔掉下行 `ServerReplicateCFrame`** 后建名字表
+  （末段名 + 全串名都登记）；wrapper 按参数类型分流 —— `CFrame`/`Vector3` 走原 maxStep 限速、
+  **模长≈1 的 Vector3 判为朝向、放行**、`number` 且属移动通道且名字像速度/跳跃 ⇒ 夹到
+  `Orig.WalkSpeed × C_.SpeedMult`。新增开关 **`AntiRevertExtra`（默认开）**。
+- ★ **顺手修掉一个真 bug**：老代码对**任何** `Vector3` 都写 `lastPos` —— `PitchYaw` 这类传的是**单位向量**，
+  会把限速基准污染成 1 格 ⇒ 之后所有位置限速全算错。现在模长≈1 放行**且不更新 lastPos**。
+- 🧬 **`AttrGuard`（新开关 · 默认关）**：快照自己 Player 的 `Health/MaxHealth/State/Shield/TempShield`，
+  每 0.2s 比对；Attribute 说死但本地活着 ⇒ 写回，**写回带 0.05~0.2s 随机延迟**。
+- 🎥 **`CamGuard`（新开关 · 默认关）**：飞行/加速/战斗类开着时每 0.1s 量相机到角色距离，超过阈值拉回（阈值可调）。
+- 🦘 **跳跃伪装**：`SYS.SetJumpBoost` 默认**只写 JumpHeight**（不再无条件写 `JumpPower` + `UseJumpPower=true`）；
+  新增 `C_.JumpSpoofMode = Height/Power/Both`（默认 Height），切到 `Both` 时提示「JumpPower 服务端可读，慎用」。
+- 💡 加速模式选到 `WalkSpeed` 时提示「服务端可读，推荐 Linear」（**只提示，不加限制**）。
+
+### C · Stealth 补强
+- `debug.getupvalue` / `debug.setupvalue` 对**我方登记闭包**返回 nil；
+- `getloadedmodules` / `getscripts` 过滤掉名字命中 `Prot.FPWords` 的脚本；
+- `getreg` 可选过滤（新开关 **`StealthReg` · 默认关**，风险提示已写进 UI）；
+- `ST.Harvest` 显式纳入 `ACBlock` 的登记；`Prot.FPWords` 补 **15 个词**；`ST.Report` 补**覆盖率**一行。
+
+### D · 只读监听补全（纯观察）
+- 战斗/移动侧 `srvRec` 记录器补 **13 条通道**（HitConfirmed/ReloadFinished/ShieldChanged/Teleported…）；
+- 命中关键词且被判风险的 remote **只接 `OnClientEvent`（绝不 FireServer）**，收到就 print + 滚动存 200 条；
+- `ServerReplicateCFrame.OnClientEvent` 只读观察 + **`PosRebound`（默认关）** 位置下行回压（仅飞行/加速时生效）；
+- **`CB_BlockDeathSignal`（默认关）**：丢掉关于自己的「死亡」客户端信号 —— **只做客户端自洽，拦不住服务端判死**。
+
+### E · 诊断补全
+- `Prot.SelfAudit` 增列：ACBlock/AntiRevert/AttrGuard/CamGuard/FireJitter 运行计数 + H 段一致性检查 + J.4 物理完整性 + K 段框架识别 + G 段遗留键；
+- `SYS.AC` 新增 **D11 上行速率指纹**（10s 计数/间隔标准差，<5ms 报警）、**D12 上报通道暴露面**、
+  **D13 Attribute 一致性**、**D14 Stealth 覆盖率**。
+
+### F / G · 管理员侧只读监听 + 遗留键
+- `LP.OnTeleport`、`Kick/Ban/BanAsync/KickPlayer/…` 类通道**只接下行**，收到就 print+Notify+存表；
+  `PlayerRemoving` 也记一条（自己被移除而脚本还在 ⇒ 可能被踢）。
+- 旧版遗留键（`CheatLoaded` 等）**只报告 + 建议手动清理，绝不删**。
+
+### H · 其它绕过方法
+- H.1 时间函数一致性（快照 `os.clock/os.time/tick/time` 的**函数身份**，被换过就报）；H.2 写回延迟；
+- H.3 **`SYS.Fire` 参数类型签名缓存**（32 个 remote LRU；同签名 ≥3 次后类型突变 ⇒ 拒绝发送 + Notify）；
+- H.4 元表完整性（用 `getmetatable`，**不新增 `getrawmetatable`**）；H.5 网络所有权提示；H.6 **`FireSignalSpoof`（默认关）**；
+- H.7 FPS / `gcinfo` 只报告；H.8 心跳频率指纹（并入 D11）。
+
+### J · 移动类专项反检测
+- J.1 TP 分步：`dist > 50 格` 一律**至少分 2 帧**（单步不超 `TPMaxStep`，间隔 20ms）；`≤50 格` 仍一帧到位。
+  ★ 已核实 `TPToMouse/TPToPlayer/TPToNearest` **全部**经由 `SYS.TPTo`。
+- J.2 速度曲线平滑（`SYS.SmoothSpd`，`C_.MoveSmooth = 0.25s` 线性插值）；J.3 **`FlyAirMimic`（默认关）**；
+  J.4 物理完整性只报告；J.5 飞行对齐改 **Lerp 平滑**（不再硬设）。
+
+### K · 反作弊框架识别
+- `SYS.Diag.ACFramework()` → `{name=byfron|custom|none|unknown, strength=1~3}`（CoreGui/PlayerGui 关键词 + 执行器全局 + RStorage 特征）；
+  SelfAudit 显示结果 + 对应建议；**识别后不自动改行为**。
+
+### L · 会话与指纹
+- L.1 名字池**跨热更新复用**（首次加载随机、之后沿用，`GENV` 会话内缓存）；
+- L.2 `AntiAFK` 心跳 + `AutoSell` 周期加 **±15% 抖动**（不再精确每 5 秒）；
+- L.3 新增 `SYS.Stagger(frames)`（1–3 帧错峰助手，已用于新监听接线）；
+- L.4 防回退改写后的位置/速度值加随机微抖动（**只动被改写过的值**，正常上报不受影响）。
+
+### ⚠ 如实记下的偏差与边界
+- **A.1 / B.1 的「逐个通道 hook」照字面做不到**（共享 C 函数）⇒ 按正确机制实现，见上。
+- **H.3 可能误拦**：只在同一 remote 已见过 ≥3 次同类型签名后才启用拒绝，降低误伤；被拦会 Notify 并计数。
+- **L.3 只做了新接线部分**：把已有 GUI/Highlight 的创建全部错峰属于大范围重构，未动（避免动到已稳定的 UI 路径）。
+- A 段收窄、L.4 只动被改写值、`H.4 不新增 getrawmetatable`（单子 §15 明确不做，故改用 `getmetatable`）。
+- 开关接线均按四点：`T_`/`C_` 默认值 · 模块本体 · `UI` 注册 · 卸载清单（`UnloadAll` 已补 4 项清理）。
+
+---
+
 ## 11.3.2 · 2026-09-23
 
 **源码瘦身：把注释搬进 git（发行产物只差一个内嵌版本号）**
