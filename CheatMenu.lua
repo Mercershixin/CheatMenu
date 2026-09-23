@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 16:12 sha 68364207 bytes 589649'):format('2026-09-23 16:12','68364207',589649))
+print(('[CheatMenu] build 2026-09-23 16:47 sha 8dc57555 bytes 590832'):format('2026-09-23 16:47','8dc57555',590832))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -111,7 +111,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.1.0"
+SYS.BuildVer="11.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10682,6 +10682,10 @@ end
 end
 end
 markDict(SYS._Hooks,true)
+if SYS.AntiRevert and SYS.AntiRevert.ev then
+local f=SYS.AntiRevert.ev.FireServer
+if type(f)=="function" then ST.Mark(f) n=n+1 end
+end
 if SYS.SpiderSense then markDict(SYS.SpiderSense.Found) end
 if SYS.DeadOnTime  then markDict(SYS.DeadOnTime.Found)  end
 if SYS.DRCombat then
@@ -10748,6 +10752,36 @@ return base(l)
 end
 if SYS.SafeHook(base,fespoof,"getrenv.getfenv") then ST.Extra[#ST.Extra+1]=base end
 end
+local gi=genv.getidentity or rawget(_G,"getidentity")
+if type(gi)=="function" then
+local base=gi
+local function idspoof(...)
+if type(checkcaller)=="function" and checkcaller() then return base(...) end
+ST.Cnt=ST.Cnt+1
+return 2
+end
+if SYS.SafeHook(base,idspoof,"getidentity") then ST.Extra[#ST.Extra+1]=base end
+end
+local gti=genv.getthreadidentity or rawget(_G,"getthreadidentity")
+if type(gti)=="function" and gti~=gi then
+local base=gti
+local function tisp(...)
+if type(checkcaller)=="function" and checkcaller() then return base(...) end
+ST.Cnt=ST.Cnt+1
+return 2
+end
+if SYS.SafeHook(base,tisp,"getthreadidentity") then ST.Extra[#ST.Extra+1]=base end
+end
+local gt=genv.debug and genv.debug.traceback
+if type(gt)=="function" then
+local base=gt
+local function tbs(...)
+if type(checkcaller)=="function" and checkcaller() then return base(...) end
+ST.Cnt=ST.Cnt+1
+return ""
+end
+if SYS.SafeHook(base,tbs,"debug.traceback") then ST.Extra[#ST.Extra+1]=base end
+end
 end)
 ST.On=true ST.Note=""
 return true
@@ -10769,7 +10803,7 @@ local n=0 for _ in pairs(ST.Ours) do n=n+1 end
 return {
 ("已开启: %s   已登记(需隐身)闭包: %d   被遮次数: %d"):format(tostring(ST.On),n,ST.Cnt),
 ("备注: %s"):format(tostring(ST.Note~="" and ST.Note or "(无)")),
-("层数: 全局 debug.info + 游戏环境 debug.info/getfenv 共 %d 个 hook 点(多层叠用)"):format(1+(ST.Extra and #ST.Extra or 0)),
+("层数: 全局/游戏环境 debug.info + getfenv 层级隐藏 + 身份伪装 + 回溯擦除  共 %d 个 hook 点(多层叠用)"):format(1+(ST.Extra and #ST.Extra or 0)),
 "原理: 只把【我方登记闭包】的 debug.info 报成 [C]/name 空; 别人函数原样返回; 我们自己调用直通。",
 }
 end
@@ -10788,7 +10822,7 @@ P(function()
 if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
 if SYS.FloatGui then SYS.FloatGui.Archivable=false end
 end)
-SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n多层: 全局 debug.info + 游戏环境 debug.info/getfenv; 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
+SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n多层: debug.info(全局+游戏环境) + getfenv 层级隐藏 + getidentity 身份伪装 + debug.traceback 擦除; 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
 else
 ST.Remove()
 SYS.Notify("🫥 hook 隐身已关(debug.info 已还原)",SYS.CY.sub)
