@@ -1,3 +1,35 @@
+## 11.1.0 · 2026-09-23
+
+**绕过能力二轮补强 —— 隐身扩到 3 层 + `filtergc` 快速定位**
+（用户要求：「补强，然后搜索不只在 git 其他网站也搜索 看看 3 个月范围内的」）
+
+### 隐身补强（`Prot_Stealth` 内部升级 · 开关数不变 · 默认仍关）
+- 🫥 **hook 隐身由 1 层 → 3 层**：
+  ① 全局 `debug.info`（原有）· ② 游戏环境 `getrenv().debug.info` · ③ 游戏环境 `getrenv().getfenv`（栈层隐藏）。
+  · 理由：只遮全局那份**不够** —— 反作弊若直接持 `getrenv().debug.info` / `getrenv().getfenv` 的引用就绕过了。
+  · 一手源实测：`bbparrybypass.lua` = `hookfunction(getrenv().debug.info, …→"[C]")` + `getfenv` 把 1~10 层映射到第 10 层；
+    `lifesetenceacbypass.lua` = `filtergc("function",{Name=…},true)` 直取函数。
+  · 三层全走 `SYS.SafeHook` 登记 → 卸载时 `SYS.SafeUnhook` 逐一还原（不残留）。
+  · ⚠ 诚实边界不变：逐帧遍历 GUI / 对非玩家对象调 Kick / 服务端判定 —— 一律无效。
+
+### 定位补强（无开关 · 内部提速）
+- 新增 **`SYS.FindFn(name[,all])`**：本机有 `filtergc` 就**按名字直取函数**（免全表遍历），没有则返回 nil、调用方回退 GC 扫描（不引入硬依赖）。
+- **指纹回退接入 `filtergc`**：`SYS.FP.Record` 记下名字 → `SYS.FP.FindIn` 先试 `filtergc` 再走指纹遍历。
+  ⇒ 蜘蛛感知 / 死亡倒计时 / 亡命铁轨 三处「名字路失效回退」自动获得更快的兜底。
+- `SYS.GCStat` 增计 `filtergc` 命中次数（`_FGHit`）。
+
+### 调研（3 个月窗口 · 非 GitHub 也搜）
+覆盖 rscripts / scriptblox / CSDN / GitHub gist / open-vsx 等站点；一手源实测结论见
+`事件库/2026-09-23_绕过能力二轮补强_多站取证.md`。
+- ⛔ 仍不碰：`hookmetamethod(game,"__namecall/__index")` 关键词搜索；**给游戏内部表灌元表**
+  （`knifeduelsanticheatbypass.lua` 那种"盲给 upvalue 表 setmetatable"= 违反本仓红线，**不采纳**）。
+
+### 待点名的候选（新增功能 · 未擅自加）
+- **B5** `raknet.add_send_hook` 包级远程拦截（`raknetremoteblocker.lua` 实证：拦 PacketId 0x83、`packet:Block()`；需 Real 有 `raknet`）
+- **B6** `setfflag` 开关（`pfnorecoil.lua` / `PrisonlifeFullScript.lua` 实证）
+- **「🎯 AC 函数定向阉割」**：`filtergc` 找到游戏 ban/kick 函数后 hook 成 no-op（需先确认目标函数名）
+- **「🧹 威胁日志清理」**：清游戏侧 Speed/Fly/TP 检测记录（需先只读探针定位日志表）
+
 ## 11.0.0 · 2026-09-23
 
 **绕过能力补强 + 总扫描合并 + 新增「🫥 hook 隐身」**
