@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 16:47 sha 8dc57555 bytes 590832'):format('2026-09-23 16:47','8dc57555',590832))
+print(('[CheatMenu] build 2026-09-23 16:59 sha 24883793 bytes 592419'):format('2026-09-23 16:59','24883793',592419))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -70,6 +70,7 @@ TransDyn=true,
 Prot_AntiAdmin=true,
 AntiFling=false,
 Prot_Stealth=false,
+Prot_RayNamecall=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 },
 C_={
@@ -111,7 +112,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.2.0"
+SYS.BuildVer="11.2.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10940,9 +10941,11 @@ end
 return origin,dir
 end
 function Ray.Install()
+if Ray.Hooked then return true end
+Ray.Namecall=false
+if SYS.T_.Prot_RayNamecall==true then
 local c=Prot.Caps()
 if not c.hmm or not c.gnm then return false,"这台执行器没有 hookmetamethod/getnamecallmethod" end
-if Ray.Hooked then return true end
 local ok,err=pcall(function()
 local h
 h=hookmetamethod(game,"__namecall",newcclosure(function(self,...)
@@ -11017,11 +11020,14 @@ end))
 Ray.Unhook=h
 end)
 if not ok then return false,tostring(err) end
+Ray.Namecall=true
+end
 Ray.Hooked=true
 task.spawn(function()
 local n=Ray.HookFns()
-SYS.Notify(("🧷 射线函数层: 挂上 %d 个(候选 %d)%s")
-:format(n,#Ray.FnCands,(Ray.FnNote~="" and (" · "..Ray.FnNote)) or ""),SYS.CY.cyan)
+SYS.Notify(("🧷 射线函数层: 挂上 %d 个(候选 %d)%s%s")
+:format(n,#Ray.FnCands,(Ray.FnNote~="" and (" · "..Ray.FnNote)) or "",
+Ray.Namecall and " · ⚠ 路A(总入口hook)已开" or " · 路A已关(只走函数层)"),SYS.CY.cyan)
 end)
 return true
 end
@@ -11035,6 +11041,13 @@ end
 Ray.Unhook=nil Ray.Hooked=false
 Ray.Busy=false
 HC.part=nil HC.pos=nil HC.nrm=nil HC.t=0
+end
+function SYS.SetRayNamecall(on)
+if SYS.RayHook then
+local want=SYS.T_.CB_SilentAim or SYS.T_.CB_BulletWall or SYS.T_.CB_BlockRay
+P(SYS.RayHook.Remove)
+if want then P(SYS.RayHook.Install) end
+end
 end
 local function RAPI(n)
 local ok,v=pcall(function() return _G[n] end)
@@ -11146,8 +11159,12 @@ local orig
 local ok
 ok,orig=pcall(HF,e.f,newcclosure(function(...)
 local res=orig(...)
-if not (SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true) then return res end
 if Ray.Busy then return res end
+if SYS.T_.CB_BlockRay==true then
+local hit=(typeof(res)=="Instance") or (type(res)=="table" and rawget(res,"Instance")~=nil)
+if hit then Ray.FnRewrites=Ray.FnRewrites+1 return nil end
+end
+if not (SYS.T_.CB_SilentAim==true or SYS.T_.CB_BulletWall==true) then return res end
 if typeof(res)=="Instance" and Ray.IsCharPart(res) then return res end
 local o,dv=Ray.DigRay(...)
 if not o or not dv then return res end
@@ -12750,9 +12767,18 @@ UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查
 "  游戏自己的 Lua 闭包会报出脚本名, 被执行器 hook 过的会露馅。\n"..
 "本开关把【我方登记过的闭包】一律报成 `[C]`(假装是 C 函数)、name 报空; 别人的函数原样返回,\n"..
 "  我们自己调用时(checkcaller)直接直通, 所以【不影响本脚本自己的函数定位与扫描】。\n"..
-"★ 多层叠用: 开它会顺手把「中性名 + Archivable=false」也做一遍(多一道保险)。\n"..
+"★ 多层叠用(5 层): 全局/游戏环境 debug.info + getfenv 层级隐藏 + getidentity 身份伪装 + debug.traceback 擦除;\n"..
+"  另叠「中性名 + Archivable=false」两道(多一道保险)。\n"..
 "⚠ 诚实边界: 只挡「debug.info 找非 C 闭包」这一类; 逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 /\n"..
 "  服务端侧判定 —— 一律无效。开了也可能被更强的检测看穿。默认关。",CY.sub)
+UI.Switch(p,"🧷 射线总入口 hook 路A (⛔不推荐·有风险: 掉帧+易检测)","Prot_RayNamecall",SYS.SetRayNamecall)
+UI.Tip(p,"背景: 静默瞄准 / 子弹穿墙 / 阻挡射线 原本靠两条腿 ——\n"..
+"  · 路 A: hookmetamethod(game,\"__namecall\") 拦 workspace:Raycast(...);\n"..
+"  · 路 B: 函数层(单点 hookfunction, 只认名字带 raycast/cast/lineofsight… 的函数)。\n"..
+"⛔ 路 A 是【所有实例方法调用的总入口】—— 可检测 + 掉帧源; 本仓 v6.9.10 曾因同样原因把它从「管理员检测绕过」删过。\n"..
+"★ 现在【默认只走路 B】(本开关默认关 ⇒ 破绽已修)。\n"..
+"⚠ 仅当你在某个游戏里发现「静默瞄准 / 穿墙完全不生效」(该游戏射线不走可命名函数)时, 才开它走路 A。\n"..
+"  开了可能掉帧、交互变慢, 也更易被检测 —— 用完记得关。",CY.sub)
 UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
 "这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
 "纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
