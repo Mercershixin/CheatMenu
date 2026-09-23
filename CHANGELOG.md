@@ -1,3 +1,45 @@
+## 10.11.0 · 2026-09-23
+
+**绕过能力补强 + 总扫描合并 + 新增「🫥 hook 隐身」**
+（用户要求：「扫描的放进总扫描一起扫描 / 隐身也加入新功能 / 补强增强你推荐的 / 最好多条绕过一起用」）
+
+### 新增功能（1 个开关）
+- 🫥 **hook 隐身**（`Prot_Stealth`，防护页，默认**关**）—— 只把【我方登记闭包】的 `debug.info`
+  报成 C 函数（`[C]` / name 空 / line −1 / argc 0），骗过「扫非 C 闭包找 hook」这一类检测。
+  · 别人函数**原样返回**；我们自己调用（`checkcaller` 为真）**直通** ⇒ 不干扰本脚本的定位与扫描。
+  · ★ **多层叠用**：开启时顺手把「中性名 + `Archivable=false`」也做一遍（多一道保险）。
+  · ⚠ 诚实边界：逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 / 服务端侧判定 —— 一律无效。
+  · 实现见 `[08G] SYS.Stealth`；红线不变（**单点** `hookfunction(debug.info)`，**不是** `__namecall/__index`）。
+  · 本机没有 `checkcaller` 时**拒绝开启**（否则会误伤本脚本自己的函数定位）。
+
+### 总扫描合并（用户要求：散落的独立扫描都并进总扫描）
+- 新增 **`SYS.GCList(force)` 共享 GC 快照**（TTL 20 秒）：以前 SP / DO / DR / Ray / Gun 各自
+  `pcall(getgc,true)` 扫一遍 —— 同一份 GC 表被反复取。现在**一次取、全模块复用**（`SYS.GCStat` 可看统计）。
+- 新增 **`SYS.ScanAll()`**，并在「🔍 综合扫描」里加 **L · 总扫描层**。
+  ★ 修**死代码**：`SYS.RegisterScanner` 从 v6.9.0 起就一直在注册，但**从来没有地方执行它们**
+  （`SYS.ScanAll` 之前只存在于注释里）。现在注册的探测器会被跑起来并报出结果。综合扫描 十一层 → **十二层**。
+- 把 **SP / DO / DR / Ray / Gun 五个模块的扫描状态**注册进统一扫描器（以前界面上哪都看不到）。
+
+### 绕过能力补强（学自公开源码 `Lutosys/opensrc` 等，只抄思路、实现全自写）
+- **B1 结构指纹**（`SYS.FP`）：按 `upvalue 数 + 定义行号 + 归属脚本` 记录 / 回放函数指纹 ——
+  游戏把函数名抹掉 / 混淆时，仍能把同一个函数找回来。SP / DO / DR 已接入「自动学习 + 回退」。
+- **B4 统一安全 hook**（`SYS.SafeHook` / `SYS.SafeUnhook` / `SYS.UnhookAllSafe`）：别名链
+  （`hookfunction`→`hookfunc`→`replaceclosure`）+ 探针（不返回原函数就拒绝）+ 登记 + 还原
+  （优先 `restorefunction`）。
+- **B7 反检测自检升级**：「🔎 反指纹自检」增加一栏 —— 列出已登记 hook，并说明它们是否会被
+  `debug.info` 看穿、想遮就开「🫥 hook 隐身」。
+
+### 卸载对称
+- `SYS.Stealth.Clear()` 与 `SYS.UnhookAllSafe()` 已进 `SYS.UnloadAll`
+  （否则「卸载了还留着 hook 空转」——与本项目既有 6 个替换点同一条坑）。
+
+### 验证
+- `luau-compile` 通过；开关接线审计 ③ 残留模块 = 0（新增 `Prot_Stealth` 有界面入口）。
+- ⚠ 待用户挑的仍挂着：B2 `filtergc` 快路径 / B3 已做 / B5 `raknet` 包级拦截 / B6 FFlag + 重连保活
+  （B5 需先只读测 Real 有没有 `raknet`）。
+
+---
+
 ## 10.10.0 · 2026-09-23
 
 **删除「🚦 移动限速护栏」**（用户要求「删除移动限速护栏」）—— 防护页整区移除，键 `Prot_SpeedCap` 进黑名单。
