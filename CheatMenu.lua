@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 19:31 sha 6977df64 bytes 597834'):format('2026-09-23 19:31','6977df64',597834))
+print(('[CheatMenu] build 2026-09-23 23:41 sha 179fe70c bytes 632431'):format('2026-09-23 23:41','179fe70c',632431))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -73,6 +73,14 @@ Prot_Stealth=false,
 Prot_RayNamecall=false,
 Prot_UImask=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
+ACBlock=true,
+AntiRevertExtra=true,
+AttrGuard=false,
+CamGuard=false,
+PosRebound=false,
+CB_BlockDeathSignal=false,
+StealthReg=false,
+FireSignalSpoof=false,
 },
 C_={
 FlySpeed=6,FlyMode="BodyVelocity",
@@ -108,12 +116,17 @@ UIScaleManual=0,
 MenuPosX=0.5,MenuPosY=0.5,MenuPosSaved=false,
 PC_Sel="",PC_Range=8,PC_SpinSpeed=3,
 PC_Mode="off",
+FireJitter=0.03,
+CamGuardDist=30,
+MoveSmooth=0.25,
+JumpSpoofMode="Height",
+FireTypeSigN=3,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.3.2"
+SYS.BuildVer="11.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -150,6 +163,16 @@ return nil
 end
 SYS.GV=_gv
 GENV.__SYS=SYS
+do
+local K="RblxSessionN"
+local prev=GENV[K]
+if type(prev)=="table" and type(prev.Gui)=="string" then
+for k,v in pairs(prev) do SYS.N[k]=v end
+else
+local cp={} for k,v in pairs(SYS.N) do cp[k]=v end
+GENV[K]=cp
+end
+end
 local Players,RS,UIS,WS,CAS,LT,Stats,TweenService,VIM,VirtualUser,RStorage,CS,HS
 do
 local function G(n) local ok,s=pcall(function() return game:GetService(n) end) return ok and s or nil end
@@ -352,6 +375,20 @@ elseif SYS.Loops[k] then
 SYS.Loops[k]:Disconnect() SYS.Loops[k]=nil
 if SYS._LoopRec then SYS._LoopRec[k]=nil end
 end
+end
+SYS._FireSig=SYS._FireSig or {}
+SYS._FireOrder=SYS._FireOrder or {}
+function SYS.SmoothSpd(base)
+local now=os.clock()
+local dt=now-(SYS._smT or now)
+SYS._smT=now
+local cur=SYS._smCur
+if type(cur)~="number" or dt>0.4 then SYS._smCur=base return base end
+local tau=math.max(0.05,tonumber(SYS.C_.MoveSmooth) or 0.25)
+local k=math.min(1,dt/tau)
+local nx=cur+(base-cur)*k
+SYS._smCur=nx
+return nx
 end
 function SYS.SpawnLoop(fn)
 local co=task.spawn(function()
@@ -673,7 +710,48 @@ function SYS.REventU(n) return findRemote(n,"UnreliableRemoteEvent") end
 function SYS.RFunction(n) return findRemote(n,"RemoteFunction") end
 function SYS.Fire(n,...)
 local r=SYS.REvent(n) if not r then return false end
+if SYS.T_.ACBlock and type(SYS.RemoteRisk)=="function" and SYS.RemoteRisk(r.Name) then
+SYS._ACBlockedN=(SYS._ACBlockedN or 0)+1
+SYS._ACBlockedLast=r.Name
+return false
+end
 local a=table.pack(...)
+local sig=""
+do
+local parts={}
+for i=1,math.min(a.n,6) do
+parts[#parts+1]=((typeof and typeof(a[i])) or type(a[i]))
+end
+sig=a.n..":"..table.concat(parts,"|")
+end
+local SIG=SYS._FireSig
+if SIG then
+local rec=SIG[r.Name]
+if rec==nil then
+if #SYS._FireOrder>=32 then
+local old=table.remove(SYS._FireOrder,1)
+SIG[old]=nil
+end
+SIG[r.Name]={ sig=sig, n=1 }
+SYS._FireOrder[#SYS._FireOrder+1]=r.Name
+elseif rec.sig==sig then
+rec.n=rec.n+1
+else
+if rec.n>=(tonumber(SYS.C_.FireTypeSigN) or 3) then
+SYS._FireRejected=(SYS._FireRejected or 0)+1
+P(SYS.Notify,("⛔ 已拦一次「参数类型和以往不一样」的上行: %s\n   以往 %s / 这次 %s"):format(r.Name,rec.sig,sig),SYS.CY.red)
+return false
+end
+rec.sig=sig rec.n=1
+end
+end
+local jitter=math.random()*(SYS.C_.FireJitter or 0.03)
+if jitter>0.001 then
+return P(function()
+pcall(function() task.wait(jitter) end)
+r:FireServer(table.unpack(a,1,a.n))
+end)
+end
 return P(function() r:FireServer(table.unpack(a,1,a.n)) end)
 end
 function SYS.OnRemote(n,cb)
@@ -1051,9 +1129,10 @@ function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
 local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
+if SYS.T_.FlyAirMimic and SYS.FlyAirMimicTick then P(SYS.FlyAirMimicTick,dt) end
 local mode=tostring(SYS.C_.FlyMode or "Align")
 local d=GetInputDir(cam.CFrame)
-local spd=SYS.Orig.WalkSpeed*SYS.C_.FlySpeed
+local spd=SYS.SmoothSpd(SYS.Orig.WalkSpeed*SYS.C_.FlySpeed)
 if mode=="CFrame" then
 FlyHoldStates(true)
 if not FlyEnsure(root) then
@@ -1079,7 +1158,10 @@ return
 end
 local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
 if f.Magnitude>0.1 and SYS._FlyAlign then
-SYS._FlyAlign.CFrame=CFrame.lookAt(root.Position,root.Position+f.Unit)
+local want=CFrame.lookAt(root.Position,root.Position+f.Unit)
+local tau=math.max(0.05,tonumber(SYS.C_.MoveSmooth) or 0.25)
+local k=math.min(1,(tonumber(dt) or 0.016)/tau)
+SYS._FlyAlign.CFrame=SYS._FlyAlign.CFrame:Lerp(want,k)
 end
 if SYS._FlyVel then
 SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
@@ -1100,7 +1182,7 @@ end
 function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
-local spd=guardSpeed(SYS.Orig.WalkSpeed*(SYS.C_.SpeedMult or 1))
+local spd=guardSpeed(SYS.SmoothSpd(SYS.Orig.WalkSpeed*(SYS.C_.SpeedMult or 1)))
 if SYS.C_.SpeedMode=="WalkSpeed" then
 if math.abs(hum.WalkSpeed-spd)>spd*0.01 then hum.WalkSpeed=spd end
 lastSM=SYS.C_.SpeedMult
@@ -1375,8 +1457,27 @@ print("[CheatMenu] 反陷阱免伤: 已开启(无视触发 + 免疫 位移/弹�
 end
 end
 do
-local AR = { on=false, ev=nil, orig=nil, lastPos=nil, lastT=0, fixed=0 }
+local AR = { on=false, ev=nil, orig=nil, lastPos=nil, lastT=0, fixed=0, capped=0, names={} }
 SYS.AntiRevert = AR
+local DOWNLINK={ ServerReplicateCFrame=true }
+local SPEEDY={"speed","velocity","walk","jump","power","force","accel","thrust","boost"}
+local function speedLike(nm)
+local low=tostring(nm or ""):lower()
+for i=1,#SPEEDY do if low:find(SPEEDY[i],1,true) then return true end end
+return false
+end
+local function buildNames()
+AR.names={}
+local list=(SYS.RemoteAlias and SYS.RemoteAlias.move) or {}
+for i=1,#list do
+local full=tostring(list[i])
+local short=full:match("([^%.]+)$") or full
+if not DOWNLINK[short] and not DOWNLINK[full] then
+AR.names[short]=true
+AR.names[full]=true
+end
+end
+end
 local function findRepl()
 local r=RStorage
 if not r then return nil end
@@ -1386,13 +1487,19 @@ if SYS.FindEvent then
 local ok2,e2=P(function() return SYS.FindEvent("move") end)
 if ok2 and e2 and e2.FireServer then return e2 end
 end
+local list=(SYS.RemoteAlias and SYS.RemoteAlias.move) or {}
+for i=1,#list do
+local ok3,e3=P(function() return SYS.REvent(tostring(list[i])) end)
+if ok3 and e3 and e3.FireServer then return e3 end
+end
 return nil
 end
 function AR.On()
 if AR.on then return true end
 if type(hookfunction)~="function" then return false,"这台执行器没有 hookfunction" end
+buildNames()
 local ev=findRepl()
-if not ev then return false,"没找到位置上报的 remote(ClientReplicateCFrame)" end
+if not ev then return false,"没找到可做位置上报限速的 remote" end
 local ok=pcall(function()
 AR.ev=ev
 AR.orig=hookfunction(ev.FireServer,newcclosure(function(self,...)
@@ -1401,9 +1508,12 @@ local n=select("#",...)
 if n==0 then return AR.orig(self,...) end
 local now=os.clock()
 local dt=now-(AR.lastT or now)
+local nm=(self and self.Name) or ""
+local isMove=AR.names[nm]==true
+local cap=math.max(1,(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2))
+local extra=(SYS.T_.AntiRevertExtra~=false)
 local maxStep=math.max(3,(SYS.Orig.WalkSpeed or 22)*3*math.min(dt,0.5))
 local a={...}
-local touched=false
 for i=1,n do
 local v=a[i]
 local tp=(typeof and typeof(v)) or type(v)
@@ -1414,24 +1524,32 @@ local d=p-AR.lastPos
 local m=d.Magnitude
 if m>maxStep and m>0 then
 local np=AR.lastPos+d.Unit*maxStep
+np=np+Vector3.new((math.random()-0.5),(math.random()-0.5),(math.random()-0.5))
 a[i]=CFrame.new(np, np+v.LookVector)
 AR.fixed=AR.fixed+1
-touched=true
 p=np
 end
 end
 AR.lastPos=p
 elseif tp=="Vector3" then
+local um=v.Magnitude
+if um>0.95 and um<1.05 then
+else
 if AR.lastPos then
 local d=v-AR.lastPos
-local m=d.Magnitude
-if m>maxStep and m>0 then
+local dm=d.Magnitude
+if dm>maxStep and dm>0 then
 a[i]=AR.lastPos+d.Unit*maxStep
 AR.fixed=AR.fixed+1
-touched=true
 end
 end
 AR.lastPos=a[i]
+end
+elseif tp=="number" then
+if extra and isMove and speedLike(nm) and v>cap then
+a[i]=cap*(0.98+math.random()*0.04)
+AR.capped=(AR.capped or 0)+1
+end
 end
 end
 AR.lastT=now
@@ -1440,7 +1558,7 @@ end))
 end)
 if not ok then return false,"hook 失败" end
 AR.on=true AR.lastPos=nil AR.lastT=os.clock()
-print("[CheatMenu] 防回退已随飞行/加速开启(位置上报限速)")
+print("[CheatMenu] 防回退已随飞行/加速开启(位置上报限速 + 移动通道 数值/朝向 分流)")
 return true
 end
 function AR.Off()
@@ -1536,10 +1654,17 @@ JumpOrig=h.JumpPower or 50
 JHOrig=(h.JumpHeight and h.JumpHeight>0) and h.JumpHeight or nil
 end
 local mult=tonumber(SYS.C_.JumpMult) or 2
+local mode=tostring(SYS.C_.JumpSpoofMode or "Height")
 P(function()
+if mode=="Power" or mode=="Both" then
 h.UseJumpPower=true
 h.JumpPower=JumpOrig*mult
-if JHOrig then h.JumpHeight=JHOrig*mult end
+elseif h.UseJumpPower==true then
+h.UseJumpPower=false
+end
+if mode=="Height" or mode=="Both" then
+h.JumpHeight=(JHOrig or h.JumpHeight or 7.2)*mult
+end
 end)
 end
 local function restore(h)
@@ -3196,6 +3321,122 @@ local n=0
 for t in pairs(SYS._Hooks) do if SYS.SafeUnhook(t) then n=n+1 end end
 return n
 end
+do
+local ACB={ on=false, names={}, hooked=false, n=0, rfWarned=false, tFS=nil, tIS=nil, origFS=nil, origIS=nil }
+SYS.ACBlock=ACB
+SYS._ACBlockedN=SYS._ACBlockedN or 0
+SYS._ACBlockedLast=SYS._ACBlockedLast or ""
+local function kwHit(name)
+local kws=SYS.EventWatch and SYS.EventWatch.keywords
+if type(name)~="string" or type(kws)~="table" then return false end
+local low=name:lower()
+for i=1,#kws do
+local k=tostring(kws[i]):lower()
+if k~="" and low:find(k,1,true) then return true end
+end
+return false
+end
+local function cclosure(f)
+if type(newcclosure)=="function" then
+local ok,c=pcall(newcclosure,f)
+if ok and type(c)=="function" then return c end
+end
+return f
+end
+local function shouldBlock(inst)
+if not ACB.on then return false end
+local nm=(inst and inst.Name) or ""
+if type(nm)~="string" or ACB.names[nm]~=true then return false end
+if type(SYS.RemoteRisk)=="function" and not SYS.RemoteRisk(nm) then return false end
+return true
+end
+local function bump(inst)
+ACB.n=ACB.n+1
+SYS._ACBlockedN=(SYS._ACBlockedN or 0)+1
+SYS._ACBlockedLast=tostring(inst and inst.Name or "?")
+end
+function SYS.SetAntiCheatBlock(on)
+if on then
+if ACB.on then return true end
+if ACB.hooked then ACB.on=true return true end
+local rs=SYS.RStorage
+if not rs then return false,"没有 ReplicatedStorage" end
+if type(SYS.SafeHook)~="function" then return false,"没有 SafeHook" end
+local desc={}
+local ok,d=pcall(function() return rs:GetDescendants() end)
+if ok and type(d)=="table" then desc=d end
+ACB.names={}
+local seedRE,seedRF,cnt=nil,nil,0
+for i=1,#desc do
+local o=desc[i]
+local cls=o.ClassName
+if cls=="RemoteEvent" or cls=="UnreliableRemoteEvent" or cls=="RemoteFunction" then
+if kwHit(o.Name) then ACB.names[o.Name]=true cnt=cnt+1 end
+if not seedRE and (cls=="RemoteEvent" or cls=="UnreliableRemoteEvent") then seedRE=o end
+if not seedRF and cls=="RemoteFunction" then seedRF=o end
+end
+end
+local probe=nil
+if not seedRE then
+local okN,inst=pcall(function() return Instance.new("RemoteEvent") end)
+if okN and inst then probe=inst seedRE=inst end
+end
+if not seedRE then return false,"没有 RemoteEvent 可供取 FireServer" end
+local fsFn=seedRE.FireServer
+if type(fsFn)~="function" then
+if probe then pcall(function() probe:Destroy() end) end
+return false,"取不到 RemoteEvent.FireServer"
+end
+if SYS._Hooks and SYS._Hooks[fsFn] then
+if probe then pcall(function() probe:Destroy() end) end
+return false,"FireServer 已被别的模块 hook, 先关那个再开这个"
+end
+local got,err=SYS.SafeHook(fsFn,cclosure(function(self,...)
+if shouldBlock(self) then bump(self) return nil end
+return ACB.origFS(self,...)
+end),"ACBlock:FireServer")
+if not got then
+if probe then pcall(function() probe:Destroy() end) end
+return false,tostring(err)
+end
+ACB.tFS=fsFn ACB.origFS=got
+if seedRF then
+local isFn=seedRF.InvokeServer
+if type(isFn)=="function" then
+local got2=SYS.SafeHook(isFn,cclosure(function(self,...)
+if shouldBlock(self) then
+bump(self)
+if not ACB.rfWarned then
+ACB.rfWarned=true
+if SYS.Notify then
+SYS.Notify("⚠ 已拦下一条 RemoteFunction 上行 —— 游戏若依赖它的返回值可能报错",SYS.CY and SYS.CY.yellow)
+end
+end
+return nil
+end
+return ACB.origIS(self,...)
+end),"ACBlock:InvokeServer")
+if got2 then ACB.tIS=isFn ACB.origIS=got2 end
+end
+end
+if probe then pcall(function() probe:Destroy() end) end
+ACB.on=true ACB.hooked=true
+if SYS.Notify then
+SYS.Notify(("🛡 反作弊通道拦截已开 —— 候选通道名 %d 个, 命中即丢弃上行"):format(cnt),SYS.CY and SYS.CY.green)
+end
+return true
+end
+if not ACB.on and not ACB.hooked then return true end
+ACB.on=false
+if type(SYS.SafeUnhook)=="function" then
+if ACB.tFS then SYS.SafeUnhook(ACB.tFS) end
+if ACB.tIS then SYS.SafeUnhook(ACB.tIS) end
+end
+ACB.hooked=false ACB.tFS=nil ACB.tIS=nil ACB.origFS=nil ACB.origIS=nil
+if SYS.Notify then SYS.Notify("🛡 反作弊通道拦截已关(上行已还原)",SYS.CY and SYS.CY.sub) end
+return true
+end
+end
 function SYS.ScanAll()
 local out={}
 for _,s in ipairs(SYS.Scanners) do
@@ -3801,7 +4042,8 @@ end)
 SYS.SetLoop("AntiAFKBeat",true,RS.Heartbeat,function()
 if SYS.T_.AntiAFK~=true then return end
 local now=os.clock()
-if now-(SYS._afkAt or 0)<5 then return end
+local gap=5*(0.85+math.random()*0.3)
+if now-(SYS._afkAt or 0)<gap then return end
 SYS._afkAt=now
 P(function()
 if LP.SetAttribute then LP:SetAttribute("Heartbeat",math.floor(now*1000)) end
@@ -6090,7 +6332,7 @@ return picks,threshold,all
 end
 TT(task.spawn(function()
 while not SYS.Unloaded do
-task.wait(5)
+task.wait(5*(0.85+math.random()*0.3))
 if SYS.T_.AutoSell and not SYS.Unloaded then pcall(SYS.sellLowCPSTools) end
 end
 end))
@@ -6619,7 +6861,7 @@ local STEP=math.max(20,tonumber(SYS.C_.TPMaxStep) or 300)
 local from=root.Position
 local d=pos-from
 local dist=d.Magnitude
-if dist<=STEP or dist<=0 then
+if dist<=50 then
 root.CFrame=CFrame.new(pos)
 task.delay(0.05,function() if root.Parent then root.CFrame=CFrame.new(pos) end end)
 else
@@ -6749,6 +6991,19 @@ local CH={
 "EntityService.HealUnreliable",
 "EntityService.KnockbackUnreliable",
 "Any.TouchDamage",
+"CombatService.HitConfirmed",
+"CombatService.HitRejected",
+"CombatService.WeaponSwitched",
+"CombatService.ReloadStarted",
+"CombatService.ReloadFinished",
+"EntityService.DeathUnreliable",
+"EntityService.KilledUnreliable",
+"EntityService.ShieldChanged",
+"EntityService.HealthChangedUnreliable",
+"Any.SpeedChanged",
+"Any.JumpChanged",
+"EntityService.Teleported",
+"EntityService.SetState",
 }
 CB.SrvCh={}
 local n=0
@@ -6833,10 +7088,12 @@ if #valid>1 then valid={} end
 for i=1,#valid do
 local nm=valid[i]
 if mode=="die" then
+if not (SYS.T_.CB_BlockDeathSignal and SYS.LP and nm==SYS.LP.Name) then
 CB.DeadAt[nm]=os.clock()
 local _dp=Players and Players:FindFirstChild(nm)
 CB.DeadCh[nm]=_dp and _dp.Character or nil
 if CB.Target and CB.Target.Name==nm then CB.Target=nil CB.TargetPart=nil end
+end
 else
 CB.DeadAt[nm]=nil CB.DeadCh[nm]=nil
 end
@@ -10613,7 +10870,9 @@ end)
 Prot.Hooks.hide=nil
 end
 Prot.FPWords={"cheat","hack","exploit","aimbot","macro","autofarm","inject",
-"cheatmenu","synapse","krnl","script-ware","fluxus"}
+"cheatmenu","synapse","krnl","script-ware","fluxus",
+"hyperion","byfron","electron","sirhurt","solvent","oxygen","scriptware",
+"flyhack","speedhack","noclip","godmode","espwall","esp","wallhack"}
 local function fpBad(name)
 local lo=string.lower(tostring(name or ""))
 for i=1,#Prot.FPWords do
@@ -10792,12 +11051,74 @@ local stb=SYS.Stealth
 if stb and stb.On then A("  当前「🫥 hook 隐身」= 已开(累计遮了 %d 次)",stb.Cnt)
 else A("  当前「🫥 hook 隐身」= 关") end
 end
+A("")
+A("----------- E. 运行计数 -----------")
+local acb=SYS.ACBlock
+A("反作弊通道拦截: %s   拦下 %d 次   最近 %s",(acb and acb.on) and "开" or "关",
+tonumber(SYS._ACBlockedN) or 0,tostring(SYS._ACBlockedLast or "(无)"))
+local ar=SYS.AntiRevert
+A("防回退: %s   位置改写 %d 次   数值夹值 %d 次   最近移动通道 %s",(ar and ar.on) and "开" or "关",
+(ar and ar.fixed) or 0,(ar and ar.capped) or 0,tostring((ar and ar.ev and ar.ev.Name) or "(无)"))
+local ag=SYS.AttrGuard
+A("Attribute 回写: %s   回写 %d 次",(ag and ag.on) and "开" or "关",(ag and ag.fixed) or 0)
+local cg=SYS.CamGuard
+A("相机护栏: %s   回压 %d 次   阈值 %s 格",(cg and cg.on) and "开" or "关",(cg and cg.pulls) or 0,
+tostring(tonumber(SYS.C_.CamGuardDist) or 30))
+A("开火抖动: %s (0 ~ %.3f 秒)",((tonumber(SYS.C_.FireJitter) or 0)>0.001) and "生效中" or "关",
+tonumber(SYS.C_.FireJitter) or 0)
+A("")
+A("----------- H. 一致性 / 只读检查 -----------")
+if SYS.TimeCheck then for _,l in ipairs(SYS.TimeCheck()) do A("%s",l) end end
+if SYS.MetaCheck then for _,l in ipairs(SYS.MetaCheck()) do A("%s",l) end end
+if SYS.NetOwnerInfo then for _,l in ipairs(SYS.NetOwnerInfo()) do A("%s",l) end end
+A("%s",SYS.FpsGcInfo and SYS.FpsGcInfo() or "FPS: (取样未启动)")
+if SYS.FireRateStat then for _,l in ipairs(SYS.FireRateStat()) do A("%s",l) end end
+A("")
+A("----------- J.4 角色物理完整性(只报告, 本脚本不动这些) -----------")
+local ch=LP.Character
+local hm=ch and ch:FindFirstChildOfClass("Humanoid")
+local rt=ch and ch:FindFirstChild("HumanoidRootPart")
+if hm then
+A("Humanoid.BreakJointsOnDeath=%s (默认 true)",tostring(hm.BreakJointsOnDeath))
+A("Humanoid.PlatformStand=%s   JumpPower/UseJumpPower=%s/%s",
+tostring(hm.PlatformStand),tostring(hm.JumpPower),tostring(hm.UseJumpPower))
+end
+if rt then A("HumanoidRootPart.CanCollide=%s (默认 true)",tostring(rt.CanCollide)) end
+A("★ 飞行/加速期间本脚本不改 BreakJointsOnDeath/CanCollide; 上面若与默认不符, 是别的脚本或游戏改的。")
+A("")
+A("----------- K. 反作弊框架识别 -----------")
+if SYS.Diag and SYS.Diag.ACFramework then
+local f=SYS.Diag.ACFramework()
+A("识别结果: %s   强度 %d/3",tostring(f.name),tonumber(f.strength) or 0)
+for i=1,#f.hits do A("  命中: %s",f.hits[i]) end
+if f.name=="byfron" then A("建议: ⚠ 高强度反作弊, 倍率 <= 2, 不做高频操作")
+elseif f.name=="custom" then A("建议: ⚠ 自定义反作弊, 谨慎调倍率")
+elseif f.name=="none" then A("建议: ✅ 无明显反作弊, 正常使用即可")
+else A("建议: 未知 —— 按自定义反作弊对待") end
+end
+A("")
+A("----------- G. 旧版遗留键(只报告, 不删) -----------")
+local LG={ {"旧加载键","CheatLoaded"}, {"旧卸载键","CheatUnload"},
+{"旧启动键","CheatBootDone"}, {"旧更新提示","CheatUpdateNote"} }
+local anyLeg=false
+for i=1,#LG do
+local k=LG[i][2]
+if GENV[k]~=nil then
+anyLeg=true
+A("⚠ %s GENV.%s 还在 —— 建议用户手动清理(本脚本不删)",LG[i][1],k)
+end
+end
+if not anyLeg then A("✅ 没有旧版遗留键") end
 return L
 end
 SYS.Stealth={ On=false, Ours={}, Cnt=0, Note="" }
 local ST=SYS.Stealth
 function ST.Mark(f) if type(f)=="function" then ST.Ours[f]=true end return f end
 function ST.Harvest()
+if SYS.ACBlock then
+if type(SYS.ACBlock.tFS)=="function" then ST.Mark(SYS.ACBlock.tFS) end
+if type(SYS.ACBlock.tIS)=="function" then ST.Mark(SYS.ACBlock.tIS) end
+end
 local n=0
 local function markDict(t, keyed)
 if type(t)~="table" then return end
@@ -10910,6 +11231,71 @@ return ""
 end
 if SYS.SafeHook(base,tbs,"debug.traceback") then ST.Extra[#ST.Extra+1]=base end
 end
+local FPB=SYS.Prot and SYS.Prot.fpBad
+local function upSpoof(fn)
+return function(f,i)
+if type(checkcaller)=="function" and checkcaller() then return fn(f,i) end
+if type(f)=="function" and ST.Ours[f] then ST.Cnt=ST.Cnt+1 return nil end
+return fn(f,i)
+end
+end
+local d1=debug and debug.getupvalue
+if type(d1)=="function" then
+if SYS.SafeHook(d1,upSpoof(d1),"debug.getupvalue") then ST.Extra[#ST.Extra+1]=d1 end
+end
+local d2=debug and debug.setupvalue
+if type(d2)=="function" then
+if SYS.SafeHook(d2,upSpoof(d2),"debug.setupvalue") then ST.Extra[#ST.Extra+1]=d2 end
+end
+local function modSpoof(fn)
+return function(...)
+if type(checkcaller)=="function" and checkcaller() then return fn(...) end
+local ok,r=pcall(fn,...)
+if not ok or type(r)~="table" then return r end
+local out={}
+for i=1,#r do
+local s=r[i]
+local nm=nil
+pcall(function() nm=tostring(s.Name or "") end)
+if nm==nil or nm=="" or not (FPB and FPB(nm)) then out[#out+1]=s end
+end
+ST.Cnt=ST.Cnt+1
+return out
+end
+end
+local m1=rawget(_G,"getloadedmodules")
+if type(m1)=="function" then
+if SYS.SafeHook(m1,modSpoof(m1),"getloadedmodules") then ST.Extra[#ST.Extra+1]=m1 end
+end
+local m2=rawget(_G,"getscripts")
+if type(m2)=="function" then
+if SYS.SafeHook(m2,modSpoof(m2),"getscripts") then ST.Extra[#ST.Extra+1]=m2 end
+end
+if SYS.T_.StealthReg then
+local gr=rawget(_G,"getreg") or genv.getreg
+if type(gr)=="function" then
+local function regSpoof(...)
+if type(checkcaller)=="function" and checkcaller() then return gr(...) end
+local ok,r=pcall(gr,...)
+if not ok or type(r)~="table" then return r end
+local out={}
+for k,v in pairs(r) do
+if type(v)=="table" then
+local cp={}
+for kk,vv in pairs(v) do
+if not (type(kk)=="function" and ST.Ours[kk]) then cp[kk]=vv end
+end
+out[k]=cp
+else
+out[k]=v
+end
+end
+ST.Cnt=ST.Cnt+1
+return out
+end
+if SYS.SafeHook(gr,regSpoof,"getreg") then ST.Extra[#ST.Extra+1]=gr end
+end
+end
 end)
 ST.On=true ST.Note=""
 return true
@@ -10932,10 +11318,13 @@ end
 function ST.Clear() ST.Remove() ST.Ours={} ST.Cnt=0 end
 function ST.Report()
 local n=0 for _ in pairs(ST.Ours) do n=n+1 end
+local hk=0
+if SYS._Hooks then for _ in pairs(SYS._Hooks) do hk=hk+1 end end
 return {
 ("已开启: %s   已登记(需隐身)闭包: %d   被遮次数: %d"):format(tostring(ST.On),n,ST.Cnt),
 ("备注: %s"):format(tostring(ST.Note~="" and ST.Note or "(无)")),
 ("层数: 全局/游戏环境 debug.info + getfenv 层级隐藏 + 身份伪装 + 回溯擦除  共 %d 个 hook 点(多层叠用)"):format(1+(ST.Extra and #ST.Extra or 0)),
+("覆盖率: 覆盖闭包 %d / 已登记 hook 总数 %d, 缺口 %d"):format(n,hk,math.max(0,hk-n)),
 "原理: 只把【我方登记闭包】的 debug.info 报成 [C]/name 空; 别人函数原样返回; 我们自己调用直通。",
 }
 end
@@ -12213,6 +12602,50 @@ end
 if viaNew then return true,"状态键已是中性名("..SYS.GK.loaded..")" end
 return true,"会话未注册外部状态键"
 end
+local function d11()
+if not SYS.FireRateStat then return true,"(未接)" end
+local l=SYS.FireRateStat()
+return true,table.concat(l,"  |  ")
+end
+local function d12()
+local hk={}
+if SYS._Hooks then for _,r in pairs(SYS._Hooks) do hk[#hk+1]=tostring(r.tag or "?") end end
+local can=0
+local acb=SYS.ACBlock
+if acb and acb.names then for _ in pairs(acb.names) do can=can+1 end end
+return true,("被 hook 的上行目标 %d 个: %s   |   反作弊关键词候选通道 %d 个"):format(
+#hk,#hk>0 and table.concat(hk,", ") or "(无)",can)
+end
+local function d13()
+local pl=SYS.LP
+local ch=pl and pl.Character
+local hm=ch and ch:FindFirstChildOfClass("Humanoid")
+local A2={"Health","MaxHealth","State","Shield","TempShield"}
+local bad={}
+for i=1,#A2 do
+local k=A2[i]
+local av=nil pcall(function() av=pl:GetAttribute(k) end)
+if av~=nil then
+if k=="Health" and hm and type(av)=="number" and math.abs(av-hm.Health)>1 then
+bad[#bad+1]=("Health 本地=%.0f Attribute=%.0f"):format(hm.Health,av)
+elseif k=="State" and tostring(av)=="Dead" and hm and hm.Health>0 then
+bad[#bad+1]="State=Dead 但本地活着"
+end
+end
+end
+if #bad==0 then return true,"本地 Humanoid 与 Player Attribute 一致(或本游戏不用这些 Attribute)" end
+return false,"不一致 "..#bad.." 处: "..table.concat(bad," / ")
+end
+local function d14()
+local st=SYS.Stealth
+if not st then return true,"(未接)" end
+local n=0 for _ in pairs(st.Ours) do n=n+1 end
+local hk=0
+if SYS._Hooks then for _ in pairs(SYS._Hooks) do hk=hk+1 end end
+if not st.On then return false,("hook 隐身【没开】—— 已登记闭包 %d 个全裸奔(hook 总数 %d)"):format(n,hk) end
+if n<hk then return false,("隐身已开但只覆盖 %d/%d, 缺口 %d"):format(n,hk,hk-n) end
+return true,("隐身已开, 覆盖 %d/%d"):format(n,hk)
+end
 AC.List={
 {"D1","实例足迹扫描",d1},
 {"D2","菜单可见性",d2},
@@ -12224,6 +12657,10 @@ AC.List={
 {"D8","相机行为",d8},
 {"D9","hook 自检",d9},
 {"D10","外部状态键",d10},
+{"D11","上行速率指纹",d11},
+{"D12","上报通道暴露面",d12},
+{"D13","Attribute 一致性",d13},
+{"D14","Stealth 覆盖率",d14},
 }
 function SYS.ApplyNeutralNames()
 local ok=true
@@ -12466,6 +12903,12 @@ UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
 UI.Tip(p,"★ 默认「Align」= 官方推荐的 LinearVelocity + AlignOrientation, 也最不容易被服务器拉回。\n「BodyVelocity」= 老执行器(已弃用), 兼容用。\n「CFrame」= 逐帧瞬移, **会被服务端位置校验拉回**, 不推荐。\n另外: 新版本开飞行时不再把世界重力清零(那正是被拉回的经典原因), 只对角色自身抵消重力。",CY.yellow)
+UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
+UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
+UI.Tip(p,"游戏用 ServerReplicateCFrame 这类下行通道把「你该在哪」推回来时, 本开关延迟一帧把角色位置重新盖回去。\n"
+.."★ 只在飞行/加速开着时生效; 关掉立即断开监听。\n"
+.."⚠ 这是「和游戏抢位置」: 可能被更强的服务端校验发现, 也可能让画面轻微抖动。默认关。",CY.yellow)
+UI.Tip(p,"防回退原本只做一件事: 把位置类上报(CFrame/Vector3)按「每帧最多走多远」限速, 让服务端看到的是连续位移而不是瞬移。\n本开关再补两条:\n· 8 条移动通道(EntityService.WalkSpeed/Jump/SetState/SetInAir/PitchYaw · Any.AirJump/JumpPad · ClientReplicateCFrame)里, 名字像速度/跳跃的【数值】参数一律夹到「WalkSpeed × 移动速度倍率」以内;\n· 【单位向量(模长≈1)】判定为朝向(如 PitchYaw)直接放行, 不再被当位置去限速。\n★ 只限速/夹值, 不改常量、不删参数; 关掉即完全还原 hook。默认开。",CY.sub)
 UI.Div(p)
 UI.Section(p,"⚡ 移动加速",CY.accent)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
@@ -12476,7 +12919,18 @@ end)
 UI.Slider(p,"移动速度倍率",0,20,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode end,
-function(v) SYS.C_.SpeedMode=v if SYS.T_.Speed then SYS.CleanSpeed() end end)
+function(v)
+SYS.C_.SpeedMode=v
+if v=="WalkSpeed" then SYS.Notify("⚠ WalkSpeed 模式服务端可读, 推荐 Linear",CY.yellow) end
+if SYS.T_.Speed then SYS.CleanSpeed() end
+end)
+UI.Cycle(p,"跳跃伪装模式",{"Height","Power","Both"},
+function() return SYS.C_.JumpSpoofMode or "Height" end,
+function(v)
+SYS.C_.JumpSpoofMode=v
+if v=="Both" then SYS.Notify("⚠ JumpPower 服务端可读, 慎用(已切到 Both)",CY.yellow) end
+if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,true) end
+end)
 UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
@@ -12726,6 +13180,11 @@ SYS.Notify("🩺 自检已打到控制台(F9)",SYS.CY.cyan)
 end)
 end)
 UI.Div(p)
+UI.Switch(p,"🎥 相机护栏 (相机离角色太远就拉回)","CamGuard",SYS.SetCamGuard)
+UI.Slider(p,"相机护栏距离 (格)",10,200,5,function() return SYS.C_.CamGuardDist or 30 end,function(v) SYS.C_.CamGuardDist=v end,"%.0f")
+UI.Tip(p,"飞行/加速/战斗类功能开着时, 相机如果离角色本体太远, 在别人(和服务端)眼里就是「人在这里、视角在天上」的怪样子。\n"
+.."本开关每 0.1 秒量一次相机到角色的距离, 超过阈值就沿视线方向把相机拉回。\n"
+.."★ 自由视角开着、菜单开着时不生效(那是你自己要看的)。默认关。",CY.sub)
 UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
 local TR_MODES={"关闭","只看自己","自己+其他玩家"}
 UI.Cycle(p,"子弹射线 (每个人自己的准心线)",TR_MODES,
@@ -12897,6 +13356,28 @@ UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
 "   真实踢/封/传送都由服务端发出, 客户端拦不到; 而且 **hook 本身就是可被检测的特征**\n"..
 "   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
 "📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
+UI.Switch(p,"🛡 反作弊通道拦截 (名字像反作弊/审计的上行一律丢弃)","ACBlock",SYS.SetAntiCheatBlock)
+UI.Switch(p,"🧬 Attribute 回写 (本地活着但 Attribute 被判死时写回)","AttrGuard",SYS.SetAttrGuard)
+UI.Tip(p,"有些游戏把「死没死」放在 Player 的 Attribute(Health/MaxHealth/State/Shield)里, 而不是 Humanoid。\n"
+.."本开关每 0.2 秒比一次: Attribute 说 State=Dead 或 Health<=0, 但本地 Humanoid 还活着 -> 就写回。\n"
+.."★ 写回带 0.05~0.2 秒随机延迟(避免同帧触发 AttributeChanged 这种一眼假的特征)。\n"
+.."⚠ 诚实边界: 只改【客户端看到的】Attribute; 服务端判死拦不住。默认关。",CY.sub)
+UI.Switch(p,"🧪 getreg 过滤 (隐身时把登记闭包从注册表里摘掉)","StealthReg",function(on)
+SYS.T_.StealthReg=on and true or false
+if SYS.Stealth and SYS.Stealth.On then P(SYS.Stealth.Remove) P(SYS.SetStealth,true) end
+end)
+UI.Tip(p,"⚠ 风险较高: 打开后 hook 隐身会多挂一个 getreg 过滤点, 每次调用都要重建注册表副本(较慢)。\n"
+.."只在确认对手会用 getreg 扫注册表时才开。默认关。",CY.yellow)
+UI.Switch(p,"📡 firesignal 伪装 (禁止对自己 GUI 触发信号)","FireSignalSpoof",SYS.SetFireSignalSpoof)
+UI.Tip(p,"firesignal 是对【自己客户端】的事件手工触发, 有些反作弊会拿它当特征(尤其对 PlayerGui 里的按钮)。\n"
+.."本开关把 firesignal 挂上: 只拦「目标是本脚本自己的 GUI」的调用, 其余原样直通。默认关。",CY.sub)
+UI.Slider(p,"开火抖动 (秒 · 打散机器节奏)",0,0.1,0.005,function() return SYS.C_.FireJitter or 0.03 end,function(v) SYS.C_.FireJitter=v end,"%.3f")
+UI.Tip(p,"原理: 反作弊/审计通道被触发 = 自报家门。本开关把 EventWatch 关键词表落地成「候选通道名」,\n"..
+"  再拦下【发往这些通道的上行】(RemoteEvent.FireServer / RemoteFunction.InvokeServer)。\n"..
+"★ 实现: Roblox 里所有 remote 的 FireServer 是同一个 C 函数 ⇒ 只能 hook 一次(单点), 调用时按 self.Name 判断。\n"..
+"★ 已收窄: 必须【名字命中关键词】且【RemoteRisk 判定像反作弊/审计/后台】才拦 —— 否则商店/领奖/拾取会被一起拦掉。\n"..
+"★ 开火抖动: 所有走 SYS.Fire 的上行加 0~FireJitter 秒随机延迟, 让上报不会「每次都同一时刻」。\n"..
+"⚠ 诚实边界: 只拦【客户端→服务端】上行; 服务端对你的判定、下行推送一律拦不到。默认开。",CY.sub)
 UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",SYS.SetAntiFling)
 UI.Switch(p,"🫥 hook 隐身 (我方 hook 对 debug.info 显示成 C 函数)","Prot_Stealth",SYS.SetStealth)
 UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查 debug.info 的 source ——\n"..
@@ -14566,6 +15047,11 @@ SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
 end)
 UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(正在瞄我的→指定→最近→屏幕中心)。\n点完直接打就行。",CY.green)
 UI.Div(p)
+UI.Switch(p,"🚫 不提前放弃 (丢掉「自己死了」的客户端信号)","CB_BlockDeathSignal")
+UI.Tip(p,"战斗模块收到「某人死了」的事件时会记一笔(用于判断目标是否已死)。\n"
+.."本开关把【关于你自己】的那一条直接丢掉 —— 不写死亡时间、不清当前目标。\n"
+.."★ 只做客户端自洽: 让你不会因为一条误报就提前放弃打架。\n"
+.."⚠ 诚实边界: 【拦不住服务端判死】—— 服务端说你死了你还是死。默认关。",CY.sub)
 UI.Section(p,"🎯 瞄准 (自动瞄准 / 关闭)",CY.accent)
 local AIM_OFF   ="关闭"
 local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
@@ -16115,6 +16601,450 @@ SYS.TPToMouse() return
 end
 end))
 end
+do
+local function rnd(a,b) return a+math.random()*(b-a) end
+SYS.Rnd=rnd
+local function rootHum()
+local ch=SYS.LP and SYS.LP.Character
+if not ch then return nil,nil end
+return ch:FindFirstChild("HumanoidRootPart"), ch:FindFirstChildOfClass("Humanoid")
+end
+SYS.RootHum=rootHum
+SYS.ACL_N=0
+SYS._ACEvents=SYS._ACEvents or {}
+local ACEN={}
+function SYS.ACELog(tag,text)
+local key=tostring(tag)
+local n=(ACEN[key] or 0)+1
+ACEN[key]=n
+local t=SYS._ACEvents
+t[#t+1]=("%s x%d  %s"):format(key,n,tostring(text))
+while #t>200 do table.remove(t,1) end
+print(("[CheatMenu][AC监听] %s x%d  %s"):format(key,n,tostring(text)))
+if n<=3 then P(SYS.Notify,"👂 通道下行: "..key,SYS.CY.cyan) end
+end
+function SYS.StartACWatch()
+if SYS._ACWatch then return end
+SYS._ACWatch=true
+local kws=(SYS.EventWatch and SYS.EventWatch.keywords) or {}
+local ok,d=pcall(function() return SYS.RStorage:GetDescendants() end)
+if not ok or type(d)~="table" then return end
+local seen={}
+local n=0
+for i=1,#d do
+local o=d[i]
+local cls=o.ClassName
+if cls=="RemoteEvent" or cls=="UnreliableRemoteEvent" then
+local nm=tostring(o.Name)
+local low=nm:lower()
+local hit=false
+for j=1,#kws do
+local k=tostring(kws[j]):lower()
+if k~="" and low:find(k,1,true) then hit=true break end
+end
+if hit and not seen[nm] and type(SYS.RemoteRisk)=="function" and SYS.RemoteRisk(nm) then
+seen[nm]=true
+n=n+1
+T(o.OnClientEvent:Connect(function(...)
+local args=table.pack(...)
+local s={}
+for q=1,math.min(args.n,4) do s[#s+1]=tostring(args[q]) end
+SYS.ACELog(nm,table.concat(s,", "))
+end))
+end
+end
+end
+print(("[CheatMenu][AC监听] 已只读接入 %d 个反作弊/审计通道(从不 FireServer)"):format(n))
+end
+function SYS.StartAdminWatch()
+if SYS._AdminWatch then return end
+SYS._AdminWatch=true
+local pl=SYS.LP
+if pl and pl.OnTeleport then
+T(pl.OnTeleport:Connect(function(...)
+local args=table.pack(...)
+local s={}
+for q=1,math.min(args.n,4) do s[#s+1]=tostring(args[q]) end
+SYS.ACELog("LP.OnTeleport",table.concat(s,", "))
+end))
+end
+local NAMES={"Kick","Ban","BanAsync","KickPlayer","BanPlayer","Punish","RemovePlayer"}
+local ok,d=pcall(function() return SYS.RStorage:GetDescendants() end)
+if ok and type(d)=="table" then
+for i=1,#d do
+local o=d[i]
+local cls=o.ClassName
+if cls=="RemoteEvent" or cls=="UnreliableRemoteEvent" then
+local nm=tostring(o.Name)
+local hit=false
+for j=1,#NAMES do if nm==NAMES[j] or nm:find(NAMES[j],1,true) then hit=true break end end
+if hit then
+T(o.OnClientEvent:Connect(function(...)
+local args=table.pack(...)
+local s={}
+for q=1,math.min(args.n,4) do s[#s+1]=tostring(args[q]) end
+SYS.ACELog("管理通道:"..nm,table.concat(s,", "))
+end))
+end
+end
+end
+end
+if Players then
+T(Players.PlayerRemoving:Connect(function(p)
+if pl and p==pl then
+SYS.ACELog("PlayerRemoving(自己)","自己被移除但脚本还在跑 —— 可能被踢")
+else
+SYS.ACELog("PlayerRemoving",tostring(p and p.Name))
+end
+end))
+end
+print("[CheatMenu][管理监听] 已只读接入 Teleport/Kick/Ban 类通道 + PlayerRemoving")
+end
+local AG={ on=false, fixed=0, last=0 }
+SYS.AttrGuard=AG
+function SYS.AttrGuardTick()
+if not AG.on or SYS.T_.AttrGuard~=true then return end
+local now=os.clock()
+if now-(AG.last or 0)<0.2 then return end
+AG.last=now
+local pl=SYS.LP
+if not pl or type(pl.GetAttribute)~="function" then return end
+local _,hum=rootHum()
+local hv=hum and hum.Health or nil
+local snap={}
+local bad={}
+local KEYS={"Health","MaxHealth","State","Shield","TempShield"}
+for i=1,#KEYS do
+local k=KEYS[i]
+local v=nil
+pcall(function() v=pl:GetAttribute(k) end)
+snap[k]=v
+if v~=nil then
+if k=="State" and tostring(v)=="Dead" and hv and hv>0 then bad[#bad+1]=k end
+if k=="Health" and type(v)=="number" and v<=0 and hv and hv>0 then bad[#bad+1]=k end
+end
+end
+if #bad==0 then return end
+AG.fixed=AG.fixed+1
+for i=1,#bad do
+local k=bad[i]
+local want=snap[k]
+if k=="State" then want="Alive" end
+if k=="Health" and hv then want=hv end
+if want~=snap[k] then
+SYS.TT(task.delay(rnd(0.05,0.2),function()
+if not AG.on then return end
+P(function() pl:SetAttribute(k,want) end)
+end))
+end
+end
+end
+function SYS.SetAttrGuard(on)
+on=on and true or false
+SYS.T_.AttrGuard=on
+AG.on=on
+if on then
+SYS.SetLoop("AttrGuard",true,RS.Heartbeat,SYS.AttrGuardTick)
+P(SYS.Notify,"🧬 Attribute 回写已开 (写回带 0.05~0.2 秒随机延迟)",SYS.CY.green)
+else
+SYS.SetLoop("AttrGuard",false)
+P(SYS.Notify,"🧬 Attribute 回写已关",SYS.CY.sub)
+end
+return true
+end
+local CG={ on=false, pulls=0, last=0 }
+SYS.CamGuard=CG
+function SYS.SetCamGuard(on)
+on=on and true or false
+SYS.T_.CamGuard=on
+CG.on=on
+if not on then
+SYS.SetLoop("CamGuard",false)
+P(SYS.Notify,"🎥 相机护栏已关",SYS.CY.sub)
+return true
+end
+SYS.SetLoop("CamGuard",true,RS.Heartbeat,function()
+if not CG.on then return end
+if SYS.FreeCamActive or SYS.MenuOpen then return end
+local any=SYS.T_.Fly or SYS.T_.Speed
+if not any then
+local K2={"CB_Aim","CB_Silent","CB_Fire","CB_360","CB_Ballistic","AutoDodge"}
+for i=1,#K2 do if SYS.T_[K2[i]] then any=true break end end
+end
+if not any then return end
+local now=os.clock()
+if now-(CG.last or 0)<0.1 then return end
+CG.last=now
+local cam=SYS.Cam
+local root=rootHum()
+if not cam or not root then return end
+local d=(cam.CFrame.Position-root.Position).Magnitude
+local lim=math.max(5,tonumber(SYS.C_.CamGuardDist) or 30)
+if d>lim then
+CG.pulls=CG.pulls+1
+P(function()
+local look=cam.CFrame.LookVector
+cam.CFrame=CFrame.lookAt(root.Position-look*lim,root.Position)
+end)
+end
+end)
+P(SYS.Notify,"🎥 相机护栏已开 (相机离角色超过 "..tostring(tonumber(SYS.C_.CamGuardDist) or 30).." 格就拉回)",SYS.CY.green)
+return true
+end
+local PR={ on=false, conn=nil, applied=0 }
+SYS.PosRebound=PR
+function SYS.SetPosRebound(on)
+on=on and true or false
+SYS.T_.PosRebound=on
+PR.on=on
+if PR.conn then PR.conn:Disconnect() PR.conn=nil end
+if not on then
+P(SYS.Notify,"📍 位置下行回压已关",SYS.CY.sub)
+return true
+end
+local ev=SYS.REvent("ServerReplicateCFrame") or SYS.REventU("ServerReplicateCFrame")
+if not ev then
+SYS.T_.PosRebound=false PR.on=false
+P(SYS.Notify,"📍 位置下行回压: 这个游戏没有 ServerReplicateCFrame, 开不了",SYS.CY.yellow)
+return false
+end
+PR.conn=T(ev.OnClientEvent:Connect(function(...)
+if not PR.on then return end
+if not (SYS.T_.Fly or SYS.T_.Speed) then return end
+local args=table.pack(...)
+local cf=nil
+for i=1,args.n do
+local v=args[i]
+local tp=(typeof and typeof(v)) or type(v)
+if tp=="CFrame" then cf=v break end
+end
+if not cf then return end
+PR.applied=PR.applied+1
+task.defer(function()
+if not PR.on then return end
+local root=rootHum()
+if root then P(function() root.CFrame=cf end) end
+end)
+end))
+P(SYS.Notify,"📍 位置下行回压已开 (仅飞行/加速时生效)",SYS.CY.green)
+return true
+end
+local FSS={ on=false, hooked=false, t=nil, orig=nil, blocked=0 }
+SYS.FireSignal= FSS
+function SYS.SetFireSignalSpoof(on)
+on=on and true or false
+SYS.T_.FireSignalSpoof=on
+FSS.on=on
+if not on then
+if FSS.t then P(SYS.SafeUnhook,FSS.t) end
+FSS.hooked=false FSS.t=nil FSS.orig=nil
+P(SYS.Notify,"📡 firesignal 伪装已关(已还原)",SYS.CY.sub)
+return true
+end
+local fs=rawget(_G,"firesignal")
+if type(fs)~="function" then
+SYS.T_.FireSignalSpoof=false FSS.on=false
+P(SYS.Notify,"📡 本机没有 firesignal, 开不了",SYS.CY.yellow)
+return false
+end
+local f=function(gui,...)
+if not FSS.on then return FSS.orig(gui,...) end
+local mine=SYS.ScreenGui
+if gui and mine and typeof(gui)=="Instance" and gui:IsDescendantOf(mine) then
+FSS.blocked=FSS.blocked+1
+return nil
+end
+return FSS.orig(gui,...)
+end
+if type(newcclosure)=="function" then
+local okc,c=pcall(newcclosure,f)
+if okc and type(c)=="function" then f=c end
+end
+local got=SYS.SafeHook(fs,f,"firesignal")
+if not got then
+SYS.T_.FireSignalSpoof=false FSS.on=false
+return false
+end
+FSS.t=fs FSS.orig=got FSS.hooked=true
+P(SYS.Notify,"📡 firesignal 伪装已开 (只拦对我们自己 GUI 的调用)",SYS.CY.green)
+return true
+end
+SYS._TimeSnap=nil
+function SYS.TimeCheck()
+local s=SYS._TimeSnap
+if not s then return {"(未做时间快照)"} end
+local out={}
+local function chk(label,old,now)
+if old~=nil and now~=old then
+out[#out+1]=("⚠ %s 的函数身份变了 —— 有别的脚本 hook 了时间函数"):format(label)
+else
+out[#out+1]=("✅ %s 未被替换"):format(label)
+end
+end
+chk("os.clock",s.clock,os.clock)
+chk("os.time",s.time,os.time)
+chk("tick",s.tick,tick)
+chk("time",s.luaTime,time)
+return out
+end
+function SYS.TimeSnapshot()
+SYS._TimeSnap={ clock=os.clock, time=os.time, tick=tick, luaTime=time }
+end
+SYS._MetaSnap=nil
+function SYS.MetaCheck()
+local out={}
+if type(getmetatable)~="function" then return {"(本机没有 getmetatable, 跳过)"} end
+local ok,mt=pcall(getmetatable,game)
+if not ok or type(mt)~="table" then return {"(取 game 元表失败 —— 可能被锁)"} end
+SYS._MetaSnap=SYS._MetaSnap or {}
+local snap=SYS._MetaSnap
+local bad=0
+local KS={"__index","__namecall","__newindex"}
+for i=1,#KS do
+local k=KS[i]
+local v=nil
+pcall(function() v=rawget(mt,k) end)
+if snap[k]==nil then
+snap[k]=v
+elseif v~=snap[k] then
+bad=bad+1
+out[#out+1]=("⚠ game 元表 %s 与快照不同 —— 被别的脚本改过"):format(k)
+end
+end
+if bad==0 then out[#out+1]="✅ game 元表 __index/__namecall/__newindex 与快照一致" end
+out[#out+1]="(只报告, 本脚本绝不改元表)"
+return out
+end
+function SYS.NetOwnerInfo()
+local root=rootHum()
+if not root then return {"(没有角色)"} end
+local ok,pl=pcall(function() return root:GetNetworkOwner() end)
+if ok and pl then return {("网络所有权: %s (这个人能权威地移动它)"):format(tostring(pl.Name))} end
+return {"网络所有权: 服务端(或取不到) —— 你的位置由服务端拍板"}
+end
+SYS._fps=60
+function SYS.FpsGcInfo()
+local g=0
+pcall(function() if type(gcinfo)=="function" then g=gcinfo() end end)
+return ("FPS≈%.0f   gcinfo≈%.0f KB (原样上报, 不做伪装)"):format(tonumber(SYS._fps) or 0,tonumber(g) or 0)
+end
+SYS._fireLog={}
+function SYS.FireRateStat()
+local t=SYS._fireLog
+local now=os.clock()
+local n,last,ds,dn=0,nil,0,0
+for i=1,#t do
+local e=t[i]
+if now-e<=10 then
+n=n+1
+if last then ds=ds+(e-last) dn=dn+1 end
+last=e
+end
+end
+local mean=dn>0 and (ds/dn) or 0
+local var=0
+if dn>0 then
+local l2=nil
+local acc=0
+for i=1,#t do
+local e=t[i]
+if now-e<=10 then
+if l2 then acc=acc+(e-l2-mean)^2 end
+l2=e
+end
+end
+var=math.sqrt(acc/dn)
+end
+local out={ ("近 10 秒上行 %d 次   平均间隔 %.1f ms   标准差 %.1f ms"):format(n,mean*1000,var*1000) }
+if n>=8 and mean*1000>0 and var*1000<5 then
+out[#out+1]="⚠ 间隔标准差 < 5ms —— 这条上行太规律了, 开火抖动可能没生效"
+end
+return out
+end
+SYS._airAt=nil
+function SYS.FlyAirMimicTick(dt)
+if SYS.T_.FlyAirMimic~=true then SYS._airAt=nil return end
+local _,hum=rootHum()
+if not hum then return end
+local mat=hum.FloorMaterial
+if mat==Enum.Material.Air then
+SYS._airAt=SYS._airAt or os.clock()
+if os.clock()-(SYS._airAt)>=5 then
+SYS._airAt=os.clock()
+P(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+end
+else
+SYS._airAt=nil
+end
+end
+SYS.Diag=SYS.Diag or {}
+function SYS.Diag.ACFramework()
+local r={ name="unknown", strength=1, hits={} }
+local function hit(s) r.hits[#r.hits+1]=s end
+local words={"byfron","hyperion","electron","sirhurt","solvent","oxygen","scriptware"}
+local roots={}
+pcall(function() roots[#roots+1]=SYS.CoreGui end)
+roots[#roots+1]=SYS.PG
+for i=1,#roots do
+local rt=roots[i]
+if rt then
+pcall(function()
+for _,c in ipairs(rt:GetDescendants()) do
+local nm=tostring(c.Name):lower()
+for j=1,#words do
+if nm:find(words[j],1,true) then hit(tostring(rt.Name).."."..tostring(c.Name).." <-"..words[j]) break end
+end
+end
+end)
+end
+end
+local gg={"is_sirhurt_closure","syn","KRNL_LOADED","secure_load","isbyfron","hyperion"}
+for i=1,#gg do
+local ok,v=pcall(function() return _G[gg[i]] end)
+if ok and v~=nil then hit("执行器全局 "..gg[i]) end
+end
+local rs=SYS.RStorage
+if rs then
+local NM={"CommonClientAntiCheat","Replica","ReplicaShared","jecs","AntiCheat","ACService",
+"validateLivingCharacter","DeathFlowTelemetry","AntiCheatService","ACRemote"}
+for i=1,#NM do
+local ok,c=pcall(function() return rs:FindFirstChild(NM[i],true) end)
+if ok and c then hit("ReplicatedStorage."..NM[i]) end
+end
+end
+local byfron=false
+local ac=false
+for i=1,#r.hits do
+local h=r.hits[i]:lower()
+if h:find("byfron",1,true) or h:find("hyperion",1,true) or h:find("electron",1,true) then byfron=true end
+if h:find("anticheat",1,true) or h:find("acservice",1,true) or h:find("commonclientanticheat",1,true)
+or h:find("deathflowtelemetry",1,true) or h:find("validatelivingcharacter",1,true)
+or h:find("replica",1,true) or h:find("jecs",1,true) then ac=true end
+end
+if byfron then r.name="byfron" r.strength=3
+elseif ac or #r.hits>0 then r.name="custom" r.strength=(ac and 2 or 1)
+else r.name="none" r.strength=1 end
+return r
+end
+SYS.Stagger=function(frames)
+local n=math.max(1,math.min(3,tonumber(frames) or 1))
+for _=1,n do RS.Heartbeat:Wait() end
+end
+SYS.SpawnLoop(function()
+local last=os.clock()
+local acc=0
+while not SYS.Unloaded do
+RS.Heartbeat:Wait()
+local now=os.clock()
+acc=acc+(now-last)
+last=now
+if acc>=0.5 then
+SYS._fps=math.min(999,1/ math.max(acc,0.001))
+acc=0
+end
+end
+end)
+end
 function SYS.UnloadAll()
 if SYS.Unloaded then return end
 SYS.Unloaded=true
@@ -16137,6 +17067,11 @@ P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.Unload
 P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
 P(function() if SYS.Stealth then SYS.Stealth.Clear() end end)
 P(function() if SYS.UIMask and SYS.UIMask.Restore then SYS.UIMask.Restore() end end)
+P(function() if SYS.SetAntiCheatBlock then SYS.SetAntiCheatBlock(false) end end)
+P(function() if SYS.SetAttrGuard then SYS.SetAttrGuard(false) end end)
+P(function() if SYS.SetCamGuard then SYS.SetCamGuard(false) end end)
+P(function() if SYS.SetPosRebound then SYS.SetPosRebound(false) end end)
+P(function() if SYS.SetFireSignalSpoof then SYS.SetFireSignalSpoof(false) end end)
 P(function() if SYS.UnhookAllSafe then SYS.UnhookAllSafe() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
@@ -16253,6 +17188,12 @@ GENV[SYS.GK.unload]=SYS.UnloadAll
 task.spawn(function()
 task.wait(1.5)
 if SYS.T_.AntiAFK then P(SYS.enableAntiAFK) end
+if SYS.T_.ACBlock~=false and SYS.SetAntiCheatBlock then
+P(function() SYS.SetAntiCheatBlock(true) end)
+end
+if SYS.TimeSnapshot then P(SYS.TimeSnapshot) end
+if SYS.StartACWatch then P(SYS.StartACWatch) end
+if SYS.StartAdminWatch then P(SYS.StartAdminWatch) end
 for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
