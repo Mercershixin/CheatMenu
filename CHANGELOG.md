@@ -2,6 +2,27 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 11.8.4 · 2026-09-24 —— 修「全亮」没全图亮：清 Atmosphere 雾 + 去暗色滤镜 + 环境光拉满
+
+用户：「高亮全亮没有全图亮」。
+
+### 根因
+「全亮」之前只改 `Brightness / ClockTime / FogEnd / GlobalShadows`，**没动两个真正压暗全图的东西**：
+- `Atmosphere`（雾/大气密度）—— Dead Rails 西部夜晚主题，几乎必有
+- `ColorCorrectionEffect`（暗色/对比度滤镜）—— 夜景常用的"整体压暗"
+
+⇒ 亮度再高，这俩一盖，远处/整体还是黑的。
+
+### 改动（「全亮」模式补三样）
+1. `LT.Ambient` / `LT.OutdoorAmbient` 拉满白 → 没有直射光的地方也亮。
+2. `Atmosphere` 密度压到 0.001 → 清雾。
+3. `ColorCorrectionEffect` 的 `Brightness/Contrast/Saturation` 归零 → 去暗色滤镜。
+
+### 验收
+`luau-compile` **0 错误**。
+
+---
+
 ## 11.8.3 · 2026-09-24 —— 删除班卓琴功能（实测回血没成功）
 
 用户实测：「回血没成功 删了吧」。
