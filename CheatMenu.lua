@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 02:37 sha 943d68a7 bytes 674104'):format('2026-09-25 02:37','943d68a7',674104))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v75] =====")
+print(('[CheatMenu] build 2026-09-25 03:10 sha 3a05130f bytes 633481'):format('2026-09-25 03:10','3a05130f',633481))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v77] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -30,12 +30,9 @@ T_={
 Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
 GodMode=false,NoFall=false,DeepHide=false,
 LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
-ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,AutoHitMinigame=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,MenuMouse=true,FreeCam=false,Tracer=false,
 ESP_WallWise=true,
 HUD_Info=false,
-SpiderSense=false,
-DeadOn_Freeze=false,DeadOn_NoBlow=false,
-DeadRails_HitMark=false,DeadRails_AimProbe=false,
 DeadRails_LockHp=false,DeadRails_NoFlop=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
@@ -133,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.1.2"
+SYS.BuildVer="12.1.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -999,7 +996,6 @@ return nil
 end
 do
 local CFG=SYS.N.Cfg
-local CFG_LEGACY=SYS.N.OldCfg
 local HAS_FS=(type(writefile)=="function" and type(readfile)=="function" and type(isfile)=="function")
 SYS.HAS_FS=HAS_FS
 SYS.has_fs_txt=HAS_FS and ("持久化启用 · "..CFG) or "执行器不支持 writefile"
@@ -3180,255 +3176,6 @@ SYS.Notify("🛰 战况面板: 已关",SYS.CY.sub)
 end
 end
 do
-local SP={} SYS.SpiderSense=SP
-SP.Ready=false SP.Found={} SP.Hooked={} SP.Orig={} SP.Note=""
-SP.Gui=nil SP.Lab=nil SP.Next=0
-SP.Cnt={} SP.T={}
-SP.ON={"AimHead","GripTarget","CarryTarget","PoseAttached","PoseKill","Relax"}
-SP.EV={GripTarget="grip",CarryTarget="grip",PoseAttached="grip",PoseKill="kill",Relax="relax"}
-SP.gripAt=0 SP.relaxAt=0 SP.killAt=0
-local function spAPI(n)
-local ok,v=pcall(function() return _G[n] end)
-if ok and type(v)=="function" then return v end
-return nil
-end
-local function spScript(f)
-local gfe=spAPI("getfenv")
-if not gfe then return nil end
-local ok,e=pcall(gfe,f)
-if not ok or type(e)~="table" then return nil end
-local sc=e.script
-if not sc then return nil end
-local ok2,nm=pcall(function() return sc.Name end)
-if ok2 and type(nm)=="string" and nm~="" then return nm end
-return nil
-end
-local function spName(f)
-local g=spAPI("getinfo")
-if g then
-local ok,n=pcall(g,f)
-if ok and type(n)=="table" and type(n.name)=="string" and n.name~="" then return n.name end
-end
-if type(debug)=="table" and type(debug.info)=="function" then
-local ok,n=pcall(debug.info,f,"n")
-if ok and type(n)=="string" and n~="" then return n end
-end
-return nil
-end
-function SP.Probe()
-local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
-if not HF then SP.Note="本机没有 hookfunction —— 函数层用不了"; return false end
-local G=spAPI("getgc") or spAPI("getGC")
-if not G then SP.Note="本机没有 getgc —— 找不到 SpiderRig 的函数"; return false end
-local function dummy(a) return a end
-local ok,o=pcall(HF,dummy,function(...) return ... end)
-if not ok or type(o)~="function" then
-SP.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
-return false
-end
-return true
-end
-function SP.Scan()
-if SP.Ready then return #SP.Found end
-local list,why=SYS.GCList()
-if not list then SP.Note=why or "getgc(true) 没返回表"; return 0 end
-local want={}
-for _,k in ipairs(SP.ON) do want[k]=true end
-local budget=os.clock()+4
-local n=0
-for _,v in ipairs(list) do
-if os.clock()>budget then SP.Note="(扫描超 4 秒已截断)"; break end
-if type(v)=="function" then
-local nm=spName(v)
-if nm and want[nm] and not SP.Found[nm] then
-if spScript(v)=="SpiderRig" then
-SP.Found[nm]=v n=n+1
-if SYS.FP then SYS.FP.Record("SpiderRig",nm,v) end
-end
-end
-end
-end
-if n==0 and SYS.FP then
-local fi=0
-for _,k in ipairs(SP.ON) do
-if not SP.Found[k] then
-local spec=SYS.FP.Lookup("SpiderRig",k)
-local v=spec and SYS.FP.FindIn(list,spec)
-if v then SP.Found[k]=v n=n+1 fi=fi+1 end
-end
-end
-if fi>0 then
-SP.Note=(SP.Note~="" and (SP.Note.." · ") or "")..("🧬结构指纹回退命中 %d 个"):format(fi)
-end
-end
-SP.Ready=true
-return n
-end
-function SP.Hook()
-if next(SP.Hooked)~=nil then return 0 end
-local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
-local NCC=spAPI("newcclosure")
-if not HF then return 0 end
-local n=0
-for nm,f in pairs(SP.Found) do
-local orig
-local body=function(...)
-SP.Cnt[nm]=(SP.Cnt[nm] or 0)+1
-SP.T[nm]=os.clock()
-local ev=SP.EV[nm]
-if ev=="grip" then SP.gripAt=os.clock()
-elseif ev=="kill" then SP.killAt=os.clock()
-elseif ev=="relax" then SP.relaxAt=os.clock() end
-if type(orig)~="function" then return end
-return orig(...)
-end
-local ok,o=pcall(HF,f,NCC and NCC(body) or body)
-if ok and type(o)=="function" then
-orig=o SP.Hooked[nm]=f SP.Orig[nm]=o n=n+1
-end
-end
-return n
-end
-function SP.Unhook()
-local HF=spAPI("hookfunction") or spAPI("hookfunc") or spAPI("replaceclosure")
-local RF=spAPI("restorefunction") or spAPI("restorefunc")
-if not HF then return 0 end
-local n=0
-for nm,f in pairs(SP.Hooked) do
-local ok=false
-if RF then ok=pcall(RF,f) end
-if not ok and type(SP.Orig[nm])=="function" then ok=pcall(HF,f,SP.Orig[nm]) end
-if ok then n=n+1 end
-end
-SP.Hooked={}
-return n
-end
-function SP.FindSpider()
-if SP.Model and SP.Model.Parent then
-local hd2=SP.Model:FindFirstChild("Head") or SP.Model:FindFirstChildWhichIsA("BasePart")
-if hd2 then return SP.Model,hd2 end
-end
-SP.Model=nil
-local now=os.clock()
-if SP.At and (now-SP.At)<1.0 then return nil end
-SP.At=now
-local function hit(m)
-local n=m.Name
-if type(n)~="string" or n=="" then return nil end
-if not n:lower():find("spider",1,true) then return nil end
-return m:FindFirstChild("Head") or m:FindFirstChildWhichIsA("BasePart")
-end
-local ok,kids=P(function() return WS:GetChildren() end)
-if not ok or type(kids)~="table" then return nil end
-local q={} local seen=0
-for i=1,#kids do q[#q+1]={kids[i],1} end
-local head=1
-while head<=#q and seen<2000 do
-local it=q[head] head=head+1
-local o,lv=it[1],it[2]
-seen=seen+1
-if o:IsA("Model") then
-local hd=hit(o)
-if hd then SP.Model=o return o,hd end
-end
-if lv<3 and #q<2500 then
-local ok2,cs=P(function() return o:GetChildren() end)
-if ok2 and type(cs)=="table" then
-for j=1,#cs do q[#q+1]={cs[j],lv+1} end
-end
-end
-end
-return nil
-end
-function SP.Clear()
-if SP.Gui then P(function() SP.Gui:Destroy() end) end
-SP.Gui=nil SP.Lab=nil
-end
-function SP.Tick()
-if not SYS.T_.SpiderSense then
-if SP.Gui then SP.Clear() end
-return
-end
-local now=os.clock()
-if now<(SP.Next or 0) then return end
-SP.Next=now+0.2
-local ok,model,hd=P(SP.FindSpider)
-if not ok or model==nil or hd==nil then
-if SP.Gui then SP.Clear() end
-return
-end
-local L={"🕷 蜘蛛"}
-if SP.killAt>0 and (now-SP.killAt)<5 then
-L[#L+1]=("⚠ 扑杀 %.1f 秒前"):format(now-SP.killAt)
-elseif SP.gripAt>SP.relaxAt and SP.gripAt>0 and (now-SP.gripAt)<300 then
-L[#L+1]=("抓住目标 已 %.1f 秒"):format(now-SP.gripAt)
-elseif SP.T.AimHead and (now-SP.T.AimHead)<1 then
-L[#L+1]="索敌中"
-else
-L[#L+1]="待机"
-end
-if SP.relaxAt>0 then L[#L+1]=("脱身 %.1f 秒前"):format(now-SP.relaxAt) end
-local c={}
-for _,k in ipairs(SP.ON) do
-local v=SP.Cnt[k] or 0
-if v>0 then c[#c+1]=("%s×%d"):format(k,v) end
-end
-if #c>0 then L[#L+1]="观测: "..table.concat(c,"  ") end
-local txt=table.concat(L,"\n")
-P(function()
-if not (SP.Gui and SP.Gui.Parent) then
-local g=Instance.new("BillboardGui")
-g.Name=SYS.N.Spider
-g.Size=UDim2.new(0,300,0,60)
-g.AlwaysOnTop=true
-g.Adornee=hd
-g.Parent=hd
-local t=Instance.new("TextLabel")
-t.Size=UDim2.fromScale(1,1)
-t.BackgroundTransparency=1
-t.TextColor3=Color3.fromRGB(255,130,60)
-t.TextScaled=true
-t.Font=Enum.Font.Code
-t.TextStrokeTransparency=0.4
-t.Parent=g
-SP.Gui=g SP.Lab=t
-end
-local g=SP.Gui
-if not (g and g.Parent) then return end
-if g.Adornee~=hd then g.Adornee=hd g.Parent=hd end
-local off=6
-local okb,a,b=P(function() local x,y=model:GetBoundingBox() return x,y end)
-if okb and a and b and hd.Position then
-off=(a.Position.Y+b.Y*0.5-hd.Position.Y)+2.0
-end
-if g.StudsOffsetWorldSpace.Y~=off then g.StudsOffsetWorldSpace=Vector3.new(0,off,0) end
-if g and g.Parent and SP.Lab and SP.Lab.Text~=txt then SP.Lab.Text=txt end
-g.Enabled=true
-end)
-end
-function SYS.SetSpiderSense(on)
-on=on and true or false
-SYS.T_.SpiderSense=on
-SYS.SetLoop("Spider",on,RS.Heartbeat,SP.Tick)
-if on then
-if next(SP.Hooked)==nil then
-if SP.Probe() then
-P(SP.Scan)
-local okh,n2=P(SP.Hook)
-SP.Note=("已挂 %d/%d 个函数"):format((type(n2)=="number") and n2 or 0,#SP.ON)
-end
-end
-SP.Next=0
-P(SP.Tick)
-SYS.Notify("🕷 蜘蛛感知: "..tostring(SP.Note),SYS.CY.green)
-else
-SP.Clear()
-P(SP.Unhook)
-SYS.Notify("🕷 蜘蛛感知: 已关(函数已还原)",SYS.CY.sub)
-end
-end
-end
-do
 local DO={} SYS.DeadOnTime=DO
 DO.Script="MachinePartyDeadOnTime"
 DO.Ready=false DO.Found={} DO.Hooked={} DO.Orig={} DO.Note=""
@@ -3659,33 +3406,6 @@ if DO.Gui and DO.Gui.Parent and DO.Lab and DO.Lab.Text~=txt then DO.Lab.Text=txt
 DO.Gui.Enabled=true
 end)
 end
-function SYS.SetDeadOn(kind,on)
-on=on and true or false
-if kind=="freeze" then SYS.T_.DeadOn_Freeze=on else SYS.T_.DeadOn_NoBlow=on end
-local both=(SYS.T_.DeadOn_Freeze or SYS.T_.DeadOn_NoBlow)
-if both then
-P(DO.Sync)
-DO.Next=0
-SYS.SetLoop("DeadOn",true,RS.Heartbeat,DO.Tick)
-P(DO.Tick)
-else
-DO.UnhookAll()
-DO.Clear()
-SYS.SetLoop("DeadOn",false,RS.Heartbeat,DO.Tick)
-end
-if on then
-print(("[CheatMenu] 死亡倒计时(%s): %s"):format(kind,tostring(DO.Note)))
-print(("      已挂函数: %s"):format((function()
-local a={} for k in pairs(DO.Hooked) do a[#a+1]=k end
-table.sort(a) return (#a>0) and table.concat(a,", ") or "(无)"
-end)()))
-end
-local nm=(kind=="freeze") and "🧊 冻住倒计时" or "🛡 到点不炸"
-SYS.Notify(nm..(on and ": 已开" or ": 已关").." · "..tostring(DO.Note),
-on and SYS.CY.green or SYS.CY.sub)
-end
-function SYS.SetDeadOnFreeze(on) SYS.SetDeadOn("freeze",on) end
-function SYS.SetDeadOnNoBlow(on) SYS.SetDeadOn("blow",on) end
 end
 do
 local DR={} SYS.DRCombat=DR
@@ -3710,76 +3430,6 @@ if not sc then return nil end
 local ok2,nm=pcall(function() return sc.Name end)
 if ok2 and type(nm)=="string" and nm~="" then return nm end
 return nil
-end
-local function drGui()
-P(function()
-if DR.Gui and DR.Gui.Parent then return end
-local pg=(SYS.SafeParentGui and SYS.ScreenGui) or PG
-if not pg then return end
-local g=SYS.NewVis and SYS.NewVis("ScreenGui")
-if not g then return end
-g.ResetOnSpawn=false g.IgnoreGuiInset=true g.DisplayOrder=999997
-P(function() if syn and syn.protect_gui then syn.protect_gui(g) end end)
-local x=Instance.new("TextLabel")
-x.AnchorPoint=Vector2.new(0.5,0.5) x.Position=UDim2.new(0.5,0,0.5,0)
-x.Size=UDim2.new(0,70,0,70) x.BackgroundTransparency=1
-x.Font=Enum.Font.GothamBlack x.TextSize=46 x.Text="✕"
-x.TextColor3=Color3.fromRGB(255,70,70)
-x.TextStrokeColor3=Color3.fromRGB(0,0,0) x.TextStrokeTransparency=0.15
-x.Visible=false x.Parent=g
-local fr=Instance.new("Frame")
-fr.AnchorPoint=Vector2.new(0.5,1) fr.Position=UDim2.new(0.5,0,1,-134)
-fr.Size=UDim2.new(0,300,0,24)
-fr.BackgroundColor3=Color3.fromRGB(12,14,20) fr.BackgroundTransparency=0.22
-fr.BorderSizePixel=0 fr.Parent=g
-local rc=Instance.new("UICorner") rc.CornerRadius=UDim.new(0,8) rc.Parent=fr
-local lab=Instance.new("TextLabel")
-lab.Size=UDim2.new(1,-12,1,0) lab.Position=UDim2.new(0,6,0,0)
-lab.BackgroundTransparency=1 lab.Font=Enum.Font.GothamMedium
-lab.TextSize=14 lab.TextColor3=Color3.fromRGB(235,240,250)
-lab.TextXAlignment=Enum.TextXAlignment.Center lab.Text="🎯 命中 0"
-lab.Parent=fr
-g.Parent=pg
-DR.Gui=g DR.X=x DR.Lab=lab
-end)
-end
-function DR.ShowHit()
-drGui()
-P(function()
-if not (DR.X and DR.X.Parent) then return end
-DR.X.Visible=true DR.XAt=os.clock()+0.22
-DR.HitN=(DR.HitN or 0)+1
-if DR.Lab then DR.Lab.Text=("🎯 命中 %d"):format(DR.HitN) end
-task.delay(0.22,function()
-if DR.X and DR.X.Parent and os.clock()>=DR.XAt then DR.X.Visible=false end
-end)
-end)
-end
-function SYS.SetDRHit(on)
-on=on and true or false
-SYS.T_.DeadRails_HitMark=on
-if on then
-if not DR.HitConn then
-local ev=SYS.RStorage
-for _,seg in ipairs(DR.HitPath) do
-if not ev then break end
-ev=(P(function() return ev:FindFirstChild(seg) end))
-end
-if ev and ev.OnClientEvent then
-DR.HitConn=T(ev.OnClientEvent:Connect(function() DR.ShowHit() end))
-DR.Note="已监听 Hitmarker 通道"
-else
-DR.Note="没找到 Hitmarker 通道(这个游戏 / 这局可能没有)"
-end
-end
-drGui()
-SYS.Notify("🎯 命中标记: 已开 · "..tostring(DR.Note),SYS.CY.green)
-else
-if DR.HitConn then P(function() DS(DR.HitConn) end) DR.HitConn=nil end
-if DR.Gui then P(function() DR.Gui:Destroy() end) end
-DR.Gui=nil DR.X=nil DR.Lab=nil
-SYS.Notify("🎯 命中标记: 已关(监听已断开)",SYS.CY.sub)
-end
 end
 function DR.Probe()
 local HF=drAPI("hookfunction") or drAPI("hookfunc") or drAPI("replaceclosure")
@@ -3824,25 +3474,6 @@ end
 DR.Found=fnd DR.FoundNM=nms DR.Ready=true
 return #fnd
 end
-local function drHookOne(idx)
-local f=DR.Found[idx]
-if not f or DR.Hooked[idx] then return false end
-local HF=drAPI("hookfunction") or drAPI("hookfunc") or drAPI("replaceclosure")
-local NCC=drAPI("newcclosure")
-if not HF then return false end
-local sn=DR.FoundNM[idx] or "?"
-local orig
-local body=function(...)
-DR.Cnt[sn]=(DR.Cnt[sn] or 0)+1
-if type(orig)~="function" then return nil end
-return orig(...)
-end
-local ok,o=pcall(HF,f,NCC and NCC(body) or body)
-if ok and type(o)=="function" then
-orig=o DR.Hooked[idx]=true DR.Orig[idx]=o return true
-end
-return false
-end
 local function drUnhookOne(idx)
 if not DR.Hooked[idx] then return false end
 local f=DR.Found[idx]
@@ -3859,36 +3490,6 @@ local t={} local tot=0
 for sn,c in pairs(DR.Cnt) do t[#t+1]=("%s=%d"):format(sn,c) tot=tot+c end
 table.sort(t)
 return ("瞄准层调用累计 %d 次: %s"):format(tot, (#t>0 and table.concat(t," · ") or "还没调用过"))
-end
-function SYS.SetDRAim(on)
-on=on and true or false
-SYS.T_.DeadRails_AimProbe=on
-if on then
-if not DR.Probe() then
-SYS.T_.DeadRails_AimProbe=false
-SYS.Notify("🔭 开镜探针: 开不了 · "..tostring(DR.Note),SYS.CY.red)
-return
-end
-if not DR.Ready then P(DR.Scan) end
-local n=0
-if #DR.Found==0 then
-DR.Note="没找到瞄准层的函数(现在没在 Dead Rails 对局里?)"
-else
-for i=1,#DR.Found do if drHookOne(i) then n=n+1 end end
-DR.Note=("已挂 %d/%d 个函数(只记录, 不改行为)"):format(n,#DR.Found)
-end
-print("[CheatMenu][DRCombat] "..tostring(DR.Note))
-for _,sn in ipairs(DR.AimScripts) do
-if DR.Cnt[sn] then print(("  · %s 命中时会被计数"):format(sn)) end
-end
-SYS.Notify("🔭 开镜探针: 已开 · "..tostring(DR.Note),SYS.CY.cyan)
-else
-local n=0
-for i=1,#DR.Found do if drUnhookOne(i) then n=n+1 end end
-print("[CheatMenu][DRCombat] "..DR.Summary())
-DR.Note=("已还原 %d 个函数"):format(n)
-SYS.Notify("🔭 开镜探针: 已关(函数已还原)",SYS.CY.sub)
-end
 end
 function DR.UnloadAll()
 if DR.HitConn then P(function() DS(DR.HitConn) end) DR.HitConn=nil end
@@ -4342,7 +3943,7 @@ o[#o+1]=""
 o[#o+1]="● 上帝模式 / 无敌"
 o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到" or "⚠️ 只对\"伤害在客户端结算\"的服有效")
 o[#o+1]="  层: ①客户端权威层(本地免伤) + ①属性写回"
-o[#o+1]="  怎么做: GodMode(本地免疫) + NoFall(无坠落伤) + T_.AttrGuard(属性回写防判死) + TrapImmune(反陷阱免伤)"
+o[#o+1]="  怎么做: GodMode(本地免疫) + NoFall(无坠落伤) + TrapImmune(反陷阱免伤)"
 o[#o+1]="  做不到: 伤害在服务端算 ⇒ 客户端拦不到 ⇒ 真无敌做不到(这是本项目的诚实边界, 别承诺)"
 o[#o+1]="  ⛔ 别做: 给游戏内部表灌元表 / 伪造\"我没受伤\"上行"
 o[#o+1]=""
@@ -4540,6 +4141,46 @@ o[#o+1]="     ⇒ ⛔ 拦通道 / 删 remote / 断网 = 直接吃超时判罚; �
 o[#o+1]="        唯一活路是【让上报的数值自洽】—— 即: 别伪造, 只做本地表现, 少碰服务端判据。"
 o[#o+1]="  ⇒ 怎么判是哪一类: 看「🚦 移动环境」+「反作弊模块痕迹」两节;"
 o[#o+1]="    出现「随机间隔 + 限时回报 + 数值比对」特征就是 B 类, 此时 ACBlock 那类拦截要谨慎开。"
+return o
+end)
+SYS.RegisterScanner("🩺 一致性 / 只读体检 (时间函数 / game 元表 / 网络所有权 / FPS·GC / 反作弊框架 / 反挂机)", function()
+local o={}
+local function part(title, fn)
+o[#o+1]="── "..title.." ──"
+if type(fn)~="function" then o[#o+1]="  (本版本没有这项)" return end
+local ok,r=pcall(fn)
+if not ok then o[#o+1]="  (执行失败: "..tostring(r)..")" return end
+if type(r)=="table" then
+for i=1,#r do o[#o+1]="  "..tostring(r[i]) end
+else
+o[#o+1]="  "..tostring(r)
+end
+end
+part("时间函数有没有被别人替换(只读)", SYS.TimeCheck)
+part("game 元表 __index/__namecall 有没有被改(只读)", SYS.MetaCheck)
+part("网络所有权(谁说了算)", SYS.NetOwnerInfo)
+part("FPS / GC", SYS.FpsGcInfo)
+if SYS.CurKick then
+local ok,k=pcall(SYS.CurKick)
+o[#o+1]="── 反挂机 ──"
+if ok and type(k)=="number" then
+o[#o+1]=("  距被踢还有 %.1f 秒"):format(k)
+else
+o[#o+1]="  (读不到倒计时)"
+end
+end
+if SYS.Diag and SYS.Diag.ACFramework then
+local ok,f=pcall(SYS.Diag.ACFramework)
+o[#o+1]="── 反作弊框架识别 ──"
+if ok and type(f)=="table" then
+o[#o+1]=("  识别: %s   强度 %d/3"):format(tostring(f.name),tonumber(f.strength) or 0)
+for i=1,#(f.hits or {}) do o[#o+1]="    命中: "..tostring(f.hits[i]) end
+else
+o[#o+1]="  (识别失败)"
+end
+o[#o+1]="  ★ 判读: 出现「随机间隔注入 + 限时回报」特征 = 动态注入式反作弊,"
+o[#o+1]="     此时【拦通道/删 remote 反而吃超时判罚】, ACBlock 要谨慎开(见「🕵 外部手法对照」)。"
+end
 return o
 end)
 function SYS.ScanAll()
@@ -4790,7 +4431,7 @@ local cg=game:GetService("CoreGui")
 if cg then scan(cg,"CoreGui",0) end
 end)
 table.sort(found)
-local info,nm,fn_hint=SYS.GameInfoLine()
+local info=SYS.GameInfoLine()
 SYS.ScanEmit("========== 【A 通信层】游戏接口完整清单(Remote / Bindable / 交互) ==========")
 SYS.ScanEmit("[Remote] ===== "..info.." =====")
 SYS.ScanEmit("[Remote] 抓包时间: "..os.date("%Y-%m-%d %H:%M:%S"))
@@ -5343,7 +4984,6 @@ for _,p in ipairs(Players:GetPlayers()) do
 if p~=LP then
 local c=p.Character
 if c and tagPart(c) then
-local h=c:FindFirstChildOfClass("Humanoid")
 act[p]=c
 end
 end
@@ -5497,7 +5137,6 @@ if Players.GetPlayerFromCharacter then
 local ok,pl=pcall(function() return Players:GetPlayerFromCharacter(m) end)
 isPlayerChar=(ok and pl~=nil)
 end
-local h=m:FindFirstChildOfClass("Humanoid")
 if not isPlayerChar then
 list[#list+1]=m
 HOST[m]=isHostile(m)
@@ -5961,9 +5600,6 @@ end
 end
 end)
 SYS._doorList=list
-SYS._doorCut=CUTOF
-SYS._doorSoft=SOFT
-SYS._doorFake=FAKE
 SYS._doorTrap=TRAP
 if not SYS._doorLogged then
 SYS._doorLogged=true
@@ -5981,9 +5617,6 @@ end
 for p,s in pairs(HD_SK) do
 if not dact[p] or s.Adornee~=p then P(function() s:Destroy() end) HD_SK[p]=nil end
 end
-local DCUT=SYS._doorCut or {}
-local DSOFT=SYS._doorSoft or {}
-local DFAKE=SYS._doorFake or {}
 local DTRAP=SYS._doorTrap or {}
 for p in pairs(dact) do
 local h=HD[p]
@@ -6032,9 +5665,6 @@ else
 if next(HD) then for _,h in pairs(HD) do P(function() h:Destroy() end) end HD={} end
 if next(HD_SK) then for _,s in pairs(HD_SK) do P(function() s:Destroy() end) end HD_SK={} end
 SYS._doorList=nil
-SYS._doorCut=nil
-SYS._doorSoft=nil
-SYS._doorFake=nil
 SYS._doorTrap=nil
 end
 if SYS.T_.ESP_Mini then
@@ -6428,270 +6058,10 @@ SYS.SetLoop("AutoDodge", on, RS.Heartbeat, SYS.AutoDodgeTick)
 if on then SYS.Notify("🏃 自动躲机关: 已开(靠近陷阱/地雷/压板会自动退开)", SYS.CY.green) end
 end
 local AUTO_MINI_AREA = SYS.MiniArea
-local function _globalFn(n)
-local f = rawget(_G, n)
-if type(f) ~= "function" then P(function() f = getfenv()[n] end) end
-return type(f) == "function" and f or nil
-end
-local function fireObj(obj)
-if SYS.IsHoneypot and SYS.IsHoneypot(obj) then return false end
-if obj:IsA("ProximityPrompt") then
-local fp = _globalFn("fireproximityprompt")
-if fp then P(function() fp(obj) end) end
-P(function() obj:InputHoldBegin() end)
-P(function() obj:InputHoldEnd() end)
-elseif obj:IsA("ClickDetector") then
-local fc = _globalFn("fireclickdetector")
-if fc then P(function() fc(obj) end) end
-end
-end
-function SYS.AutoHitScan()
-local list = {}
-P(function()
-for _, o in ipairs(SYS.Index()) do
-if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then
-local inMini = false
-local anc = o.Parent
-for _=1,4 do
-if not anc then break end
-local raw = anc.Name
-if type(raw)=="string" and raw~="" then
-local nm = raw:lower():gsub("%s+","")
-for _,kw in ipairs(AUTO_MINI_AREA) do if nm:find(kw,1,true) then inMini=true break end end
-if not inMini and (raw:find("小游戏") or raw:find("关卡") or raw:find("模式")) then inMini = true end
-end
-if inMini then break end
-anc = anc.Parent
-end
-if inMini then
-local p = o.Parent
-if p and p:IsA("BasePart") and p.Position then
-list[#list+1] = { part=p, obj=o }
-end
-end
-end
-end
-end)
-return list
-end
-function SYS.InterKey(obj)
-local okn,nm=P(function() return obj and obj.Name end)
-if not okn or type(nm)~="string" or nm=="" then return nil end
-local host=nil
-local okc,cur=P(function() return obj.Parent end)
-if not okc then cur=nil end
-for _=1,4 do
-if not cur then break end
-local okm,ism=P(function() return cur:IsA("Model") end)
-if okm and ism then
-local ok2,h=P(function() return cur.Name end)
-if ok2 and type(h)=="string" and h~="" then host=h end
-break
-end
-local ok3,par=P(function() return cur.Parent end)
-cur=ok3 and par or nil
-end
-if not host then
-local ok4,hp=P(function() return (obj.Parent and obj.Parent.Name) or nil end)
-host=(ok4 and type(hp)=="string" and hp~="") and hp or "?"
-end
-return tostring(host).."#"..nm
-end
-local HITMK_MAX = 8
-local HITMK_SEC = 1.2
 SYS._hitMk      = SYS._hitMk      or {}
 SYS._hitMkAt    = SYS._hitMkAt    or {}
 SYS._hitMkIdx   = SYS._hitMkIdx   or 0
-SYS._hitMkCount = 0
-local function _hitLabel(obj)
-local ok,nm = P(function() return obj and obj.Name end)
-nm = (ok and type(nm)=="string" and nm~="") and nm or "交互件"
-if #nm > 22 then nm = nm:sub(1,22).."…" end
-return nm
-end
-local function _hitParentGui()
-local ok,pg = P(function()
-return (SYS.SafeParentGui and SYS.ScreenGui) or LP:FindFirstChildOfClass("PlayerGui") or LP.PlayerGui
-end)
-return (ok and pg) or nil
-end
-function SYS.HitMark(part, text, col)
-if SYS._hitMkOff or not part then return end
-P(function()
-if not part.Parent then return end
-SYS._hitMkIdx = (SYS._hitMkIdx % HITMK_MAX) + 1
-local i  = SYS._hitMkIdx
-local mk = SYS._hitMk[i]
-if not mk or not mk.gui or not mk.gui.Parent then
-local gui = SYS.NewVis and SYS.NewVis("BillboardGui")
-if not gui then return end
-gui.Size = UDim2.new(0, 190, 0, 22)
-gui.StudsOffsetWorldSpace = Vector3.new(0, 2.4, 0)
-gui.AlwaysOnTop = true
-gui.MaxDistance = 300
-gui.LightInfluence = 0
-local lab = Instance.new("TextLabel")
-lab.Size = UDim2.new(1, 0, 1, 0)
-lab.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
-lab.BackgroundTransparency = 0.12
-lab.BorderSizePixel = 0
-lab.Font = Enum.Font.GothamBold
-lab.TextSize = 13
-lab.TextColor3 = Color3.fromRGB(235, 240, 250)
-lab.TextStrokeTransparency = 0.55
-lab.Parent = gui
-local rc = Instance.new("UICorner") rc.CornerRadius = UDim.new(0, 6) rc.Parent = lab
-mk = { gui = gui, lab = lab }
-SYS._hitMk[i] = mk
-end
-local pg = _hitParentGui()
-if pg and mk.gui.Parent ~= pg then mk.gui.Parent = pg end
-if not mk.gui.Parent then return end
-mk.gui.Adornee = part
-mk.lab.Text      = tostring(text or "🎯 自动触发")
-mk.lab.TextColor3 = col or Color3.fromRGB(160, 255, 200)
-mk.gui.Enabled = true
-SYS._hitMkAt[i] = os.clock() + HITMK_SEC
-end)
-end
-function SYS.HitMarkHud(text, secs)
-if SYS._hitMkOff then return end
-P(function()
-local pg = _hitParentGui()
-if not pg then return end
-local gui = SYS._hitHudGui
-if not gui or not gui.Parent then
-gui = SYS.NewVis and SYS.NewVis("ScreenGui")
-if not gui then return end
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.DisplayOrder = 999995
-P(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
-local fr = Instance.new("Frame")
-fr.Name = "Box"
-fr.AnchorPoint = Vector2.new(0.5, 1)
-fr.Position = UDim2.new(0.5, 0, 1, -104)
-fr.Size = UDim2.new(0, 460, 0, 26)
-fr.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
-fr.BackgroundTransparency = 0.2
-fr.BorderSizePixel = 0
-fr.Parent = gui
-local rc = Instance.new("UICorner") rc.CornerRadius = UDim.new(0, 8) rc.Parent = fr
-local lab = Instance.new("TextLabel")
-lab.Size = UDim2.new(1, -16, 1, 0) lab.Position = UDim2.new(0, 8, 0, 0)
-lab.BackgroundTransparency = 1
-lab.Font = Enum.Font.GothamMedium
-lab.TextSize = 14
-lab.TextColor3 = Color3.fromRGB(235, 240, 250)
-lab.TextXAlignment = Enum.TextXAlignment.Center
-lab.Parent = fr
-gui.Parent = pg
-SYS._hitHudGui, SYS._hitHudLab = gui, lab
-end
-local s = tostring(text or "")
-if SYS._hitHudLab.Text ~= s then SYS._hitHudLab.Text = s end
-gui.Enabled = true
-SYS._hitHudAt = (secs and secs > 0) and (os.clock() + secs) or nil
-end)
-end
-function SYS.HitMarkTick()
-local now = os.clock()
-for i, mk in pairs(SYS._hitMk or {}) do
-if mk.gui and mk.gui.Parent and mk.gui.Enabled then
-local at = SYS._hitMkAt[i]
-if at and now >= at then mk.gui.Enabled = false end
-end
-end
-if SYS._hitHudGui and SYS._hitHudGui.Parent and SYS._hitHudGui.Enabled then
-local at = SYS._hitHudAt
-if at and now >= at then SYS._hitHudAt = nil SYS._hitHudGui.Enabled = false end
-end
-end
-function SYS.HitMarkClear(off)
-SYS._hitMkOff = off and true or false
-for i, mk in pairs(SYS._hitMk or {}) do
-if mk.gui then P(function() mk.gui.Enabled = false mk.gui.Adornee = nil end) end
-SYS._hitMkAt[i] = nil
-end
-if SYS._hitHudGui then P(function() SYS._hitHudGui.Enabled = false end) end
-SYS._hitHudAt = nil
-end
-function SYS.HitMarkDestroy()
-for i, mk in pairs(SYS._hitMk or {}) do
-if mk.gui then P(function() mk.gui:Destroy() end) end
-SYS._hitMk[i] = nil SYS._hitMkAt[i] = nil
-end
-if SYS._hitHudGui then P(function() SYS._hitHudGui:Destroy() end) end
-SYS._hitHudGui, SYS._hitHudLab, SYS._hitHudAt = nil, nil, nil
-SYS._hitMkCount = 0
-end
 SYS._hitStat = SYS._hitStat or {fired=0, capped=0, dup=0}
-function SYS.AutoHitTick()
-if not SYS.T_.AutoHitMinigame then return end
-local _, _, root = GC()
-if not root then return end
-local now = os.clock()
-SYS._hitSeenN = (SYS._hitSeenN or 0) + 1
-if SYS._hitSeenN >= 600 then
-SYS._hitSeenN = 0
-local cut = now - 60
-for k, t in pairs(SYS._hitSeen) do
-if type(t)=="number" and t < cut then SYS._hitSeen[k] = nil end
-end
-end
-if (now - (SYS._hitAt or 0)) > 0.5 or not SYS._hitList then
-SYS._hitAt = now
-SYS._hitList = SYS.AutoHitScan()
-if not SYS._hitLogged and #SYS._hitList > 0 then
-SYS._hitLogged = true
-local keys,dup = {}, 0
-for _, it in ipairs(SYS._hitList) do
-local k = SYS.InterKey(it.obj)
-if k then
-if keys[k] then dup = dup + 1 else keys[k] = true end
-end
-end
-SYS._hitStat.dup = dup
-print(("[CheatMenu] 自动小游戏: 本轮目标 %d 个, 其中 %d 个是【同一物件上的重复交互件】"
-.." —— 已按【宿主+交互件名】合并, 同一目标最快 0.6 秒触发一次(不再同帧连点)"):format(#SYS._hitList, dup))
-end
-end
-local thr = tonumber(SYS.C_.HitDist) or 30
-local BURST = 24
-local fired = 0
-for _, it in ipairs(SYS._hitList or {}) do
-local p = it.part
-if p and p.Parent and (p.Position - root.Position).Magnitude < thr then
-local key = SYS.InterKey(it.obj) or it.obj
-if not SYS._hitSeen[key] or now - SYS._hitSeen[key] > 0.6 then
-if fired >= BURST then
-SYS._hitStat.capped = SYS._hitStat.capped + 1
-break
-end
-SYS._hitSeen[key] = now
-fired = fired + 1
-SYS._hitStat.fired = SYS._hitStat.fired + 1
-local lbl = _hitLabel(it.obj)
-local okFire = fireObj(it.obj)
-SYS._hitMkCount = (SYS._hitMkCount or 0) + 1
-if okFire == false then
-SYS.HitMark(p, "⛔ 跳过(蜜罐) · "..lbl, Color3.fromRGB(255, 150, 150))
-SYS.HitMarkHud(("🎯 自动触发: 跳过蜜罐 · %s (累计 %d)"):format(lbl, SYS._hitMkCount), 1.6)
-else
-SYS.HitMark(p, "🎯 自动触发 · "..lbl, Color3.fromRGB(160, 255, 200))
-SYS.HitMarkHud(("🎯 自动触发: %s (累计 %d)"):format(lbl, SYS._hitMkCount), 1.6)
-end
-end
-end
-end
-SYS.HitMarkTick()
-end
-function SYS.SetAutoHitMinigame(on)
-SYS.T_.AutoHitMinigame = on and true or false
-SYS.SetLoop("AutoHitMinigame", on, RS.Heartbeat, SYS.AutoHitTick)
-if SYS.HitMarkClear then SYS.HitMarkClear(not on) end
-if on then SYS.Notify("🎯 自动触发小游戏目标: 已开(同名交互件会合并、每帧最多 24 个; 被触发的物件上会贴「🎯 自动触发」小牌, 屏幕下方显示累计次数)", SYS.CY.green) end
-end
 local FPos,FYaw,FPitch=Vector3.zero,0,0
 local FConn,FMC,FKC=nil,nil,nil
 local FHum={}
@@ -8931,7 +8301,6 @@ local fovOK=(dd0<=fovPx) or SYS.T_.CB_360==true or SYS.T_.CB_BulletWall==true
 or SYS.T_.CB_SilentAim==true or SYS.T_.CB_SilentNoTurn==true
 if (not (SYS.T_.CB_SkipFF and _sh)) and d<=maxD and fovOK then
 local sp,on=sp0,on0
-local inView=on and sp.Z>0
 local dd=dd0
 local aiming=false
 local fc=bodyOf(pl.Character)
@@ -9137,7 +8506,6 @@ if next(moveHeld)~=nil then return true end
 return UIS:IsKeyDown(Enum.KeyCode.W) or UIS:IsKeyDown(Enum.KeyCode.A)
 or UIS:IsKeyDown(Enum.KeyCode.S) or UIS:IsKeyDown(Enum.KeyCode.D)
 end
-local SCAN_DT=1/30
 local accScan=0
 CB.Stat={scan=0,hud=0,aim=0}
 local function tickBody(dt)
@@ -12063,448 +11431,6 @@ fixDeep(SYS.ScreenGui,"RBX_Panel")
 fixDeep(SYS.FloatGui,"RBX_Float")
 return n
 end
-SYS.UIMask={ On=false, Saved=nil, Placeholder="Info" }
-local UM=SYS.UIMask
-local function umRoots()
-local r={}
-if SYS.ScreenGui then r[#r+1]=SYS.ScreenGui end
-if SYS.FloatGui then r[#r+1]=SYS.FloatGui end
-return r
-end
-function UM.Build()
-local saved={}
-for _,root in ipairs(umRoots()) do
-P(function()
-local list={root}
-local ok,ds=pcall(function() return root:GetDescendants() end)
-if ok and ds then for i=1,#ds do list[#list+1]=ds[i] end end
-for i=1,#list do
-local o=list[i]
-if o then
-local ok2,t=pcall(function() return o.Text end)
-if ok2 and type(t)=="string" and t~="" then saved[o]=t end
-end
-end
-end)
-end
-UM.Saved=saved
-return saved
-end
-function UM.Apply()
-if not UM.Saved then UM.Build() end
-local n=0
-for o in pairs(UM.Saved or {}) do
-P(function()
-if o.Parent then pcall(function() o.Text=UM.Placeholder end) n=n+1 end
-end)
-end
-return n
-end
-function UM.Restore()
-local n=0
-if UM.Saved then
-for o,t in pairs(UM.Saved) do
-P(function()
-if o.Parent then pcall(function() o.Text=t end) n=n+1 end
-end)
-end
-end
-return n
-end
-function SYS.SetUIMask(on)
-UM.On=on and true or false
-if on then
-UM.Build()
-if SYS.ScreenGui and SYS.MenuOpen==false then P(UM.Apply) end
-else
-P(UM.Restore)
-end
-end
-function Prot.SelfAudit()
-local L={}
-local function A(f,...) L[#L+1]="  "..(select("#",...)>0 and f:format(...) or f) end
-A("=========== CheatMenu 反指纹自检 (G6/G7) ===========")
-local root=SYS.ScreenGui
-if not root then
-A("!! ScreenGui=nil (菜单还没建)")
-else
-local w=fpBad(root.Name)
-A("ScreenGui.Name=%q  可疑词=%s",tostring(root.Name),w or "(无)")
-local par=root.Parent
-local pn="nil"
-if par then
-if par==SYS.PG then pn="PlayerGui (任何脚本都能遍历)"
-elseif SYS.CoreGui and par==SYS.CoreGui then pn="CoreGui (权限更高)"
-else P(function() pn=par:GetFullName() end) end
-end
-A("ScreenGui 父级=%s",pn)
-A("Archivable: ScreenGui=%s  FloatGui=%s  (false=不会被 GetDescendants+Clone 抓走)",
-tostring(root.Archivable),tostring(SYS.FloatGui and SYS.FloatGui.Archivable))
-local subs={}
-P(function()
-local seen={}
-for _,d in ipairs(root:GetDescendants()) do
-local dw=fpBad(d.Name)
-if dw and not seen[d.Name] then
-seen[d.Name]=true
-subs[#subs+1]=("%s<%s>"):format(tostring(d.Name),d.ClassName)
-end
-end
-end)
-if #subs==0 then
-A("GUI 树可疑名: (无)")
-else
-local show=math.min(#subs,12)
-A("GUI 树可疑名 %d 处: %s%s",#subs,table.concat(subs,", ",1,show),#subs>show and " …" or "")
-A("   -> 点「🧹 擦掉 GUI 可疑名」可一键换成中性名(子元素本来就是 t/fr/lab 这类, 不会动)")
-end
-local txt={}
-P(function()
-local ok,ds=pcall(function() return root:GetDescendants() end)
-if ok and ds then
-for i=1,#ds do
-local d=ds[i]
-local ok2,t2=pcall(function() return d.Text end)
-if ok2 and type(t2)=="string" and t2~="" then
-local hit=txBad(t2)
-if hit and #txt<40 then txt[#txt+1]=("%s<%s>"):format(tostring(t2),hit) end
-end
-end
-end
-end)
-if #txt==0 then
-A("GUI 文字可疑词: (无)")
-else
-local sh=math.min(#txt,8)
-A("⚠ GUI 文字可疑词 %d 处: %s%s",#txt,table.concat(txt," | ",1,sh),#txt>sh and " …" or "")
-A("   -> 文字不能中性化(否则你看不懂)。想降低暴露窗口: 开「🧐 UI 文字脱敏」")
-A("      (菜单【关闭】时把全部文字换成中性占位, 打开时还原)。")
-end
-end
-local eg={"getgenv","gethui","getrawmetatable","hookmetamethod","hookfunction","checkcaller",
-"setreadonly","getconnections","firesignal","getscriptbytecode","setfflag",
-"is_sirhurt_closure","syn","KRNL_LOADED","secure_load"}
-local seenG={}
-local G=_G
-for i=1,#eg do
-local ok,v=pcall(function() return G[eg[i]] end)
-if ok and v~=nil then seenG[#seenG+1]=eg[i] end
-end
-A("可见执行器全局 %d 个: %s",#seenG,#seenG>0 and table.concat(seenG,",") or "(无)")
-A("⚠ 边界: 这些全局是执行器注入的, 脚本层删不掉(删了脚本自己也没得用)。")
-A("  能做的只有「少暴露自己」: 中性名 + 少留特征实例 —— 上面已经逐项列出。")
-local hk={}
-if SYS._Hooks then for _,r in pairs(SYS._Hooks) do hk[#hk+1]=tostring(r.tag or "?") end end
-A("已登记 hook %d 个: %s",#hk,#hk>0 and table.concat(hk,", ") or "(无)")
-if #hk>0 then
-A("  ⚠ 这些全是【函数替换】—— 反作弊若比较函数身份, 或用 debug.info 扫「非 C 闭包」, 就能看见。")
-A("  -> 想遮: 开「🫥 hook 隐身」(只把【我方闭包】的 debug.info 报成 C 函数, 别人函数原样返回)。")
-local stb=SYS.Stealth
-if stb and stb.On then A("  当前「🫥 hook 隐身」= 已开(累计遮了 %d 次)",stb.Cnt)
-else A("  当前「🫥 hook 隐身」= 关") end
-end
-A("")
-A("----------- E. 运行计数 -----------")
-local acb=SYS.ACBlock
-A("反作弊通道拦截: %s   拦下 %d 次   最近 %s",(acb and acb.on) and "开" or "关",
-tonumber(SYS._ACBlockedN) or 0,tostring(SYS._ACBlockedLast or "(无)"))
-local ar=SYS.AntiRevert
-A("防回退: %s   位置改写 %d 次   数值夹值 %d 次   最近移动通道 %s",(ar and ar.on) and "开" or "关",
-(ar and ar.fixed) or 0,(ar and ar.capped) or 0,tostring((ar and ar.ev and ar.ev.Name) or "(无)"))
-local ag=SYS.AttrGuard
-A("Attribute 回写: %s   回写 %d 次",(ag and ag.on) and "开" or "关",(ag and ag.fixed) or 0)
-local cg=SYS.CamGuard
-A("相机护栏: %s   回压 %d 次   阈值 %s 格",(cg and cg.on) and "开" or "关",(cg and cg.pulls) or 0,
-tostring(tonumber(SYS.C_.CamGuardDist) or 30))
-A("开火抖动: %s (0 ~ %.3f 秒)",((tonumber(SYS.C_.FireJitter) or 0)>0.001) and "生效中" or "关",
-tonumber(SYS.C_.FireJitter) or 0)
-A("上行参数类型突变告警: %d 次 (只报不拦, 不会丢上行)",tonumber(SYS._FireTypeWarn) or 0)
-A("")
-A("----------- H. 一致性 / 只读检查 -----------")
-if SYS.TimeCheck then for _,l in ipairs(SYS.TimeCheck()) do A("%s",l) end end
-if SYS.MetaCheck then for _,l in ipairs(SYS.MetaCheck()) do A("%s",l) end end
-if SYS.NetOwnerInfo then for _,l in ipairs(SYS.NetOwnerInfo()) do A("%s",l) end end
-A("%s",SYS.FpsGcInfo and SYS.FpsGcInfo() or "FPS: (取样未启动)")
-if SYS.FireRateStat then for _,l in ipairs(SYS.FireRateStat()) do A("%s",l) end end
-A("")
-A("----------- J.4 角色物理完整性(只报告, 本脚本不动这些) -----------")
-local ch=LP.Character
-local hm=ch and ch:FindFirstChildOfClass("Humanoid")
-local rt=ch and ch:FindFirstChild("HumanoidRootPart")
-if hm then
-A("Humanoid.BreakJointsOnDeath=%s (默认 true)",tostring(hm.BreakJointsOnDeath))
-A("Humanoid.PlatformStand=%s   JumpPower/UseJumpPower=%s/%s",
-tostring(hm.PlatformStand),tostring(hm.JumpPower),tostring(hm.UseJumpPower))
-end
-if rt then A("HumanoidRootPart.CanCollide=%s (默认 true)",tostring(rt.CanCollide)) end
-A("★ 飞行/加速期间本脚本不改 BreakJointsOnDeath/CanCollide; 上面若与默认不符, 是别的脚本或游戏改的。")
-A("")
-A("----------- K. 反作弊框架识别 -----------")
-if SYS.Diag and SYS.Diag.ACFramework then
-local f=SYS.Diag.ACFramework()
-A("识别结果: %s   强度 %d/3",tostring(f.name),tonumber(f.strength) or 0)
-for i=1,#f.hits do A("  命中: %s",f.hits[i]) end
-if f.name=="byfron" then A("建议: ⚠ 高强度反作弊, 倍率 <= 2, 不做高频操作")
-elseif f.name=="custom" then A("建议: ⚠ 自定义反作弊, 谨慎调倍率")
-elseif f.name=="none" then A("建议: ✅ 无明显反作弊, 正常使用即可")
-else A("建议: 未知 —— 按自定义反作弊对待") end
-end
-A("")
-A("----------- G. 旧版遗留键(只报告, 不删) -----------")
-local LG={ {"旧加载键","CheatLoaded"}, {"旧卸载键","CheatUnload"},
-{"旧启动键","CheatBootDone"}, {"旧更新提示","CheatUpdateNote"} }
-local anyLeg=false
-for i=1,#LG do
-local k=LG[i][2]
-if GENV[k]~=nil then
-anyLeg=true
-A("⚠ %s GENV.%s 还在 —— 建议用户手动清理(本脚本不删)",LG[i][1],k)
-end
-end
-if not anyLeg then A("✅ 没有旧版遗留键") end
-return L
-end
-SYS.Stealth={ On=false, Ours={}, Cnt=0, Note="" }
-local ST=SYS.Stealth
-function ST.Mark(f) if type(f)=="function" then ST.Ours[f]=true end return f end
-function ST.Harvest()
-if SYS.ACBlock then
-if type(SYS.ACBlock.tFS)=="function" then ST.Mark(SYS.ACBlock.tFS) end
-if type(SYS.ACBlock.tIS)=="function" then ST.Mark(SYS.ACBlock.tIS) end
-end
-local n=0
-local function markDict(t, keyed)
-if type(t)~="table" then return end
-for k,v in pairs(t) do
-if keyed then
-if type(k)=="function" then ST.Mark(k) n=n+1 end
-else
-if type(v)=="function" then ST.Mark(v) n=n+1 end
-end
-end
-end
-markDict(SYS._Hooks,true)
-if SYS.AntiRevert and SYS.AntiRevert.ev then
-local f=SYS.AntiRevert.ev.FireServer
-if type(f)=="function" then ST.Mark(f) n=n+1 end
-end
-if SYS.SpiderSense then markDict(SYS.SpiderSense.Found) end
-if SYS.DeadOnTime  then markDict(SYS.DeadOnTime.Found)  end
-if SYS.DRCombat then
-markDict(SYS.DRCombat.Found)
-local H=SYS.DRCombat.Hooked
-if type(H)=="table" and type(SYS.DRCombat.Found)=="table" then
-for i in pairs(H) do ST.Mark(SYS.DRCombat.Found[i]) n=n+1 end
-end
-end
-if SYS.RayHook then markDict(SYS.RayHook.FnHooked,true) end
-if SYS.Gun and type(SYS.Gun.Nums)=="table" then
-for i=1,#SYS.Gun.Nums do
-local e=SYS.Gun.Nums[i]
-if e and type(e.f)=="function" then ST.Mark(e.f) n=n+1 end
-end
-end
-return n
-end
-function ST.Install()
-if ST.On then return true end
-if type(debug)~="table" or type(debug.info)~="function" then
-ST.Note="本机没有 debug.info —— 隐身用不了"; return false,"本机没有 debug.info"
-end
-if type(checkcaller)~="function" then
-ST.Note="本机没有 checkcaller —— 装了会误伤本脚本自己, 故不开"; return false,"本机没有 checkcaller"
-end
-if type(SYS.HookAPI)~="function" or not SYS.HookAPI() then
-ST.Note="本机没有 hookfunction —— 隐身用不了"; return false,"本机没有 hookfunction"
-end
-local DI=debug.info
-local function spoof(f,opt)
-if type(checkcaller)=="function" and checkcaller() then return DI(f,opt) end
-if type(f)=="function" and ST.Ours[f] then
-ST.Cnt=ST.Cnt+1
-local o=tostring(opt or "")
-if o=="s" then return "[C]" end
-if o=="n" then return "" end
-if o=="l" then return -1 end
-if o=="a" then return 0 end
-return "[C]"
-end
-return DI(f,opt)
-end
-local orig,err=SYS.SafeHook(DI,spoof,"debug.info")
-if not orig then ST.Note=tostring(err); return false,err end
-ST.Orig=orig ST.Extra={} ST.DI=DI
-pcall(function()
-if type(getrenv)~="function" then return end
-local genv=getrenv(); if type(genv)~="table" then return end
-local gdi=genv.debug and genv.debug.info
-if type(gdi)=="function" and gdi~=DI then
-if SYS.SafeHook(gdi,spoof,"getrenv.debug.info") then ST.Extra[#ST.Extra+1]=gdi end
-end
-local gfe=genv.getfenv
-if type(gfe)=="function" then
-local base=gfe
-local function fespoof(l)
-if type(checkcaller)=="function" and checkcaller() then return base(l) end
-if type(l)=="number" and l>=1 and l<=10 then
-ST.Cnt=ST.Cnt+1
-return base(10)
-end
-return base(l)
-end
-if SYS.SafeHook(base,fespoof,"getrenv.getfenv") then ST.Extra[#ST.Extra+1]=base end
-end
-local gi=genv.getidentity or rawget(_G,"getidentity")
-if type(gi)=="function" then
-local base=gi
-local function idspoof(...)
-if type(checkcaller)=="function" and checkcaller() then return base(...) end
-ST.Cnt=ST.Cnt+1
-return 2
-end
-if SYS.SafeHook(base,idspoof,"getidentity") then ST.Extra[#ST.Extra+1]=base end
-end
-local gti=genv.getthreadidentity or rawget(_G,"getthreadidentity")
-if type(gti)=="function" and gti~=gi then
-local base=gti
-local function tisp(...)
-if type(checkcaller)=="function" and checkcaller() then return base(...) end
-ST.Cnt=ST.Cnt+1
-return 2
-end
-if SYS.SafeHook(base,tisp,"getthreadidentity") then ST.Extra[#ST.Extra+1]=base end
-end
-local gt=genv.debug and genv.debug.traceback
-if type(gt)=="function" then
-local base=gt
-local function tbs(...)
-if type(checkcaller)=="function" and checkcaller() then return base(...) end
-ST.Cnt=ST.Cnt+1
-return ""
-end
-if SYS.SafeHook(base,tbs,"debug.traceback") then ST.Extra[#ST.Extra+1]=base end
-end
-local FPB=SYS.Prot and SYS.Prot.fpBad
-local function upSpoof(fn)
-return function(f,i)
-if type(checkcaller)=="function" and checkcaller() then return fn(f,i) end
-if type(f)=="function" and ST.Ours[f] then ST.Cnt=ST.Cnt+1 return nil end
-return fn(f,i)
-end
-end
-local d1=debug and debug.getupvalue
-if type(d1)=="function" then
-if SYS.SafeHook(d1,upSpoof(d1),"debug.getupvalue") then ST.Extra[#ST.Extra+1]=d1 end
-end
-local d2=debug and debug.setupvalue
-if type(d2)=="function" then
-if SYS.SafeHook(d2,upSpoof(d2),"debug.setupvalue") then ST.Extra[#ST.Extra+1]=d2 end
-end
-local function modSpoof(fn)
-return function(...)
-if type(checkcaller)=="function" and checkcaller() then return fn(...) end
-local ok,r=pcall(fn,...)
-if not ok or type(r)~="table" then return r end
-local out={}
-for i=1,#r do
-local s=r[i]
-local nm=nil
-pcall(function() nm=tostring(s.Name or "") end)
-if nm==nil or nm=="" or not (FPB and FPB(nm)) then out[#out+1]=s end
-end
-ST.Cnt=ST.Cnt+1
-return out
-end
-end
-local m1=rawget(_G,"getloadedmodules")
-if type(m1)=="function" then
-if SYS.SafeHook(m1,modSpoof(m1),"getloadedmodules") then ST.Extra[#ST.Extra+1]=m1 end
-end
-local m2=rawget(_G,"getscripts")
-if type(m2)=="function" then
-if SYS.SafeHook(m2,modSpoof(m2),"getscripts") then ST.Extra[#ST.Extra+1]=m2 end
-end
-if SYS.T_.StealthReg then
-local gr=rawget(_G,"getreg") or genv.getreg
-if type(gr)=="function" then
-local function regSpoof(...)
-if type(checkcaller)=="function" and checkcaller() then return gr(...) end
-local ok,r=pcall(gr,...)
-if not ok or type(r)~="table" then return r end
-local out={}
-for k,v in pairs(r) do
-if type(v)=="table" then
-local cp={}
-for kk,vv in pairs(v) do
-if not (type(kk)=="function" and ST.Ours[kk]) then cp[kk]=vv end
-end
-out[k]=cp
-else
-out[k]=v
-end
-end
-ST.Cnt=ST.Cnt+1
-return out
-end
-if SYS.SafeHook(gr,regSpoof,"getreg") then ST.Extra[#ST.Extra+1]=gr end
-end
-end
-end)
-ST.On=true ST.Note=""
-return true
-end
-function ST.Remove()
-if not ST.On then return end
-local restored = false
-if SYS.SafeUnhook and ST.DI then restored = SYS.SafeUnhook(ST.DI) end
-if not restored and ST.DI and ST.Orig and type(SYS.HookAPI)=="function" then
-local HF = SYS.HookAPI()
-if HF then pcall(HF, ST.DI, ST.Orig) end
-end
-if SYS.SafeUnhook and type(ST.Extra)=="table" then
-for i=1,#ST.Extra do SYS.SafeUnhook(ST.Extra[i]) end
-end
-ST.Extra=nil
-ST.DI=nil
-ST.On=false ST.Orig=nil
-end
-function ST.Clear() ST.Remove() ST.Ours={} ST.Cnt=0 end
-function ST.Report()
-local n=0 for _ in pairs(ST.Ours) do n=n+1 end
-local hk=0
-if SYS._Hooks then for _ in pairs(SYS._Hooks) do hk=hk+1 end end
-return {
-("已开启: %s   已登记(需隐身)闭包: %d   被遮次数: %d"):format(tostring(ST.On),n,ST.Cnt),
-("备注: %s"):format(tostring(ST.Note~="" and ST.Note or "(无)")),
-("层数: 全局/游戏环境 debug.info + getfenv 层级隐藏 + 身份伪装 + 回溯擦除  共 %d 个 hook 点(多层叠用)"):format(1+(ST.Extra and #ST.Extra or 0)),
-("覆盖率: 覆盖闭包 %d / 已登记 hook 总数 %d, 缺口 %d"):format(n,hk,math.max(0,hk-n)),
-"原理: 只把【我方登记闭包】的 debug.info 报成 [C]/name 空; 别人函数原样返回; 我们自己调用直通。",
-}
-end
-function SYS.SetStealth(on)
-if on then
-if SYS._Hooks then for t in pairs(SYS._Hooks) do ST.Mark(t) end end
-local got=ST.Harvest()
-local ok,err=ST.Install()
-if not ok then
-SYS.T_.Prot_Stealth=false
-SYS.Notify("❌ hook 隐身开启失败: "..tostring(err),SYS.CY.red)
-return false
-end
-if SYS.Prot and SYS.Prot.NeutralizeNames then P(function() SYS.Prot.NeutralizeNames() end) end
-P(function()
-if SYS.ScreenGui then SYS.ScreenGui.Archivable=false end
-if SYS.FloatGui then SYS.FloatGui.Archivable=false end
-end)
-SYS.Notify(("🫥 hook 隐身已开 —— 已遮蔽 %d 个我方闭包(hook 目标)\n多层: debug.info(全局+游戏环境) + getfenv 层级隐藏 + getidentity 身份伪装 + debug.traceback 擦除; 并叠了中性名 + Archivable=false"):format(got),SYS.CY.green)
-else
-ST.Remove()
-SYS.Notify("🫥 hook 隐身已关(debug.info 已还原)",SYS.CY.sub)
-end
-return true
-end
-if SYS.RegisterScanner then
-end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
 Ray.Hooked=false Ray.Unhook=nil Ray.Rewrites=0 Ray.ThruN=0
@@ -12716,13 +11642,6 @@ end
 Ray.Unhook=nil Ray.Hooked=false
 Ray.Busy=false
 HC.part=nil HC.pos=nil HC.nrm=nil HC.t=0
-end
-function SYS.SetRayNamecall(on)
-if SYS.RayHook then
-local want=SYS.T_.CB_SilentAim or SYS.T_.CB_BulletWall or SYS.T_.CB_BlockRay
-P(SYS.RayHook.Remove)
-if want then P(SYS.RayHook.Install) end
-end
 end
 local function RAPI(n)
 local ok,v=pcall(function() return _G[n] end)
@@ -13693,7 +12612,7 @@ if #bad==0 then return true,"工作目录里没有带外挂名的旧文件" end
 return false,("仍存在: "..table.concat(bad,", ").."  (点「一键修复」可删)")
 end
 local function d5()
-local _,hum,root=GC()
+local _,hum=GC()
 if not hum then return true,"当前没有角色" end
 local bad={}
 local okW,ws=pcall(function() return hum.WalkSpeed end)
@@ -13745,7 +12664,6 @@ return true,("%d 个 hook 在装: %s —— 只有【执行器级】对手能枚
 :format(#installed,table.concat(installed,"/"),caps)
 end
 local function d10()
-local g=SYS.GV and SYS.GV(SYS.GK.loaded,LEG_LOADED) or nil
 local viaNew=(GENV[SYS.GK.loaded]~=nil)
 local viaOld=(GENV[LEG_LOADED]~=nil)
 if viaOld then
@@ -13788,16 +12706,6 @@ end
 if #bad==0 then return true,"本地 Humanoid 与 Player Attribute 一致(或本游戏不用这些 Attribute)" end
 return false,"不一致 "..#bad.." 处: "..table.concat(bad," / ")
 end
-local function d14()
-local st=SYS.Stealth
-if not st then return true,"(未接)" end
-local n=0 for _ in pairs(st.Ours) do n=n+1 end
-local hk=0
-if SYS._Hooks then for _ in pairs(SYS._Hooks) do hk=hk+1 end end
-if not st.On then return false,("hook 隐身【没开】—— 已登记闭包 %d 个全裸奔(hook 总数 %d)"):format(n,hk) end
-if n<hk then return false,("隐身已开但只覆盖 %d/%d, 缺口 %d"):format(n,hk,hk-n) end
-return true,("隐身已开, 覆盖 %d/%d"):format(n,hk)
-end
 AC.List={
 {"D1","实例足迹扫描",d1},
 {"D2","菜单可见性",d2},
@@ -13812,7 +12720,6 @@ AC.List={
 {"D11","上行速率指纹",d11},
 {"D12","上报通道暴露面",d12},
 {"D13","Attribute 一致性",d13},
-{"D14","Stealth 覆盖率",d14},
 }
 function SYS.ApplyNeutralNames()
 local ok=true
@@ -14305,7 +13212,7 @@ UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n
 "· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
 "· 小游戏区域: 名字或 3 层祖先命中区域名(duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost / machin) 或含「小游戏/关卡/模式」\n"..
 "🎨 颜色统一: 普通物件 + 普通门 + 小游戏里的东西 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。\n"..
-"💡 小游戏区域透视已并入本开关 —— MachineParty 页不再单独提供。",CY.sub)
+"💡 小游戏区域透视已并入本开关。",CY.sub)
 UI.Btn(p,"🩺 高亮彻底性自检 (控制台)",CY.cyan,function()
 P(function()
 print("[CheatMenu] ===== 物件透视 · 彻底性自检 =====")
@@ -14551,7 +13458,6 @@ UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
 "    ✅ 只动【我们自己的】实例, 不碰游戏 UI、不改任何按键绑定; 菜单仍留在 PlayerGui ⇒ 位置不受影响。\n"..
 "    ⚠ 对「逐帧遍历 PlayerGui/gethui 找可疑 GUI」的检测【防不住】—— 那种本来也拦不住。\n"..
 "    ⚠ 也【挡不住】遍历 Workspace 找 Highlight/多出来的 Part —— 那是透视类功能的固有代价。\n"..
-"· 🎈 防甩飞 = 纯本地速度清零, 不 hook 任何函数。\n"..
 "★ 共同原则: 【只做零开销的改名与本地处理, 绝不挂 __namecall / __index】。\n"..
 "❌ 已删除(2026-09-22): 「反作弊绕过(hook 本地 Kick/BanAsync)」与「防止被换服(拦 TeleportService)」——\n"..
 "   真实踢/封/传送都由服务端发出, 客户端拦不到; 而且 **hook 本身就是可被检测的特征**\n"..
@@ -15547,19 +14453,6 @@ LAB.LastRemote={net=#net,recv=withRecv}
 return #net,withRecv,fn
 end
 do
-local function dictN(t) local n=0 if type(t)=="table" then for _ in pairs(t) do n=n+1 end end return n end
-SYS.RegisterScanner("🕷 蜘蛛感知扫描 (SpiderRig 函数层)", function()
-local M=SYS.SpiderSense
-if not M then return {"(本版本没有 SpiderSense)"} end
-return { ("已扫描: %s   已定位函数: %d"):format(tostring(M.Ready==true),dictN(M.Found)),
-("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
-end)
-SYS.RegisterScanner("⏱ 死亡倒计时扫描 (DeadOnTime 函数层)", function()
-local M=SYS.DeadOnTime
-if not M then return {"(本版本没有 DeadOnTime)"} end
-return { ("已扫描: %s   已定位函数: %d"):format(tostring(M.Ready==true),dictN(M.Found)),
-("备注: %s"):format(tostring(M.Note~="" and M.Note or "(无)")) }
-end)
 SYS.RegisterScanner("🚂 亡命铁轨战斗扫描 (瞄准脚本函数层)", function()
 local M=SYS.DRCombat
 if not M then return {"(本版本没有 DRCombat)"} end
@@ -16539,7 +15432,7 @@ UI.Tip(p,"★ 服务端战斗数据 = 综合扫描新发现的 3 条【权威输
 .. "  · CombatService.Ammo（真实弹药）\n"
 .. "现在【只记录不改行为】—— 因为这三条的参数格式还没实机见过，猜着当判据会把原来能打中的也打不中。\n"
 .. "你玩一局 -> 点上面那个按钮 -> 把控制台几行发我，我就按真实参数把它们接成判据（这才是补强的正确顺序）。",CY.sub)
-UI.Tip(p,"⚠ 这三条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 静默瞄准 = 游戏射线命中点被改写成当前锁定目标\n  · 子弹穿墙 = 只打人、不打墙(下面详述)\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
+UI.Tip(p,"⚠ 下面这两条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 子弹穿墙 = 只打人、不打墙(下面详述)\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
 UI.Tip(p,"🎯 子弹穿墙 v9.10.0 重做 —— 原来那条为什么穿不过去, 以及现在的三条路:\n"..
 "  【旧版的三个硬前提, 缺一个就整条失效, 界面却仍显示『已开』】\n"..
 "   ① 必须先在战斗页【锁定一个目标】: 没锁定就一行都不改写;\n"..
@@ -16983,7 +15876,7 @@ function(v)
 SYS.C_.PC_Sel=v
 if SYS.PCRender then P(SYS.PCRender) end
 end)
-local infoCard,info=UI.Card(p,118)
+local _,info=UI.Card(p,118)
 local _,nL=UI.Stat(info,"昵称","—")
 local _,uL=UI.Stat(info,"用户名","—")
 local _,idL=UI.Stat(info,"用户ID","—")
@@ -17686,9 +16579,6 @@ if not ok then warn("[CheatMenu] CreateMenu 失败:",tostring(err)) end
 return
 end
 SYS.MenuOpen=not (SYS.ScreenGui.Enabled==true)
-if SYS.T_.Prot_UImask and SYS.UIMask then
-if SYS.MenuOpen then P(SYS.UIMask.Restore) else P(SYS.UIMask.Apply) end
-end
 SYS.ScreenGui.Enabled=SYS.MenuOpen
 if SYS.MenuOpen then
 SYS.MenuPrevMouseBehav=UIS.MouseBehavior
@@ -17869,7 +16759,6 @@ end
 end))
 end
 do
-local function rnd(a,b) return a+math.random()*(b-a) end
 local function rootHum()
 local ch=SYS.LP and SYS.LP.Character
 if not ch then return nil,nil end
@@ -17975,59 +16864,6 @@ end))
 end
 print("[CheatMenu][管理监听] 已只读接入 Teleport/Kick/Ban 类通道 + PlayerRemoving")
 end
-local AG={ on=false, fixed=0, last=0 }
-SYS.AttrGuard=AG
-function SYS.AttrGuardTick()
-if not AG.on or SYS.T_.AttrGuard~=true then return end
-local now=os.clock()
-if now-(AG.last or 0)<0.2 then return end
-AG.last=now
-local pl=SYS.LP
-if not pl or type(pl.GetAttribute)~="function" then return end
-local _,hum=rootHum()
-local hv=hum and hum.Health or nil
-local snap={}
-local bad={}
-local KEYS={"Health","MaxHealth","State","Shield","TempShield"}
-for i=1,#KEYS do
-local k=KEYS[i]
-local v=nil
-pcall(function() v=pl:GetAttribute(k) end)
-snap[k]=v
-if v~=nil then
-if k=="State" and tostring(v)=="Dead" and hv and hv>0 then bad[#bad+1]=k end
-if k=="Health" and type(v)=="number" and v<=0 and hv and hv>0 then bad[#bad+1]=k end
-end
-end
-if #bad==0 then return end
-AG.fixed=AG.fixed+1
-for i=1,#bad do
-local k=bad[i]
-local want=snap[k]
-if k=="State" then want="Alive" end
-if k=="Health" and hv then want=hv end
-if want~=snap[k] then
-SYS.TT(task.delay(rnd(0.05,0.2),function()
-if not AG.on then return end
-P(function() pl:SetAttribute(k,want) end)
-end))
-end
-end
-end
-function SYS.SetAttrGuard(on)
-on=on and true or false
-local wasOn=AG.on
-SYS.T_.AttrGuard=on
-AG.on=on
-if on then
-SYS.SetLoop("AttrGuard",true,RS.Heartbeat,SYS.AttrGuardTick)
-P(SYS.Notify,"🧬 Attribute 回写已开 (写回带 0.05~0.2 秒随机延迟)",SYS.CY.green)
-else
-SYS.SetLoop("AttrGuard",false)
-if wasOn then P(SYS.Notify,"🧬 Attribute 回写已关",SYS.CY.sub) end
-end
-return true
-end
 local CG={ on=false, pulls=0, last=0 }
 SYS.CamGuard=CG
 function SYS.SetCamGuard(on)
@@ -18104,46 +16940,6 @@ if root then P(function() root.CFrame=cf end) end
 end)
 end))
 P(SYS.Notify,"📍 位置下行回压已开 (仅飞行/加速时生效)",SYS.CY.green)
-return true
-end
-local FSS={ on=false, hooked=false, t=nil, orig=nil, blocked=0 }
-function SYS.SetFireSignalSpoof(on)
-on=on and true or false
-local wasOn=FSS.on
-SYS.T_.FireSignalSpoof=on
-FSS.on=on
-if not on then
-if FSS.t then P(SYS.SafeUnhook,FSS.t) end
-FSS.hooked=false FSS.t=nil FSS.orig=nil
-if wasOn then P(SYS.Notify,"📡 firesignal 伪装已关(已还原)",SYS.CY.sub) end
-return true
-end
-local fs=rawget(_G,"firesignal")
-if type(fs)~="function" then
-SYS.T_.FireSignalSpoof=false FSS.on=false
-P(SYS.Notify,"📡 本机没有 firesignal, 开不了",SYS.CY.yellow)
-return false
-end
-local f=function(gui,...)
-if not FSS.on then return FSS.orig(gui,...) end
-local mine=SYS.ScreenGui
-if gui and mine and typeof(gui)=="Instance" and gui:IsDescendantOf(mine) then
-FSS.blocked=FSS.blocked+1
-return nil
-end
-return FSS.orig(gui,...)
-end
-if type(newcclosure)=="function" then
-local okc,c=pcall(newcclosure,f)
-if okc and type(c)=="function" then f=c end
-end
-local got=SYS.SafeHook(fs,f,"firesignal")
-if not got then
-SYS.T_.FireSignalSpoof=false FSS.on=false
-return false
-end
-FSS.t=fs FSS.orig=got FSS.hooked=true
-P(SYS.Notify,"📡 firesignal 伪装已开 (只拦对我们自己 GUI 的调用)",SYS.CY.green)
 return true
 end
 SYS._TimeSnap=nil
@@ -18337,13 +17133,9 @@ P(SYS.SetFullBright,false) P(SYS.SetPerf,false) P(SYS.ClearPerfConns)
 P(function() SYS.RefreshNC(false) end)
 P(SYS.StopFreeCam) P(SYS.ClearESP) P(SYS.TracerHide) P(SYS.disableAntiAFK) P(SYS.StopSpectate)
 P(function() if SYS.Info then SYS.Info.Clear() end end)
-P(function() if SYS.HitMarkDestroy then SYS.HitMarkDestroy() end end)
 P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
-P(function() if SYS.SpiderSense then SYS.SpiderSense.Clear() SYS.SpiderSense.Unhook() end end)
 P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
 P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
-P(function() if SYS.Stealth then SYS.Stealth.Clear() end end)
-P(function() if SYS.UIMask and SYS.UIMask.Restore then SYS.UIMask.Restore() end end)
 P(function() if SYS.SetAntiCheatBlock then SYS.SetAntiCheatBlock(false) end end)
 P(function() if SYS.SetCamGuard then SYS.SetCamGuard(false) end end)
 P(function() if SYS.SetPosRebound then SYS.SetPosRebound(false) end end)
