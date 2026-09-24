@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 16:20 sha d214aabb bytes 634674'):format('2026-09-24 16:20','d214aabb',634674))
+print(('[CheatMenu] build 2026-09-24 16:32 sha 45682334 bytes 638338'):format('2026-09-24 16:32','45682334',638338))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -130,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.5.0"
+SYS.BuildVer="11.5.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1171,6 +1171,16 @@ end
 function SYS.FlyReleaseStates() HoldStates(false) end
 function SYS.FlyTeardown() Unmount() end
 function SYS.FlyEnsure(root) return MountLV(root,true) end
+local function StallCheck(root,dir)
+if not dir or dir.Magnitude<=0 then M.tPos=nil M.tAt=nil M.stall=0 return false end
+local now=os.clock()
+if not M.tPos then M.tPos=root.Position M.tAt=now return false end
+if (now-(M.tAt or 0))<0.6 then return false end
+local moved=(root.Position-M.tPos).Magnitude
+if moved<1.0 then M.stall=(M.stall or 0)+1 else M.stall=0 end
+M.tPos=root.Position M.tAt=now
+return (M.stall or 0)>=2
+end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
@@ -1182,11 +1192,20 @@ local dir=GetInputDir(cam.CFrame,true)
 local spd=SYS.SmoothSpd(SYS.FlyTarget())
 local fv=cam.CFrame.LookVector*Vector3.new(1,0,1)
 local faceDir=fv.Magnitude>0.1 and fv.Unit or nil
+if (not M.forceCFrame) and mode~="CFrame" then
+if StallCheck(root,dir) then
+M.forceCFrame=true
+SYS.Notify("⚠ 物理驱动推不动你(服务端权威 / 游戏自己每帧改写速度, 都长这样) —— 本次会话飞行已自动改用【CFrame 逐帧直推】。若这样还是被拉回, 那是服务端位置校验拦的, 客户端无解。",SYS.CY.yellow)
+end
+end
+if mode~="CFrame" then M.tPos=nil M.tAt=nil end
+if M.forceCFrame then mode="CFrame" end
 if mode=="CFrame" then
 HoldStates(true)
 if dir.Magnitude>0 then
 local rot=root.CFrame-root.CFrame.Position
-P(function() root.CFrame=CFrame.new(root.Position+dir.Unit*spd*dt)*rot end)
+local np=root.Position+dir.Unit*spd*dt
+P(function() root.CFrame=CFrame.new(np)*rot end)
 end
 return
 end
@@ -1222,13 +1241,22 @@ if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
 local spd=guardSpeed(SYS.SmoothSpd(SYS.SpeedTarget()))
 local mode=tostring(SYS.C_.SpeedMode or "Linear")
+local cam=WS.CurrentCamera
+local dir=(cam and cam.CFrame) and GetInputDir(cam.CFrame,false) or Vector3.zero
+if (not M.forceWalk) and mode~="WalkSpeed" then
+if StallCheck(root,dir) then
+M.forceWalk=true
+SYS.Notify("⚠ 物理驱动推不动你 —— 本次会话加速已自动改用【WalkSpeed 直写】。若还无效, 说明这游戏把你的速度每帧改回去或服务端不认。",SYS.CY.yellow)
+end
+end
+if mode~="WalkSpeed" then M.tPos=nil M.tAt=nil end
+if M.forceWalk then mode="WalkSpeed" end
 if mode=="WalkSpeed" then
 local w=math.max(1,spd)
 if math.abs(hum.WalkSpeed-w)>w*0.01 then P(function() hum.WalkSpeed=w end) end
 return
 end
-local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
-local dir=GetInputDir(cam.CFrame,false)
+if not cam or not cam.CFrame then return end
 local fv=cam.CFrame.LookVector*Vector3.new(1,0,1)
 local faceDir=fv.Magnitude>0.1 and fv.Unit or nil
 if mode=="BodyVelocity" then
@@ -1239,6 +1267,34 @@ return
 end
 if not MountLV(root,false) then return end
 if M.lv then M.lv.VectorVelocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero end
+end
+function SYS.MoveDiag()
+local L={}
+local _,hum,root=GC()
+L[#L+1]=("[移动自检] 飞行开关=%s   加速开关=%s"):format(tostring(SYS.T_.Fly),tostring(SYS.T_.Speed))
+L[#L+1]=("  飞行: 目标 %d 格/秒   模式=%s   FlyAbs=%s / 倍率=%s")
+:format(SYS.FlyTarget(),tostring(SYS.C_.FlyMode),tostring(SYS.C_.FlyAbs),tostring(SYS.C_.FlySpeed))
+L[#L+1]=("  加速: 目标 %d 格/秒   模式=%s   SpeedAbs=%s / 倍率=%s")
+:format(SYS.SpeedTarget(),tostring(SYS.C_.SpeedMode),tostring(SYS.C_.SpeedAbs),tostring(SYS.C_.SpeedMult))
+L[#L+1]=("  驱动实例: LinearVelocity=%s   AlignOrientation=%s   BodyVelocity=%s   BodyGyro=%s")
+:format(tostring(M.lv and M.lv.Parent~=nil),tostring(M.al and M.al.Parent~=nil),
+tostring(M.bv and M.bv.Parent~=nil),tostring(M.gyro and M.gyro.Parent~=nil))
+L[#L+1]=("  本次会话自动兜底: CFrame直推=%s   WalkSpeed直写=%s   已降级BV=%s")
+:format(tostring(M.forceCFrame),tostring(M.forceWalk),tostring(M.degraded))
+if root then
+local ok,pl=pcall(function() return root:GetNetworkOwner() end)
+L[#L+1]=("  角色网络所有权: %s"):format(ok and (pl and tostring(pl.Name) or "服务端(空=服务端权威, 本地推不动)") or "取不到")
+local v=root.AssemblyLinearVelocity
+L[#L+1]=("  当前实际速度: 总 %.1f 格/秒   水平 %.1f 格/秒")
+:format(v and v.Magnitude or 0,(v and Vector3.new(v.X,0,v.Z).Magnitude) or 0)
+end
+if hum then
+L[#L+1]=("  Humanoid.WalkSpeed = %s  (若你设了数值但它一会儿就变回去, 说明游戏每帧改写)"):format(tostring(hum.WalkSpeed))
+L[#L+1]=("  Humanoid 状态 = %s   PlatformStand=%s"):format(tostring(hum:GetState()),tostring(hum.PlatformStand))
+end
+L[#L+1]="  ★ 判读: ① 按着方向但「实际速度≈0」+ 驱动实例显示 true ⇒ 本地被拦(看网络所有权/游戏改写);"
+L[#L+1]="         ② 速度很好看但人被拽回原地 ⇒ 服务端位置校验, 客户端无解(这类服就是不给跑)。"
+return L
 end
 function SYS.CleanFly()
 Unmount()
@@ -12938,7 +12994,7 @@ if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"飞行速度 (格/秒 · 推荐直接填数值)",16,3000,10,function() return SYS.C_.FlyAbs or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
+UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
 UI.Slider(p,"飞行速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode or "Align" end,
@@ -12956,7 +13012,7 @@ if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"移动速度 (格/秒 · 推荐直接填数值)",16,3000,10,function() return SYS.C_.SpeedAbs or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
+UI.Slider(p,"移动速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
 UI.Slider(p,"移动速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode or "Linear" end,
@@ -12977,6 +13033,16 @@ if v=="Both" then SYS.Notify("⚠ JumpPower 服务端可读, 慎用(已切到 Bo
 if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,true) end
 end)
 UI.Tip(p,"「Height」= 只写 JumpHeight(默认, 服务端一般不读); 「Power」= 只写 JumpPower; 「Both」= 都写(最猛也最显眼)。",CY.sub)
+UI.Div(p)
+UI.Btn(p,"🧪 移动自检 (飞不动/没加速时点这个, 看结果发我)",CY.cyan,function()
+local L=SYS.MoveDiag and SYS.MoveDiag()
+if type(L)=="table" then
+for _,x in ipairs(L) do print(x) end
+SYS.Notify(("🧪 移动自检: 共 %d 行, 见控制台(F9)"):format(#L),SYS.CY.cyan)
+else
+SYS.Notify("❌ 移动自检不可用",SYS.CY.red)
+end
+end)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
