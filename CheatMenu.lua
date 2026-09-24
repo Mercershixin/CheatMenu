@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 23:12 sha ae70bcf6 bytes 634248'):format('2026-09-24 23:12','ae70bcf6',634248))
+print(('[CheatMenu] build 2026-09-24 23:20 sha 83b3347a bytes 629836'):format('2026-09-24 23:20','83b3347a',629836))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -124,7 +124,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.5"
+SYS.BuildVer="11.8.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -13526,57 +13526,13 @@ UI.Tip(p,"有些游戏把「死没死」放在 Player 的 Attribute(Health/MaxHe
 .."本开关每 0.2 秒比一次: Attribute 说 State=Dead 或 Health<=0, 但本地 Humanoid 还活着 -> 就写回。\n"
 .."★ 写回带 0.05~0.2 秒随机延迟(避免同帧触发 AttributeChanged 这种一眼假的特征)。\n"
 .."⚠ 诚实边界: 只改【客户端看到的】Attribute; 服务端判死拦不住。默认关。",CY.sub)
-UI.Switch(p,"🧪 getreg 过滤 (隐身时把登记闭包从注册表里摘掉)","StealthReg",function(on)
-SYS.T_.StealthReg=on and true or false
-if SYS.Stealth and SYS.Stealth.On then P(SYS.Stealth.Remove) P(SYS.SetStealth,true) end
-end)
-UI.Tip(p,"⚠ 风险较高: 打开后 hook 隐身会多挂一个 getreg 过滤点, 每次调用都要重建注册表副本(较慢)。\n"
-.."只在确认对手会用 getreg 扫注册表时才开。默认关。",CY.yellow)
-UI.Tip(p,"firesignal 是对【自己客户端】的事件手工触发, 有些反作弊会拿它当特征(尤其对 PlayerGui 里的按钮)。\n"
-.."本开关把 firesignal 挂上: 只拦「目标是本脚本自己的 GUI」的调用, 其余原样直通。默认关。",CY.sub)
 UI.Tip(p,"原理: 反作弊/审计通道被触发 = 自报家门。本开关把 EventWatch 关键词表落地成「候选通道名」,\n"..
 "  再拦下【发往这些通道的上行】(RemoteEvent.FireServer / RemoteFunction.InvokeServer)。\n"..
 "★ 实现: Roblox 里所有 remote 的 FireServer 是同一个 C 函数 ⇒ 只能 hook 一次(单点), 调用时按 self.Name 判断。\n"..
 "★ 已收窄: 必须【名字命中关键词】且【RemoteRisk 判定像反作弊/审计/后台】才拦 —— 否则商店/领奖/拾取会被一起拦掉。\n"..
 "★ 开火抖动: 所有走 SYS.Fire 的上行加 0~FireJitter 秒随机延迟, 让上报不会「每次都同一时刻」。\n"..
 "⚠ 诚实边界: 只拦【客户端→服务端】上行; 服务端对你的判定、下行推送一律拦不到。默认开。",CY.sub)
-UI.Switch(p,"🫥 hook 隐身 (我方 hook 对 debug.info 显示成 C 函数)","Prot_Stealth",SYS.SetStealth)
-UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查 debug.info 的 source ——\n"..
-"  游戏自己的 Lua 闭包会报出脚本名, 被执行器 hook 过的会露馅。\n"..
-"本开关把【我方登记过的闭包】一律报成 `[C]`(假装是 C 函数)、name 报空; 别人的函数原样返回,\n"..
-"  我们自己调用时(checkcaller)直接直通, 所以【不影响本脚本自己的函数定位与扫描】。\n"..
-"★ 多层叠用(5 层): 全局/游戏环境 debug.info + getfenv 层级隐藏 + getidentity 身份伪装 + debug.traceback 擦除;\n"..
-"  另叠「中性名 + Archivable=false」两道(多一道保险)。\n"..
-"⚠ 诚实边界: 只挡「debug.info 找非 C 闭包」这一类; 逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 /\n"..
-"  服务端侧判定 —— 一律无效。开了也可能被更强的检测看穿。默认关。",CY.sub)
-UI.Tip(p,"反作弊找外挂常做的一件事: 遍历 PlayerGui, 读每个 TextLabel/TextButton 的 .Text。\n"..
-"我们的标签写着「自动瞄瞄 / 透视 / 上帝模式 / 无后坐力」—— 名字能中性化, **文字不能**(文字是给你看的)。\n"..
-"本开关: 菜单【关闭】时, 把界面里所有文字换成中性占位(Info); 【打开】时原样还原。\n"..
-"★ 效果: 你正常游戏(菜单关着)时, 别人/反作弊扫到的就是一堆无意义的 Info, 而不是功能名。\n"..
-"⚠ 诚实边界: 菜单【开着】时文字必须是真的, 那一瞬间扫到照样认得出来; 逐帧遍历 GUI 也拦不住。\n"..
-"  这是「降低暴露窗口」, 不是隐形。默认关。",CY.sub)
-UI.Tip(p,"背景: 静默瞄准 / 子弹穿墙 / 阻挡射线 原本靠两条腿 ——\n"..
-"  · 路 A: hookmetamethod(game,\"__namecall\") 拦 workspace:Raycast(...);\n"..
-"  · 路 B: 函数层(单点 hookfunction, 只认名字带 raycast/cast/lineofsight… 的函数)。\n"..
-"⛔ 路 A 是【所有实例方法调用的总入口】—— 可检测 + 掉帧源; 本仓 v6.9.10 曾因同样原因把它从「管理员检测绕过」删过。\n"..
-"★ 现在【默认只走路 B】(本开关默认关 ⇒ 破绽已修)。\n"..
-"⚠ 仅当你在某个游戏里发现「静默瞄准 / 穿墙完全不生效」(该游戏射线不走可命名函数)时, 才开它走路 A。\n"..
-"  开了可能掉帧、交互变慢, 也更易被检测 —— 用完记得关。",CY.sub)
-UI.Tip(p,"有人用约束/焊接把高速速度传染到你的角色上(俗称 fling/甩飞), 你会被弹到天上或地图外。\n"..
-"这里每帧检查你自己的 AssemblyLinearVelocity, 超过 80 格/秒就清零。\n"..
-"纯本地: 只动你自己的速度, 不改服务端判定; 正常跑步(16~30)与飞行/加速(走约束、不写这个字段)都不会被误伤。",CY.sub)
 UI.Div(p)
-UI.Section(p,"🔎 反指纹自检 (G6/G7)",CY.cyan)
-UI.Btn(p,"🔎 跑一次反指纹自检 (结果打到控制台)",CY.cyan,function()
-local fn=SYS.Prot and SYS.Prot.SelfAudit
-local lines=fn and fn()
-if type(lines)=="table" then
-for _,l in ipairs(lines) do print(l) end
-SYS.Notify(("🔎 自检完成: 共 %d 行, 详见控制台(F9)"):format(#lines),SYS.CY.cyan)
-else
-SYS.Notify("❌ 自检不可用",SYS.CY.red)
-end
-end)
 UI.Btn(p,"🧹 擦掉 GUI 可疑名 (换成中性名)",CY.orange,function()
 local fn=SYS.Prot and SYS.Prot.NeutralizeNames
 local n=(fn and fn()) or 0
@@ -14642,11 +14598,6 @@ end
 end
 if SYS.RegisterScanner then
 local R=SYS.RegisterScanner
-R("🔎 反指纹自检 (UI 文字/实例名/执行器全局)", function()
-if not (SYS.Prot and type(SYS.Prot.SelfAudit)=="function") then return {"(本版没有这个自检)"} end
-local t=SYS.Prot.SelfAudit()
-return type(t)=="table" and t or {"(无输出)"}
-end, "原来只能点按钮打到控制台 —— 现在总扫描里直接看")
 R("📖 密码/提示文本", function() return cap(SYS.DumpHintTexts) end, "原来「读密码提示」按钮")
 R("📡 服务端战斗数据 (只读记录器)", function()
 if not (SYS.Combat and type(SYS.Combat.DumpSrv)=="function") then return {"(本版没有)"} end
