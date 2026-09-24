@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 22:15 sha de4e384e bytes 636350'):format('2026-09-24 22:15','de4e384e',636350))
+print(('[CheatMenu] build 2026-09-24 22:24 sha 07616c19 bytes 636528'):format('2026-09-24 22:24','07616c19',636528))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -132,7 +132,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.1"
+SYS.BuildVer="11.8.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -17168,6 +17168,11 @@ if not t and lp.Character then t=lp.Character:FindFirstChild("Banjo") end
 if not t then return end
 local ev=t:FindFirstChild("PlayEvent")
 if ev and ev:IsA("RemoteEvent") then P(function() ev:FireServer() end) end
+local ev2=SYS.REvent("banjo.PlayEvent")
+if not ev2 then ev2=SYS.REvent("PlayEvent") end
+if ev2 and ev2~=ev and ev2:IsA("RemoteEvent") then
+P(function() ev2:FireServer() end)
+end
 end)
 P(SYS.Notify,"🎵 班卓琴自动弹奏已开(每3秒一次, 保持治疗光环常开; 不消耗道具)",SYS.CY.green)
 else
