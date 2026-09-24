@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 22:01 sha a5843a52 bytes 636122'):format('2026-09-24 22:01','a5843a52',636122))
+print(('[CheatMenu] build 2026-09-24 22:15 sha de4e384e bytes 636350'):format('2026-09-24 22:15','de4e384e',636350))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -132,7 +132,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.0"
+SYS.BuildVer="11.8.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -16658,7 +16658,12 @@ end
 end)
 TT(task.spawn(function()
 while not SYS.Unloaded do
-P(SYS.ESPTick)
+local okE,errE = pcall(SYS.ESPTick)
+if not okE and not SYS._espErrOnce then
+SYS._espErrOnce = true
+print("[高亮] ESPTick 报错(只提示一次): "..tostring(errE))
+print("        ↑ 把这行发我, 就能定位高亮为什么不出")
+end
 P(SYS.AutoTPTick)
 task.wait(0.15)
 end
