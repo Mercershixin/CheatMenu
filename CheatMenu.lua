@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 18:00 sha b96a1d9d bytes 638338'):format('2026-09-24 18:00','b96a1d9d',638338))
+print(('[CheatMenu] build 2026-09-24 18:10 sha a3ea61f9 bytes 638232'):format('2026-09-24 18:10','a3ea61f9',638232))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -130,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.6.3"
+SYS.BuildVer="11.6.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1080,7 +1080,6 @@ Kill(M.lv) Kill(M.al) Kill(M.att) Kill(M.bv) Kill(M.gyro)
 M.owner=nil M.att=nil M.lv=nil M.al=nil M.bv=nil M.gyro=nil
 SYS._FlyAtt=nil SYS._FlyVel=nil SYS._FlyAlign=nil
 end
-SYS.MoveUnmount=Unmount
 local function GetInputDir(camCF,vertical)
 local d=Vector3.zero
 local f=camCF.LookVector*Vector3.new(1,0,1)
@@ -16729,14 +16728,11 @@ end))
 end
 do
 local function rnd(a,b) return a+math.random()*(b-a) end
-SYS.Rnd=rnd
 local function rootHum()
 local ch=SYS.LP and SYS.LP.Character
 if not ch then return nil,nil end
 return ch:FindFirstChild("HumanoidRootPart"), ch:FindFirstChildOfClass("Humanoid")
 end
-SYS.RootHum=rootHum
-SYS.ACL_N=0
 SYS._ACEvents=SYS._ACEvents or {}
 local ACEN={}
 function SYS.ACELog(tag,text)
@@ -16931,7 +16927,6 @@ P(SYS.Notify,"🎥 相机护栏已开 (相机离角色超过 "..tostring(tonumbe
 return true
 end
 local PR={ on=false, conn=nil, applied=0 }
-SYS.PosRebound=PR
 function SYS.SetPosRebound(on)
 on=on and true or false
 local wasOn=PR.on
@@ -16970,7 +16965,6 @@ P(SYS.Notify,"📍 位置下行回压已开 (仅飞行/加速时生效)",SYS.CY.
 return true
 end
 local FSS={ on=false, hooked=false, t=nil, orig=nil, blocked=0 }
-SYS.FireSignal= FSS
 function SYS.SetFireSignalSpoof(on)
 on=on and true or false
 local wasOn=FSS.on
