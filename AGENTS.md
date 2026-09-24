@@ -171,7 +171,10 @@
   `开关 N · 有入口 N · 死键 N · 间接驱动 N · 残留 N`，并与基线比对（**只报告、不阻断**）。
   ⇒ **新增开关后如果这个数字变了，先看 `_audit_out/_audit_switch_wiring.log`**，
   别让「开了没反应 / 死键 / 界面删了后端还在」再悄悄积累。
-  基线（2026-09-24）：死键 4（`FullBright`/`NightVision`/`NightVisionPro`/`SuperLight`，待用户点头）、残留 0。
+  基线（2026-09-24 更新）：**死键 0 · 间接驱动 11 · 残留 0**（全绿）。
+  ★ 那 4 个光照键 `FullBright`/`NightVision`/`NightVisionPro`/`SuperLight` **不是死键** ——
+  它们是 `SYS.MigrateLightMode()` 里**旧存档的迁移桥**（`SYS.T_.X=(m==...)` 是写），
+  **删了会让老存档的光照设置丢失**。⇒ 审计工具的「写判定」已修正为认「任何 `.Key = (非 ==)`」。
 - **升号**：默认「次+1」= **中间位 +1、补丁归零**（`11.5.1 → 11.6.0`）；minor 到 10 进位主号（`11.10.x → 12.0.0`）。
   **写 CHANGELOG 前先看 `.workbuddy/build/VERSION`。**
 - ⚠ `push_now.py` **先**跑 `sync_src_name.py` 改名 ⇒ 它报的 `[sync_src_name] build/VERSION = X` 就是本次真实发版号。
