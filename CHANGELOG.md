@@ -2,6 +2,50 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 12.1.2 · 2026-09-25 —— 全工程通读 + 全面检查后修的 2 类源码问题（+ 5 处工具链缺陷）
+
+用户：「先通读我的工程，告诉我目录结构、代码约定和 git 状态，然后进行全面的检查和修复逻辑/符号等问题」。
+
+### 怎么查的（四路交叉，互相补盲）
+① 项目总门禁 `verify_all.py`（13 步）· ② `luau-analyze` 原始诊断**逐类归类**
+（2 621 条 —— `GlobalUsedAsLocal` **0** 条；1 454 条 `TypeError` 逐条过滤后**非噪音 0** 条）·
+③ 项目 20 个 `_audit_*.py` · ④ 技能工具 `lua_review.py`（结果不可用，见下）。
+⛔ 全程只用静态分析/单元测试/云端分发三种手段，**没有**搭 mock、**没有**整脚本仿真。
+
+### 🔴 修的源码问题
+- **`PerfProfile` 是死开关**：界面有控件、`onChange` 也写了，但 `SYS.T_.PerfProfile` **全代码没人读** ⇒
+  **存档里是 true 的用户，重载后界面显示"开"、剖面具实际没开** —— 铁律"开关四点"缺第 4 点的典型形态。
+  ⇒ 在 `SYS.V3Boot` 里**显式补挂一次**（`if SYS.T_.PerfProfile then K2.Guard("v3.prof",K2.Sched.Profile,true) end`）。
+  验证：`_audit_features.py` 死开关 **1 → 0**。
+- 🧹 删掉 12.0/12.1 我自己引入的 4 个**零引用内核 API**：`K.LogCats` · `BUS.Prop` · `BUS.Attr` ·
+  `HK.RestoreOwner`（定义了从没被调用）。文件头补提醒：**内核只留真被调用的接口，加接口请同时接上调用点**。
+  验证：`_audit_features2.py` 零引用函数 **17 → 14**（剩下 14 个全是"界面已删、后端保留"的待点头批次）。
+
+### 🔧 修的工具链缺陷（都不占版本号，但每一个都在"让检查真的生效"）
+- **4 个只读审计脚本默认路径写死成 `C:\Users\Administrator\Desktop\1.txt`（占位符）**：
+  `_audit_implicit_globals.py` · `_audit_loops.py` · `_audit_thirdparty.py` · `_audit_ui_binding.py`
+  ⇒ **一跑就 FileNotFoundError 崩** = 这几个检查**从来没生效过**。全改成走 `srcpath.src()`。
+  ⚠ **崩掉的检查比没有检查更危险**（看着像"跑过了没事"）。
+- **_audit_ui_binding.py 标注适用范围**：它认的是第三方 UI 库写法，本仓自研 UI 下恒为「共检查 0 个控件」，
+  文件头写明"查本项目的开关接线请用 `_audit_switch_wiring.py`"。
+- **_audit_loops.py / _audit_thirdparty.py 的循环判据按条件分档**：旧判据把一切没 wait 的 `while` 都标"★高危"，
+  实测 2 条全是 `while #t>c do table.remove(t,1) end`（环形缓冲裁剪，**自己会停**）。
+  ⇒ 现在只有 `while true`（或 `repeat…until false`）且体内无 wait/break/return 才叫高危。**必然假报 2 → 0**。
+
+### 检查结论：代码本身是干净的
+`verify_all` 13/13 · `check.py` 0 · `_audit_switch_wiring` **死键 0** · `_audit_c_` 0 · `_audit_errcheck` 0 ·
+`_audit_luapitfalls` 0 · `_audit_implicit_globals` 0 · `_audit_hygiene` 无硬结论 · `_audit_syntax` 词法层干净 ·
+`_audit_chunklocals` **76/200**（V3 内核整段包在 `do..end` 里，没吃 chunk 名额，余量充足）·
+`_audit_members` 连接无丢弃 · `LocalUnused` 14 / `LocalShadow` 4 逐条核完**无功能缺失**（遮蔽全是有意）。
+
+### ⚠ 记一条"工具不可信"（避免以后照着它改错代码）
+技能工具 `lua_review.py` 在这份脚本上报 error 10 / warning 744，**逐条核验后全部是假报**：
+行号整体错位（报 `L19443 drg 未声明`，实际那行是 `UI.Round(grip,12)…`；`L19627` 是注释行），
+且把 `while … do task.wait(1.5) … end` 报成"没有 `task.wait`"。
+⇒ **不要照它的行号改代码**；定位一律回原文核。（已同步写进该技能的已知局限）
+
+---
+
 ## 12.1.1 · 2026-09-25 —— bug 全修 + 全功能测试（门禁 13/13）
 
 用户：「bug 全部修复 功能全部进行测试」。
