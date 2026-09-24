@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 19:26 sha 3892ccd1 bytes 639000'):format('2026-09-24 19:26','3892ccd1',639000))
+print(('[CheatMenu] build 2026-09-24 19:31 sha 97c7634b bytes 639773'):format('2026-09-24 19:31','97c7634b',639773))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.0"
+SYS.BuildVer="11.7.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1282,6 +1282,18 @@ L[#L+1]=("  本次会话自动兜底: CFrame直推=%s   WalkSpeed直写=%s   已
 if root then
 local ok,pl=pcall(function() return root:GetNetworkOwner() end)
 L[#L+1]=("  角色网络所有权: %s"):format(ok and (pl and tostring(pl.Name) or "服务端(空=服务端权威, 本地推不动)") or "取不到")
+local am="(读不到)"
+pcall(function() am=tostring(WS.AuthorityMode) end)
+L[#L+1]=("  Workspace.AuthorityMode = %s"):format(am)
+if am:find("Server",1,true) then
+L[#L+1]="  ⛔ 服务端权威【已开】—— 引擎会直接拒绝你的速度/CFrame 改动(& 抢所有权会报错)。"
+L[#L+1]="     移动类(飞行/加速/穿墙/瞬移)在这服【客户端无解】, 只能靠游戏自己的机制。"
+elseif am:find("Automatic",1,true) then
+L[#L+1]="  ✅ 服务端权威【未开】(Automatic) —— 移动类理论上可做; 飞不动就是别的原因(见上面几行)。"
+end
+local ufs=nil
+pcall(function() ufs=tostring(WS.UseFixedSimulation) end)
+L[#L+1]=("  UseFixedSimulation = %s   StreamingEnabled = %s"):format(tostring(ufs),tostring(WS.StreamingEnabled))
 local v=root.AssemblyLinearVelocity
 L[#L+1]=("  当前实际速度: 总 %.1f 格/秒   水平 %.1f 格/秒")
 :format(v and v.Magnitude or 0,(v and Vector3.new(v.X,0,v.Z).Magnitude) or 0)
