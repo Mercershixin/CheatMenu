@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 22:37 sha 55d9d595 bytes 634929'):format('2026-09-24 22:37','55d9d595',634929))
+print(('[CheatMenu] build 2026-09-24 22:47 sha 26c90469 bytes 635338'):format('2026-09-24 22:47','26c90469',635338))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.3"
+SYS.BuildVer="11.8.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10619,6 +10619,16 @@ if LT.Brightness~=2 then LT.Brightness=2 end
 if LT.ClockTime~=12 then LT.ClockTime=12 end
 if LT.FogEnd<1e5 then LT.FogEnd=1e6 LT.FogStart=1e6 end
 if LT.GlobalShadows then LT.GlobalShadows=false end
+LT.Ambient=Color3.new(1,1,1)
+LT.OutdoorAmbient=Color3.new(1,1,1)
+for _,o in ipairs(LT:GetChildren()) do
+if o:IsA("Atmosphere") and (o.Density and o.Density>0.001) then o.Density=0.001 end
+if o:IsA("ColorCorrectionEffect") then
+if o.Brightness and o.Brightness~=0 then o.Brightness=0 end
+if o.Contrast and o.Contrast~=0 then o.Contrast=0 end
+if o.Saturation and o.Saturation~=0 then o.Saturation=0 end
+end
+end
 elseif mode=="超级光明" then
 if LT.Brightness~=3 then LT.Brightness=3 end
 if LT.ClockTime~=12 then LT.ClockTime=12 end
