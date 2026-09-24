@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 19:12 sha a64e39d3 bytes 638711'):format('2026-09-24 19:12','a64e39d3',638711))
+print(('[CheatMenu] build 2026-09-24 19:26 sha 3892ccd1 bytes 639000'):format('2026-09-24 19:26','3892ccd1',639000))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -81,7 +81,7 @@ PosRebound=false,
 CB_BlockDeathSignal=false,
 StealthReg=false,
 FireSignalSpoof=false,
-AntiRevert=false,
+AntiRevert=true,
 },
 C_={
 FlySpeed=6,FlyMode="BodyVelocity",
@@ -123,14 +123,15 @@ MoveSmooth=0.25,
 JumpSpoofMode="Height",
 FlyAbs=0,
 SpeedAbs=0,
-RevertCap=60,
+RevertCap=0,
+RevertJump=150,
 FireTypeSigN=3,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.6.6"
+SYS.BuildVer="11.7.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -904,6 +905,8 @@ kill    = {"GameService.Killed","Killed","Kill","Damage","CombatEvent","Died"},
 damage  = {"Damage","Hit","Damaged","TakeDamage","ApplyDamage","DamageEvent","BeDamaged"},
 buy     = {"BuyProduct","Buy","Purchase","BuyItem","RequestBuy","BuyGamepass","BoxBuy","ItemBuyEvent"},
 claim   = {"ClaimReward","Claim","ClaimDaily","ClaimBonus","ClaimRewardEvent","CollectReward",
+"FreeGiftRemotes.ClaimFreeGift","OfflineCashSystem.ClaimOfflineCash",
+"FishIndexSystem.ClaimFishIndex","RewardPopupSystem.ShouldShowRewardPopup",
 "ClaimWeeklyCase","ClaimPremiumReward","ClaimRebirthReward","ClaimRebirth3Reward",
 "ClaimSeasonWeapon","ClaimTradeTokenReward","ClaimLimitedBundleReward","ClaimStall",
 "Days7Claim","Days4RecurClaim","NewBieClaim","OnlineRewardClaim","TryGroupReward",
@@ -984,7 +987,7 @@ respawn = {"respawn","characterreset"},
 kill    = {"killed","kill","death","died","playerdied","jumpscare"},
 damage  = {"damage","hit"},
 buy     = {"buy","purchase"},
-claim   = {"claim","reward"},
+claim   = {"claim","reward","freegift","offlinecash","fishindex"},
 sell    = {"sell"},
 pickup  = {"pickup","collect","loot","hidepickup","dropitem"},
 trade   = {"trade"},
@@ -1577,10 +1580,11 @@ return AR.orig(self,...)
 end
 AR.rateN=0 AR.rateT=now
 end
-local cap=tonumber(SYS.C_.RevertCap) or 60
+local cap=tonumber(SYS.C_.RevertCap) or 0
+local jump=math.max(20,tonumber(SYS.C_.RevertJump) or 150)
 local extra=(SYS.T_.AntiRevertExtra~=false)
 local speedCap=math.max(1,(SYS.SpeedTarget and SYS.SpeedTarget()) or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2)))
-local maxStep=math.max(0.5,cap*math.min(dt,0.5))
+local maxStep=cap>0 and math.max(0.5,cap*math.min(dt,0.5)) or jump
 local a={...}
 for i=1,n do
 local v=a[i]
@@ -1645,7 +1649,7 @@ AR.lastPos=nil
 print("[CheatMenu] 防回退(过检测)已关")
 end
 function SYS.SyncAntiRevert()
-local want=(SYS.T_.AntiRevert==true) and ((SYS.T_.Fly==true) or (SYS.T_.Speed==true))
+local want=(SYS.T_.AntiRevert~=false)
 if want then
 local ok2,res,err=P(AR.On)
 if ok2 and res==false then
@@ -13449,7 +13453,7 @@ UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
 UI.Switch(p,"🛡 防回退 (过检测: 让上报的位置位移看起来合理)","AntiRevert",SYS.SyncAntiRevert)
-UI.Slider(p,"上报速率上限 (格/秒 · 0=不限速只去抖)",0,400,5,function() return SYS.C_.RevertCap or 60 end,function(v) SYS.C_.RevertCap=v end,"%.0f")
+UI.Slider(p,"上报速率上限 (格/秒 · 0=只拦瞬移, 推荐)",0,400,5,function() return tonumber(SYS.C_.RevertCap) or 0 end,function(v) SYS.C_.RevertCap=v end,"%.0f")
 UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
 UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
 UI.Tip(p,"★ 先分清两个概念(以前混在一起, 才出过「定在原地」的坑):\n"
@@ -17338,6 +17342,7 @@ end
 if SYS.TimeSnapshot then P(SYS.TimeSnapshot) end
 if SYS.StartACWatch then P(SYS.StartACWatch) end
 if SYS.StartAdminWatch then P(SYS.StartAdminWatch) end
+if SYS.SyncAntiRevert then P(SYS.SyncAntiRevert) end
 for key,fn in pairs(SYS.SwitchOnChange) do
 if key~="AntiAFK" and SYS.T_[key]==true then P(fn,true) end
 end
