@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 01:40 sha 7962e33b bytes 675185'):format('2026-09-25 01:40','7962e33b',675185))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v74] =====")
+print(('[CheatMenu] build 2026-09-25 02:37 sha 943d68a7 bytes 674104'):format('2026-09-25 02:37','943d68a7',674104))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v75] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -133,7 +133,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.1.1"
+SYS.BuildVer="12.1.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -274,12 +274,6 @@ return out
 end
 function K.LogClear(cat)
 if cat then LOG[cat]={} else for k in pairs(LOG) do LOG[k]=nil end end
-end
-function K.LogCats()
-local out={}
-for k in pairs(LOG) do out[#out+1]=k end
-table.sort(out)
-return out
 end
 local ERRS={}
 K.ERRS=ERRS
@@ -473,27 +467,6 @@ local ok2,conn=pcall(function() return sig:Connect(fn) end)
 if not ok2 then return nil end
 return busAdd(conn,evt,owner)
 end
-function BUS.Prop(inst,prop,fn,owner)
-if not inst or type(prop)~="string" or type(fn)~="function" then return nil end
-local ok,sig=pcall(function() return inst:GetPropertyChangedSignal(prop) end)
-if not ok or not sig then return nil end
-local ok2,conn=pcall(function() return sig:Connect(fn) end)
-if not ok2 then return nil end
-return busAdd(conn,"prop:"..prop,owner)
-end
-function BUS.Attr(inst,attr,fn,owner)
-if not inst then return nil end
-if type(attr)=="string" then
-local ok,sig=pcall(function() return inst:GetAttributeChangedSignal(attr) end)
-if ok and sig then
-local ok2,conn=pcall(function() return sig:Connect(function() fn(attr) end) end)
-if ok2 then return busAdd(conn,"attr:"..attr,owner) end
-end
-end
-local ok3,conn2=pcall(function() return inst.AttributeChanged:Connect(fn) end)
-if ok3 then return busAdd(conn2,"attr:*",owner) end
-return nil
-end
 function BUS.Off(owner)
 local n=0
 local keep={}
@@ -568,19 +541,6 @@ if not rec then return false end
 hkRestoreOne(rec)
 HK.Drop(target)
 return true
-end
-function HK.RestoreOwner(owner)
-local n=0
-for i=#HK.list,1,-1 do
-local r=HK.list[i]
-if r.owner==owner then
-hkRestoreOne(r)
-table.remove(HK.list,i)
-n=n+1
-end
-end
-HK.n=#HK.list
-return n
 end
 function HK.RestoreAll()
 local n=0
@@ -1006,6 +966,7 @@ if SYS.T_.TagWatch then K2.Guard("v3.boot.tag",K2.Watch.Tags,true) end
 if SYS.T_.EntityWatch then K2.Guard("v3.boot.ent",K2.Watch.Entities,true) end
 if SYS.T_.NetSpy then K2.Net.Spy(true) end
 if SYS.T_.IdleStealth then K2.Idle.Set(true) end
+if SYS.T_.PerfProfile then K2.Guard("v3.prof",K2.Sched.Profile,true) end
 if SYS.T_.LazyRebind~=false then
 K2.Sched.Add("V3Rebind",function()
 if K2.Net.PendingN()>0 then K2.Guard("v3.rebind",K2.Net.Rebind) end
