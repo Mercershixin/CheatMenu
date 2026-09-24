@@ -63,6 +63,7 @@
 | **[6] 战斗** | 瞄准/开火、弹道、死亡登记 | `SYS.Combat`(`CB`) `SYS.FP` `SYS.DeadOnTime` `SYS.SpiderSense` |
 | **[7] 玩法** | 各游戏专用模块 + 通用玩法（挂机/交易/翻译） | `SYS.DRHp` `SYS.DRCombat` `Trans` `SYS.Dodge` … |
 | **[8] 界面** | UI 框架 + 页面 | `UI.Pages` `UI.Switch` `UI.Slider` `UI.Cycle` `UI.Btn` `UI.Tip` `EnsurePage` |
+| **[9] 编排** | **启动 / 卸载 / 收尾**：装配各层、`CreateMenu`、`UnloadAll`、更新检查 | `SYS.CreateMenu` `SYS.UnloadAll` `SYS.BootUpdateCheck` `SYS.CheckUpdate` |
 
 **硬规则**
 - ④ **[4] 层只有 `SYS._Move` 能创建/销毁角色上的约束实例**（`Attachment` / `LinearVelocity` /
@@ -219,3 +220,6 @@ dist/repo/               仓库工作树根（= git 根）
 .workbuddy/build/        工具链（push_now / push_docs / local_sync / verify_all / srcpath …）
 .workbuddy/memory/       助手记忆：MEMORY.md 索引 + MEMORY2/3/4 分卷 + 按天日志
 ```
+
+- ★ **[9] 是唯一允许「调用上层」的层** —— 启动/卸载天然要按顺序调用各层；
+  除它之外，某层若引用了**更高层**的 `SYS.*` 接口，就是**反向依赖**，要修。
