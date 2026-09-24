@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 18:58 sha 1c1fdbb1 bytes 637964'):format('2026-09-24 18:58','1c1fdbb1',637964))
+print(('[CheatMenu] build 2026-09-24 19:12 sha a64e39d3 bytes 638711'):format('2026-09-24 19:12','a64e39d3',638711))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -130,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.6.5"
+SYS.BuildVer="11.6.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10230,13 +10230,29 @@ lay.Padding=UDim.new(0,6) lay.SortOrder=Enum.SortOrder.LayoutOrder lay.Parent=in
 return card,inner
 end
 function UI.Tip(parent,text,col)
+local row=Instance.new("Frame")
+row.Size=UDim2.new(1,0,0,22) row.BackgroundTransparency=1 row.Parent=parent
+local btn=Instance.new("TextButton")
+btn.Size=UDim2.new(0,72,0,20) btn.Position=UDim2.new(0,14,0,1)
+btn.BackgroundColor3=CY.card2 btn.BackgroundTransparency=0.3 AutoButtonColor=false
+btn.Text="? 说明" btn.TextColor3=col or CY.sub
+btn.Font=Enum.Font.GothamMedium btn.TextSize=11 btn.Parent=row
+UI.Round(btn,8) if UI.Stroke then UI.Stroke(btn,CY.line,1,0.7) end
 local l=Instance.new("TextLabel")
-l.Size=UDim2.new(1,0,0,30) l.BackgroundTransparency=1
+l.Size=UDim2.new(1,-28,0,0) l.Position=UDim2.new(0,14,0,26)
+l.BackgroundTransparency=1 l.Visible=false
 l.Text=text or "" l.TextColor3=col or CY.sub
 l.Font=Enum.Font.GothamMedium l.TextSize=11
-l.TextXAlignment=Enum.TextXAlignment.Left l.TextWrapped=true l.Parent=parent
+l.TextXAlignment=Enum.TextXAlignment.Left l.TextWrapped=true l.Parent=row
 l.AutomaticSize=Enum.AutomaticSize.Y
-return l
+local open=false
+T(btn.MouseButton1Click:Connect(function()
+open=not open
+l.Visible=open
+btn.Text=open and "? 收起" or "? 说明"
+row.Size=open and UDim2.new(1,0,0,26+math.max(24,l.TextBounds.Y)+8) or UDim2.new(1,0,0,22)
+end))
+return row
 end
 function UI.Stat(parent,label,value,valCol)
 local row=Instance.new("Frame")
