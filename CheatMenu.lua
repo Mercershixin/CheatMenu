@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 22:47 sha 26c90469 bytes 635338'):format('2026-09-24 22:47','26c90469',635338))
+print(('[CheatMenu] build 2026-09-24 23:12 sha ae70bcf6 bytes 634248'):format('2026-09-24 23:12','ae70bcf6',634248))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -68,19 +68,12 @@ NoAggro=false,
 TransBilingual=false,
 TransDyn=true,
 Prot_AntiAdmin=true,
-AntiFling=false,
-Prot_Stealth=false,
-Prot_RayNamecall=false,
-Prot_UImask=false,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
 ACBlock=true,
 AntiRevertExtra=true,
-AttrGuard=false,
 CamGuard=false,
 PosRebound=false,
 CB_BlockDeathSignal=false,
-StealthReg=false,
-FireSignalSpoof=false,
 AntiRevert=true,
 },
 C_={
@@ -131,7 +124,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.4"
+SYS.BuildVer="11.8.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -11494,7 +11487,6 @@ end
 return true
 end
 if SYS.RegisterScanner then
-SYS.RegisterScanner("🫥 hook 隐身 (debug.info 伪装)", ST.Report)
 end
 local RayCtor=Ray
 local Ray={} SYS.RayHook=Ray
@@ -13530,7 +13522,6 @@ UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
 "   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
 "📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
 UI.Switch(p,"🛡 反作弊通道拦截 (名字像反作弊/审计的上行一律丢弃)","ACBlock",SYS.SetAntiCheatBlock)
-UI.Switch(p,"🧬 Attribute 回写 (本地活着但 Attribute 被判死时写回)","AttrGuard",SYS.SetAttrGuard)
 UI.Tip(p,"有些游戏把「死没死」放在 Player 的 Attribute(Health/MaxHealth/State/Shield)里, 而不是 Humanoid。\n"
 .."本开关每 0.2 秒比一次: Attribute 说 State=Dead 或 Health<=0, 但本地 Humanoid 还活着 -> 就写回。\n"
 .."★ 写回带 0.05~0.2 秒随机延迟(避免同帧触发 AttributeChanged 这种一眼假的特征)。\n"
@@ -13541,17 +13532,14 @@ if SYS.Stealth and SYS.Stealth.On then P(SYS.Stealth.Remove) P(SYS.SetStealth,tr
 end)
 UI.Tip(p,"⚠ 风险较高: 打开后 hook 隐身会多挂一个 getreg 过滤点, 每次调用都要重建注册表副本(较慢)。\n"
 .."只在确认对手会用 getreg 扫注册表时才开。默认关。",CY.yellow)
-UI.Switch(p,"📡 firesignal 伪装 (禁止对自己 GUI 触发信号)","FireSignalSpoof",SYS.SetFireSignalSpoof)
 UI.Tip(p,"firesignal 是对【自己客户端】的事件手工触发, 有些反作弊会拿它当特征(尤其对 PlayerGui 里的按钮)。\n"
 .."本开关把 firesignal 挂上: 只拦「目标是本脚本自己的 GUI」的调用, 其余原样直通。默认关。",CY.sub)
-UI.Slider(p,"开火抖动 (秒 · 打散机器节奏)",0,0.1,0.005,function() return SYS.C_.FireJitter or 0.03 end,function(v) SYS.C_.FireJitter=v end,"%.3f")
 UI.Tip(p,"原理: 反作弊/审计通道被触发 = 自报家门。本开关把 EventWatch 关键词表落地成「候选通道名」,\n"..
 "  再拦下【发往这些通道的上行】(RemoteEvent.FireServer / RemoteFunction.InvokeServer)。\n"..
 "★ 实现: Roblox 里所有 remote 的 FireServer 是同一个 C 函数 ⇒ 只能 hook 一次(单点), 调用时按 self.Name 判断。\n"..
 "★ 已收窄: 必须【名字命中关键词】且【RemoteRisk 判定像反作弊/审计/后台】才拦 —— 否则商店/领奖/拾取会被一起拦掉。\n"..
 "★ 开火抖动: 所有走 SYS.Fire 的上行加 0~FireJitter 秒随机延迟, 让上报不会「每次都同一时刻」。\n"..
 "⚠ 诚实边界: 只拦【客户端→服务端】上行; 服务端对你的判定、下行推送一律拦不到。默认开。",CY.sub)
-UI.Switch(p,"🎈 防甩飞 (被别人弹飞时立即清零速度)","AntiFling",SYS.SetAntiFling)
 UI.Switch(p,"🫥 hook 隐身 (我方 hook 对 debug.info 显示成 C 函数)","Prot_Stealth",SYS.SetStealth)
 UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查 debug.info 的 source ——\n"..
 "  游戏自己的 Lua 闭包会报出脚本名, 被执行器 hook 过的会露馅。\n"..
@@ -13561,8 +13549,6 @@ UI.Tip(p,"原理: 反作弊判「这段函数是不是被人换过」时, 常查
 "  另叠「中性名 + Archivable=false」两道(多一道保险)。\n"..
 "⚠ 诚实边界: 只挡「debug.info 找非 C 闭包」这一类; 逐帧遍历 GUI / 对非玩家对象调 Kick 看返回值 /\n"..
 "  服务端侧判定 —— 一律无效。开了也可能被更强的检测看穿。默认关。",CY.sub)
-UI.Switch(p,"🧷 射线总入口 hook 路A (⛔不推荐·有风险: 掉帧+易检测)","Prot_RayNamecall",SYS.SetRayNamecall)
-UI.Switch(p,"🧐 UI 文字脱敏 (菜单关闭时把界面文字换成中性占位)","Prot_UImask",SYS.SetUIMask)
 UI.Tip(p,"反作弊找外挂常做的一件事: 遍历 PlayerGui, 读每个 TextLabel/TextButton 的 .Text。\n"..
 "我们的标签写着「自动瞄瞄 / 透视 / 上帝模式 / 无后坐力」—— 名字能中性化, **文字不能**(文字是给你看的)。\n"..
 "本开关: 菜单【关闭】时, 把界面里所有文字换成中性占位(Info); 【打开】时原样还原。\n"..
@@ -17244,10 +17230,8 @@ P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end en
 P(function() if SYS.Stealth then SYS.Stealth.Clear() end end)
 P(function() if SYS.UIMask and SYS.UIMask.Restore then SYS.UIMask.Restore() end end)
 P(function() if SYS.SetAntiCheatBlock then SYS.SetAntiCheatBlock(false) end end)
-P(function() if SYS.SetAttrGuard then SYS.SetAttrGuard(false) end end)
 P(function() if SYS.SetCamGuard then SYS.SetCamGuard(false) end end)
 P(function() if SYS.SetPosRebound then SYS.SetPosRebound(false) end end)
-P(function() if SYS.SetFireSignalSpoof then SYS.SetFireSignalSpoof(false) end end)
 P(function() if SYS.UnhookAllSafe then SYS.UnhookAllSafe() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
