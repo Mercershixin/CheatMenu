@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-24 23:20 sha 83b3347a bytes 629836'):format('2026-09-24 23:20','83b3347a',629836))
-print("[CheatMenu] ===== v68 加载开始 =====")
+print(('[CheatMenu] build 2026-09-25 01:40 sha 7962e33b bytes 675185'):format('2026-09-25 01:40','7962e33b',675185))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v74] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -39,6 +39,9 @@ DeadRails_HitMark=false,DeadRails_AimProbe=false,
 DeadRails_LockHp=false,DeadRails_NoFlop=false,
 TracerAll=true,
 AntiAFK=true,AutoBonus=false,
+EventAtlas=true,LazyRebind=true,WatchPlayers=false,
+AttrWatch=false,ValueWatch=false,TagWatch=false,EntityWatch=false,
+NetSpy=false,IdleStealth=false,PerfProfile=false,
 AutoGym=false,AutoTrain=false,
 TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
@@ -77,6 +80,12 @@ CB_BlockDeathSignal=false,
 AntiRevert=true,
 },
 C_={
+AtlasCap=60000,
+CamZoom=20,
+HitDist=30,
+LightMode="",
+WL_Sel="",
+GameNameCache="",
 FlySpeed=6,FlyMode="BodyVelocity",
 SpeedMult=6,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=6,
@@ -124,7 +133,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.8.6"
+SYS.BuildVer="12.1.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -240,6 +249,787 @@ SYS.PhysicsStep=RS.PreSimulation or RS.Heartbeat
 T_(WS:GetPropertyChangedSignal("CurrentCamera"):Connect(function() SYS.Cam=WS.CurrentCamera end))
 end
 local T=SYS.T local TT=SYS.TT local P=SYS.P local DS=SYS.DisconnectSafe
+do
+local K={ Ver="V3" }
+SYS.K=K
+local LOG={}
+K.LOG=LOG
+function K.Log(cat,text,cap)
+if cat==nil then return end
+local t=LOG[cat]
+if not t then t={} LOG[cat]=t end
+t[#t+1]=("[%s] %s"):format(os.date("%H:%M:%S"),tostring(text))
+local c=tonumber(cap) or 200
+if c<10 then c=10 end
+while #t>c do table.remove(t,1) end
+end
+function K.LogGet(cat,n)
+local t=LOG[cat]
+if not t then return {} end
+local out={}
+local from=#t-(tonumber(n) or 20)+1
+if from<1 then from=1 end
+for i=from,#t do out[#out+1]=t[i] end
+return out
+end
+function K.LogClear(cat)
+if cat then LOG[cat]={} else for k in pairs(LOG) do LOG[k]=nil end end
+end
+function K.LogCats()
+local out={}
+for k in pairs(LOG) do out[#out+1]=k end
+table.sort(out)
+return out
+end
+local ERRS={}
+K.ERRS=ERRS
+K.ErrN=0
+K.ErrSlot=0
+K.ErrOther=0
+K.ErrPrintN=0
+K.ErrPrintMax=40
+function K.Guard(where,fn,...)
+if type(fn)~="function" then return false end
+local a,b,c=pcall(fn,...)
+if a then return a,b,c end
+K.ErrN=K.ErrN+1
+local m=tostring(b)
+if #m>200 then m=m:sub(1,200) end
+local w=tostring(where)
+local key=w.."|"..m
+local e=ERRS[key]
+if e then
+e.n=e.n+1
+elseif K.ErrSlot<80 then
+K.ErrSlot=K.ErrSlot+1
+ERRS[key]={n=1,t=os.clock(),where=w,msg=m}
+K.Log("err",w.." -> "..m,300)
+if K.ErrPrintN<K.ErrPrintMax then
+K.ErrPrintN=K.ErrPrintN+1
+print(("[CheatMenu] ⚠ 错误显形[%s]: %s"):format(w,m))
+end
+else
+K.ErrOther=K.ErrOther+1
+end
+return a,b,c
+end
+function K.ErrList()
+local out={}
+for _,e in pairs(ERRS) do out[#out+1]=e end
+table.sort(out,function(x,y) return (x.n or 0)>(y.n or 0) end)
+return out
+end
+function K.ErrText()
+local l=K.ErrList()
+if #l==0 then return "无错误记录" end
+local s={}
+local n=#l
+if n>8 then n=8 end
+for i=1,n do
+s[#s+1]=("[%s x%d] %s"):format(tostring(l[i].where),l[i].n or 1,tostring(l[i].msg))
+end
+return table.concat(s,"\n")
+end
+local SC={ jobs={}, order={}, drivers={}, n=0, paused=false, cost=0, tickN=0, profile=false, prof={} }
+K.Sched=SC
+function SC.Ensure(sig)
+if not sig then return nil end
+local d=SC.drivers[sig]
+if d then return d end
+local ok,conn=pcall(function() return sig:Connect(function(dt) SC.Pump(sig,dt) end) end)
+if not ok or not conn then return nil end
+d={conn=conn}
+SC.drivers[sig]=d
+SYS.Conns[#SYS.Conns+1]=conn
+return d
+end
+function SC.Add(name,fn,opt)
+if type(name)~="string" or type(fn)~="function" then return nil end
+opt=opt or {}
+local rec=SC.jobs[name]
+if rec then
+if rec.dead then rec.dead=false rec.on=true SC.n=SC.n+1 end
+rec.fn=fn
+if opt.sig then rec.sig=opt.sig end
+if opt.every~=nil then rec.every=tonumber(opt.every) or rec.every end
+else
+rec={ name=name, fn=fn, sig=opt.sig, every=tonumber(opt.every) or 0,
+acc=0, done=0, cost=0, on=true, dead=false, where="job:"..name }
+SC.jobs[name]=rec
+SC.order[#SC.order+1]=name
+SC.n=SC.n+1
+end
+if SC.profile then SC.prof[name]=SC.prof[name] or {n=0,cost=0} end
+SC.Ensure(rec.sig)
+return rec
+end
+function SC.Del(name)
+local rec=SC.jobs[name]
+if not rec or rec.dead then return false end
+rec.dead=true
+rec.on=false
+SC.n=SC.n-1
+SC.dirty=true
+return true
+end
+local function scCompact()
+if not SC.dirty then return end
+SC.dirty=false
+local out={}
+local ord=SC.order
+for i=1,#ord do
+local rec=SC.jobs[ord[i]]
+if rec and not rec.dead then out[#out+1]=ord[i] end
+end
+SC.order=out
+end
+function SC.Has(name)
+local rec=SC.jobs[name]
+return (rec~=nil) and (rec.dead~=true)
+end
+function SC.Pause(on)
+SC.paused=on and true or false
+return SC.paused
+end
+function SC.Pump(sig,dt)
+if SC.paused then return end
+scCompact()
+SC.tickN=SC.tickN+1
+local t0=os.clock()
+local ord=SC.order
+local prof=SC.profile
+for i=1,#ord do
+local rec=SC.jobs[ord[i]]
+if rec and rec.on and not rec.dead and rec.sig==sig then
+local run=false
+if rec.every<=0 then
+run=true
+else
+rec.acc=rec.acc+dt
+if rec.acc>=rec.every then rec.acc=0 run=true end
+end
+if run then
+rec.done=rec.done+1
+if prof then
+local a0=os.clock()
+K.Guard(rec.where,rec.fn,dt)
+local c0=os.clock()-a0
+rec.cost=rec.cost*0.9+c0*0.1
+local p=SC.prof[rec.name]
+if p then p.n=p.n+1 p.cost=p.cost*0.9+c0*0.1 end
+else
+K.Guard(rec.where,rec.fn,dt)
+end
+end
+end
+end
+SC.cost=SC.cost*0.88+(os.clock()-t0)*0.12
+end
+function SC.Top(n)
+local out={}
+for _,rec in pairs(SC.jobs) do
+if not rec.dead then out[#out+1]={name=rec.name,cost=rec.cost,done=rec.done} end
+end
+table.sort(out,function(x,y) return (x.cost or 0)>(y.cost or 0) end)
+local r={}
+local m=#out
+local lim=tonumber(n) or 5
+if m>lim then m=lim end
+for i=1,m do r[#r+1]=out[i] end
+return r
+end
+function SC.Count() return SC.n end
+function SC.DriverCount()
+local c=0
+for _ in pairs(SC.drivers) do c=c+1 end
+return c
+end
+function SC.Clear()
+SC.jobs={} SC.order={} SC.n=0 SC.dirty=false
+end
+function SC.Profile(on)
+SC.profile=on and true or false
+if SC.profile then
+for name in pairs(SC.jobs) do SC.prof[name]=SC.prof[name] or {n=0,cost=0} end
+end
+return SC.profile
+end
+local BUS={ recs={}, n=0 }
+K.Bus=BUS
+local function busAdd(conn,tag,owner)
+if not conn or type(conn.Disconnect)~="function" then return nil end
+BUS.recs[#BUS.recs+1]={conn=conn,tag=tostring(tag or "?"),owner=tostring(owner or "?"),live=true}
+BUS.n=#BUS.recs
+return conn
+end
+function BUS.Raw(conn,tag,owner)
+return busAdd(conn,tag,owner)
+end
+function BUS.Sig(inst,evt,fn,owner)
+if not inst or type(evt)~="string" or type(fn)~="function" then return nil end
+local ok,sig=pcall(function() return inst[evt] end)
+if not ok or not sig or type(sig.Connect)~="function" then return nil end
+local ok2,conn=pcall(function() return sig:Connect(fn) end)
+if not ok2 then return nil end
+return busAdd(conn,evt,owner)
+end
+function BUS.Prop(inst,prop,fn,owner)
+if not inst or type(prop)~="string" or type(fn)~="function" then return nil end
+local ok,sig=pcall(function() return inst:GetPropertyChangedSignal(prop) end)
+if not ok or not sig then return nil end
+local ok2,conn=pcall(function() return sig:Connect(fn) end)
+if not ok2 then return nil end
+return busAdd(conn,"prop:"..prop,owner)
+end
+function BUS.Attr(inst,attr,fn,owner)
+if not inst then return nil end
+if type(attr)=="string" then
+local ok,sig=pcall(function() return inst:GetAttributeChangedSignal(attr) end)
+if ok and sig then
+local ok2,conn=pcall(function() return sig:Connect(function() fn(attr) end) end)
+if ok2 then return busAdd(conn,"attr:"..attr,owner) end
+end
+end
+local ok3,conn2=pcall(function() return inst.AttributeChanged:Connect(fn) end)
+if ok3 then return busAdd(conn2,"attr:*",owner) end
+return nil
+end
+function BUS.Off(owner)
+local n=0
+local keep={}
+for i=1,#BUS.recs do
+local r=BUS.recs[i]
+if r.owner==owner then
+pcall(function() r.conn:Disconnect() end)
+r.live=false
+n=n+1
+else
+keep[#keep+1]=r
+end
+end
+BUS.recs=keep BUS.n=#keep
+return n
+end
+function BUS.OffAll()
+local n=#BUS.recs
+for i=1,#BUS.recs do pcall(function() BUS.recs[i].conn:Disconnect() end) end
+BUS.recs={} BUS.n=0
+return n
+end
+function BUS.Count() return BUS.n end
+local HK={ list={}, n=0 }
+K.Hook=HK
+function HK.API()
+local f=SYS.HookAPI
+if type(f)=="function" then
+local ok,v=pcall(f)
+if ok then return v end
+end
+return nil
+end
+function HK.Find(target)
+for i=1,#HK.list do if HK.list[i].target==target then return HK.list[i] end end
+return nil
+end
+function HK.Has(target) return HK.Find(target)~=nil end
+local function hkRestoreOne(rec)
+if type(restorefunction)=="function" then
+pcall(restorefunction,rec.target)
+else
+local HF=HK.API()
+if HF then pcall(HF,rec.target,rec.orig) end
+end
+end
+function HK.Set(target,wrapper,owner,tag)
+if type(target)~="function" or type(wrapper)~="function" then return nil,"目标/包装不是函数" end
+local ex=HK.Find(target)
+if ex then return ex.orig end
+local HF=HK.API()
+if not HF then return nil,"本机没有 hookfunction" end
+local ok,orig=pcall(HF,target,wrapper)
+if not ok or type(orig)~="function" then return nil,"hookfunction 不返回原函数(按红线不动手)" end
+HK.list[#HK.list+1]={target=target,orig=orig,owner=tostring(owner or "?"),tag=tostring(tag or "?")}
+HK.n=#HK.list
+return orig
+end
+function HK.Drop(target)
+for i=#HK.list,1,-1 do
+if HK.list[i].target==target then
+table.remove(HK.list,i)
+HK.n=#HK.list
+return true
+end
+end
+return false
+end
+function HK.Restore(target)
+local rec=HK.Find(target)
+if not rec then return false end
+hkRestoreOne(rec)
+HK.Drop(target)
+return true
+end
+function HK.RestoreOwner(owner)
+local n=0
+for i=#HK.list,1,-1 do
+local r=HK.list[i]
+if r.owner==owner then
+hkRestoreOne(r)
+table.remove(HK.list,i)
+n=n+1
+end
+end
+HK.n=#HK.list
+return n
+end
+function HK.RestoreAll()
+local n=0
+for i=#HK.list,1,-1 do
+hkRestoreOne(HK.list[i])
+table.remove(HK.list,i)
+n=n+1
+end
+HK.n=0
+return n
+end
+function HK.Count() return HK.n end
+local NET={ atlas={t=0,list={},byClass={},n=0}, bound={}, pending={}, spy=false, recvN=0, cap=300, tracked=false }
+K.Net=NET
+local CLSSET={ RemoteEvent=true, UnreliableRemoteEvent=true, RemoteFunction=true,
+BindableEvent=true, BindableFunction=true, ProximityPrompt=true, ClickDetector=true }
+NET.Order={"RemoteEvent","UnreliableRemoteEvent","RemoteFunction","BindableEvent","BindableFunction","ProximityPrompt","ClickDetector"}
+local _roots=nil
+function NET.Roots()
+if _roots then return _roots end
+local r={}
+if RStorage then r[#r+1]=RStorage end
+if WS then r[#r+1]=WS end
+if LP and LP.PlayerScripts then r[#r+1]=LP.PlayerScripts end
+if LP and LP.PlayerGui then r[#r+1]=LP.PlayerGui end
+if CoreGui then r[#r+1]=CoreGui end
+_roots=r
+return _roots
+end
+local function atlasAdd(e)
+local A=NET.atlas
+A.list[#A.list+1]=e
+local t=A.byClass[e.cls]
+if not t then t={} A.byClass[e.cls]=t end
+t[#t+1]=e
+A.n=A.n+1
+end
+function NET.Scan(root,limit)
+limit=tonumber(limit) or tonumber(SYS.C_ and SYS.C_.AtlasCap) or 60000
+local ok,ds=pcall(function() return root:GetDescendants() end)
+if not ok or not ds then return 0 end
+if #ds>limit then
+K.Log("atlas",("跳过(实例过多 %d > %d): %s"):format(#ds,limit,root.Name),60)
+return 0
+end
+local c=0
+for i=1,#ds do
+local d=ds[i]
+local cls=d.ClassName
+if CLSSET[cls] then
+local okp,path=pcall(function() return d:GetFullName() end)
+atlasAdd({inst=d,name=d.Name,cls=cls,path=okp and path or d.Name})
+c=c+1
+end
+end
+return c
+end
+function NET.Atlas(force)
+local A=NET.atlas
+if (not force) and A.n>0 and (os.clock()-A.t)<15 then return A end
+A.list={} A.byClass={} A.n=0
+local rt=NET.Roots()
+for i=1,#rt do K.Guard("atlas.scan",NET.Scan,rt[i]) end
+A.t=os.clock()
+K.Log("atlas",("图谱重建: %d 条"):format(A.n),60)
+return A
+end
+function NET.Track()
+if NET.tracked then return end
+NET.tracked=true
+local rt=NET.Roots()
+for i=1,#rt do
+BUS.Sig(rt[i],"DescendantAdded",function(d)
+local cls=d.ClassName
+if CLSSET[cls] then
+local okp,path=pcall(function() return d:GetFullName() end)
+atlasAdd({inst=d,name=d.Name,cls=cls,path=okp and path or d.Name})
+end
+if SYS.T_.LazyRebind~=false and next(NET.pending)~=nil then
+K.Guard("net.rebind",NET.Rebind)
+end
+local Wc=K.Watch
+if Wc then
+if Wc.on.ents then K.Guard("dyn.ent",Wc.Entity,d) end
+if Wc.on.values then K.Guard("dyn.val",Wc.Value,d) end
+if Wc.on.attrs then K.Guard("dyn.attr",Wc.Attr,d) end
+end
+end,"V3:atlas")
+end
+K.Log("atlas","增量维护已开启(不再全量轮询)")
+end
+function NET.Resolve(name,cls)
+if type(name)~="string" then return nil end
+if cls=="RemoteFunction" and SYS.RFunction then
+local ok,f=pcall(SYS.RFunction,name)
+if ok and f then return f end
+end
+if SYS.REvent then
+local ok,f=pcall(SYS.REvent,name)
+if ok and f then return f end
+end
+if cls=="RemoteEvent" or cls==nil then
+if SYS.REventU then
+local ok,f=pcall(SYS.REventU,name)
+if ok and f then return f end
+end
+end
+return nil
+end
+function NET.Attach(name,r,cb)
+if not r or type(cb)~="function" then return nil end
+local b=NET.bound[name]
+if b and b.remote==r then
+b.cbs[#b.cbs+1]=cb
+return r
+end
+if b then
+pcall(function() b.conn:Disconnect() end)
+NET.bound[name]=nil
+end
+local sig
+if r.ClassName=="RemoteFunction" then sig=r.OnClientInvoke else sig=r.OnClientEvent end
+if not sig or type(sig.Connect)~="function" then return nil end
+local rec={remote=r,cbs={cb},name=name,cls=r.ClassName,n=0}
+local ok,conn=pcall(function()
+return sig:Connect(function(...)
+rec.n=rec.n+1
+NET.recvN=NET.recvN+1
+if NET.spy then
+K.Log("recv",("▸ [%s] %s  (参数 %d)"):format(rec.cls,name,select("#",...)),NET.cap)
+end
+local cbs=rec.cbs
+for i=1,#cbs do K.Guard("netcb:"..name,cbs[i],...) end
+end)
+end)
+if not ok or not conn then return nil end
+rec.conn=conn
+NET.bound[name]=rec
+SYS.Conns[#SYS.Conns+1]=conn
+K.Log("bind",("已挂 %s (%s)"):format(name,rec.cls),150)
+return r
+end
+function NET.Bind(name,cb,cls)
+if type(name)~="string" or type(cb)~="function" then return nil end
+local r=NET.Resolve(name,cls)
+if r then return NET.Attach(name,r,cb) end
+local p=NET.pending[name]
+if not p then p={list={},cls=cls} NET.pending[name]=p end
+p.list[#p.list+1]=cb
+K.Log("bind",("挂起(等远程下发): %s"):format(name),150)
+return nil
+end
+function NET.Rebind()
+local n=0
+for name,p in pairs(NET.pending) do
+local r=NET.Resolve(name,p.cls)
+if r then
+for i=1,#p.list do NET.Attach(name,r,p.list[i]) end
+NET.pending[name]=nil
+n=n+1
+end
+end
+if n>0 then K.Log("bind",("远程下发后重绑 %d 个监听"):format(n),150) end
+return n
+end
+function NET.PendingN()
+local c=0
+for _ in pairs(NET.pending) do c=c+1 end
+return c
+end
+function NET.BoundN()
+local c=0
+for _ in pairs(NET.bound) do c=c+1 end
+return c
+end
+function NET.Spy(on)
+NET.spy=on and true or false
+return NET.spy
+end
+function NET.DetachAll()
+local n=0
+for _,b in pairs(NET.bound) do
+pcall(function() b.conn:Disconnect() end)
+n=n+1
+end
+NET.bound={}
+return n
+end
+function NET.Categories()
+local WANT={
+{"box","盒子 / 宝箱"},{"pickup","拾取"},{"equip","装备"},{"revive","复活"},
+{"buy","购买"},{"shop","商店"},{"sell","出售"},{"trade","交易"},
+{"claim","领取"},{"daily","每日"},{"mail","邮件"},{"friend","好友"},
+{"chat","聊天"},{"emote","表情"},{"team","队伍"},{"round","回合"},
+{"respawn","重生"},{"kill","击杀"},{"damage","伤害"},{"heal","治疗"},
+{"doors","门"},{"teleport","传送"},{"move","移动"},{"server","服务器"},
+{"kick","踢出"},{"inventory","背包"},{"itemuse","使用道具"},{"craft","制造"},
+{"loot","战利品"},{"orb","光球"},{"milestone","里程碑"},{"stall","摊位"},
+{"deathfx","死亡特效"},{"doorshop","门商店"},
+}
+local out={}
+local miss=0
+if type(SYS.FindEvent)~="function" then return out,0 end
+for i=1,#WANT do
+local k=WANT[i][1]
+local ok,r,nm,how=pcall(SYS.FindEvent,k)
+if not ok then r=nil nm=nil how=nil end
+out[#out+1]={key=k,label=WANT[i][2],inst=r,name=nm,how=how}
+if not r then miss=miss+1 end
+end
+return out,miss
+end
+local W={ on={}, attrN=0, valN=0, tagN=0, entN=0 }
+K.Watch=W
+local function seen(key)
+if W.on[key] then return true end
+W.on[key]=true
+return false
+end
+local function clearPrefix(pre)
+local rm={}
+for k in pairs(W.on) do
+if type(k)=="string" and k:sub(1,#pre)==pre then rm[#rm+1]=k end
+end
+for i=1,#rm do W.on[rm[i]]=nil end
+return #rm
+end
+W.ClearPrefix=clearPrefix
+function W.Hum(p,ch)
+if not p or not ch then return end
+local h=ch:FindFirstChildOfClass("Humanoid")
+if not h then
+if not seen("humwait:"..p.Name) then
+BUS.Sig(ch,"ChildAdded",function(c)
+if c:IsA("Humanoid") then W.Hum(p,ch) end
+end,"V3:hum")
+end
+return
+end
+if W.on["hum:"..p.Name]==h then return end
+W.on["hum:"..p.Name]=h
+BUS.Sig(h,"Died",function() K.Log("evt","Died "..p.Name) end,"V3:hum")
+BUS.Sig(h,"StateChanged",function(_,s)
+if p==LP then K.Log("evt","状态 -> "..tostring(s)) end
+end,"V3:hum")
+end
+function W.Char(p)
+if not p then return end
+if seen("char:"..p.Name) then return end
+BUS.Sig(p,"CharacterAdded",function(ch)
+K.Log("evt","CharacterAdded "..p.Name)
+W.Hum(p,ch)
+end,"V3:char")
+local ch=p.Character
+if ch then W.Hum(p,ch) end
+end
+function W.Players(on)
+if on==false then
+BUS.Off("V3:players") BUS.Off("V3:char") BUS.Off("V3:hum")
+clearPrefix("char:") clearPrefix("hum:") clearPrefix("humwait:")
+W.on.players=false
+return false
+end
+if W.on.players then return true end
+W.on.players=true
+BUS.Sig(Players,"PlayerAdded",function(p) W.Char(p) K.Log("evt","PlayerAdded "..p.Name) end,"V3:players")
+BUS.Sig(Players,"PlayerRemoving",function(p) K.Log("evt","PlayerRemoving "..p.Name) end,"V3:players")
+local pls=Players:GetPlayers()
+for i=1,#pls do W.Char(pls[i]) end
+W.Char(LP)
+return true
+end
+function W.Attr(inst)
+if not inst then return end
+local ok,names=pcall(function() return inst:GetAttributes() end)
+if not ok or type(names)~="table" then return end
+local has=false
+for _ in pairs(names) do has=true break end
+if not has then return end
+if seen("attr:"..tostring(inst)) then return end
+W.attrN=W.attrN+1
+BUS.Sig(inst,"AttributeChanged",function(nm,v)
+K.Log("attr",("%s.%s = %s"):format(inst.Name,tostring(nm),tostring(v)),250)
+end,"V3:attr")
+end
+function W.Attrs(on)
+if on==false then
+BUS.Off("V3:attr") clearPrefix("attr:") W.on.attrs=false W.attrN=0
+return false
+end
+if W.on.attrs then return true end
+W.on.attrs=true
+local rt=NET.Roots()
+for i=1,#rt do
+local root=rt[i]
+K.Guard("attr.scan",function()
+local ds=root:GetDescendants()
+if #ds>40000 then return end
+for j=1,#ds do W.Attr(ds[j]) end
+end)
+end
+return true
+end
+function W.Value(inst)
+if not inst then return end
+local c=inst.ClassName
+if c~="IntValue" and c~="NumberValue" and c~="StringValue" and c~="BoolValue" and c~="ObjectValue" then return end
+if seen("val:"..tostring(inst)) then return end
+W.valN=W.valN+1
+local ok,label=pcall(function()
+local p=inst.Parent
+return (p and (p.Name.."."..inst.Name)) or inst.Name
+end)
+if not ok or type(label)~="string" then label=inst.Name end
+BUS.Sig(inst,"Changed",function(v)
+K.Log("val",("%s = %s"):format(label,tostring(v)),250)
+end,"V3:val")
+end
+function W.Values(on)
+if on==false then
+BUS.Off("V3:val") clearPrefix("val:") W.on.values=false W.valN=0
+return false
+end
+if W.on.values then return true end
+W.on.values=true
+local rt=NET.Roots()
+for i=1,#rt do
+local root=rt[i]
+K.Guard("val.scan",function()
+local ds=root:GetDescendants()
+if #ds>40000 then return end
+for j=1,#ds do W.Value(ds[j]) end
+end)
+end
+return true
+end
+function W.Tags(on)
+if on==false then
+BUS.Off("V3:tag") W.on.tags=false W.tagN=0
+return false
+end
+if W.on.tags then return true end
+if not CS then return false end
+W.on.tags=true
+local ok,tags=pcall(function() return CS:GetTags() end)
+if not ok or type(tags)~="table" then return true end
+local n=0
+for i=1,#tags do
+if n>=80 then break end
+local tg=tostring(tags[i])
+n=n+1
+W.tagN=W.tagN+1
+local okA,sigA=pcall(function() return CS:GetInstanceAddedSignal(tg) end)
+if okA and sigA then
+local ok2,c=pcall(function()
+return sigA:Connect(function(inst)
+local okp,path=pcall(function() return inst:GetFullName() end)
+K.Log("tag",("+ [%s] %s"):format(tg,okp and path or tostring(inst)))
+end)
+end)
+if ok2 then BUS.Raw(c,"tag:"..tg,"V3:tag") end
+end
+end
+K.Log("tag",("已挂 %d 个标签的变动信号"):format(n))
+return true
+end
+function W.Entity(d)
+if not d then return end
+if d.ClassName~="Model" then return end
+if seen("ent:"..tostring(d)) then return end
+W.entN=W.entN+1
+local nm=nil
+pcall(function() nm=d:GetAttribute("EntityName") end)
+local hum=(d:FindFirstChildOfClass("Humanoid")~=nil)
+if nm or hum then
+K.Log("ent",("+ %s%s%s"):format(d.Name,
+nm and (" EntityName="..tostring(nm)) or "",
+hum and " (有 Humanoid)" or ""),250)
+end
+end
+function W.Entities(on)
+if on==false then
+BUS.Off("V3:ent") clearPrefix("ent:") W.on.ents=false W.entN=0
+return false
+end
+if W.on.ents then return true end
+W.on.ents=true
+return true
+end
+local IDLE={ on=false }
+K.Idle=IDLE
+function IDLE.Set(on)
+on=on and true or false
+IDLE.on=on
+SC.Pause(on)
+if on then
+NET.Spy(false)
+if W.on.values then W.Values(false) end
+if W.on.attrs then W.Attrs(false) end
+if W.on.tags then W.Tags(false) end
+if W.on.ents then W.Entities(false) end
+K.Log("idle","进入静默: 调度器挂起 / 下行监听停 / 属性·值·标签·实体监听全摘")
+else
+if SYS.T_.ValueWatch then K.Guard("idle.val",W.Values,true) end
+if SYS.T_.AttrWatch then K.Guard("idle.attr",W.Attrs,true) end
+if SYS.T_.TagWatch then K.Guard("idle.tag",W.Tags,true) end
+if SYS.T_.EntityWatch then K.Guard("idle.ent",W.Entities,true) end
+if SYS.T_.NetSpy then NET.Spy(true) end
+K.Log("idle","退出静默: 调度器恢复")
+end
+return IDLE.on
+end
+function SYS.V3Boot()
+local K2=SYS.K
+if not K2 then return end
+if K2._booted then return end
+K2._booted=true
+K2.Net.Track()
+K2.Watch.Players(SYS.T_.WatchPlayers==true)
+if SYS.T_.AttrWatch then K2.Guard("v3.boot.attr",K2.Watch.Attrs,true) end
+if SYS.T_.ValueWatch then K2.Guard("v3.boot.val",K2.Watch.Values,true) end
+if SYS.T_.TagWatch then K2.Guard("v3.boot.tag",K2.Watch.Tags,true) end
+if SYS.T_.EntityWatch then K2.Guard("v3.boot.ent",K2.Watch.Entities,true) end
+if SYS.T_.NetSpy then K2.Net.Spy(true) end
+if SYS.T_.IdleStealth then K2.Idle.Set(true) end
+if SYS.T_.LazyRebind~=false then
+K2.Sched.Add("V3Rebind",function()
+if K2.Net.PendingN()>0 then K2.Guard("v3.rebind",K2.Net.Rebind) end
+end,{sig=RS.Heartbeat,every=3})
+end
+if SYS.T_.EventAtlas then
+task.delay(4,function()
+K2.Guard("v3.atlas",K2.Net.Atlas,true)
+print(("[CheatMenu] 🧩 事件图谱就绪: %d 条(远程/交互/值对象)"):format(K2.Net.atlas.n))
+end)
+end
+print("[CheatMenu] ✅ V3 内核就绪: 统一调度 / 事件总线 / 错误显形 / hook 归属 / 事件图谱")
+end
+function SYS.V3Teardown()
+local K2=SYS.K
+if not K2 then return end
+K2.Guard("v3.net",K2.Net.DetachAll)
+K2.Guard("v3.bus",K2.Bus.OffAll)
+K2.Guard("v3.hook",K2.Hook.RestoreAll)
+K2.Idle.on=false
+K2.Sched.Pause(false)
+K2.Sched.Clear()
+end
+end
 function SYS.KeyCodeOf(name)
 if type(name)~="string" or name=="" then return nil end
 local ok,k=pcall(function() return Enum.KeyCode[name] end)
@@ -355,21 +1145,18 @@ end
 function SYS.SetLoop(k,on,sig,fn)
 if on then
 if not sig then return end
-local rec=SYS._LoopRec and SYS._LoopRec[k]
-if rec and (rec.sig~=sig or rec.fn~=fn) then
-pcall(function() if rec.conn then rec.conn:Disconnect() end end)
-SYS.Loops[k]=nil
-if SYS._LoopRec then SYS._LoopRec[k]=nil end
-rec=nil
+if SYS.K.Idle and SYS.K.Idle.on then
+SYS.K.Idle.Set(false)
+if SYS.T_ then SYS.T_.IdleStealth=false end
+P(function() SYS.Notify("🙈 有功能被打开, 已自动退出空闲静默",SYS.CY and SYS.CY.yellow) end)
 end
-if not SYS.Loops[k] then
-local conn=T(sig:Connect(fn))
-SYS.Loops[k]=conn
+SYS.K.Sched.Add(k,fn,{sig=sig})
+SYS.Loops[k]={sched=true}
 SYS._LoopRec=SYS._LoopRec or {}
-SYS._LoopRec[k]={sig=sig,fn=fn,conn=conn}
-end
-elseif SYS.Loops[k] then
-SYS.Loops[k]:Disconnect() SYS.Loops[k]=nil
+SYS._LoopRec[k]={sig=sig,fn=fn,conn=nil,sched=true}
+else
+SYS.K.Sched.Del(k)
+if SYS.Loops[k] then SYS.Loops[k]=nil end
 if SYS._LoopRec then SYS._LoopRec[k]=nil end
 end
 end
@@ -400,8 +1187,7 @@ return nx
 end
 function SYS.SpawnLoop(fn)
 local co=task.spawn(function()
-local ok,err=pcall(fn)
-if not ok then warn("[CheatMenu] loop:",tostring(err)) end
+SYS.K.Guard("spawnloop",fn)
 end)
 return SYS.TT(co)
 end
@@ -771,9 +1557,7 @@ end
 return P(function() r:FireServer(table.unpack(a,1,a.n)) end)
 end
 function SYS.OnRemote(n,cb)
-local r=SYS.REvent(n) or SYS.REventU(n)
-if not r then return end
-T(r.OnClientEvent:Connect(cb))
+return SYS.K.Net.Bind(n,cb)
 end
 end
 do
@@ -1315,6 +2099,9 @@ for _,p in ipairs(ch:GetDescendants()) do
 if p:IsA("BasePart") then p.CanCollide=not on end
 end
 end
+local noclipThread=nil
+local NoclipAtt,NoclipVel=false,false
+local InfiniteJumpConn=nil
 function SYS.SetNoclip(on)
 for _,c in ipairs(SYS.NoclipConns) do DS(c) end
 SYS.NoclipConns={}
@@ -1338,7 +2125,10 @@ if p:IsA("BasePart") and p.CanCollide then p.CanCollide=false end
 end
 local root=c:FindFirstChild("HumanoidRootPart")
 local cam=WS and WS.CurrentCamera
-if root and cam and cam.CFrame then
+if SYS.T_.Fly then
+if NoclipVel then NoclipVel:Destroy() NoclipVel=nil end
+if NoclipAtt then NoclipAtt:Destroy() NoclipAtt=nil end
+elseif root and cam and cam.CFrame then
 local d=GetInputDir(cam.CFrame)
 if d.Magnitude>0.1 then
 if not NoclipVel or NoclipVel.Parent~=root then
@@ -2007,7 +2797,7 @@ end
 function SYS.GameTag()
 local pid=tostring(game.PlaceId or 0)
 local nm=SYS.C_.GameNameCache
-if not nm then
+if nm==nil or nm=="" then
 local ok,info=pcall(function()
 return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
 end)
@@ -3379,18 +4169,17 @@ end
 SYS._Hooks={}
 function SYS.SafeHook(target,wrapper,tag)
 if type(target)~="function" then return nil,"目标不是函数" end
-local rec=SYS._Hooks[target]
-if rec then return rec.orig end
-local HF=SYS.HookAPI()
-if not HF then return nil,"本机没有 hookfunction" end
-local ok,orig=pcall(HF,target,wrapper)
-if not ok or type(orig)~="function" then return nil,"hookfunction 不返回原函数(按红线不动手)" end
+local orig,err=SYS.K.Hook.Set(target,wrapper,tag or "?","hook")
+if not orig then return nil,err or "hookfunction 不可用(按红线不动手)" end
 SYS._Hooks[target]={orig=orig,tag=tag or "?"}
 return orig
 end
 function SYS.SafeUnhook(target)
 local rec=SYS._Hooks[target]
-if not rec then return false end
+if not rec then
+if SYS.K.Hook.Has(target) then return SYS.K.Hook.Restore(target) end
+return false
+end
 if type(restorefunction)=="function" then
 pcall(restorefunction,target)
 else
@@ -3398,11 +4187,15 @@ local HF=SYS.HookAPI()
 if HF then pcall(HF,target,rec.orig) end
 end
 SYS._Hooks[target]=nil
+SYS.K.Hook.Drop(target)
 return true
 end
 function SYS.UnhookAllSafe()
 local n=0
-for t in pairs(SYS._Hooks) do if SYS.SafeUnhook(t) then n=n+1 end end
+for t in pairs(SYS._Hooks) do
+if SYS.SafeUnhook(t) then n=n+1 end
+end
+n=n+SYS.K.Hook.RestoreAll()
 return n
 end
 do
@@ -3525,6 +4318,269 @@ if SYS.Notify then SYS.Notify("🛡 反作弊通道拦截已关(上行已还原)
 return true
 end
 end
+SYS.RegisterScanner("🛡 能力绕过判定 (飞行加速 / 回血锁血上帝 / 高亮透视 · 含外部手法对照)", function()
+local o={}
+local char=LP and LP.Character
+local root=char and char:FindFirstChild("HumanoidRootPart")
+local auth="读不到"
+pcall(function() auth=tostring(WS.AuthorityMode) end)
+local saOn=(auth:find("Server")~=nil)
+local owner="取不到"
+pcall(function()
+if root then
+local ow=root:GetNetworkOwner()
+owner=ow and ow.Name or "服务端/空"
+end
+end)
+local stream="读不到"
+pcall(function() stream=tostring(WS.StreamingEnabled) end)
+o[#o+1]="【前提 · 这三条决定一切, 先看这个】"
+o[#o+1]=("  ① 服务端权威 AuthorityMode = %s%s"):format(auth,
+saOn and "   ⛔ 已开 ⇒ 引擎级拒绝客户端位移/属性篡改, 移动类当场结案"
+or  "   ✅ 未开 ⇒ 客户端动得起来")
+o[#o+1]=("  ② 角色网络所有权 = %s   (空 / 服务端 ⇒ 本地推不动; SA 下永远是服务端)"):format(owner)
+o[#o+1]=("  ③ StreamingEnabled = %s   (true ⇒ 远处物件没下发, 透视会「走近才出」—— 引擎行为, 不是脚本坏了)"):format(stream)
+o[#o+1]=""
+o[#o+1]="【判定表】能力 → 判定 / 打在哪一层 / 怎么做 / 做不到什么"
+o[#o+1]=""
+o[#o+1]="● 飞行 / 加速"
+o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到(SA 服引擎级拒绝)" or "✅ 可做")
+o[#o+1]="  层: ①客户端权威层(改本地动多快) + ②上行通道层(改「上报看起来多快」)"
+o[#o+1]="  怎么做: [4]移动层 SYS._Move 三驱动各自独立 —— Align / BodyVelocity / CFrame 直推;"
+o[#o+1]="          速度一律【格/秒】绝对值 C_.FlyAbs / C_.SpeedAbs (0 = 用倍率; 倍率基准是开局 WalkSpeed, 不写死 16)。"
+o[#o+1]="          过检测走【另一个模块】T_.AntiRevert —— 它只管\"上报给服务端多快\", 与本地速度解耦。"
+o[#o+1]="  做不到: ① SA 服引擎拒绝; ② 上报上限 < 实际速度 ⇒ 服务端把你拽回(=看着像定在原地)。"
+o[#o+1]="          ★ 「跑得快」与「看起来正常」不可兼得 —— 物理限制, 不是参数没调好。"
+o[#o+1]="  ⛔ 别做: 抢网络所有权 SetNetworkOwner(SA 下直接报错) · 伪造位置上报(红线)"
+o[#o+1]=""
+o[#o+1]="● 回血 (治疗)"
+do
+local cands={"bandage.Use","snake_oil.Use","RevivePlayer","heal"}
+local hit={}
+for i=1,#cands do
+local r=select(2,pcall(SYS.FindEvent,cands[i]))
+if r then hit[#hit+1]=cands[i] end
+end
+o[#o+1]=("  实测: 本服能定位到的治疗类通道 = %s"):format(#hit>0 and table.concat(hit," / ") or "无")
+end
+o[#o+1]="  判定: 有治疗道具的服 ✅(真持有自己触发) / 无客户端上行通道的服 ⛔(凭空回血)"
+o[#o+1]="  层: ①客户端权威层(属性写回 = 只影响本地血条表现) / ③本地表现层"
+o[#o+1]="  怎么做: 唯一真实通道 =【真持有道具 / 乐器, 自己触发】; 本地顶血只改自己看到的血条。"
+o[#o+1]="  做不到: 凭空给别人回血 ⛔ —— 治疗与血量是服务端结算, 客户端伪装不了队友真实血条。"
+o[#o+1]="          (Dead Rails 实测: 220 个 remote 里与玩家血量相关的只有 bandage.Use / snake_oil.Use / RevivePlayer, 无客户端上行通道)"
+o[#o+1]="  ⛔ 已试过并证伪: 直接 FireServer 资源模板远程(赌服务端不校验持有) —— 服务端校验, 无效(该功能已删)"
+o[#o+1]=""
+o[#o+1]="● 锁血 / 防击倒"
+o[#o+1]=("  判定: 锁血 %s / 防击倒 %s"):format(
+"⚠️ 本地顶回(血条可能回弹)", saOn and "⚠️" or "✅ 通常可做")
+o[#o+1]="  层: ①客户端权威层(同帧把血写回) / ③本地表现层(断开布娃娃)"
+o[#o+1]="  怎么做: DeadRails_LockHp = 血被扣就同一帧顶回满; DeadRails_NoFlop = 被打倒/被摆布娃娃时立刻站起来"
+o[#o+1]="          (Dead Rails 的 ClientPlayerFlopHandler 在客户端 ⇒ 防击倒是这一类里唯一真有效的)"
+o[#o+1]="  做不到: 服务端算伤害的服, 血条会回弹 ⇒ 真·锁血做不到; 真无敌 ⛔"
+o[#o+1]=""
+o[#o+1]="● 上帝模式 / 无敌"
+o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到" or "⚠️ 只对\"伤害在客户端结算\"的服有效")
+o[#o+1]="  层: ①客户端权威层(本地免伤) + ①属性写回"
+o[#o+1]="  怎么做: GodMode(本地免疫) + NoFall(无坠落伤) + T_.AttrGuard(属性回写防判死) + TrapImmune(反陷阱免伤)"
+o[#o+1]="  做不到: 伤害在服务端算 ⇒ 客户端拦不到 ⇒ 真无敌做不到(这是本项目的诚实边界, 别承诺)"
+o[#o+1]="  ⛔ 别做: 给游戏内部表灌元表 / 伪造\"我没受伤\"上行"
+o[#o+1]=""
+o[#o+1]="● 高亮 / 透视"
+o[#o+1]="  判定: ✅ 永远有效 —— 这是【纯本地表现层】, 完全不依赖服务端配合"
+o[#o+1]="  层: ③本地表现层(自绘/高亮) + ④检测面层(顺便降暴露)"
+o[#o+1]=("  怎么做: SYS.NewVis 做【边框高亮】(填充 0.88 / 隔墙 0.93, 只留描边); 本轮已挂载高亮载体 %d 个"):format(SYS._doorN or 0)
+o[#o+1]="          敌人 = 红 · 队友 = 绿 · 幽灵 = 紫 · 怪物NPC = 橙; 危险物 = 红 + ☠"
+o[#o+1]="  做不到: StreamingEnabled=true 时服务端没下发的物件看不见(走近才出); 服务端剔除的永远看不到"
+o[#o+1]=""
+o[#o+1]="● 传送"
+o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到" or "✅ 可做(分步链)")
+o[#o+1]="  层: ①客户端权威层"
+o[#o+1]="  怎么做: SYS.TPTo 走【分步链】多帧小步, 而不是单帧几百格; 阈值跟着 C_.RevertJump 自适应"
+o[#o+1]="  做不到: SA 服无解; 无上行通道的服也可能被服务端位置校验拉回"
+o[#o+1]=""
+o[#o+1]="● 反检测 / 欺骗 (只降低被抓概率, 不改变服务端判定)"
+o[#o+1]="  层: ④检测面层"
+o[#o+1]="  怎么做: T_.AntiRevert(默认开, 只拦单帧大跳) · ACBlock(名字像反作弊/审计的上行丢弃) ·"
+o[#o+1]="          T_.IdleStealth(V3 空闲静默: 挂起全部自建循环 + 摘掉监听面, 压小动态足迹) ·"
+o[#o+1]="          中性名 + Archivable=false + 关闭时文字脱敏 (开着的瞬间拦不住, 这是事实)"
+o[#o+1]="  ★★ 外部调研得出的关键结论(见下面「外部手法对照」):"
+o[#o+1]="     对【动态注入 inspector 式】反作弊(随机间隔注入脚本 + 要求限时回报 + 数值比对):"
+o[#o+1]="       · 拦通道 / 删 remote ⇒ 直接吃【超时判罚】(它就是要你没回话);"
+o[#o+1]="       · 改名 / 清执行器全局 ⇒ 对它【无效】(它压根不看这些);"
+o[#o+1]="       · 唯一有效的是【让上报的数值自洽】—— 也就是别伪造, 只做本地表现。"
+o[#o+1]="     对【静态扫描式】反作弊(遍历 PlayerGui 读文字 / 找特征实例 / 查函数身份):"
+o[#o+1]="       · 中性名 + 关闭时脱敏 + 少留特征实例 才有意义。"
+o[#o+1]="     ⇒ 先判断对面是哪一类, 再决定做不做 ④ 层 —— 做错方向等于白费。"
+return o
+end)
+SYS.RegisterScanner("🧩 事件扫描 (V3 事件图谱 + 下行监听 + 监听面 + 运行态)", function()
+local o={}
+local K=SYS.K
+if not K then
+o[#o+1]="（V3 内核未加载 —— 这是 12.0.0 起的模块）"
+return o
+end
+local A=K.Net.Atlas()
+o[#o+1]=("事件图谱: 共 %d 条   ★ 别名表命中的只是其中一小撮, 别只盯着 remote 名字"):format(A.n)
+local ord=K.Net.Order
+for i=1,#ord do
+local t=A.byClass[ord[i]]
+o[#o+1]=("  %-22s %d"):format(ord[i],t and #t or 0)
+end
+o[#o+1]="  ↑ ProximityPrompt / ClickDetector / Bindable 这三类【不用猜名字】, 是框架式命名服上唯一稳的口子"
+o[#o+1]=""
+o[#o+1]=("下行监听: 已挂 %d 个 · 挂起(等远程下发) %d 个 · 累计收到 %d 次"):format(
+K.Net.BoundN(),K.Net.PendingN(),K.Net.recvN or 0)
+o[#o+1]=("  记录总开关 NetSpy=%s · 远程下发自动重绑 LazyRebind=%s"):format(
+tostring(K.Net.spy),tostring(SYS.T_.LazyRebind~=false))
+o[#o+1]="  ★ 「挂起」这一项就是以前缺的监听: 旧 OnRemote 拿不到 remote 就直接 return ⇒ 监听静默丢失;"
+o[#o+1]="    现在先挂起, 远程一下发就自动绑上。挂起数 > 0 说明本服真的在下发后才建 remote。"
+o[#o+1]=""
+local W2=K.Watch
+o[#o+1]="新增监听面 (以前根本没有的):"
+o[#o+1]=("  玩家/角色/死亡 %s · 属性 %s(%d 个实例) · 值对象 %s(%d 个) · 标签 %s(%d 个) · 实体出现 %s"):format(
+W2.on.players and "开" or "关",
+W2.on.attrs and "开" or "关", W2.attrN,
+W2.on.values and "开" or "关", W2.valN,
+W2.on.tags and "开" or "关", W2.tagN,
+W2.on.ents and "开" or "关")
+o[#o+1]=("  实体出现计数 %d 个 (事件驱动, 不再靠每 2 秒轮询)"):format(W2.entN or 0)
+o[#o+1]=""
+local si=K.Sched
+o[#o+1]=("V3 运行态: 任务 %d · 驱动连接 %d · 总线连接 %d · hook %d · 错误 %d"):format(
+si.Count(),si.DriverCount(),K.Bus.Count(),K.Hook.Count(),K.ErrN)
+o[#o+1]=("  空闲静默 %s · 自建负载 %.3f ms/帧 · 已跑 %d 帧"):format(
+K.Idle.on and "开" or "关",(si.cost or 0)*1000,si.tickN)
+o[#o+1]=("  ★ 驱动连接 = 每个信号只开一条(旧实现是每个任务各一条, 实测 ~29 条 → 现在 1~2 条)")
+local top=si.Top(5)
+if #top>0 then
+o[#o+1]="  最贵的 5 个任务:"
+for i=1,#top do
+o[#o+1]=("    #%d %-18s %.3f ms/帧  已跑 %d"):format(i,tostring(top[i].name),(top[i].cost or 0)*1000,top[i].done or 0)
+end
+end
+o[#o+1]=""
+do
+local el=K.ErrList()
+if #el>0 then
+o[#o+1]=("错误显形 (只列前 5 条, 完整清单见「🧩 事件」页导出):")
+for i=1,#el do
+if i>5 then break end
+o[#o+1]=("  [%s x%d] %s"):format(tostring(el[i].where),el[i].n or 1,tostring(el[i].msg))
+end
+else
+o[#o+1]="错误显形: 本轮 0 条 (V3 起不再静默吞错)"
+end
+end
+o[#o+1]=""
+o[#o+1]="最近下行事件 (最后 8 条):"
+local l=K.LogGet("recv",8)
+if #l==0 then
+o[#o+1]="  (无 —— 想收就把「🧩 事件」页的『记录所有下行事件』打开)"
+else
+for i=1,#l do o[#o+1]="  "..tostring(l[i]) end
+end
+return o
+end)
+SYS.RegisterScanner("🧪 自检合集 (移动 / 高亮 / 穿墙 · 原来散在 4 个按钮里)", function()
+local o={}
+o[#o+1]="── 移动自检 ──"
+do
+local L2=nil
+if type(SYS.MoveDiag)=="function" then
+local ok,r=pcall(SYS.MoveDiag)
+if ok then L2=r end
+end
+if type(L2)=="table" then
+for i=1,#L2 do o[#o+1]="  "..tostring(L2[i]) end
+else
+o[#o+1]="  (不可用)"
+end
+end
+o[#o+1]="── 高亮彻底性 ──"
+do
+local n=-1
+if type(SYS.Index)=="function" then
+local ok,d=pcall(SYS.Index)
+if ok and type(d)=="table" then n=#d end
+end
+o[#o+1]=("  Workspace 实例 %d 个 · 真正挂上高亮的载体 %d 个 · 池里 %d 个"):format(
+n,SYS._doorN or 0,#(SYS._doorList or {}))
+o[#o+1]="  (高亮载体为 0 而开关是开的 ⇒ 先看是不是被 pcall 吞了错 —— 见上面「错误显形」)"
+end
+o[#o+1]="── 穿墙 / 射线改写 ──"
+do
+local R=SYS.RayHook
+if type(R)=="table" then
+o[#o+1]=("  函数层已装 hook=%s · 改写 %d 次 · 打到墙后的人 %d 次"):format(
+tostring(R.Hooked),R.Rewrites or 0,R.ThruN or 0)
+o[#o+1]=("  候选射线函数 %d 个 · 已 hook %d 个"):format(
+#(type(R.FnCands)=="table" and R.FnCands or {}),R.FnN or 0)
+else
+o[#o+1]="  (RayHook 不可用)"
+end
+end
+o[#o+1]="── 武器逻辑 / 数值槽 ──"
+do
+local G=SYS.Gun
+if type(G)=="table" then
+o[#o+1]=("  已扫描=%s · 数值槽 %d 个"):format(
+tostring(G.Scanned),#(type(G.Nums)=="table" and G.Nums or {}))
+else
+o[#o+1]="  (Gun 不可用)"
+end
+end
+return o
+end)
+SYS.RegisterScanner("🕵 外部手法对照 (2026-09 公开仓库 · 别人怎么绕 / 我们为什么不做)", function()
+local o={}
+o[#o+1]="调研范围: GitHub 最近一个月内更新的 Roblox 相关仓库(2026-08-25 ~ 09-25), 只记技法, 不抄代码。"
+o[#o+1]=""
+o[#o+1]="【飞行 / 加速】别人怎么做"
+o[#o+1]="  · BodyVelocity + BodyGyro 挂 HumanoidRootPart, MaxForce/MaxTorque = math.huge,"
+o[#o+1]="    hum.PlatformStand = true, RenderStepped 里按相机向量算 Velocity —— 与我们 Align/BodyVelocity 驱动同源。"
+o[#o+1]="  · ★ 可借鉴的一点: 他们给自建实例起了【随机名】(_BV_NAME/_BG_NAME)。"
+o[#o+1]="    我们的「擦掉 GUI 可疑名 / 中性命名」只覆盖了 GUI; 角色身上的驱动实例名也是检测面。"
+o[#o+1]="  · 直接写 humanoid.WalkSpeed(最省事, 也最容易被服务端每帧改写)。"
+o[#o+1]="  ⛔ 不抄: SetNetworkOwner 抢所有权(SA 下直接报错, 且 2026-07-09 起 SA 已正式发布)。"
+o[#o+1]=""
+o[#o+1]="【回血 / 锁血 / 上帝】别人的做法 + 一个反例"
+o[#o+1]="  · 调研到的两个 MM2 / 通用 hub 里【根本没有】godmode / 无限血 / 血锁实现 ——"
+o[#o+1]="    这不是巧合: 血量与伤害在服务端算, 客户端做不了。与我们的结论完全一致(补血 ✅ · 锁血 ⚠️ · 真无敌 ⛔)。"
+o[#o+1]="  · 他们做的替代品是: 断开 Humanoid 的 GetPropertyChangedSignal(「WalkSpeed」/「MaxHealth」) ——"
+o[#o+1]="    用执行器的 getconnections 把【游戏自己挂的】属性监听掐掉。⚠ 本机执行器(Real)没有 getconnections ⇒ 这条路我们走不了。"
+o[#o+1]=""
+o[#o+1]="【高亮 / 透视】别人怎么做"
+o[#o+1]="  · 主流做法是 Drawing API(Drawing.new(\"Square\"/\"Text\"/\"Line\")) —— 它【不是 Instance】,"
+o[#o+1]="    所以反作弊遍历 PlayerGui / 扫 GetDescendants 抓不到。代价: 没有 Roblox 的光照/遮挡/交互表现, 也不会跟着 UI 缩放。"
+o[#o+1]="  · 我们走 Instance 高亮(Highlight)是【有意的取舍】: 名字能中性化、能进 GUI 树做统一管理,"
+o[#o+1]="    但确实更「可见」。⇒ 这就是为什么我们把「关闭时文字脱敏」保留着。"
+o[#o+1]="  ⛔ 不抄: 把 Drawing 当默认(用户实测「位置正确 > 反检测收益」, 容器/表现不动)。"
+o[#o+1]=""
+o[#o+1]="【反作弊对抗】别人怎么做 —— 这一块我们【大量不抄】, 且理由很硬"
+o[#o+1]="  · 他们普遍挂 hookmetamethod(game,「__namecall」) 拦截 Kick / KickPlayer / Ban / Report / FireServer。"
+o[#o+1]="    ⛔ 我们明令禁止: 那是所有实例方法调用的总入口, 实测就是卡顿掉帧的病根(AGENTS §1 第 3 条)。"
+o[#o+1]="  · 他们扫全树把名字像 AC/Kick/Ban 的 RemoteEvent / LocalScript 直接 Disabled + Destroy,"
+o[#o+1]="    并挂 game.DescendantAdded 监控后续补进来的。⚠ 这招对【动态注入式】反作弊是自杀(见下)。"
+o[#o+1]="  · 指纹擦除: 删 getgenv() 里的执行器全局 · 把 identifyexecutor 伪造成「Roblox」 ·"
+o[#o+1]="    hook loadstring 过滤反作弊源码 · hook require 拦 AC 模块 · 改环境元表 __index 让索引返回 nil。"
+o[#o+1]="    ⛔ 我们不做: 删执行器全局 = 自己也没得用; 改元表 = 红线。"
+o[#o+1]="  · 伪装成「活着」: 每隔 30~90 秒给 LocalPlayer 写一个 Heartbeat Attribute。"
+o[#o+1]="    ⚠ 存疑: 服务端若不认这个属性, 写它反而是额外特征。本项目【没有】采用。"
+o[#o+1]="  · 也见到【空壳功能】: 配置项存在、UI 能点, 但代码是 no-op(比如 SpoofName 只是把原函数透传一遍)。"
+o[#o+1]="    ⇒ 这正是本项目 V3 把\"错误显形\"做成本能的原因: 静默的假功能比没功能更坏。"
+o[#o+1]=""
+o[#o+1]="★★ 最重要的一条: 反作弊分两类, 先判类型再决定做什么"
+o[#o+1]="  【A 静态扫描式】遍历 PlayerGui 读 .Text / 找特征实例名 / 比较函数身份 / 查执行器全局。"
+o[#o+1]="     ⇒ ④ 层(中性名 / 脱敏 / 少留特征实例)有用。"
+o[#o+1]="  【B 动态注入式】随机间隔(带随机噪声)注入 inspector 脚本 → 客户端算一个值 → FireServer 回报 →"
+o[#o+1]="     服务端用 DependantValues 重算比对; 到点没回报就判\"反作弊被动过\"。"
+o[#o+1]="     ⇒ ⛔ 拦通道 / 删 remote / 断网 = 直接吃超时判罚; 改名清全局 = 完全无效;"
+o[#o+1]="        唯一活路是【让上报的数值自洽】—— 即: 别伪造, 只做本地表现, 少碰服务端判据。"
+o[#o+1]="  ⇒ 怎么判是哪一类: 看「🚦 移动环境」+「反作弊模块痕迹」两节;"
+o[#o+1]="    出现「随机间隔 + 限时回报 + 数值比对」特征就是 B 类, 此时 ACBlock 那类拦截要谨慎开。"
+return o
+end)
 function SYS.ScanAll()
 local out={}
 for _,s in ipairs(SYS.Scanners) do
@@ -10255,7 +11311,7 @@ local row=Instance.new("Frame")
 row.Size=UDim2.new(1,0,0,22) row.BackgroundTransparency=1 row.Parent=parent
 local btn=Instance.new("TextButton")
 btn.Size=UDim2.new(0,72,0,20) btn.Position=UDim2.new(0,14,0,1)
-btn.BackgroundColor3=CY.card2 btn.BackgroundTransparency=0.3 AutoButtonColor=false
+btn.BackgroundColor3=CY.card2 btn.BackgroundTransparency=0.3 btn.AutoButtonColor=false
 btn.Text="? 说明" btn.TextColor3=col or CY.sub
 btn.Font=Enum.Font.GothamMedium btn.TextSize=11 btn.Parent=row
 UI.Round(btn,8) if UI.Stroke then UI.Stroke(btn,CY.line,1,0.7) end
@@ -13023,7 +14079,7 @@ end
 end
 end
 UI.Defs={
-{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
+{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="事件",icon="🧩"},{name="设置",icon="⚙"}
 }
 UI.Pages["移动"]=function(p)
 UI.Section(p,"✈️ 飞行",CY.accent)
@@ -13400,13 +14456,32 @@ UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/�
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
+UI.Btn(p,"🛡 能力绕过判定 (飞行加速 · 回血 · 锁血 · 上帝 · 高亮 · 透视)","能力判定",function()
+P(function()
+local TARGET="🛡 能力绕过判定 (飞行加速 / 回血锁血上帝 / 高亮透视 · 含外部手法对照)"
+for _,s in ipairs(SYS.Scanners or {}) do
+if s.name==TARGET then
+print("[CheatMenu] ===== "..TARGET.." =====")
+local ok,L=pcall(s.fn)
+if ok and type(L)=="table" then
+for i=1,#L do print("  "..tostring(L[i])) end
+else
+print("  (能力判定扫描失败)")
+end
+SYS.Notify("🛡 能力绕过判定已打到控制台(F9)",SYS.CY.cyan)
+return
+end
+end
+SYS.Notify("❌ 找不到能力判定扫描器",SYS.CY.red)
+end)
+end)
 UI.Btn(p,"🔎 探测本游戏的领取/收集/购买 remote",CY.sub,function()
 P(function() SYS.ProbeEvent("claim") end)
 P(function() SYS.ProbeEvent("pickup") end)
 P(function() SYS.ProbeEvent("buy") end)
 SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
 end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十二层分行:\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n  L 总扫描层 = 统一扫描器注册的探测器 + 各模块扫描状态(SP/DO/DR/Ray/Gun) + GC 快照复用统计\n★ I/J/K/L 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
+UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十二层分行:\n  ★ 新并入的 4 块(2026-09-25): \n    ① 🛡 能力绕过判定 = 飞行加速/回血/锁血/上帝/高亮/透视/传送 逐条「能不能做·怎么绕·做不到什么」\n    ② 🧩 事件扫描 = V3 事件图谱 + 下行监听 + 新增监听面 + 运行态/错误显形\n    ③ 🧪 自检合集 = 移动自检 / 高亮彻底性 / 穿墙射线 / 武器数值槽(原来散在 4 个按钮)\n    ④ 🕵 外部手法对照 = 2026-09 公开仓库怎么写, 我们为什么抄/不抄\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n  L 总扫描层 = 统一扫描器注册的探测器 + 各模块扫描状态(SP/DO/DR/Ray/Gun) + GC 快照复用统计\n★ I/J/K/L 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔒 Dead Rails 锁血 · 补血 · 防击倒",CY.green)
 UI.Switch(p,"🔒 锁血 + 补血 (血被扣就同一帧顶回满)","DeadRails_LockHp",SYS.SetDRLockHp)
@@ -15612,6 +16687,134 @@ end
 end
 end)
 end
+UI.Pages["事件"]=function(p)
+local K=SYS.K
+if not K then
+UI.Label(p,"V3 内核未加载",CY.red)
+return
+end
+UI.Section(p,"🧩 事件图谱 (这局游戏有哪些远程 / 交互 / 状态对象)",CY.cyan)
+UI.Switch(p,"启动时全量走一遍图谱 (之后【一直】只认新增; 想看最新的点下面重建)","EventAtlas",function(on)
+if on and SYS.K then
+local ok,A=SYS.K.Guard("ui.atlas2",SYS.K.Net.Atlas,true)
+if ok and A then SYS.Notify(("🧩 图谱: %d 条"):format(A.n),SYS.CY.green) end
+end
+end)
+UI.Btn(p,"🔁 立即重建图谱 (全量走一遍)","重建图谱",function()
+local ok,A=SYS.K.Guard("ui.atlas",SYS.K.Net.Atlas,true)
+if ok and A then
+SYS.Notify(("🧩 图谱: 共 %d 条事件"):format(A.n),SYS.CY.green)
+print(("[CheatMenu] 🧩 图谱: %d 条"):format(A.n))
+end
+end)
+UI.Btn(p,"🖨 把完整清单打到控制台","打印清单",function()
+local A=SYS.K.Net.Atlas()
+print(("[CheatMenu] ===== 事件图谱 · 共 %d 条 ====="):format(A.n))
+local ord=SYS.K.Net.Order
+for i=1,#ord do
+local t=A.byClass[ord[i]]
+if t then
+print(("[CheatMenu] --- %s · %d ---"):format(ord[i],#t))
+for j=1,#t do print("   "..tostring(t[j].path)) end
+end
+end
+end)
+UI.Tip(p,"图谱 = 这套脚本「能听什么」的全集。远程还没下发时先挂起, 下发后自动绑上 —— 这就是以前缺的那一环。",CY.sub)
+UI.Section(p,"📋 功能可用性总表 (别名搜索能不能找到对应通道)",CY.accent2)
+UI.Btn(p,"🔎 扫一遍并打印结果","扫描",function()
+local list,miss=SYS.K.Net.Categories()
+for i=1,#list do
+local e=list[i]
+if e.inst then
+print(("[CheatMenu] %-11s ✅ %s [%s]  %s"):format(e.key,tostring(e.name),tostring(e.how),e.label))
+else
+print(("[CheatMenu] %-11s ❌ 无  %s"):format(e.key,e.label))
+end
+end
+local total=#list
+print(("[CheatMenu] 可用性: %d/%d 类命中"):format(total-miss,total))
+if miss>total*0.8 then
+print("[CheatMenu] ⚠ 极可能是【框架式命名】: 别名搜索天生的盲区。走交互物 / 实体 Attribute / 值对象三条路。")
+end
+SYS.Notify(("📋 可用性: %d/%d"):format(total-miss,total), miss>total*0.8 and SYS.CY.yellow or SYS.CY.green)
+end)
+UI.Section(p,"🛰 下行监听 (被动记录服务端发来的事件)",CY.purple)
+UI.Switch(p,"记录所有下行事件 (只读, 不发送任何东西)","NetSpy",function(on)
+if SYS.K then SYS.K.Net.Spy(on) end
+end)
+UI.Switch(p,"远程下发后自动重绑监听","LazyRebind",function(on)
+if not SYS.K then return end
+if on then
+if not SYS.K.Sched.Has("V3Rebind") then
+SYS.K.Sched.Add("V3Rebind",function()
+if SYS.K.Net.PendingN()>0 then SYS.K.Guard("v3.rebind",SYS.K.Net.Rebind) end
+end,{sig=RS.Heartbeat,every=3})
+end
+SYS.Notify("🔁 远程下发后自动重绑: 开",SYS.CY.green)
+else
+P(function() SYS.K.Net.Rebind() end)
+SYS.K.Sched.Del("V3Rebind")
+SYS.Notify("🔁 远程下发后自动重绑: 关(仍会认 DescendantAdded 那次)",SYS.CY.sub)
+end
+end)
+UI.Btn(p,"📜 看最近 20 条下行事件","查看",function()
+local l=SYS.K.LogGet("recv",20)
+if #l==0 then
+SYS.Notify("还没有收到下行事件",SYS.CY.sub)
+return
+end
+for i=1,#l do print("[CheatMenu][recv] "..l[i]) end
+SYS.Notify(("🛰 最近 %d 条已打到控制台"):format(#l),SYS.CY.cyan)
+end)
+UI.Section(p,"🔔 新增监听面 (以前缺的监听事件)",CY.orange)
+UI.Switch(p,"玩家 / 角色 / 死亡 事件","WatchPlayers",function(on) SYS.K.Watch.Players(on and true or false) end)
+UI.Switch(p,"属性变化 (游戏用的 Attribute · 例: Dead Rails 的 EntityName)","AttrWatch",function(on) SYS.K.Watch.Attrs(on and true or false) end)
+UI.Switch(p,"值对象变化 (游戏把状态塞在 IntValue / StringValue 里)","ValueWatch",function(on) SYS.K.Watch.Values(on and true or false) end)
+UI.Switch(p,"标签 (CollectionService tag) 变动","TagWatch",function(on) SYS.K.Watch.Tags(on and true or false) end)
+UI.Switch(p,"实体出现 (新怪 / 新物件一出现就知道, 不用轮询)","EntityWatch",function(on) SYS.K.Watch.Entities(on and true or false) end)
+UI.Btn(p,"📜 看最近的新增监听记录","查看",function()
+local any=0
+for _,cat in ipairs({"evt","attr","val","tag","ent"}) do
+local l=SYS.K.LogGet(cat,8)
+if #l>0 then
+print(("[CheatMenu][%s] ---"):format(cat))
+for i=1,#l do print("   "..l[i]) end
+any=any+1
+end
+end
+SYS.Notify(any>0 and "📜 已打到控制台" or "还没有新增监听记录", any>0 and SYS.CY.cyan or SYS.CY.sub)
+end)
+UI.Section(p,"🙈 静默 / 足迹收敛",CY.sub)
+UI.Switch(p,"空闲静默 (挂起自建循环 + 摘掉新增监听面; 关掉即恢复)","IdleStealth",function(on)
+SYS.K.Idle.Set(on and true or false)
+end)
+UI.Tip(p,"静默 = 你不玩的时候把「动态足迹」压到最小: 调度器不再每帧跑, 监听面全摘。这不是隐身, 只是少留痕迹。",CY.sub)
+UI.Section(p,"🩺 运行态 (V3 内核)",CY.green)
+UI.Btn(p,"🩺 查看运行态","查看",function()
+local K2=SYS.K
+local msg=("任务 %d · 驱动连接 %d · 总线连接 %d · 已挂监听 %d (挂起 %d) · hook %d · 错误 %d")
+:format(K2.Sched.Count(),K2.Sched.DriverCount(),K2.Bus.Count(),
+K2.Net.BoundN(),K2.Net.PendingN(),K2.Hook.Count(),K2.ErrN)
+print("[CheatMenu] 🩺 "..msg)
+local top=K2.Sched.Top(5)
+for i=1,#top do
+print(("[CheatMenu] 🩺 耗时 #%d  %s  %.3f ms/帧  已跑 %d")
+:format(i,top[i].name,(top[i].cost or 0)*1000,top[i].done or 0))
+end
+SYS.Notify(msg,SYS.CY.cyan)
+end)
+UI.Switch(p,"记录每个任务的耗时 (排性能问题用)","PerfProfile",function(on) SYS.K.Sched.Profile(on and true or false) end)
+UI.Btn(p,"📜 导出错误清单 (错误显形)","导出错误",function()
+local t=SYS.K.ErrText()
+print("[CheatMenu] ⚠ 错误清单:\n"..t)
+SYS.Notify("⚠ 错误清单已打到控制台",SYS.CY.yellow)
+end)
+UI.Btn(p,"🧹 清空事件日志","清空",function()
+SYS.K.LogClear()
+SYS.Notify("🧹 事件日志已清空",SYS.CY.green)
+end)
+UI.Tip(p,"V3 内核四件事: ① 一个信号只留一条驱动连接(旧的每拨一次开关就断线重连) ② 任务出错第一次就显形, 不再静默 ③ hook 有归属、卸载后进先出 ④ 远程没下发也能先挂监听。",CY.sub)
+end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
@@ -17184,6 +18387,7 @@ P(function() if SYS.SetAntiCheatBlock then SYS.SetAntiCheatBlock(false) end end)
 P(function() if SYS.SetCamGuard then SYS.SetCamGuard(false) end end)
 P(function() if SYS.SetPosRebound then SYS.SetPosRebound(false) end end)
 P(function() if SYS.UnhookAllSafe then SYS.UnhookAllSafe() end end)
+P(function() if SYS.V3Teardown then SYS.V3Teardown() end end)
 P(function() if SYS._f3Gui then SYS._f3Gui:Destroy() SYS._f3Gui=nil SYS._f3Lbl=nil end end)
 P(function() if SYS._awConn then SYS._awConn:Disconnect() SYS._awConn=nil end end)
 P(function() SYS._ciOn=false end)
@@ -17304,6 +18508,7 @@ P(function() SYS.SetAntiCheatBlock(true) end)
 end
 if SYS.TimeSnapshot then P(SYS.TimeSnapshot) end
 if SYS.StartACWatch then P(SYS.StartACWatch) end
+if SYS.V3Boot then P(SYS.V3Boot) end
 if SYS.StartAdminWatch then P(SYS.StartAdminWatch) end
 if SYS.SyncAntiRevert then P(SYS.SyncAntiRevert) end
 for key,fn in pairs(SYS.SwitchOnChange) do
