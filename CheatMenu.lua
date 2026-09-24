@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 20:29 sha 691f7ba0 bytes 643260'):format('2026-09-24 20:29','691f7ba0',643260))
+print(('[CheatMenu] build 2026-09-24 20:44 sha f738b256 bytes 643202'):format('2026-09-24 20:44','f738b256',643202))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.5"
+SYS.BuildVer="11.7.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1305,80 +1305,6 @@ end
 L[#L+1]="  ★ 判读: ① 按着方向但「实际速度≈0」+ 驱动实例显示 true ⇒ 本地被拦(看网络所有权/游戏改写);"
 L[#L+1]="         ② 速度很好看但人被拽回原地 ⇒ 服务端位置校验, 客户端无解(这类服就是不给跑)。"
 return L
-end
-local function cap(fn)
-local buf={}
-if type(fn)~="function" then return {"(不可用)"} end
-local old=print
-print=function(...)
-local a=table.pack(...)
-for i=1,a.n do a[i]=tostring(a[i]) end
-buf[#buf+1]=table.concat(a," ")
-end
-local ok,err=pcall(fn)
-print=old
-if not ok then buf[#buf+1]="(执行失败: "..tostring(err)..")" end
-if #buf==0 then buf[1]="(无输出 —— 这个游戏可能没有对应数据)" end
-return buf
-end
-SYS.CaptureLines=cap
-do
-local TE={ buf={}, max=300, real=nil }
-SYS.ConsoleTee=TE
-local rp=print
-TE.real=rp
-print=function(...)
-local a=table.pack(...)
-for i=1,a.n do a[i]=tostring(a[i]) end
-TE.buf[#TE.buf+1]=table.concat(a," ")
-while #TE.buf>TE.max do table.remove(TE.buf,1) end
-return rp(...)
-end
-TE.restore=function() if print~=rp then print=rp end end
-if SYS.RegisterScanner then
-SYS.RegisterScanner("📋 控制台输出 (常驻镜像 · 所有『打到控制台』的功能都收在这里)", function()
-local out={}
-local b=TE.buf
-if #b==0 then
-out[#out+1]="(还没有输出 —— 先去点一次对应的按钮/开关, 再回来跑总扫描)"
-return out
-end
-out[#out+1]=("累计 %d 条, 下面显示最后 60 条:"):format(#b)
-local from=math.max(1,#b-60)
-for i=from,#b do out[#out+1]="  "..b[i] end
-return out
-end, "不用改任何旧代码: 所有 print 自动进这里")
-end
-end
-if SYS.RegisterScanner then
-local R=SYS.RegisterScanner
-if SYS.Prot and type(SYS.Prot.SelfAudit)=="function" then
-R("🔎 反指纹自检 (UI 文字/实例名/执行器全局)", function()
-local t=SYS.Prot.SelfAudit()
-if type(t)=="table" then return t end
-return {"(无输出)"}
-end, "原来只能点按钮打到控制台 —— 现在总扫描里直接看")
-end
-if type(SYS.DumpHintTexts)=="function" then
-R("📖 密码/提示文本", function() return cap(SYS.DumpHintTexts) end, "原来「读密码提示」按钮")
-end
-if SYS.Combat and type(SYS.Combat.DumpSrv)=="function" then
-R("📡 服务端战斗数据 (只读记录器)", function() return cap(SYS.Combat.DumpSrv) end, "原来「看服务端战斗数据」按钮")
-end
-if Trans and type(Trans.dumpDyn)=="function" then
-R("🧹 翻译·已跳过的动态文本", function() return cap(Trans.dumpDyn) end)
-end
-if Trans and type(Trans.dumpFails)=="function" then
-R("🧾 翻译·失败/退避清单", function() return cap(Trans.dumpFails) end)
-end
-end
-if SYS.RegisterScanner then
-SYS.RegisterScanner("🚦 移动环境 (服务端权威 / 网络所有权 / 驱动 / 实际速度)", function()
-if not SYS.MoveDiag then return {"(MoveDiag 不可用)"} end
-local ok,lines=SYS.MoveDiag()
-if not ok or type(lines)~="table" then return {"(移动自检执行失败)"} end
-return lines
-end, "判『这服移动类能不能做』—— AuthorityMode=Server 即客户端无解")
 end
 function SYS.CleanFly()
 Unmount()
@@ -14673,6 +14599,73 @@ return { ("GC 共享快照: 取过 %d 次 / 复用 %d 次 / 表内 %d 个对象(
 ("结构指纹记忆: %d 条   已登记 hook: %d 个"):format(mn,hn),
 "★ 各模块扫描(SP/DO/DR/Ray/Gun)现在共用这一份 GC 表, 不再各自 getgc。" }
 end)
+local function cap(fn)
+local buf={}
+if type(fn)~="function" then return {"(不可用)"} end
+local old=print
+print=function(...)
+local a=table.pack(...)
+for i=1,a.n do a[i]=tostring(a[i]) end
+buf[#buf+1]=table.concat(a," ")
+end
+local ok,err=pcall(fn)
+print=old
+if not ok then buf[#buf+1]="(执行失败: "..tostring(err)..")" end
+if #buf==0 then buf[1]="(无输出 —— 这个游戏可能没有对应数据)" end
+return buf
+end
+SYS.CaptureLines=cap
+do
+local TE={ buf={}, max=300, real=nil }
+SYS.ConsoleTee=TE
+local rp=print
+TE.real=rp
+print=function(...)
+local a=table.pack(...)
+for i=1,a.n do a[i]=tostring(a[i]) end
+TE.buf[#TE.buf+1]=table.concat(a," ")
+while #TE.buf>TE.max do table.remove(TE.buf,1) end
+return rp(...)
+end
+TE.restore=function() if print~=rp then print=rp end end
+if SYS.RegisterScanner then
+SYS.RegisterScanner("📋 控制台输出 (常驻镜像 · 所有『打到控制台』的功能都收在这里)", function()
+local out={}
+local b=TE.buf
+if #b==0 then
+out[#out+1]="(还没有输出 —— 先去点一次对应的按钮/开关, 再回来跑总扫描)"
+return out
+end
+out[#out+1]=("累计 %d 条, 下面显示最后 60 条:"):format(#b)
+local from=math.max(1,#b-60)
+for i=from,#b do out[#out+1]="  "..b[i] end
+return out
+end, "不用改任何旧代码: 所有 print 自动进这里")
+end
+end
+if SYS.RegisterScanner then
+local R=SYS.RegisterScanner
+R("🔎 反指纹自检 (UI 文字/实例名/执行器全局)", function()
+if not (SYS.Prot and type(SYS.Prot.SelfAudit)=="function") then return {"(本版没有这个自检)"} end
+local t=SYS.Prot.SelfAudit()
+return type(t)=="table" and t or {"(无输出)"}
+end, "原来只能点按钮打到控制台 —— 现在总扫描里直接看")
+R("📖 密码/提示文本", function() return cap(SYS.DumpHintTexts) end, "原来「读密码提示」按钮")
+R("📡 服务端战斗数据 (只读记录器)", function()
+if not (SYS.Combat and type(SYS.Combat.DumpSrv)=="function") then return {"(本版没有)"} end
+return cap(SYS.Combat.DumpSrv)
+end, "原来「看服务端战斗数据」按钮")
+R("🧹 翻译·已跳过的动态文本", function() return cap(SYS.Trans and SYS.Trans.dumpDyn) end)
+R("🧾 翻译·失败/退避清单", function() return cap(SYS.Trans and SYS.Trans.dumpFails) end)
+end
+if SYS.RegisterScanner then
+SYS.RegisterScanner("🚦 移动环境 (服务端权威 / 网络所有权 / 驱动 / 实际速度)", function()
+if not SYS.MoveDiag then return {"(MoveDiag 不可用)"} end
+local ok,lines=SYS.MoveDiag()
+if not ok or type(lines)~="table" then return {"(移动自检执行失败)"} end
+return lines
+end, "判『这服移动类能不能做』—— AuthorityMode=Server 即客户端无解")
+end
 end
 function LAB.FullScan()
 local t0=os.clock()
