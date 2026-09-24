@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 19:31 sha 97c7634b bytes 639773'):format('2026-09-24 19:31','97c7634b',639773))
+print(('[CheatMenu] build 2026-09-24 19:48 sha 073167dc bytes 640193'):format('2026-09-24 19:48','073167dc',640193))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.1"
+SYS.BuildVer="11.7.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1305,6 +1305,14 @@ end
 L[#L+1]="  ★ 判读: ① 按着方向但「实际速度≈0」+ 驱动实例显示 true ⇒ 本地被拦(看网络所有权/游戏改写);"
 L[#L+1]="         ② 速度很好看但人被拽回原地 ⇒ 服务端位置校验, 客户端无解(这类服就是不给跑)。"
 return L
+end
+if SYS.RegisterScanner then
+SYS.RegisterScanner("🚦 移动环境 (服务端权威 / 网络所有权 / 驱动 / 实际速度)", function()
+if not SYS.MoveDiag then return {"(MoveDiag 不可用)"} end
+local ok,lines=SYS.MoveDiag()
+if not ok or type(lines)~="table" then return {"(移动自检执行失败)"} end
+return lines
+end, "判『这服移动类能不能做』—— AuthorityMode=Server 即客户端无解")
 end
 function SYS.CleanFly()
 Unmount()
