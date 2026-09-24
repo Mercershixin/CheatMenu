@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 21:18 sha b8b86191 bytes 634564'):format('2026-09-24 21:18','b8b86191',634564))
+print(('[CheatMenu] build 2026-09-24 21:20 sha 5d5126bb bytes 634702'):format('2026-09-24 21:20','5d5126bb',634702))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.9"
+SYS.BuildVer="11.7.10"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -10964,6 +10964,7 @@ gnm=type(getnamecallmethod)=="function",
 cc=type(checkcaller)=="function",
 gcs=type(getcallingscript)=="function",
 gmt=type(getrawmetatable)=="function",
+{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
 }
 c.ok=(c.hmm or c.hf) and c.ncc
 return c
