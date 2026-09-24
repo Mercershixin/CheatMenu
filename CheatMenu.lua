@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 13:32 sha a3487a21 bytes 634332'):format('2026-09-24 13:32','a3487a21',634332))
+print(('[CheatMenu] build 2026-09-24 13:58 sha 4cfd7883 bytes 635009'):format('2026-09-24 13:58','4cfd7883',635009))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -128,7 +128,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.4.1"
+SYS.BuildVer="11.4.2"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -380,6 +380,7 @@ end
 end
 SYS._FireSig=SYS._FireSig or {}
 SYS._FireOrder=SYS._FireOrder or {}
+SYS._fireLog=SYS._fireLog or {}
 function SYS.SpeedTarget()
 local a=tonumber(SYS.C_.SpeedAbs)
 if a and a>0 then return a end
@@ -750,11 +751,19 @@ elseif rec.sig==sig then
 rec.n=rec.n+1
 else
 if rec.n>=(tonumber(SYS.C_.FireTypeSigN) or 3) then
-SYS._FireRejected=(SYS._FireRejected or 0)+1
-P(SYS.Notify,("⛔ 已拦一次「参数类型和以往不一样」的上行: %s\n   以往 %s / 这次 %s"):format(r.Name,rec.sig,sig),SYS.CY.red)
-return false
+SYS._FireTypeWarn=(SYS._FireTypeWarn or 0)+1
+if SYS._FireTypeWarn<=5 then
+P(SYS.Notify,("⚠ 这条上行的参数类型和以往不一样(已照发, 不拦): %s\n   以往 %s / 这次 %s"):format(r.Name,rec.sig,sig),SYS.CY.yellow)
+end
 end
 rec.sig=sig rec.n=1
+end
+end
+do
+local t=SYS._fireLog
+if type(t)=="table" then
+t[#t+1]=os.clock()
+while #t>400 do table.remove(t,1) end
 end
 end
 local jitter=math.random()*(SYS.C_.FireJitter or 0.03)
@@ -1601,7 +1610,7 @@ end
 function AR.Off()
 if not AR.on then return end
 AR.on=false
-if AR.ev and AR.orig and type(hookfunction)=="function" then
+if AR.ev and AR.orig and type(hookfunction)=="function" and not SYS.Unloaded then
 P(function() hookfunction(AR.ev.FireServer,AR.orig) end)
 end
 AR.lastPos=nil
@@ -11119,6 +11128,7 @@ A("相机护栏: %s   回压 %d 次   阈值 %s 格",(cg and cg.on) and "开" or
 tostring(tonumber(SYS.C_.CamGuardDist) or 30))
 A("开火抖动: %s (0 ~ %.3f 秒)",((tonumber(SYS.C_.FireJitter) or 0)>0.001) and "生效中" or "关",
 tonumber(SYS.C_.FireJitter) or 0)
+A("上行参数类型突变告警: %d 次 (只报不拦, 不会丢上行)",tonumber(SYS._FireTypeWarn) or 0)
 A("")
 A("----------- H. 一致性 / 只读检查 -----------")
 if SYS.TimeCheck then for _,l in ipairs(SYS.TimeCheck()) do A("%s",l) end end
@@ -16686,7 +16696,9 @@ local ok,d=pcall(function() return SYS.RStorage:GetDescendants() end)
 if not ok or type(d)~="table" then return end
 local seen={}
 local n=0
+local MAXN=60
 for i=1,#d do
+if n>=MAXN then break end
 local o=d[i]
 local cls=o.ClassName
 if cls=="RemoteEvent" or cls=="UnreliableRemoteEvent" then
@@ -16697,7 +16709,15 @@ for j=1,#kws do
 local k=tostring(kws[j]):lower()
 if k~="" and low:find(k,1,true) then hit=true break end
 end
-if hit and not seen[nm] and type(SYS.RemoteRisk)=="function" and SYS.RemoteRisk(nm) then
+local risky=false
+if hit and not seen[nm] and type(SYS.RemoteRisk)=="function" then
+local v=SYS.RemoteRisk(nm)
+if type(v)=="string" then
+local c=v:sub(1,1)
+risky=(c=="⛔" or c=="⚠")
+end
+end
+if risky then
 seen[nm]=true
 n=n+1
 T(o.OnClientEvent:Connect(function(...)
@@ -16706,10 +16726,11 @@ local s={}
 for q=1,math.min(args.n,4) do s[#s+1]=tostring(args[q]) end
 SYS.ACELog(nm,table.concat(s,", "))
 end))
+if n%8==0 and SYS.Stagger then P(SYS.Stagger,1) end
 end
 end
 end
-print(("[CheatMenu][AC监听] 已只读接入 %d 个反作弊/审计通道(从不 FireServer)"):format(n))
+print(("[CheatMenu][AC监听] 已只读接入 %d 个反作弊/审计通道(从不 FireServer; 上限 %d)"):format(n,MAXN))
 end
 function SYS.StartAdminWatch()
 if SYS._AdminWatch then return end
@@ -16796,6 +16817,7 @@ end
 end
 function SYS.SetAttrGuard(on)
 on=on and true or false
+local wasOn=AG.on
 SYS.T_.AttrGuard=on
 AG.on=on
 if on then
@@ -16803,7 +16825,7 @@ SYS.SetLoop("AttrGuard",true,RS.Heartbeat,SYS.AttrGuardTick)
 P(SYS.Notify,"🧬 Attribute 回写已开 (写回带 0.05~0.2 秒随机延迟)",SYS.CY.green)
 else
 SYS.SetLoop("AttrGuard",false)
-P(SYS.Notify,"🧬 Attribute 回写已关",SYS.CY.sub)
+if wasOn then P(SYS.Notify,"🧬 Attribute 回写已关",SYS.CY.sub) end
 end
 return true
 end
@@ -16811,11 +16833,12 @@ local CG={ on=false, pulls=0, last=0 }
 SYS.CamGuard=CG
 function SYS.SetCamGuard(on)
 on=on and true or false
+local wasOn=CG.on
 SYS.T_.CamGuard=on
 CG.on=on
 if not on then
 SYS.SetLoop("CamGuard",false)
-P(SYS.Notify,"🎥 相机护栏已关",SYS.CY.sub)
+if wasOn then P(SYS.Notify,"🎥 相机护栏已关",SYS.CY.sub) end
 return true
 end
 SYS.SetLoop("CamGuard",true,RS.Heartbeat,function()
@@ -16850,11 +16873,12 @@ local PR={ on=false, conn=nil, applied=0 }
 SYS.PosRebound=PR
 function SYS.SetPosRebound(on)
 on=on and true or false
+local wasOn=PR.on
 SYS.T_.PosRebound=on
 PR.on=on
 if PR.conn then PR.conn:Disconnect() PR.conn=nil end
 if not on then
-P(SYS.Notify,"📍 位置下行回压已关",SYS.CY.sub)
+if wasOn then P(SYS.Notify,"📍 位置下行回压已关",SYS.CY.sub) end
 return true
 end
 local ev=SYS.REvent("ServerReplicateCFrame") or SYS.REventU("ServerReplicateCFrame")
@@ -16888,12 +16912,13 @@ local FSS={ on=false, hooked=false, t=nil, orig=nil, blocked=0 }
 SYS.FireSignal= FSS
 function SYS.SetFireSignalSpoof(on)
 on=on and true or false
+local wasOn=FSS.on
 SYS.T_.FireSignalSpoof=on
 FSS.on=on
 if not on then
 if FSS.t then P(SYS.SafeUnhook,FSS.t) end
 FSS.hooked=false FSS.t=nil FSS.orig=nil
-P(SYS.Notify,"📡 firesignal 伪装已关(已还原)",SYS.CY.sub)
+if wasOn then P(SYS.Notify,"📡 firesignal 伪装已关(已还原)",SYS.CY.sub) end
 return true
 end
 local fs=rawget(_G,"firesignal")
