@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 20:13 sha 5dbff031 bytes 642295'):format('2026-09-24 20:13','5dbff031',642295))
+print(('[CheatMenu] build 2026-09-24 20:29 sha 691f7ba0 bytes 643260'):format('2026-09-24 20:29','691f7ba0',643260))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.4"
+SYS.BuildVer="11.7.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1322,6 +1322,34 @@ if #buf==0 then buf[1]="(无输出 —— 这个游戏可能没有对应数据)"
 return buf
 end
 SYS.CaptureLines=cap
+do
+local TE={ buf={}, max=300, real=nil }
+SYS.ConsoleTee=TE
+local rp=print
+TE.real=rp
+print=function(...)
+local a=table.pack(...)
+for i=1,a.n do a[i]=tostring(a[i]) end
+TE.buf[#TE.buf+1]=table.concat(a," ")
+while #TE.buf>TE.max do table.remove(TE.buf,1) end
+return rp(...)
+end
+TE.restore=function() if print~=rp then print=rp end end
+if SYS.RegisterScanner then
+SYS.RegisterScanner("📋 控制台输出 (常驻镜像 · 所有『打到控制台』的功能都收在这里)", function()
+local out={}
+local b=TE.buf
+if #b==0 then
+out[#out+1]="(还没有输出 —— 先去点一次对应的按钮/开关, 再回来跑总扫描)"
+return out
+end
+out[#out+1]=("累计 %d 条, 下面显示最后 60 条:"):format(#b)
+local from=math.max(1,#b-60)
+for i=from,#b do out[#out+1]="  "..b[i] end
+return out
+end, "不用改任何旧代码: 所有 print 自动进这里")
+end
+end
 if SYS.RegisterScanner then
 local R=SYS.RegisterScanner
 if SYS.Prot and type(SYS.Prot.SelfAudit)=="function" then
@@ -13073,6 +13101,7 @@ UI.Section(p,"✈️ 飞行",CY.accent)
 UI.Switch(p,"飞行 (Fly)","Fly",function(on)
 if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
+P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.restore() end end)
 P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
