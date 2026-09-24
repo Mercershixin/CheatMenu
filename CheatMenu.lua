@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 20:02 sha 55acee7e bytes 641447'):format('2026-09-24 20:02','55acee7e',641447))
+print(('[CheatMenu] build 2026-09-24 20:13 sha 5dbff031 bytes 642295'):format('2026-09-24 20:13','5dbff031',642295))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.3"
+SYS.BuildVer="11.7.4"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3620,6 +3620,19 @@ k,
 r and ("✅ " .. tostring(nm) .. " [" .. tostring(how) .. "]") or "❌ 无",
 #list,
 r and "" or ("   试过: " .. table.concat(list, "/"):sub(1, 90)))
+end
+do
+local miss=0
+for _, k in ipairs(kinds) do if not (SYS.FindEvent(k)) then miss=miss+1 end end
+if #kinds>0 and (miss/#kinds)>=0.8 then
+out[#out+1]=""
+out[#out+1]=("⚠ 本服 %d/%d 类功能都搜不到 —— 极可能是【框架式命名】:"):format(miss,#kinds)
+out[#out+1]="   remote 全堆在同一个文件夹里, 名字是 find_/get_/update_/inspect_ 这类【框架动词】, 不含玩法语义。"
+out[#out+1]="   这不是脚本坏了, 是【别名搜索在这类服上天生无效】。可走的路:"
+out[#out+1]="     · 交互类: 找 ProximityPrompt / ClickDetector(本脚本「🔍 物件透视」已覆盖)"
+out[#out+1]="     · 实体类: 看 Workspace 里带 Attribute 的实体模型(本脚本实体扫描层会列)"
+out[#out+1]="     · 真要发 remote 只能手动试参数, 不能靠别名猜 —— 风险自负"
+end
 end
 return out
 end)
