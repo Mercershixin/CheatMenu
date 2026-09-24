@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 18:22 sha a3ea61f9 bytes 638232'):format('2026-09-24 18:22','a3ea61f9',638232))
+print(('[CheatMenu] build 2026-09-24 18:58 sha 1c1fdbb1 bytes 637964'):format('2026-09-24 18:58','1c1fdbb1',637964))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -130,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.6.4"
+SYS.BuildVer="11.6.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -325,7 +325,6 @@ SYS.T_[k] = v
 n = n + 1
 end
 end
-SYS._resumedFromUpdate = true
 task.delay(0.6, function()
 for _, f in ipairs(SYS.BtnRefs or {}) do P(f) end
 SYS.Notify(("♻ 热更新完成, 已自动恢复 %d 个开关状态"):format(n), SYS.CY.green)
@@ -1167,9 +1166,6 @@ hum:ChangeState(Enum.HumanoidStateType.Freefall)
 end)
 end
 end
-function SYS.FlyReleaseStates() HoldStates(false) end
-function SYS.FlyTeardown() Unmount() end
-function SYS.FlyEnsure(root) return MountLV(root,true) end
 local function StallCheck(root,dir)
 if not dir or dir.Magnitude<=0 then M.tPos=nil M.tAt=nil M.stall=0 return false end
 local now=os.clock()
@@ -2155,9 +2151,6 @@ return nil, "写入失败("..fn..")", dir
 end
 SYS._realClock = SYS._realClock or os.clock
 SYS._realTime  = SYS._realTime  or os.time
-SYS._timeScale = 1
-SYS._timeAcc   = 0
-SYS._timeLast  = SYS._realClock()
 local _tsHooked = false
 function SYS.ProbeTrapWatch()
 local rel = RStorage:FindFirstChild("Remote")
@@ -10376,7 +10369,7 @@ if not h or not input then return end
 local ut=input.UserInputType
 if ut==Enum.UserInputType.MouseMovement or ut==Enum.UserInputType.Touch then P(h,input) end
 end))
-SYS._SlDrop=T(UIS.InputEnded:Connect(function(input)
+T(UIS.InputEnded:Connect(function(input)
 if not input then return end
 local ut=input.UserInputType
 if ut==Enum.UserInputType.MouseButton1 or ut==Enum.UserInputType.Touch then
