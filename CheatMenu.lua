@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 21:20 sha 5d5126bb bytes 634702'):format('2026-09-24 21:20','5d5126bb',634702))
+print(('[CheatMenu] build 2026-09-24 21:58 sha a5843a52 bytes 636122'):format('2026-09-24 21:58','a5843a52',636122))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -82,6 +82,7 @@ CB_BlockDeathSignal=false,
 StealthReg=false,
 FireSignalSpoof=false,
 AntiRevert=true,
+BanjoAuto=false,
 },
 C_={
 FlySpeed=6,FlyMode="BodyVelocity",
@@ -131,7 +132,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.10"
+SYS.BuildVer="11.8.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -13029,6 +13030,7 @@ UI.Switch(p,"飞行 (Fly)","Fly",function(on)
 if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.restore() end end)
+P(function() if SYS.SetBanjoAuto then SYS.SetBanjoAuto(false) end end)
 P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
@@ -13393,6 +13395,13 @@ UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处�
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
+UI.Section(p,"🎵 团队治疗 (班卓琴)",CY.green)
+UI.Switch(p,"🎵 班卓琴自动弹奏 (自动保持治疗光环, 不消耗道具)","BanjoAuto",SYS.SetBanjoAuto)
+UI.Tip(p,"机制: 弹班卓琴触发【治疗光环】, 给范围内队友回血。\n"
+.."★ 每 3 秒自动弹一次 ⇒ 光环常开, 队友持续回血。\n"
+.."★ 班卓琴是乐器不是消耗品 ⇒ 弹它不消耗任何道具。\n"
+.."· 触发走背包里那把琴的 PlayEvent ⇒ 不需要装备在手上。",CY.green)
+UI.Div(p)
 UI.Section(p,"🔍 综合扫描 (十二层一次扫完)",CY.green)
 UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/值对象/总扫描/DEX/Remote 十二层一次扫完)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
@@ -17137,6 +17146,30 @@ end
 else
 SYS._airAt=nil
 end
+end
+function SYS.SetBanjoAuto(on)
+on=on and true or false
+SYS.T_.BanjoAuto=on
+if on then
+SYS.SetLoop("BanjoAuto",true,SYS.PhysicsStep,function()
+if SYS.T_.BanjoAuto~=true then return end
+local now=os.clock()
+if now-(SYS._banjoAt or 0)<3 then return end
+SYS._banjoAt=now
+local lp=SYS.LP
+if not lp then return end
+local t=lp.Backpack and lp.Backpack:FindFirstChild("Banjo")
+if not t and lp.Character then t=lp.Character:FindFirstChild("Banjo") end
+if not t then return end
+local ev=t:FindFirstChild("PlayEvent")
+if ev and ev:IsA("RemoteEvent") then P(function() ev:FireServer() end) end
+end)
+P(SYS.Notify,"🎵 班卓琴自动弹奏已开(每3秒一次, 保持治疗光环常开; 不消耗道具)",SYS.CY.green)
+else
+SYS.SetLoop("BanjoAuto",false)
+P(SYS.Notify,"🎵 班卓琴自动弹奏已关",SYS.CY.sub)
+end
+return true
 end
 SYS.Diag=SYS.Diag or {}
 function SYS.Diag.ACFramework()
