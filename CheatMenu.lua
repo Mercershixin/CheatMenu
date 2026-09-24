@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 19:48 sha 073167dc bytes 640193'):format('2026-09-24 19:48','073167dc',640193))
+print(('[CheatMenu] build 2026-09-24 20:02 sha 55acee7e bytes 641447'):format('2026-09-24 20:02','55acee7e',641447))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.2"
+SYS.BuildVer="11.7.3"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1306,6 +1306,44 @@ L[#L+1]="  ★ 判读: ① 按着方向但「实际速度≈0」+ 驱动实例�
 L[#L+1]="         ② 速度很好看但人被拽回原地 ⇒ 服务端位置校验, 客户端无解(这类服就是不给跑)。"
 return L
 end
+local function cap(fn)
+local buf={}
+if type(fn)~="function" then return {"(不可用)"} end
+local old=print
+print=function(...)
+local a=table.pack(...)
+for i=1,a.n do a[i]=tostring(a[i]) end
+buf[#buf+1]=table.concat(a," ")
+end
+local ok,err=pcall(fn)
+print=old
+if not ok then buf[#buf+1]="(执行失败: "..tostring(err)..")" end
+if #buf==0 then buf[1]="(无输出 —— 这个游戏可能没有对应数据)" end
+return buf
+end
+SYS.CaptureLines=cap
+if SYS.RegisterScanner then
+local R=SYS.RegisterScanner
+if SYS.Prot and type(SYS.Prot.SelfAudit)=="function" then
+R("🔎 反指纹自检 (UI 文字/实例名/执行器全局)", function()
+local t=SYS.Prot.SelfAudit()
+if type(t)=="table" then return t end
+return {"(无输出)"}
+end, "原来只能点按钮打到控制台 —— 现在总扫描里直接看")
+end
+if type(SYS.DumpHintTexts)=="function" then
+R("📖 密码/提示文本", function() return cap(SYS.DumpHintTexts) end, "原来「读密码提示」按钮")
+end
+if SYS.Combat and type(SYS.Combat.DumpSrv)=="function" then
+R("📡 服务端战斗数据 (只读记录器)", function() return cap(SYS.Combat.DumpSrv) end, "原来「看服务端战斗数据」按钮")
+end
+if Trans and type(Trans.dumpDyn)=="function" then
+R("🧹 翻译·已跳过的动态文本", function() return cap(Trans.dumpDyn) end)
+end
+if Trans and type(Trans.dumpFails)=="function" then
+R("🧾 翻译·失败/退避清单", function() return cap(Trans.dumpFails) end)
+end
+end
 if SYS.RegisterScanner then
 SYS.RegisterScanner("🚦 移动环境 (服务端权威 / 网络所有权 / 驱动 / 实际速度)", function()
 if not SYS.MoveDiag then return {"(MoveDiag 不可用)"} end
@@ -1530,7 +1568,6 @@ end)
 end)
 for i=1,#TrapConns do T(TrapConns[i]) end
 P(function() SYS.TrapIgnore(true) end)
-print("[CheatMenu] 反陷阱免伤: 已开启(无视触发 + 免疫 位移/弹开/定身/布娃娃/坐骑/焊接 + 补血; 服务端结算的伤害拦不住)")
 end
 end
 do
@@ -1666,7 +1703,6 @@ if AR.ev and AR.orig and type(hookfunction)=="function" and not SYS.Unloaded the
 P(function() hookfunction(AR.ev.FireServer,AR.orig) end)
 end
 AR.lastPos=nil
-print("[CheatMenu] 防回退(过检测)已关")
 end
 function SYS.SyncAntiRevert()
 local want=(SYS.T_.AntiRevert~=false)
