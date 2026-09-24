@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 20:47 sha be03e176 bytes 643386'):format('2026-09-24 20:47','be03e176',643386))
+print(('[CheatMenu] build 2026-09-24 20:52 sha 9fcaae7a bytes 634429'):format('2026-09-24 20:52','9fcaae7a',634429))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.7"
+SYS.BuildVer="11.7.8"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -13021,7 +13021,6 @@ end
 end
 UI.Defs={
 {name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},
-{name="MachineParty",icon="🎮"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"},
 }
 UI.Pages["移动"]=function(p)
 UI.Section(p,"✈️ 飞行",CY.accent)
@@ -15664,88 +15663,6 @@ end
 end
 end
 end)
-end
-UI.Pages["MachineParty"]=function(p)
-UI.Section(p,"🤖 小游戏 · 自动",CY.accent)
-UI.Tip(p,"🎮 小游戏区域透视已并入【视觉页 -> 🔍 物件透视】(判据合并, 一个开关一起亮)。",CY.sub)
-UI.Switch(p,"🏃 自动躲伤害机关 (靠近陷阱/地雷/压板/弹球自动退开)","AutoDodge",SYS.SetAutoDodge)
-UI.Slider(p,"躲避触发距离 (格 · 越早开始退)",3,60,1,
-function() return SYS.C_.DodgeDist or 15 end,
-function(v) SYS.C_.DodgeDist=v QueueSave() end,"%.0f")
-UI.Slider(p,"扫描深度 (层 · 机关藏在 Model 里就调大)",1,8,1,
-function() return SYS.C_.DodgeDepth or 2 end,
-function(v) SYS.C_.DodgeDepth=v QueueSave() end,"%.0f")
-UI.Slider(p,"每层上限 (防大图卡顿)",20,400,10,
-function() return SYS.C_.DodgeCap or 80 end,
-function(v) SYS.C_.DodgeCap=v QueueSave() end,"%.0f")
-UI.Slider(p,"重扫间隔 (秒 · 越小越早发现新机关)",0.2,3,0.1,
-function() return SYS.C_.DodgeScanSec or 0.6 end,
-function(v) SYS.C_.DodgeScanSec=v QueueSave() end,"%.1f")
-UI.Slider(p,"退避速度 (格/帧 · 0.35≈21 格/秒)",0.10,1.20,0.05,
-function() return SYS.C_.DodgeStep or 0.35 end,
-function(v) SYS.C_.DodgeStep=v QueueSave() end,"%.2f")
-UI.Tip(p,"★ 2026-09-22 补强: 这五项原来都调不了(距离是后端读的但没界面, 其余写死)。\n"..
-"  · 触发距离: 陷阱进到几格内开始退。对「跑得快」的机关(火车那类)要调大才有提前量。\n"..
-"  · 扫描深度: 原来固定两层 ⇒ 藏在 Model 更深处的机关扫不到。调 3~4 层能扫到, 代价是每次扫描更慢。\n"..
-"  · 重扫间隔: 原来固定 2 秒 ⇒ 新出现的机关最多 2 秒后才被认识(快速机关就是这时候撞上的)。\n"..
-"  · 退避速度: 原来固定 0.35 格/帧。调大退得更快, 但别拉到底 —— 再快就是瞬移位移, 会被服务端判异常。\n"..
-"★ 它只会「沿直线远离危险物」。所以对「进安全点躲火车」那种玩法**不对症** ——\n"..
-"  那种要的是「按信号进/出固定安全点」, 目前还没有(缺绿灯位置的证据, 见扫描补的绿色物件探测)。",CY.yellow)
-UI.Switch(p,"🎯 自动触发小游戏目标 (小游戏区域里的按钮/可交互物自动触发)","AutoHitMinigame",SYS.SetAutoHitMinigame)
-UI.Tip(p,"自动躲: 扫全图伤害机关(与「🔍 物件透视」里门·陷阱那条同判据, 已含地雷 mine/bomb/landmine/地雷/炸弹), 离你约 15 格内自动走开。\n"..
-"自动触发: 只扫【小游戏区域】里的 ProximityPrompt/ClickDetector, 自动帮你按/点(打鸭子那类)。\n"..
-"★ 去重(2026-09-22 加): 同一个物件上往往挂十几个【同名】交互件(实测: 机器派对的商店人偶身上 20+ 个 ClickDetector),\n"..
-"  旧版会把它们当成 20 个不同目标、同一帧连点 20 下。现在按【宿主 + 交互件名】看成一次。\n"..
-"★ 节奏(2026-09-22 放宽, 用户口径「不需要压制」): 同一目标 0.6 秒即可重复触发; 每帧最多 24 个(原 3 秒 / 6 个)。\n"..
-"★ 自动触发标记(2026-09-22 加): 它替你按了什么, 现在【看得见】——\n"..
-"  · 被触发的物件上方贴一块小牌「🎯 自动触发 · 交互件名」(约 1.2 秒); 被蜜罐闸门拦下的改红字「⛔ 跳过(蜜罐)」。\n"..
-"  · 屏幕下方一行显示最近一次自动触发 + 本局累计次数(关掉菜单也看得见), 关开关即一并收起。\n"..
-"  ★ 想自己掐时机(切割台/凿子那类「看准了再切」的考验), 看准这块小牌 —— 关掉本开关就完全不按键。\n"..
-"两个都纯客户端、默认关, 关掉即停; 隔墙/隐形的地雷也能扫到(只要客户端有这个实例)。\n"..
-"想知道合并了多少个, 点「🔍 物件透视」下面那个 🩺 高亮彻底性自检。",CY.sub)
-UI.Section(p,"⏱ 死亡倒计时 · 引信 (机器派对 · DeadOnTime)",CY.accent)
-UI.Switch(p,"🧊 冻住倒计时 (计时条/数字停在当前帧, 不再重绘 —— 纯显示层)","DeadOn_Freeze",SYS.SetDeadOnFreeze)
-UI.Switch(p,"🛡 到点不炸 (引信烧到头也不爆炸 = 不判死 —— 断的是致死那一步)","DeadOn_NoBlow",SYS.SetDeadOnNoBlow)
-UI.Tip(p,"针对机器派对的【引信计时】小游戏(`MachinePartyDeadOnTime` —— 点引信 → 计时条 → 你要在给定时间按空格 → 没贴合就炸)。\n"..
-"★ 函数名不是猜的: 2026-09-22 的机器派对全量扫描里, 这个脚本的 44 个函数是【实名】列出来的 ——\n"..
-"  `igniteFuse`(点引信) / `redraw`·`writeBar`(画计时条) / `perfectPress`·`tryPress`(贴合按键) / `blowDynamite`(爆炸判死)。\n"..
-"  ⇒ 🧊 包的是 `redraw`+`writeBar`(不重绘 = 条停住); 🛡 包的是 `blowDynamite`(不炸 = 不死)。\n"..
-"★ 两档是【并列】的, 想只冻显示就只开 🧊, 想根本不死就开 🛡, 两个都开 = 双保险:\n"..
-"  · 🧊 只动画面, 一个字节都不写游戏状态(最低风险);\n"..
-"  · 🛡 断的是「爆炸」这一步 —— 如果这游戏的判死是【服务端】算的, 客户端拦不住(那你会看到条冻住了但照样死)。\n"..
-"★ 开了会在屏幕右侧显示状态(关掉菜单也看得见): 两档谁生效、拦了几次、引信有没有点火。\n"..
-"★ 开着的时候控制台(F9)会打一份【已挂函数清单】—— 要是没效果, 把 F9 那几行发我, 我按实际调用改判据。\n"..
-"★ 没有 `getgc` / `hookfunction` 的执行器会直接说不支持, 不会静默失败; 关掉开关 = 把游戏函数【原样还原】, 不留 hook。",CY.sub)
-UI.Section(p,"🕷 蜘蛛感知 (机器派对 · 蜘蛛扑上身)",CY.accent)
-UI.Switch(p,"🕷 蜘蛛感知 (蜘蛛头顶显示 索敌/抓住/扑杀 的已持续时长)","SpiderSense",SYS.SetSpiderSense)
-UI.Tip(p,"只观测, 不动手: 按名字把 SpiderRig 的 6 个函数包一层, 一律 `return orig(...)` ——\n"..
-"  不改返回值、不改入参、不碰任何游戏状态。关掉开关【会把被包的函数还原】, 不留在游戏里空转。\n"..
-"★ 它能告诉你什么(实锤, 来自 2026-09-22 17:19 机器派对综合扫描):\n"..
-"  · AimHead 被调用        = 蜘蛛开始锁头(最早的来袭信号)\n"..
-"  · GripTarget / PoseAttached / CarryTarget = 抓住目标 / 附着 / 带着走\n"..
-"  · PoseKill              = 扑杀姿态(标签会变 ⚠ 并标出距今多久)\n"..
-"  · Relax                 = 脱身\n"..
-"★ 它【不能】告诉你什么(诚实边界, 别当它是倒计时):\n"..
-"  · 「还要多久才脱身」—— 游戏没把这个总时长给客户端, 我们算不出来, 也不猜。\n"..
-"  · 蜘蛛【什么时候会来】—— 那份扫描里场上没有蜘蛛场(Workspace 顶层 60 个场景里没它),\n"..
-"    拿不到预告字段。现在最早只能靠 AimHead 一开始被调用 来当来袭信号。\n"..
-"★ 想把它做成真正的倒计数: 让蜘蛛正在场时用「综合扫描」再扫一次,\n"..
-"  如果它自己画了倒计时数字(像 MachinePartyDoorRefusal 那种 mm:ss 标签), 我就改成直读镜像, 零风险。",CY.yellow)
-UI.Section(p,"🔫 Dead Rails 战斗增强 (命中标记 / 开镜探针)",CY.accent)
-UI.Switch(p,"🎯 命中标记 (监听 Hitmarker 通道 —— 打中就闪 ✕ + 计数)","DeadRails_HitMark",SYS.SetDRHit)
-UI.Switch(p,"🔭 开镜/瞄准探针 (只把瞄准层调用记到控制台, 绝不改行为)","DeadRails_AimProbe",SYS.SetDRAim)
-UI.Tip(p,"针对【Dead Rails(亡命铁轨)】这一局的战斗增强 —— 两个开关互相独立、默认都关。\n"..
-"★ 🎯 命中标记: 听游戏自己发给客户端的 `ReplicatedStorage...RemoteEvent.Hitmarker`(实锤路径),\n"..
-"  每响一次 = 你打中一次 -> 准星处闪一个大号 ✕ + 屏幕下方累计计数; 菜单关着也看得见。\n"..
-"  ★ 它【不替换任何函数】, 只挂一个事件监听, 关掉即断开 —— 没有「卸载不还原」的坑。\n"..
-"★ 🔭 开镜/瞄准探针: 这游戏的瞄准辅助在扫描里【只有模块名】(aimAssist / AimAssistMode /\n"..
-"  ZoomController 等), 里面函数叫什么名、参数什么形状, 扫描里都没有 ——\n"..
-"  ⇒ 按「先取证再动手」的铁律, 这一档【只把调用次数打到控制台(F9)】, 不做任何真增强;\n"..
-"  拿到 F9 输出后, 下一版再按真实字段做「真瞄准辅助」。\n"..
-"  ★ 为什么现在不硬改: 这游戏自带 CrosshairHud / CrosshairManager / crosshairTargetingSystem,\n"..
-"    乱动瞄准层 = 重演「开镜准星没了」那个事故。\n"..
-"★ 探针需要执行器有 getgc / hookfunction, 没有会直接说不支持(不静默失败);\n"..
-"  关掉探针 = 把被包的函数【原样还原】, 不留在游戏里空转。",CY.sub)
 end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
