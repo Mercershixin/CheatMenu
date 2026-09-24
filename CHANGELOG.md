@@ -2,6 +2,50 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 12.1.4 · 2026-09-25 —— 清理无效功能 / 无效声明 / 无效扫描（两轮 + 一层层收敛）
+
+用户：「清理无效功能监听事件 清理无效的声明 避免在 ui 菜单占用位置」。
+
+### 判据（不是"看着像没用的就删"）
+只有**三条同时成立**才动：① 入口零引用（全文件没有任何地方调用它）
+② 它绑的 `T_` 键**永远不可能为真**（没 UI、也没别的写入点）③ 对应 UI 行早在 11.8.5~11.8.6 按你要求删掉了。
+⇒ 只要有一处还活着就保留。**逐处核引用面**后才改。
+
+### 删掉了什么（净 −8477 B ≈ 200 行；函数 830 → 766）
+| 类别 | 内容 |
+|---|---|
+| **已删功能的整簇后端**（UI 已删 + 入口零引用） | 蜘蛛感知模块(含 `SYS.SpiderSense`/`SetSpiderSense`，9.7 KB) · **hook 隐身**模块(11 KB) · **UI 文字脱敏**模块 · **反指纹自检** `Prot.SelfAudit`(7.2 KB) · **Attribute 回写**模块 · **firesignal 伪装**模块 · 自动打小游戏(`AutoHitScan`/`AutoHitTick`/`SetAutoHitMinigame`) · `SYS.SetDeadOn`+两个薄包装 · `SYS.SetDRHit`/`SYS.SetDRAim` · `SYS.SetRayNamecall` |
+| **第 2 轮：删完入口后新暴露的孤儿** | 命中标记整簇(`SYS.HitMark`/`HitMarkHud`/`HitMarkTick`/`HitMarkClear`/`HitMarkDestroy` + `drGui`/`fireObj`/`_globalFn`/`_hitParentGui`/`SYS.InterKey`/`_hitLabel`/`HITMK_MAX`/`HITMK_SEC`) · `DR.ShowHit`/`drHookOne` · `rnd` · scanner 辅助 `dictN` |
+| **无效声明** | `T_` 键 6 个（`SpiderSense`/`DeadOn_Freeze`/`DeadOn_NoBlow`/`DeadRails_HitMark`/`DeadRails_AimProbe`/`AutoHitMinigame`）⇒ **T_ 111 → 105**；孤儿导出 `SYS._doorCut/_doorSoft/_doorFake`（只写不读）；**14 个 `luau-analyze` 点名的未用 local**；悬挂引用（卸载清单 3 行 · UIMask 死引用 3 行 · `AC.List` 的 D14 项 + `d14` 函数 · 模块索引 2 行） |
+| **无效扫描** | 删掉 2 个扫描器：`🕷 蜘蛛感知扫描` · `⏱ 死亡倒计时扫描`（对应功能已不可启用，永远只会报"已扫描: false"）⇒ 扫描器 19 → 18 |
+| **UI 占位文案**（**不新增任何 UI**，只清残留说明） | 「防甩飞」bullet（功能 UI 已删）·「静默瞄准」bullet（功能已删，并把"这三条"改成"这两条"）·「MachineParty 页不再单独提供」的已删页引用 |
+
+### ★ 没有删、而是**接回可用**的（6 个诊断）
+`SYS.TimeCheck`（时间函数有没有被换）· `SYS.MetaCheck`（game 元表有没有被改）· `SYS.NetOwnerInfo`（网络所有权）·
+`SYS.FpsGcInfo` · `SYS.Diag.ACFramework`（反作弊框架识别）· `SYS.CurKick`（反挂机倒计时）
+—— 它们原先**只由被删的「反指纹自检」调用**，删掉可惜（都是真有用的只读体检）。
+⇒ 新注册一个扫描器 **「🩺 一致性 / 只读体检」**把它们接回来。
+**扫描是控制台输出、不占 UI 任何位置** —— 正好满足「避免在 ui 菜单占用位置」。
+（并在其中写清"动态注入式反作弊下 ACBlock 要谨慎开"的判读提示。）
+
+### ⛔ 明确保留（有保护，不动）
+`SYS.SetAntiFling`（AGENTS §3「用户明确说还需要」）· 4 个光照键 `FullBright/NightVision/NightVisionPro/SuperLight`
+（老存档迁移桥，删了会让老存档丢光照设置）· `SYS.DeadOnTime` / `SYS.DRCombat` 模块本体
+（入口已删 ⇒ 已成惰性代码；整块精确切要 500+ 行且**无真机验证**，本轮只登记不切）。
+
+### 验证
+`luau-compile` 双模式 exit 0 · **被删的 30+ 个符号逐个复查：残留引用全为 0**（无悬挂）·
+`check.py` 问题数 **0** · `_audit_switch_wiring`：**T_ 105 / 死键 0 / 间接驱动 11 / 残留 0**（原残留 5 ⇒ 归零）·
+`_audit_features` 死开关 **0** · `_audit_features2` **零引用函数 19 → 1**（只剩受保护的 `SYS.SetAntiFling`）·
+`_audit_luapitfalls` 0 · `_audit_implicit_globals` 0 · `verify_all` 13/13。
+UI 控件/提示总数 **338 → 338（一个没加）**。
+
+### 顺带修的工具链
+`_audit_hygiene.py` §⑦ 的"开关键三向对账"把 `REMOVED_FEATURES` 块本身当成了"声明" ⇒ 误报
+「10 个键声明里同时出现在 REMOVED（会互相打架）」。实测那 34 个键**没有一个**声明在 `T_` 里（各只出现 1 次 = 就在 REMOVED 块里）⇒ 假报，已修。
+
+---
+
 ## 12.1.2 · 2026-09-25 —— 全工程通读 + 全面检查后修的 2 类源码问题（+ 5 处工具链缺陷）
 
 用户：「先通读我的工程，告诉我目录结构、代码约定和 git 状态，然后进行全面的检查和修复逻辑/符号等问题」。
