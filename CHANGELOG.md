@@ -2,6 +2,27 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 11.8.5 · 2026-09-24 —— 按用户要求删除 8 个"杂乱/低效"功能（UI 层）
+
+用户列表：反甩飞 / 射线总入口 / 开火抖动 / getreg过滤 / Attribute回写 / UI文字脱敏 / 反指纹自检 / hook隐身。
+
+### 本次删除（UI 层 + 接线，精确单行匹配，编译不过即回滚）
+- 7 个 `T_` 默认键：`AntiFling` / `Prot_Stealth` / `Prot_RayNamecall` / `Prot_UImask` / `AttrGuard` / `StealthReg` / `FireSignalSpoof`
+- UI 入口：防甩飞开关 · 射线总入口开关 · 开火抖动滑块 · Attribute回写开关 · UI文字脱敏开关 · firesignal伪装开关
+- 总扫描层：`🫥 hook 隐身`；UnloadAll 清理：`SetAttrGuard(false)` / `SetFireSignalSpoof(false)`
+- ⚠ 本轮**只删 UI/接线**（后端函数如 `SYS.SetAntiFling`/`SYS.SetStealth`/`SYS.Prot.SelfAudit`/`SYS.SetAttrGuard` 等仍在，
+  但现在**已无入口调用 = 不可达**）。要连后端一起彻底删，下轮再做。
+
+### 诚实说明
+- 这些是"反检测类"，多数**有效但隐形**（不是没用，是"降低被抓概率"类）；用户要精简菜单，故按其要求删。
+- 删除过程：第一轮"自动块匹配"在多行注册上跑飞（吞 3000 行）→ **自动回滚**；第二轮改用**精确单行匹配**成功。
+  ★ **教训重申：多行块绝不能靠"数 end"自动删，只能精确文本删，或逐块删、删一块编一次。**
+
+### 验收
+`luau-compile` **0 错误**。
+
+---
+
 ## 11.8.4 · 2026-09-24 —— 修「全亮」没全图亮：清 Atmosphere 雾 + 去暗色滤镜 + 环境光拉满
 
 用户：「高亮全亮没有全图亮」。
