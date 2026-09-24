@@ -2,6 +2,36 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 11.6.4 · 2026-09-24 —— P3/P4/P5 一次收口（结论：**大部分不是问题**）
+
+新增 **`事件库/架构剩余工作总表.md`**（完整证据与裁决）。要点：
+
+### P3 开关四点 —— **不需要"统一生成器"**
+项目自带 `_audit_switch_wiring.py` 实测：`T_` **108** 个 → **有界面入口 97**、无入口 11
+（**4 死键 + 7 间接驱动 + 0 残留**）。⇒ 手写接线本身是对的，重写成生成器是**零收益大 diff**；
+真收益是**把对账工具纳入发版流程**。
+⚠ **更正我上一轮的错判**：`FullBright` / `NightVision` / `NightVisionPro` / `SuperLight` **仍在 `T_` 里**
+（当时我的 `T_` 区块解析器漏了"一行多键"）—— 它们才是那 4 个"有读无写"的死键。
+
+### P4 玩法层隔离 —— **不做**
+八层在文件里不连续，重排 = 跨作用域搬代码；而 **Luau 不会把"读未声明变量"报错**（静默变全局读）
+⇒ 典型"编译能过、运行才坏"。**没有真机验证就不动。** 方案留档（先加 `Install/Uninstall` 壳 → 真机验 → 再搬）。
+
+### P5 残留清理 —— 实测 37 个零引用 `SYS.*`，**逐类裁决**
+- ✅ **删掉 6 个我自己引入的孤儿导出**：`SYS.ACL_N` · `SYS.Rnd` · `SYS.RootHum` · `SYS.FireSignal` ·
+  `SYS.PosRebound` · `SYS.MoveUnmount`（只是把内部表对外挂一份，零引用，删了不影响功能）。
+- ⚠ **待点头**：`SYS.FlyEnsure` / `SYS.FlyTeardown` / `SYS.FlyReleaseStates`（11.5.0 重写后已没人调用，
+  属接口面变更，先报不动）。
+- ⚠ **写了没人读**：`SYS._resumedFromUpdate` / `SYS._realTime` / `SYS._timeScale` / `SYS._timeAcc` /
+  `SYS._timeLast` / `SYS._SlDrop`。
+- ⛔ **刻意保留**：`SYS.Players/Stats/UI/Trans/CurKick/FindHUD/AFK/GymWeightNames…`（接口导出，别删）。
+- ❌ **误报**：`_rands`（被 `SYS.N` 使用，我的正则把前导 `.` 排除了）。
+
+### 验收
+`luau-compile` **0 错误**（删完 6 行后重编）；源码 19,209 行。
+
+---
+
 ## 11.6.3 · 2026-09-24 —— P2：分层补 [9] 编排 + 跨层依赖门禁（结论：没有真反向依赖）
 
 ### 做了什么
