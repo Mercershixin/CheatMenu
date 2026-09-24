@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-23 23:41 sha 179fe70c bytes 632431'):format('2026-09-23 23:41','179fe70c',632431))
+print(('[CheatMenu] build 2026-09-24 13:32 sha a3487a21 bytes 634332'):format('2026-09-24 13:32','a3487a21',634332))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -120,13 +120,15 @@ FireJitter=0.03,
 CamGuardDist=30,
 MoveSmooth=0.25,
 JumpSpoofMode="Height",
+FlyAbs=0,
+SpeedAbs=0,
 FireTypeSigN=3,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.4.0"
+SYS.BuildVer="11.4.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -378,6 +380,16 @@ end
 end
 SYS._FireSig=SYS._FireSig or {}
 SYS._FireOrder=SYS._FireOrder or {}
+function SYS.SpeedTarget()
+local a=tonumber(SYS.C_.SpeedAbs)
+if a and a>0 then return a end
+return (SYS.Orig.WalkSpeed or 16)*(tonumber(SYS.C_.SpeedMult) or 1)
+end
+function SYS.FlyTarget()
+local a=tonumber(SYS.C_.FlyAbs)
+if a and a>0 then return a end
+return (SYS.Orig.WalkSpeed or 16)*(tonumber(SYS.C_.FlySpeed) or 6)
+end
 function SYS.SmoothSpd(base)
 local now=os.clock()
 local dt=now-(SYS._smT or now)
@@ -1132,7 +1144,7 @@ local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
 if SYS.T_.FlyAirMimic and SYS.FlyAirMimicTick then P(SYS.FlyAirMimicTick,dt) end
 local mode=tostring(SYS.C_.FlyMode or "Align")
 local d=GetInputDir(cam.CFrame)
-local spd=SYS.SmoothSpd(SYS.Orig.WalkSpeed*SYS.C_.FlySpeed)
+local spd=SYS.SmoothSpd(SYS.FlyTarget())
 if mode=="CFrame" then
 FlyHoldStates(true)
 if not FlyEnsure(root) then
@@ -1170,19 +1182,19 @@ end
 local lastSM=-1
 local function expectSpeed()
 local base=SYS.Orig.WalkSpeed or 16
-if SYS.T_.Speed then return base*(SYS.C_.SpeedMult or 1) end
+if SYS.T_.Speed then return SYS.SpeedTarget() end
 return base
 end
 local function guardSpeed(v) return v end
 local function wantWalkSpeed()
 local base=SYS.Orig.WalkSpeed or 16
-if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(base*(SYS.C_.SpeedMult or 1)) end
+if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(SYS.SpeedTarget()) end
 return guardSpeed(base)
 end
 function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
-local spd=guardSpeed(SYS.SmoothSpd(SYS.Orig.WalkSpeed*(SYS.C_.SpeedMult or 1)))
+local spd=guardSpeed(SYS.SmoothSpd(SYS.SpeedTarget()))
 if SYS.C_.SpeedMode=="WalkSpeed" then
 if math.abs(hum.WalkSpeed-spd)>spd*0.01 then hum.WalkSpeed=spd end
 lastSM=SYS.C_.SpeedMult
@@ -1510,9 +1522,26 @@ local now=os.clock()
 local dt=now-(AR.lastT or now)
 local nm=(self and self.Name) or ""
 local isMove=AR.names[nm]==true
-local cap=math.max(1,(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2))
+if not isMove then return AR.orig(self,...) end
+if now-(AR.rateT or now)>5 then
+if (AR.rateN or 0)>400 then
+AR.rateN=0 AR.rateT=now
+SYS.TT(task.defer(function()
+if AR.on then
+P(AR.Off)
+P(SYS.Notify,"⚠ 防回退改写过于频繁, 已自动停用(免得把你钉在原地)。关掉再开飞行/加速即可重试。",SYS.CY.yellow)
+end
+end))
+return AR.orig(self,...)
+end
+AR.rateN=0 AR.rateT=now
+end
+local ref=math.max(SYS.Orig.WalkSpeed or 16,
+(SYS.T_.Speed and SYS.SpeedTarget and SYS.SpeedTarget()) or 0,
+(SYS.T_.Fly and SYS.FlyTarget and SYS.FlyTarget()) or 0)
+local cap=math.max(1,(SYS.SpeedTarget and SYS.SpeedTarget()) or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2)))
 local extra=(SYS.T_.AntiRevertExtra~=false)
-local maxStep=math.max(3,(SYS.Orig.WalkSpeed or 22)*3*math.min(dt,0.5))
+local maxStep=math.max(3, ref*3*math.min(dt,0.5))
 local a={...}
 for i=1,n do
 local v=a[i]
@@ -1522,11 +1551,12 @@ local p=v.Position
 if AR.lastPos then
 local d=p-AR.lastPos
 local m=d.Magnitude
-if m>maxStep and m>0 then
+if m>maxStep and m>0 and m<2000 then
 local np=AR.lastPos+d.Unit*maxStep
 np=np+Vector3.new((math.random()-0.5),(math.random()-0.5),(math.random()-0.5))
 a[i]=CFrame.new(np, np+v.LookVector)
 AR.fixed=AR.fixed+1
+AR.rateN=(AR.rateN or 0)+1
 p=np
 end
 end
@@ -1538,12 +1568,19 @@ else
 if AR.lastPos then
 local d=v-AR.lastPos
 local dm=d.Magnitude
+if dm>=2000 then
+AR.lastPos=a[i]
+else
 if dm>maxStep and dm>0 then
 a[i]=AR.lastPos+d.Unit*maxStep
 AR.fixed=AR.fixed+1
-end
+AR.rateN=(AR.rateN or 0)+1
 end
 AR.lastPos=a[i]
+end
+else
+AR.lastPos=a[i]
+end
 end
 elseif tp=="number" then
 if extra and isMove and speedLike(nm) and v>cap then
@@ -1663,7 +1700,12 @@ elseif h.UseJumpPower==true then
 h.UseJumpPower=false
 end
 if mode=="Height" or mode=="Both" then
-h.JumpHeight=(JHOrig or h.JumpHeight or 7.2)*mult
+local jb=tonumber(JHOrig)
+if not jb or jb<=0 then
+local cur=tonumber(h.JumpHeight)
+jb=(cur and cur>0) and cur or 7.2
+end
+h.JumpHeight=jb*mult
 end
 end)
 end
@@ -3347,7 +3389,11 @@ local function shouldBlock(inst)
 if not ACB.on then return false end
 local nm=(inst and inst.Name) or ""
 if type(nm)~="string" or ACB.names[nm]~=true then return false end
-if type(SYS.RemoteRisk)=="function" and not SYS.RemoteRisk(nm) then return false end
+if type(SYS.RemoteRisk)~="function" then return false end
+local v=SYS.RemoteRisk(nm)
+if type(v)~="string" then return false end
+local c=v:sub(1,1)
+if c~="⛔" and c~="⚠" then return false end
 return true
 end
 local function bump(inst)
@@ -8138,7 +8184,7 @@ if SYS.Unloaded or not SYS.T_.CB_Melee then return end
 P(function()
 local _,hum,r2=GC()
 if not hum or not r2 then return end
-local want=(SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 1)
+local want=SYS.SpeedTarget and SYS.SpeedTarget() or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 1))
 if hum.WalkSpeed<want*0.5 then
 hum.WalkSpeed=want
 print("[CheatMenu] 近战解卡: WalkSpeed 被清零, 已写回 "..tostring(want))
@@ -10784,15 +10830,22 @@ SYS.SetLoop("AntiFling",true,RS.Heartbeat,function()
 if SYS.T_.AntiFling~=true then return end
 local _,_,root=GC()
 if not root then return end
+local lim=FLING_MAX
+if SYS.SpeedTarget and (SYS.T_.Speed or SYS.T_.Fly) then
+local t=0
+if SYS.T_.Speed then t=SYS.SpeedTarget() end
+if SYS.T_.Fly then t=math.max(t,SYS.FlyTarget()) end
+lim=math.max(lim,t*2.5)
+end
 P(function()
 local v=root.AssemblyLinearVelocity
-if v and v.Magnitude>FLING_MAX then
+if v and v.Magnitude>lim then
 root.AssemblyLinearVelocity=Vector3.zero
 SYS._flingN=(SYS._flingN or 0)+1
 end
 end)
 end)
-SYS.Notify(("🎈 防甩飞: 已开(速度超过 %d 格/秒立即清零)"):format(FLING_MAX),SYS.CY.green)
+SYS.Notify(("🎈 防甩飞: 已开(超过 %d 格/秒清零; 飞行/加速开着时阈值会按目标速度自动放宽, 免得把正常高速当甩飞)"):format(FLING_MAX),SYS.CY.green)
 else
 SYS.SetLoop("AntiFling",false)
 SYS.Notify("🎈 防甩飞: 已关",SYS.CY.sub)
@@ -12898,7 +12951,8 @@ if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"飞行速度倍率",0,20,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
+UI.Slider(p,"飞行速度 (格/秒 · 0=用倍率)",0,3000,10,function() return SYS.C_.FlyAbs or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
+UI.Slider(p,"飞行速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
@@ -12916,7 +12970,8 @@ if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"移动速度倍率",0,20,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
+UI.Slider(p,"移动速度 (格/秒 · 0=用倍率 · 推荐直接填数值)",0,3000,10,function() return SYS.C_.SpeedAbs or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
+UI.Slider(p,"移动速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode end,
 function(v)
