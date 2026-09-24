@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 13:58 sha 4cfd7883 bytes 635009'):format('2026-09-24 13:58','4cfd7883',635009))
+print(('[CheatMenu] build 2026-09-24 16:20 sha d214aabb bytes 634674'):format('2026-09-24 16:20','d214aabb',634674))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -81,6 +81,7 @@ PosRebound=false,
 CB_BlockDeathSignal=false,
 StealthReg=false,
 FireSignalSpoof=false,
+AntiRevert=false,
 },
 C_={
 FlySpeed=6,FlyMode="BodyVelocity",
@@ -122,13 +123,14 @@ MoveSmooth=0.25,
 JumpSpoofMode="Height",
 FlyAbs=0,
 SpeedAbs=0,
+RevertCap=60,
 FireTypeSigN=3,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.4.2"
+SYS.BuildVer="11.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1070,202 +1072,182 @@ return r,name,how
 end
 local Fire=SYS.Fire local OnRemote=SYS.OnRemote
 do
-local FlyBV,FlyGyro,SpeedBV,SpeedGyro,gravZero=false,false,false,false,false
-local SpeedAtt,SpeedLV=false,false
-local InfiniteJumpConn=nil
-local noclipThread=nil
-local NoclipAtt,NoclipVel=false,false
-SYS.NoclipConns={}
-local function GetInputDir(camCF)
-local d=Vector3.zero local f=camCF.LookVector*Vector3.new(1,0,1)
+local M={ owner=nil, att=nil, lv=nil, al=nil, bv=nil, gyro=nil, hold=false, degraded=false }
+SYS._Move=M
+local function Kill(o) if o then P(function() o:Destroy() end) end end
+local function Unmount()
+Kill(M.lv) Kill(M.al) Kill(M.att) Kill(M.bv) Kill(M.gyro)
+M.owner=nil M.att=nil M.lv=nil M.al=nil M.bv=nil M.gyro=nil
+SYS._FlyAtt=nil SYS._FlyVel=nil SYS._FlyAlign=nil
+end
+SYS.MoveUnmount=Unmount
+local function GetInputDir(camCF,vertical)
+local d=Vector3.zero
+local f=camCF.LookVector*Vector3.new(1,0,1)
 if UIS:IsKeyDown(Enum.KeyCode.W) then d+=f end
 if UIS:IsKeyDown(Enum.KeyCode.S) then d-=f end
 if UIS:IsKeyDown(Enum.KeyCode.A) then d-=camCF.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then d+=camCF.RightVector end
+if vertical then
 if UIS:IsKeyDown(Enum.KeyCode.Space) then d+=Vector3.yAxis end
 if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then d-=Vector3.yAxis end
+end
 return d
 end
-local function FlyParts()
-return SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign
-end
-function SYS.FlyTeardown()
-local a,v,al=FlyParts()
-if v  then P(function() v:Destroy()  end) end
-if al then P(function() al:Destroy() end) end
-if a  then P(function() a:Destroy()  end) end
-SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=nil,nil,nil
-end
-local function FlyEnsure(root)
-local a,v,al=FlyParts()
-if a and a.Parent==root and v and v.Parent==root and al and al.Parent==root then return true end
-SYS.FlyTeardown()
-local okF=pcall(function()
-a=Instance.new("Attachment") a.Name="Attachment" a.Parent=root
-v=Instance.new("LinearVelocity") v.Name="LinearVelocity" v.Attachment0=a
-v.MaxForce=math.huge
-pcall(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
-v.VectorVelocity=Vector3.zero v.Parent=root
-al=Instance.new("AlignOrientation") al.Name="AlignOrientation" al.Attachment0=a
+local function MountAlign(a,root)
+local okA=pcall(function()
+local al=Instance.new("AlignOrientation") al.Name="AlignOrientation" al.Attachment0=a
 pcall(function() al.Mode=Enum.OrientationAlignmentMode.OneAttachment end)
 al.MaxTorque=math.huge al.Responsiveness=200 al.RigidityEnabled=false
 al.Parent=root
+M.al=al
 end)
-if (not okF) or (not v) or (not al) then
-if v  then pcall(function() v:Destroy()  end) end
-if al then pcall(function() al:Destroy() end) end
-if a  then pcall(function() a:Destroy()  end) end
-SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=nil,nil,nil
-return false
+return okA and M.al~=nil
 end
-SYS._FlyAtt,SYS._FlyVel,SYS._FlyAlign=a,v,al
+local function MountLV(root,withAlign)
+if M.owner~=root then Unmount() M.owner=root end
+if M.lv and M.lv.Parent==root then
+if withAlign and not M.al then return MountAlign(M.att,root) end
 return true
 end
-local function FlyHoldStates(on)
+Kill(M.lv) Kill(M.al) Kill(M.att) M.lv=nil M.al=nil M.att=nil
+local okF=pcall(function()
+local a=Instance.new("Attachment") a.Name="Attachment" a.Parent=root
+local v=Instance.new("LinearVelocity") v.Name="LinearVelocity" v.Attachment0=a
+v.MaxForce=math.huge
+pcall(function() v.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
+v.VectorVelocity=Vector3.zero v.Parent=root
+M.att=a M.lv=v
+end)
+if (not okF) or (not M.lv) then Unmount() return false end
+if withAlign and not MountAlign(M.att,root) then Unmount() return false end
+SYS._FlyAtt=M.att SYS._FlyVel=M.lv SYS._FlyAlign=M.al
+return true
+end
+local function MountBV(root,withGyro)
+if M.owner~=root then Unmount() M.owner=root end
+if not (M.bv and M.bv.Parent==root) then
+Kill(M.bv) M.bv=Instance.new("BodyVelocity")
+M.bv.MaxForce=Vector3.new(1e9,1e9,1e9) M.bv.Parent=root
+end
+if withGyro and not (M.gyro and M.gyro.Parent==root) then
+Kill(M.gyro) M.gyro=Instance.new("BodyGyro")
+M.gyro.MaxTorque=Vector3.new(1e9,1e9,1e9)
+M.gyro.P=1e5 M.gyro.D=1000 M.gyro.Parent=root
+end
+return M.bv~=nil
+end
+local function FaceTo(root,faceDir)
+if not faceDir then return end
+if M.gyro and M.gyro.Parent==root then M.gyro.CFrame=CFrame.lookAt(root.Position,root.Position+faceDir) end
+end
+local function AlignLerp(faceDir,dt)
+if not (M.al and faceDir) then return end
+local root=nil
+local _,_,r=GC() root=r
+if not root then return end
+local want=CFrame.lookAt(root.Position,root.Position+faceDir)
+local tau=math.max(0.05,tonumber(SYS.C_.MoveSmooth) or 0.25)
+P(function() M.al.CFrame=M.al.CFrame:Lerp(want,math.min(1,dt/tau)) end)
+end
+local function HoldStates(on)
 local _,hum=GC() if not hum then return end
 if on then
+if M.hold then return end
+M.hold=true SYS._FlyStateHeld=true
 P(function()
 hum:SetStateEnabled(Enum.HumanoidStateType.Running,false)
 hum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
 end)
-SYS._FlyStateHeld=true
-elseif SYS._FlyStateHeld then
+else
+if not M.hold and not SYS._FlyStateHeld then return end
+M.hold=false SYS._FlyStateHeld=false
 P(function()
 hum:SetStateEnabled(Enum.HumanoidStateType.Running,true)
 hum:ChangeState(Enum.HumanoidStateType.Freefall)
 end)
-SYS._FlyStateHeld=false
 end
 end
-function SYS.FlyReleaseStates() FlyHoldStates(false) end
-local function FlyBodyDrive(root,d,spd)
-if not FlyBV or FlyBV.Parent~=root then
-if FlyBV then FlyBV:Destroy() end
-FlyBV=Instance.new("BodyVelocity")
-FlyBV.MaxForce=Vector3.new(1e9,1e9,1e9) FlyBV.Parent=root
-end
-FlyBV.Velocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
-end
+function SYS.FlyReleaseStates() HoldStates(false) end
+function SYS.FlyTeardown() Unmount() end
+function SYS.FlyEnsure(root) return MountLV(root,true) end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
 local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
+dt=tonumber(dt) or 1/60
 if SYS.T_.FlyAirMimic and SYS.FlyAirMimicTick then P(SYS.FlyAirMimicTick,dt) end
 local mode=tostring(SYS.C_.FlyMode or "Align")
-local d=GetInputDir(cam.CFrame)
+local dir=GetInputDir(cam.CFrame,true)
 local spd=SYS.SmoothSpd(SYS.FlyTarget())
+local fv=cam.CFrame.LookVector*Vector3.new(1,0,1)
+local faceDir=fv.Magnitude>0.1 and fv.Unit or nil
 if mode=="CFrame" then
-FlyHoldStates(true)
-if not FlyEnsure(root) then
-SYS._FlyDegraded=true
-FlyBodyDrive(root,d,spd)
-return
-end
-if SYS._FlyVel then
-SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+HoldStates(true)
+if dir.Magnitude>0 then
+local rot=root.CFrame-root.CFrame.Position
+P(function() root.CFrame=CFrame.new(root.Position+dir.Unit*spd*dt)*rot end)
 end
 return
 end
-FlyHoldStates(true)
-if mode=="BodyVelocity" or SYS._FlyDegraded then
-FlyBodyDrive(root,d,spd)
+HoldStates(true)
+if mode=="BodyVelocity" or M.degraded then
+if not MountBV(root,true) then return end
+FaceTo(root,faceDir)
+M.bv.Velocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero
 return
 end
-if not FlyEnsure(root) then
-SYS._FlyDegraded=true
-SYS.Notify("⚠ 这台执行器不支持 LinearVelocity/AlignOrientation, 飞行已自动降级为 BodyVelocity",SYS.CY.yellow)
-FlyBodyDrive(root,d,spd)
+if not MountLV(root,true) then
+M.degraded=true
+SYS.Notify("⚠ 这台执行器不支持 LinearVelocity/AlignOrientation —— 飞行已自动改用 BodyVelocity(本次会话内不再重试)",SYS.CY.yellow)
+if not MountBV(root,true) then return end
+FaceTo(root,faceDir)
+M.bv.Velocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero
 return
 end
-local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
-if f.Magnitude>0.1 and SYS._FlyAlign then
-local want=CFrame.lookAt(root.Position,root.Position+f.Unit)
-local tau=math.max(0.05,tonumber(SYS.C_.MoveSmooth) or 0.25)
-local k=math.min(1,(tonumber(dt) or 0.016)/tau)
-SYS._FlyAlign.CFrame=SYS._FlyAlign.CFrame:Lerp(want,k)
+if M.lv then M.lv.VectorVelocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero end
+AlignLerp(faceDir,dt)
 end
-if SYS._FlyVel then
-SYS._FlyVel.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
-end
-end
-local lastSM=-1
 local function expectSpeed()
-local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed then return SYS.SpeedTarget() end
-return base
+return SYS.Orig.WalkSpeed or 16
 end
 local function guardSpeed(v) return v end
 local function wantWalkSpeed()
-local base=SYS.Orig.WalkSpeed or 16
 if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(SYS.SpeedTarget()) end
-return guardSpeed(base)
+return guardSpeed(SYS.Orig.WalkSpeed or 16)
 end
 function SYS.SpeedTick()
 if not SYS.T_.Speed or SYS.T_.Fly or SYS.FreeCamActive then return end
 local _,hum,root=GC() if not hum or not root then return end
 local spd=guardSpeed(SYS.SmoothSpd(SYS.SpeedTarget()))
-if SYS.C_.SpeedMode=="WalkSpeed" then
-if math.abs(hum.WalkSpeed-spd)>spd*0.01 then hum.WalkSpeed=spd end
-lastSM=SYS.C_.SpeedMult
+local mode=tostring(SYS.C_.SpeedMode or "Linear")
+if mode=="WalkSpeed" then
+local w=math.max(1,spd)
+if math.abs(hum.WalkSpeed-w)>w*0.01 then P(function() hum.WalkSpeed=w end) end
 return
-end
-if SYS.C_.SpeedMode=="BodyVelocity" then
-if not SpeedBV or SpeedBV.Parent~=root then
-if SpeedBV then SpeedBV:Destroy() end
-SpeedBV=Instance.new("BodyVelocity")
-SpeedBV.MaxForce=Vector3.new(1e9,0,1e9) SpeedBV.Parent=root
-end
-if not SpeedGyro or SpeedGyro.Parent~=root then
-if SpeedGyro then SpeedGyro:Destroy() end
-SpeedGyro=Instance.new("BodyGyro")
-SpeedGyro.MaxTorque=Vector3.new(1e9,1e9,1e9)
-SpeedGyro.P=1e5 SpeedGyro.D=1000 SpeedGyro.Parent=root
-end
-local c0=WS.CurrentCamera if not c0 or not c0.CFrame then return end
-local f0=c0.CFrame.LookVector*Vector3.new(1,0,1)
-if f0.Magnitude>0.1 then SpeedGyro.CFrame=CFrame.lookAt(root.Position,root.Position+f0.Unit) end
-local d0=Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then d0+=f0 end
-if UIS:IsKeyDown(Enum.KeyCode.S) then d0-=f0 end
-if UIS:IsKeyDown(Enum.KeyCode.A) then d0-=c0.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then d0+=c0.CFrame.RightVector end
-SpeedBV.Velocity=d0.Magnitude>0 and d0.Unit*spd or Vector3.zero
-return
-end
-if not (SpeedAtt and SpeedAtt.Parent==root) or not (SpeedLV and SpeedLV.Parent==root) then
-if SpeedLV then SpeedLV:Destroy() SpeedLV=nil end
-if SpeedAtt then SpeedAtt:Destroy() SpeedAtt=nil end
-SpeedAtt=Instance.new("Attachment") SpeedAtt.Name="Attachment" SpeedAtt.Parent=root
-SpeedLV=Instance.new("LinearVelocity") SpeedLV.Name="LinearVelocity" SpeedLV.Attachment0=SpeedAtt
-SpeedLV.MaxForce=math.huge
-P(function() SpeedLV.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector end)
-SpeedLV.VectorVelocity=Vector3.zero SpeedLV.Parent=root
 end
 local cam=WS.CurrentCamera if not cam or not cam.CFrame then return end
-local f=cam.CFrame.LookVector*Vector3.new(1,0,1)
-local d=Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then d+=f end
-if UIS:IsKeyDown(Enum.KeyCode.S) then d-=f end
-if UIS:IsKeyDown(Enum.KeyCode.A) then d-=cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then d+=cam.CFrame.RightVector end
-SpeedLV.VectorVelocity=d.Magnitude>0 and d.Unit*spd or Vector3.zero
+local dir=GetInputDir(cam.CFrame,false)
+local fv=cam.CFrame.LookVector*Vector3.new(1,0,1)
+local faceDir=fv.Magnitude>0.1 and fv.Unit or nil
+if mode=="BodyVelocity" then
+if not MountBV(root,true) then return end
+FaceTo(root,faceDir)
+M.bv.Velocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero
+return
+end
+if not MountLV(root,false) then return end
+if M.lv then M.lv.VectorVelocity=dir.Magnitude>0 and dir.Unit*spd or Vector3.zero end
 end
 function SYS.CleanFly()
-if FlyBV then FlyBV:Destroy() FlyBV=nil end
-if FlyGyro then FlyGyro:Destroy() FlyGyro=nil end
-if SYS.FlyTeardown then P(SYS.FlyTeardown) end
-if SYS.FlyReleaseStates then P(SYS.FlyReleaseStates) end
+Unmount()
+HoldStates(false)
 SYS._FlyStateHeld=false
-SYS._FlyDegraded=false
-if gravZero then WS.Gravity=SYS.Orig.Gravity gravZero=false end
 end
 function SYS.CleanSpeed()
-if SpeedBV then SpeedBV:Destroy() SpeedBV=nil end
-if SpeedGyro then SpeedGyro:Destroy() SpeedGyro=nil end
-if SpeedLV then SpeedLV:Destroy() SpeedLV=nil end
-if SpeedAtt then SpeedAtt:Destroy() SpeedAtt=nil end
-lastSM=-1
-local _,hum=GC() if hum then hum.WalkSpeed=SYS.Orig.WalkSpeed end
+Unmount()
+local _,hum=GC() if hum then P(function() hum.WalkSpeed=SYS.Orig.WalkSpeed end) end
 end
 function SYS.ApplyNoclip(ch,on)
 if not ch then return end
@@ -1478,8 +1460,8 @@ print("[CheatMenu] 反陷阱免伤: 已开启(无视触发 + 免疫 位移/弹�
 end
 end
 do
-local AR = { on=false, ev=nil, orig=nil, lastPos=nil, lastT=0, fixed=0, capped=0, names={} }
-SYS.AntiRevert = AR
+local AR={ on=false, ev=nil, orig=nil, lastPos=nil, lastT=0, fixed=0, capped=0, names={}, rateN=0, rateT=0 }
+SYS.AntiRevert=AR
 local DOWNLINK={ ServerReplicateCFrame=true }
 local SPEEDY={"speed","velocity","walk","jump","power","force","accel","thrust","boost"}
 local function speedLike(nm)
@@ -1494,8 +1476,7 @@ for i=1,#list do
 local full=tostring(list[i])
 local short=full:match("([^%.]+)$") or full
 if not DOWNLINK[short] and not DOWNLINK[full] then
-AR.names[short]=true
-AR.names[full]=true
+AR.names[short]=true AR.names[full]=true
 end
 end
 end
@@ -1520,37 +1501,35 @@ if AR.on then return true end
 if type(hookfunction)~="function" then return false,"这台执行器没有 hookfunction" end
 buildNames()
 local ev=findRepl()
-if not ev then return false,"没找到可做位置上报限速的 remote" end
+if not ev then return false,"没找到可做上报伪装的位置通道" end
 local ok=pcall(function()
 AR.ev=ev
 AR.orig=hookfunction(ev.FireServer,newcclosure(function(self,...)
 if not AR.on then return AR.orig(self,...) end
 local n=select("#",...)
 if n==0 then return AR.orig(self,...) end
+local nm=(self and self.Name) or ""
+if AR.names[nm]~=true then return AR.orig(self,...) end
 local now=os.clock()
 local dt=now-(AR.lastT or now)
-local nm=(self and self.Name) or ""
-local isMove=AR.names[nm]==true
-if not isMove then return AR.orig(self,...) end
+AR.lastT=now
 if now-(AR.rateT or now)>5 then
 if (AR.rateN or 0)>400 then
 AR.rateN=0 AR.rateT=now
 SYS.TT(task.defer(function()
 if AR.on then
 P(AR.Off)
-P(SYS.Notify,"⚠ 防回退改写过于频繁, 已自动停用(免得把你钉在原地)。关掉再开飞行/加速即可重试。",SYS.CY.yellow)
+P(SYS.Notify,"⚠ 防回退改写过于频繁, 已自动停用(免得把你钉在原地)。重开飞行/加速即可再试。",SYS.CY.yellow)
 end
 end))
 return AR.orig(self,...)
 end
 AR.rateN=0 AR.rateT=now
 end
-local ref=math.max(SYS.Orig.WalkSpeed or 16,
-(SYS.T_.Speed and SYS.SpeedTarget and SYS.SpeedTarget()) or 0,
-(SYS.T_.Fly and SYS.FlyTarget and SYS.FlyTarget()) or 0)
-local cap=math.max(1,(SYS.SpeedTarget and SYS.SpeedTarget()) or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2)))
+local cap=tonumber(SYS.C_.RevertCap) or 60
 local extra=(SYS.T_.AntiRevertExtra~=false)
-local maxStep=math.max(3, ref*3*math.min(dt,0.5))
+local speedCap=math.max(1,(SYS.SpeedTarget and SYS.SpeedTarget()) or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2)))
+local maxStep=math.max(0.5,cap*math.min(dt,0.5))
 local a={...}
 for i=1,n do
 local v=a[i]
@@ -1572,8 +1551,7 @@ end
 AR.lastPos=p
 elseif tp=="Vector3" then
 local um=v.Magnitude
-if um>0.95 and um<1.05 then
-else
+if not (um>0.95 and um<1.05) then
 if AR.lastPos then
 local d=v-AR.lastPos
 local dm=d.Magnitude
@@ -1592,19 +1570,18 @@ AR.lastPos=a[i]
 end
 end
 elseif tp=="number" then
-if extra and isMove and speedLike(nm) and v>cap then
-a[i]=cap*(0.98+math.random()*0.04)
+if extra and speedLike(nm) and v>speedCap then
+a[i]=speedCap*(0.98+math.random()*0.04)
 AR.capped=(AR.capped or 0)+1
 end
 end
 end
-AR.lastT=now
 return AR.orig(self, table.unpack(a,1,n))
 end))
 end)
 if not ok then return false,"hook 失败" end
-AR.on=true AR.lastPos=nil AR.lastT=os.clock()
-print("[CheatMenu] 防回退已随飞行/加速开启(位置上报限速 + 移动通道 数值/朝向 分流)")
+AR.on=true AR.lastPos=nil AR.lastT=os.clock() AR.rateN=0 AR.rateT=os.clock()
+print(("[CheatMenu] 防回退(过检测)已开: 上报速率上限 %s 格/秒"):format(tostring(tonumber(SYS.C_.RevertCap) or 60)))
 return true
 end
 function AR.Off()
@@ -1614,14 +1591,14 @@ if AR.ev and AR.orig and type(hookfunction)=="function" and not SYS.Unloaded the
 P(function() hookfunction(AR.ev.FireServer,AR.orig) end)
 end
 AR.lastPos=nil
-print("[CheatMenu] 防回退已关闭")
+print("[CheatMenu] 防回退(过检测)已关")
 end
 function SYS.SyncAntiRevert()
-local want=(SYS.T_.Fly==true) or (SYS.T_.Speed==true)
+local want=(SYS.T_.AntiRevert==true) and ((SYS.T_.Fly==true) or (SYS.T_.Speed==true))
 if want then
 local ok2,res,err=P(AR.On)
 if ok2 and res==false then
-SYS.Notify("⚠ 防回退没挂上: "..tostring(err or "未知原因").." (飞行/加速照常, 只是位置按真实值上报)", SYS.CY.yellow)
+SYS.Notify("⚠ 防回退没挂上: "..tostring(err or "未知原因").." (飞行/加速照常, 只是上报按真实值)", SYS.CY.yellow)
 end
 else
 P(AR.Off)
@@ -12961,18 +12938,17 @@ if not on then SYS.CleanFly() end
 SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"飞行速度 (格/秒 · 0=用倍率)",0,3000,10,function() return SYS.C_.FlyAbs or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
+UI.Slider(p,"飞行速度 (格/秒 · 推荐直接填数值)",16,3000,10,function() return SYS.C_.FlyAbs or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
 UI.Slider(p,"飞行速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
-function() return SYS.C_.FlyMode end,
+function() return SYS.C_.FlyMode or "Align" end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
-UI.Tip(p,"★ 默认「Align」= 官方推荐的 LinearVelocity + AlignOrientation, 也最不容易被服务器拉回。\n「BodyVelocity」= 老执行器(已弃用), 兼容用。\n「CFrame」= 逐帧瞬移, **会被服务端位置校验拉回**, 不推荐。\n另外: 新版本开飞行时不再把世界重力清零(那正是被拉回的经典原因), 只对角色自身抵消重力。",CY.yellow)
-UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
-UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
-UI.Tip(p,"游戏用 ServerReplicateCFrame 这类下行通道把「你该在哪」推回来时, 本开关延迟一帧把角色位置重新盖回去。\n"
-.."★ 只在飞行/加速开着时生效; 关掉立即断开监听。\n"
-.."⚠ 这是「和游戏抢位置」: 可能被更强的服务端校验发现, 也可能让画面轻微抖动。默认关。",CY.yellow)
-UI.Tip(p,"防回退原本只做一件事: 把位置类上报(CFrame/Vector3)按「每帧最多走多远」限速, 让服务端看到的是连续位移而不是瞬移。\n本开关再补两条:\n· 8 条移动通道(EntityService.WalkSpeed/Jump/SetState/SetInAir/PitchYaw · Any.AirJump/JumpPad · ClientReplicateCFrame)里, 名字像速度/跳跃的【数值】参数一律夹到「WalkSpeed × 移动速度倍率」以内;\n· 【单位向量(模长≈1)】判定为朝向(如 PitchYaw)直接放行, 不再被当位置去限速。\n★ 只限速/夹值, 不改常量、不删参数; 关掉即完全还原 hook。默认开。",CY.sub)
+UI.Tip(p,"三种模式各干各的, 互不影响:\n"
+.."· Align      = LinearVelocity + AlignOrientation(官方推荐, 最稳, 朝相机方向飞)\n"
+.."· BodyVelocity = 老式 BodyVelocity + BodyGyro(旧执行器兼容用)\n"
+.."· CFrame     = 逐帧直接写 CFrame(最直接, 但【服务端位置校验会把你拉回】, 不推荐)\n"
+.."★ 速度填「格/秒」绝对值: 走路的基准是 16, 填 100 就是约 6 倍。填 0 才回落到下面的倍率。\n"
+.."⚠ 想跑得更快又不想被拉回, 需要另开防护页的「防回退(过检测)」—— 那是它的活。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"⚡ 移动加速",CY.accent)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
@@ -12980,15 +12956,19 @@ if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"移动速度 (格/秒 · 0=用倍率 · 推荐直接填数值)",0,3000,10,function() return SYS.C_.SpeedAbs or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
+UI.Slider(p,"移动速度 (格/秒 · 推荐直接填数值)",16,3000,10,function() return SYS.C_.SpeedAbs or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
 UI.Slider(p,"移动速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
-function() return SYS.C_.SpeedMode end,
+function() return SYS.C_.SpeedMode or "Linear" end,
 function(v)
 SYS.C_.SpeedMode=v
 if v=="WalkSpeed" then SYS.Notify("⚠ WalkSpeed 模式服务端可读, 推荐 Linear",CY.yellow) end
 if SYS.T_.Speed then SYS.CleanSpeed() end
 end)
+UI.Tip(p,"· Linear       = LinearVelocity(官方推荐, 最稳)\n"
+.."· BodyVelocity = BodyVelocity + BodyGyro(旧执行器兼容)\n"
+.."· WalkSpeed    = 直接改走路速度(最朴素, 但服务端能读到, 容易被判加速)\n"
+.."★ 速度同上: 填「格/秒」绝对值; 填 0 回落到倍率。",CY.yellow)
 UI.Cycle(p,"跳跃伪装模式",{"Height","Power","Both"},
 function() return SYS.C_.JumpSpoofMode or "Height" end,
 function(v)
@@ -12996,7 +12976,8 @@ SYS.C_.JumpSpoofMode=v
 if v=="Both" then SYS.Notify("⚠ JumpPower 服务端可读, 慎用(已切到 Both)",CY.yellow) end
 if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,true) end
 end)
-UI.Tip(p,"默认「Linear」= 官方推荐的 LinearVelocity(旧 BodyVelocity 已弃用, 保留兼容)。\n「WalkSpeed」= 只改走路速度, 最朴素也最稳。\n⚠️ 倍率建议 ≤ 2: 服务端按【每 tick 位移 > 正常速度 ×2】判定加速作弊, 调太高会被记一笔。",CY.yellow)
+UI.Tip(p,"「Height」= 只写 JumpHeight(默认, 服务端一般不读); 「Power」= 只写 JumpPower; 「Both」= 都写(最猛也最显眼)。",CY.sub)
+UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
 UI.Switch(p,"穿墙 (角色各部位关碰撞)","Noclip",function(on)
@@ -13393,6 +13374,20 @@ UI.Tip(p,"「抹除」= 直接移除你自己的角色模型; 「虚空抹除」
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
+UI.Switch(p,"🛡 防回退 (过检测: 让上报的位置位移看起来合理)","AntiRevert",SYS.SyncAntiRevert)
+UI.Slider(p,"上报速率上限 (格/秒 · 0=不限速只去抖)",0,400,5,function() return SYS.C_.RevertCap or 60 end,function(v) SYS.C_.RevertCap=v end,"%.0f")
+UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
+UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
+UI.Tip(p,"★ 先分清两个概念(以前混在一起, 才出过「定在原地」的坑):\n"
+.."  · 飞行/加速 = 【你本地动多快】, 单位是格/秒 —— 在移动页调。\n"
+.."  · 防回退   = 【你上报给服务端多快】, 这才是【过检测】: 让服务端看到的位移像正常走路,\n"
+.."    从而不判瞬移、不把你拉回。\n"
+.."⚠ 所以两者天生互相拉扯: 上报上限比实际速度低, 就会被服务端往回拽; 想真的快, 就得把上限调高或关掉本开关。\n"
+.."★ 本开关默认【关】(11.4.0 默认开, 结果把正常移动也限速了)。\n"
+.."· 只处理移动通道(EntityService.* / Any.* / ClientReplicateCFrame), 别的 remote 一律直通;\n"
+.."· 单位向量(模长≈1)=朝向 -> 放行, 不当位置处理;\n"
+.."· 5 秒内改写 >400 次 -> 【自动关闭】并提示(免得把你钉死)。\n"
+.."📍 位置下行回压 = 反过来: 游戏把「你该在哪」推回来时, 下一帧再盖回去(和游戏抢位置, 可能抖)。",CY.yellow)
 UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
 if on then
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
