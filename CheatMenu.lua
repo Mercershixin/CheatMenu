@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-24 20:44 sha f738b256 bytes 643202'):format('2026-09-24 20:44','f738b256',643202))
+print(('[CheatMenu] build 2026-09-24 20:47 sha be03e176 bytes 643386'):format('2026-09-24 20:47','be03e176',643386))
 print("[CheatMenu] ===== v68 加载开始 =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="11.7.6"
+SYS.BuildVer="11.7.7"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1291,9 +1291,10 @@ L[#L+1]="     移动类(飞行/加速/穿墙/瞬移)在这服【客户端无解�
 elseif am:find("Automatic",1,true) then
 L[#L+1]="  ✅ 服务端权威【未开】(Automatic) —— 移动类理论上可做; 飞不动就是别的原因(见上面几行)。"
 end
-local ufs=nil
+local ufs,sen="(读不到)","(读不到)"
 pcall(function() ufs=tostring(WS.UseFixedSimulation) end)
-L[#L+1]=("  UseFixedSimulation = %s   StreamingEnabled = %s"):format(tostring(ufs),tostring(WS.StreamingEnabled))
+pcall(function() sen=tostring(WS.StreamingEnabled) end)
+L[#L+1]=("  UseFixedSimulation = %s   StreamingEnabled = %s"):format(tostring(ufs),tostring(sen))
 local v=root.AssemblyLinearVelocity
 L[#L+1]=("  当前实际速度: 总 %.1f 格/秒   水平 %.1f 格/秒")
 :format(v and v.Magnitude or 0,(v and Vector3.new(v.X,0,v.Z).Magnitude) or 0)
@@ -14660,9 +14661,12 @@ R("🧾 翻译·失败/退避清单", function() return cap(SYS.Trans and SYS.Tr
 end
 if SYS.RegisterScanner then
 SYS.RegisterScanner("🚦 移动环境 (服务端权威 / 网络所有权 / 驱动 / 实际速度)", function()
-if not SYS.MoveDiag then return {"(MoveDiag 不可用)"} end
-local ok,lines=SYS.MoveDiag()
-if not ok or type(lines)~="table" then return {"(移动自检执行失败)"} end
+if type(SYS.MoveDiag)~="function" then return {"(本版没有 MoveDiag)"} end
+local ok,lines=pcall(SYS.MoveDiag)
+if not ok then
+return { "(移动自检报错 —— 把这行发我就能定位): "..tostring(lines) }
+end
+if type(lines)~="table" then return {"(MoveDiag 没返回表)"} end
 return lines
 end, "判『这服移动类能不能做』—— AuthorityMode=Server 即客户端无解")
 end
