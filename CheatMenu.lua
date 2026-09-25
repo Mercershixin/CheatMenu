@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 19:55 sha b5870ebd bytes 554474'):format('2026-09-25 19:55','b5870ebd',554474))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v86] =====")
+print(('[CheatMenu] build 2026-09-25 20:05 sha c2529399 bytes 576643'):format('2026-09-25 20:05','c2529399',576643))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v85] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -27,12 +27,58 @@ end)
 local SYS={
 Conns={},Threads={},Unloaded=false,
 T_={
-AntiAFK=true,AutoTrain=false,AutoBonus=false,AutoGym=false,
+Fly=false,Noclip=false,Speed=false,InfiniteJump=false,JumpBoost=false,
+GodMode=false,NoFall=false,DeepHide=false,
+LocalPhrase=true,FullBright=false,PerfBoost=false,TPEnabled=false,NoCollide=false,
+ESP=false,ESPNameTag=false,ESPItem=false,ESPWeapon=false,ESP_NPC=false,ESP_Pick=false,ESP_Door=false,ESP_Mini=false,BlockHandlers=false,QuickInteract=false,AutoHide=false,AutoDodge=false,MenuMouse=true,FreeCam=false,Tracer=false,
+ESP_WallWise=true,
+HUD_Info=false,
+DeadRails_LockHp=false,DeadRails_NoFlop=false,
+TracerAll=true,
+AntiAFK=true,AutoBonus=false,
+EventAtlas=true,LazyRebind=true,WatchPlayers=false,
+AttrWatch=false,ValueWatch=false,TagWatch=false,EntityWatch=false,
+NetSpy=false,IdleStealth=false,PerfProfile=false,
+AutoGym=false,AutoTrain=false,
+TransChat=false,TransUI=false,
 AutoSell=false,SellThresholdEnabled=false,
-DeepHide=false,
-TransChat=false,TransUI=false,TransBilingual=false,TransDyn=true,LocalPhrase=true,
-MenuMouse=true,
-AutoUpdateCheck=true,BootUpdateCheck=true,
+CB_Aim=false,CB_Silent=false,CB_Fire=false,
+CB_PauseMove=false,CB_Predict=true,CB_Team=false,CB_Wall=true,
+CB_Stealth=false,
+CB_Ballistic=false,
+CB_TgtStrict=false,
+CB_SnapFire=false,
+CB_OnlyAlive=true,
+CB_SkipFF=true,
+CB_Melee=false,
+TrapImmune=false,
+UA_Auto=true,UA_Mouse=false,UA_Human=false,CB_HitboxFirst=true,
+PathKey=false,
+AutoUpdateCheck=true,
+BootUpdateCheck=true,
+NightVision=false,NightVisionPro=false,Lantern=false,SuperLight=false,
+NoFog=false,NoShadow=false,
+NoDeath=false,NoKnock=false,
+CB_SilentAim=false,CB_BulletWall=false,CB_BlockRay=false,
+Gun_NoRecoil=false,Gun_InfAmmo=false,Gun_InstantReload=false,Gun_NoDrop=false,
+Gun_NoCooldown=false,Gun_InfItem=false,
+Gun_AimStable=false,
+Gun_NoSpread=false,
+CB_360=false,CB_SilentNoTurn=false,
+NoAggro=false,
+TransBilingual=false,
+TransDyn=true,
+Prot_AntiAdmin=true,
+PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
+ACBlock=false,
+AntiRevertExtra=false,
+CamGuard=false,
+PosRebound=false,
+CB_BlockDeathSignal=false,
+AntiRevert=false,
+KickGuard=false,KickRejoin=false,
+SpeedJitter=false,FlyGround=false,ConnAudit=false,
+Prot_Survive=false,Prot_Kick=false,Prot_Revert=false,
 },
 C_={
 AtlasCap=60000,
@@ -88,7 +134,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="1.0.0"
+SYS.BuildVer="12.6.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1151,7 +1197,6 @@ end
 end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
-Fly=true, Noclip=true, Speed=true, InfiniteJump=true, JumpBoost=true, GodMode=true, NoFall=true, FullBright=true, PerfBoost=true, TPEnabled=true, NoCollide=true, ESP=true, ESPNameTag=true, ESPItem=true, ESPWeapon=true, ESP_NPC=true, ESP_Pick=true, ESP_Door=true, ESP_Mini=true, BlockHandlers=true, QuickInteract=true, AutoHide=true, AutoDodge=true, FreeCam=true, Tracer=true, ESP_WallWise=true, HUD_Info=true, DeadRails_LockHp=true, DeadRails_NoFlop=true, TracerAll=true, EventAtlas=true, LazyRebind=true, WatchPlayers=true, AttrWatch=true, ValueWatch=true, TagWatch=true, EntityWatch=true, NetSpy=true, IdleStealth=true, PerfProfile=true, CB_Aim=true, CB_Silent=true, CB_Fire=true, CB_PauseMove=true, CB_Predict=true, CB_Team=true, CB_Wall=true, CB_Stealth=true, CB_Ballistic=true, CB_TgtStrict=true, CB_SnapFire=true, CB_OnlyAlive=true, CB_SkipFF=true, CB_Melee=true, TrapImmune=true, UA_Auto=true, UA_Mouse=true, UA_Human=true, CB_HitboxFirst=true, PathKey=true, NightVision=true, NightVisionPro=true, Lantern=true, SuperLight=true, NoFog=true, NoShadow=true, NoDeath=true, NoKnock=true, CB_SilentAim=true, CB_BulletWall=true, CB_BlockRay=true, Gun_NoRecoil=true, Gun_InfAmmo=true, Gun_InstantReload=true, Gun_NoDrop=true, Gun_NoCooldown=true, Gun_InfItem=true, Gun_AimStable=true, Gun_NoSpread=true, CB_360=true, CB_SilentNoTurn=true, NoAggro=true, Prot_AntiAdmin=true, PC_LoopTP=true, PC_OnHead=true, PC_Orbit=true, PC_Stare=true, PC_Follow=true, ACBlock=true, AntiRevertExtra=true, CamGuard=true, PosRebound=true, CB_BlockDeathSignal=true, AntiRevert=true, KickGuard=true, KickRejoin=true, SpeedJitter=true, FlyGround=true, ConnAudit=true, Prot_Survive=true, Prot_Kick=true, Prot_Revert=true,
 SpeedCap=true,
 ACBlock=true, KickGuard=true, KickRejoin=true, AntiRevert=true, AntiRevertExtra=true, PosRebound=true, GodMode=true, NoFall=true, DeadRails_LockHp=true, DeadRails_NoFlop=true, UA_Auto=true, UA_Mouse=true, UA_Human=true, CB_BlockRay=true, FlyGround=true, Gun_InfAmmo=true, Gun_InstantReload=true, Gun_NoRecoil=true, Gun_NoDrop=true, Gun_NoCooldown=true, Gun_InfItem=true, Gun_AimStable=true, Gun_NoSpread=true, MenuMouse=true,
 SpeedJitter=true, PathKey=true, CB_BlockDeathSignal=true, CB_HitboxFirst=true, CB_OnlyAlive=true, CB_Melee=true, CB_PauseMove=true, CB_Stealth=true, CB_SkipFF=true, BlockHandlers=true, EventAtlas=true, NetSpy=true, LazyRebind=true, ConnAudit=true, WatchPlayers=true, AttrWatch=true, ValueWatch=true, TagWatch=true, EntityWatch=true, IdleStealth=true, PerfProfile=true,
@@ -13346,17 +13391,256 @@ end
 end
 end
 UI.Defs={
-{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
+{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
 }
-UI.Pages["功能"]=function(p)
-UI.Section(p,"🕳 藏身 · 自杀",CY.green)
-UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
-UI.Btn(p,"☠ 自杀 (抹除自己的角色)",CY.red,function() P(SYS.ForceSuicide,"erase") end)
+UI.Pages["移动"]=function(p)
+UI.Section(p,"✈️ 飞行",CY.accent)
+UI.Switch(p,"飞行 (Fly)","Fly",function(on)
+if not on then SYS.CleanFly() end
+SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
+P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.restore() end end)
+P(SYS.SyncAntiRevert)
+end)
+UI.Slider(p,"飞行速度 (格/秒 · 直接填你要的速度, 0=用默认倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
+UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
+function() return SYS.C_.FlyMode or "Align" end,
+function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
 UI.Div(p)
+UI.Section(p,"⚡ 移动加速",CY.accent)
+UI.Switch(p,"加速 (Speed)","Speed",function(on)
+if not on then SYS.CleanSpeed() end
+SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
+P(SYS.SyncAntiRevert)
+end)
+UI.Slider(p,"移动速度 (格/秒 · 直接填你要的速度, 0=用默认倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
+UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
+function() return SYS.C_.SpeedMode or "Linear" end,
+function(v)
+SYS.C_.SpeedMode=v
+if v=="WalkSpeed" then SYS.Notify("⚠ WalkSpeed 模式服务端可读, 推荐 Linear",CY.yellow) end
+if SYS.T_.Speed then SYS.CleanSpeed() end
+end)
+UI.Div(p)
+UI.Div(p)
+UI.Div(p)
+UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
+UI.Switch(p,"穿墙 (角色各部位关碰撞)","Noclip",function(on)
+P(SYS.SetNoclip,on)
+SYS.Notify(("🕳 穿墙 %s"):format(on and "已开" or "已关"), on and SYS.CY.green or SYS.CY.sub)
+end)
+UI.Div(p)
+UI.Section(p,"🛡 免伤",CY.green)
+local NA={tick=0, wrote=0, scanned=0, others={}}
+SYS.NoAggroInfo=NA
+local function otherTarget(pos)
+local best,bd=nil,math.huge
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=SYS.LP then
+local r=bodyOf(pl.Character)
+if r then
+local d=(r.Position-pos).Magnitude
+if d<bd then bd=d best=r end
+end
+end
+end
+return best
+end
+local NA_ATTRS={"Target","Enemy","Aggro","TargetPlayer","TargetEntity","Hostile"}
+function SYS.NoAggroTick()
+if not SYS.T_.NoAggro then return end
+P(function()
+local me=bodyOf(SYS.LP.Character)
+if not me then return end
+local n,w=0,0
+for _,m in ipairs(WS:GetChildren()) do
+local h=pcall(function() return m:FindFirstChildOfClass("Humanoid") end) and m:FindFirstChildOfClass("Humanoid") or nil
+if h then
+local pl=Players:GetPlayerFromCharacter(m)
+if not pl then
+n=n+1
+local root=m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
+local pos=root and root.Position
+for _,k in ipairs(NA_ATTRS) do
+local ok,av=P(function() return m:GetAttribute(k) end)
+if ok and av~=nil then
+local isMe=(av==SYS.LP.Name) or (av==SYS.LP) or (av==SYS.LP.Character)
+if isMe and pos then
+local newt=otherTarget(pos)
+if newt then
+local ok2=P(function() m:SetAttribute(k,newt.Name) end)
+if ok2 then w=w+1 end
+end
+end
+end
+end
+end
+end
+end
+NA.scanned=n NA.wrote=NA.wrote+w NA.tick=NA.tick+1
+end)
+end
+local NoAggroPrev=nil
+function SYS.SetNoAggro(on)
+SYS.T_.NoAggro = on and true or false
+if not on then
+local prev=NoAggroPrev or {}
+NoAggroPrev=nil
+if not prev.trap  then SYS.T_.TrapImmune=false end
+if not prev.dodge then SYS.T_.AutoDodge=false end
+P(function()
+if not prev.trap and SYS.SetTrapImmune then SYS.SetTrapImmune(false) end
+if not prev.dodge and SYS.SetAutoDodge then SYS.SetAutoDodge(false) end
+if prev.dodge and SYS.T_.AutoDodge and SYS.SetAutoDodge then SYS.SetAutoDodge(true) end
+if prev.trap  and SYS.T_.TrapImmune and SYS.SetTrapImmune then SYS.SetTrapImmune(true) end
+end)
+SYS.Notify("🕊 无仇恨模式已关",SYS.CY.sub)
+return
+end
+NoAggroPrev={trap=SYS.T_.TrapImmune and true or false, dodge=SYS.T_.AutoDodge and true or false}
+SYS.T_.TrapImmune=true SYS.T_.AutoDodge=true
+P(function()
+if SYS.SetTrapImmune then SYS.SetTrapImmune(true) end
+if SYS.SetAutoDodge then SYS.SetAutoDodge(true) end
+end)
+SYS.SpawnLoop(function()
+while SYS.T_.NoAggro and not SYS.Unloaded do
+task.wait(0.5)
+P(SYS.NoAggroTick)
+end
+end)
+SYS.Notify("🕊 无仇恨模式已开: 正在把怪的目标改写到别人身上\n(附赠 反陷阱免伤 + 自动躲; 不再自动潜地 —— 要隐身请自己开「藏地下隐身」\n控制台可看 SYS.NoAggroInfo)",SYS.CY.cyan)
+end
+UI.Switch(p,"🕊 无仇恨模式 (怪去打别人 · 唯独不打你)","NoAggro",function(on)
+P(SYS.SetNoAggro,on)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end)
+UI.Switch(p,"🛡 反陷阱免伤","TrapImmune",SYS.SetTrapImmune)
+UI.Section(p,"🦘 跳跃",CY.accent)
+UI.Switch(p,"无限跳跃","InfiniteJump",SYS.SetInfiniteJump)
+UI.Switch(p,"⤴ 超级跳跃 (跳得更高)","JumpBoost",SYS.SetJumpBoost)
+UI.Slider(p,"跳跃高度倍率",1,10,0.5,function() return SYS.C_.JumpMult end,
+function(v)
+SYS.C_.JumpMult=v
+if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,false) P(SYS.SetJumpBoost,true) end
+end,"x%.1f")
+end
+UI.Pages["视觉"]=function(p)
+UI.Section(p,"👁 活物透视 (玩家 / 生物)",CY.accent)
+local LIVING_MODES={"关闭","仅玩家","全部活物(含 NPC/怪物)"}
+UI.Cycle(p,"👁 活物透视",LIVING_MODES,
+function()
+if SYS.T_.ESP_NPC then return "全部活物(含 NPC/怪物)" end
+if SYS.T_.ESP    then return "仅玩家" end
+return "关闭"
+end,
+function(v)
+SYS.T_.ESP_NPC=(v=="全部活物(含 NPC/怪物)")
+SYS.T_.ESP    =(v~="关闭")
+SYS.ESPMaybeClear()
+end)
+UI.Switch(p,"🧱 隔墙只留描边 (关掉 = 全身实心高亮)","ESP_WallWise")
+UI.Div(p)
+UI.Section(p,"🪧 头顶标签 (名字 / 武器标记)",CY.accent)
+UI.Switch(p,"🪧 头顶标签 (名字+血量+距离 · 有武器就标红)","ESPNameTag",function(on)
+SYS.T_.ESPWeapon=on
+SYS.ESPMaybeClear()
+end)
+UI.Div(p)
+UI.Section(p,"🛰 战况面板 (回合 / 战绩 / 在场实体)",CY.accent)
+UI.Switch(p,"🛰 战况面板 (回合 · 战绩 · 在场实体 · 关掉菜单也看得见)","HUD_Info",SYS.SetHUDInfo)
+UI.Div(p)
+UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
+UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
+UI.Slider(p,"快速交互距离 (格)",10,300,5,function() return SYS.C_.QuickRange or 60 end,
+function(v) SYS.C_.QuickRange=v end,"%.0f")
+UI.Switch(p,"🏃 自动藏身 (敌对生物靠近自动钻进藏身点)","AutoHide",SYS.SetAutoHide)
+UI.Div(p)
+UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏)",CY.accent)
+UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏 一起)","ESP_Pick",function(on)
+SYS.T_.ESPItem=on SYS.T_.ESP_Door=on SYS.T_.ESP_Mini=on
+SYS.ESPMaybeClear()
+end)
+UI.Div(p)
+UI.Switch(p,"🎥 相机护栏 (相机离角色太远就拉回)","CamGuard",SYS.SetCamGuard)
+local TR_MODES={"关闭","只看自己","自己+其他玩家"}
+UI.Div(p)
+UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
+UI.Switch(p,"自由视角","FreeCam",function(on)
+if on then SYS.StartFreeCam() else SYS.StopFreeCam() end
+end)
+UI.Div(p)
+UI.Section(p,"🌗 光照 · 去雾 (夜视 / 全亮 / 禁雾)",CY.orange)
+UI.Switch(p,"🚫 禁雾 (去迷雾 · 远处不再白茫茫)","NoFog",function() P(SYS.ReapplyLight) end)
+UI.Switch(p,"🌑 禁阴影","NoShadow",function() P(SYS.ReapplyLight) end)
+UI.Switch(p,"🏮 随身灯笼 (只有你看得见的光)","Lantern",function() P(SYS.ReapplyLight) end)
+local __DIST={"600","1200","3000","8000","全图"}
+UI.Cycle(p,"透视距离 (物件/门/小游戏)",__DIST,
+function()
+local d=tonumber(SYS.C_.PickDist) or 1200
+if d>=9000 then return "全图" end
+return tostring(math.floor(d+0.5))
+end,
+function(v)
+local m={["600"]=600,["1200"]=1200,["3000"]=3000,["8000"]=8000,["全图"]=99999}
+SYS.C_.PickDist=m[v] or 1200
+end)
+UI.Div(p)
+end
+UI.Pages["功能"]=function(p)
 UI.Section(p,"🔍 综合扫描",CY.green)
-UI.Btn(p,"🔍 综合扫描 (结果打到控制台 F9)",CY.green,function()
+UI.Btn(p,"🔍 综合扫描 (全部扫描器一次跑完 · 结果打到控制台 F9)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
+UI.Div(p)
+UI.Section(p,"🔒 生存",CY.green)
+UI.Switch(p,"🔒 生存 (锁血 + 防击倒 + 上帝 + 无坠落 一起)","Prot_Survive",function(on)
+if SYS.SetDRLockHp then P(SYS.SetDRLockHp,on) end
+if SYS.SetDRNoFlop then P(SYS.SetDRNoFlop,on) end
+if SYS.SetNoFall then P(SYS.SetNoFall,on) end
+if SYS.SetGod then P(SYS.SetGod,on) end
+end)
+UI.Btn(p,"☠ 自杀 (抹除自己的角色)",CY.red,function() P(SYS.ForceSuicide,"erase") end)
+UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
+UI.Switch(p,"穿透玩家","NoCollide",function(on) SYS.RefreshNC(on) end)
+UI.Div(p)
+UI.Section(p,"⚡ 性能",CY.cyan)
+UI.Switch(p,"帧率优化 (一键)","PerfBoost",SYS.SetPerf)
+UI.Div(p)
+UI.Section(p,"🛡 防护",CY.orange)
+UI.Switch(p,"🦶 防踢 (本地拦截 + 抢传回同服 + 反作弊通道拦截)","Prot_Kick",function(on)
+local ok,err=true,nil
+if SYS.SetKickGuard then ok,err=SYS.SetKickGuard(on) end
+if on and not ok then
+SYS.T_.Prot_Kick=false
+SYS.Notify("❌ 防踢开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end
+if SYS.SetKickRejoin then P(SYS.SetKickRejoin,on) end
+if SYS.SetAntiCheatBlock then P(SYS.SetAntiCheatBlock,on) end
+end)
+UI.Switch(p,"🛡 防回退 (上报位移像正常走路 + 移动通道 + 位置回压)","Prot_Revert",function(on)
+SYS.T_.AntiRevert=on
+SYS.T_.AntiRevertExtra=on
+SYS.T_.PosRebound=on
+if SYS.SetPosRebound then P(SYS.SetPosRebound,on) end
+if SYS.SyncAntiRevert then P(SYS.SyncAntiRevert) end
+end)
+UI.Switch(p,"🕵 反检测 (菜单挪进隐藏容器 + 关闭可打包)","Prot_AntiAdmin",function(on)
+if on then
+if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
+local ok,err=SYS.Prot.InstallHideGui()
+if not ok then
+SYS.T_.Prot_AntiAdmin=false
+SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+else
+SYS.Notify("🕵 菜单已挪进执行器隐藏容器 + 关闭 Archivable",SYS.CY.green)
+end
+else
+SYS.Prot.RemoveHideGui()
+end
+end)
+UI.Div(p)
 end
 UI.Pages["挂机"]=function(p)
 UI.Label(p,"挂机增强")
@@ -14825,6 +15109,296 @@ if ok then SYS.Notify("摘要已复制到剪贴板",SYS.CY.green) else print(txt
 return txt
 end
 end
+UI.Pages["传送"]=function(p)
+UI.Section(p,"🖱 鼠标传送 · 快速跳转",CY.accent)
+UI.Switch(p,"允许鼠标传送 (T)","TPEnabled")
+UI.Btn(p,"传送到鼠标位置",CY.cyan,SYS.TPToMouse)
+UI.Btn(p,"传送到最近玩家",CY.cyan,SYS.TPToNearest)
+UI.Btn(p,"停止观战 (回自己视角)",CY.orange,SYS.StopSpectate)
+UI.Btn(p,"回到主城",CY.green,function() SYS.TPTo(SYS.GetDefSpawn()) end)
+UI.Btn(p,"保存当前坐标",CY.purple,function()
+local _,_,root=GC()
+if root then
+table.insert(SYS.SavedPos,{name="位置"..#SYS.SavedPos+1,position=root.Position,autoTP=false})
+if SYS.RebuildSaved then SYS.RebuildSaved() end
+P(function()
+SYS.Notify(("📍 已保存位置 #%d (自动循环传送: 关 · 点该行的「自动」按钮开启)")
+:format(#SYS.SavedPos),SYS.CY.cyan)
+end)
+print("[TP] 已保存位置 #"..#SYS.SavedPos.." (autoTP=false · 需要时点列表行里的「自动」按钮)")
+end
+end)
+UI.Cycle(p,"传送方式",{"CFrame","MoveTo"},
+function() return SYS.C_.TPMethod end,
+function(v) SYS.C_.TPMethod=v end)
+UI.Cycle(p,"鼠标传送模式",{"Raycast","Infinite"},
+function() return SYS.C_.MouseTPMode end,
+function(v) SYS.C_.MouseTPMode=v end)
+UI.Section(p,"👥 玩家列表",CY.cyan)
+local plList=Instance.new("ScrollingFrame")
+plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
+plList.BackgroundTransparency=0.3 plList.BorderSizePixel=0 plList.Parent=p
+plList.ClipsDescendants=true
+P(function() plList.CanvasSize=UDim2.new(0,0,0,0) plList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
+P(function() plList.ScrollBarThickness=6 plList.ScrollBarImageColor3=CY.accent end)
+P(function() plList.ScrollingDirection=Enum.ScrollingDirection.Y end)
+P(function() plList.ElasticBehavior=Enum.ElasticBehavior.Never end)
+UI.Round(plList,8) UI.Stroke(plList,CY.line,1,0.85)
+local lay=Instance.new("UIListLayout") lay.Padding=UDim.new(0,4) lay.Parent=plList
+local pad=Instance.new("UIPadding")
+pad.PaddingTop=UDim.new(0,6) pad.PaddingLeft=UDim.new(0,6)
+pad.PaddingRight=UDim.new(0,6) pad.Parent=plList
+local function Ref()
+for _,c in ipairs(plList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+for _,pl in ipairs(Players:GetPlayers()) do
+if pl~=LP then
+local row=Instance.new("Frame")
+row.Size=UDim2.new(1,-12,0,28) row.BackgroundColor3=CY.panel
+row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=plList
+UI.Round(row,6)
+local nm=Instance.new("TextLabel")
+nm.Size=UDim2.new(1,-120,1,0) nm.Position=UDim2.new(0,4,0,0)
+nm.BackgroundTransparency=1 nm.TextColor3=CY.text nm.Text=pl.Name
+nm.Font=Enum.Font.GothamMedium nm.TextSize=13 nm.TextXAlignment=Enum.TextXAlignment.Left
+nm.Parent=row
+local tb=Instance.new("TextButton")
+tb.Size=UDim2.new(0,56,1,0) tb.Position=UDim2.new(1,-116,0,0)
+tb.BackgroundColor3=CY.cyan tb.BackgroundTransparency=0.3 tb.TextColor3=CY.text
+tb.Text="传送" tb.Font=Enum.Font.GothamBold tb.TextSize=11
+tb.BorderSizePixel=0 tb.Parent=row UI.Round(tb,4)
+tb.MouseButton1Click:Connect(function() P(SYS.TPToPlayer,pl) end)
+local sb=Instance.new("TextButton")
+sb.Size=UDim2.new(0,56,1,0) sb.Position=UDim2.new(1,-56,0,0)
+sb.BackgroundColor3=CY.orange sb.BackgroundTransparency=0.3 sb.TextColor3=CY.text
+sb.Text="观战" sb.Font=Enum.Font.GothamBold sb.TextSize=11
+sb.BorderSizePixel=0 sb.Parent=row UI.Round(sb,4)
+sb.MouseButton1Click:Connect(function() P(SYS.Spectate,pl) end)
+end
+end
+end
+Ref()
+T(Players.PlayerAdded:Connect(function() task.wait(0.3) P(Ref) end))
+T(Players.PlayerRemoving:Connect(function() task.wait(0.3) P(Ref) end))
+UI.Label(p,"已保存位置 (点行里的「自动」按钮才会循环传送, 默认关)",CY.sub)
+local svList=Instance.new("ScrollingFrame")
+svList.Size=UDim2.new(1,0,0,140) svList.BackgroundColor3=CY.card
+svList.BackgroundTransparency=0.3 svList.BorderSizePixel=0 svList.Parent=p
+svList.ClipsDescendants=true
+P(function() svList.CanvasSize=UDim2.new(0,0,0,0) svList.AutomaticCanvasSize=Enum.AutomaticSize.Y end)
+P(function() svList.ScrollBarThickness=6 svList.ScrollBarImageColor3=CY.accent end)
+P(function() svList.ScrollingDirection=Enum.ScrollingDirection.Y end)
+P(function() svList.ElasticBehavior=Enum.ElasticBehavior.Never end)
+UI.Round(svList,8) UI.Stroke(svList,CY.line,1,0.85)
+local svLay=Instance.new("UIListLayout") svLay.Padding=UDim.new(0,4) svLay.Parent=svList
+local svPad=Instance.new("UIPadding")
+svPad.PaddingTop=UDim.new(0,6) svPad.PaddingLeft=UDim.new(0,6)
+svPad.PaddingRight=UDim.new(0,6) svPad.Parent=svList
+local function RebuildSaved()
+for _,c in ipairs(svList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+for i,s in ipairs(SYS.SavedPos) do
+local r=Instance.new("Frame")
+r.Size=UDim2.new(1,-12,0,30) r.BackgroundColor3=CY.panel
+r.BackgroundTransparency=0.3 r.BorderSizePixel=0 r.Parent=svList
+UI.Round(r,6)
+local tp=Instance.new("TextButton")
+tp.Size=UDim2.new(0.5,0,1,0) tp.BackgroundTransparency=1
+tp.TextColor3=CY.text
+tp.Text=string.format("%s (%.0f,%.0f,%.0f)",s.name,s.position.X,s.position.Y,s.position.Z)
+tp.Font=Enum.Font.GothamMedium tp.TextSize=12
+tp.TextXAlignment=Enum.TextXAlignment.Left tp.Parent=r
+tp.MouseButton1Click:Connect(function() P(SYS.TPTo,s.position+Vector3.new(0,2,0)) end)
+local au=Instance.new("TextButton")
+au.Size=UDim2.new(0,60,1,0) au.Position=UDim2.new(0.55,0,0,0)
+au.BackgroundColor3=s.autoTP and CY.green or CY.sub
+au.BackgroundTransparency=0.3 au.TextColor3=CY.text
+au.Text=s.autoTP and "自动✓" or "自动"
+au.Font=Enum.Font.GothamBold au.TextSize=11
+au.BorderSizePixel=0 au.Parent=r UI.Round(au,4)
+au.MouseButton1Click:Connect(function()
+s.autoTP=not s.autoTP
+au.Text=s.autoTP and "自动✓" or "自动"
+au.BackgroundColor3=s.autoTP and CY.green or CY.sub
+P(function()
+SYS.Notify(s.autoTP and ("📍 「"..s.name.."」自动循环传送已开启")
+or ("📍 「"..s.name.."」自动循环传送已关闭"),
+s.autoTP and CY.green or CY.sub)
+end)
+end)
+local dl=Instance.new("TextButton")
+dl.Size=UDim2.new(0,40,1,0) dl.Position=UDim2.new(1,-44,0,0)
+dl.BackgroundColor3=CY.red dl.BackgroundTransparency=0.3
+dl.TextColor3=CY.text dl.Text="删"
+dl.Font=Enum.Font.GothamBold dl.TextSize=11
+dl.BorderSizePixel=0 dl.Parent=r UI.Round(dl,4)
+dl.MouseButton1Click:Connect(function()
+table.remove(SYS.SavedPos,i) RebuildSaved()
+end)
+end
+end
+SYS.RebuildSaved=RebuildSaved
+RebuildSaved()
+end
+UI.Pages["战斗"]=function(p)
+local AUTO_TXT="自动 · 按优先级挑"
+UI.Section(p,"📊 实时状态",CY.accent)
+local card,inner=UI.Card(p,175)
+local _,targetV=UI.Stat(inner,"当前目标","—")
+local _,wantV=UI.Stat(inner,"指定目标","自动")
+local _,lockV=UI.Stat(inner,"锁定状态","未锁定")
+local _,aimV=UI.Stat(inner,"瞄准方式","关闭")
+local _,distV=UI.Stat(inner,"距离","—")
+local _,perfV=UI.Stat(inner,"循环频率(选人/开火)","—")
+UI.Div(p)
+UI.Section(p,"🎯 瞄准 (自动瞄准 / 关闭)",CY.accent)
+local AIM_OFF   ="关闭"
+local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
+UI.Cycle(p,"瞄准方式",{AIM_OFF,AIM_AUTO},
+function()
+if SYS.T_.CB_Aim then return AIM_AUTO end
+return AIM_OFF
+end,
+function(v)
+SYS.T_.CB_Aim     =(v==AIM_AUTO)
+SYS.T_.CB_SnapFire=false
+SYS.T_.CB_Silent=false
+if SYS.Combat then
+SYS.Combat.Start()
+SYS.Combat.Say("瞄准方式 -> "..v,SYS.CY.accent)
+end
+end)
+UI.Switch(p,"🎯 360 无死角 (有人就锁就打 · 不看方向/视野)","CB_360")
+UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
+function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
+function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
+UI.Switch(p,"📐 预测瞄准 (算目标移动的提前量)","CB_Predict")
+UI.Switch(p,"🏹 抛射物弹道预判 (弓/火箭/手雷等抛物线武器)","CB_Ballistic")
+UI.Slider(p,"索敌范围 (屏幕像素半径 · 越小越只锁正前方)",40,600,10,
+function() return SYS.C_.CB_Fov end,
+function(v) SYS.C_.CB_Fov=v end,"%.0f")
+UI.Slider(p,"最大距离",50,2000,50,
+function() return SYS.C_.CB_MaxDist end,
+function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
+UI.Div(p)
+UI.Div(p)
+UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
+UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
+UI.Slider(p,"开火间隔 (秒 · 0=每帧都开, 最快)",0,0.50,0.005,
+function() return SYS.C_.CB_FireDelay end,
+function(v) SYS.C_.CB_FireDelay=v end,"%.3f")
+UI.Div(p)
+UI.Section(p,"🧭 打谁 · 选人规则",CY.purple)
+UI.Dropdown(p,"指定目标(点开选择)", function()
+local L={AUTO_TXT}
+local names={}
+local ps=Players:GetPlayers()
+if ps then
+for _,pl in ipairs(ps) do
+if pl~=SYS.LP and pl.Character and pl.Character.Parent then
+names[#names+1]=pl.Name
+end
+end
+end
+table.sort(names)
+for i=1,#names do L[#L+1]=names[i] end
+return L
+end,
+function()
+if SYS.C_.CB_TargetMode==2 and SYS.C_.CB_TargetName and SYS.C_.CB_TargetName~="" then
+return SYS.C_.CB_TargetName
+end
+return AUTO_TXT
+end,
+function(v)
+if (not v) or v==AUTO_TXT then
+SYS.Combat.ClearTarget()
+print("[Combat] 选人方式 -> 自动")
+SYS.Combat.Say("指定目标已清除, 回到自动选人",SYS.CY.sub)
+else
+local got=SYS.Combat.LockTarget(v)
+SYS.Combat.Say(got and ("指定目标 -> "..got) or "指定失败",got and SYS.CY.green or SYS.CY.red)
+end
+SYS.Combat.Start()
+end)
+UI.Div(p)
+UI.Div(p)
+UI.Section(p,"🔀 选人偏好 (自动选人的先后顺序)",CY.purple)
+UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
+function() return ({"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
+function(v)
+local m={["正在瞄我的→指定→最近→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
+SYS.C_.CB_PrioMode = m[v] or 1
+end)
+UI.Switch(p,"🛡 不打队友 (混战/自建房请关掉)","CB_Team")
+UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
+UI.Div(p)
+UI.Div(p)
+UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
+UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线命中)","CB_SilentNoTurn",function(on)
+SYS.T_.CB_SilentAim = on and true or false
+if on then
+local ok,err=SYS.RayHook.Install()
+if not ok then
+SYS.T_.CB_SilentAim=false SYS.T_.CB_SilentNoTurn=false
+SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+else
+SYS.Notify("🙈 真·静默已开 —— 射线改写中, 相机与角色都不动",SYS.CY.red)
+end
+elseif SYS.T_.CB_BulletWall~=true and SYS.T_.CB_BlockRay~=true then
+SYS.RayHook.Remove()
+end
+end)
+UI.Switch(p,"子弹穿墙 (隔墙也判定命中)","CB_BulletWall",function(on)
+if on then
+local ok,err=SYS.RayHook.Install()
+if not ok then
+SYS.T_.CB_BulletWall=false
+SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+else
+SYS.Notify("⚠ 子弹穿墙已开 —— 射线改写中",SYS.CY.red)
+end
+elseif SYS.T_.CB_SilentAim~=true and SYS.T_.CB_BlockRay~=true then
+SYS.RayHook.Remove()
+end
+end)
+task.spawn(function()
+local lastScan,lastHud=0,0
+while card.Parent do
+task.wait(0.5)
+if card.Visible and p.Visible then
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+local cb=SYS.Combat
+if cb then
+local st=cb.Stat or {scan=0,hud=0}
+perfV.Text=("%d / %d 次每秒%s"):format((st.scan-lastScan)*2,(st.hud-lastHud)*2,
+(cb.RenderBound and "" or "  ⚠未运行"))
+lastScan=st.scan lastHud=st.hud
+targetV.Text=cb.Target and cb.Target.Name or "—"
+targetV.TextColor3=cb.Target and CY.green or CY.text
+local want=cb.TargetName and cb.TargetName()
+if want and (SYS.C_.CB_TargetMode or 1)==2 then
+wantV.Text=want
+wantV.TextColor3=CY.yellow
+else
+wantV.Text="自动"
+wantV.TextColor3=CY.sub
+end
+lockV.Text=cb.Target and "已锁定" or "未锁定"
+lockV.TextColor3=cb.Target and CY.green or CY.sub
+if SYS.T_.CB_Aim then
+aimV.Text="自动瞄准" aimV.TextColor3=CY.green
+else
+aimV.Text="关闭" aimV.TextColor3=CY.sub
+end
+local root=(cb.BodyOf and cb.BodyOf(SYS.LP.Character)) or nil
+distV.Text=(cb.TargetPart and root)
+and ("%.0f m"):format((cb.TargetPart.Position-root.Position).Magnitude) or "—"
+end
+end
+end
+end)
+end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"📱 界面缩放",CY.cyan)
 local TDEV=(SYS.DEV and SYS.DEV.anyTouch)==true
@@ -15425,7 +15999,7 @@ fd=false
 end
 end))
 end) end
-ShowTab("挂机")
+ShowTab("战斗")
 P(function()
 local where=SYS.SafeParentGui(sg)
 print("[CheatMenu] 菜单挂载: "..tostring(where))
