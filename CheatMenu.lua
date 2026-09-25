@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 18:29 sha d9bc9709 bytes 644893'):format('2026-09-25 18:29','d9bc9709',644893))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v81] =====")
+print(('[CheatMenu] build 2026-09-25 18:40 sha 2fa1b0d8 bytes 644893'):format('2026-09-25 18:40','2fa1b0d8',644893))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v82] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.3.0"
+SYS.BuildVer="12.3.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -3620,6 +3620,31 @@ disarmLife(h) disarmStand(h)
 end
 end
 SYS.Scanners = SYS.Scanners or {}
+function SYS.ScanAll()
+local out={}
+for _,s in ipairs(SYS.Scanners) do
+out[#out+1]=("── %s ──"):format(tostring(s.name))
+local ok,lines=pcall(s.fn)
+if ok and type(lines)=="table" then
+for i=1,#lines do out[#out+1]="  "..tostring(lines[i]) end
+else
+out[#out+1]="  (该项扫描失败)"
+end
+end
+return out
+end
+function SYS.RegisterScanner(name, fn, desc)
+for _, s in ipairs(SYS.Scanners) do
+if s.name == name then
+s.fn = fn
+s.desc = desc or s.desc
+return s
+end
+end
+local s = { name = name, fn = fn, desc = desc or "" }
+SYS.Scanners[#SYS.Scanners + 1] = s
+return s
+end
 SYS.GC_TTL = 20
 function SYS.GCList(force)
 local now=os.clock()
@@ -4184,31 +4209,6 @@ o[#o+1]="     此时【拦通道/删 remote 反而吃超时判罚】, ACBlock �
 end
 return o
 end)
-function SYS.ScanAll()
-local out={}
-for _,s in ipairs(SYS.Scanners) do
-out[#out+1]=("── %s ──"):format(tostring(s.name))
-local ok,lines=pcall(s.fn)
-if ok and type(lines)=="table" then
-for i=1,#lines do out[#out+1]="  "..tostring(lines[i]) end
-else
-out[#out+1]="  (该项扫描失败)"
-end
-end
-return out
-end
-function SYS.RegisterScanner(name, fn, desc)
-for _, s in ipairs(SYS.Scanners) do
-if s.name == name then
-s.fn = fn
-s.desc = desc or s.desc
-return s
-end
-end
-local s = { name = name, fn = fn, desc = desc or "" }
-SYS.Scanners[#SYS.Scanners + 1] = s
-return s
-end
 SYS.RegisterScanner("游戏信息 / 执行器能力 (实测 · 决定本机能开什么)", function()
 local o={}
 local UA=SYS.UA
