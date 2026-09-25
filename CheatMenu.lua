@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 18:40 sha 2fa1b0d8 bytes 644893'):format('2026-09-25 18:40','2fa1b0d8',644893))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v82] =====")
+print(('[CheatMenu] build 2026-09-25 19:06 sha 339b994b bytes 657440'):format('2026-09-25 19:06','339b994b',657440))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v83] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -76,6 +76,8 @@ CamGuard=false,
 PosRebound=false,
 CB_BlockDeathSignal=false,
 AntiRevert=true,
+KickGuard=false,KickRejoin=false,
+SpeedJitter=false,FlyGround=false,ConnAudit=false,
 },
 C_={
 AtlasCap=60000,
@@ -83,7 +85,7 @@ CamZoom=20,
 LightMode="",
 WL_Sel="",
 GameNameCache="",
-FlySpeed=6,FlyMode="BodyVelocity",
+FlySpeed=6,FlyMode="BodyVelocity",FlyGroundH=4,SpeedCap=0,
 SpeedMult=6,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=6,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
@@ -131,7 +133,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.3.1"
+SYS.BuildVer="12.4.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -551,7 +553,7 @@ HK.n=0
 return n
 end
 function HK.Count() return HK.n end
-local NET={ atlas={t=0,list={},byClass={},n=0}, bound={}, pending={}, spy=false, recvN=0, cap=300, tracked=false }
+local NET={ atlas={t=0,list={},byClass={},n=0}, bound={}, pending={}, spy=false, recvN=0, cap=300, tracked=false, healthN=0, healthLast=0 }
 K.Net=NET
 local CLSSET={ RemoteEvent=true, UnreliableRemoteEvent=true, RemoteFunction=true,
 BindableEvent=true, BindableFunction=true, ProximityPrompt=true, ClickDetector=true }
@@ -662,10 +664,12 @@ end
 local sig
 if r.ClassName=="RemoteFunction" then sig=r.OnClientInvoke else sig=r.OnClientEvent end
 if not sig or type(sig.Connect)~="function" then return nil end
-local rec={remote=r,cbs={cb},name=name,cls=r.ClassName,n=0}
+local rec={remote=r,cbs={cb},name=name,cls=r.ClassName,n=0,at=os.clock(),lastAt=nil,ever=false}
 local ok,conn=pcall(function()
 return sig:Connect(function(...)
 rec.n=rec.n+1
+rec.lastAt=os.clock()
+rec.ever=true
 NET.recvN=NET.recvN+1
 if NET.spy then
 K.Log("recv",("▸ [%s] %s  (参数 %d)"):format(rec.cls,name,select("#",...)),NET.cap)
@@ -702,6 +706,41 @@ n=n+1
 end
 end
 if n>0 then K.Log("bind",("远程下发后重绑 %d 个监听"):format(n),150) end
+return n
+end
+function NET.Health()
+local now=os.clock()
+local rows={}
+for name,b in pairs(NET.bound) do
+local dead=false
+pcall(function() dead=(b.remote==nil or b.remote.Parent==nil) end)
+rows[#rows+1]={ name=name, cls=b.cls, dead=dead, ever=b.ever==true,
+n=b.n or 0, age=now-((b.lastAt or b.at) or now) }
+end
+table.sort(rows,function(x,y)
+if x.dead~=y.dead then return x.dead end
+return (x.n or 0)>(y.n or 0)
+end)
+return rows
+end
+function NET.HealthRebind()
+local n=0
+for name,b in pairs(NET.bound) do
+local dead=false
+pcall(function() dead=(b.remote==nil or b.remote.Parent==nil) end)
+if dead then
+local cbs=b.cbs or {}
+pcall(function() if b.conn then b.conn:Disconnect() end end)
+NET.bound[name]=nil
+local p={list={},cls=b.cls}
+for i=1,#cbs do p.list[#p.list+1]=cbs[i] end
+NET.pending[name]=p
+n=n+1
+end
+end
+if n>0 then K.Log("bind",("健康检查: %d 个绑定目标已失效 -> 改挂起等重发"):format(n),150) end
+NET.healthN=n
+NET.healthLast=os.clock()
 return n
 end
 function NET.PendingN()
@@ -928,6 +967,51 @@ if W.on.ents then return true end
 W.on.ents=true
 return true
 end
+local CN={ n=0, lastAt=0, rows={} }
+K.Conn=CN
+function CN.API()
+local ok,f=pcall(function() return rawget(getfenv(),"getconnections") end)
+if ok and type(f)=="function" then return f end
+local ok2,f2=pcall(function() return getconnections end)
+if ok2 and type(f2)=="function" then return f2 end
+return nil
+end
+function CN.Count(sig)
+if not sig then return nil end
+local gc=CN.API()
+if not gc then return nil end
+local ok,cs=pcall(gc,sig)
+if not ok or type(cs)~="table" then return nil end
+return #cs
+end
+function CN.Probe()
+CN.rows={}
+CN.n=0
+CN.lastAt=os.clock()
+if not CN.API() then return CN.rows,"本机没有 getconnections" end
+local ch,hum,root=nil,nil,nil
+local okG,a,b,c=pcall(function() return SYS.GC() end)
+if okG then ch,hum,root=a,b,c end
+local function add(label,getSig)
+local ok,sig=pcall(getSig)
+local n=(ok and sig) and CN.Count(sig) or nil
+CN.rows[#CN.rows+1]={label=label,n=n}
+end
+add("工作区 子对象增删",function() return WS and WS.ChildAdded end)
+add("玩家 加入",function() return Players and Players.PlayerAdded end)
+add("玩家 离开",function() return Players and Players.PlayerRemoving end)
+if hum then
+add("自己 血量变化",function() return hum:GetPropertyChangedSignal("Health") end)
+add("自己 速度变化",function() return hum:GetPropertyChangedSignal("WalkSpeed") end)
+end
+if root then
+add("自己 位置变化",function() return root:GetPropertyChangedSignal("Position") end)
+end
+local cnt=0
+for i=1,#CN.rows do if CN.rows[i].n then cnt=cnt+1 end end
+CN.n=cnt
+return CN.rows,nil
+end
 local IDLE={ on=false }
 K.Idle=IDLE
 function IDLE.Set(on)
@@ -968,8 +1052,10 @@ if SYS.T_.PerfProfile then K2.Guard("v3.prof",K2.Sched.Profile,true) end
 if SYS.T_.LazyRebind~=false then
 K2.Sched.Add("V3Rebind",function()
 if K2.Net.PendingN()>0 then K2.Guard("v3.rebind",K2.Net.Rebind) end
+K2.Guard("v3.health",K2.Net.HealthRebind)
 end,{sig=RS.Heartbeat,every=3})
 end
+if SYS.T_.ConnAudit then K2.Guard("v3.conn",K2.Conn.Probe) end
 if SYS.T_.EventAtlas then
 task.delay(4,function()
 K2.Guard("v3.atlas",K2.Net.Atlas,true)
@@ -987,6 +1073,106 @@ K2.Guard("v3.hook",K2.Hook.RestoreAll)
 K2.Idle.on=false
 K2.Sched.Pause(false)
 K2.Sched.Clear()
+end
+end
+do
+local KG={ on=false, rj=false, hooked=false, target=nil, hits=0,
+lastReason="", lastAt=0, lastHow="", rjConn=nil, rjTries=0 }
+SYS.KickGuard=KG
+local function note(reason,how)
+KG.hits=KG.hits+1
+KG.lastReason=tostring(reason)
+KG.lastHow=tostring(how)
+KG.lastAt=os.clock()
+pcall(function() GENV.CheatMenu_LastKick=KG.lastReason end)
+pcall(function() if SYS.K then SYS.K.Log("kick",("踢出记录[%s]: %s"):format(KG.lastHow,KG.lastReason),120) end end)
+print(("[CheatMenu] 🦶 防踢[%s]: %s"):format(KG.lastHow,KG.lastReason))
+end
+SYS.KGNote=note
+local function strish(v)
+return (type(v)=="string" and #v>0) or type(v)=="number"
+end
+function SYS.SetKickGuard(on)
+on=on and true or false
+SYS.T_.KickGuard=on
+KG.on=on
+if not on then
+if KG.hooked and SYS.K and SYS.K.Hook then
+if SYS.K.Hook.Restore(KG.target) then KG.hooked=false end
+end
+if SYS.Notify then
+SYS.Notify("🦶 防踢(本地拦截) 已关"..(KG.hits>0 and (" · 本次拦过 "..KG.hits.." 次") or ""),SYS.CY and SYS.CY.sub)
+end
+return true
+end
+if KG.hooked then return true end
+local pl=SYS.LP or LP
+if not pl then return false,"拿不到 LocalPlayer" end
+local kf=pl.Kick
+if type(kf)~="function" then return false,"本执行器取不到 Player.Kick" end
+if not (SYS.K and SYS.K.Hook and SYS.K.Hook.API()) then return false,"本机没有 hookfunction(按红线不动手)" end
+local orig
+local wrapper=function(...)
+local self,msg=...
+if KG.on and self==pl and strish(msg) then
+note(msg,"本地拦截")
+if SYS.Notify then SYS.Notify("🦶 拦下一次本地踢出请求 · 理由见控制台(F9)",SYS.CY and SYS.CY.green) end
+return
+end
+if orig then return orig(...) end
+end
+orig=SYS.K.Hook.Set(kf,wrapper,"KickGuard","hook")
+if type(orig)~="function" then return false,"hookfunction 没返回原函数, 已按红线放弃" end
+KG.target=kf
+KG.hooked=true
+if SYS.Notify then
+SYS.Notify("🦶 防踢已开: 本地 Kick 单点拦截(不用 __namecall) · 边界见按钮里的体检",SYS.CY and SYS.CY.green)
+end
+return true
+end
+function SYS.SetKickRejoin(on)
+on=on and true or false
+SYS.T_.KickRejoin=on
+KG.rj=on
+if not on then
+if KG.rjConn then pcall(function() KG.rjConn:Disconnect() end) KG.rjConn=nil end
+return true
+end
+if KG.rjConn then return true end
+if not Players then return false,"没有 Players" end
+KG.rjConn=Players.PlayerRemoving:Connect(function(p)
+local me=SYS.LP or LP
+if p~=me then return end
+note("自己被移除(可能被踢)", "前兆抢传")
+if not KG.rj then return end
+KG.rjTries=KG.rjTries+1
+pcall(function()
+local ts=game:GetService("TeleportService")
+local place=game.PlaceId
+local job=tostring(game.JobId or "")
+if type(place)~="number" or place<=0 or job=="" then return end
+ts:TeleportToPlaceInstance(place,job,me)
+end)
+end)
+SYS.Conns[#SYS.Conns+1]=KG.rjConn
+return true
+end
+function SYS.KGReport()
+local L={}
+L[#L+1]=("[防踢] 本地拦截=%s(已拦 %d 次)   前兆抢传=%s(已尝试 %d 次)")
+:format(tostring(KG.on),KG.hits,tostring(KG.rj),KG.rjTries)
+if KG.hits>0 then
+L[#L+1]=("  最近一次: [%s] %s"):format(KG.lastHow,KG.lastReason)
+else
+L[#L+1]="  本次会话没有拦到过本地踢出请求。"
+end
+if GENV and GENV.CheatMenu_LastKick then
+L[#L+1]=("  历史留痕 getgenv().CheatMenu_LastKick = %s"):format(tostring(GENV.CheatMenu_LastKick))
+end
+L[#L+1]="  ⛔ 边界一: 服务端 Player:Kick() 走引擎 C 路径, 不经过 Lua 的 Player.Kick ⇒ 本地拦截拦不到它。"
+L[#L+1]="  ⛔ 边界二: 前兆抢传只在「移除已到、连接未断」的窗口里有概率成功, 不保证。"
+L[#L+1]="  ✅ 三层的作用: 少给理由 + 留下线索 + 争一个窗口。真正防踢 = 别做会被判的事。"
+return L
 end
 end
 function SYS.KeyCodeOf(name)
@@ -1914,6 +2100,20 @@ if moved<1.0 then M.stall=(M.stall or 0)+1 else M.stall=0 end
 M.tPos=root.Position M.tAt=now
 return (M.stall or 0)>=2
 end
+local function GroundY(root)
+local ok,hit=P(function()
+local pa=RaycastParams.new()
+local okFT,ft=P(function()
+return Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
+end)
+pa.FilterType=(okFT and ft) or Enum.RaycastFilterType.Blacklist
+pa.FilterDescendantsInstances={LP.Character}
+pcall(function() pa.IgnoreWater=true end)
+return WS:Raycast(root.Position,Vector3.new(0,-400,0),pa)
+end)
+if ok and hit and hit.Position then return hit.Position.Y end
+return nil
+end
 function SYS.FlyTick(dt)
 if not SYS.T_.Fly then return end
 local _,_,root=GC() if not root then return end
@@ -1933,6 +2133,20 @@ end
 end
 if mode~="CFrame" then M.tPos=nil M.tAt=nil end
 if M.forceCFrame then mode="CFrame" end
+if SYS.T_.FlyGround and root and dir.Magnitude>0 then
+local gy=GroundY(root)
+if gy then
+local h=math.max(1,tonumber(SYS.C_.FlyGroundH) or 4)
+local above=root.Position.Y-gy
+local y=dir.Y
+if above>h then
+y=math.min(y,-0.65)
+elseif above<h*0.5 then
+y=math.max(y,0.10)
+end
+dir=Vector3.new(dir.X,y,dir.Z)
+end
+end
 if mode=="CFrame" then
 HoldStates(true)
 if dir.Magnitude>0 then
@@ -1964,7 +2178,29 @@ local function expectSpeed()
 if SYS.T_.Speed then return SYS.SpeedTarget() end
 return SYS.Orig.WalkSpeed or 16
 end
-local function guardSpeed(v) return v end
+local function guardSpeed(v)
+local n=tonumber(v) or 16
+local cur=n
+if SYS.T_.SpeedJitter then
+local t=os.clock()
+local dt=math.min((type(SYS._jitT)=="number") and (t-SYS._jitT) or 0.05,0.25)
+SYS._jitT=t
+local prev=tonumber(SYS._jitW) or n
+local tgt=n+(math.random()*2-1)*n*0.08
+cur=prev+(tgt-prev)*math.min(1,dt/0.22)
+SYS._jitW=cur
+end
+local cap=tonumber(SYS.C_.SpeedCap) or 0
+if cap>0 and cur>cap then
+local t2=os.clock()
+if not SYS._capWarn or (t2-SYS._capWarn)>10 then
+SYS._capWarn=t2
+P(SYS.Notify,("⚠ 速度已按上限夹到 %.0f 格/秒(设置里的「速度上报上限」)"):format(cap),SYS.CY and SYS.CY.yellow)
+end
+cur=cap
+end
+return cur
+end
 local function wantWalkSpeed()
 if SYS.T_.Speed and SYS.C_.SpeedMode=="WalkSpeed" then return guardSpeed(SYS.SpeedTarget()) end
 return guardSpeed(SYS.Orig.WalkSpeed or 16)
@@ -3906,6 +4142,61 @@ if SYS.Notify then SYS.Notify("🛡 反作弊通道拦截已关(上行已还原)
 return true
 end
 end
+SYS.RegisterScanner("🦶 防踢 / 检测面 / 监听健康 (三层防踢 + getconnections 审计 + 监听自检)", function()
+local o={}
+o[#o+1]="【防踢 KickGuard】"
+if SYS.KickGuard and SYS.KGReport then
+local L=SYS.KGReport()
+for i=1,#L do o[#o+1]="  "..L[i] end
+else
+o[#o+1]="  模块未载入"
+end
+o[#o+1]="  📚 公开源码对照: Exunys/Anti-Kick 用 hookmetamethod(game,__namecall) 全局拦 Kick。"
+o[#o+1]="    不抄它(全局 hook=卡顿源, 且无条件 return 会被'对别的对象调 Kick 看返回'识破)。"
+o[#o+1]="    本实现 = 单点 hook Player.Kick + 语义保真透传 + 前兆抢传 + 理由留痕。"
+o[#o+1]=""
+o[#o+1]="【检测面审计 getconnections】(只读; 抄自 Ult-Killer 的手法)"
+local cn=SYS.K and SYS.K.Conn
+if cn then
+local rows,err=cn.Probe()
+if err then
+o[#o+1]="  ⚠ "..tostring(err).." —— 换支持 getconnections 的执行器才能看"
+else
+for i=1,#rows do
+local r=rows[i]
+o[#o+1]=("  %-14s %s"):format(tostring(r.label),r.n~=nil and (tostring(r.n).." 条") or "取不到")
+end
+o[#o+1]="  ★ 判读: 条数 >0 说明【有 Lua 脚本在这台机器上监听这个信号】。"
+o[#o+1]="     正常人一个都不用挂 —— 挂着的多半是游戏自己的本地检测/UI 模块, 这就是检测面在哪。"
+o[#o+1]="  ⛔ 绝不自动断开: 断掉客户端检测监听 = 反作弊收不到数值 = 可能直接吃超时判罚, 是负收益。"
+end
+else
+o[#o+1]="  模块未载入"
+end
+o[#o+1]=""
+o[#o+1]="【监听健康 NET.Health】"
+if SYS.K and SYS.K.Net and SYS.K.Net.Health then
+local rows=SYS.K.Net.Health()
+if #rows==0 then
+o[#o+1]="  当前没有挂着的下行监听(没开相关功能 / 游戏没下发过 remote)"
+else
+local m=#rows
+if m>10 then m=10 end
+for i=1,m do
+local r=rows[i]
+o[#o+1]=("  %s [%s] 收到 %d 次 · 距今 %.0f 秒 %s")
+:format(tostring(r.name),tostring(r.cls),r.n or 0,r.age or 0,
+r.dead and "⛔ 目标实例已失效" or (r.ever and "" or "(从未下发 · 属正常)"))
+end
+local dead=0
+for i=1,#rows do if rows[i].dead then dead=dead+1 end end
+o[#o+1]=("  合计 %d 条监听, 目标实例已失效 %d 条(健康检查会自动改挂起等重发)"):format(#rows,dead)
+end
+else
+o[#o+1]="  模块未载入"
+end
+return o
+end)
 SYS.RegisterScanner("🛡 能力绕过判定 (飞行加速 / 回血锁血上帝 / 高亮透视 · 含外部手法对照)", function()
 local o={}
 local char=LP and LP.Character
@@ -13171,6 +13462,8 @@ P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
 UI.Slider(p,"飞行速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
+UI.Switch(p,"🥾 贴地飞行 (高度压在地面上方几格 · 位置特征像跳跃/爬坡)","FlyGround")
+UI.Slider(p,"贴地飞行 高度 (格)",1,40,1,function() return tonumber(SYS.C_.FlyGroundH) or 4 end,function(v) SYS.C_.FlyGroundH=v end,"%.0f")
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode or "Align" end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
@@ -13189,6 +13482,8 @@ P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"移动速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
 UI.Slider(p,"移动速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
+UI.Switch(p,"🎲 速度人类化 (速度±8%平滑游走 · 恒速反而是暴露特征)","SpeedJitter")
+UI.Slider(p,"速度上报上限 (格/秒 · 0=不夹)",0,500,5,function() return tonumber(SYS.C_.SpeedCap) or 0 end,function(v) SYS.C_.SpeedCap=v end,"%.0f")
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode or "Linear" end,
 function(v)
@@ -13676,6 +13971,22 @@ UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
 "   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
 "📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
 UI.Switch(p,"🛡 反作弊通道拦截 (名字像反作弊/审计的上行一律丢弃)","ACBlock",SYS.SetAntiCheatBlock)
+UI.Switch(p,"🦶 防踢 · 本地拦截 (单点 hook Player.Kick · 不用 __namecall)","KickGuard",function(on)
+local ok,err=SYS.SetKickGuard(on)
+if on and not ok then
+SYS.T_.KickGuard=false
+SYS.Notify("❌ 防踢开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end
+end)
+UI.Switch(p,"🦶 防踢 · 被移除时抢传回同服","KickRejoin",function(on) P(SYS.SetKickRejoin,on) end)
+UI.Tip(p,"★ 公开源码(PotassiumHub / Exunys-Anti-Kick 这一批)做防踢, 清一色 hook 全局 __namecall 拦 Kick。\n"
+.."  本项目【不抄】: ① 全局 namecall hook 是这台脚本的卡顿主因(V3 内核就是为去掉它写的);\n"
+.."  ② 它们普遍无条件 return 吞掉 —— 反作弊「对非玩家对象调 Kick, 看返回是不是 nil」就能认出你换过函数。\n"
+.."★ 本项目改走: 【单点 hook Player.Kick】+【语义保真】——只在'踢的是本玩家 + 理由能转字符串'时拦,\n"
+.."  其余一律原样透传原函数(反作弊验不出差别) + 【被移除时抢传回同服】+【理由写进 getgenv().CheatMenu_LastKick】。\n"
+.."⛔ 说清楚边界: 服务端 Player:Kick() 走引擎 C 路径, 不经过 Lua 的 Player.Kick ⇒ 本地拦截【拦不到真被踢】;\n"
+.."  抢传也只在'移除已到、连接未断'的窗口里有概率成功。它是【少给理由 + 留线索 + 争窗口】, 不是踢不掉。",CY.sub)
 UI.Tip(p,"有些游戏把「死没死」放在 Player 的 Attribute(Health/MaxHealth/State/Shield)里, 而不是 Humanoid。\n"
 .."本开关每 0.2 秒比一次: Attribute 说 State=Dead 或 Health<=0, 但本地 Humanoid 还活着 -> 就写回。\n"
 .."★ 写回带 0.05~0.2 秒随机延迟(避免同帧触发 AttributeChanged 这种一眼假的特征)。\n"
@@ -15886,6 +16197,15 @@ for i=1,#l do print("[CheatMenu][recv] "..l[i]) end
 SYS.Notify(("🛰 最近 %d 条已打到控制台"):format(#l),SYS.CY.cyan)
 end)
 UI.Section(p,"🔔 新增监听面 (以前缺的监听事件)",CY.orange)
+UI.Switch(p,"🔎 检测面审计 (只读列出谁在这台客户端上挂了监听 · 不动手)","ConnAudit",function(on)
+if on then
+P(function()
+local rows,err=SYS.K.Conn.Probe()
+if err then SYS.Notify("⚠ "..tostring(err),CY.yellow)
+else SYS.Notify(("🔎 检测面已扫: %d 项有监听, 详单见「事件扫描」"):format(#rows),CY.cyan) end
+end)
+end
+end)
 UI.Switch(p,"玩家 / 角色 / 死亡 事件","WatchPlayers",function(on) SYS.K.Watch.Players(on and true or false) end)
 UI.Switch(p,"属性变化 (游戏用的 Attribute · 例: Dead Rails 的 EntityName)","AttrWatch",function(on) SYS.K.Watch.Attrs(on and true or false) end)
 UI.Switch(p,"值对象变化 (游戏把状态塞在 IntValue / StringValue 里)","ValueWatch",function(on) SYS.K.Watch.Values(on and true or false) end)
@@ -17398,6 +17718,8 @@ P(function() if SYS.Info then SYS.Info.Clear() end end)
 P(function() if SYS.DeadOnTime then SYS.DeadOnTime.UnhookAll() SYS.DeadOnTime.Clear() end end)
 P(function() if SYS.DRCombat and SYS.DRCombat.UnloadAll then SYS.DRCombat.UnloadAll() end end)
 P(function() if SYS.DRHp and SYS.DRHp.UnloadAll then SYS.DRHp.UnloadAll() end end)
+P(function() if SYS.SetKickGuard then SYS.SetKickGuard(false) end end)
+P(function() if SYS.SetKickRejoin then SYS.SetKickRejoin(false) end end)
 P(function() if SYS.SetAntiCheatBlock then SYS.SetAntiCheatBlock(false) end end)
 P(function() if SYS.SetCamGuard then SYS.SetCamGuard(false) end end)
 P(function() if SYS.SetPosRebound then SYS.SetPosRebound(false) end end)
