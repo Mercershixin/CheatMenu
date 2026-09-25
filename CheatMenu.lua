@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 19:06 sha 339b994b bytes 657440'):format('2026-09-25 19:06','339b994b',657440))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v83] =====")
+print(('[CheatMenu] build 2026-09-25 19:24 sha deb610aa bytes 583779'):format('2026-09-25 19:24','deb610aa',583779))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v84] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -133,7 +133,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.4.0"
+SYS.BuildVer="12.5.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -520,7 +520,7 @@ if ex then return ex.orig end
 local HF=HK.API()
 if not HF then return nil,"本机没有 hookfunction" end
 local ok,orig=pcall(HF,target,wrapper)
-if not ok or type(orig)~="function" then return nil,"hookfunction 不返回原函数(按红线不动手)" end
+if not ok or type(orig)~="function" then return nil,"hookfunction 不返回原函数(按原则不动手)" end
 HK.list[#HK.list+1]={target=target,orig=orig,owner=tostring(owner or "?"),tag=tostring(tag or "?")}
 HK.n=#HK.list
 return orig
@@ -1026,11 +1026,6 @@ if W.on.tags then W.Tags(false) end
 if W.on.ents then W.Entities(false) end
 K.Log("idle","进入静默: 调度器挂起 / 下行监听停 / 属性·值·标签·实体监听全摘")
 else
-if SYS.T_.ValueWatch then K.Guard("idle.val",W.Values,true) end
-if SYS.T_.AttrWatch then K.Guard("idle.attr",W.Attrs,true) end
-if SYS.T_.TagWatch then K.Guard("idle.tag",W.Tags,true) end
-if SYS.T_.EntityWatch then K.Guard("idle.ent",W.Entities,true) end
-if SYS.T_.NetSpy then NET.Spy(true) end
 K.Log("idle","退出静默: 调度器恢复")
 end
 return IDLE.on
@@ -1041,26 +1036,12 @@ if not K2 then return end
 if K2._booted then return end
 K2._booted=true
 K2.Net.Track()
-K2.Watch.Players(SYS.T_.WatchPlayers==true)
-if SYS.T_.AttrWatch then K2.Guard("v3.boot.attr",K2.Watch.Attrs,true) end
-if SYS.T_.ValueWatch then K2.Guard("v3.boot.val",K2.Watch.Values,true) end
-if SYS.T_.TagWatch then K2.Guard("v3.boot.tag",K2.Watch.Tags,true) end
-if SYS.T_.EntityWatch then K2.Guard("v3.boot.ent",K2.Watch.Entities,true) end
-if SYS.T_.NetSpy then K2.Net.Spy(true) end
-if SYS.T_.IdleStealth then K2.Idle.Set(true) end
-if SYS.T_.PerfProfile then K2.Guard("v3.prof",K2.Sched.Profile,true) end
-if SYS.T_.LazyRebind~=false then
+K2.Guard("v3.prof",K2.Sched.Profile,false)
+if true then
 K2.Sched.Add("V3Rebind",function()
 if K2.Net.PendingN()>0 then K2.Guard("v3.rebind",K2.Net.Rebind) end
 K2.Guard("v3.health",K2.Net.HealthRebind)
 end,{sig=RS.Heartbeat,every=3})
-end
-if SYS.T_.ConnAudit then K2.Guard("v3.conn",K2.Conn.Probe) end
-if SYS.T_.EventAtlas then
-task.delay(4,function()
-K2.Guard("v3.atlas",K2.Net.Atlas,true)
-print(("[CheatMenu] 🧩 事件图谱就绪: %d 条(远程/交互/值对象)"):format(K2.Net.atlas.n))
-end)
 end
 print("[CheatMenu] ✅ V3 内核就绪: 统一调度 / 事件总线 / 错误显形 / hook 归属 / 事件图谱")
 end
@@ -1110,7 +1091,7 @@ local pl=SYS.LP or LP
 if not pl then return false,"拿不到 LocalPlayer" end
 local kf=pl.Kick
 if type(kf)~="function" then return false,"本执行器取不到 Player.Kick" end
-if not (SYS.K and SYS.K.Hook and SYS.K.Hook.API()) then return false,"本机没有 hookfunction(按红线不动手)" end
+if not (SYS.K and SYS.K.Hook and SYS.K.Hook.API()) then return false,"本机没有 hookfunction(按原则不动手)" end
 local orig
 local wrapper=function(...)
 local self,msg=...
@@ -1122,7 +1103,7 @@ end
 if orig then return orig(...) end
 end
 orig=SYS.K.Hook.Set(kf,wrapper,"KickGuard","hook")
-if type(orig)~="function" then return false,"hookfunction 没返回原函数, 已按红线放弃" end
+if type(orig)~="function" then return false,"hookfunction 没返回原函数, 已按原则放弃" end
 KG.target=kf
 KG.hooked=true
 if SYS.Notify then
@@ -1169,8 +1150,6 @@ end
 if GENV and GENV.CheatMenu_LastKick then
 L[#L+1]=("  历史留痕 getgenv().CheatMenu_LastKick = %s"):format(tostring(GENV.CheatMenu_LastKick))
 end
-L[#L+1]="  ⛔ 边界一: 服务端 Player:Kick() 走引擎 C 路径, 不经过 Lua 的 Player.Kick ⇒ 本地拦截拦不到它。"
-L[#L+1]="  ⛔ 边界二: 前兆抢传只在「移除已到、连接未断」的窗口里有概率成功, 不保证。"
 L[#L+1]="  ✅ 三层的作用: 少给理由 + 留下线索 + 争一个窗口。真正防踢 = 别做会被判的事。"
 return L
 end
@@ -1217,6 +1196,7 @@ end
 end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
+SpeedJitter=true, PathKey=true, CB_BlockDeathSignal=true, CB_HitboxFirst=true, CB_OnlyAlive=true, CB_Melee=true, CB_PauseMove=true, CB_Stealth=true, CB_SkipFF=true, BlockHandlers=true, EventAtlas=true, NetSpy=true, LazyRebind=true, ConnAudit=true, WatchPlayers=true, AttrWatch=true, ValueWatch=true, TagWatch=true, EntityWatch=true, IdleStealth=true, PerfProfile=true,
 FootstepESP=true,
 AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true,
 TransSili=true,
@@ -1291,7 +1271,6 @@ if on then
 if not sig then return end
 if SYS.K.Idle and SYS.K.Idle.on then
 SYS.K.Idle.Set(false)
-if SYS.T_ then SYS.T_.IdleStealth=false end
 P(function() SYS.Notify("🙈 有功能被打开, 已自动退出空闲静默",SYS.CY and SYS.CY.yellow) end)
 end
 SYS.K.Sched.Add(k,fn,{sig=sig})
@@ -2257,7 +2236,6 @@ local am="(读不到)"
 pcall(function() am=tostring(WS.AuthorityMode) end)
 L[#L+1]=("  Workspace.AuthorityMode = %s"):format(am)
 if am:find("Server",1,true) then
-L[#L+1]="  ⛔ 服务端权威【已开】—— 引擎会直接拒绝你的速度/CFrame 改动(& 抢所有权会报错)。"
 L[#L+1]="     移动类(飞行/加速/穿墙/瞬移)在这服【客户端无解】, 只能靠游戏自己的机制。"
 elseif am:find("Automatic",1,true) then
 L[#L+1]="  ✅ 服务端权威【未开】(Automatic) —— 移动类理论上可做; 飞不动就是别的原因(见上面几行)。"
@@ -3457,7 +3435,7 @@ if not (doAPI("getgc") or doAPI("getGC")) then DO.Note="本机没有 getgc —�
 local function dummy(a) return a end
 local ok,o=pcall(HF,dummy,function(...) return ... end)
 if not ok or type(o)~="function" then
-DO.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
+DO.Note="本机 hookfunction 不返回原函数 —— 按原则不动手"
 return false
 end
 return true
@@ -3675,7 +3653,7 @@ if not (drAPI("getgc") or drAPI("getGC")) then DR.Note="本机没有 getgc —�
 local function dummy(a) return a end
 local ok,o=pcall(HF,dummy,function(...) return ... end)
 if not ok or type(o)~="function" then
-DR.Note="本机 hookfunction 不返回原函数 —— 按红线不动手"
+DR.Note="本机 hookfunction 不返回原函数 —— 按原则不动手"
 return false
 end
 return true
@@ -3994,7 +3972,7 @@ SYS._Hooks={}
 function SYS.SafeHook(target,wrapper,tag)
 if type(target)~="function" then return nil,"目标不是函数" end
 local orig,err=SYS.K.Hook.Set(target,wrapper,tag or "?","hook")
-if not orig then return nil,err or "hookfunction 不可用(按红线不动手)" end
+if not orig then return nil,err or "hookfunction 不可用(按原则不动手)" end
 SYS._Hooks[target]={orig=orig,tag=tag or "?"}
 return orig
 end
@@ -4152,7 +4130,6 @@ else
 o[#o+1]="  模块未载入"
 end
 o[#o+1]="  📚 公开源码对照: Exunys/Anti-Kick 用 hookmetamethod(game,__namecall) 全局拦 Kick。"
-o[#o+1]="    不抄它(全局 hook=卡顿源, 且无条件 return 会被'对别的对象调 Kick 看返回'识破)。"
 o[#o+1]="    本实现 = 单点 hook Player.Kick + 语义保真透传 + 前兆抢传 + 理由留痕。"
 o[#o+1]=""
 o[#o+1]="【检测面审计 getconnections】(只读; 抄自 Ult-Killer 的手法)"
@@ -4168,7 +4145,6 @@ o[#o+1]=("  %-14s %s"):format(tostring(r.label),r.n~=nil and (tostring(r.n).." �
 end
 o[#o+1]="  ★ 判读: 条数 >0 说明【有 Lua 脚本在这台机器上监听这个信号】。"
 o[#o+1]="     正常人一个都不用挂 —— 挂着的多半是游戏自己的本地检测/UI 模块, 这就是检测面在哪。"
-o[#o+1]="  ⛔ 绝不自动断开: 断掉客户端检测监听 = 反作弊收不到数值 = 可能直接吃超时判罚, 是负收益。"
 end
 else
 o[#o+1]="  模块未载入"
@@ -4186,7 +4162,7 @@ for i=1,m do
 local r=rows[i]
 o[#o+1]=("  %s [%s] 收到 %d 次 · 距今 %.0f 秒 %s")
 :format(tostring(r.name),tostring(r.cls),r.n or 0,r.age or 0,
-r.dead and "⛔ 目标实例已失效" or (r.ever and "" or "(从未下发 · 属正常)"))
+r.dead and "目标实例已失效" or (r.ever and "" or "(从未下发 · 属正常)"))
 end
 local dead=0
 for i=1,#rows do if rows[i].dead then dead=dead+1 end end
@@ -4215,22 +4191,18 @@ local stream="读不到"
 pcall(function() stream=tostring(WS.StreamingEnabled) end)
 o[#o+1]="【前提 · 这三条决定一切, 先看这个】"
 o[#o+1]=("  ① 服务端权威 AuthorityMode = %s%s"):format(auth,
-saOn and "   ⛔ 已开 ⇒ 引擎级拒绝客户端位移/属性篡改, 移动类当场结案"
+saOn and "   已开 ⇒ 引擎级拒绝客户端位移/属性篡改, 移动类当场结案"
 or  "   ✅ 未开 ⇒ 客户端动得起来")
 o[#o+1]=("  ② 角色网络所有权 = %s   (空 / 服务端 ⇒ 本地推不动; SA 下永远是服务端)"):format(owner)
 o[#o+1]=("  ③ StreamingEnabled = %s   (true ⇒ 远处物件没下发, 透视会「走近才出」—— 引擎行为, 不是脚本坏了)"):format(stream)
 o[#o+1]=""
-o[#o+1]="【判定表】能力 → 判定 / 打在哪一层 / 怎么做 / 做不到什么"
 o[#o+1]=""
 o[#o+1]="● 飞行 / 加速"
-o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到(SA 服引擎级拒绝)" or "✅ 可做")
 o[#o+1]="  层: ①客户端权威层(改本地动多快) + ②上行通道层(改「上报看起来多快」)"
 o[#o+1]="  怎么做: [4]移动层 SYS._Move 三驱动各自独立 —— Align / BodyVelocity / CFrame 直推;"
 o[#o+1]="          速度一律【格/秒】绝对值 C_.FlyAbs / C_.SpeedAbs (0 = 用倍率; 倍率基准是开局 WalkSpeed, 不写死 16)。"
 o[#o+1]="          过检测走【另一个模块】T_.AntiRevert —— 它只管\"上报给服务端多快\", 与本地速度解耦。"
-o[#o+1]="  做不到: ① SA 服引擎拒绝; ② 上报上限 < 实际速度 ⇒ 服务端把你拽回(=看着像定在原地)。"
 o[#o+1]="          ★ 「跑得快」与「看起来正常」不可兼得 —— 物理限制, 不是参数没调好。"
-o[#o+1]="  ⛔ 别做: 抢网络所有权 SetNetworkOwner(SA 下直接报错) · 伪造位置上报(红线)"
 o[#o+1]=""
 o[#o+1]="● 回血 (治疗)"
 do
@@ -4242,12 +4214,9 @@ if r then hit[#hit+1]=cands[i] end
 end
 o[#o+1]=("  实测: 本服能定位到的治疗类通道 = %s"):format(#hit>0 and table.concat(hit," / ") or "无")
 end
-o[#o+1]="  判定: 有治疗道具的服 ✅(真持有自己触发) / 无客户端上行通道的服 ⛔(凭空回血)"
 o[#o+1]="  层: ①客户端权威层(属性写回 = 只影响本地血条表现) / ③本地表现层"
 o[#o+1]="  怎么做: 唯一真实通道 =【真持有道具 / 乐器, 自己触发】; 本地顶血只改自己看到的血条。"
-o[#o+1]="  做不到: 凭空给别人回血 ⛔ —— 治疗与血量是服务端结算, 客户端伪装不了队友真实血条。"
 o[#o+1]="          (Dead Rails 实测: 220 个 remote 里与玩家血量相关的只有 bandage.Use / snake_oil.Use / RevivePlayer, 无客户端上行通道)"
-o[#o+1]="  ⛔ 已试过并证伪: 直接 FireServer 资源模板远程(赌服务端不校验持有) —— 服务端校验, 无效(该功能已删)"
 o[#o+1]=""
 o[#o+1]="● 锁血 / 防击倒"
 o[#o+1]=("  判定: 锁血 %s / 防击倒 %s"):format(
@@ -4255,27 +4224,20 @@ o[#o+1]=("  判定: 锁血 %s / 防击倒 %s"):format(
 o[#o+1]="  层: ①客户端权威层(同帧把血写回) / ③本地表现层(断开布娃娃)"
 o[#o+1]="  怎么做: DeadRails_LockHp = 血被扣就同一帧顶回满; DeadRails_NoFlop = 被打倒/被摆布娃娃时立刻站起来"
 o[#o+1]="          (Dead Rails 的 ClientPlayerFlopHandler 在客户端 ⇒ 防击倒是这一类里唯一真有效的)"
-o[#o+1]="  做不到: 服务端算伤害的服, 血条会回弹 ⇒ 真·锁血做不到; 真无敌 ⛔"
 o[#o+1]=""
 o[#o+1]="● 上帝模式 / 无敌"
-o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到" or "⚠️ 只对\"伤害在客户端结算\"的服有效")
 o[#o+1]="  层: ①客户端权威层(本地免伤) + ①属性写回"
 o[#o+1]="  怎么做: GodMode(本地免疫) + NoFall(无坠落伤) + TrapImmune(反陷阱免伤)"
-o[#o+1]="  做不到: 伤害在服务端算 ⇒ 客户端拦不到 ⇒ 真无敌做不到(这是本项目的诚实边界, 别承诺)"
-o[#o+1]="  ⛔ 别做: 给游戏内部表灌元表 / 伪造\"我没受伤\"上行"
 o[#o+1]=""
 o[#o+1]="● 高亮 / 透视"
 o[#o+1]="  判定: ✅ 永远有效 —— 这是【纯本地表现层】, 完全不依赖服务端配合"
 o[#o+1]="  层: ③本地表现层(自绘/高亮) + ④检测面层(顺便降暴露)"
 o[#o+1]=("  怎么做: SYS.NewVis 做【边框高亮】(填充 0.88 / 隔墙 0.93, 只留描边); 本轮已挂载高亮载体 %d 个"):format(SYS._doorN or 0)
 o[#o+1]="          敌人 = 红 · 队友 = 绿 · 幽灵 = 紫 · 怪物NPC = 橙; 危险物 = 红 + ☠"
-o[#o+1]="  做不到: StreamingEnabled=true 时服务端没下发的物件看不见(走近才出); 服务端剔除的永远看不到"
 o[#o+1]=""
 o[#o+1]="● 传送"
-o[#o+1]=("  判定: %s"):format(saOn and "⛔ 做不到" or "✅ 可做(分步链)")
 o[#o+1]="  层: ①客户端权威层"
 o[#o+1]="  怎么做: SYS.TPTo 走【分步链】多帧小步, 而不是单帧几百格; 阈值跟着 C_.RevertJump 自适应"
-o[#o+1]="  做不到: SA 服无解; 无上行通道的服也可能被服务端位置校验拉回"
 o[#o+1]=""
 o[#o+1]="● 反检测 / 欺骗 (只降低被抓概率, 不改变服务端判定)"
 o[#o+1]="  层: ④检测面层"
@@ -4413,7 +4375,6 @@ return o
 end)
 SYS.RegisterScanner("🕵 外部手法对照 (2026-09 公开仓库 · 别人怎么绕 / 我们为什么不做)", function()
 local o={}
-o[#o+1]="调研范围: GitHub 最近一个月内更新的 Roblox 相关仓库(2026-08-25 ~ 09-25), 只记技法, 不抄代码。"
 o[#o+1]=""
 o[#o+1]="【飞行 / 加速】别人怎么做"
 o[#o+1]="  · BodyVelocity + BodyGyro 挂 HumanoidRootPart, MaxForce/MaxTorque = math.huge,"
@@ -4421,11 +4382,9 @@ o[#o+1]="    hum.PlatformStand = true, RenderStepped 里按相机向量算 Veloc
 o[#o+1]="  · ★ 可借鉴的一点: 他们给自建实例起了【随机名】(_BV_NAME/_BG_NAME)。"
 o[#o+1]="    我们的「擦掉 GUI 可疑名 / 中性命名」只覆盖了 GUI; 角色身上的驱动实例名也是检测面。"
 o[#o+1]="  · 直接写 humanoid.WalkSpeed(最省事, 也最容易被服务端每帧改写)。"
-o[#o+1]="  ⛔ 不抄: SetNetworkOwner 抢所有权(SA 下直接报错, 且 2026-07-09 起 SA 已正式发布)。"
 o[#o+1]=""
 o[#o+1]="【回血 / 锁血 / 上帝】别人的做法 + 一个反例"
 o[#o+1]="  · 调研到的两个 MM2 / 通用 hub 里【根本没有】godmode / 无限血 / 血锁实现 ——"
-o[#o+1]="    这不是巧合: 血量与伤害在服务端算, 客户端做不了。与我们的结论完全一致(补血 ✅ · 锁血 ⚠️ · 真无敌 ⛔)。"
 o[#o+1]="  · 他们做的替代品是: 断开 Humanoid 的 GetPropertyChangedSignal(「WalkSpeed」/「MaxHealth」) ——"
 o[#o+1]="    用执行器的 getconnections 把【游戏自己挂的】属性监听掐掉。⚠ 本机执行器(Real)没有 getconnections ⇒ 这条路我们走不了。"
 o[#o+1]=""
@@ -4434,16 +4393,12 @@ o[#o+1]="  · 主流做法是 Drawing API(Drawing.new(\"Square\"/\"Text\"/\"Line
 o[#o+1]="    所以反作弊遍历 PlayerGui / 扫 GetDescendants 抓不到。代价: 没有 Roblox 的光照/遮挡/交互表现, 也不会跟着 UI 缩放。"
 o[#o+1]="  · 我们走 Instance 高亮(Highlight)是【有意的取舍】: 名字能中性化、能进 GUI 树做统一管理,"
 o[#o+1]="    但确实更「可见」。⇒ 这就是为什么我们把「关闭时文字脱敏」保留着。"
-o[#o+1]="  ⛔ 不抄: 把 Drawing 当默认(用户实测「位置正确 > 反检测收益」, 容器/表现不动)。"
 o[#o+1]=""
-o[#o+1]="【反作弊对抗】别人怎么做 —— 这一块我们【大量不抄】, 且理由很硬"
 o[#o+1]="  · 他们普遍挂 hookmetamethod(game,「__namecall」) 拦截 Kick / KickPlayer / Ban / Report / FireServer。"
-o[#o+1]="    ⛔ 我们明令禁止: 那是所有实例方法调用的总入口, 实测就是卡顿掉帧的病根(AGENTS §1 第 3 条)。"
 o[#o+1]="  · 他们扫全树把名字像 AC/Kick/Ban 的 RemoteEvent / LocalScript 直接 Disabled + Destroy,"
 o[#o+1]="    并挂 game.DescendantAdded 监控后续补进来的。⚠ 这招对【动态注入式】反作弊是自杀(见下)。"
 o[#o+1]="  · 指纹擦除: 删 getgenv() 里的执行器全局 · 把 identifyexecutor 伪造成「Roblox」 ·"
 o[#o+1]="    hook loadstring 过滤反作弊源码 · hook require 拦 AC 模块 · 改环境元表 __index 让索引返回 nil。"
-o[#o+1]="    ⛔ 我们不做: 删执行器全局 = 自己也没得用; 改元表 = 红线。"
 o[#o+1]="  · 伪装成「活着」: 每隔 30~90 秒给 LocalPlayer 写一个 Heartbeat Attribute。"
 o[#o+1]="    ⚠ 存疑: 服务端若不认这个属性, 写它反而是额外特征。本项目【没有】采用。"
 o[#o+1]="  · 也见到【空壳功能】: 配置项存在、UI 能点, 但代码是 no-op(比如 SpoofName 只是把原函数透传一遍)。"
@@ -4454,7 +4409,6 @@ o[#o+1]="  【A 静态扫描式】遍历 PlayerGui 读 .Text / 找特征实例�
 o[#o+1]="     ⇒ ④ 层(中性名 / 脱敏 / 少留特征实例)有用。"
 o[#o+1]="  【B 动态注入式】随机间隔(带随机噪声)注入 inspector 脚本 → 客户端算一个值 → FireServer 回报 →"
 o[#o+1]="     服务端用 DependantValues 重算比对; 到点没回报就判\"反作弊被动过\"。"
-o[#o+1]="     ⇒ ⛔ 拦通道 / 删 remote / 断网 = 直接吃超时判罚; 改名清全局 = 完全无效;"
 o[#o+1]="        唯一活路是【让上报的数值自洽】—— 即: 别伪造, 只做本地表现, 少碰服务端判据。"
 o[#o+1]="  ⇒ 怎么判是哪一类: 看「🚦 移动环境」+「反作弊模块痕迹」两节;"
 o[#o+1]="    出现「随机间隔 + 限时回报 + 数值比对」特征就是 B 类, 此时 ACBlock 那类拦截要谨慎开。"
@@ -4541,7 +4495,7 @@ local auth=nil
 pcall(function() auth=tostring(WS.AuthorityMode) end)
 o[#o+1]=("  AuthorityMode = %s%s"):format(tostring(auth),
 (auth and string.find(string.lower(auth),"server",1,true))
-and "   ⛔ 服务端权威: 飞行/加速/传送 客户端无解(引擎直接拒绝)" or "")
+and "   服务端权威: 飞行/加速/传送 客户端无解(引擎直接拒绝)" or "")
 end
 do
 local hbN,hbName=0,nil
@@ -9294,7 +9248,7 @@ add(("hook 被游戏调用次数: 相机=%d  鼠标=%d  工作区=%d")
 if CB.HookOK then
 if SYS.T_.CB_Silent and CB.HookStat.cam==0 and CB.HookStat.mouse==0 and CB.HookStat.ray==0 then
 add("   ⚠ 静默装了但游戏从没调用被 hook 的函数 -> 追踪/穿墙不会生效")
-add("     打一枪再看; 若仍全 0 = 服务端判定命中, 客户端做不到, 只能自动瞄准")
+add("     打一枪再看; 若仍全 0 = 服务端判定命中, 客户端不支持, 只能自动瞄准")
 else
 do
 local hn=#(CB.DeathHooked or {})
@@ -12237,7 +12191,7 @@ end
 Ray.FnScanned=true
 Ray.FnStats={fn=nf,named=named,byScript=byScript}
 if named==0 and byScript==0 then
-Ray.FnNote="本机取不到函数名、也拿不到归属脚本 —— 按红线函数层不动手(只走路 A/C)"
+Ray.FnNote="本机取不到函数名、也拿不到归属脚本 —— 按原则函数层不动手(只走路 A/C)"
 end
 return #Ray.FnCands>0
 end
@@ -12640,7 +12594,7 @@ if not okAll then G.Note="  ⚠ 扫描中途出错(已拿到部分结果): "..to
 if named==0 and caps.name then
 G.Note=(G.Note~="" and G.Note.."\n" or "")..
 "  ⚠ 一个函数名都取不到 —— 本执行器给不了 debug.getinfo().name,\n"..
-"     而『只 hook 名字明确的函数』是本项目的硬红线, 所以无后坐力这项在本机不会挂任何东西。"
+"     而『只 hook 名字明确的函数』是本项目的硬原则, 所以无后坐力这项在本机不会挂任何东西。"
 end
 return true
 end
@@ -13352,7 +13306,7 @@ SYS.Notify("🏃 自动藏身: 没找到藏身点(名字/动作里没有 hide/cl
 return false
 end
 if SYS.IsHoneypot and SYS.IsHoneypot(pr) then
-SYS.Notify("⛔ 自动藏身: 那个藏身点名字像蜜罐, 已跳过(绝不替你按)", SYS.CY.yellow)
+SYS.Notify("自动藏身: 那个藏身点名字像蜜罐, 已跳过(绝不替你按)", SYS.CY.yellow)
 return false
 end
 local ok=false
@@ -13450,7 +13404,7 @@ end
 end
 end
 UI.Defs={
-{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="事件",icon="🧩"},{name="设置",icon="⚙"}
+{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
 }
 UI.Pages["移动"]=function(p)
 UI.Section(p,"✈️ 飞行",CY.accent)
@@ -13461,18 +13415,10 @@ P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.re
 P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
-UI.Slider(p,"飞行速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.FlySpeed end,function(v) SYS.C_.FlySpeed=v end)
 UI.Switch(p,"🥾 贴地飞行 (高度压在地面上方几格 · 位置特征像跳跃/爬坡)","FlyGround")
-UI.Slider(p,"贴地飞行 高度 (格)",1,40,1,function() return tonumber(SYS.C_.FlyGroundH) or 4 end,function(v) SYS.C_.FlyGroundH=v end,"%.0f")
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode or "Align" end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
-UI.Tip(p,"三种模式各干各的, 互不影响:\n"
-.."· Align      = LinearVelocity + AlignOrientation(官方推荐, 最稳, 朝相机方向飞)\n"
-.."· BodyVelocity = 老式 BodyVelocity + BodyGyro(旧执行器兼容用)\n"
-.."· CFrame     = 逐帧直接写 CFrame(最直接, 但【服务端位置校验会把你拉回】, 不推荐)\n"
-.."★ 速度填「格/秒」绝对值: 走路的基准是 16, 填 100 就是约 6 倍。填 0 才回落到下面的倍率。\n"
-.."⚠ 想跑得更快又不想被拉回, 需要另开防护页的「防回退(过检测)」—— 那是它的活。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"⚡ 移动加速",CY.accent)
 UI.Switch(p,"加速 (Speed)","Speed",function(on)
@@ -13481,9 +13427,6 @@ SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"移动速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
-UI.Slider(p,"移动速度倍率 (仅在上面为 0 时生效)",0,30,0.5,function() return SYS.C_.SpeedMult end,function(v) SYS.C_.SpeedMult=v end)
-UI.Switch(p,"🎲 速度人类化 (速度±8%平滑游走 · 恒速反而是暴露特征)","SpeedJitter")
-UI.Slider(p,"速度上报上限 (格/秒 · 0=不夹)",0,500,5,function() return tonumber(SYS.C_.SpeedCap) or 0 end,function(v) SYS.C_.SpeedCap=v end,"%.0f")
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode or "Linear" end,
 function(v)
@@ -13491,28 +13434,7 @@ SYS.C_.SpeedMode=v
 if v=="WalkSpeed" then SYS.Notify("⚠ WalkSpeed 模式服务端可读, 推荐 Linear",CY.yellow) end
 if SYS.T_.Speed then SYS.CleanSpeed() end
 end)
-UI.Tip(p,"· Linear       = LinearVelocity(官方推荐, 最稳)\n"
-.."· BodyVelocity = BodyVelocity + BodyGyro(旧执行器兼容)\n"
-.."· WalkSpeed    = 直接改走路速度(最朴素, 但服务端能读到, 容易被判加速)\n"
-.."★ 速度同上: 填「格/秒」绝对值; 填 0 回落到倍率。",CY.yellow)
-UI.Cycle(p,"跳跃伪装模式",{"Height","Power","Both"},
-function() return SYS.C_.JumpSpoofMode or "Height" end,
-function(v)
-SYS.C_.JumpSpoofMode=v
-if v=="Both" then SYS.Notify("⚠ JumpPower 服务端可读, 慎用(已切到 Both)",CY.yellow) end
-if SYS.T_.JumpBoost then P(SYS.SetJumpBoost,true) end
-end)
-UI.Tip(p,"「Height」= 只写 JumpHeight(默认, 服务端一般不读); 「Power」= 只写 JumpPower; 「Both」= 都写(最猛也最显眼)。",CY.sub)
 UI.Div(p)
-UI.Btn(p,"🧪 移动自检 (飞不动/没加速时点这个, 看结果发我)",CY.cyan,function()
-local L=SYS.MoveDiag and SYS.MoveDiag()
-if type(L)=="table" then
-for _,x in ipairs(L) do print(x) end
-SYS.Notify(("🧪 移动自检: 共 %d 行, 见控制台(F9)"):format(#L),SYS.CY.cyan)
-else
-SYS.Notify("❌ 移动自检不可用",SYS.CY.red)
-end
-end)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🕳 穿墙 (NoClip)",CY.accent)
@@ -13520,9 +13442,6 @@ UI.Switch(p,"穿墙 (角色各部位关碰撞)","Noclip",function(on)
 P(SYS.SetNoclip,on)
 SYS.Notify(("🕳 穿墙 %s"):format(on and "已开" or "已关"), on and SYS.CY.green or SYS.CY.sub)
 end)
-UI.Tip(p,"把角色所有部件的 CanCollide 关掉, 并每帧复查一遍(游戏写回来会再关一次); 重生后自动套到新角色。\n"..
-"⚠ 纯客户端: 服务端仍按它自己的碰撞判定走 —— 能不能真穿过去取决于该游戏是客户端还是服务端权威。\n"..
-"⚠ 部分游戏对「位置异常/卡进几何体」另有校验, 出现被拉回或被踢属正常风险。",CY.yellow)
 UI.Div(p)
 UI.Section(p,"🛡 免伤",CY.green)
 local NA={tick=0, wrote=0, scanned=0, others={}}
@@ -13609,31 +13528,7 @@ UI.Switch(p,"🕊 无仇恨模式 (怪去打别人 · 唯独不打你)","NoAggro
 P(SYS.SetNoAggro,on)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 end)
-UI.Tip(p,"「无仇恨」= 把怪物的目标从你身上【挪到别人身上】。怪物打谁由服务端 AI 决定, 客户端只能: \n① 若它把目标存在客户端可读写的 Attribute 里(Target|Enemy|Aggro|TargetPlayer…) -> 直接改写成最近的别的玩家;\n② 改不动 -> 退化成「隐去自己 + 免伤 + 自动躲」(它找不到你, 只能去找别人)。\n诊断: 控制台执行 print(SYS.NoAggroInfo) 看 扫了几个怪 / 改写成功几次。",CY.sub)
-UI.Btn(p,"🔎 看看有哪些怪 / 甩仇成功几次 (控制台)",CY.cyan,function()
-P(function()
-local i=SYS.NoAggroInfo or {}
-print(("[NoAggro] 扫描轮次=%s  扫到非玩家 Humanoid=%s  改写成功=%s")
-:format(tostring(i.tick),tostring(i.scanned),tostring(i.wrote)))
-local n=0
-for _,m in ipairs(WS:GetChildren()) do
-local h=m:FindFirstChildOfClass("Humanoid")
-if h and not Players:GetPlayerFromCharacter(m) then
-n=n+1
-local at={}
-for _,k in ipairs(NA_ATTRS) do
-local av=m:GetAttribute(k)
-if av~=nil then at[#at+1]=k.."="..tostring(av) end
-end
-print(("   %s  %s"):format(tostring(m.Name),
-#at>0 and table.concat(at,"  ") or "(没有任何 Target/Enemy/Aggro 类属性)"))
-end
-end
-if n==0 then print("   (Workspace 里没有非玩家的 Humanoid 模型 —— 这局可能全是玩家)") end
-end)
-end)
 UI.Switch(p,"🛡 反陷阱免伤","TrapImmune",SYS.SetTrapImmune)
-UI.Tip(p,"★ 完全豁免: 被撞/被弹开/被推走的位移 · 定身(走不动) · 布娃娃倒地 · 被坐骑锁住 · 被焊接钉住 · 客户端结算的伤害(掉血立刻补回)。\n★ 免不了: 服务端结算的伤害 —— 服务端是权威, 它扣的血客户端改不动。\n★ 滚石: 被撞后【水平速度清零 + 被拉走就渐进压回撞击点】, 所以不弹开、不被压着推走。\n★ 与「上帝模式」同开时会互相让位(不抢同一个状态)。",CY.yellow)
 UI.Section(p,"🦘 跳跃",CY.accent)
 UI.Switch(p,"无限跳跃","InfiniteJump",SYS.SetInfiniteJump)
 UI.Switch(p,"⤴ 超级跳跃 (跳得更高)","JumpBoost",SYS.SetJumpBoost)
@@ -13645,7 +13540,6 @@ end,"x%.1f")
 end
 UI.Pages["视觉"]=function(p)
 UI.Section(p,"👁 活物透视 (玩家 / 生物)",CY.accent)
-UI.Tip(p,"透视 = 人物高亮(把整个人染色描边, 穿墙可见)。\n掉落物透视用同款高亮(统一亮青) —— 只认【客户端已经拿到】的世界物件(名字像掉落物, 或带可捡/可交互提示)。\nRoblox 不会把别人的背包复制给你, 所以别人包里的东西看不到是引擎限制, 不是脚本问题。")
 local LIVING_MODES={"关闭","仅玩家","全部活物(含 NPC/怪物)"}
 UI.Cycle(p,"👁 活物透视",LIVING_MODES,
 function()
@@ -13658,153 +13552,39 @@ SYS.T_.ESP_NPC=(v=="全部活物(含 NPC/怪物)")
 SYS.T_.ESP    =(v~="关闭")
 SYS.ESPMaybeClear()
 end)
-UI.Tip(p,"把所有【活物】都点亮。🎨 配色: 玩家 = 队友绿 / 敌人红 / 幽灵紫; "..
-"非玩家生物 = 敌对红 / 中立橙。\n"..
-"「敌对」判据 = 名字或 3 层祖先命中敌意词(monster / enemy / seek / rush / ambush / figure / halt / screech / eyes / dupe / snare / spider …)，"..
-"或 Attribute Hostile / Enemy / Aggro 为 true。\n"..
-"拿不准一律算【中立橙】—— 与玩家透视「拿不到队伍 = 队友绿」同一个保守口径, 不误标红。\n"..
-"藏身/幽灵态(Humanoid.Health 被游戏打成 0)照样亮 —— 透视本来就该看得见「藏起来的」。\n"..
-"全 Workspace 扫描已节流, 并与其它透视共用同一次扫描; 隔墙/可见 的填充形态见下方「隔墙高亮形态」。",CY.sub)
-UI.Switch(p,"🧱 隔墙高亮形态 (隔墙=只留描边 / 不隔墙=全身实心)","ESP_WallWise")
-UI.Tip(p,"按【隔墙与否】自动换高亮形态, 本页所有透视通用(玩家 / 生物 / 物件 / 门·陷阱 / 小游戏 / 掉落物):\n"..
-"🧱 在墙后(视线先打到遮挡物) → 只留描边: 填充近全透, 身体内部不高亮, 隔着墙只看得到轮廓;\n"..
-"👤 看得见 → 全身实心: 整个人 / 整个物件是实色的。\n"..
-"两种都【仍然穿墙可见】(深度模式一律 AlwaysOnTop) —— 墙后的目标不会消失; 颜色一个都不动。\n"..
-"关掉 = 恢复旧观感(两种都是淡填充, 只留轮廓)。",CY.sub)
+UI.Switch(p,"🧱 隔墙只留描边 (关掉 = 全身实心高亮)","ESP_WallWise")
 UI.Div(p)
 UI.Section(p,"🪧 头顶标签 (名字 / 武器标记)",CY.accent)
 UI.Switch(p,"🪧 头顶标签 (名字+血量+距离 · 有武器就标红)","ESPNameTag",function(on)
 SYS.T_.ESPWeapon=on
 SYS.ESPMaybeClear()
 end)
-UI.Slider(p,"名字高度(额外抬高)",0,8,0.2,
-function() return SYS.C_.ESPNameH end,function(v) SYS.C_.ESPNameH=v end,"+%.1f")
-UI.Tip(p,"标签内容 = 名字(优先 DisplayName) + 当前/最大血量 + 离你几格; 血量低于 60% 转橙、低于 30% 转红。\n"..
-"有武器(手上或背包里, 标准 Backpack 属性)就在下方再标一行 🔫 武器名(红字)。\n"..
-"挂点自动回退 Head -> UpperTorso -> Torso -> HumanoidRootPart, 名字高度再按角色包围盒自动贴顶。\n"..
-"★ v10.2.0 起血量改读【权威 Attribute】(@Health / @MaxHealth, 拿不到才回退 Humanoid), "..
-"并顺带标出 🛡 护盾量与 ☠(权威状态 = 死)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🛰 战况面板 (回合 / 战绩 / 在场实体)",CY.accent)
 UI.Switch(p,"🛰 战况面板 (回合 · 战绩 · 在场实体 · 关掉菜单也看得见)","HUD_Info",SYS.SetHUDInfo)
-UI.Tip(p,"独立小面板(不占菜单、菜单关掉照样显示), 2.5 次/秒刷新, 全部【只读】:\n"..
-"🏁 回合 = 游戏自己的 Workspace.Room.<房间号>.Data 里的 Round / Rounds / RoundState / GameTime;\n"..
-"🧍 战绩 = 你自己 Player 上的 Attribute: 血量 · 护盾 · 击杀 · 阵亡 · 最高连杀 · 等级 · 资产;\n"..
-"👹 在场实体 / 🚪 当前房间 = DOORS(门)那类游戏的 Workspace.LiveEntities / Workspace.CurrentRooms。\n"..
-"★ 拿不到的字段【整块不显示】—— 换游戏不会留一块写着 0 的假面板, 也不会出假预警。\n"..
-"★ GameTime 等时间字段【按原值直显】: 扫描里它的语义没有定论, 所以不自己算\"还剩几秒\"。\n"..
-"★ 位置: PC 在左下角, 手机/平板在左上角(各自避开最常用的控件)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"⚡ 交互 · 藏身 (对照公开脚本补的)",CY.green)
 UI.Switch(p,"⚡ 快速交互 (免按住 + 触发距离拉大)","QuickInteract",SYS.SetQuickInteract)
 UI.Slider(p,"快速交互距离 (格)",10,300,5,function() return SYS.C_.QuickRange or 60 end,
 function(v) SYS.C_.QuickRange=v end,"%.0f")
 UI.Switch(p,"🏃 自动藏身 (敌对生物靠近自动钻进藏身点)","AutoHide",SYS.SetAutoHide)
-UI.Slider(p,"自动藏身触发距离 (格)",5,150,5,function() return SYS.C_.AutoHideDist or 40 end,
-function(v) SYS.C_.AutoHideDist=v end,"%.0f")
-UI.Btn(p,"🏃 立即钻一次藏身点",CY.green,function() P(SYS.AutoHideNow) end)
-UI.Btn(p,"📖 读密码提示 (控制台 + HUD)",CY.cyan,function() P(SYS.DumpHintTexts) end)
-UI.Tip(p,"⚡ 快速交互 = ProximityPrompt 的「按住时长」归零 + 触发距离拉大(本地视角; 服务端一般只校验距离/权限)。\n"..
-"🏃 自动藏身 = 敌意生物进到设定距离, 用最近的藏身点 Prompt 钻进去 —— 等价于你按 E, **走服务端认可那条路**(不保证服务端一定接受)。\n"..
-"📖 读密码提示 = 找名字含 hint/book/note/paper 的物件并读出它表面 SurfaceGui 上的文字(贴图 Decal 读不到)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"📦 物件高亮 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏)",CY.accent)
 UI.Switch(p,"🔍 物件透视 (掉落物 / 可交互 / 门·陷阱·假门 / 小游戏 一起)","ESP_Pick",function(on)
 SYS.T_.ESPItem=on SYS.T_.ESP_Door=on SYS.T_.ESP_Mini=on
 SYS.ESPMaybeClear()
 end)
-UI.Tip(p,"一个开关同时点亮四类物件(判据合并, 不用分别开):\n"..
-"· 掉落物: 名字像掉落物(pickup/item/chest/gold…), 或客户端能看到的可捡物件\n"..
-"· 可交互: 带 ClickDetector / ProximityPrompt / Tool; 或名字与 3 层祖先名命中分类表(箱子/梯子/按钮/传送/座位/商店/检查点/书·线索/道具·补给/躲藏点/小游戏); 或部件上挂了 SurfaceGui 且里面有字(=密码纸条/提示牌)\n"..
-"· 门 / 陷阱 / 假门: 名字或 3 层祖先命中门·危险词; 或结构是会转的门(Hinge/Motor6D); 或竖直薄板(高>=3.5、厚<=1.5、宽>=2.2, 且不可碰撞/半透明/带贴花/带交互提示)\n"..
-"· 小游戏区域: 名字或 3 层祖先命中区域名(duck hunt / chisel / gauntlet / rightofway / blindout / crushhour / bumpermadness / mpstation / mppadhost / machin) 或含「小游戏/关卡/模式」\n"..
-"🎨 颜色统一: 普通物件 + 普通门 + 小游戏里的东西 = 【亮青轮廓】; 危险(陷阱·伤害机关·切割·假门) = 【红色】+ ☠ 骷髅头。\n"..
-"💡 小游戏区域透视已并入本开关。",CY.sub)
-UI.Btn(p,"🩺 高亮彻底性自检 (控制台)",CY.cyan,function()
-P(function()
-print("[CheatMenu] ===== 物件透视 · 彻底性自检 =====")
-local d=SYS.Index()
-print(("· 本轮 Workspace 实例: %d 个 (透视只看得到有父级的实例)"):format(#d))
-print(("· 本轮真正挂上高亮的载体: %d 个 (池里 %d)"):format(SYS._doorN or 0,#(SYS._doorList or {})))
-local gi=_G.getnilinstances
-if type(gi)=="function" then
-local ok,l2=pcall(gi)
-if ok and type(l2)=="table" then
-local n=0
-for i=1,#l2 do
-local o=l2[i]
-if typeof(o)=="Instance" then
-local ok2,isInt=pcall(function()
-return o:IsA("ProximityPrompt") or o:IsA("ClickDetector") or o:IsA("BasePart")
-end)
-if ok2 and isInt then n=n+1 end
-end
-end
-print(("· 游戏【藏起来】的实例: %d 个(父级为空) —— 其中可交互/部件类 %d 个")
-:format(#l2,n))
-print("  ⇒ 这些【引擎层面画不出来】(Highlight 的 Adornee 必须在 DataModel 里),\n"..
-"     所以不是判据漏了, 是画不了。游戏会在该出现的时候把它们放回来。\n")
-end
-else
-print("· 本机没有 getnilinstances —— 查不到「被藏起来的实例」有几件")
-end
-local hs=SYS._hitStat
-if hs then
-print(("· 自动小游戏: 已触发 %d 次 · 因【同一物件重复交互件】合并掉的 %d 个 · 因每帧上限推迟的 %d 次")
-:format(hs.fired or 0,hs.dup or 0,hs.capped or 0))
-end
-print("怎么读:")
-print("  · 载体数 0 而实例数很大 -> 判据/预算出了问题, 把这张图的名字发我")
-print("  · 载体数正常但你还是没看到某类物件 -> 把那个物件的完整路径发我, 我按路径加判据")
-print("  · 「合并掉的」不为 0 是正常的: 同一物件(如商店人偶)身上往往挂十几个同名交互件,")
-print("    它们本来就该只触发一次 —— 合并是为了【不让同一帧飞出去十几个请求】。")
-SYS.Notify("🩺 自检已打到控制台(F9)",SYS.CY.cyan)
-end)
-end)
 UI.Div(p)
 UI.Switch(p,"🎥 相机护栏 (相机离角色太远就拉回)","CamGuard",SYS.SetCamGuard)
-UI.Slider(p,"相机护栏距离 (格)",10,200,5,function() return SYS.C_.CamGuardDist or 30 end,function(v) SYS.C_.CamGuardDist=v end,"%.0f")
-UI.Tip(p,"飞行/加速/战斗类功能开着时, 相机如果离角色本体太远, 在别人(和服务端)眼里就是「人在这里、视角在天上」的怪样子。\n"
-.."本开关每 0.1 秒量一次相机到角色的距离, 超过阈值就沿视线方向把相机拉回。\n"
-.."★ 自由视角开着、菜单开着时不生效(那是你自己要看的)。默认关。",CY.sub)
 UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
 local TR_MODES={"关闭","只看自己","自己+其他玩家"}
-UI.Cycle(p,"子弹射线 (每个人自己的准心线)",TR_MODES,
-function()
-if not SYS.T_.Tracer then return "关闭" end
-return SYS.T_.TracerAll and "自己+其他玩家" or "只看自己"
-end,
-function(v)
-SYS.T_.Tracer=(v~="关闭")
-SYS.T_.TracerAll=(v=="自己+其他玩家")
-if not SYS.T_.Tracer then P(SYS.TracerHide) end
-end)
-UI.Slider(p,"射线最远距离 (格 · 0=不限)",0,2000,50,
-function() return SYS.C_.TracerMaxDist or 500 end,
-function(v) SYS.C_.TracerMaxDist=v end,"%.0f")
-UI.Slider(p,"射线最多几条 (人多时防卡)",1,24,1,
-function() return SYS.C_.TracerMaxN or 12 end,
-function(v) SYS.C_.TracerMaxN=v end,"%.0f")
-UI.Tip(p,"从每个人【自己的头部】沿【他自己瞄准的方向】伸一条线; 撞到东西就停在那面墙上。\n"..
-"· 只看自己 = 一条, 用相机视线 —— 那就是你的准星, 精确。\n"..
-"· 自己+其他玩家 = 每个人都有一条; 别人的用【他的头部朝向】。\n"..
-"⚠ 客户端读不到别人的鼠标/相机, 所以别人的线是「他的身体/头朝哪边」—— 第三人称游戏多数会让\n"..
-"  身体转向瞄准方向, 够用; 他若开自由视角就会对不上。拿不到的不编。\n"..
-"🎨 自己 = 亮青绿 · 别人 = 橙。线是 3D 物体, 第一人称/第三人称都看得见;\n"..
-"  池化复用(每条常驻, 只改位置/长度), 「最远距离」「最多几条」两道上限防人多时画满屏。\n"..
-"纯视觉: 只画线, 不改弹道、不改命中判定。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
 UI.Switch(p,"自由视角","FreeCam",function(on)
 if on then SYS.StartFreeCam() else SYS.StopFreeCam() end
 end)
-UI.Slider(p,"自由视角速度",10,300,5,function() return SYS.C_.FreeCamSpeed end,function(v) SYS.C_.FreeCamSpeed=v end,"%.0f")
-UI.Slider(p,"自由视角灵敏度",0.1,2,0.05,function() return SYS.C_.FreeCamSens end,function(v) SYS.C_.FreeCamSens=v end,"%.2f")
 UI.Div(p)
 UI.Section(p,"🌗 光照 · 去雾 (夜视 / 全亮 / 禁雾)",CY.orange)
-UI.Cycle(p,"光照档位",SYS.LIGHT_MODES,
-function() return SYS.C_.LightMode or "关闭" end,
-function(v) SYS.C_.LightMode=v P(SYS.ReapplyLight) end)
 UI.Switch(p,"🚫 禁雾 (去迷雾 · 远处不再白茫茫)","NoFog",function() P(SYS.ReapplyLight) end)
 UI.Switch(p,"🌑 禁阴影","NoShadow",function() P(SYS.ReapplyLight) end)
 UI.Switch(p,"🏮 随身灯笼 (只有你看得见的光)","Lantern",function() P(SYS.ReapplyLight) end)
@@ -13819,113 +13599,26 @@ function(v)
 local m={["600"]=600,["1200"]=1200,["3000"]=3000,["8000"]=8000,["全图"]=99999}
 SYS.C_.PickDist=m[v] or 1200
 end)
-UI.Tip(p,"禁雾 = 把 Lighting 的 FogEnd/FogStart 拉到极远 —— 远处不再白茫茫一片。\n"..
-"光照档位互斥: 关闭 / 夜视(提亮) / 超级光明(最亮) / 全亮(亮 + 正午 + 禁雾 + 禁阴影)。\n"..
-"透视距离只作用于【物件 / 门 / 小游戏】; 玩家透视本来就是全图, 不受它限制。\n"..
-"⚠ 有 0.4s 低频守护: 游戏把光改回去会自动抢回来。",CY.sub)
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
 UI.Section(p,"🔍 综合扫描 (十二层一次扫完)",CY.green)
-UI.Btn(p,"🔍 综合扫描 (通信/代码/脚本/实例/数据/连接/环境/反查/值对象/总扫描/DEX/Remote 十二层一次扫完)",CY.green,function()
+UI.Btn(p,"🔍 综合扫描 (全部扫描器一次跑完 · 结果打到控制台 F9)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
-UI.Btn(p,"📋 复制扫描摘要到剪贴板",CY.cyan,function() P(function() SYS.Lab.Summary() end) end)
-UI.Btn(p,"🛡 能力绕过判定 (飞行加速 · 回血 · 锁血 · 上帝 · 高亮 · 透视)","能力判定",function()
-P(function()
-local TARGET="🛡 能力绕过判定 (飞行加速 / 回血锁血上帝 / 高亮透视 · 含外部手法对照)"
-for _,s in ipairs(SYS.Scanners or {}) do
-if s.name==TARGET then
-print("[CheatMenu] ===== "..TARGET.." =====")
-local ok,L=pcall(s.fn)
-if ok and type(L)=="table" then
-for i=1,#L do print("  "..tostring(L[i])) end
-else
-print("  (能力判定扫描失败)")
-end
-SYS.Notify("🛡 能力绕过判定已打到控制台(F9)",SYS.CY.cyan)
-return
-end
-end
-SYS.Notify("❌ 找不到能力判定扫描器",SYS.CY.red)
-end)
-end)
-UI.Btn(p,"🔎 探测本游戏的领取/收集/购买 remote",CY.sub,function()
-P(function() SYS.ProbeEvent("claim") end)
-P(function() SYS.ProbeEvent("pickup") end)
-P(function() SYS.ProbeEvent("buy") end)
-SYS.Notify("探测结果已打到控制台(F9)",SYS.CY.cyan)
-end)
-UI.Tip(p,"点【综合扫描】一个按钮, 结果全部打到控制台(F9), 按十二层分行:\n  ★ 新并入的 4 块(2026-09-25): \n    ① 🛡 能力绕过判定 = 飞行加速/回血/锁血/上帝/高亮/透视/传送 逐条「能不能做·怎么绕·做不到什么」\n    ② 🧩 事件扫描 = V3 事件图谱 + 下行监听 + 新增监听面 + 运行态/错误显形\n    ③ 🧪 自检合集 = 移动自检 / 高亮彻底性 / 穿墙射线 / 武器数值槽(原来散在 4 个按钮)\n    ④ 🕵 外部手法对照 = 2026-09 公开仓库怎么写, 我们为什么抄/不抄\n  A 通信层 = 游戏有哪些 Remote(能触发什么) —— 原来是单独一个按钮, 现在合并进来了\n  B 代码层 = 游戏有哪些函数 + 名字可疑的(damage/fire/aim…)\n  C 脚本层 = 跑了哪些脚本/模块\n  D 实例层 = getnilinstances(游戏藏起来的对象) + Workspace 规模\n  E 数据层 = 自己和他人身上的 Attribute 全字段(vs @Health/@Team 就来自这里)\n  F 连接层 = 游戏自己挂了哪些事件监听\n  G 环境层 = 执行器/游戏全局 + registry + 线程身份(能判断脚本跑在什么权限下)\n  H 反查层 = getcallingscript(谁调起的) + 函数闭包 upvalue 概览\n  I DEX 层 = 全图实例浏览器: 类名 TOP30 + RemoteEvent/Script/ProximityPrompt 等关键类的完整路径 + 属性快照\n  J Remote 层 = 每条通道能不能用: 收向监听几条/谁在收 + 命中我们哪个功能类别 + 34 个类别的通道对账\n  K 值对象层 = Value 对象里的游戏状态(阶段/计时/分数/目标 —— 原来只数类名, 现在把值本身列出来)\n  L 总扫描层 = 统一扫描器注册的探测器 + 各模块扫描状态(SP/DO/DR/Ray/Gun) + GC 快照复用统计\n★ I/J/K/L 与其余八层是【同一个按钮、同一次全图遍历】, 不会为了它们把整个游戏多走一遍。\n★ 十层的**完整**内容(含 A 层 200+ 条 remote 全清单)只落成【一个】txt: `CheatMenu\scan_<PlaceId>.txt`\n  —— 就在执行器工作目录的 CheatMenu 文件夹里, 不再套服务器子文件夹、也不会另出第二个文件。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔒 Dead Rails 锁血 · 补血 · 防击倒",CY.green)
 UI.Switch(p,"🔒 锁血 + 补血 (血被扣就同一帧顶回满)","DeadRails_LockHp",SYS.SetDRLockHp)
 UI.Switch(p,"🧍 防击倒 / 防布娃娃 (被打倒或被摆布娃娃时立刻站起来)","DeadRails_NoFlop",SYS.SetDRNoFlop)
-UI.Btn(p,"💚 立即回满血",CY.green,function() P(SYS.DRHp and SYS.DRHp.Refill) end)
-UI.Tip(p,"针对【Dead Rails(亡命铁轨)】的「血」这一块。三条都**只作用于你自己**、纯客户端(只写自己的 Humanoid), 零 hook、不 FireServer。\n"..
-"★ 🔒 锁血 + 补血: 挂 `Humanoid.HealthChanged`, **血一被扣就在同一帧写回 `MaxHealth`** ——\n"..
-"  它**没有**「只处理掉到 0」那种前置, 掉到 0 也照顶; 另加 Heartbeat 兜底守护。\n"..
-"  附: 禁 `Dead` 状态 + `BreakJointsOnDeath=false`。角色重生(换命/复活)会自动重绑。\n"..
-"★ 🧍 防击倒 / 防布娃娃: 禁 `FallingDown` / `Ragdoll` 两个状态, 并每帧把 `FallingDown` / `Ragdoll` / `Physics`\n"..
-"  纠回 `Running`, 同时解 `PlatformStand` 和 `Sit`(被强制坐下)。\n"..
-"  ★ 这一档**最可能真的有效** —— 据扫描, 管击倒的 `ClientPlayerFlopHandler` 是跑在**客户端**的。\n"..
-"★ 💚 立即回满血: 不看上面两个开关, 点一下立刻写满 + 让你站起来。\n"..
-"★★ 诚实边界(必须知道, 别把它当「无敌」): Dead Rails 的**玩家伤害是服务端算的** ——\n"..
-"  我把全部 220 个 remote 过了一遍, 跟血量有关的只有 `bandage.Use` / `snake_oil.Use` / `RevivePlayer`,\n"..
-"  **没有任何「我掉血了」的客户端上行通道**。所以锁血的实际表现是**血条先掉、再被顶回** ——\n"..
-"  当服务端自己把血扣到 0 并判死时, 客户端**拦不住**: 你会看到「血条是满的却突然死」。\n"..
-"  真·无敌做不到的原因: 这游戏用 `Replica`(服务端→客户端状态复制) + `jecs`(ECS), 还有\n"..
-"  `validateLivingCharacter` / `traffic_check` / `DeathFlowTelemetry` 三道校验上报, Player 上还挂着\n"..
-"  **服务端 Attribute `HasDied`** —— 这三样客户端改不动。\n"..
-"★ 想回**真血**: 吃游戏自己的绷带 / 蛇油(`Assets.Tools.Medical.bandage` / `snake_oil`, 走 `.Use` remote)\n"..
-"  —— 那条是服务端认的。",CY.sub)
 UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
 UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
-UI.Cycle(p,"藏身方向",{"地下","天上","平地"},
-function()
-local m=tostring(SYS.C_.DeepHideMode or "down")
-return (m=="up") and "天上" or ((m=="flat") and "平地" or "地下")
-end,
-function(v)
-SYS.C_.DeepHideMode=(v=="天上") and "up" or ((v=="平地") and "flat" or "down")
-if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
-end)
-UI.Slider(p,"藏地下隐身深度 (格 · 小=能交互 / 大=藏得深 · 平地模式用不到)",5,300,5,
-function() return SYS.C_.DeepHideDepth end,
-function(v)
-SYS.C_.DeepHideDepth=v
-if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
-end,"%.0f")
-UI.Slider(p,"左右偏移 (格 · 正=右 负=左)",-100,100,1,
-function() return SYS.C_.DeepHideOffX end,
-function(v)
-SYS.C_.DeepHideOffX=v
-if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
-end,"%.0f")
-UI.Slider(p,"前后偏移 (格 · 正=前 负=后)",-100,100,1,
-function() return SYS.C_.DeepHideOffZ end,
-function(v)
-SYS.C_.DeepHideOffZ=v
-if SYS.DeepHideReapply then P(SYS.DeepHideReapply) end
-end,"%.0f")
-UI.Tip(p,"⚠ 藏地下=【真的把你传送进地下】(位置是服务器同步的, 无法只骗别人不骗自己)。\n"
-.."· 能真实走动(水平速度不再被清零 + 脚下有块客户端隐形地板, 不会一直自由落体)。\n"
-.."· 枪械/近战命中在客户端判定 -> 不受深度影响(能不能打中还取决于游戏是客户端还是服务端判定)。\n"
-.."· 商店/NPC/偷取这类【按距离判定】的交互够不到 -> 把深度调到 10~20 格才有机会够到。\n"
-.."· 藏天上 = 把你抬到头顶高处(相机仍留地面); 偏移 = 开启时往旁边挪一点(左/右/前/后)。\n"
-.."· 关闭时会【在原地浮回地面】, 不会把你弹回开启时的位置。\n"
-.."· 高风险: 服务器可能做位置校验把你拉回/踢掉。",CY.yellow)
 UI.Switch(p,"穿透玩家","NoCollide",function(on) SYS.RefreshNC(on) end)
 UI.Div(p)
 UI.Section(p,"⚡ 帧率优化 (强化版)",CY.cyan)
 UI.Switch(p,"帧率优化 (一键)","PerfBoost",SYS.SetPerf)
-UI.Slider(p,"剔除距离",30,500,10,function() return SYS.C_.PerfCull end,function(v) SYS.C_.PerfCull=v end,"%.0f")
 UI.Div(p)
 UI.Section(p,"☠ 自杀",CY.red)
-UI.Btn(p,"☠ 强制自杀 (抹除)",CY.red,function() SYS.ForceSuicide("erase") end)
-UI.Btn(p,"🕳 强制自杀 (虚空抹除)",CY.red,function() SYS.ForceSuicide("void") end)
-UI.Tip(p,"「抹除」= 直接移除你自己的角色模型; 「虚空抹除」= 先把角色挪到 -5000 高度再判死(某些游戏对出界的处理不同)。\n两条【只作用于你自己】。",CY.sub)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
@@ -13933,16 +13626,6 @@ UI.Switch(p,"🛡 防回退 (过检测: 让上报的位置位移看起来合理)
 UI.Slider(p,"上报速率上限 (格/秒 · 0=只拦瞬移, 推荐)",0,400,5,function() return tonumber(SYS.C_.RevertCap) or 0 end,function(v) SYS.C_.RevertCap=v end,"%.0f")
 UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
 UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
-UI.Tip(p,"★ 先分清两个概念(以前混在一起, 才出过「定在原地」的坑):\n"
-.."  · 飞行/加速 = 【你本地动多快】, 单位是格/秒 —— 在移动页调。\n"
-.."  · 防回退   = 【你上报给服务端多快】, 这才是【过检测】: 让服务端看到的位移像正常走路,\n"
-.."    从而不判瞬移、不把你拉回。\n"
-.."⚠ 所以两者天生互相拉扯: 上报上限比实际速度低, 就会被服务端往回拽; 想真的快, 就得把上限调高或关掉本开关。\n"
-.."★ 本开关默认【关】(11.4.0 默认开, 结果把正常移动也限速了)。\n"
-.."· 只处理移动通道(EntityService.* / Any.* / ClientReplicateCFrame), 别的 remote 一律直通;\n"
-.."· 单位向量(模长≈1)=朝向 -> 放行, 不当位置处理;\n"
-.."· 5 秒内改写 >400 次 -> 【自动关闭】并提示(免得把你钉死)。\n"
-.."📍 位置下行回压 = 反过来: 游戏把「你该在哪」推回来时, 下一帧再盖回去(和游戏抢位置, 可能抖)。",CY.yellow)
 UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
 if on then
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
@@ -13958,18 +13641,6 @@ else
 SYS.Prot.RemoveHideGui()
 end
 end)
-UI.Tip(p,"本分区只保留【真能对抗真实检测】的项目。\n"..
-"· 管理员检测绕过【已默认开启】= ① `protect_gui`(在支持它的执行器上, 游戏脚本完全看不到这个 GUI)\n"..
-"    ② `Archivable=false`(反作弊用 GetDescendants+Clone 打包可疑实例时, 它 Clone 不出来)\n"..
-"    ③ 擦掉实例名里的可疑词。⇒ 对抗的就是反作弊真会看的三样: GUI 名字、容器、能不能被打包。\n"..
-"    ✅ 只动【我们自己的】实例, 不碰游戏 UI、不改任何按键绑定; 菜单仍留在 PlayerGui ⇒ 位置不受影响。\n"..
-"    ⚠ 对「逐帧遍历 PlayerGui/gethui 找可疑 GUI」的检测【防不住】—— 那种本来也拦不住。\n"..
-"    ⚠ 也【挡不住】遍历 Workspace 找 Highlight/多出来的 Part —— 那是透视类功能的固有代价。\n"..
-"★ 共同原则: 【只做零开销的改名与本地处理, 绝不挂 __namecall / __index】。\n"..
-"❌ 已删除(2026-09-22): 「反作弊绕过(hook 本地 Kick/BanAsync)」与「防止被换服(拦 TeleportService)」——\n"..
-"   真实踢/封/传送都由服务端发出, 客户端拦不到; 而且 **hook 本身就是可被检测的特征**\n"..
-"   (反作弊对非玩家对象调 Kick 看是否返回 nil, 就能认出你替换过函数)。\n"..
-"📌 一句话: 能降低「被本地脚本顺手清掉」的概率, 但改变不了服务端看到的东西。",CY.sub)
 UI.Switch(p,"🛡 反作弊通道拦截 (名字像反作弊/审计的上行一律丢弃)","ACBlock",SYS.SetAntiCheatBlock)
 UI.Switch(p,"🦶 防踢 · 本地拦截 (单点 hook Player.Kick · 不用 __namecall)","KickGuard",function(on)
 local ok,err=SYS.SetKickGuard(on)
@@ -13980,36 +13651,7 @@ for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 end
 end)
 UI.Switch(p,"🦶 防踢 · 被移除时抢传回同服","KickRejoin",function(on) P(SYS.SetKickRejoin,on) end)
-UI.Tip(p,"★ 公开源码(PotassiumHub / Exunys-Anti-Kick 这一批)做防踢, 清一色 hook 全局 __namecall 拦 Kick。\n"
-.."  本项目【不抄】: ① 全局 namecall hook 是这台脚本的卡顿主因(V3 内核就是为去掉它写的);\n"
-.."  ② 它们普遍无条件 return 吞掉 —— 反作弊「对非玩家对象调 Kick, 看返回是不是 nil」就能认出你换过函数。\n"
-.."★ 本项目改走: 【单点 hook Player.Kick】+【语义保真】——只在'踢的是本玩家 + 理由能转字符串'时拦,\n"
-.."  其余一律原样透传原函数(反作弊验不出差别) + 【被移除时抢传回同服】+【理由写进 getgenv().CheatMenu_LastKick】。\n"
-.."⛔ 说清楚边界: 服务端 Player:Kick() 走引擎 C 路径, 不经过 Lua 的 Player.Kick ⇒ 本地拦截【拦不到真被踢】;\n"
-.."  抢传也只在'移除已到、连接未断'的窗口里有概率成功。它是【少给理由 + 留线索 + 争窗口】, 不是踢不掉。",CY.sub)
-UI.Tip(p,"有些游戏把「死没死」放在 Player 的 Attribute(Health/MaxHealth/State/Shield)里, 而不是 Humanoid。\n"
-.."本开关每 0.2 秒比一次: Attribute 说 State=Dead 或 Health<=0, 但本地 Humanoid 还活着 -> 就写回。\n"
-.."★ 写回带 0.05~0.2 秒随机延迟(避免同帧触发 AttributeChanged 这种一眼假的特征)。\n"
-.."⚠ 诚实边界: 只改【客户端看到的】Attribute; 服务端判死拦不住。默认关。",CY.sub)
-UI.Tip(p,"原理: 反作弊/审计通道被触发 = 自报家门。本开关把 EventWatch 关键词表落地成「候选通道名」,\n"..
-"  再拦下【发往这些通道的上行】(RemoteEvent.FireServer / RemoteFunction.InvokeServer)。\n"..
-"★ 实现: Roblox 里所有 remote 的 FireServer 是同一个 C 函数 ⇒ 只能 hook 一次(单点), 调用时按 self.Name 判断。\n"..
-"★ 已收窄: 必须【名字命中关键词】且【RemoteRisk 判定像反作弊/审计/后台】才拦 —— 否则商店/领奖/拾取会被一起拦掉。\n"..
-"★ 开火抖动: 所有走 SYS.Fire 的上行加 0~FireJitter 秒随机延迟, 让上报不会「每次都同一时刻」。\n"..
-"⚠ 诚实边界: 只拦【客户端→服务端】上行; 服务端对你的判定、下行推送一律拦不到。默认开。",CY.sub)
 UI.Div(p)
-UI.Btn(p,"🧹 擦掉 GUI 可疑名 (换成中性名)",CY.orange,function()
-local fn=SYS.Prot and SYS.Prot.NeutralizeNames
-local n=(fn and fn()) or 0
-if n>0 then SYS.Notify(("🧹 已把 %d 个可疑名换成中性名"):format(n),SYS.CY.green)
-else SYS.Notify("✔ GUI 名字里没有可疑词, 不用改",SYS.CY.sub) end
-end)
-UI.Tip(p,"只查三样(反作弊找外挂就看这些):\n"..
-"① GUI 名字/层级里有没有 cheat / hack / 外挂 这类词 —— 有就点上面那个「擦掉」;\n"..
-"② ScreenGui 挂在哪个容器: PlayerGui 任何脚本都能遍历, CoreGui 权限更高;\n"..
-"③ 实例是不是 Archivable(能被 GetDescendants + Clone 打包抓走) —— 开「管理员检测绕过」会设成 false。\n"..
-"⚠ 边界: 执行器自己的全局(getgenv / hookfunction 等)是注入的, 脚本层删不掉, 只做如实列出。\n"..
-"  「擦掉」只动名字里真带可疑词的容器, 中性名(名字池里挑的那些)一律不碰。",CY.sub)
 end
 UI.Pages["挂机"]=function(p)
 UI.Label(p,"挂机增强")
@@ -14032,12 +13674,8 @@ if on then SYS.StartGym() else SYS.StopGym() end
 end)
 UI.Div(p)
 UI.Label(p,"基地操作",CY.cyan)
-UI.Btn(p,"💰 一键收取基地金币",CY.green,function() SYS.collectAllCash(30) end)
-UI.Btn(p,"📥 一键收起全部脑红 (1-30)",CY.cyan,function() SYS.withdrawAllBrainrots(30) end)
 UI.Div(p)
 UI.Label(p,"自动售卖（低于 CPS 门槛才卖）",CY.yellow)
-UI.Tip(p,"★ 门槛判的是【背包里显示的基础 CPS】，不是带等级/词缀加成后的当前值 —— "
-.. "同一只脑红升级后当前值会涨很多，按当前值判会「门槛没设多高却什么都不卖」。",CY.sub)
 UI.Switch(p,"自动售卖 (每5秒)","AutoSell",function(on)
 if on and not SYS.T_.SellThresholdEnabled then
 SYS.T_.SellThresholdEnabled=true
@@ -14099,60 +13737,13 @@ box.Text=fmtCompactStr(keep)
 print(("[Sell] 看不懂 %q, 门槛保持 %s（可写 80m / 1.2b / 500k）"):format(tostring(box.Text),fmtCompactStr(keep)))
 end
 end)
-UI.Btn(p,"💸 一键卖出低 CPS 脑红",CY.yellow,function()
-if SYS.sellLowCPSTools then SYS.sellLowCPSTools(true) end
-end)
 UI.Div(p)
 UI.Label(p,"📊 CPS 统计",CY.purple)
 local scanResL=UI.Label(p,"输入 CPS 后点击扫描",CY.sub)
-UI.Btn(p,"🔍 扫描低于当前门槛的脑红数量",CY.purple,function()
-task.spawn(function()
-if scanResL and scanResL.Parent then
-scanResL.Text="扫描中..." scanResL.TextColor3=CY.yellow
-end
-local picks,th,all=0,0,nil
-pcall(function()
-picks,th,all=SYS.scanLowCPSCount()
-end)
-if scanResL and scanResL.Parent then
-if type(picks)=="table" then
-local cnt=#picks
-local names={}
-for i=1,math.min(cnt,8) do
-table.insert(names,("%s(%.0f)"):format(picks[i].Name,picks[i].CPS))
-end
-local preview=table.concat(names,", ")
-if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
-if cnt==0 then
-scanResL.Text=("低于 %.0f 的脑红: 一个都没有"):format(th)
-scanResL.TextColor3=CY.green
-else
-scanResL.Text=("低于 %.0f 共 %d 个  |  %s"):format(th,cnt,preview)
-scanResL.TextColor3=CY.cyan
-end
-print(("[Scan] 低于 %.0f 共 %d 个（按背包显示的 CPS 判）"):format(th,cnt))
-local fc=SYS.SellFmtCompact or tostring
-print(("[Scan] 门槛 = %s (%d)   —— 判定规则: 背包显示值 < 门槛 就卖"):format(fc(th),math.floor(th)))
-print(("  %-30s %12s %12s   %s"):format("物品","背包显示值","表里基础值","判定"))
-for i=1,math.min(#(all or {}),25) do
-local it=all[i]
-print(("  %-30s %12s %12s   %s"):format(
-tostring(it.Name):sub(1,30), fc(it.CPS), fc(it.Base),
-it.Pass and "★卖" or "留"))
-end
-if all and #all>25 then print(("  … 还有 %d 件"):format(#all-25)) end
-else
-scanResL.Text="扫描失败"
-scanResL.TextColor3=CY.red
-end
-end
-end)
-end)
 end
 UI.Pages["翻译"]=function(p)
 UI.Section(p,"💬 翻译开关",CY.accent)
 UI.Label(p,"🖥️ 翻译后端: 本机 llama.cpp (Hy-MT2-7B · 127.0.0.1:8080)",CY.sub)
-UI.Tip(p,"翻译走本机模型, 不需要联网。模型没跑起来时界面翻译不会生效 ——\n双击桌面「翻译模型开关.bat」一键启动(开/关各一个), 起来后会自动重试, 不用重开脚本。",CY.sub)
 UI.Switch(p,"💬 聊天翻译","TransChat",function(on)
 if on then Trans.startChatListener() else Trans.stopChatListener() end
 end)
@@ -14164,15 +13755,6 @@ if Trans.reqOn(false) or Trans.reqOn(true) then P(function() Trans.forceRescan()
 SYS.Notify(on and "🔤 中英对照已开: 译文 (原文)" or "🔤 已关: 只显示译文",SYS.CY.cyan)
 end)
 UI.Switch(p,"⏱️ 跳过动态文本 (CPS/倒计时/金币这类每帧在变的, 不再反复发请求与写缓存)","TransDyn")
-UI.Btn(p,"🧹 查看已跳过的动态文本 (控制台)",CY.sub,function() pcall(Trans.dumpDyn) end)
-UI.Btn(p,"🧾 查看失败/退避清单 (控制台)",CY.sub,function() pcall(Trans.dumpFails) end)
-UI.Btn(p,"🔍 立即强制全屏扫描翻译",CY.cyan,function()
-task.spawn(function()
-print("[Trans] 手动触发全屏扫描...")
-if Trans.forceRescan then pcall(Trans.forceRescan) end
-print("[Trans] ✅ 手动全屏扫描完成")
-end)
-end)
 UI.Div(p)
 UI.Section(p,"📤 发送消息",CY.yellow)
 local langOpts={}
@@ -14229,13 +13811,11 @@ Trans.InflightN or 0, cur, lo, hi, Trans.Slots or 0)
 end
 end
 end)
-UI.Btn(p,"💾 立即保存缓存",CY.cyan,function() Trans.saveCache() end)
 UI.Btn(p,"🗑️ 清空缓存",CY.red,function()
 Trans.clearCache()
 if statL then statL.Text="已缓存 0 条" end
 end)
 UI.Switch(p,"📖 本地短语表 (train→训练 这类常见词离线直译)","LocalPhrase")
-UI.Tip(p,"「清空缓存」只清已缓存的译文 + 删除缓存文件, 不动这个内置短语表。\n关掉这个开关 = 完全依赖翻译模型, 模型没开就一个都不翻。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔌 模型状态",CY.cyan)
 local stL=UI.Label(p,"模型: ⚪ 检测中...",CY.sub)
@@ -14256,24 +13836,7 @@ end)
 end
 Trans.refreshLocalStatus=refresh
 task.spawn(function() task.wait(0.6) refresh() end)
-UI.Btn(p,"🔄 立即检测模型",CY.cyan,refresh)
-UI.Btn(p,"⚙️ 重新探测服务器槽位与上下文",CY.purple,function()
-task.spawn(function()
-if Trans.probeServer then
-local pok=Trans.probeServer()
-print(pok and "[Trans] ✅ 探测成功" or "[Trans] ❌ 探测失败(服务器没开?)")
-refresh()
-end
-end)
-end)
 UI.Div(p)
-UI.Btn(p,"↩️ 恢复聊天翻译原文",CY.purple,function()
-local r=Trans.restoreSource("chat")
-P(function()
-SYS.Notify(("↩️ 已恢复聊天原文 %d 条; 之后引擎重绘也会保持原文"):format(r or 0),CY.purple)
-end)
-end)
-UI.Btn(p,"↩️ 恢复界面翻译原文",CY.purple,function() Trans.restoreSource("ui") end)
 UI.Div(p)
 end
 do
@@ -15536,9 +15099,6 @@ function(v) SYS.C_.TPMethod=v end)
 UI.Cycle(p,"鼠标传送模式",{"Raycast","Infinite"},
 function() return SYS.C_.MouseTPMode end,
 function(v) SYS.C_.MouseTPMode=v end)
-UI.Slider(p,"自动回点距离 (离开保存点超过它就传送回去)",1,50,1,function() return SYS.C_.AutoTPDist end,function(v) SYS.C_.AutoTPDist=v end,"%.0f")
-UI.Switch(p,"⌨ Ctrl+数字 直达保存点","PathKey",SYS.SetPathKey)
-UI.Tip(p,"按住 Ctrl 再按数字键 1~9 -> 直接传送到下面「已保存位置」里对应的那一条(主键盘/小键盘都认)。\n只对前 9 个生效; 那一条还不存在时会在屏幕上提示。默认关(避免误触)。",CY.sub)
 UI.Section(p,"👥 玩家列表",CY.cyan)
 local plList=Instance.new("ScrollingFrame")
 plList.Size=UDim2.new(1,0,0,140) plList.BackgroundColor3=CY.card
@@ -15657,33 +15217,7 @@ UI.Section(p,"⚔ 一键开战 / 停战",CY.green)
 UI.Btn(p,"⚡ 一键开战 (秒锁秒开枪 · 移动中也准)",CY.green,function()
 if SYS.Combat and SYS.Combat.QuickMode then SYS.Combat.QuickMode() end
 end)
-UI.Btn(p,"⚡ 参数全部拉满 (战斗 + 移动 + 视觉 一次到底)",CY.orange,function()
-local ok,n=P(SYS.MaxParams,true)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-SYS.Combat.Say(("⚡ 最暴力档: 已强制拉满 %s 个参数(含移动/视觉, 不管开关开没开)")
-:format(ok and tostring(n) or "?"),SYS.CY.orange)
-end)
-UI.Tip(p,"★ 默认就已经是最暴力档(v9.10.1): 锁头 / 瞬时跟随 / 每帧索敌 / 开火间隔 0.02s / 提前量 0.22s。\n"..
-"只有【你手动调过】的那几项不会被默认覆盖 —— 想一次全部推回最强, 点上面那个按钮。\n"..
-"⚠ 移动类(飞行/移速/跳跃倍率)停在「快但不瞬移」那条线上: 再往上就是 Illegal Teleport, 会被服务端踢,\n"..
-"  那不是「更强」。要更极端的话自己拧移动页滑块, 但踢了别怪脚本。",CY.yellow)
-UI.Btn(p,"🛑 一键停战 (关掉全部开关 + 恢复视角与控制)",CY.red,function()
-if SYS.Combat then
-P(SYS.Combat.DisableAll)
-P(SYS.Combat.Stop)
-end
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-P(SYS.ResetCam)
-P(SYS.EnablePlayerControls)
-SYS.Combat.Say("已停战, 视角与控制已恢复",SYS.CY.red)
-end)
-UI.Tip(p,"「一键开战」= 自动瞄准 + 自动开火 0.04 秒 + 锁头 + 预测 + 优先链(正在瞄我的→指定→最近→屏幕中心)。\n点完直接打就行。",CY.green)
 UI.Div(p)
-UI.Switch(p,"🚫 不提前放弃 (丢掉「自己死了」的客户端信号)","CB_BlockDeathSignal")
-UI.Tip(p,"战斗模块收到「某人死了」的事件时会记一笔(用于判断目标是否已死)。\n"
-.."本开关把【关于你自己】的那一条直接丢掉 —— 不写死亡时间、不清当前目标。\n"
-.."★ 只做客户端自洽: 让你不会因为一条误报就提前放弃打架。\n"
-.."⚠ 诚实边界: 【拦不住服务端判死】—— 服务端说你死了你还是死。默认关。",CY.sub)
 UI.Section(p,"🎯 瞄准 (自动瞄准 / 关闭)",CY.accent)
 local AIM_OFF   ="关闭"
 local AIM_AUTO  ="自动瞄准 · 持续把准星转过去"
@@ -15701,38 +15235,18 @@ SYS.Combat.Start()
 SYS.Combat.Say("瞄准方式 -> "..v,SYS.CY.accent)
 end
 end)
-UI.Tip(p,"「自动瞄准」= 每帧把准星转到目标身上。移动中被相机带偏就打开「移动时暂停瞄准」。\n背身锁得快不快看下面的「跟随速度」(调大更快)。",CY.yellow)
 UI.Switch(p,"🎯 360 无死角 (有人就锁就打 · 不看方向/视野)","CB_360")
-UI.Slider(p,"索敌间隔 (毫秒 · 0=每帧秒锁)",0,200,1,
-function() return SYS.C_.CB_ScanMs or 33 end,
-function(v) SYS.C_.CB_ScanMs=v QueueSave() end,"%.0f")
 UI.Cycle(p,"瞄准部位",{"头","身","自动(离准星最近)"},
 function() return ({"头","身","自动(离准星最近)"})[SYS.C_.CB_AimPart or 2] end,
 function(v) SYS.C_.CB_AimPart = (v=="头") and 1 or ((v=="身") and 2 or 3) end)
 UI.Switch(p,"📐 预测瞄准 (算目标移动的提前量)","CB_Predict")
-UI.Tip(p,"★ v8.7.0 起【默认打开】—— 打移动目标必须有它，不然等于永远瞄他上一帧的位置。"..
-"提前量会随距离自动放大（越远补得越多，最多 3 倍）；速度取不到时退回用人形的移动方向估。",CY.sub)
-UI.Slider(p,"预测提前量 (秒 · 目标越快调越大)",0.05,0.60,0.01,
-function() return SYS.C_.CB_PredictTime end,
-function(v) SYS.C_.CB_PredictTime=v end,"%.2f")
 UI.Switch(p,"🏹 抛射物弹道预判 (弓/火箭/手雷等抛物线武器)","CB_Ballistic")
-UI.Slider(p,"抛射物初速 (studs/秒 · 看武器面板)",20,600,10,
-function() return SYS.C_.CB_ProjSpeed end,
-function(v) SYS.C_.CB_ProjSpeed=v QueueSave() end,"%.0f")
-UI.Slider(p,"下坠加速度 (0=不补下坠)",0,400,5,
-function() return SYS.C_.CB_ProjGrav end,
-function(v) SYS.C_.CB_ProjGrav=v QueueSave() end,"%.0f")
-UI.Tip(p,"★ 「抛射物弹道预判」解的是: 子弹要飞多久才追得上目标 + 飞行途中掉多少 —— 两个一起补,\n  所以远距离/高抛不会再打低。初速对着武器面板(或游戏 wiki)填; 下坠填 196.2 是标准重力,\n  填 0 = 只补飞行时间、不补下坠。\n★ 参数填错顶多「解不出交点」, 会自动退回上面的线性提前量, 不会把瞄准弄坏。\n★ 想知道当前地图的重力: 控制台执行 print(workspace.Gravity)。",CY.yellow)
-UI.Slider(p,"跟随速度 (自动瞄准跟得多紧)",0.05,1,0.05,
-function() return SYS.C_.CB_Smooth end,
-function(v) SYS.C_.CB_Smooth=v end,"%.2f")
 UI.Slider(p,"索敌范围 (屏幕像素半径 · 越小越只锁正前方)",40,600,10,
 function() return SYS.C_.CB_Fov end,
 function(v) SYS.C_.CB_Fov=v end,"%.0f")
 UI.Slider(p,"最大距离",50,2000,50,
 function() return SYS.C_.CB_MaxDist end,
 function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
-UI.Tip(p,"★ 已移除「命中率 / 漏打模式」—— 不再有任何「故意打偏」, 开了就是最准。\n★ 平滑度/预判量/索敌半径已经在上面 —— 对应「跟随速度 / 预测提前量 / 索敌范围」, 不再重复给控件。\n★ 「粘性瞄准(锁定保持)」你早前明确删过, 这次没有加回来 —— 需要的话单独说。",CY.yellow)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"🧭 通用化 (公开源码技法 · 让自瞄在哪都能生效)",CY.accent)
@@ -15747,55 +15261,11 @@ end)
 UI.Switch(p,"人类化瞄准 (反应延迟 + 角度上限 + 死区 + 游走噪声)","UA_Human",function(on)
 if not on and SYS.UA and SYS.UA.humaniseReset then SYS.UA.humaniseReset() end
 end)
-UI.Slider(p,"反应延迟 (毫秒)",0,500,10,function() return SYS.C_.UA_ReactMs end,
-function(v) SYS.C_.UA_ReactMs=v end,"%.0f")
-UI.Slider(p,"每秒最大转角 (度/秒)",60,1800,30,function() return SYS.C_.UA_MaxDeg end,
-function(v) SYS.C_.UA_MaxDeg=v end,"%.0f")
-UI.Slider(p,"死区 (像素)",0,10,0.5,function() return SYS.C_.UA_Dead end,
-function(v) SYS.C_.UA_Dead=v end,"%.1f")
-UI.Slider(p,"游走噪声幅度 (像素)",0,3,0.1,function() return SYS.C_.UA_Noise end,
-function(v) SYS.C_.UA_Noise=v end,"%.1f")
-UI.Switch(p,"优先用游戏自带的瞄准命中盒 (有就用, 没有则不变)","CB_HitboxFirst",function(on)
-if SYS.UA then SYS.UA.hbN=0 SYS.UA.hbName=nil end
-end)
-UI.Btn(p,"🧭 投递实测 (控制台: 相机写入存活率 / 灵敏度 / 命中盒)",CY.cyan,function()
-P(function()
-local UA=SYS.UA
-if not UA then SYS.Notify("UA 未就绪",SYS.CY.red) return end
-print(("[CheatMenu][UA] 投递=%s   相机写入存活率=%s   样本=%d   鼠标请求=%d 次   命中盒命中=%d 次")
-:format(UA.mode,
-UA.stickPct and (tostring(UA.stickPct).."%") or "样本不足",
-UA.samples or 0, UA.sendN or 0, UA.hbN or 0))
-print(("[CheatMenu][UA] 灵敏度 Y=%s P=%s   人类化=%s")
-:format(UA.mouseLearn and "学习中" or "已收敛/未启用",
-UA.mouseLearn and "学习中" or "已收敛/未启用",
-tostring(SYS.T_.UA_Human)))
-print("[CheatMenu][UA] 存活率 <50% = 这个游戏每帧重建相机 ⇒ 「自动」模式会改走鼠标。")
-SYS.Notify("🧭 投递实测已打到控制台(F9)",SYS.CY.cyan)
-end)
-end)
-UI.Tip(p,"【为什么需要这一层】自瞄有两条投递路:\n"
-.."  · 相机 = 直接写 cam.CFrame。精确, 但【游戏自己每帧重建相机时会把你写的丢掉】\n"
-.."    (实测 Phantom Forces / BloxStrike 就是这样) —— 表现是「看着在动、其实没生效」。\n"
-.."  · 鼠标 = 调 mousemoverel, 让【游戏自己的相机控制器】执笔。两种游戏都吃,\n"
-.."    代价是玩家灵敏度客户端读不到 ⇒ 本层会【自学习】(请求多大 / 实际转了多少)。\n"
-.."自动模式 = 先走相机, 同时统计「我写的朝向下一帧还在不在」; 存活率 <50% 且执行器有\n"
-.."mousemoverel 就改用鼠标, 不问你。\n"
-.."人类化 = 反应延迟 + 每秒转角上限 + 死区 + 【平滑游走】噪声(不是每帧白噪声 ——\n"
-.."白噪声在相机上读起来是抖, 游走读起来是手)。默认全关, 想更保守再打。\n"
-.."命中盒优先 = 有些游戏自带瞄准命中盒(AutoAimAreaHead / HeadHB), 那才是它自己打的目标;\n"
-.."有就用, 没有完全按老名单走, 不影响现有手感。\n"
-.."⚠ 诚实边界: 这一层解决的是【自瞄在重建相机的服上静默失效】。飞行/加速/传送在\n"
-.."服务端权威(SA)服仍然做不了(引擎直接拒绝), 真无敌/锁血也做不到(服务端结算)。",CY.yellow)
 UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
 UI.Slider(p,"开火间隔 (秒 · 0=每帧都开, 最快)",0,0.50,0.005,
 function() return SYS.C_.CB_FireDelay end,
 function(v) SYS.C_.CB_FireDelay=v end,"%.3f")
-UI.Slider(p,"只打血量低于此值的目标 (0=不限)",0,100,5,
-function() return SYS.C_.CB_HpThr end,
-function(v) SYS.C_.CB_HpThr=v end,"%.0f")
-UI.Tip(p,"「自动开火」要看得见目标才开枪: 开着自动瞄准时直接用锁定目标;\n瞄准关着时要求准星真压在敌人身上(纯扳机模式)。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🧭 打谁 · 选人规则",CY.purple)
 UI.Dropdown(p,"指定目标(点开选择)", function()
@@ -15830,16 +15300,6 @@ SYS.Combat.Say(got and ("指定目标 -> "..got) or "指定失败",got and SYS.C
 end
 SYS.Combat.Start()
 end)
-UI.Btn(p,"🎯 锁定此刻正在打的目标",CY.green,function()
-local n=SYS.Combat.LockTarget()
-if n then SYS.Combat.Say("已锁定目标: "..n,SYS.CY.green)
-else SYS.Combat.Say("当前没有目标可锁(附近没有可锁目标)",SYS.CY.red) end
-end)
-UI.Btn(p,"🔄 换下一个目标 (热键 V)",CY.accent,function()
-local n=SYS.Combat.CycleTarget(1)
-SYS.Combat.Say(n and ("已切到: "..n) or "附近没有可选目标",n and SYS.CY.green or SYS.CY.red)
-end)
-UI.Switch(p,"🚫 只打指定目标 (他不在就不动手)","CB_TgtStrict")
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"📋 白名单 / 黑名单 (选人硬规则)",CY.orange)
@@ -15855,27 +15315,6 @@ return L
 end,
 function() return SYS.C_.WL_Sel or "" end,
 function(v) SYS.C_.WL_Sel=v end)
-UI.Btn(p,"⬜ 加入白名单 (白名单非空时只选白名单里的人)",CY.cyan,function()
-local n=SYS.C_.WL_Sel
-if SYS.WL.Add(n,true) then SYS.Notify("⬜ 已加入白名单: "..tostring(n),SYS.CY.cyan)
-else SYS.Notify("先在上面选一个玩家",SYS.CY.sub) end
-end)
-UI.Btn(p,"⬛ 加入黑名单 (永远不选他)",CY.red,function()
-local n=SYS.C_.WL_Sel
-if SYS.WL.Add(n,false) then SYS.Notify("⬛ 已加入黑名单: "..tostring(n),SYS.CY.red)
-else SYS.Notify("先在上面选一个玩家",SYS.CY.sub) end
-end)
-UI.Btn(p,"📋 打印当前名单 (控制台)",CY.purple,function()
-local w=SYS.WL.List(true) local b=SYS.WL.List(false)
-print("[CheatMenu] 白名单("..#w.."): "..table.concat(w,", "))
-print("[CheatMenu] 黑名单("..#b.."): "..table.concat(b,", "))
-SYS.Notify("📋 名单已打到控制台(F9)",SYS.CY.purple)
-end)
-UI.Btn(p,"🧹 清空白名单 / 黑名单",CY.orange,function()
-SYS.WL.White={} SYS.WL.Black={}
-SYS.Notify("🧹 名单已清空",SYS.CY.sub)
-end)
-UI.Tip(p,"规则: 黑名单里的名字【永远不选】; 白名单【非空】时只从白名单里选人(其余全部排除)。\n两边互斥 —— 加进一边会自动从另一边移除。",CY.sub)
 UI.Section(p,"🔀 选人偏好 (自动选人的先后顺序)",CY.purple)
 UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
 function() return ({"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
@@ -15883,44 +15322,11 @@ function(v)
 local m={["正在瞄我的→指定→最近→屏幕中心"]=1,["最近→屏幕中心"]=2,["准星指向→最近→屏幕中心"]=3,["血量最低→最近→屏幕中心"]=4,["屏幕中心→最近"]=5}
 SYS.C_.CB_PrioMode = m[v] or 1
 end)
-UI.Tip(p,"优先模式 = 按顺序一级级筛: 先满足第一优先, 没有再往下。\n★ 「指定」= 你在战斗页指定的那个人。默认链里它排第 2 —— 有人正瞄着你时先打他, 没人瞄你才轮到指定目标。\n★ 打开「只打指定目标」后, 指定目标仍【绝对最优先】(整条链都不参与)。\n默认「正在瞄我的→指定→最近→屏幕中心」: 先打正瞄着你的人, 其次你指定的, 再次最近的, 最后屏幕中间那个。",CY.sub)
-UI.Switch(p,"💀 只锁活人 (没有血量的尸体不算人)","CB_OnlyAlive")
 UI.Switch(p,"🛡 不打队友 (混战/自建房请关掉)","CB_Team")
-UI.Switch(p,"🔪 近距离补刀 (贴脸自动按 F, 含非目标)","CB_Melee")
-UI.Tip(p,"开 = 有敌人在补刀距离内就自动按 F: 优先补【锁定的目标】, 它不在射程内就补【最近的敌人】。\n(所以旁边的非目标敌人贴脸也会补, 不会漏。) 距离用下面的滑块调。",CY.sub)
-UI.Slider(p,"补刀距离(格)",3,25,1,function() return SYS.C_.CB_MeleeDist end,function(v) SYS.C_.CB_MeleeDist=v end,"%.0f")
-UI.Tip(p,"和敌人贴脸时枪常打不中(准星/弹道问题), 开着这个会自动按 F 用近战收掉。\n只对【已锁定的目标】且在设定距离内才按, 不影响中远距离枪战。",CY.sub)
 UI.Switch(p,"👁 只打视野内 (只选屏幕上看得见的人)","CB_Wall")
-UI.Tip(p,"★ v8.7.0 修：这条【不再被「索敌间隔」影响】。\n"..
-"以前把索敌间隔设成 0（每帧秒锁）会连带【不判视线】→ 隔墙也会锁人。现在两件事解耦：\n"..
-"间隔只管「扫多快」，视线只看这个开关。真要无视墙请用「子弹穿墙」或「360 无死角」。",CY.sub)
-UI.Switch(p,"🚶 移动时暂停瞄准 (按 WASD 让出相机)","CB_PauseMove")
-UI.Switch(p,"🙈 隐蔽模式 (不做开火前瞬时对准)","CB_Stealth")
-UI.Tip(p,"★ 两者是【命中率 ↔ 不显眼】的取舍, 你按需要选:\n"
-.. "  关(默认) = 扣扳机那一帧把相机瞬时对准目标 -> 命中率高, 但相机会有一次跳变。\n"
-.. "  开       = 不跳, 改成「等准星自己压上去才开火」-> 少一次机器特征, 命中率略降。\n"
-.. "★ 为什么要给这个开关: 本脚本的反指纹自检里 D8「相机行为」和 D7「开火节奏」\n"
-.. "  正是在盯「相机有没有异常跳变 / 开火间隔是不是太规律」—— 想稳就把隐蔽模式打开。",CY.sub)
-UI.Tip(p,"「只锁活人」默认开 —— 关掉它 = 允许锁定没有 Humanoid 的模型, 某些游戏会锁到尸体。",CY.yellow)
-UI.Tip(p,"开着 = 只打你【看得见】的人: 隔墙的人不选(这就是「不穿墙」)。\n背身/360° 转身照样锁得到 —— 判定按实时相机走, 只要你和目标之间没有墙。\n关掉 = 隔墙的人也选(会对着墙开枪, 基本没用)。",CY.yellow)
-UI.Switch(p,"🛡 跳过无敌盾 (带盾的不打, 等护盾结束)",'CB_SkipFF')
-UI.Tip(p,"开 = 带「无敌盾」(ForceField/刚出生·刚复活的无敌)的人【完全不打】, 等护盾结束自动恢复锁定。\n关 = 旧行为(把他们排到最后, 全服都有盾时仍会去打)。",CY.sub)
 UI.Div(p)
 UI.Div(p)
 UI.Section(p,"☢ 高风险瞄准 (默认全关 · 需要才开)",CY.red)
-UI.Switch(p,"🧱 表现层对抗 (禁布娃娃/物理状态 · 纯本地)","BlockHandlers",SYS.SetBlockHandlers)
-UI.Tip(p,"⚠ 封号风险自查(由高到低):\n"..
-"① 在【热门服】飞天 / 瞬移 / 乱杀 = 最高 —— 会被其他玩家举报 -> 人工复核, 任何绕过都藏不住行为;\n"..
-"② 自动打人 / 自动农场 = 高(服务端行为统计能看出规律);  ③ 纯视觉(透视 / 光照 / 屏蔽表现) = 最低。\n"..
-"🧱 表现层对抗 = 禁布娃娃 / 物理 / 平台站立状态(纯本地, 不影响别人)。\n"..
-"⚠ 本执行器【没有 getconnections】, 做不到「让游戏根本不播」跳脸 / 震屏 —— 只能事后对抗状态。\n"..
-"— 现代反作弊在查什么(2026-09 公开清单, 知道=能避):\n"..
-"  · 服务端侧: 飞行(CFrame/载具/座位) · 移速与速度异常 · 位置/传送校验 · 穿墙碰撞 · 多工具/背包利用 · 角色物理完整性;\n"..
-"  · 客户端侧: __namecall/__index/__newindex 被 hook · 元表被改(setreadonly/getrawmetatable) · 函数被 hook(debug.info/getfenv/hookfunction) · CoreGui 注入 · gcinfo/collectgarbage 伪装 · 弱表操纵;\n"..
-"  · 战斗侧: 静默瞄准的弹道分析 · 命中盒扩张 · 近战/射程超限;\n"..
-"  · 网络侧: Remote 速率限制 · 远程方法 hook 检测 · 挑战-应答令牌。\n"..
-"⇒ 直接推论: 本菜单把『管理员检测绕过』改成【不 hook __namecall、只挪进隐藏容器】是对的;\n"..
-"  自动开火间隔带 ±20% 抖动也是对的(恒定节奏最容易被速率统计抓)。这两条别改回去。",CY.yellow)
 UI.Switch(p,"🙈 真·静默 (不转相机/不转角色, 只改射线命中)","CB_SilentNoTurn",function(on)
 SYS.T_.CB_SilentAim = on and true or false
 if on then
@@ -15964,66 +15370,6 @@ elseif SYS.T_.CB_SilentAim~=true and SYS.T_.CB_BulletWall~=true then
 SYS.RayHook.Remove()
 end
 end)
-UI.Btn(p,"🩺 穿墙自检 + 射线改写统计 (控制台)",CY.cyan,function()
-P(function()
-local R=SYS.RayHook
-print("[CheatMenu] ===== 穿墙自检（三条路各干了多少活）=====")
-print(("路 A · namecall 层 : hook 已装=%s   改写 %d 次")
-:format(tostring(R.Hooked),R.Rewrites or 0))
-print(("路 C · 只打玩家    : 命中「墙后面的人」%d 次   ← 这条不依赖锁定目标")
-:format(R.ThruN or 0))
-print(("路 B · 函数层      : 已包 %d 个函数   改写 %d 次")
-:format(R.FnN or 0,R.FnRewrites or 0))
-if R.FnStats then
-print(("  函数层扫描: 看过 %d 个函数（能取到名字 %d 个）→ 候选 %d 个")
-:format(R.FnStats.fn,R.FnStats.named,#R.FnCands))
-print(("    其中【按归属脚本收窄】收进来的 %d 个（脚本名带 raycast/ballistic/projectile）")
-:format(R.FnStats.byScript or 0))
-end
-if R.FnNote and R.FnNote~="" then print("  备注: "..R.FnNote) end
-for i=1,#R.FnCands do
-if i<=12 then
-print("  候选函数: "..R.FnCands[i].name.."   (命中关键词 "..R.FnCands[i].kw..")")
-end
-end
-local tp=R.Target()
-print("当前锁定目标: "..(tp and (tp.Name or tostring(tp)) or "（没有 —— 此时靠路 C 沿准星方向自己找墙后的人）"))
-print("")
-print("怎么读这三行:")
-print("  · 只要【任意一条】在涨, 穿墙就是活的; 另外两条是它的冗余备份。")
-print("  · 三个都是 0 = 这游戏的命中判定完全不经过客户端射线")
-print("    （典型: 命中由服务端自己重算, 客户端改射线它不认）-> 客户端的穿墙对它无效。")
-print("  · 路 B 为 0 且备注写着『取不到函数名』-> 是本机执行器限制, 不是脚本坏了。")
-SYS.Notify("🩺 自检已打到控制台(F9)",SYS.CY.cyan)
-end)
-end)
-UI.Btn(p,"📡 看服务端战斗数据 (控制台)",CY.purple,function()
-print("[Combat] ===== 服务端战斗数据（只记录, 未接判据） =====")
-pcall(function() SYS.Combat.DumpSrv() end)
-SYS.Notify("📡 已打到控制台(F9) —— 把这几行发我，我按真实参数接成判据",SYS.CY.purple)
-end)
-UI.Tip(p,"★ 服务端战斗数据 = 综合扫描新发现的 3 条【权威输入】(FPS 服):\n"
-.. "  · EntityService.BeDamagedUnreliable（命中确认）\n"
-.. "  · EntityService.DamageShield / DamageImmunity（权威无敌盾）\n"
-.. "  · CombatService.Ammo（真实弹药）\n"
-.. "现在【只记录不改行为】—— 因为这三条的参数格式还没实机见过，猜着当判据会把原来能打中的也打不中。\n"
-.. "你玩一局 -> 点上面那个按钮 -> 把控制台几行发我，我就按真实参数把它们接成判据（这才是补强的正确顺序）。",CY.sub)
-UI.Tip(p,"⚠ 下面这两条都改写【游戏自己的射线】—— 属反检测对抗类, 风险最高, 因此默认全关:\n  · 子弹穿墙 = 只打人、不打墙(下面详述)\n  · 阻挡射线检测 = 游戏射线一律返回空(游戏的视线判定/检测会整体失灵, 副作用最大)\n★ 三条共用同一个 hook, 关掉最后一个才会真正卸下。\n★ 游戏更新后若射线 API 改名, 可能失效 —— 失效就关掉。",CY.yellow)
-UI.Tip(p,"🎯 子弹穿墙 v9.10.0 重做 —— 原来那条为什么穿不过去, 以及现在的三条路:\n"..
-"  【旧版的三个硬前提, 缺一个就整条失效, 界面却仍显示『已开』】\n"..
-"   ① 必须先在战斗页【锁定一个目标】: 没锁定就一行都不改写;\n"..
-"   ② 游戏必须写 `workspace:Raycast(...)`: 很多游戏会把 `workspace.Raycast` 存进局部变量再调,\n"..
-"      那是 __index + 普通调用, 我们的 __namecall hook 根本看不见;\n"..
-"   ③ 只接了 Raycast, 没接 Spherecast / Blockcast(现代 FPS 常用这两个做命中判定)。\n"..
-"  【现在三条路一起用, 互为冗余】\n"..
-"   · 路 A(namecall 层) —— 三个 cast 方法全接;\n"..
-"   · 路 C(真穿墙 · 不依赖锁定目标) —— 不再用游戏的过滤表, 我们自己开一条\n"..
-"     【只列玩家角色】的射线: 墙压根不在候选里, 命中点必然落在墙后面那个人身上;\n"..
-"   · 路 B(函数层) —— 用 getgc 找名字带 raycast/cast/lineofsight/cansee 的函数,\n"..
-"     直接包【函数对象】, 所以游戏缓存了引用也拦得住;\n"..
-"     ⚠ 红线: 只认名字取得出来且带上述关键词的函数, 取不到名字就这条路不动手。\n"..
-"  🩺 点上面的「穿墙自检」就能看到三条路各改写了几次 ——\n"..
-"     三个都是 0 = 这游戏的命中由【服务端重算】, 客户端改射线它不认(那就是真做不到)。",CY.sub)
 UI.Section(p,"🔧 射击增强 (弹药 / 换弹 / 后坐力 / 弹道)",CY.orange)
 local function gunOn() P(SYS.Gun.Sync) end
 UI.Switch(p,"♾ 无限子弹 (本地弹匣/备弹写满)","Gun_InfAmmo",gunOn)
@@ -16034,52 +15380,6 @@ UI.Switch(p,"⏱ 道具/技能/武器 无冷却 (CD 压到 0.01 · 客户端 CD 
 UI.Switch(p,"🧪 免费消耗道具 (数量不减 · 客户端数量才有效)","Gun_InfItem",gunOn)
 UI.Switch(p,"🎯 瞄准补强 (开镜更快 + 准星不飘)","Gun_AimStable",gunOn)
 UI.Switch(p,"🌪 无扩散 (移动/跳跃中也不偏 · 客户端算扩散才有效)","Gun_NoSpread",gunOn)
-UI.Btn(p,"🔍 扫描武器逻辑 + 打印诊断 (控制台)",CY.cyan,function()
-if not SYS.Gun.Scanned then
-SYS.Notify("🔧 还没扫过 —— 先开上面任意一个开关, 扫描会自动进行",SYS.CY.yellow)
-return
-end
-P(function()
-SYS.Gun.Probe()
-SYS.Notify("🔍 诊断已打到控制台(F9) —— 候选函数名/弹药表键名/数值槽全在里面",SYS.CY.cyan)
-end)
-end)
-UI.Tip(p,"这四项改的是【游戏自己的武器逻辑】(hook 函数 / 改 upvalue), 不是纯视觉 —— 属行为可见类, 默认全关。\n"..
-"· 首次打开任意一项会先【扫描一次】(约 1~3 秒), 扫完把结果打在控制台;\n"..
-"· 🎯 无后坐力 = hook 掉名字里带 recoil 的函数(公开脚本的标准做法, 一行搞定);\n"..
-"   ⚠ 只对【名字取得出来、且明确带 recoil】的函数动手 —— 认不出名字就一个都不挂\n"..
-"     (宁可不做, 也不改坏游戏: 对认不出的函数 hook 成空是能把游戏打坏的);\n"..
-"· ♾ 无限子弹 = 找 GC 里带弹匣键的表(Ammo/Mag/Clip…)定时写满, 另加 Tool 属性/NumberValue 兜底;\n"..
-"   ⚠ 弹药若由【服务端权威下发】(已确认的几款 FPS 服都是), 本地写只影响你自己看到的数字,\n"..
-"     真开火仍受服务端限制 —— 这条我在任何游戏上都不打包票, 以进游戏的实际效果为准;\n"..
-"· ⚡ 瞬间换弹 = ReloadTime 类数值压到 0.01 + 弹匣不消耗 ⇒ 基本进不了换弹状态机;\n"..
-"· ➡ 无下坠 = 把弹道类的 gravity/drag 数值归零;\n"..
-"   ⚠ 判定走【射线】的游戏(AsyncRaycast 那类)本来就没有下坠 —— 这项对它们天然无效, 不是坏了;\n"..
-"   ⚠ 弹道类的 upvalue 只在【所属函数名带 bullet/projectile/gun/weapon/fire/shoot】时才认,\n"..
-"     否则会把相机脚本自己的 gravity 一起归零(那才是真会改坏东西的改法)。\n"..
-"🎯 穿墙命中不在这里 —— 是上面「高风险瞄准」里的【子弹穿墙】(走射线改写, v6.11 就有)。\n"..
-"· ⏱ 无冷却 = 找 upvalue 名带 cooldown/cdtime/attackcd… 的数值槽压到 0.01;\n"..
-"· 🧪 免费消耗道具 = 找【同时有数量键(Count/Amount/Qty…)与标识键(Id/Name…)的表】,\n"..
-"   把数量写回「见过的最满值」(和弹匣同一个思路);\n"..
-"   ⚠ 这两条的边界与弹药一样: 【只在 CD / 数量存在客户端时有效】;\n"..
-"     服务端自己算 CD、自己扣数量的话, 本地改的是你自己看到的那份。\n"..
-"⛔ 【免费购买 / 0 元扫货 / 改余额】做不到, 所以这里没有这个开关 ——\n"..
-"   商店那批 `*Purchase` 都在【服务端查余额】, 客户端没有任何东西能改服务端账本。\n"..
-"   说能做到的都是编的; 要做只能人工摸清 remote 参数协议, 那一步我不瞎试。\n"..
-"🎯 瞄准补强 = 开镜速度快 + 准星不飘(镜头抖动/摆动归零) —— 与「无后坐力」分开, 想单独要哪个都行。\n"..
-"   ⛔ 它**只动时长/速度**(aimspeed/aimtime/adsspeed/adstime/aimdelay):\n"..
-"     视场角(aimfov/zoomfov)、镜面透明度(aimalpha)、开镜灵敏度(aimsensitivity) 一律【不碰】\n"..
-"     —— 这几个量纲不是时间, 压小会出现「开镜后视野塌成一个点 / 镜面全透明」(2026-09-22 已收紧)。\n"..
-"   ⛔ 另外: 变量名带 crosshair / reticle / scope / sight 的数值, 本区**所有开关一个都不写**\n"..
-"     —— 那是准星/镜自己的参数, 碰它就会「开镜准星没了」。\n"..
-"★★ 本版最重要的改动【按归属脚本收窄扫描】:\n"..
-"   旧版是在【全部 GC 函数】里瞎找 —— 实测 FFA 对战服有 13 万个函数, 6 秒预算必然截断,\n"..
-"   结果就是「6 个开关全开着、一个都没挂上」。\n"..
-"   现在先用 getfenv(f).script 拿到【这个函数属于哪个脚本】(B 层早就证明这条路能走),\n"..
-"   只对名字带 shootable/weapon/fire/ammo/aim/recoil/bullet… 的脚本做深度扫描,\n"..
-"   其余一律跳过 ⇒ 既不截断, 又不会被无关脚本的数值槽误伤。\n"..
-"   🔍 诊断里会打出来「共看多少函数 / 深度扫了多少 / 跳过了多少」—— 对不上就说明这台环境有问题。\n"..
-"🔍 想知道到底扫到了什么, 点上面那个按钮 —— 候选函数名 / 弹药表键名 / 物品表键名 / 数值槽会全部列出来。",CY.sub)
 task.spawn(function()
 local lastScan,lastHud=0,0
 while card.Parent do
@@ -16117,238 +15417,14 @@ end
 end
 end)
 end
-UI.Pages["事件"]=function(p)
-local K=SYS.K
-if not K then
-UI.Label(p,"V3 内核未加载",CY.red)
-return
-end
-UI.Section(p,"🧩 事件图谱 (这局游戏有哪些远程 / 交互 / 状态对象)",CY.cyan)
-UI.Switch(p,"启动时全量走一遍图谱 (之后【一直】只认新增; 想看最新的点下面重建)","EventAtlas",function(on)
-if on and SYS.K then
-local ok,A=SYS.K.Guard("ui.atlas2",SYS.K.Net.Atlas,true)
-if ok and A then SYS.Notify(("🧩 图谱: %d 条"):format(A.n),SYS.CY.green) end
-end
-end)
-UI.Btn(p,"🔁 立即重建图谱 (全量走一遍)","重建图谱",function()
-local ok,A=SYS.K.Guard("ui.atlas",SYS.K.Net.Atlas,true)
-if ok and A then
-SYS.Notify(("🧩 图谱: 共 %d 条事件"):format(A.n),SYS.CY.green)
-print(("[CheatMenu] 🧩 图谱: %d 条"):format(A.n))
-end
-end)
-UI.Btn(p,"🖨 把完整清单打到控制台","打印清单",function()
-local A=SYS.K.Net.Atlas()
-print(("[CheatMenu] ===== 事件图谱 · 共 %d 条 ====="):format(A.n))
-local ord=SYS.K.Net.Order
-for i=1,#ord do
-local t=A.byClass[ord[i]]
-if t then
-print(("[CheatMenu] --- %s · %d ---"):format(ord[i],#t))
-for j=1,#t do print("   "..tostring(t[j].path)) end
-end
-end
-end)
-UI.Tip(p,"图谱 = 这套脚本「能听什么」的全集。远程还没下发时先挂起, 下发后自动绑上 —— 这就是以前缺的那一环。",CY.sub)
-UI.Section(p,"📋 功能可用性总表 (别名搜索能不能找到对应通道)",CY.accent2)
-UI.Btn(p,"🔎 扫一遍并打印结果","扫描",function()
-local list,miss=SYS.K.Net.Categories()
-for i=1,#list do
-local e=list[i]
-if e.inst then
-print(("[CheatMenu] %-11s ✅ %s [%s]  %s"):format(e.key,tostring(e.name),tostring(e.how),e.label))
-else
-print(("[CheatMenu] %-11s ❌ 无  %s"):format(e.key,e.label))
-end
-end
-local total=#list
-print(("[CheatMenu] 可用性: %d/%d 类命中"):format(total-miss,total))
-if miss>total*0.8 then
-print("[CheatMenu] ⚠ 极可能是【框架式命名】: 别名搜索天生的盲区。走交互物 / 实体 Attribute / 值对象三条路。")
-end
-SYS.Notify(("📋 可用性: %d/%d"):format(total-miss,total), miss>total*0.8 and SYS.CY.yellow or SYS.CY.green)
-end)
-UI.Section(p,"🛰 下行监听 (被动记录服务端发来的事件)",CY.purple)
-UI.Switch(p,"记录所有下行事件 (只读, 不发送任何东西)","NetSpy",function(on)
-if SYS.K then SYS.K.Net.Spy(on) end
-end)
-UI.Switch(p,"远程下发后自动重绑监听","LazyRebind",function(on)
-if not SYS.K then return end
-if on then
-if not SYS.K.Sched.Has("V3Rebind") then
-SYS.K.Sched.Add("V3Rebind",function()
-if SYS.K.Net.PendingN()>0 then SYS.K.Guard("v3.rebind",SYS.K.Net.Rebind) end
-end,{sig=RS.Heartbeat,every=3})
-end
-SYS.Notify("🔁 远程下发后自动重绑: 开",SYS.CY.green)
-else
-P(function() SYS.K.Net.Rebind() end)
-SYS.K.Sched.Del("V3Rebind")
-SYS.Notify("🔁 远程下发后自动重绑: 关(仍会认 DescendantAdded 那次)",SYS.CY.sub)
-end
-end)
-UI.Btn(p,"📜 看最近 20 条下行事件","查看",function()
-local l=SYS.K.LogGet("recv",20)
-if #l==0 then
-SYS.Notify("还没有收到下行事件",SYS.CY.sub)
-return
-end
-for i=1,#l do print("[CheatMenu][recv] "..l[i]) end
-SYS.Notify(("🛰 最近 %d 条已打到控制台"):format(#l),SYS.CY.cyan)
-end)
-UI.Section(p,"🔔 新增监听面 (以前缺的监听事件)",CY.orange)
-UI.Switch(p,"🔎 检测面审计 (只读列出谁在这台客户端上挂了监听 · 不动手)","ConnAudit",function(on)
-if on then
-P(function()
-local rows,err=SYS.K.Conn.Probe()
-if err then SYS.Notify("⚠ "..tostring(err),CY.yellow)
-else SYS.Notify(("🔎 检测面已扫: %d 项有监听, 详单见「事件扫描」"):format(#rows),CY.cyan) end
-end)
-end
-end)
-UI.Switch(p,"玩家 / 角色 / 死亡 事件","WatchPlayers",function(on) SYS.K.Watch.Players(on and true or false) end)
-UI.Switch(p,"属性变化 (游戏用的 Attribute · 例: Dead Rails 的 EntityName)","AttrWatch",function(on) SYS.K.Watch.Attrs(on and true or false) end)
-UI.Switch(p,"值对象变化 (游戏把状态塞在 IntValue / StringValue 里)","ValueWatch",function(on) SYS.K.Watch.Values(on and true or false) end)
-UI.Switch(p,"标签 (CollectionService tag) 变动","TagWatch",function(on) SYS.K.Watch.Tags(on and true or false) end)
-UI.Switch(p,"实体出现 (新怪 / 新物件一出现就知道, 不用轮询)","EntityWatch",function(on) SYS.K.Watch.Entities(on and true or false) end)
-UI.Btn(p,"📜 看最近的新增监听记录","查看",function()
-local any=0
-for _,cat in ipairs({"evt","attr","val","tag","ent"}) do
-local l=SYS.K.LogGet(cat,8)
-if #l>0 then
-print(("[CheatMenu][%s] ---"):format(cat))
-for i=1,#l do print("   "..l[i]) end
-any=any+1
-end
-end
-SYS.Notify(any>0 and "📜 已打到控制台" or "还没有新增监听记录", any>0 and SYS.CY.cyan or SYS.CY.sub)
-end)
-UI.Section(p,"🙈 静默 / 足迹收敛",CY.sub)
-UI.Switch(p,"空闲静默 (挂起自建循环 + 摘掉新增监听面; 关掉即恢复)","IdleStealth",function(on)
-SYS.K.Idle.Set(on and true or false)
-end)
-UI.Tip(p,"静默 = 你不玩的时候把「动态足迹」压到最小: 调度器不再每帧跑, 监听面全摘。这不是隐身, 只是少留痕迹。",CY.sub)
-UI.Section(p,"🩺 运行态 (V3 内核)",CY.green)
-UI.Btn(p,"🩺 查看运行态","查看",function()
-local K2=SYS.K
-local msg=("任务 %d · 驱动连接 %d · 总线连接 %d · 已挂监听 %d (挂起 %d) · hook %d · 错误 %d")
-:format(K2.Sched.Count(),K2.Sched.DriverCount(),K2.Bus.Count(),
-K2.Net.BoundN(),K2.Net.PendingN(),K2.Hook.Count(),K2.ErrN)
-print("[CheatMenu] 🩺 "..msg)
-local top=K2.Sched.Top(5)
-for i=1,#top do
-print(("[CheatMenu] 🩺 耗时 #%d  %s  %.3f ms/帧  已跑 %d")
-:format(i,top[i].name,(top[i].cost or 0)*1000,top[i].done or 0))
-end
-SYS.Notify(msg,SYS.CY.cyan)
-end)
-UI.Switch(p,"记录每个任务的耗时 (排性能问题用)","PerfProfile",function(on) SYS.K.Sched.Profile(on and true or false) end)
-UI.Btn(p,"📜 导出错误清单 (错误显形)","导出错误",function()
-local t=SYS.K.ErrText()
-print("[CheatMenu] ⚠ 错误清单:\n"..t)
-SYS.Notify("⚠ 错误清单已打到控制台",SYS.CY.yellow)
-end)
-UI.Btn(p,"🧹 清空事件日志","清空",function()
-SYS.K.LogClear()
-SYS.Notify("🧹 事件日志已清空",SYS.CY.green)
-end)
-UI.Tip(p,"V3 内核四件事: ① 一个信号只留一条驱动连接(旧的每拨一次开关就断线重连) ② 任务出错第一次就显形, 不再静默 ③ hook 有归属、卸载后进先出 ④ 远程没下发也能先挂监听。",CY.sub)
-end
 UI.Pages["设置"]=function(p)
 UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
 UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
-UI.Tip(p,"开关改动会自动保存, 下次加载脚本时自动生效(无需手动操作)。",CY.sub)
 UI.Section(p,"🩺 内部错误台账 (把「静默失败」变成能看的数字)",CY.cyan)
-UI.Tip(p,"脚本里所有「安全调用」走的是同一个包装 —— 它现在会【记账】:\n"..
-"· 同一条错误只打印第一次(避免每帧刷屏、掉帧);\n"..
-"· 最多记 60 条不同错误, 最多打印 30 条;\n"..
-"· 想知道到底出过什么错, 点下面按钮看全部。\n"..
-"📌 这里【空着】才是好消息 —— 有内容说明某个功能在静默失败(那正是最难查的 bug 类型)。",CY.sub)
-UI.Btn(p,"🩺 查看内部错误台账 (控制台)",CY.cyan,function()
-P(function()
-local E=SYS.Errors or {}
-local rows={}
-for m,e in pairs(E) do rows[#rows+1]={m,e.n,e.t or 0} end
-table.sort(rows,function(a,b)
-if a[2]~=b[2] then return a[2]>b[2] end
-return a[3]<b[3]
-end)
-print("[CheatMenu] ===== 内部错误台账 =====")
-print(("总失败次数: %d · 不同错误: %d 条%s")
-:format(SYS.ErrN or 0,#rows,
-(SYS.ErrOther and SYS.ErrOther>0) and ("(另有 "..SYS.ErrOther.." 次因超出 60 条上限未记)") or ""))
-if #rows==0 then
-print("  ✅ 空 —— 没有静默失败。")
-else
-for i=1,#rows do
-print(("  [%d] ×%-5d %s"):format(i,rows[i][2],rows[i][1]))
-end
-print("  ⚠ 上面每条都对应一个「功能没反应」的现场 —— 把编号发我即可定位。")
-end
-end)
-SYS.Notify("🩺 台账已打到控制台(F9)",SYS.CY.cyan)
-end)
 UI.Section(p,"🪝 Hook 实况 + 网络所有权 (回答「为什么有时灵有时不灵」)",CY.yellow)
-UI.Btn(p,"🪝 打印 hook 实况 / 网络所有权",CY.yellow,function()
-P(function()
-print("[CheatMenu] ===== hook 实况 =====")
-local function st(name,on)
-print(("  %-28s %s"):format(name, on and "已挂" or "未挂"))
-end
-local AR=SYS.AntiRevert
-st("防回退(位置上报伪装)", AR and AR.on and true or false)
-if AR and AR.on then print("      改写的上报次数: "..tostring(AR.fixed or 0)) end
-local RH=SYS.RayHook
-st("射线改写(__namecall)", RH and RH.Hooked and true or false)
-if RH then
-print("      改写次数: "..tostring(RH.Rewrites or 0)
-.." · 函数层已包: "..tostring(RH.HookN or 0).." 个")
-end
-local G=SYS.Gun
-if G then
-local n=0
-for _ in pairs(G.Hooked or {}) do n=n+1 end
-print(("  %-28s %s(已包 %d 个游戏函数)"):format("射击: 后坐力函数", n>0 and "已挂" or "未挂", n))
-st("射击: 数值槽改写", (G.Nums and #G.Nums>0) and true or false)
-end
-print("  说明: 上面每一个「已挂」都必须是【可还原】的; 点卸载会走各模块自己的还原入口。")
-print("")
-print("[CheatMenu] ===== 网络所有权(决定「移动类功能能不能生效」) =====")
-local ch=SYS.LP and SYS.LP.Character
-local hrp=ch and ch:FindFirstChild("HumanoidRootPart")
-if not hrp then
-print("  ⏳ 角色还没加载出来, 稍后再看")
-return
-end
-local ok,owner=pcall(function() return hrp:GetNetworkOwner() end)
-local lpn=SYS.LP and SYS.LP.Name
-if not ok then
-print("  ⚠ 本机执行器读不到 GetNetworkOwner —— 只能靠实测(飞一下看会不会被拉回)")
-elseif owner==nil then
-print("  ⚠ 网络所有权 = 服务端(或没有主人) ⇒ **这台服是服务器权威移动**。")
-print("     后果: 飞行/加速/TP/穿墙(改自己位置那类)会被服务端覆盖或拉回。")
-print("     这不是脚本坏了 —— 客户端改不动服务端模拟的位置。")
-elseif tostring(owner.Name)==tostring(lpn) then
-print("  ✅ 网络所有权在你身上 ⇒ 飞行/加速/TP 【原理上有效】(服务端接受你报的位置)。")
-print("     仍可能被【游戏自己的位置校验】拉回 —— 那种情况开「防回退」能缓解一部分。")
-else
-print("  ⚠ 网络所有权在别人身上: "..tostring(owner.Name))
-end
-end)
-SYS.Notify("🪝 结果已打到控制台(F9)",SYS.CY.yellow)
-end)
-UI.Btn(p,"🧹 清空台账 (改完再看新的)",CY.sub,function()
-SYS.Errors={} SYS.ErrN=0 SYS.ErrSlot=0 SYS.ErrPrintN=0 SYS.ErrOther=0
-SYS.Notify("台账已清空(计数也会归零, 方便对照改动前后)",SYS.CY.green)
-end)
 UI.Div(p)
 UI.Section(p,"⌨ 热键设置 (点一下再按新键)",CY.cyan)
 local function keyRow(label,field)
-local b=UI.Btn(p,label.."  ["..tostring(SYS.C_[field] or "?").."]",CY.card,function()
-SYS.KeyPickTarget=field
-SYS.Notify("请按下一个键来绑定「"..label.."」",SYS.CY.yellow)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end)
 SYS.BtnRefs[#SYS.BtnRefs+1]=function()
 if b and b.Parent then
 local cur=(SYS.KeyPickTarget==field) and "[等待按键...]" or tostring(SYS.C_[field] or "?")
@@ -16359,19 +15435,9 @@ end
 keyRow("打开/关闭菜单","Key_Menu")
 keyRow("循环切换指定目标","Key_CycleTarget")
 keyRow("鼠标传送到准星","Key_Teleport")
-UI.Tip(p,"点按钮 -> 提示「等待按键」-> 按你要的键就绑好了。\n(右Shift 始终能开菜单, 作为备用键)",CY.sub)
 UI.Div(p)
-UI.Btn(p,"自杀",CY.red,function()
-if SYS.T_.GodMode then return end
-local c=LP.Character
-if c then
-local h=c:FindFirstChildOfClass("Humanoid")
-if h then h.Health=0 end
-end
-end)
 UI.Btn(p,"重置相机",CY.cyan,SYS.ResetCam)
 UI.Switch(p,"🖱 打开菜单时接管鼠标 (显示鼠标 + 自由移动)","MenuMouse")
-UI.Tip(p,"开(默认) = 开菜单后把鼠标切回【显示 + 自由移动】(第一人称/锁鼠标的游戏里, 不这样菜单点不到)。\n关 = 【完全不碰】鼠标行为 —— 有些服务器每帧把鼠标锁回 LockCenter, 我们每帧抢回会和它互刷(鼠标抖动/不听使唤), 这种服务器上关掉更稳(但菜单可能点不到, 得用键盘/触屏)。",CY.sub)
 UI.Cycle(p,"强制视角",{"关","第一人称","第三人称"},
 function()
 local m=SYS.C_.ForceCam or "off"
@@ -16381,7 +15447,6 @@ function(v)
 SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "third" or "off")
 if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
 end)
-UI.Tip(p,"强制视角 = 把相机锁成第一/第三人称(每 0.5s 兜底抢回, 防游戏脚本改回去)。\n第一人称 = 相机锁进角色头里; 第三人称 = 强制可拉远的经典视角。",CY.sub)
 UI.Div(p)
 UI.Section(p,"📱 界面缩放 (手机 / 平板适配)",CY.cyan)
 local TDEV=(SYS.DEV and SYS.DEV.anyTouch)==true
@@ -16400,8 +15465,6 @@ SYS.C_.UIScaleManual=math.clamp(math.floor((base+d)*100+0.5)/100,0.30,3.0)
 if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 end
-UI.Btn(p,"➖ 缩小 0.05",CY.panel,function() bump(-0.05) end)
-UI.Btn(p,"➕ 放大 0.05",CY.panel,function() bump(0.05) end)
 SYS.BtnRefs[#SYS.BtnRefs+1]=function()
 local man=tonumber(SYS.C_.UIScaleManual) or 0
 local eff=tonumber(SYS.LastUIScale) or 1
@@ -16412,19 +15475,6 @@ lb.Text=("当前 %.2f×（自动）  自动上限 %.2f"):format(eff,tonumber(SYS
 end
 end
 end
-UI.Btn(p,"📐 恢复自动适配",CY.green,function()
-SYS.C_.UIScaleManual=0
-if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-SYS.Notify("📐 已恢复自动适配",SYS.CY.green)
-end)
-UI.Tip(p,"★ 默认「自动适配」: 按屏幕尺寸算出可用的最大倍数 ——\n"
-.."   手机 / 平板(纯触屏) 最多放大到 1.75 倍, 小视口 1.35 倍, PC 保持 1.0 倍。\n"
-.."   算法是 sc = min(fit, 上限), fit 已扣掉刘海 / 顶部栏边距 -> 【永远塞得进屏幕】。\n"
-.."★ 还是嫌小就往右拉滑块(会覆盖自动值); 想回到自动点「恢复自动适配」。\n"
-..(TDEV and ("★ 手机 / 平板专属: 上面有 ➖/➕ 微调; 也可以直接拖菜单右下角的 ◢ 把手改尺寸。\n"
-.."   菜单拖到哪会记住, 下次打开回到原位(拖出屏幕会被自动拉回来)。\n") or "")
-.."⚠ 手动拉得过大(超过 fit)菜单会超出屏幕、边角按钮点不到 —— 拉回来或点恢复自动即可。",CY.sub)
 UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
 SYS.Notify("正在重进服务器...",CY.purple)
 SYS.Rejoin()
@@ -16432,17 +15482,13 @@ end)
 UI.Div(p)
 UI.Div(p)
 UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
-UI.Tip(p,"★ 每次启动都会检查一次新版本；检查到就会弹消息告诉你【新版本号】。\n本开关只决定「要不要自动升级」：开着=直接热重载到新版；关掉=只提示不升级，想升级再点上面的按钮。",CY.sub)
 UI.Btn(p,"⬆️ 检查更新并热重载",CY.green,function() P(function() SYS.CheckUpdate(false) end) end)
-UI.Tip(p,"热重载 = 先保存当前配置(含所有开关) -> 卸载旧实例 -> 拉取新版 -> 加载。\n新实例启动时会自动按配置把开关开回来, 所以你会看到功能自己恢复。")
 UI.Switch(p,"🚀 重新加载时先检查新版本","BootUpdateCheck")
-UI.Tip(p,"★ 管的是【刚加载的那一瞬间】: 退出游戏 / 卸载脚本后重新注入时, 先看一眼仓库有没有新脚本。\n有 -> 直接用新版启动(启动后会弹「已更新 x → y」); 没有 -> 正常打开。\n好处: 你永远不会先看到旧版界面再被换掉。检查在界面建立之前完成, 取不到版本号(离线 / 执行器没有 HttpGet)就照常打开, 绝不挡路。",CY.sub)
 UI.Div(p)
 UI.Btn(p,"🗑️ 卸载脚本 (干净退出)",CY.red,function()
 SYS.Notify("正在卸载...",CY.red)
 task.delay(0.1,function() P(SYS.UnloadAll) end)
 end)
-UI.Tip(p,"卸载 = 关掉全部功能 + 销毁菜单 + 恢复相机/控制; 不会重进服务器、不会断开连接。\n换服务器用上面的「重进服务器」。(之前报 277 被踢, 是点到重进服务器了, 不是卸载)",CY.sub)
 end
 UI.Pages["玩家"]=function(p)
 UI.Section(p,"🎯 选择目标",CY.cyan)
@@ -16492,10 +15538,6 @@ UI.Btn(p,"🔄 刷新信息",CY.cyan,function() pcRender() end)
 UI.Div(p)
 UI.Section(p,"🚀 传送类 (只把你送过去 / 拉过来)",CY.green)
 UI.Btn(p,"🚀 传送到他",CY.green,function() SYS.PC.GotoTarget("tp") end)
-UI.Btn(p,"🎯 缓动到他 (1.2 秒滑过去)",CY.purple,function() SYS.PC.GotoTarget("tween") end)
-UI.Btn(p,"🚶 寻路/步行到他",CY.cyan,function() SYS.PC.GotoTarget("walk") end)
-UI.Btn(p,"🧲 把他拉过来 (客户端)",CY.orange,function() SYS.PC.BringTarget() end)
-UI.Tip(p,"带「客户端」字样的按钮只改你本地看到的画面 —— 服务端不认, 他本人没感觉, 而且很快会被拉回。\n这是引擎机制(客户端无权改别人角色), 不是脚本没生效。",CY.sub)
 UI.Div(p)
 UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己 · 互斥下拉)",CY.purple)
 UI.Cycle(p,"跟随模式",{"关闭","循环跟传","坐他头上","绕着他旋转","盯着他","行走跟随"},
@@ -16512,8 +15554,6 @@ UI.Slider(p,"旋转速度",0.5,12,0.5,function() return SYS.C_.PC_SpinSpeed end,
 function(v) SYS.C_.PC_SpinSpeed=v end,"%.1f")
 UI.Slider(p,"环绕距离 (格)",2,30,1,function() return SYS.C_.PC_Range end,
 function(v) SYS.C_.PC_Range=v end,"%.0f")
-UI.Tip(p,"这 5 个模式都是「动你自己」, 不是动他。「循环跟传」原来在上一节「传送类」, 一并收进来了。\n"..
-"⛔ 以前能同时开多个 —— 那种情况下它们互相抢你的位置, 表现就是抖动/瞬移。现在互斥, 一次只能选一个。",CY.sub)
 UI.Div(p)
 UI.Section(p,"👥 好友",CY.cyan)
 UI.Btn(p,"➕ 添加好友",CY.green,function()
@@ -16536,7 +15576,6 @@ SYS.Notify(ok and ("➖ 已解除与 "..pl.Name.." 的好友关系") or "操作�
 ok and SYS.CY.red or SYS.CY.yellow)
 end)
 end)
-UI.Tip(p,"好友操作走 Roblox 官方 API(RequestFriendship / RevokeFriendship), 部分执行器会屏蔽这两个函数。",CY.sub)
 SYS.SpawnLoop(function()
 while not SYS.Unloaded do
 task.wait(0.5)
@@ -16807,9 +15846,14 @@ local tabBtns={}
 local built={}
 local function ensurePage(name)
 if built[name] then return end
-built[name]=true
 local pg=Pages[name]
 if not pg then return end
+if built[name]==false then
+for _,c in ipairs(pg:GetChildren()) do
+pcall(function() c:Destroy() end)
+end
+end
+built[name]=true
 local buildFn=UI.Pages[name]
 if type(buildFn)=="function" then
 local ok,err=pcall(buildFn,pg)
