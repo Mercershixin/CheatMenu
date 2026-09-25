@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 19:24 sha deb610aa bytes 583779'):format('2026-09-25 19:24','deb610aa',583779))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v84] =====")
+print(('[CheatMenu] build 2026-09-25 19:40 sha e6516454 bytes 576908'):format('2026-09-25 19:40','e6516454',576908))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v85] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -70,14 +70,15 @@ TransBilingual=false,
 TransDyn=true,
 Prot_AntiAdmin=true,
 PC_LoopTP=false,PC_OnHead=false,PC_Orbit=false,PC_Stare=false,PC_Follow=false,
-ACBlock=true,
-AntiRevertExtra=true,
+ACBlock=false,
+AntiRevertExtra=false,
 CamGuard=false,
 PosRebound=false,
 CB_BlockDeathSignal=false,
-AntiRevert=true,
+AntiRevert=false,
 KickGuard=false,KickRejoin=false,
 SpeedJitter=false,FlyGround=false,ConnAudit=false,
+Prot_Survive=false,Prot_Kick=false,Prot_Revert=false,
 },
 C_={
 AtlasCap=60000,
@@ -133,7 +134,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.5.0"
+SYS.BuildVer="12.6.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1196,6 +1197,7 @@ end
 end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
+ACBlock=true, KickGuard=true, KickRejoin=true, AntiRevert=true, AntiRevertExtra=true, PosRebound=true, GodMode=true, NoFall=true, DeadRails_LockHp=true, DeadRails_NoFlop=true, UA_Auto=true, UA_Mouse=true, UA_Human=true, CB_BlockRay=true, FlyGround=true, Gun_InfAmmo=true, Gun_InstantReload=true, Gun_NoRecoil=true, Gun_NoDrop=true, Gun_NoCooldown=true, Gun_InfItem=true, Gun_AimStable=true, Gun_NoSpread=true, MenuMouse=true,
 SpeedJitter=true, PathKey=true, CB_BlockDeathSignal=true, CB_HitboxFirst=true, CB_OnlyAlive=true, CB_Melee=true, CB_PauseMove=true, CB_Stealth=true, CB_SkipFF=true, BlockHandlers=true, EventAtlas=true, NetSpy=true, LazyRebind=true, ConnAudit=true, WatchPlayers=true, AttrWatch=true, ValueWatch=true, TagWatch=true, EntityWatch=true, IdleStealth=true, PerfProfile=true,
 FootstepESP=true,
 AutoClaim=true, AutoPickup=true, AutoRespawn=true, AutoShop=true, AutoTeam=true, AutoEmote=true,
@@ -1259,12 +1261,9 @@ if not ok2 then print("[CheatMenu] ⚠️ 配置文件损坏且无备份, 使用
 end
 end)
 end
-SYS.LoadConfig()
 local pending=false
 function SYS.QueueSave()
-if not HAS_FS or pending then return end
-pending=true
-task.delay(1.0,function() pending=false SYS.SaveConfig() end)
+return
 end
 function SYS.SetLoop(k,on,sig,fn)
 if on then
@@ -2535,12 +2534,12 @@ local now=os.clock()
 local dt=now-(AR.lastT or now)
 AR.lastT=now
 if now-(AR.rateT or now)>5 then
-if (AR.rateN or 0)>400 then
+if (AR.rateN or 0)>1200 then
 AR.rateN=0 AR.rateT=now
 SYS.TT(task.defer(function()
 if AR.on then
 P(AR.Off)
-P(SYS.Notify,"⚠ 防回退改写过于频繁, 已自动停用(免得把你钉在原地)。重开飞行/加速即可再试。",SYS.CY.yellow)
+P(SYS.Notify,"⚠ 防回退触发过密, 已自动停用(不影响飞行/加速)。",SYS.CY.yellow)
 end
 end))
 return AR.orig(self,...)
@@ -2550,8 +2549,11 @@ end
 local cap=tonumber(SYS.C_.RevertCap) or 0
 local jump=math.max(20,tonumber(SYS.C_.RevertJump) or 150)
 local extra=(SYS.T_.AntiRevertExtra~=false)
-local speedCap=math.max(1,(SYS.SpeedTarget and SYS.SpeedTarget()) or ((SYS.Orig.WalkSpeed or 16)*(SYS.C_.SpeedMult or 2)))
-local maxStep=cap>0 and math.max(0.5,cap*math.min(dt,0.5)) or jump
+local ownSpeed=math.max(16,
+(SYS.SpeedTarget and tonumber(SYS.SpeedTarget())) or 16,
+(SYS.FlyTarget and tonumber(SYS.FlyTarget())) or 16)
+local speedCap=ownSpeed
+local maxStep=cap>0 and math.max(0.5,cap*math.min(dt,0.5),ownSpeed*math.min(dt,0.5)*1.8) or jump
 local a={...}
 for i=1,n do
 local v=a[i]
@@ -9275,13 +9277,6 @@ local txt=table.concat(L,"\n")
 print(txt)
 return txt
 end
-T(UIS.InputBegan:Connect(function(inp)
-if SYS.Unloaded then return end
-if inp.KeyCode==(SYS.KeyCodeOf(SYS.C_.Key_CycleTarget) or Enum.KeyCode.V) then
-local ok,r=P(function() return CB.CycleTarget(1) end)
-print((ok and r) and ("[Combat] 指定目标 -> "..r) or "[Combat] 附近没有可选目标")
-end
-end))
 T(RS.Heartbeat:Connect(function()
 if SYS.Unloaded then return end
 if SYS.T_.CB_Aim or SYS.T_.CB_Silent or SYS.T_.CB_Fire
@@ -13404,7 +13399,7 @@ end
 end
 end
 UI.Defs={
-{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="玩家",icon="👤"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
+{name="战斗",icon="⚔"},{name="视觉",icon="◉"},{name="移动",icon="◈"},{name="传送",icon="➲"},{name="挂机",icon="★"},{name="功能",icon="✱"},{name="翻译",icon="🌐"},{name="设置",icon="⚙"}
 }
 UI.Pages["移动"]=function(p)
 UI.Section(p,"✈️ 飞行",CY.accent)
@@ -13415,7 +13410,6 @@ P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.re
 P(SYS.SyncAntiRevert)
 end)
 UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
-UI.Switch(p,"🥾 贴地飞行 (高度压在地面上方几格 · 位置特征像跳跃/爬坡)","FlyGround")
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode or "Align" end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
@@ -13576,7 +13570,6 @@ SYS.ESPMaybeClear()
 end)
 UI.Div(p)
 UI.Switch(p,"🎥 相机护栏 (相机离角色太远就拉回)","CamGuard",SYS.SetCamGuard)
-UI.Section(p,"🎯 射线 (人物射线 / 弹道)",CY.accent)
 local TR_MODES={"关闭","只看自己","自己+其他玩家"}
 UI.Div(p)
 UI.Section(p,"🎥 自由视角 (镜头飞出去看, 人留在原地)",CY.cyan)
@@ -13602,31 +13595,45 @@ end)
 UI.Div(p)
 end
 UI.Pages["功能"]=function(p)
-UI.Section(p,"🔍 综合扫描 (十二层一次扫完)",CY.green)
+UI.Section(p,"🔍 综合扫描",CY.green)
 UI.Btn(p,"🔍 综合扫描 (全部扫描器一次跑完 · 结果打到控制台 F9)",CY.green,function()
 P(function() SYS.Lab.FullScan() end)
 end)
 UI.Div(p)
-UI.Section(p,"🔒 Dead Rails 锁血 · 补血 · 防击倒",CY.green)
-UI.Switch(p,"🔒 锁血 + 补血 (血被扣就同一帧顶回满)","DeadRails_LockHp",SYS.SetDRLockHp)
-UI.Switch(p,"🧍 防击倒 / 防布娃娃 (被打倒或被摆布娃娃时立刻站起来)","DeadRails_NoFlop",SYS.SetDRNoFlop)
-UI.Switch(p,"上帝模式","GodMode",SYS.SetGod)
-UI.Switch(p,"无坠落伤害","NoFall",SYS.SetNoFall)
+UI.Section(p,"🔒 生存",CY.green)
+UI.Switch(p,"🔒 生存 (锁血 + 防击倒 + 上帝 + 无坠落 一起)","Prot_Survive",function(on)
+if SYS.SetDRLockHp then P(SYS.SetDRLockHp,on) end
+if SYS.SetDRNoFlop then P(SYS.SetDRNoFlop,on) end
+if SYS.SetNoFall then P(SYS.SetNoFall,on) end
+if SYS.SetGod then P(SYS.SetGod,on) end
+end)
+UI.Btn(p,"☠ 自杀 (抹除自己的角色)",CY.red,function() P(SYS.ForceSuicide,"erase") end)
 UI.Switch(p,"🕳 藏地下隐身 (服务器认可)","DeepHide",SYS.SetDeepHide)
 UI.Switch(p,"穿透玩家","NoCollide",function(on) SYS.RefreshNC(on) end)
 UI.Div(p)
-UI.Section(p,"⚡ 帧率优化 (强化版)",CY.cyan)
+UI.Section(p,"⚡ 性能",CY.cyan)
 UI.Switch(p,"帧率优化 (一键)","PerfBoost",SYS.SetPerf)
 UI.Div(p)
-UI.Section(p,"☠ 自杀",CY.red)
-UI.Div(p)
-UI.Div(p)
-UI.Section(p,"🛡 防护 (反作弊绕过 / 管理员检测 / 防踢出)",CY.orange)
-UI.Switch(p,"🛡 防回退 (过检测: 让上报的位置位移看起来合理)","AntiRevert",SYS.SyncAntiRevert)
-UI.Slider(p,"上报速率上限 (格/秒 · 0=只拦瞬移, 推荐)",0,400,5,function() return tonumber(SYS.C_.RevertCap) or 0 end,function(v) SYS.C_.RevertCap=v end,"%.0f")
-UI.Switch(p,"🛡 防回退扩展 (移动通道: 朝向放行 · 速度类数值夹到安全区)","AntiRevertExtra")
-UI.Switch(p,"📍 位置下行回压 (服务端推来的位置, 下一帧再盖回来)","PosRebound",SYS.SetPosRebound)
-UI.Switch(p,"管理员检测绕过 (挪进隐藏容器 · 零开销不卡)","Prot_AntiAdmin",function(on)
+UI.Section(p,"🛡 防护",CY.orange)
+UI.Switch(p,"🦶 防踢 (本地拦截 + 抢传回同服 + 反作弊通道拦截)","Prot_Kick",function(on)
+local ok,err=true,nil
+if SYS.SetKickGuard then ok,err=SYS.SetKickGuard(on) end
+if on and not ok then
+SYS.T_.Prot_Kick=false
+SYS.Notify("❌ 防踢开启失败: "..tostring(err),SYS.CY.red)
+for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
+end
+if SYS.SetKickRejoin then P(SYS.SetKickRejoin,on) end
+if SYS.SetAntiCheatBlock then P(SYS.SetAntiCheatBlock,on) end
+end)
+UI.Switch(p,"🛡 防回退 (上报位移像正常走路 + 移动通道 + 位置回压)","Prot_Revert",function(on)
+SYS.T_.AntiRevert=on
+SYS.T_.AntiRevertExtra=on
+SYS.T_.PosRebound=on
+if SYS.SetPosRebound then P(SYS.SetPosRebound,on) end
+if SYS.SyncAntiRevert then P(SYS.SyncAntiRevert) end
+end)
+UI.Switch(p,"🕵 反检测 (菜单挪进隐藏容器 + 关闭可打包)","Prot_AntiAdmin",function(on)
 if on then
 if SYS.ScreenGui then P(function() SYS.ScreenGui.Name="RobloxGui_Backpack" end) end
 local ok,err=SYS.Prot.InstallHideGui()
@@ -13635,22 +13642,12 @@ SYS.T_.Prot_AntiAdmin=false
 SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
 for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
 else
-SYS.Notify("🕵 菜单已挪进执行器隐藏容器 + 关闭 Archivable\n(不再 hook __namecall —— 之前那个是卡顿主因)",SYS.CY.green)
+SYS.Notify("🕵 菜单已挪进执行器隐藏容器 + 关闭 Archivable",SYS.CY.green)
 end
 else
 SYS.Prot.RemoveHideGui()
 end
 end)
-UI.Switch(p,"🛡 反作弊通道拦截 (名字像反作弊/审计的上行一律丢弃)","ACBlock",SYS.SetAntiCheatBlock)
-UI.Switch(p,"🦶 防踢 · 本地拦截 (单点 hook Player.Kick · 不用 __namecall)","KickGuard",function(on)
-local ok,err=SYS.SetKickGuard(on)
-if on and not ok then
-SYS.T_.KickGuard=false
-SYS.Notify("❌ 防踢开启失败: "..tostring(err),SYS.CY.red)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end
-end)
-UI.Switch(p,"🦶 防踢 · 被移除时抢传回同服","KickRejoin",function(on) P(SYS.SetKickRejoin,on) end)
 UI.Div(p)
 end
 UI.Pages["挂机"]=function(p)
@@ -13687,6 +13684,52 @@ print(("[Sell] 已顺带打开「启用 CPS 门槛」(当前门槛 %.0f, 按【�
 end
 end)
 UI.Switch(p,"启用 CPS 门槛","SellThresholdEnabled")
+UI.Div(p)
+UI.Label(p,"📊 CPS 统计",CY.purple)
+local scanResL=UI.Label(p,"输入 CPS 后点击扫描",CY.sub)
+UI.Btn(p,"🔍 扫描低于当前门槛的脑红数量",CY.purple,function()
+task.spawn(function()
+if scanResL and scanResL.Parent then
+scanResL.Text="扫描中..." scanResL.TextColor3=CY.yellow
+end
+local picks,th,all=0,0,nil
+pcall(function()
+picks,th,all=SYS.scanLowCPSCount()
+end)
+if scanResL and scanResL.Parent then
+if type(picks)=="table" then
+local cnt=#picks
+local names={}
+for i=1,math.min(cnt,8) do
+table.insert(names,("%s(%.0f)"):format(picks[i].Name,picks[i].CPS))
+end
+local preview=table.concat(names,", ")
+if cnt>8 then preview=preview..(" ... +%d"):format(cnt-8) end
+if cnt==0 then
+scanResL.Text=("低于 %.0f 的脑红: 一个都没有"):format(th)
+scanResL.TextColor3=CY.green
+else
+scanResL.Text=("低于 %.0f 共 %d 个  |  %s"):format(th,cnt,preview)
+scanResL.TextColor3=CY.cyan
+end
+print(("[Scan] 低于 %.0f 共 %d 个（按背包显示的 CPS 判）"):format(th,cnt))
+local fc=SYS.SellFmtCompact or tostring
+print(("[Scan] 门槛 = %s (%d)   —— 判定规则: 背包显示值 < 门槛 就卖"):format(fc(th),math.floor(th)))
+print(("  %-30s %12s %12s   %s"):format("物品","背包显示值","表里基础值","判定"))
+for i=1,math.min(#(all or {}),25) do
+local it=all[i]
+print(("  %-30s %12s %12s   %s"):format(
+tostring(it.Name):sub(1,30), fc(it.CPS), fc(it.Base),
+it.Pass and "★卖" or "留"))
+end
+if all and #all>25 then print(("  … 还有 %d 件"):format(#all-25)) end
+else
+scanResL.Text="扫描失败"
+scanResL.TextColor3=CY.red
+end
+end
+end)
+end)
 local row=Instance.new("Frame")
 row.Size=UDim2.new(1,0,0,42) row.BackgroundColor3=CY.card
 row.BackgroundTransparency=0.3 row.BorderSizePixel=0 row.Parent=p
@@ -15213,10 +15256,6 @@ local _,lockV=UI.Stat(inner,"锁定状态","未锁定")
 local _,aimV=UI.Stat(inner,"瞄准方式","关闭")
 local _,distV=UI.Stat(inner,"距离","—")
 local _,perfV=UI.Stat(inner,"循环频率(选人/开火)","—")
-UI.Section(p,"⚔ 一键开战 / 停战",CY.green)
-UI.Btn(p,"⚡ 一键开战 (秒锁秒开枪 · 移动中也准)",CY.green,function()
-if SYS.Combat and SYS.Combat.QuickMode then SYS.Combat.QuickMode() end
-end)
 UI.Div(p)
 UI.Section(p,"🎯 瞄准 (自动瞄准 / 关闭)",CY.accent)
 local AIM_OFF   ="关闭"
@@ -15249,18 +15288,6 @@ function() return SYS.C_.CB_MaxDist end,
 function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
 UI.Div(p)
 UI.Div(p)
-UI.Section(p,"🧭 通用化 (公开源码技法 · 让自瞄在哪都能生效)",CY.accent)
-UI.Switch(p,"自动换投递 (相机写入被游戏丢时, 自动改用真实鼠标)","UA_Auto",function(on)
-if on and SYS.UA then SYS.UA.stickPct=nil SYS.UA.samples=0 end
-end)
-UI.Switch(p,"强制走鼠标 (让游戏自己的控制器执笔 · 运动形态最像人)","UA_Mouse",function(on)
-if on and SYS.UA and not SYS.UA.moveMouse then
-SYS.Notify("⚠ 这台执行器没有 mousemoverel —— 仍会走相机(写 cam.CFrame)",SYS.CY.yellow)
-end
-end)
-UI.Switch(p,"人类化瞄准 (反应延迟 + 角度上限 + 死区 + 游走噪声)","UA_Human",function(on)
-if not on and SYS.UA and SYS.UA.humaniseReset then SYS.UA.humaniseReset() end
-end)
 UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
 UI.Slider(p,"开火间隔 (秒 · 0=每帧都开, 最快)",0,0.50,0.005,
@@ -15302,19 +15329,6 @@ SYS.Combat.Start()
 end)
 UI.Div(p)
 UI.Div(p)
-UI.Section(p,"📋 白名单 / 黑名单 (选人硬规则)",CY.orange)
-UI.Dropdown(p,"选一个玩家", function()
-local L={}
-local ps=Players:GetPlayers()
-for i=1,#ps do
-local pl=ps[i]
-if pl~=LP then L[#L+1]=pl.Name end
-end
-table.sort(L)
-return L
-end,
-function() return SYS.C_.WL_Sel or "" end,
-function(v) SYS.C_.WL_Sel=v end)
 UI.Section(p,"🔀 选人偏好 (自动选人的先后顺序)",CY.purple)
 UI.Cycle(p,"优先模式 (自动选人的先后顺序)",{"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"},
 function() return ({"正在瞄我的→指定→最近→屏幕中心","最近→屏幕中心","准星指向→最近→屏幕中心","血量最低→最近→屏幕中心","屏幕中心→最近"})[SYS.C_.CB_PrioMode or 1] end,
@@ -15356,30 +15370,6 @@ elseif SYS.T_.CB_SilentAim~=true and SYS.T_.CB_BlockRay~=true then
 SYS.RayHook.Remove()
 end
 end)
-UI.Switch(p,"阻挡射线检测 (游戏自己的射线一律打空)","CB_BlockRay",function(on)
-if on then
-local ok,err=SYS.RayHook.Install()
-if not ok then
-SYS.T_.CB_BlockRay=false
-SYS.Notify("❌ 开启失败: "..tostring(err),SYS.CY.red)
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-else
-SYS.Notify("⚠ 阻挡射线已开 —— 副作用很大, 用完记得关",SYS.CY.red)
-end
-elseif SYS.T_.CB_SilentAim~=true and SYS.T_.CB_BulletWall~=true then
-SYS.RayHook.Remove()
-end
-end)
-UI.Section(p,"🔧 射击增强 (弹药 / 换弹 / 后坐力 / 弹道)",CY.orange)
-local function gunOn() P(SYS.Gun.Sync) end
-UI.Switch(p,"♾ 无限子弹 (本地弹匣/备弹写满)","Gun_InfAmmo",gunOn)
-UI.Switch(p,"⚡ 瞬间换弹 (换弹时长压到 0.01)","Gun_InstantReload",gunOn)
-UI.Switch(p,"🎯 无后坐力 (hook 掉后坐力函数 · 纯本地)","Gun_NoRecoil",gunOn)
-UI.Switch(p,"➡ 子弹无阻力 / 无下坠 (弹道类游戏才有效)","Gun_NoDrop",gunOn)
-UI.Switch(p,"⏱ 道具/技能/武器 无冷却 (CD 压到 0.01 · 客户端 CD 才有效)","Gun_NoCooldown",gunOn)
-UI.Switch(p,"🧪 免费消耗道具 (数量不减 · 客户端数量才有效)","Gun_InfItem",gunOn)
-UI.Switch(p,"🎯 瞄准补强 (开镜更快 + 准星不飘)","Gun_AimStable",gunOn)
-UI.Switch(p,"🌪 无扩散 (移动/跳跃中也不偏 · 客户端算扩散才有效)","Gun_NoSpread",gunOn)
 task.spawn(function()
 local lastScan,lastHud=0,0
 while card.Parent do
@@ -15418,37 +15408,7 @@ end
 end)
 end
 UI.Pages["设置"]=function(p)
-UI.Section(p,"💾 配置 (自动保存 / 自动读回)",CY.green)
-UI.Label(p,SYS.has_fs_txt,SYS.HAS_FS and CY.green or CY.yellow)
-UI.Section(p,"🩺 内部错误台账 (把「静默失败」变成能看的数字)",CY.cyan)
-UI.Section(p,"🪝 Hook 实况 + 网络所有权 (回答「为什么有时灵有时不灵」)",CY.yellow)
-UI.Div(p)
-UI.Section(p,"⌨ 热键设置 (点一下再按新键)",CY.cyan)
-local function keyRow(label,field)
-SYS.BtnRefs[#SYS.BtnRefs+1]=function()
-if b and b.Parent then
-local cur=(SYS.KeyPickTarget==field) and "[等待按键...]" or tostring(SYS.C_[field] or "?")
-b.Text=label.."  ["..cur.."]"
-end
-end
-end
-keyRow("打开/关闭菜单","Key_Menu")
-keyRow("循环切换指定目标","Key_CycleTarget")
-keyRow("鼠标传送到准星","Key_Teleport")
-UI.Div(p)
-UI.Btn(p,"重置相机",CY.cyan,SYS.ResetCam)
-UI.Switch(p,"🖱 打开菜单时接管鼠标 (显示鼠标 + 自由移动)","MenuMouse")
-UI.Cycle(p,"强制视角",{"关","第一人称","第三人称"},
-function()
-local m=SYS.C_.ForceCam or "off"
-return (m=="first") and "第一人称" or ((m=="third") and "第三人称" or "关")
-end,
-function(v)
-SYS.C_.ForceCam=(v=="第一人称") and "first" or ((v=="第三人称") and "third" or "off")
-if SYS.SetForceCam then P(SYS.SetForceCam,SYS.C_.ForceCam) end
-end)
-UI.Div(p)
-UI.Section(p,"📱 界面缩放 (手机 / 平板适配)",CY.cyan)
+UI.Section(p,"📱 界面缩放",CY.cyan)
 local TDEV=(SYS.DEV and SYS.DEV.anyTouch)==true
 UI.Slider(p,"界面缩放 (0 = 自动适配)",0,(TDEV and 3.0 or 2.5),0.05,
 function() return SYS.C_.UIScaleManual or 0 end,
@@ -15456,131 +15416,16 @@ function(v)
 SYS.C_.UIScaleManual=v
 if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
 end,"%.2f")
-if TDEV then
-local lb=UI.Label(p,"",CY.accent)
-local function bump(d)
-local cur=tonumber(SYS.C_.UIScaleManual) or 0
-local base=(cur>0) and cur or (tonumber(SYS.LastUIScale) or 1)
-SYS.C_.UIScaleManual=math.clamp(math.floor((base+d)*100+0.5)/100,0.30,3.0)
-if SYS.ApplyUIScale then P(SYS.ApplyUIScale) end
-for _,f in ipairs(SYS.BtnRefs or {}) do P(f) end
-end
-SYS.BtnRefs[#SYS.BtnRefs+1]=function()
-local man=tonumber(SYS.C_.UIScaleManual) or 0
-local eff=tonumber(SYS.LastUIScale) or 1
-if man>0 then
-lb.Text=("当前 %.2f×（手动）  可拉到 3.00"):format(eff)
-else
-lb.Text=("当前 %.2f×（自动）  自动上限 %.2f"):format(eff,tonumber(SYS.LastUIScaleAuto) or eff)
-end
-end
-end
-UI.Btn(p,"🔄 重进服务器 (Rejoin)",CY.purple,function()
-SYS.Notify("正在重进服务器...",CY.purple)
-SYS.Rejoin()
-end)
 UI.Div(p)
-UI.Div(p)
+UI.Section(p,"🔄 热更新",CY.green)
 UI.Switch(p,"🔁 有新版本时自动热重载","AutoUpdateCheck")
 UI.Btn(p,"⬆️ 检查更新并热重载",CY.green,function() P(function() SYS.CheckUpdate(false) end) end)
 UI.Switch(p,"🚀 重新加载时先检查新版本","BootUpdateCheck")
 UI.Div(p)
+UI.Section(p,"🚪 退出",CY.red)
 UI.Btn(p,"🗑️ 卸载脚本 (干净退出)",CY.red,function()
 SYS.Notify("正在卸载...",CY.red)
 task.delay(0.1,function() P(SYS.UnloadAll) end)
-end)
-end
-UI.Pages["玩家"]=function(p)
-UI.Section(p,"🎯 选择目标",CY.cyan)
-UI.Dropdown(p,"选择玩家", function()
-local L={}
-local ps=Players:GetPlayers()
-for i=1,#ps do
-local pl=ps[i]
-if pl~=LP then L[#L+1]=pl.Name end
-end
-table.sort(L)
-return L
-end,
-function() return SYS.C_.PC_Sel or "" end,
-function(v)
-SYS.C_.PC_Sel=v
-if SYS.PCRender then P(SYS.PCRender) end
-end)
-local _,info=UI.Card(p,118)
-local _,nL=UI.Stat(info,"昵称","—")
-local _,uL=UI.Stat(info,"用户名","—")
-local _,idL=UI.Stat(info,"用户ID","—")
-local _,jL=UI.Stat(info,"账号年龄","—")
-local _,dL=UI.Stat(info,"距离","—")
-local function pcRender()
-local pl=SYS.PC.Get()
-if not pl then
-nL.Text="—" uL.Text="—" idL.Text="—" jL.Text="—" dL.Text="—"
-return
-end
-nL.Text=tostring(pl.DisplayName or pl.Name)
-uL.Text="@"..tostring(pl.Name)
-idL.Text=tostring(pl.UserId)
-local okAge,age=pcall(function() return pl.AccountAge end)
-jL.Text=(okAge and age) and (tostring(age).." 天") or "?"
-local r=SYS.PC.Root(pl)
-local _,_,mine=GC()
-if r and mine then
-dL.Text=("%.0f 格"):format((r.Position-mine.Position).Magnitude)
-else
-dL.Text="—"
-end
-end
-SYS.PCRender=pcRender
-pcRender()
-UI.Btn(p,"🔄 刷新信息",CY.cyan,function() pcRender() end)
-UI.Div(p)
-UI.Section(p,"🚀 传送类 (只把你送过去 / 拉过来)",CY.green)
-UI.Btn(p,"🚀 传送到他",CY.green,function() SYS.PC.GotoTarget("tp") end)
-UI.Div(p)
-UI.Section(p,"🔄 跟随 / 环绕 (动的是你自己 · 互斥下拉)",CY.purple)
-UI.Cycle(p,"跟随模式",{"关闭","循环跟传","坐他头上","绕着他旋转","盯着他","行走跟随"},
-function()
-local i=SYS.PC.FollowModeIndex(tostring(SYS.C_.PC_Mode or "off"))
-return SYS.PC.FollowLabels[i] or "关闭"
-end,
-function(v)
-local i=1
-for idx,lab in ipairs(SYS.PC.FollowLabels) do if lab==v then i=idx break end end
-SYS.PC.ApplyFollowMode(SYS.PC.FollowModes[i] or "off")
-end)
-UI.Slider(p,"旋转速度",0.5,12,0.5,function() return SYS.C_.PC_SpinSpeed end,
-function(v) SYS.C_.PC_SpinSpeed=v end,"%.1f")
-UI.Slider(p,"环绕距离 (格)",2,30,1,function() return SYS.C_.PC_Range end,
-function(v) SYS.C_.PC_Range=v end,"%.0f")
-UI.Div(p)
-UI.Section(p,"👥 好友",CY.cyan)
-UI.Btn(p,"➕ 添加好友",CY.green,function()
-local pl=SYS.PC.Get()
-if not pl then SYS.Notify("先在上面选一个玩家",SYS.CY.sub) return end
-P(function()
-local ok=pcall(function() LP:RequestFriendship(pl) end)
-if not ok then ok=pcall(function() pl:RequestFriendship(LP) end) end
-SYS.Notify(ok and ("➕ 已向 "..pl.Name.." 发起好友请求")
-or "这台执行器/这个客户端不支持发起好友请求",
-ok and SYS.CY.green or SYS.CY.yellow)
-end)
-end)
-UI.Btn(p,"➖ 移除好友",CY.red,function()
-local pl=SYS.PC.Get()
-if not pl then SYS.Notify("先在上面选一个玩家",SYS.CY.sub) return end
-P(function()
-local ok=pcall(function() LP:RevokeFriendship(pl) end)
-SYS.Notify(ok and ("➖ 已解除与 "..pl.Name.." 的好友关系") or "操作失败",
-ok and SYS.CY.red or SYS.CY.yellow)
-end)
-end)
-SYS.SpawnLoop(function()
-while not SYS.Unloaded do
-task.wait(0.5)
-if SYS.PCRender then P(SYS.PCRender) end
-end
 end)
 end
 local function GetGuiParent()
