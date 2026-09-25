@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-25 19:40 sha e6516454 bytes 576908'):format('2026-09-25 19:40','e6516454',576908))
+print(('[CheatMenu] build 2026-09-25 19:46 sha c2529399 bytes 576643'):format('2026-09-25 19:46','c2529399',576643))
 print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v85] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
@@ -86,7 +86,7 @@ CamZoom=20,
 LightMode="",
 WL_Sel="",
 GameNameCache="",
-FlySpeed=6,FlyMode="BodyVelocity",FlyGroundH=4,SpeedCap=0,
+FlySpeed=6,FlyMode="BodyVelocity",FlyGroundH=4,
 SpeedMult=6,TPMethod="CFrame",SpeedMode="Linear",
 JumpMult=6,
 MouseTPMode="Raycast",AutoTPDist=5,TPMaxStep=300,
@@ -134,7 +134,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.6.0"
+SYS.BuildVer="12.6.1"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -1197,6 +1197,7 @@ end
 end)
 end
 SYS.REMOVED_FEATURES = { TrapWatch=true, AutoUse=true,
+SpeedCap=true,
 ACBlock=true, KickGuard=true, KickRejoin=true, AntiRevert=true, AntiRevertExtra=true, PosRebound=true, GodMode=true, NoFall=true, DeadRails_LockHp=true, DeadRails_NoFlop=true, UA_Auto=true, UA_Mouse=true, UA_Human=true, CB_BlockRay=true, FlyGround=true, Gun_InfAmmo=true, Gun_InstantReload=true, Gun_NoRecoil=true, Gun_NoDrop=true, Gun_NoCooldown=true, Gun_InfItem=true, Gun_AimStable=true, Gun_NoSpread=true, MenuMouse=true,
 SpeedJitter=true, PathKey=true, CB_BlockDeathSignal=true, CB_HitboxFirst=true, CB_OnlyAlive=true, CB_Melee=true, CB_PauseMove=true, CB_Stealth=true, CB_SkipFF=true, BlockHandlers=true, EventAtlas=true, NetSpy=true, LazyRebind=true, ConnAudit=true, WatchPlayers=true, AttrWatch=true, ValueWatch=true, TagWatch=true, EntityWatch=true, IdleStealth=true, PerfProfile=true,
 FootstepESP=true,
@@ -2167,15 +2168,6 @@ local prev=tonumber(SYS._jitW) or n
 local tgt=n+(math.random()*2-1)*n*0.08
 cur=prev+(tgt-prev)*math.min(1,dt/0.22)
 SYS._jitW=cur
-end
-local cap=tonumber(SYS.C_.SpeedCap) or 0
-if cap>0 and cur>cap then
-local t2=os.clock()
-if not SYS._capWarn or (t2-SYS._capWarn)>10 then
-SYS._capWarn=t2
-P(SYS.Notify,("⚠ 速度已按上限夹到 %.0f 格/秒(设置里的「速度上报上限」)"):format(cap),SYS.CY and SYS.CY.yellow)
-end
-cur=cap
 end
 return cur
 end
@@ -13409,7 +13401,7 @@ SYS.SetLoop("Fly",on,SYS.PhysicsStep,SYS.FlyTick)
 P(function() if SYS.ConsoleTee and SYS.ConsoleTee.restore then SYS.ConsoleTee.restore() end end)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"飞行速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
+UI.Slider(p,"飞行速度 (格/秒 · 直接填你要的速度, 0=用默认倍率)",0,3000,10,function() return tonumber(SYS.C_.FlyAbs) or 0 end,function(v) SYS.C_.FlyAbs=v end,"%.0f")
 UI.Cycle(p,"飞行模式",{"Align","BodyVelocity","CFrame"},
 function() return SYS.C_.FlyMode or "Align" end,
 function(v) SYS.C_.FlyMode=v if SYS.T_.Fly then SYS.CleanFly() end end)
@@ -13420,7 +13412,7 @@ if not on then SYS.CleanSpeed() end
 SYS.SetLoop("Speed",on,SYS.PhysicsStep,SYS.SpeedTick)
 P(SYS.SyncAntiRevert)
 end)
-UI.Slider(p,"移动速度 (格/秒 · 0=自动用下面的倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
+UI.Slider(p,"移动速度 (格/秒 · 直接填你要的速度, 0=用默认倍率)",0,3000,10,function() return tonumber(SYS.C_.SpeedAbs) or 0 end,function(v) SYS.C_.SpeedAbs=v end,"%.0f")
 UI.Cycle(p,"加速模式",{"Linear","BodyVelocity","WalkSpeed"},
 function() return SYS.C_.SpeedMode or "Linear" end,
 function(v)
