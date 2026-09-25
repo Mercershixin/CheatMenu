@@ -2,6 +2,55 @@
 
 > 只记**当前世代（V2）**起的变更。更早的历史在 git 里（`git log`）—— **不再在文件里堆**。
 
+## 12.2.0 · 2026-09-25 —— 通用化：公开源码技法落地（通用投递层 + 命中盒识别 + 能力实测）
+
+用户：「把我的 lua 里面的全部功能，进行 git 仓库上面的全部公开源码的 lua 进行学习复制代码 使用，
+让我的功能在保证全部服务器都能通用 和绕过反作弊 之类的，飞行自瞄 透视 加速 tp 传送这一类」。
+
+### 调研对象（GitHub 公开仓库，只学【手法】不复制代码）
+`ttwizz/Open-Aimbot`（通用瞄准框架）· `Exunys/AirHub-V2`（targeting/ESP 模块划分）·
+`seltonmt012/sel01-rbx` 的 `games/universal.lua`（★ 双投递 + 运行时探测）与
+`games/phantomforces.lua`（★ 反检测工程笔记）。样本存 `.workbuddy/research_samples/20260925/`。
+
+### ✅ 落地的三件（都是现有版本确实没有的）
+- **P1 通用投递层 `SYS.UA`（全新）** —— 原来 `aimTick` **只写 `cam.CFrame`**；
+  而大量游戏每帧从内部角度重建相机（实测 Phantom Forces / BloxStrike）⇒ 写入下一帧被丢，
+  表现是**「自瞄看着在动、其实没生效」**，面板还诚实地说"相机"。
+  现在：① **相机写入存活率探测**（写进去的朝向下一帧还差多少）② 存活率<50% 且执行器有
+  `mousemoverel` → **自动走真实鼠标**，让游戏自己的相机控制器执笔 ③ **鼠标灵敏度自学习**
+  （上一帧请求 vs 本帧实际，EMA 0.85/0.15）④ **亚像素请求跳过**（否则从"没发生的移动"里学习）。
+- **P2 游戏自带瞄准命中盒优先（`CB_HitboxFirst`，默认开）** —— `CB_PART_ORDER` 原只有写死的
+  Roblox 名字；而 DoW 的 `AutoAimAreaHead/Body`、Counter Blox 的 `HeadHB` **才是游戏自己打的目标**。
+  ★ 有就用、**没有则完全按老名单走，行为不变**。
+- **P3 执行器能力实测** —— `游戏信息 / 执行器能力` 扫描器原来是个**空壳**（`return {"（见头部）"}`），
+  换成真探测：`mousemoverel` / `Drawing` / `hookfunction` / `getconnections` / `getgenv` /
+  `mouse1click` / `keypress` / VirtualInputManager / `setfpscap`，并给结论行（"重建相机的服也能自瞄"）。
+
+### 配套（都来自 phantomforces 的实测笔记）
+- ★★ **取执行器全局绝不用 `rawget(getfenv(),"mousemoverel")`** —— Potassium 类执行器通过 env 的
+  `__index` 交全局，`rawget` 拿到 nil ⇒ **静默退化成相机路径**（原版 `universal.lua` 就栽在这，
+  白丢整个自瞄）。本项目 `pcall(getgenv)` / `pcall(game:GetService)` 本来就对，已写进新模块注释与文档。
+- **人类化用「平滑随机游走」不用每帧白噪声** —— 白噪声在相机上读起来是**抖**，游走读起来是**手**。
+- `hookfunction` **没有撤销**（重复 hook 会叠加）⇒ 继续保留「每处安装都有还原路径」的纪律。
+
+### ⛔ 明确不抄
+`__index`/`__namecall` 全局劫持（卡顿病根）· 把 `Drawing` 当默认透视（用户已裁决「位置正确 > 反检测收益」）·
+任何 webhook 上报 · hook `print/warn/error` 灭日志 · 删 `getgenv` 全局 / 改环境元表。
+
+### ⚠ 诚实边界（写进 UI 提示，不写假功能）
+**能通用的是「本地表现 + 输入路径」，不能通用的是「服务端结算的东西」**：
+透视本来通用；自瞄本轮显著更通用（但服务端记录视角角度的游戏事后仍可算异常）；
+飞行/加速/传送在**服务端权威(SA)**服无解（引擎直接拒绝）；真无敌/锁血做不到（服务端结算）。
+
+### 新增
+战斗页新分区「🧭 通用化」：4 开关（`UA_Auto` 开 / `UA_Mouse` 关 / `UA_Human` 关 / `CB_HitboxFirst` 开）
++ 4 滑块（`UA_ReactMs` 120 · `UA_MaxDeg` 420 · `UA_Dead` 1.5 · `UA_Noise` 0.35）+ 「🧭 投递实测」按钮。
+改动点外科式，各只碰一处：`aimTick` 投递两行 · `CB.PickVisiblePart` 头部 · 能力扫描器。
+
+### 验证
+`luau-compile` 双模式 exit 0 · `_audit_feature_chain` **85/85 完整性自检 ✅** ·
+`_audit_buttons` **213/213** · `_audit_c_` 未使用键 0 · `_audit_deadcode` 零引用 0 · `verify_all` **13/13**
+
 ## 12.1.6 · 2026-09-25 —— 核心功能复查 + 函数/监听检查 + 符号·死代码·幽灵清理
 
 用户：「透视 飞行 加速 挂机 重生 这些全部功能呢 都复查，然后函数 事件监听 检查一下修复，
