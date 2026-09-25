@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 03:10 sha 3a05130f bytes 633481'):format('2026-09-25 03:10','3a05130f',633481))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v77] =====")
+print(('[CheatMenu] build 2026-09-25 10:14 sha 59676e9a bytes 633417'):format('2026-09-25 10:14','59676e9a',633417))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v78] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -130,7 +130,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.1.4"
+SYS.BuildVer="12.1.5"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -8825,7 +8825,7 @@ end
 if (SYS.C_.CB_SnapMaxAngle or 60)==60 then SYS.C_.CB_SnapMaxAngle=360 end
 if (SYS.C_.CB_SnapMinGap or 0.25)==0.25 then SYS.C_.CB_SnapMinGap=0.08 end
 if (SYS.C_.CB_SnapDelay or 0.05)==0.05 then SYS.C_.CB_SnapDelay=0.03 end
-if (SYS.C_.CB_FireDelay or 0.08)==0.06 then SYS.C_.CB_FireDelay=0.08 end
+if (SYS.C_.CB_FireDelay or 0.06)==0.06 then SYS.C_.CB_FireDelay=0.08 end
 print(("[Combat] v72 参数: 单次转角上限=360° 最小间隔=%.2f 转向后延迟=%.2f 开火间隔=%.3f")
 :format(SYS.C_.CB_SnapMinGap,SYS.C_.CB_SnapDelay,SYS.C_.CB_FireDelay))
 end
@@ -15972,7 +15972,7 @@ local ok2=pcall(function() gui.Parent=game:GetService("CoreGui") end)
 if ok2 and gui.Parent then return "CoreGui(兜底)" end
 return "失败"
 end
-local function CreateMenuLegacy()
+local function CreateMenu()
 SYS.BtnRefs={}
 print("[CheatMenu] CreateMenu 开始")
 if SYS.ScreenGui then pcall(function() SYS.ScreenGui:Destroy() end) SYS.ScreenGui=nil end
@@ -16566,9 +16566,6 @@ TweenService:Create(main,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDire
 {Size=tw0,BackgroundTransparency=0.06}):Play()
 end)
 print("[CheatMenu] ✅ UI 创建完成")
-end
-local function CreateMenu()
-return CreateMenuLegacy()
 end
 SYS.CreateMenu=CreateMenu
 function SYS.ToggleMenu()
