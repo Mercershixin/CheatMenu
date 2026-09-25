@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 10:40 sha 59676e9a bytes 633417'):format('2026-09-25 10:40','59676e9a',633417))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v78] =====")
+print(('[CheatMenu] build 2026-09-25 11:51 sha d3e3900a bytes 632439'):format('2026-09-25 11:51','d3e3900a',632439))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v79] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -79,7 +79,6 @@ AntiRevert=true,
 C_={
 AtlasCap=60000,
 CamZoom=20,
-HitDist=30,
 LightMode="",
 WL_Sel="",
 GameNameCache="",
@@ -130,7 +129,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.1.5"
+SYS.BuildVer="12.1.6"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -11288,35 +11287,6 @@ else
 SYS.SetLoop("NoKnock",false)
 end
 end
-local FLING_MAX=80
-function SYS.SetAntiFling(on)
-SYS.T_.AntiFling=on==true
-if on then
-SYS.SetLoop("AntiFling",true,RS.Heartbeat,function()
-if SYS.T_.AntiFling~=true then return end
-local _,_,root=GC()
-if not root then return end
-local lim=FLING_MAX
-if SYS.SpeedTarget and (SYS.T_.Speed or SYS.T_.Fly) then
-local t=0
-if SYS.T_.Speed then t=SYS.SpeedTarget() end
-if SYS.T_.Fly then t=math.max(t,SYS.FlyTarget()) end
-lim=math.max(lim,t*2.5)
-end
-P(function()
-local v=root.AssemblyLinearVelocity
-if v and v.Magnitude>lim then
-root.AssemblyLinearVelocity=Vector3.zero
-SYS._flingN=(SYS._flingN or 0)+1
-end
-end)
-end)
-SYS.Notify(("🎈 防甩飞: 已开(超过 %d 格/秒清零; 飞行/加速开着时阈值会按目标速度自动放宽, 免得把正常高速当甩飞)"):format(FLING_MAX),SYS.CY.green)
-else
-SYS.SetLoop("AntiFling",false)
-SYS.Notify("🎈 防甩飞: 已关",SYS.CY.sub)
-end
-end
 local WL={} SYS.WL=WL
 WL.White={} WL.Black={}
 function WL.List(white)
@@ -12609,7 +12579,7 @@ local ok,v=pcall(isfile,list[i])
 if ok and v then bad[#bad+1]=list[i] end
 end
 if #bad==0 then return true,"工作目录里没有带外挂名的旧文件" end
-return false,("仍存在: "..table.concat(bad,", ").."  (点「一键修复」可删)")
+return false,("仍存在: "..table.concat(bad,", ").."  (只报告, 不自动删)")
 end
 local function d5()
 local _,hum=GC()
@@ -12626,7 +12596,7 @@ return false,("服务端可测到的异常: "..table.concat(bad," · ").."  (这
 end
 local function d6()
 if not AC.SamplerOn then
-return true,"采样器未运行 —— 点「开始采样」并正常玩 5~10 秒再测"
+return true,"采样器未运行 —— 正常玩 5~10 秒再测"
 end
 local m=AC.PosMax
 if m<=0 then return true,"采样中, 尚未记录到位移" end
@@ -12643,7 +12613,7 @@ end
 return true,("开火间隔 %.3f 秒 + ±20%% 抖动, 节奏不恒定"):format(d)
 end
 local function d8()
-if not AC.SamplerOn then return true,"采样器未运行(点「开始采样」)" end
+if not AC.SamplerOn then return true,"采样器未运行" end
 if AC.CamMax>40 then
 return false,("相机与角色最大偏离 %.0f 格 —— 自由视角/灵魂出窍在客户端很显眼"):format(AC.CamMax)
 end
@@ -15257,7 +15227,7 @@ end)
 UI.Btn(p,"🎯 锁定此刻正在打的目标",CY.green,function()
 local n=SYS.Combat.LockTarget()
 if n then SYS.Combat.Say("已锁定目标: "..n,SYS.CY.green)
-else SYS.Combat.Say("当前没有目标可锁(点「输出战斗诊断」能看到被什么挡住)",SYS.CY.red) end
+else SYS.Combat.Say("当前没有目标可锁(附近没有可锁目标)",SYS.CY.red) end
 end)
 UI.Btn(p,"🔄 换下一个目标 (热键 V)",CY.accent,function()
 local n=SYS.Combat.CycleTarget(1)
