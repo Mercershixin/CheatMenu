@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 11:51 sha d3e3900a bytes 632439'):format('2026-09-25 11:51','d3e3900a',632439))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v79] =====")
+print(('[CheatMenu] build 2026-09-25 18:10 sha 88327e72 bytes 644893'):format('2026-09-25 18:10','88327e72',644893))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v80] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -52,6 +52,7 @@ CB_OnlyAlive=true,
 CB_SkipFF=true,
 CB_Melee=false,
 TrapImmune=false,
+UA_Auto=true,UA_Mouse=false,UA_Human=false,CB_HitboxFirst=true,
 PathKey=false,
 AutoUpdateCheck=true,
 BootUpdateCheck=true,
@@ -124,12 +125,13 @@ SpeedAbs=0,
 RevertCap=0,
 RevertJump=150,
 FireTypeSigN=3,
+UA_ReactMs=120,UA_MaxDeg=420,UA_Dead=1.5,UA_Noise=0.35,
 },
 SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.1.6"
+SYS.BuildVer="12.2.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
@@ -4207,10 +4209,72 @@ local s = { name = name, fn = fn, desc = desc or "" }
 SYS.Scanners[#SYS.Scanners + 1] = s
 return s
 end
-SYS.RegisterScanner("游戏信息 / 执行器能力", function()
-return {
-"（见头部）",
-}
+SYS.RegisterScanner("游戏信息 / 执行器能力 (实测 · 决定本机能开什么)", function()
+local o={}
+local UA=SYS.UA
+local function yn(b) return b and "✅" or "❌" end
+if UA then
+o[#o+1]=("  mousemoverel(鼠标投递)  %s   %s"):format(yn(UA.moveMouse~=nil),
+UA.moveMouse and "→ 通用投递可用(重建相机的服也能自瞄)" or "→ 只能写相机, 重建相机的服会静默失效")
+o[#o+1]=("  Drawing(不入 DataModel)   %s   %s"):format(yn(UA.hasDraw),
+UA.hasDraw and "→ 有; 本脚本仍用 Highlight(已按你的裁决: 位置正确 > 反检测收益)" or "→ 无")
+o[#o+1]=("  hookfunction             %s"):format(yn(UA.hasHook))
+o[#o+1]=("  getconnections           %s   %s"):format(yn(UA.hasConns),
+UA.hasConns and "→ 可掐游戏自己挂的属性监听" or "→ 无; 「掐监听」那条路走不了")
+o[#o+1]=("  getgenv()                %s   %s"):format(yn(UA.hasGenv),
+UA.hasGenv and "→ 状态不落 _G" or "→ 回退 _G(可被同状态脚本看到)")
+o[#o+1]=("  mouse1click / keypress   %s / %s   %s"):format(yn(UA.hasMouse1),yn(UA.hasKey),
+(UA.hasMouse1 and "→ 触发选 mouse1click") or (UA.hasKey and "→ 触发选 keypress") or "→ 都没有")
+o[#o+1]=("  VirtualInputManager      %s   %s"):format(yn(UA.hasVIM),
+UA.hasVIM and "→ 键盘/鼠标事件兜底可用" or "→ 无")
+o[#o+1]=("  setfpscap                %s"):format(yn(UA.hasFps))
+else
+o[#o+1]="  (UA 未就绪)"
+end
+o[#o+1]=""
+o[#o+1]="── 投递实测 ──"
+if UA then
+o[#o+1]=("  当前投递 = %s   相机写入存活率 = %s"):format(
+UA.mode, UA.stickPct and (tostring(UA.stickPct).."%") or "样本不足(用一会儿自瞄再看)")
+if UA.stickPct and UA.stickPct<50 then
+o[#o+1]="  ⚠ 存活率 <50%: 这个游戏【每帧重建相机】⇒「自动」模式会改走鼠标。"
+o[#o+1]="    若鼠标也不可用(上面 mousemoverel ❌), 则本服自瞄只能靠「静默/穿墙」那套射线改写。"
+end
+o[#o+1]=("  已发鼠标请求 %d 次   命中盒命中 %d 次"):format(UA.sendN or 0,UA.hbN or 0)
+o[#o+1]=("  灵敏度学习: %s"):format(UA.mouseLearn and "进行中(1~2 帧内收敛)" or "已收敛/未启用")
+end
+o[#o+1]=""
+o[#o+1]="── 本服可行层(决定飞行/加速/TP 能不能做) ──"
+do
+local auth=nil
+pcall(function() auth=tostring(WS.AuthorityMode) end)
+o[#o+1]=("  AuthorityMode = %s%s"):format(tostring(auth),
+(auth and string.find(string.lower(auth),"server",1,true))
+and "   ⛔ 服务端权威: 飞行/加速/传送 客户端无解(引擎直接拒绝)" or "")
+end
+do
+local hbN,hbName=0,nil
+local pls=Players:GetPlayers()
+for i=1,#pls do
+if pls[i]~=SYS.LP and pls[i].Character and UA then
+local info=UA.HitboxInfo(pls[i].Character)
+if info then hbN=hbN+1 hbName=hbName or info end
+end
+end
+o[#o+1]=("  游戏自带命中盒: %s%s"):format(
+hbN>0 and ("✅ %d 个角色有 (例: %s)"):format(hbN,hbName or "?") or "❌ 没扫到(会走写死名单, 不影响)",
+hbN>0 and "   → 已优先使用(更接近游戏自己的判定)" or "")
+end
+o[#o+1]=""
+o[#o+1]="── 队伍字段 ──"
+do
+local fn=SYS.Combat and SYS.Combat.TeamKeyUseful
+local okv,uv=pcall(function() return (type(fn)=="function") and fn() or nil end)
+if not okv then uv=nil end
+o[#o+1]=("  TeamKey 可用 = %s%s"):format(tostring(uv),
+(uv==false) and "   → 本服阵营字段无区分度(空 Teams 那种); 已按「全员视为目标」处理, 不会静默不锁人" or "")
+end
+return o
 end)
 SYS.RegisterScanner("功能可用性总表 (每类事件在当前游戏有没有)", function()
 local out = {}
@@ -8259,6 +8323,10 @@ local CB_PART_ORDER={
 function CB.PickVisiblePart(pl,mode)
 local ch=pl and pl.Character
 if not ch then return nil end
+if SYS.T_.CB_HitboxFirst~=false and SYS.UA then
+local hb=SYS.UA.GameHitbox(ch,(mode==1))
+if hb and clearShot(hb) then SYS.UA.hbN=(SYS.UA.hbN or 0)+1 return hb end
+end
 local order=CB_PART_ORDER[mode] or CB_PART_ORDER[2]
 for i=1,#order do
 local p=ch:FindFirstChild(order[i])
@@ -8388,6 +8456,178 @@ end
 if #cands==0 then P(CB.SelfHealFilters) end
 return nil,nil
 end
+do
+local UA={}
+SYS.UA=UA
+local function cap(name)
+local tries={
+function() local g=getgenv and getgenv() return g and g[name] end,
+function() return getfenv and getfenv()[name] end,
+function() return _G[name] end,
+}
+for i=1,#tries do
+local ok,v=pcall(tries[i])
+if ok and v~=nil then return v end
+end
+return nil
+end
+UA.moveMouse=cap("mousemoverel") or cap("movemouserel")
+or cap("mouse_move_rel") or cap("MoveMouseRel")
+UA.hasDraw=(cap("Drawing")~=nil)
+UA.hasHook=(type(cap("hookfunction"))=="function")
+UA.hasGenv=(getgenv~=nil)
+UA.hasConns=(type(cap("getconnections"))=="function")
+UA.hasMouse1=(type(cap("mouse1click"))=="function")
+UA.hasKey=(type(cap("keypress"))=="function")
+UA.hasVIM=(SYS.VIM~=nil)
+UA.hasFps=(type(cap("setfpscap"))=="function")
+local HB_PAT={"AutoAimArea","AimArea","Hitbox","HitBox","HITBOX","HitPart","HeadHB","_HB","HB_"}
+local function looksHitbox(n)
+if type(n)~="string" then return false end
+for i=1,#HB_PAT do if string.find(n,HB_PAT[i],1,true) then return true end end
+return false
+end
+local hbCache=setmetatable({},{__mode="k"})
+function UA.GameHitbox(char,preferHead)
+if not char then return nil end
+UA.hbChar=char
+local set=hbCache[char]
+if set==nil then
+local heads,others={},{}
+local ok,kids=pcall(function() return char:GetChildren() end)
+if ok and type(kids)=="table" then
+for i=1,#kids do
+local d=kids[i]
+local okp=pcall(function() return d:IsA("BasePart") end)
+if okp and d:IsA("BasePart") and looksHitbox(d.Name) then
+if string.find(string.lower(d.Name),"head",1,true) then
+heads[#heads+1]=d
+else
+others[#others+1]=d
+end
+end
+end
+end
+set={head=heads[1],body=others[1],n=#heads+#others,name=heads[1] and heads[1].Name or (others[1] and others[1].Name or "")}
+hbCache[char]=set
+end
+if set.n==0 then return nil end
+UA.hbName=set.name
+if preferHead then return set.head or set.body end
+return set.body or set.head
+end
+function UA.HitboxInfo(char)
+UA.GameHitbox(char,false)
+local s=hbCache[char]
+if not s or s.n==0 then return nil end
+return ("%d 个 (%s)"):format(s.n,s.name)
+end
+local stickHit,stickMiss=0,0
+local lastWriteYaw=nil
+local sensY,sensP=0,0
+local askedX,askedY=0,0
+local preYaw,prePitch=nil,nil
+UA.stickPct=nil
+UA.samples=0
+UA.mode="camera"
+UA.mouseLearn=false
+UA.sendN=0
+UA.hbN=0
+local function angDelta(a,b)
+local d=(b-a)%(math.pi*2)
+if d>math.pi then d=d-math.pi*2 end
+return d
+end
+local hum={hold=0,capAt=0,nx=0,ny=0,tx=0,ty=0,at=0,tgt=nil}
+local function humanise(dx,dy)
+local now=os.clock()
+if hum.tgt~=CB.TargetPart then hum.tgt=CB.TargetPart hum.hold=0 end
+local react=(tonumber(SYS.C_.UA_ReactMs) or 120)/1000
+if react>0 then
+hum.hold=hum.hold+0.016
+if hum.hold<react then return 0,0 end
+end
+local maxDeg=tonumber(SYS.C_.UA_MaxDeg) or 420
+local dt=math.max(0.001,now-(hum.capAt>0 and hum.capAt or now))
+hum.capAt=now
+local cur=math.deg(math.sqrt(dx*dx+dy*dy))
+local allow=maxDeg*dt
+if cur>allow and cur>0 then
+local f=allow/cur
+if f<0.02 then f=0.02 end
+dx,dy=dx*f,dy*f
+end
+local dead=tonumber(SYS.C_.UA_Dead) or 1.5
+if math.abs(dx)<dead and math.abs(dy)<dead then return 0,0 end
+local amp=tonumber(SYS.C_.UA_Noise) or 0.35
+if amp>0 then
+local period=1/6
+if now-hum.at>period then hum.at=now hum.tx=math.random()*2-1 hum.ty=math.random()*2-1 end
+local k=math.clamp(0.016/period,0,1)*2
+hum.nx=hum.nx+(hum.tx-hum.nx)*k
+hum.ny=hum.ny+(hum.ty-hum.ny)*k
+dx,dy=dx+hum.nx*amp,dy+hum.ny*amp
+end
+return dx,dy
+end
+UA.Humanise=humanise
+function UA.Deliver(cam,want,cf,spd)
+local pitchNow,yawNow=cf:ToOrientation()
+if lastWriteYaw~=nil then
+if math.abs(math.deg(angDelta(lastWriteYaw,yawNow)))<0.12 then
+stickHit=stickHit+1
+else
+stickMiss=stickMiss+1
+end
+if stickHit+stickMiss>600 then
+stickHit=math.floor(stickHit/2) stickMiss=math.floor(stickMiss/2)
+end
+lastWriteYaw=nil
+end
+if preYaw~=nil then
+if math.abs(askedX)>=1 then
+local s=-angDelta(preYaw,yawNow)/askedX
+if s==s and s>0 and s<0.1 then sensY=(sensY==0) and s or (sensY*0.85+s*0.15) end
+end
+if math.abs(askedY)>=1 then
+local s=-(pitchNow-prePitch)/askedY
+if s==s and s>0 and s<0.1 then sensP=(sensP==0) and s or (sensP*0.85+s*0.15) end
+end
+end
+askedX,askedY=0,0 preYaw,prePitch=nil,nil
+local n=stickHit+stickMiss
+if n>0 then UA.stickPct=math.floor(stickHit/n*100) end
+UA.samples=n
+local useMouse=false
+if SYS.T_.UA_Mouse then
+useMouse=(UA.moveMouse~=nil)
+elseif SYS.T_.UA_Auto~=false and UA.moveMouse and UA.stickPct~=nil and UA.stickPct<50 then
+useMouse=true
+end
+UA.mode=useMouse and "mouse" or "camera"
+UA.mouseLearn=(useMouse and (sensY==0 or sensP==0))
+if not useMouse then
+cam.CFrame=(spd>=1) and want or cf:Lerp(want,math.clamp(spd,0.02,1))
+lastWriteYaw=select(2,want:ToOrientation())
+return true
+end
+local wp,wy=want:ToOrientation()
+local kY=(sensY>0) and sensY or 0.0016
+local kP=(sensP>0) and sensP or 0.0016
+local dx=-angDelta(yawNow,wy)/kY
+local dy=-(wp-pitchNow)/kP
+if SYS.T_.UA_Human then dx,dy=humanise(dx,dy) end
+if math.abs(dx)<1 and math.abs(dy)<1 then return true end
+local mm=UA.moveMouse
+P(function() mm(math.floor(dx),math.floor(dy)) end)
+UA.sendN=UA.sendN+1
+askedX,askedY=dx,dy preYaw,prePitch=yawNow,pitchNow
+return true
+end
+UA.humaniseReset=function()
+hum.hold=0 hum.capAt=0 hum.nx=0 hum.ny=0 hum.tgt=nil
+end
+end
 local function aimTick()
 if SYS.T_.CB_SilentNoTurn then return end
 if not SYS.T_.CB_Aim then return end
@@ -8402,7 +8642,9 @@ local cf=cam.CFrame
 if not cf then return end
 local want=CFrame.lookAt(cf.Position,pos)
 local spd=SYS.C_.CB_Smooth or 0.25
+if not (SYS.UA and SYS.UA.Deliver(cam,want,cf,spd)) then
 cam.CFrame = (spd>=1) and want or cf:Lerp(want,math.clamp(spd,0.02,1))
+end
 local root=bodyOf(SYS.LP.Character)
 if root then
 local rpos=root.Position
@@ -15181,6 +15423,59 @@ function() return SYS.C_.CB_MaxDist end,
 function(v) SYS.C_.CB_MaxDist=v end,"%.0f")
 UI.Tip(p,"★ 已移除「命中率 / 漏打模式」—— 不再有任何「故意打偏」, 开了就是最准。\n★ 平滑度/预判量/索敌半径已经在上面 —— 对应「跟随速度 / 预测提前量 / 索敌范围」, 不再重复给控件。\n★ 「粘性瞄准(锁定保持)」你早前明确删过, 这次没有加回来 —— 需要的话单独说。",CY.yellow)
 UI.Div(p)
+UI.Div(p)
+UI.Section(p,"🧭 通用化 (公开源码技法 · 让自瞄在哪都能生效)",CY.accent)
+UI.Switch(p,"自动换投递 (相机写入被游戏丢时, 自动改用真实鼠标)","UA_Auto",function(on)
+if on and SYS.UA then SYS.UA.stickPct=nil SYS.UA.samples=0 end
+end)
+UI.Switch(p,"强制走鼠标 (让游戏自己的控制器执笔 · 运动形态最像人)","UA_Mouse",function(on)
+if on and SYS.UA and not SYS.UA.moveMouse then
+SYS.Notify("⚠ 这台执行器没有 mousemoverel —— 仍会走相机(写 cam.CFrame)",SYS.CY.yellow)
+end
+end)
+UI.Switch(p,"人类化瞄准 (反应延迟 + 角度上限 + 死区 + 游走噪声)","UA_Human",function(on)
+if not on and SYS.UA and SYS.UA.humaniseReset then SYS.UA.humaniseReset() end
+end)
+UI.Slider(p,"反应延迟 (毫秒)",0,500,10,function() return SYS.C_.UA_ReactMs end,
+function(v) SYS.C_.UA_ReactMs=v end,"%.0f")
+UI.Slider(p,"每秒最大转角 (度/秒)",60,1800,30,function() return SYS.C_.UA_MaxDeg end,
+function(v) SYS.C_.UA_MaxDeg=v end,"%.0f")
+UI.Slider(p,"死区 (像素)",0,10,0.5,function() return SYS.C_.UA_Dead end,
+function(v) SYS.C_.UA_Dead=v end,"%.1f")
+UI.Slider(p,"游走噪声幅度 (像素)",0,3,0.1,function() return SYS.C_.UA_Noise end,
+function(v) SYS.C_.UA_Noise=v end,"%.1f")
+UI.Switch(p,"优先用游戏自带的瞄准命中盒 (有就用, 没有则不变)","CB_HitboxFirst",function(on)
+if SYS.UA then SYS.UA.hbN=0 SYS.UA.hbName=nil end
+end)
+UI.Btn(p,"🧭 投递实测 (控制台: 相机写入存活率 / 灵敏度 / 命中盒)",CY.cyan,function()
+P(function()
+local UA=SYS.UA
+if not UA then SYS.Notify("UA 未就绪",SYS.CY.red) return end
+print(("[CheatMenu][UA] 投递=%s   相机写入存活率=%s   样本=%d   鼠标请求=%d 次   命中盒命中=%d 次")
+:format(UA.mode,
+UA.stickPct and (tostring(UA.stickPct).."%") or "样本不足",
+UA.samples or 0, UA.sendN or 0, UA.hbN or 0))
+print(("[CheatMenu][UA] 灵敏度 Y=%s P=%s   人类化=%s")
+:format(UA.mouseLearn and "学习中" or "已收敛/未启用",
+UA.mouseLearn and "学习中" or "已收敛/未启用",
+tostring(SYS.T_.UA_Human)))
+print("[CheatMenu][UA] 存活率 <50% = 这个游戏每帧重建相机 ⇒ 「自动」模式会改走鼠标。")
+SYS.Notify("🧭 投递实测已打到控制台(F9)",SYS.CY.cyan)
+end)
+end)
+UI.Tip(p,"【为什么需要这一层】自瞄有两条投递路:\n"
+.."  · 相机 = 直接写 cam.CFrame。精确, 但【游戏自己每帧重建相机时会把你写的丢掉】\n"
+.."    (实测 Phantom Forces / BloxStrike 就是这样) —— 表现是「看着在动、其实没生效」。\n"
+.."  · 鼠标 = 调 mousemoverel, 让【游戏自己的相机控制器】执笔。两种游戏都吃,\n"
+.."    代价是玩家灵敏度客户端读不到 ⇒ 本层会【自学习】(请求多大 / 实际转了多少)。\n"
+.."自动模式 = 先走相机, 同时统计「我写的朝向下一帧还在不在」; 存活率 <50% 且执行器有\n"
+.."mousemoverel 就改用鼠标, 不问你。\n"
+.."人类化 = 反应延迟 + 每秒转角上限 + 死区 + 【平滑游走】噪声(不是每帧白噪声 ——\n"
+.."白噪声在相机上读起来是抖, 游走读起来是手)。默认全关, 想更保守再打。\n"
+.."命中盒优先 = 有些游戏自带瞄准命中盒(AutoAimAreaHead / HeadHB), 那才是它自己打的目标;\n"
+.."有就用, 没有完全按老名单走, 不影响现有手感。\n"
+.."⚠ 诚实边界: 这一层解决的是【自瞄在重建相机的服上静默失效】。飞行/加速/传送在\n"
+.."服务端权威(SA)服仍然做不了(引擎直接拒绝), 真无敌/锁血也做不到(服务端结算)。",CY.yellow)
 UI.Section(p,"🔫 自动开火 (Triggerbot)",CY.red)
 UI.Switch(p,"🔫 自动开火","CB_Fire",function(on) if on then SYS.Combat.Start() end end)
 UI.Slider(p,"开火间隔 (秒 · 0=每帧都开, 最快)",0,0.50,0.005,
