@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-25 18:10 sha 88327e72 bytes 644893'):format('2026-09-25 18:10','88327e72',644893))
-print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v80] =====")
+print(('[CheatMenu] build 2026-09-25 18:29 sha d9bc9709 bytes 644893'):format('2026-09-25 18:29','d9bc9709',644893))
+print("[CheatMenu] ===== 加载开始 · V3 内核 [gen v81] =====")
 local GENV
 do local ok,e=pcall(getgenv) GENV=(ok and type(e)=="table") and e or _G end
 do local _u=GENV.RblxSessionB or GENV["Cheat".."Unload"]
@@ -131,7 +131,7 @@ SavedPos={},Loops={},BtnRefs={},SwitchOnChange={},Pages={},
 ScreenGui=nil,MenuOpen=false,FreeCamActive=false,MenuPrevMouseBehav=nil,MenuPrevMouseIcon=nil,
 FCPrevBehav=nil,FCPrevIcon=nil,
 }
-SYS.BuildVer="12.2.0"
+SYS.BuildVer="12.3.0"
 SYS.BuildURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
 SYS.BuildVerURL="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/version.txt"
 SYS.FallbackRepo="https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
