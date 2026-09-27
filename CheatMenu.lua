@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-28 02:28 sha 3867be19 bytes 128207'):format('2026-09-28 02:28','3867be19',128207))
+print(('[CheatMenu] build 2026-09-28 02:33 sha 32fbfc5a bytes 128321'):format('2026-09-28 02:33','32fbfc5a',128321))
 print("[CheatMenu] ===== 加载开始 · v4.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
@@ -3191,6 +3191,7 @@ Theme = "Dark",
 MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
+local function buildMenu()
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
@@ -3201,6 +3202,7 @@ Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
+do
 Tabs.Combat:AddSection("战斗")
 Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then CM.AimEnable() else CM.AimDisable() end end })
 Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
@@ -3258,6 +3260,8 @@ Tabs.Combat:AddToggle("ESPTeamColor", { Title = "敌我识别(敌红/友蓝/队�
 Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then ArrowEnable() else ArrowDisable() end end })
 Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then SkeletonEnable() else SkeletonDisable() end end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
+end
+do
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then CM.FlyEnable() else CM.FlyDisable() end end })
@@ -3276,6 +3280,8 @@ Tabs.Move:AddToggle("Hide", { Title = "藏地下(自己视角正常)", Default =
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.Move:AddToggle("FlyCar", { Title = "飞车(载具飞行)", Default = false, Callback = function(v) T.FlyCar = v if v then CM.FlyCarEnable() else CM.FlyCarDisable() end end })
 Tabs.Move:AddSlider("FlyCarSpeed", { Title = "飞车速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FlyCarSpeed = v end })
+end
+do
 Tabs.World:AddSection("视觉增强")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮+夜视+去雾)", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
@@ -3313,9 +3319,10 @@ Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", D
 Tabs.World:AddSlider("AutoHealHP", { Title = "治疗血量阈值", Min = 10, Max = 100, Default = 50, Rounding = 0, Callback = function(v) C.AutoHealHP = v end })
 Tabs.World:AddToggle("AutoRevive", { Title = "自动复活队友", Default = false, Callback = function(v) T.AutoRevive = v if v then AutoReviveEnable() else AutoReviveDisable() end end })
 Tabs.World:AddToggle("ThirdPerson", { Title = "第三人称相机", Default = false, Callback = function(v) T.ThirdPerson = v if v then ThirdPersonEnable() else ThirdPersonDisable() end end })
+end
+do
 Tabs.TP:AddSection("传送")
-local tpNames = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return n end)()
-Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = tpNames, Default = tpNames[1] })
+Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end if #n==0 then n[1]="(无人)" end return n end)(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then return end
@@ -3340,6 +3347,8 @@ end })
 Tabs.TP:AddToggle("AntiVoid", { Title = "防掉虚空", Default = false, Callback = function(v) T.AntiVoid = v if v then AntiVoidEnable() else AntiVoidDisable() end end })
 Tabs.TP:AddSlider("VoidY", { Title = "虚空高度阈值", Min = -200, Max = 0, Default = -50, Rounding = 0, Callback = function(v) C.VoidY = v end })
 Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then AutoRespawnEnable() end end })
+end
+do
 Tabs.AFK:AddSection("挂机防踢")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
@@ -3359,6 +3368,8 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
+end
+do
 Tabs.Trans:AddSection("翻译")
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
 local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar", ["印尼语"] = "id" }
@@ -3382,6 +3393,8 @@ if r then sendChat(r) Fluent:Notify({ Title = "已发送", Content = r, Duration
 else sendChat(txt) Fluent:Notify({ Title = "已发送(原文)", Content = txt, Duration = 4 }) end
 end })
 Tabs.Trans:AddButton({ Title = "清空翻译缓存", Callback = function() TransCache = {} saveTransCache() Fluent:Notify({ Title = "翻译", Content = "缓存已清空", Duration = 2 }) end })
+end
+do
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACBypass", { Title = "反作弊一键(防踢+拦远程+防甩飞+元表清空)", Default = false, Callback = function(v)
 T.ACBypass = v T.NamecallHook = v T.RemoteBlock = v T.AntiFling = v T.MetaBypass = v T.BadgeBypass = v
@@ -3397,6 +3410,8 @@ Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = 
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
+end
+do
 Tabs.Setting:AddSection("设置")
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then CM.ClickerEnable() else CM.ClickerDisable() end end })
 Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
@@ -3413,7 +3428,11 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-local function addToggleButton()
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.0", Duration = 5 })
+RestoreFeatures()
+print("[CheatMenu] ✅ 加载完成 v4.8.0")
+end
+local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
 if getgenv then getgenv().CM_ToggleSG = sg end
 sg.Name = "CheatMenu_Toggle"
@@ -3455,7 +3474,6 @@ btn.MouseButton1Click:Connect(function()
 Window:Minimize()
 end)
 end
-addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.0", Duration = 5 })
-RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.8.0")
+addToggleButton(Window)
+end
+buildMenu()
