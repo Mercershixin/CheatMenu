@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 18:50 sha 28dd8b55 bytes 36842'):format('2026-09-27 18:50','28dd8b55',36842))
-print("[CheatMenu] ===== 加载开始 · v1.0.0 =====")
+print(('[CheatMenu] build 2026-09-27 18:59 sha 4517db13 bytes 27199'):format('2026-09-27 18:59','4517db13',27199))
+print("[CheatMenu] ===== 加载开始 · v1.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -106,346 +106,9 @@ if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
 end
 end)
 end
-local Menu = {}
-local THEME = {
-BG      = Color3.fromRGB(20, 20, 24),
-TITLE   = Color3.fromRGB(30, 30, 36),
-ACCENT  = Color3.fromRGB(255, 255, 255),
-SUB     = Color3.fromRGB(150, 150, 160),
-GREEN   = Color3.fromRGB(90, 220, 120),
-YELLOW  = Color3.fromRGB(240, 200, 80),
-RED     = Color3.fromRGB(230, 90, 90),
-CYAN    = Color3.fromRGB(90, 200, 220),
-PURPLE  = Color3.fromRGB(180, 130, 240),
-}
-local function makeLabel(parent, text, size, color, pos, transparency)
-local l = Instance.new("TextLabel")
-l.Text = tostring(text)
-l.TextSize = size or 14
-l.TextColor3 = color or THEME.ACCENT
-l.BackgroundTransparency = 1
-l.Font = Enum.Font.Gotham
-l.TextXAlignment = Enum.TextXAlignment.Left
-l.TextWrapped = true
-if transparency then l.TextTransparency = transparency end
-if pos then l.Position = pos end
-l.Parent = parent
-return l
-end
-function Menu.CreateWindow(cfg)
-cfg = cfg or {}
-local Key = cfg.Key or Enum.KeyCode.G
-local uiRoot = Instance.new("ScreenGui")
-uiRoot.Name = "CheatMenu"
-uiRoot.ResetOnSpawn = false
-uiRoot.IgnoreGuiInset = true
-uiRoot.Parent = CoreGui
-local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(480, 520)
-main.Position = UDim2.new(0.5, -240, 0.5, -260)
-main.BackgroundColor3 = THEME.BG
-main.BorderSizePixel = 0
-main.ClipsDescendants = true
-main.Parent = uiRoot
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = main
-local title = Instance.new("Frame")
-title.Size = UDim2.fromScale(1, 0)
-title.Size = UDim2.new(1, 0, 0, 38)
-title.BackgroundColor3 = THEME.TITLE
-title.BorderSizePixel = 0
-title.Parent = main
-makeLabel(title, cfg.Title or "CheatMenu", 16, THEME.ACCENT, UDim2.fromOffset(14, 9))
-local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.fromOffset(30, 24)
-minBtn.Position = UDim2.new(1, -40, 0, 7)
-minBtn.Text = "—"
-minBtn.TextColor3 = THEME.ACCENT
-minBtn.BackgroundColor3 = THEME.TITLE
-minBtn.BorderSizePixel = 0
-minBtn.Parent = title
-local dragging, dragStart, winStart = false, nil, nil
-title.InputBegan:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 then
-dragging = true
-dragStart = input.Position
-winStart = main.Position
-end
-end)
-UIS.InputChanged:Connect(function(input)
-if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-local delta = input.Position - dragStart
-main.Position = UDim2.new(winStart.X.Scale, winStart.X.Offset + delta.X, winStart.Y.Scale, winStart.Y.Offset + delta.Y)
-end
-end)
-UIS.InputEnded:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-end)
-minBtn.MouseButton1Click:Connect(function()
-main.Visible = not main.Visible
-end)
-local minimized = false
-UIS.InputBegan:Connect(function(input, gpe)
-if gpe then return end
-if input.KeyCode == Key then
-minimized = not minimized
-main.Visible = not minimized
-end
-end)
-local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1, 0, 0, 34)
-tabBar.Position = UDim2.fromOffset(0, 38)
-tabBar.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-tabBar.BorderSizePixel = 0
-tabBar.Parent = main
-local pages = Instance.new("Frame")
-pages.Size = UDim2.new(1, 0, 1, -72)
-pages.Position = UDim2.fromOffset(0, 72)
-pages.BackgroundTransparency = 1
-pages.Parent = main
-local win = { Root = uiRoot, Main = main, Tabs = {} }
-local function buildTab(name)
-local holder = Instance.new("ScrollingFrame")
-holder.Size = UDim2.fromScale(1, 1)
-holder.BackgroundTransparency = 1
-holder.ScrollBarThickness = 3
-holder.CanvasSize = UDim2.fromScale(0, 0)
-holder.AutomaticCanvasSize = Enum.AutomaticSize.Y
-holder.Visible = false
-holder.Parent = pages
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 8)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = holder
-local pad = Instance.new("UIPadding")
-pad.PaddingLeft = UDim.new(0, 12)
-pad.PaddingRight = UDim.new(0, 12)
-pad.PaddingTop = UDim.new(0, 10)
-pad.PaddingBottom = UDim.new(0, 10)
-pad.Parent = holder
-local tab = { Holder = holder, Name = name }
-return tab, holder
-end
-function win:AddTab(name)
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(0, 90, 1, 0)
-btn.Text = name
-btn.TextSize = 14
-btn.TextColor3 = THEME.SUB
-btn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-btn.BorderSizePixel = 0
-btn.AutoButtonColor = false
-btn.Parent = tabBar
-btn.Position = UDim2.fromOffset(#win.Tabs * 90, 0)
-local tab, holder = buildTab(name)
-tab.Button = btn
-btn.MouseButton1Click:Connect(function()
-for _, t in pairs(win.Tabs) do
-t.Holder.Visible = false
-t.Button.TextColor3 = THEME.SUB
-end
-tab.Holder.Visible = true
-btn.TextColor3 = THEME.ACCENT
-end)
-win.Tabs[#win.Tabs + 1] = tab
-if #win.Tabs == 1 then
-tab.Holder.Visible = true
-btn.TextColor3 = THEME.ACCENT
-end
-return tab
-end
-local TabAPI = {}
-TabAPI.__index = TabAPI
-local function newTabApi(tab)
-return setmetatable({ Tab = tab }, TabAPI)
-end
-function TabAPI:AddSection(titleText)
-local label = makeLabel(self.Tab.Holder, titleText or "", 13, THEME.ACCENT)
-label.TextSize = 13
-label.LayoutOrder = -1
-return label
-end
-function TabAPI:AddLabel(text, color)
-return makeLabel(self.Tab.Holder, text, 13, color or THEME.SUB)
-end
-function TabAPI:AddDivider()
-local d = Instance.new("Frame")
-d.Size = UDim2.new(1, 0, 0, 1)
-d.BackgroundColor3 = Color3.fromRGB(50, 50, 58)
-d.BorderSizePixel = 0
-d.Parent = self.Tab.Holder
-return d
-end
-function TabAPI:AddToggle(text, key, default, cb)
-local row = Instance.new("Frame")
-row.Size = UDim2.new(1, 0, 0, 32)
-row.BackgroundTransparency = 1
-row.Parent = self.Tab.Holder
-makeLabel(row, text, 14, THEME.ACCENT, UDim2.fromOffset(0, 8))
-local box = Instance.new("TextButton")
-box.Size = UDim2.fromOffset(40, 20)
-box.Position = UDim2.new(1, -40, 0, 6)
-box.Text = ""
-box.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
-box.BorderSizePixel = 0
-box.AutoButtonColor = false
-box.Parent = row
-local dot = Instance.new("Frame")
-dot.Size = UDim2.fromOffset(16, 16)
-dot.Position = UDim2.fromOffset(2, 2)
-dot.BackgroundColor3 = THEME.SUB
-dot.BorderSizePixel = 0
-dot.Parent = box
-Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-local state = (T[key] ~= nil) and T[key] or (default or false)
-T[key] = state
-local function render()
-dot.BackgroundColor3 = state and THEME.GREEN or THEME.SUB
-dot.Position = state and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)
-end
-render()
-box.MouseButton1Click:Connect(function()
-state = not state
-T[key] = state
-render()
-if cb then pcall(cb, state) end
-end)
-return row
-end
-function TabAPI:AddButton(text, cb, color)
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(1, 0, 0, 32)
-btn.Text = tostring(text)
-btn.TextSize = 14
-btn.TextColor3 = THEME.ACCENT
-btn.BackgroundColor3 = Color3.fromRGB(46, 46, 56)
-btn.BorderSizePixel = 0
-btn.AutoButtonColor = false
-btn.Parent = self.Tab.Holder
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-if color then btn.TextColor3 = color end
-btn.MouseButton1Click:Connect(function()
-pcall(cb or function() end)
-end)
-return btn
-end
-function TabAPI:AddSlider(text, min, max, step, getter, setter, fmt)
-local row = Instance.new("Frame")
-row.Size = UDim2.new(1, 0, 0, 40)
-row.BackgroundTransparency = 1
-row.Parent = self.Tab.Holder
-local valLabel = makeLabel(row, "", 13, THEME.GREEN, UDim2.new(1, -70, 0, 0))
-valLabel.TextXAlignment = Enum.TextXAlignment.Right
-local bar = Instance.new("TextButton")
-bar.Size = UDim2.new(1, 0, 0, 14)
-bar.Position = UDim2.fromOffset(0, 22)
-bar.Text = ""
-bar.BackgroundColor3 = Color3.fromRGB(50, 50, 58)
-bar.BorderSizePixel = 0
-bar.AutoButtonColor = false
-bar.Parent = row
-Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-local fill = Instance.new("Frame")
-fill.Size = UDim2.fromScale(0.3, 1)
-fill.BackgroundColor3 = THEME.GREEN
-fill.BorderSizePixel = 0
-fill.Parent = bar
-Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-local function render()
-local v = getter and getter() or C[text]
-if not v then v = min end
-local pct = (v - min) / math.max(1e-6, (max - min))
-fill.Size = UDim2.fromScale(math.clamp(pct, 0, 1), 1)
-valLabel.Text = tostring(text) .. ": " .. (fmt and string.format(fmt, v) or tostring(v))
-end
-render()
-local function setFromMouse(x)
-local pct = math.clamp((x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X), 0, 1)
-local v = min + (max - min) * pct
-if step then v = min + math.floor((v - min) / step + 0.5) * step end
-v = math.clamp(v, min, max)
-if setter then pcall(setter, v) end
-render()
-end
-local sliding = false
-bar.InputBegan:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 then
-sliding = true
-setFromMouse(input.Position.X)
-end
-end)
-UIS.InputChanged:Connect(function(input)
-if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-setFromMouse(input.Position.X)
-end
-end)
-UIS.InputEnded:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end
-end)
-return row
-end
-function TabAPI:AddDropdown(text, options, default, cb)
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(1, 0, 0, 32)
-btn.Text = tostring(text) .. ": " .. tostring(default or (options and options[1]) or "")
-btn.TextSize = 14
-btn.TextColor3 = THEME.ACCENT
-btn.BackgroundColor3 = Color3.fromRGB(46, 46, 56)
-btn.BorderSizePixel = 0
-btn.AutoButtonColor = false
-btn.Parent = self.Tab.Holder
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-local list = Instance.new("Frame")
-list.Size = UDim2.new(1, 0, 0, 0)
-list.BackgroundColor3 = Color3.fromRGB(34, 34, 42)
-list.BorderSizePixel = 0
-list.ClipsDescendants = true
-list.Parent = self.Tab.Holder
-Instance.new("UICorner", list).CornerRadius = UDim.new(0, 6)
-local layout = Instance.new("UIListLayout")
-layout.Parent = list
-local open = false
-local current = default or (options and options[1]) or ""
-local function refreshOpts()
-for _, child in pairs(list:GetChildren()) do
-if child:IsA("TextButton") then child:Destroy() end
-end
-for _, opt in ipairs(options or {}) do
-local ob = Instance.new("TextButton")
-ob.Size = UDim2.new(1, 0, 0, 26)
-ob.Text = tostring(opt)
-ob.TextSize = 13
-ob.TextColor3 = THEME.ACCENT
-ob.BackgroundTransparency = 1
-ob.AutoButtonColor = false
-ob.Parent = list
-ob.MouseButton1Click:Connect(function()
-current = opt
-btn.Text = tostring(text) .. ": " .. tostring(opt)
-open = false
-list.Size = UDim2.new(1, 0, 0, 0)
-if cb then pcall(cb, opt) end
-end)
-end
-end
-refreshOpts()
-btn.MouseButton1Click:Connect(function()
-open = not open
-list.Size = open and UDim2.new(1, 0, 0, 26 * #(options or {})) or UDim2.new(1, 0, 0, 0)
-end)
-return btn
-end
-local originalAddTab = win.AddTab
-function win.AddTab(name)
-local tab = originalAddTab(name)
-return setmetatable({ Tab = tab, Holder = tab.Holder, Button = tab.Button }, {
-__index = function(_, k)
-if TabAPI[k] then return function(_, ...) return TabAPI[k](tab, ...) end end
-end
-})
-end
-return win
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+if not Fluent then
+error("[CheatMenu] ❌ Fluent UI 库加载失败(检查网络)")
 end
 local AC = {}
 function AC.InstallNamecallHook()
@@ -1053,57 +716,46 @@ end
 return nil
 end
 LoadConfig()
-local Win = Menu.CreateWindow({ Title = "CheatMenu v1.0.0", Key = Enum.KeyCode.G })
-local PageAFK = Win.AddTab("挂机")
-PageAFK:AddSection("挂机防踢")
-PageAFK:AddToggle("挂机防踢 (AntiAFK)", "AntiAFK", true, function(on)
-if on then AntiAFKEnable() end
-end)
-PageAFK:AddToggle("本地防踢 (KickGuard)", "KickGuard", false, function(on)
-if on then KickGuardEnable() else KickGuardDisable() end
-end)
-PageAFK:AddToggle("前兆抢传 (KickRejoin)", "KickRejoin", false, function(on)
-if on then KickRejoinEnable() end
-end)
-PageAFK:AddDivider()
-PageAFK:AddSection("训练")
-PageAFK:AddToggle("自动训练 (踢击力量)", "AutoTrain", false, function(on)
-if on then AutoTrainEnable() end
-end)
-PageAFK:AddToggle("自动领取训练加成", "AutoBonus", false, function(on)
-if on then AutoBonusEnable() end
-end)
-PageAFK:AddSlider("训练循环间隔(秒)", 1, 30, 0.5, function() return C.AutoTrainSec or 5 end, function(v) C.AutoTrainSec = v end, "%.1f")
-PageAFK:AddDivider()
-PageAFK:AddSection("健身房")
-PageAFK:AddToggle("自动锻炼 (AutoGym)", "AutoGym", false, function(on)
-if on then AutoGymEnable() end
-end)
-PageAFK:AddDivider()
-PageAFK:AddSection("基地操作")
-PageAFK:AddToggle("自动售卖 CPS (每轮)", "AutoSell", false, function(on)
-if on then sellLowCPSTools() end
-end)
-PageAFK:AddSlider("CPS 售卖门槛", 1000, 1000000, 1000, function() return C.SellMinCPS or 100000 end, function(v) C.SellMinCPS = v end, "%.0f")
-PageAFK:AddButton("一键收起脑红", function() withdrawAllBrainrots() end)
-PageAFK:AddButton("一键收起货币", function() collectAllCash() end)
-PageAFK:AddDivider()
-PageAFK:AddSection("翻译")
-PageAFK:AddToggle("界面翻译", "Translate", false)
-PageAFK:AddButton("翻译测试 (Hello World)", function()
+local Window = Fluent:CreateWindow({
+Title = "CheatMenu",
+SubTitle = "v1.1.0",
+TabWidth = 100,
+Size = UDim2.fromOffset(480, 540),
+Acrylic = true,
+Theme = "Dark",
+MinimizeKey = Enum.KeyCode.G,
+})
+local Tabs = {
+AFK = Window:AddTab({ Title = "挂机", Icon = "home" }),
+AC  = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
+}
+Tabs.AFK:AddSection("挂机防踢")
+Tabs.AFK:AddToggle("AntiAFK", { Title = "挂机防踢 (AntiAFK)", Default = (T.AntiAFK ~= false), Callback = function(v) T.AntiAFK = v if v then AntiAFKEnable() end end })
+Tabs.AFK:AddToggle("KickGuard", { Title = "本地防踢 (KickGuard)", Default = false, Callback = function(v) T.KickGuard = v if v then KickGuardEnable() else KickGuardDisable() end end })
+Tabs.AFK:AddToggle("KickRejoin", { Title = "前兆抢传 (KickRejoin)", Default = false, Callback = function(v) T.KickRejoin = v if v then KickRejoinEnable() end end })
+Tabs.AFK:AddSection("训练")
+Tabs.AFK:AddToggle("AutoTrain", { Title = "自动训练 (踢击力量)", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
+Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取训练加成", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
+Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
+Tabs.AFK:AddSection("健身房")
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼 (AutoGym)", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
+Tabs.AFK:AddSection("基地操作")
+Tabs.AFK:AddToggle("AutoSell", { Title = "自动售卖 CPS (每轮)", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
+Tabs.AFK:AddSlider("SellMinCPS", { Title = "CPS 售卖门槛", Min = 1000, Max = 1000000, Default = 100000, Rounding = 0, Callback = function(v) C.SellMinCPS = v end })
+Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
+Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
+Tabs.AFK:AddSection("翻译")
+Tabs.AFK:AddToggle("Translate", { Title = "界面翻译", Default = false, Callback = function(v) T.Translate = v end })
+Tabs.AFK:AddButton({ Title = "翻译测试 (Hello World)", Callback = function()
 local r = Trans.Translate("Collect all eggs")
 print("[CheatMenu] 翻译测试: " .. tostring(r))
-Notify("翻译: " .. tostring(r))
-end)
-local PageAC = Win.AddTab("反作弊")
-PageAC:AddSection("反作弊")
-PageAC:AddToggle("namecall 拦截 (防踢)", "NamecallHook", false, function(on)
-if on then AC.InstallNamecallHook() end
-end)
-PageAC:AddToggle("防甩飞 (AntiFling)", "AntiFling", false, function(on)
-if on then AntiFlingEnable() else AntiFlingDisable() end
-end)
-PageAC:AddButton("保存配置", function() SaveConfig() Notify("已保存配置") end)
+Fluent:Notify({ Title = "翻译", Content = tostring(r), Duration = 4 })
+end })
+Tabs.AC:AddSection("反作弊")
+Tabs.AC:AddToggle("NamecallHook", { Title = "namecall 拦截 (防踢)", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
+Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞 (AntiFling)", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
+Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 T.AntiAFK = true
 AntiAFKEnable()
-print("[CheatMenu] ✅ 加载完成 v1.0.0 (呼出键 G)")
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.1.0 (呼出键 G)", Duration = 5 })
+print("[CheatMenu] ✅ 加载完成 v1.1.0 (呼出键 G)")
