@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:39 sha eacfdb34 bytes 68744'):format('2026-09-27 20:39','eacfdb34',68744))
-print("[CheatMenu] ===== 加载开始 · v2.0.0 =====")
+print(('[CheatMenu] build 2026-09-27 21:18 sha 814c9aee bytes 69868'):format('2026-09-27 21:18','814c9aee',69868))
+print("[CheatMenu] ===== 加载开始 · v2.0.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1656,10 +1656,36 @@ if ok then return end
 end
 print("[CheatMenu] 聊天绕过脚本加载失败")
 end
+local BulletHls = {}
+local BulletConn = nil
+local function BulletTracerEnable()
+if BulletConn then return end
+local function tag(part)
+if not (part:IsA("BasePart") and T.BulletTracer) then return end
+local n = part.Name:lower()
+if n:match("bullet") or n:match("projectile") or n:match("shot") or n:match("rocket") or n:match("bolt") then
+local hl = Instance.new("Highlight")
+hl.FillColor = Color3.fromRGB(255, 255, 0)
+hl.FillTransparency = 0.5
+hl.OutlineColor = Color3.fromRGB(255, 120, 0)
+hl.OutlineTransparency = 0
+hl.Parent = part
+BulletHls[#BulletHls + 1] = hl
+end
+end
+BulletConn = workspace.DescendantAdded:Connect(tag)
+for _, part in ipairs(workspace:GetDescendants()) do tag(part) end
+print("[CheatMenu] 子弹追踪已开启")
+end
+local function BulletTracerDisable()
+if BulletConn then BulletConn:Disconnect() BulletConn = nil end
+for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
+BulletHls = {}
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.0",
+SubTitle = "v2.0.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1797,6 +1823,7 @@ Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = f
 Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then SingleAimEnable() else SingleAimDisable() end end })
 Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then FaceLockEnable() else FaceLockDisable() end end })
 Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() FlingTarget() end })
+Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then BulletTracerEnable() else BulletTracerDisable() end end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键全开: 防踢+拦远程+防甩飞)", Default = false, Callback = function(v)
 T.ACBypass = v
@@ -1868,6 +1895,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.0")
+print("[CheatMenu] ✅ 加载完成 v2.0.1")
