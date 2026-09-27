@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:22 sha 230ef3d2 bytes 69868'):format('2026-09-27 21:22','230ef3d2',69868))
-print("[CheatMenu] ===== 加载开始 · v2.0.2 =====")
+print(('[CheatMenu] build 2026-09-27 21:26 sha 480bbd71 bytes 70190'):format('2026-09-27 21:26','480bbd71',70190))
+print("[CheatMenu] ===== 加载开始 · v2.0.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1645,6 +1645,19 @@ if not hookfunction then return end
 local bs = game:GetService("BadgeService")
 pcall(function() hookfunction(bs.UserHasBadgeAsync, function() return true end) end)
 end
+local function ChatBypassCleanup()
+pcall(function()
+local root = gethui and gethui() or game:GetService("CoreGui")
+for _, gui in ipairs(root:GetChildren()) do
+if gui:IsA("ScreenGui") then
+local n = gui.Name:lower()
+if n:match("anna") or n:match("bypasser") then
+gui:Destroy()
+end
+end
+end
+end)
+end
 local function ChatBypassEnable()
 local urls = {
 "https://raw.githubusercontent.com/AnnaRoblox/AnnaBypasser/refs/heads/main/AnnaBypasser.lua",
@@ -1685,7 +1698,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.2",
+SubTitle = "v2.0.3",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1840,7 +1853,7 @@ end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
-Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() end end })
+Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() else ChatBypassCleanup() end end })
 Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
@@ -1895,6 +1908,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.3", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.2")
+print("[CheatMenu] ✅ 加载完成 v2.0.3")
