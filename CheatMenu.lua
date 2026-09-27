@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:06 sha a9807dee bytes 51793'):format('2026-09-27 20:06','a9807dee',51793))
-print("[CheatMenu] ===== 加载开始 · v1.7.1 =====")
+print(('[CheatMenu] build 2026-09-27 20:17 sha c0739d8b bytes 53592'):format('2026-09-27 20:17','c0739d8b',53592))
+print("[CheatMenu] ===== 加载开始 · v1.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -95,7 +95,8 @@ pcall(function()
 if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end
 end)
 end
-local function LoadConfig()
+local function loadTransCache()
+LoadConfig()
 pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local raw = readfile(SaveFile)
@@ -719,15 +720,52 @@ if WithdrawThread then return end
 WithdrawThread = task.spawn(function()
 local _, hum = GC()
 if not hum then WithdrawThread = nil return end
-pcall(function() hum:UnequipTools() end)
-task.wait(0.1)
-local done, failed = 0, 0
-for i = 1, 30 do
-pcall(function() hum:UnequipTools() end)
-if Fire("S_Interact", i) then done = done + 1 else failed = failed + 1 end
-task.wait(0.1)
+local function findEmptySlot()
+local plots = WS:FindFirstChild("Plots")
+if not plots then return nil end
+local myPlot
+for _, p in ipairs(plots:GetChildren()) do
+local o = p:GetAttribute("Owner")
+if o == LP.Name or o == LP.DisplayName then myPlot = p break end
 end
-print("[CheatMenu] 收起脑红 · 触发 " .. done .. " · 失败 " .. failed)
+if not myPlot then return nil end
+local slots = myPlot:FindFirstChild("Slots")
+if not slots then return nil end
+for _, slot in ipairs(slots:GetChildren()) do
+local sn = tostring(slot.Name)
+local idx = tonumber(sn:match("^Slot[%s_%-]*(%d+)$")) or tonumber(sn:match("(%d+)$"))
+if idx and idx >= 1 and idx <= 30 then
+local has = false
+for _, c in ipairs(slot:GetDescendants()) do
+if c:GetAttribute("ID") ~= nil then has = true break end
+end
+if not has then return idx end
+end
+end
+return nil
+end
+local placed = 0
+for _ = 1, 30 do
+local slotIdx = findEmptySlot()
+if not slotIdx then break end
+local tool
+local bp = LP:FindFirstChild("Backpack")
+if bp then
+for _, t in ipairs(bp:GetChildren()) do
+if isEntityTool(t) then tool = t break end
+end
+end
+if not tool then break end
+pcall(function() hum:EquipTool(tool) end)
+task.wait(0.2)
+if tool.Parent == LP.Character then
+Fire("S_Interact", slotIdx)
+placed = placed + 1
+task.wait(0.15)
+end
+end
+pcall(function() hum:UnequipTools() end)
+print("[CheatMenu] 收起脑红 · 放置 " .. placed .. " 个到基地槽位")
 WithdrawThread = nil
 end)
 end
@@ -766,7 +804,8 @@ local slots = myPlot:FindFirstChild("Slots")
 local done = 0
 if slots then
 for _, slot in ipairs(slots:GetChildren()) do
-local idx = tonumber(tostring(slot.Name):match("(%d+)"))
+local sn = tostring(slot.Name)
+local idx = tonumber(sn:match("^Slot[%s_%-]*(%d+)$")) or tonumber(sn:match("(%d+)$"))
 if idx and idx >= 1 and idx <= 30 then
 local has = false
 local part
@@ -833,9 +872,28 @@ Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
 The word Robux is kept as-is too.
 If the text is already Chinese or contains CJK, output it unchanged.]]
 local TransCache = {}
+local TransCacheFile = "CheatMenu_TransCache.json"
+local function loadTransCache()
+pcall(function()
+if not (readfile and isfile and isfile(TransCacheFile)) then return end
+local raw = readfile(TransCacheFile)
+local d = HS:JSONDecode(raw)
+if type(d) == "table" then
+local n = 0
+for k, v in pairs(d) do TransCache[k] = v n = n + 1 end
+print("[CheatMenu] 已加载翻译缓存 " .. n .. " 条")
+end
+end)
+end
+local function saveTransCache()
+pcall(function()
+if not writefile then return end
+writefile(TransCacheFile, HS:JSONEncode(TransCache))
+end)
+end
 local TransLangs = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
-th = "Thai", ru = "Russian", ar = "Arabic",
+th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 }
 local function promptFor(code)
 if not code or code == "zh" then return SYS_PROMPT end
@@ -858,7 +916,7 @@ messages = {
 },
 temperature = 0.1,
 top_p = 0.6,
-max_tokens = 512,
+max_tokens = 128,
 stream = false,
 })
 local ok, res = pcall(function()
@@ -886,6 +944,7 @@ if type(s) ~= "string" or s == "" then return false end
 local hasCJK = string.find(s, "[\228-\233]") ~= nil
 local hasAlpha = string.find(s, "[%a]") ~= nil
 if not hasCJK and not hasAlpha then return false end
+if s:find("$", 1, true) or s:find("€", 1, true) or s:find("¥", 1, true) then return false end
 local lang = C.TransLang or "zh"
 if lang == "zh" and hasCJK then return false end
 return true
@@ -900,6 +959,7 @@ local r = TransRequest(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
 TransCache[text] = r
+saveTransCache()
 return r
 end
 return nil
@@ -1296,7 +1356,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.7.1",
+SubTitle = "v1.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1341,8 +1401,8 @@ end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
 Tabs.AFK:AddSection("翻译")
-Tabs.AFK:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文" }, Default = "中文", Callback = function(v)
-local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar" }
+Tabs.AFK:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
+local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar", ["印尼语"] = "id" }
 C.TransLang = map[v] or "zh"
 end })
 Tabs.AFK:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
@@ -1473,6 +1533,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.7.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.7.1")
+print("[CheatMenu] ✅ 加载完成 v1.8.0")
