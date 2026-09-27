@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:52 sha da043d75 bytes 51964'):format('2026-09-27 19:52','da043d75',51964))
-print("[CheatMenu] ===== 加载开始 · v1.6.3 =====")
+print(('[CheatMenu] build 2026-09-27 20:01 sha 53b91816 bytes 51100'):format('2026-09-27 20:01','53b91816',51100))
+print("[CheatMenu] ===== 加载开始 · v1.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -140,22 +140,6 @@ return old(self, ...)
 end))
 if type(old) ~= "function" then return false end
 AC._nc = true
-return true
-end
-function AC.InstallPropertySpoof()
-if not hookmetamethod or not newcclosure then return false end
-if AC._spoofed then return true end
-local oldIndex
-oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
-if not checkcaller() and typeof(self) == "Instance" then
-if key == "WalkSpeed" and T.Speed then return 16 end
-if key == "JumpPower" and T.InfiniteJump then return 50 end
-if key == "Health" and T.God then return 100 end
-end
-return oldIndex(self, key)
-end))
-if type(oldIndex) ~= "function" then return false end
-AC._spoofed = true
 return true
 end
 local FlingConns = {}
@@ -831,8 +815,12 @@ return "Translate the following game UI text into " .. lang
 .. ". Output ONLY the translation: no explanation, no quotes, no extra words."
 .. " Keep numbers, emoji, URLs and player names unchanged."
 end
+local requestFn = (type(syn) == "table" and syn.request) or (type(http) == "table" and http.request) or http_request or request
 local function TransRequest(text)
-if not HS then return nil end
+if not requestFn then
+print("[CheatMenu] ❌ 翻译失败: 执行器没有 request 函数")
+return nil
+end
 local body = HS:JSONEncode({
 model = MODEL,
 messages = {
@@ -845,7 +833,7 @@ max_tokens = 512,
 stream = false,
 })
 local ok, res = pcall(function()
-return HS:RequestAsync({
+return requestFn({
 Url = HOST .. "/v1/chat/completions",
 Method = "POST",
 Headers = {
@@ -855,7 +843,10 @@ Headers = {
 Body = body,
 })
 end)
-if not ok or not res or res.StatusCode ~= 200 then return nil end
+if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
+print("[CheatMenu] ❌ 翻译请求失败: " .. tostring(res and res.StatusCode))
+return nil
+end
 local ok2, d = pcall(HS.JSONDecode, HS, res.Body)
 if not ok2 or not d or not d.choices or not d.choices[1] then return nil end
 local out = d.choices[1].message and d.choices[1].message.content
@@ -1134,41 +1125,15 @@ local smooth = math.max(1, C.AimSmooth or 5)
 cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, target.Position), 1 / smooth)
 end)
 end
-local HitboxList = {}
-local function addHitbox(pl)
-if pl == LP or not T.Hitbox then return end
-local ch = pl.Character
-if not ch then return end
-local hrp = ch:FindFirstChild("HumanoidRootPart")
-if not hrp then return end
-local box = Instance.new("Part")
-box.Size = Vector3.new(5, 5, 5)
-box.Transparency = 1
-box.CanCollide = true
-box.CanQuery = true
-box.Anchored = true
-box.Name = "CheatHitbox"
-box.Parent = ch
-local conn = RS.RenderStepped:Connect(function()
-if box.Parent and hrp.Parent then
-box.CFrame = hrp.CFrame
+local function cleanupHitbox(ch)
+pcall(function()
+for _, o in ipairs(ch:GetDescendants()) do
+if o.Name == "CheatHitbox" then o:Destroy() end
 end
 end)
-table.insert(HitboxList, { box = box, conn = conn })
 end
-local function HitboxEnable()
-for _, pl in ipairs(Players:GetPlayers()) do addHitbox(pl) end
-Players.PlayerAdded:Connect(function(pl)
-pl.CharacterAdded:Connect(function() addHitbox(pl) end)
-end)
-end
-local function HitboxDisable()
-for _, e in ipairs(HitboxList) do
-pcall(function() e.conn:Disconnect() end)
-pcall(function() e.box:Destroy() end)
-end
-HitboxList = {}
-end
+if LP.Character then cleanupHitbox(LP.Character) end
+LP.CharacterAdded:Connect(function(ch) task.wait(0.5) cleanupHitbox(ch) end)
 local GodConn = nil
 local function GodEnable()
 if GodConn then return end
@@ -1224,24 +1189,39 @@ for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
 ESPMap = {}
 end
 local HideConn = nil
+local HideBaseY = nil
 local function HideEnable()
 if HideConn then return end
-local baseY = nil
+local _, _, root = GC()
+if root then HideBaseY = root.Position.Y end
 HideConn = RS.RenderStepped:Connect(function()
 if not T.Hide then return end
-local _, _, root = GC()
-if not root then return end
-if not baseY then baseY = root.Position.Y end
-root.CFrame = CFrame.new(root.Position.X, baseY - (C.HideDepth or 10), root.Position.Z)
-root.AssemblyLinearVelocity = Vector3.zero
+local _, _, r = GC()
+if not r then return end
+local depth = math.min(C.HideDepth or 5, 10)
+r.CFrame = CFrame.new(r.Position.X, HideBaseY - depth, r.Position.Z)
+r.AssemblyLinearVelocity = Vector3.zero
+local cam = workspace.CurrentCamera
+if cam then
+local cp = cam.CFrame.Position
+if cp.Y < HideBaseY - 0.5 then
+cam.CFrame = CFrame.new(cp.X, HideBaseY, cp.Z) * (cam.CFrame - cam.CFrame.Position)
+end
+end
 end)
 end
 local function HideDisable()
 if HideConn then HideConn:Disconnect() HideConn = nil end
+pcall(function()
+local _, _, r = GC()
+if r and HideBaseY then
+r.CFrame = CFrame.new(r.Position.X, HideBaseY + 2, r.Position.Z)
+end
+end)
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HitboxDisable, HideDisable,
+local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HideDisable,
 ESPDisable, InvisibleDisable, KickGuardDisable, AntiFlingDisable, FullBrightDisable, NoFogDisable, SpeedDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
@@ -1261,7 +1241,6 @@ if T.Hide then HideEnable() end
 if T.FullBright then FullBrightEnable() end
 if T.NoFog then NoFogEnable() end
 if T.Aim then AimEnable() end
-if T.Hitbox then HitboxEnable() end
 if T.God then GodEnable() end
 if T.Invisible then InvisibleEnable() end
 if T.ESP then ESPEnable() end
@@ -1270,7 +1249,6 @@ if T.AutoGym then AutoGymEnable() end
 if T.AutoBonus then AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
-if T.PropertySpoof then AC.InstallPropertySpoof() end
 if T.AntiFling then AntiFlingEnable() end
 end
 local function HotUpdate()
@@ -1289,7 +1267,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.6.3",
+SubTitle = "v1.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1371,7 +1349,7 @@ Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 500, D
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
-Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度", Min = 1, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.HideDepth = v end })
+Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.World:AddSection("世界")
 Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
 Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
@@ -1397,20 +1375,17 @@ Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, 
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱", Default = false, Callback = function(v) T.Hitbox = v if v then HitboxEnable() else HitboxDisable() end end })
 Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then GodEnable() else GodDisable() end end })
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
 Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键全开: 防踢+伪装+拦远程+防甩飞)", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键全开: 防踢+拦远程+防甩飞)", Default = false, Callback = function(v)
 T.ACBypass = v
 T.NamecallHook = v
-T.PropertySpoof = v
 T.RemoteBlock = v
 T.AntiFling = v
 if v then
 AC.InstallNamecallHook()
-AC.InstallPropertySpoof()
 AntiFlingEnable()
 else
 AntiFlingDisable()
@@ -1469,6 +1444,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.3", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.7.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.6.3")
+print("[CheatMenu] ✅ 加载完成 v1.7.0")
