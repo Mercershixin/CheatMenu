@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:29 sha c907b5b9 bytes 45896'):format('2026-09-27 19:29','c907b5b9',45896))
-print("[CheatMenu] ===== 加载开始 · v1.5.2 =====")
+print(('[CheatMenu] build 2026-09-27 19:34 sha 24f27751 bytes 48353'):format('2026-09-27 19:34','24f27751',48353))
+print("[CheatMenu] ===== 加载开始 · v1.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -738,14 +738,18 @@ return out
 end
 local function shouldTranslate(s)
 if type(s) ~= "string" or s == "" then return false end
-if string.find(s, "[\228-\233]") then return false end
-if not string.find(s, "[%a]") then return false end
+local hasCJK = string.find(s, "[\228-\233]") ~= nil
+local hasAlpha = string.find(s, "[%a]") ~= nil
+if not hasCJK and not hasAlpha then return false end
+local lang = C.TransLang or "zh"
+if lang == "zh" and hasCJK then return false end
 return true
 end
-function Trans.Translate(text)
-if not T.Translate or type(text) ~= "string" or text == "" then return nil end
+function Trans.Translate(text, force)
+if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
 text = text:gsub("^%s+", ""):gsub("%s+$", "")
-if text == "" or not shouldTranslate(text) then return nil end
+if text == "" then return nil end
+if not force and not shouldTranslate(text) then return nil end
 if TransCache[text] then return TransCache[text] end
 local r = TransRequest(text)
 if r and r ~= "" and r ~= text then
@@ -754,6 +758,71 @@ TransCache[text] = r
 return r
 end
 return nil
+end
+local function sendChat(text)
+if not text or text == "" then return false end
+local tcs = game:GetService("TextChatService")
+if tcs and tcs.TextChannels then
+local channel = tcs.TextChannels:FindFirstChild("RBXGeneral")
+if channel and channel.SendAsync then
+pcall(function() channel:SendAsync(text) end)
+return true
+end
+end
+local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
+if chatEvents then
+local say = chatEvents:FindFirstChild("SayMessageRequest")
+if say then
+pcall(function() say:FireServer(text, "All") end)
+return true
+end
+end
+return false
+end
+local function translateGuiEl(obj)
+if not obj then return end
+if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+local txt = obj.Text
+if txt and shouldTranslate(txt) then
+local tr = Trans.Translate(txt, true)
+if tr and tr ~= txt then obj.Text = tr end
+end
+end
+end
+local function scanAndTranslate()
+local roots = { PG, CoreGui }
+if gethui then table.insert(roots, gethui()) end
+for _, root in ipairs(roots) do
+if root then
+for _, obj in ipairs(root:GetDescendants()) do
+translateGuiEl(obj)
+end
+end
+end
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("ProximityPrompt") then
+if obj.ActionText and obj.ActionText ~= "" then
+local tr = Trans.Translate(obj.ActionText, true)
+if tr then obj.ActionText = tr end
+end
+elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
+for _, child in ipairs(obj:GetDescendants()) do
+translateGuiEl(child)
+end
+end
+end
+end
+local TransLoop = nil
+local function startTranslateLoop()
+if TransLoop then return end
+scanAndTranslate()
+TransLoop = task.spawn(function()
+while T.Translate do
+task.wait(2)
+scanAndTranslate()
+end
+TransLoop = nil
+end)
 end
 local FlyConn = nil
 local function FlyDisable()
@@ -1095,7 +1164,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.5.2",
+SubTitle = "v1.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1144,11 +1213,29 @@ Tabs.AFK:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文",
 local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar" }
 C.TransLang = map[v] or "zh"
 end })
-Tabs.AFK:AddToggle("Translate", { Title = "界面翻译", Default = false, Callback = function(v) T.Translate = v end })
-Tabs.AFK:AddButton({ Title = "翻译测试", Callback = function()
-local r = Trans.Translate("Collect all eggs")
-print("[CheatMenu] 翻译测试: " .. tostring(r))
-Fluent:Notify({ Title = "翻译", Content = tostring(r), Duration = 4 })
+Tabs.AFK:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
+Tabs.AFK:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
+Tabs.AFK:AddButton({ Title = "翻译文本", Callback = function()
+local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
+if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
+local r = Trans.Translate(txt, true)
+if r then
+Fluent:Notify({ Title = "翻译结果", Content = r, Duration = 6 })
+else
+Fluent:Notify({ Title = "翻译", Content = "翻译失败(检查本地翻译服务是否开启)", Duration = 4 })
+end
+end })
+Tabs.AFK:AddButton({ Title = "翻译并发送到聊天", Callback = function()
+local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
+if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
+local r = Trans.Translate(txt, true)
+if r then
+sendChat(r)
+Fluent:Notify({ Title = "已发送", Content = r, Duration = 4 })
+else
+sendChat(txt)
+Fluent:Notify({ Title = "已发送(原文)", Content = txt, Duration = 4 })
+end
 end })
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
@@ -1190,10 +1277,20 @@ Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = fun
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
 Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("NamecallHook", { Title = "防踢拦截", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
-Tabs.AC:AddToggle("PropertySpoof", { Title = "属性伪装(加速不失效)", Default = false, Callback = function(v) T.PropertySpoof = v if v then AC.InstallPropertySpoof() end end })
-Tabs.AC:AddToggle("RemoteBlock", { Title = "远程阻止(拦反作弊)", Default = false, Callback = function(v) T.RemoteBlock = v if v then AC.InstallNamecallHook() end end })
-Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
+Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键全开: 防踢+伪装+拦远程+防甩飞)", Default = false, Callback = function(v)
+T.ACBypass = v
+T.NamecallHook = v
+T.PropertySpoof = v
+T.RemoteBlock = v
+T.AntiFling = v
+if v then
+AC.InstallNamecallHook()
+AC.InstallPropertySpoof()
+AntiFlingEnable()
+else
+AntiFlingDisable()
+end
+end })
 Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.AC:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
@@ -1247,6 +1344,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.5.2")
+print("[CheatMenu] ✅ 加载完成 v1.6.0")
