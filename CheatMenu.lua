@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 22:05 sha 1a3f505c bytes 74718'):format('2026-09-27 22:05','1a3f505c',74718))
-print("[CheatMenu] ===== 加载开始 · v2.0.10 =====")
+print(('[CheatMenu] build 2026-09-27 22:09 sha 32eafeeb bytes 75627'):format('2026-09-27 22:09','32eafeeb',75627))
+print("[CheatMenu] ===== 加载开始 · v2.0.11 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -642,6 +642,39 @@ end
 return true
 end
 local SellThread = nil
+local function exactToolEquipped(tool)
+local ch = LP.Character
+if not ch or not tool or tool.Parent ~= ch then return false end
+local held = ch:FindFirstChildOfClass("Tool")
+return held == tool
+end
+local function ensureSellerToolEquipped(tool, timeout)
+if not tool or not tool.Parent then return false end
+local _, hum = GC()
+if not hum then return false end
+pcall(function() hum:UnequipTools() end)
+task.wait(0.06)
+if not tool.Parent then return false end
+pcall(function() hum:EquipTool(tool) end)
+local deadline = os.clock() + (timeout or 1.2)
+while os.clock() < deadline do
+if exactToolEquipped(tool) then return true end
+task.wait(0.025)
+end
+return exactToolEquipped(tool)
+end
+local function waitForSoldTool(tool, timeout)
+local backpack = LP:FindFirstChild("Backpack")
+local ch = LP.Character
+local deadline = os.clock() + (timeout or 1.2)
+while os.clock() < deadline do
+if not tool or not tool.Parent or (tool.Parent ~= backpack and tool.Parent ~= ch) then
+return true
+end
+task.wait(0.025)
+end
+return not tool or not tool.Parent or (tool.Parent ~= backpack and tool.Parent ~= ch)
+end
 local function sellLowCPSTools()
 if SellThread then return end
 SellThread = task.spawn(function()
@@ -703,15 +736,10 @@ for _, e in ipairs(picks) do
 if not T.AutoSell then break end
 local tool = e.Tool
 if tool and tool.Parent then
-pcall(function() hum:UnequipTools() end)
-task.wait(0.06)
-pcall(function() hum:EquipTool(tool) end)
+if ensureSellerToolEquipped(tool, 1.25) then
 task.wait(0.16)
-if tool.Parent == LP.Character then
 sellHeldBrainrot()
-local deadline = os.clock() + 0.85
-while os.clock() < deadline and tool.Parent do task.wait(0.025) end
-if not tool.Parent then
+if waitForSoldTool(tool, 0.85) then
 sold = sold + 1
 total = total + 1
 end
@@ -1826,7 +1854,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.10",
+SubTitle = "v2.0.11",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -2038,6 +2066,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.10", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.11", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.10")
+print("[CheatMenu] ✅ 加载完成 v2.0.11")
