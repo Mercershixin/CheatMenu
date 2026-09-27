@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:21 sha 553aa7a1 bytes 54934'):format('2026-09-27 20:21','553aa7a1',54934))
-print("[CheatMenu] ===== 加载开始 · v1.8.1 =====")
+print(('[CheatMenu] build 2026-09-27 20:29 sha 40b4e15d bytes 55105'):format('2026-09-27 20:29','40b4e15d',55105))
+print("[CheatMenu] ===== 加载开始 · v1.8.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1383,7 +1383,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.8.1",
+SubTitle = "v1.8.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1392,12 +1392,14 @@ MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
 local Tabs = {
-AFK   = Window:AddTab({ Title = "挂机", Icon = "home" }),
-Move  = Window:AddTab({ Title = "移动", Icon = "move" }),
-World = Window:AddTab({ Title = "世界", Icon = "globe" }),
-TP    = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
-Combat = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
-AC    = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
+AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
+Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
+Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
+World   = Window:AddTab({ Title = "世界", Icon = "globe" }),
+TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
+AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
+Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
 Tabs.AFK:AddSection("防踢")
 Tabs.AFK:AddToggle("KickProtect", { Title = "防踢（挂机防踢 + 本地拦截 + 前兆抢传）", Default = true, Callback = function(v)
@@ -1427,14 +1429,14 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
-Tabs.AFK:AddSection("翻译")
-Tabs.AFK:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
+Tabs.Trans:AddSection("翻译")
+Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
 local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar", ["印尼语"] = "id" }
 C.TransLang = map[v] or "zh"
 end })
-Tabs.AFK:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
-Tabs.AFK:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
-Tabs.AFK:AddButton({ Title = "翻译文本", Callback = function()
+Tabs.Trans:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
+Tabs.Trans:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
+Tabs.Trans:AddButton({ Title = "翻译文本", Callback = function()
 local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
 if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
 local r = Trans.Translate(txt, true)
@@ -1444,7 +1446,7 @@ else
 Fluent:Notify({ Title = "翻译", Content = "翻译失败(检查本地翻译服务是否开启)", Duration = 4 })
 end
 end })
-Tabs.AFK:AddButton({ Title = "翻译并发送到聊天", Callback = function()
+Tabs.Trans:AddButton({ Title = "翻译并发送到聊天", Callback = function()
 local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
 if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
 local r = Trans.Translate(txt, true)
@@ -1507,10 +1509,10 @@ else
 AntiFlingDisable()
 end
 end })
-Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
-Tabs.AC:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
+Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
+Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
-Tabs.AC:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
+Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
 T.KickGuard = true
@@ -1561,6 +1563,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.8.1")
+print("[CheatMenu] ✅ 加载完成 v1.8.2")
