@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:40 sha e93e6c8d bytes 49384'):format('2026-09-27 19:40','e93e6c8d',49384))
-print("[CheatMenu] ===== 加载开始 · v1.6.1 =====")
+print(('[CheatMenu] build 2026-09-27 19:47 sha e68ecec1 bytes 51587'):format('2026-09-27 19:47','e68ecec1',51587))
+print("[CheatMenu] ===== 加载开始 · v1.6.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -524,32 +524,99 @@ if o:IsA("Model") and (o.Name == "Timmy" or o:GetAttribute("Name") == "Timmy") t
 end
 return nil
 end
-local function sellHeld()
-local rfNames = { "B_Sell", "Sell", "SellItem", "SellTool", "RequestSell" }
-for _, name in ipairs(rfNames) do
-local rf = RFunction(name)
-if rf then
-local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok and res ~= nil then
-print("[CheatMenu] 卖出成功 remote=" .. name .. " 返回=" .. tostring(res))
-return true
-elseif ok then
-print("[CheatMenu] 卖出 remote=" .. name .. " 返回空(可能没卖掉)")
+local function guiTextBlob(obj)
+if not obj then return "" end
+local pieces = {}
+if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+pieces[#pieces + 1] = tostring(obj.Text or "")
+end
+for _, child in ipairs(obj:GetDescendants()) do
+if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+pieces[#pieces + 1] = tostring(child.Text or "")
+end
+end
+return table.concat(pieces, " "):lower()
+end
+local function visibleGuiButtons()
+local result = {}
+if not PG then return result end
+local ok, desc = pcall(function() return PG:GetDescendants() end)
+if not ok or type(desc) ~= "table" then return result end
+for _, obj in ipairs(desc) do
+if obj:IsA("GuiButton") and obj.Visible and obj.AbsoluteSize.X > 2 and obj.AbsoluteSize.Y > 2 then
+result[#result + 1] = obj
+end
+end
+return result
+end
+local function clickGuiButton(btn)
+if not btn or not btn:IsA("GuiButton") then return false end
+if type(firesignal) == "function" then
+local ok = pcall(firesignal, btn.Activated)
+if ok then return true end
+end
 return false
 end
+local function triggerSellerPrompt()
+local npcs = WS:FindFirstChild("NPCs")
+if not npcs then return false end
+for _, o in ipairs(npcs:GetDescendants()) do
+if o:IsA("ProximityPrompt") and o.Enabled then
+local parent = o.Parent
+if parent and (parent.Name == "Timmy" or tostring(parent:GetAttribute("Name")) == "Timmy") then
+if type(fireproximityprompt) == "function" then
+local ok = pcall(fireproximityprompt, o)
+if ok then return true end
 end
-end
-local reNames = { "B_Sell", "Sell", "SellItem" }
-for _, name in ipairs(reNames) do
-local re = REvent(name)
-if re then
-pcall(function() re:FireServer() end)
-print("[CheatMenu] 已发卖出事件 remote=" .. name)
+pcall(function() o:InputHoldBegin() end)
+task.wait(0.05)
+pcall(function() o:InputHoldEnd() end)
 return true
 end
 end
-print("[CheatMenu] ❌ 找不到任何卖出 remote (B_Sell/Sell/SellItem 都不存在)")
+end
 return false
+end
+local function findSellAllButton()
+local best, bestScore = nil, -1
+for _, btn in ipairs(visibleGuiButtons()) do
+local blob = guiTextBlob(btn)
+local score = 0
+if blob:find("sell all", 1, true) then score = score + 1000 end
+if blob:find("brainrot", 1, true) then score = score + 250 end
+if blob:find("sell", 1, true) then score = score + 80 end
+if score > bestScore and score >= 1000 then
+bestScore = score
+best = btn
+end
+end
+return best
+end
+local function sellAllViaUI()
+moveToSeller()
+task.wait(0.3)
+triggerSellerPrompt()
+task.wait(0.5)
+local btn = findSellAllButton()
+if not btn then
+print("[CheatMenu] ❌ 没找到 Sell All 按钮(触发 Timmy 交互了吗?)")
+return false
+end
+print("[CheatMenu] 点击 Sell All 按钮: " .. tostring(btn.Name))
+if not clickGuiButton(btn) then
+print("[CheatMenu] ❌ Sell All 点击失败")
+return false
+end
+task.wait(0.3)
+for _, b in ipairs(visibleGuiButtons()) do
+local blob = guiTextBlob(b)
+if blob:find("confirm", 1, true) or blob:find("yes", 1, true) then
+print("[CheatMenu] 点击确认按钮: " .. tostring(b.Name))
+clickGuiButton(b)
+break
+end
+end
+return true
 end
 local function moveToSeller()
 local seller = findSeller()
@@ -608,23 +675,31 @@ print("[CheatMenu] ⚠️ 没有找到可卖的脑红 —— 检查: 是否带 E
 end
 break
 end
-for _, e in ipairs(picks) do
-if not T.AutoSell then break end
-local tool = e.Tool
-if tool and tool.Parent then
-pcall(function() hum:UnequipTools() end)
-task.wait(0.08)
-pcall(function() hum:EquipTool(tool) end)
-task.wait(0.2)
-if tool.Parent == LP.Character then
-sellHeld()
-task.wait(0.3)
-if not tool.Parent then total = total + 1 end
+local function countBrainrots()
+local n = 0
+for _, list in ipairs({ LP.Character, LP:FindFirstChild("Backpack") }) do
+if list then
+for _, t in ipairs(list:GetChildren()) do
+if isEntityTool(t) then n = n + 1 end
 end
 end
-task.wait(0.05)
 end
-task.wait(0.2)
+return n
+end
+local before = countBrainrots()
+print("[CheatMenu] 卖出前脑红数: " .. before)
+sellAllViaUI()
+task.wait(0.8)
+local after = countBrainrots()
+local sold = before - after
+if sold > 0 then
+print("[CheatMenu] ✅ Sell All 卖出 " .. sold .. " 个脑红")
+total = sold
+break
+else
+print("[CheatMenu] ⚠️ Sell All 后脑红没减少(可能 UI 按钮没找到/确认没点到/道具本就不该卖)")
+break
+end
 end
 pcall(function() hum:UnequipTools() end)
 print("[CheatMenu] 售卖完成 · 共 " .. total .. " 个")
@@ -1194,7 +1269,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.6.1",
+SubTitle = "v1.6.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1374,6 +1449,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.6.1")
+print("[CheatMenu] ✅ 加载完成 v1.6.2")
