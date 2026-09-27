@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:51 sha 8aadc1d2 bytes 74181'):format('2026-09-27 21:51','8aadc1d2',74181))
-print("[CheatMenu] ===== 加载开始 · v2.0.7 =====")
+print(('[CheatMenu] build 2026-09-27 21:56 sha 584d496f bytes 74150'):format('2026-09-27 21:56','584d496f',74150))
+print("[CheatMenu] ===== 加载开始 · v2.0.9 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -106,7 +106,29 @@ if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
 end
 end)
 end
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = nil
+local FluentSources = {
+"https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://ghfast.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://ghproxy.net/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
+}
+for _, fsrc in ipairs(FluentSources) do
+local ok1, body = pcall(function() return game:HttpGet(fsrc) end)
+if ok1 and type(body) == "string" and #body > 5000 then
+local ok2, chunk = pcall(loadstring, body)
+if ok2 and chunk then
+local ok3, loaded = pcall(chunk)
+if ok3 and loaded then
+Fluent = loaded
+print("[CheatMenu] Fluent 加载成功 <- " .. fsrc)
+break
+end
+end
+end
+end
 if not Fluent then
 error("[CheatMenu] ❌ Fluent UI 库加载失败(检查网络)")
 end
@@ -542,24 +564,18 @@ end
 return false
 end
 local function triggerSellerPrompt()
-local npcs = WS:FindFirstChild("NPCs")
-if not npcs then return false end
-for _, o in ipairs(npcs:GetDescendants()) do
-if o:IsA("ProximityPrompt") and o.Enabled then
-local parent = o.Parent
-if parent and (parent.Name == "Timmy" or tostring(parent:GetAttribute("Name")) == "Timmy") then
+local seller = findSeller()
+if not seller then return false end
+local prompt = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+if not prompt or not prompt.Enabled then return false end
 if type(fireproximityprompt) == "function" then
-local ok = pcall(fireproximityprompt, o)
+local ok = pcall(fireproximityprompt, prompt)
 if ok then return true end
 end
-pcall(function() o:InputHoldBegin() end)
+pcall(function() prompt:InputHoldBegin() end)
 task.wait(0.05)
-pcall(function() o:InputHoldEnd() end)
+pcall(function() prompt:InputHoldEnd() end)
 return true
-end
-end
-end
-return false
 end
 local function findSellAllButton()
 local best, bestScore = nil, -1
@@ -602,19 +618,13 @@ end
 end
 return true
 end
+local SELLER_CFRAME = CFrame.new(134.125, 0.125, 83.866) * CFrame.Angles(0, -1.5707963267948966, 0)
 local function moveToSeller()
-local seller = findSeller()
-local _, _, root = GC()
-if not root then return end
-local pos
-if seller then
-local part = seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart
-or seller:FindFirstChildWhichIsA("BasePart", true)
-if part then pos = part.Position end
-end
-if not pos then pos = Vector3.new(134.125, 0.125, 83.866) end
-root.CFrame = CFrame.new(pos + Vector3.new(4, 0, 0))
+local _, hum, root = GC()
+if not (hum and root) then return end
+root.CFrame = SELLER_CFRAME * CFrame.new(0, hum.HipHeight or 0, 0)
 root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
 task.wait(0.2)
 end
 local SellThread = nil
@@ -712,23 +722,6 @@ if total > 0 then
 T.AutoSell = false
 end
 end)
-end
-local function sellAllBrainrots()
-local rf = RFunction("B_SellAll")
-if rf then
-local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok then
-print("[CheatMenu] ✅ 一键卖全部 · 返回=" .. tostring(res))
-return true
-end
-end
-local re = RFunction("B_Sell")
-if re then
-local ok, res = pcall(function() return re:InvokeServer() end)
-if ok then print("[CheatMenu] 兜底 B_Sell · 返回=" .. tostring(res)) return true end
-end
-print("[CheatMenu] ❌ 找不到 B_SellAll / B_Sell remote")
-return false
 end
 local WithdrawThread = nil
 local function withdrawAllBrainrots()
@@ -1819,7 +1812,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.7",
+SubTitle = "v2.0.9",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1863,7 +1856,6 @@ Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数�
 local n = parseAmount(v)
 if n and n > 0 then C.SellMinCPS = n end
 end })
-Tabs.AFK:AddButton({ Title = "一键卖全部", Callback = function() sellAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
 Tabs.Trans:AddSection("翻译")
@@ -2032,6 +2024,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.7", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.9", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.7")
+print("[CheatMenu] ✅ 加载完成 v2.0.9")
