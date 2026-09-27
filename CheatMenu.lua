@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:27 sha 35728466 bytes 125279'):format('2026-09-28 02:27','35728466',125279))
-print("[CheatMenu] ===== 加载开始 · v4.7.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:28 sha 3867be19 bytes 128207'):format('2026-09-28 02:28','3867be19',128207))
+print("[CheatMenu] ===== 加载开始 · v4.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3047,6 +3047,69 @@ task.wait()
 end
 end
 end
+local LockHealthConn = nil
+local function LockHealthEnable()
+if LockHealthConn then return end
+LockHealthConn = RS.Heartbeat:Connect(function()
+if not T.LockHealth then return end
+local _, hum = GC()
+if hum and hum.Health > 0 then
+local target = C.LockHealthValue or 100
+if hum.Health ~= target then hum.Health = target end
+end
+task.wait(0.05)
+end)
+end
+local function LockHealthDisable()
+if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end
+end
+local RegenConn = nil
+local function RegenEnable()
+if RegenConn then return end
+RegenConn = RS.Heartbeat:Connect(function()
+if not T.Regen then return end
+local _, hum = GC()
+if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
+hum.Health = math.min(hum.MaxHealth, hum.Health + (C.RegenRate or 10))
+end
+task.wait(0.2)
+end)
+end
+local function RegenDisable()
+if RegenConn then RegenConn:Disconnect() RegenConn = nil end
+end
+local StealthGodConn = nil
+local function StealthGodEnable()
+if StealthGodConn then return end
+local _, hum0 = GC()
+if hum0 then pcall(function() if hum0.MaxHealth > 1e6 then hum0.MaxHealth = 100 end end) end
+StealthGodConn = RS.Heartbeat:Connect(function()
+if not T.StealthGod then return end
+local _, hum = GC()
+if hum and hum.Health > 0 then
+hum.Health = hum.MaxHealth
+end
+task.wait(0.05)
+end)
+end
+local function StealthGodDisable()
+if StealthGodConn then StealthGodConn:Disconnect() StealthGodConn = nil end
+end
+local NoDeathConn = nil
+local function NoDeathEnable()
+if NoDeathConn then return end
+NoDeathConn = RS.Heartbeat:Connect(function()
+if not T.NoDeath then return end
+local _, hum = GC()
+if hum and hum.Health <= 0 then
+pcall(function() hum.Health = hum.MaxHealth end)
+end
+task.wait(0.1)
+end)
+end
+local function NoDeathDisable()
+if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -3120,7 +3183,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.7.0",
+SubTitle = "v4.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3153,7 +3216,14 @@ Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", De
 Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then CM.SingleAimEnable() else CM.SingleAimDisable() end end })
 Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then CM.FaceLockEnable() else CM.FaceLockDisable() end end })
 Tabs.Combat:AddSection("生存 & 辅助")
-Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
+Tabs.Combat:AddSection("生命保护")
+Tabs.Combat:AddToggle("God", { Title = "无敌(MaxHealth=∞)", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
+Tabs.Combat:AddToggle("StealthGod", { Title = "隐蔽无敌(锁满血,难检测)", Default = false, Callback = function(v) T.StealthGod = v if v then StealthGodEnable() else StealthGodDisable() end end })
+Tabs.Combat:AddToggle("LockHealth", { Title = "锁血", Default = false, Callback = function(v) T.LockHealth = v if v then LockHealthEnable() else LockHealthDisable() end end })
+Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
+Tabs.Combat:AddToggle("Regen", { Title = "回血(主动快速回血)", Default = false, Callback = function(v) T.Regen = v if v then RegenEnable() else RegenDisable() end end })
+Tabs.Combat:AddSlider("RegenRate", { Title = "回血速度(每0.2秒)", Min = 1, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
+Tabs.Combat:AddToggle("NoDeath", { Title = "防死亡", Default = false, Callback = function(v) T.NoDeath = v if v then NoDeathEnable() else NoDeathDisable() end end })
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Combat:AddDropdown("FlingTarget", { Title = "甩飞目标玩家", Values = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return #n > 0 and n or { "(无人)" } end)(), Default = nil, Callback = function(v) C.FlingTarget = v end })
@@ -3386,6 +3456,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.7.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.7.0")
+print("[CheatMenu] ✅ 加载完成 v4.8.0")
