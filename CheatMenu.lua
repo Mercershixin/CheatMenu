@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:17 sha 96301190 bytes 108218'):format('2026-09-28 02:17','96301190',108218))
-print("[CheatMenu] ===== 加载开始 · v4.3.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:19 sha a756b76e bytes 112239'):format('2026-09-28 02:19','a756b76e',112239))
+print("[CheatMenu] ===== 加载开始 · v4.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2661,6 +2661,96 @@ end)
 VCBackup = nil
 end
 end
+local HitboxBackup = {}
+local function HitboxExpandEnable()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character and not HitboxBackup[pl] then
+local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
+if hrp then
+HitboxBackup[pl] = hrp.Size
+local s = C.HitboxSize or 10
+pcall(function()
+hrp.Size = Vector3.new(s, s, s)
+hrp.Transparency = C.HitboxVisible and 0.6 or 1
+hrp.CanCollide = false
+hrp.Massless = true
+end)
+end
+end
+end
+end
+local function HitboxExpandDisable()
+for pl, size in pairs(HitboxBackup) do
+local ch = pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if hrp then pcall(function() hrp.Size = size hrp.Massless = false end) end
+end
+HitboxBackup = {}
+end
+local KillAuraConn = nil
+local function KillAuraEnable()
+if KillAuraConn then return end
+KillAuraConn = RS.Heartbeat:Connect(function()
+if not T.KillAura then return end
+local _, _, root = GC()
+if not root then return end
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
+local hum = pl.Character:FindFirstChildOfClass("Humanoid")
+if hrp and hum and hum.Health > 0 and (root.Position - hrp.Position).Magnitude <= (C.KillAuraRange or 20) then
+if type(mouse1click) == "function" then
+pcall(mouse1click)
+elseif type(mouse1press) == "function" then
+pcall(function() mouse1press() task.wait(0.01) mouse1release() end)
+end
+break
+end
+end
+end
+task.wait(0.1)
+end)
+end
+local function KillAuraDisable()
+if KillAuraConn then KillAuraConn:Disconnect() KillAuraConn = nil end
+end
+local RecoilConn = nil
+local function NoRecoilEnable()
+if RecoilConn then return end
+local cam = workspace.CurrentCamera
+RecoilConn = RS.RenderStepped:Connect(function()
+if not T.NoRecoil then return end
+local c = workspace.CurrentCamera
+if c then
+c.CFrame = CFrame.new(c.CFrame.Position, c.CFrame.Position + c.CFrame.LookVector)
+end
+end)
+end
+local function NoRecoilDisable()
+if RecoilConn then RecoilConn:Disconnect() RecoilConn = nil end
+end
+local PickupConn = nil
+local function AutoPickupEnable()
+if PickupConn then return end
+PickupConn = RS.Heartbeat:Connect(function()
+if not T.AutoPickup then return end
+local _, _, root = GC()
+if not root then return end
+if type(firetouchinterest) ~= "function" then return end
+for _, v in ipairs(workspace:GetChildren()) do
+if v:IsA("BasePart") and v.CanTouch and (root.Position - v.Position).Magnitude <= (C.PickupRange or 15) then
+pcall(function()
+firetouchinterest(v, root, 0)
+firetouchinterest(v, root, 1)
+end)
+end
+end
+task.wait(0.2)
+end)
+end
+local function AutoPickupDisable()
+if PickupConn then PickupConn:Disconnect() PickupConn = nil end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2734,7 +2824,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.3.0",
+SubTitle = "v4.4.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2771,6 +2861,11 @@ Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = fun
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() CM.FlingTarget() end })
+Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then HitboxExpandEnable() else HitboxExpandDisable() end end })
+Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then HitboxExpandDisable() HitboxExpandEnable() end end })
+Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then KillAuraEnable() else KillAuraDisable() end end })
+Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
+Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(锁定相机)", Default = false, Callback = function(v) T.NoRecoil = v if v then NoRecoilEnable() else NoRecoilDisable() end end })
 Tabs.Combat:AddSection("ESP 透视")
 Tabs.Combat:AddToggle("ESP", { Title = "ESP 透视(默认方框+名称+距离+血条)", Default = false, Callback = function(v)
 T.ESP = v
@@ -2838,6 +2933,8 @@ end
 end })
 Tabs.World:AddButton({ Title = "触发所有互动(触摸+ClickDetector)", Callback = function() FireAllTouches() FireAllClickDetectors() end })
 Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then PropWatchEnable() end end })
+Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then AutoPickupEnable() else AutoPickupDisable() end end })
+Tabs.World:AddSlider("PickupRange", { Title = "拾取范围", Min = 5, Max = 50, Default = 15, Rounding = 0, Callback = function(v) C.PickupRange = v end })
 Tabs.TP:AddSection("传送")
 local tpNames = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return n end)()
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = tpNames, Default = tpNames[1] })
@@ -2968,6 +3065,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.3.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.4.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.3.0")
+print("[CheatMenu] ✅ 加载完成 v4.4.0")
