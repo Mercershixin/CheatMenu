@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:26 sha 480bbd71 bytes 70190'):format('2026-09-27 21:26','480bbd71',70190))
-print("[CheatMenu] ===== 加载开始 · v2.0.3 =====")
+print(('[CheatMenu] build 2026-09-27 21:34 sha 8283e93e bytes 73006'):format('2026-09-27 21:34','8283e93e',73006))
+print("[CheatMenu] ===== 加载开始 · v2.0.4 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1061,23 +1061,28 @@ end)
 end
 local SpeedConn = nil
 local SpeedConn2 = nil
+local baseWalk = nil
 local function SpeedEnable()
 if SpeedConn then return end
 local function apply()
 if not T.Speed then return end
 local _, hum = GC()
-if hum then hum.WalkSpeed = C.Speed or 30 end
+if hum then
+if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
+hum.WalkSpeed = baseWalk * (C.SpeedMul or 2)
+end
 end
 apply()
 SpeedConn = RS.Stepped:Connect(apply)
 SpeedConn2 = RS.RenderStepped:Connect(apply)
-print("[CheatMenu] 加速已开 · WalkSpeed=" .. tostring(C.Speed or 30))
+print("[CheatMenu] 加速已开 · 基准=" .. tostring(baseWalk) .. " × " .. tostring(C.SpeedMul or 2))
 end
 local function SpeedDisable()
 if SpeedConn then SpeedConn:Disconnect() SpeedConn = nil end
 if SpeedConn2 then SpeedConn2:Disconnect() SpeedConn2 = nil end
 local _, hum = GC()
-if hum then hum.WalkSpeed = 16 end
+if hum and baseWalk then hum.WalkSpeed = baseWalk end
+baseWalk = nil
 end
 local JumpConn = nil
 local function InfiniteJumpEnable()
@@ -1642,8 +1647,18 @@ end
 end
 local function BadgeBypassEnable()
 if not hookfunction then return end
+pcall(function()
 local bs = game:GetService("BadgeService")
-pcall(function() hookfunction(bs.UserHasBadgeAsync, function() return true end) end)
+hookfunction(bs.UserHasBadgeAsync, function() return true end)
+hookfunction(bs.UserOwnsBadgeAsync, function() return true end)
+pcall(function() hookfunction(bs.GetBadgeInfoAsync, function() return { IsOwned = true } end) end)
+end)
+pcall(function()
+local gs = game:GetService("GroupService")
+hookfunction(gs.IsInGroup, function() return true end)
+pcall(function() hookfunction(gs.GetGroupsAsync, function() return {} end) end)
+end)
+print("[CheatMenu] 徽章/群组本地绕过已开启(仅对客户端检查有效)")
 end
 local function ChatBypassCleanup()
 pcall(function()
@@ -1694,11 +1709,62 @@ if BulletConn then BulletConn:Disconnect() BulletConn = nil end
 for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
 BulletHls = {}
 end
+local function testRemote(name, argsStr)
+name = tostring(name or ""):gsub("%s+", "")
+if name == "" then return end
+local args = {}
+if argsStr and argsStr ~= "" then
+for part in string.gmatch(tostring(argsStr), "[^,]+") do
+part = part:gsub("^%s+", ""):gsub("%s+$", "")
+local n = tonumber(part)
+args[#args + 1] = n or part
+end
+end
+local re = REvent(name)
+if re then
+local ok = pcall(function() re:FireServer(unpack(args)) end)
+print("[测试] FireServer " .. name .. " 参数数=" .. #args .. (ok and " (已发)" or " (失败)"))
+return
+end
+local rf = RFunction(name)
+if rf then
+local ok, res = pcall(function() return rf:InvokeServer(unpack(args)) end)
+print("[测试] InvokeServer " .. name .. " 返回=" .. tostring(res))
+return
+end
+print("[测试] ❌ 找不到 remote: " .. name)
+end
+local AlertNames = { "CheatWarningEvent", "ShowSecretGuard", "AdminAbuseRequest", "AdminAbuseBossSync", "ToggleCheatAlert" }
+local function AlertBlockEnable()
+for _, name in ipairs(AlertNames) do
+OnRemote(name, function(...)
+print("[CheatMenu] ⚠️ 触发反作弊告警: " .. name)
+task.spawn(function()
+task.wait(0.2)
+pcall(function()
+for _, root in ipairs({ PG, gethui and gethui() or game:GetService("CoreGui") }) do
+if root then
+for _, gui in ipairs(root:GetDescendants()) do
+if gui:IsA("ScreenGui") or gui:IsA("Frame") then
+local n = gui.Name:lower()
+if n:match("warn") or n:match("cheat") or n:match("guard") or n:match("alert") then
+gui:Destroy()
+end
+end
+end
+end
+end
+end)
+end)
+end)
+end
+print("[CheatMenu] 反作弊告警拦截已开启")
+end
 loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.3",
+SubTitle = "v2.0.4",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1778,7 +1844,7 @@ Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，�
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
-Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 1000, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
+Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
@@ -1854,6 +1920,15 @@ Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfi
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
 Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() else ChatBypassCleanup() end end })
+Tabs.AC:AddToggle("AlertBlock", { Title = "反作弊告警拦截", Default = false, Callback = function(v) T.AlertBlock = v if v then AlertBlockEnable() end end })
+Tabs.AC:AddSection("Remote 测试器")
+Tabs.AC:AddInput("TestRemoteName", { Title = "remote名", Default = "", Placeholder = "如 AddWin / BuyWins" })
+Tabs.AC:AddInput("TestRemoteArgs", { Title = "参数(逗号分隔,可空)", Default = "", Placeholder = "如 1,100" })
+Tabs.AC:AddButton({ Title = "测试发送 remote", Callback = function()
+local name = Fluent.Options.TestRemoteName and Fluent.Options.TestRemoteName.Value
+local args = Fluent.Options.TestRemoteArgs and Fluent.Options.TestRemoteArgs.Value
+testRemote(name, args)
+end })
 Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
@@ -1908,6 +1983,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.3", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.4", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.3")
+print("[CheatMenu] ✅ 加载完成 v2.0.4")
