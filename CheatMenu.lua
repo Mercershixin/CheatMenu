@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:19 sha a756b76e bytes 112239'):format('2026-09-28 02:19','a756b76e',112239))
-print("[CheatMenu] ===== 加载开始 · v4.4.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:20 sha 1bea9edb bytes 115466'):format('2026-09-28 02:20','1bea9edb',115466))
+print("[CheatMenu] ===== 加载开始 · v4.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2751,6 +2751,76 @@ end
 local function AutoPickupDisable()
 if PickupConn then PickupConn:Disconnect() PickupConn = nil end
 end
+local ClickTPConn = nil
+local function ClickTPEnable()
+if ClickTPConn then return end
+ClickTPConn = UIS.InputBegan:Connect(function(input, gpe)
+if gpe or not T.ClickTP then return end
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+local cam = workspace.CurrentCamera
+local _, _, root = GC()
+if not (cam and root) then return end
+local ray = cam:ViewportPointToRay(input.Position.X, input.Position.Y)
+local params = RaycastParams.new()
+params.FilterDescendantsInstances = { LP.Character }
+params.FilterType = Enum.RaycastFilterType.Exclude
+local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+if hit then
+root.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0))
+end
+end
+end)
+end
+local function ClickTPDisable()
+if ClickTPConn then ClickTPConn:Disconnect() ClickTPConn = nil end
+end
+local function tpToCoords(x, y, z)
+local _, _, root = GC()
+if root and tonumber(x) and tonumber(y) and tonumber(z) then
+root.CFrame = CFrame.new(tonumber(x), tonumber(y), tonumber(z))
+end
+end
+local VoidConn = nil
+local function AntiVoidEnable()
+if VoidConn then return end
+local lastSafe = nil
+VoidConn = RS.Heartbeat:Connect(function()
+if not T.AntiVoid then return end
+local _, _, root = GC()
+if not root then return end
+if root.Position.Y > (C.VoidY or -50) then
+lastSafe = root.CFrame
+else
+if lastSafe then root.CFrame = lastSafe end
+end
+task.wait(0.3)
+end)
+end
+local function AntiVoidDisable()
+if VoidConn then VoidConn:Disconnect() VoidConn = nil end
+end
+local AutoRespawnConn = nil
+local function AutoRespawnEnable()
+if AutoRespawnConn then return end
+AutoRespawnConn = LP.CharacterAdded:Connect(function()
+task.wait(0.5)
+if T.AutoRespawn then
+local _, hum = GC()
+if hum and hum.Health <= 0 then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+end
+end
+end)
+RS.Heartbeat:Connect(function()
+if not T.AutoRespawn then return end
+local ch = LP.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum and hum.Health <= 0 then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+end
+task.wait(1)
+end)
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2824,7 +2894,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.4.0",
+SubTitle = "v4.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2950,6 +3020,18 @@ Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, De
 Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then CM.TeleportOnDeathEnable() end end })
 Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
 Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
+Tabs.TP:AddSection("传送增强")
+Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(点地面即传过去)", Default = false, Callback = function(v) T.ClickTP = v if v then ClickTPEnable() else ClickTPDisable() end end })
+Tabs.TP:AddInput("TPCoords", { Title = "坐标传送(X,Y,Z 逗号分隔)", Default = "", Placeholder = "如 100,50,200" })
+Tabs.TP:AddButton({ Title = "传送到坐标", Callback = function()
+local s = Fluent.Options.TPCoords and Fluent.Options.TPCoords.Value
+if not s or s == "" then return end
+local x, y, z = s:match("([^,]+),([^,]+),([^,]+)")
+if x then tpToCoords(x, y, z) end
+end })
+Tabs.TP:AddToggle("AntiVoid", { Title = "防掉虚空", Default = false, Callback = function(v) T.AntiVoid = v if v then AntiVoidEnable() else AntiVoidDisable() end end })
+Tabs.TP:AddSlider("VoidY", { Title = "虚空高度阈值", Min = -200, Max = 0, Default = -50, Rounding = 0, Callback = function(v) C.VoidY = v end })
+Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then AutoRespawnEnable() end end })
 Tabs.AFK:AddSection("挂机防踢")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
@@ -3065,6 +3147,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.4.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.5.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.4.0")
+print("[CheatMenu] ✅ 加载完成 v4.5.0")
