@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:07 sha f5524749 bytes 99555'):format('2026-09-28 02:07','f5524749',99555))
-print("[CheatMenu] ===== 加载开始 · v3.8.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:09 sha bdc0ca12 bytes 103918'):format('2026-09-28 02:09','bdc0ca12',103918))
+print("[CheatMenu] ===== 加载开始 · v3.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2415,6 +2415,103 @@ end
 end
 print("[CheatMenu] 已触发 " .. n .. " 个触摸互动")
 end
+local FlyBv, FlyBg, FlyBvConn = nil, nil, nil
+local function FlyPhysDisable()
+if FlyBv then pcall(function() FlyBv:Destroy() end) FlyBv = nil end
+if FlyBg then pcall(function() FlyBg:Destroy() end) FlyBg = nil end
+end
+local function FlyPhysEnable()
+local _, hum, root = GC()
+if not (hum and root) then return end
+FlyPhysDisable()
+hum.PlatformStand = true
+FlyBv = Instance.new("BodyVelocity")
+FlyBv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+FlyBv.Velocity = Vector3.zero
+FlyBv.Parent = root
+FlyBg = Instance.new("BodyGyro")
+FlyBg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+FlyBg.P = 1e4
+FlyBg.Parent = root
+if FlyBvConn then FlyBvConn:Disconnect() end
+FlyBvConn = RS.RenderStepped:Connect(function()
+if not T.FlyPhys then FlyPhysDisable() return end
+local _, _, r = GC()
+if not r or not FlyBv then return end
+local cam = workspace.CurrentCamera
+local dir = Vector3.zero
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+FlyBv.Velocity = dir.Unit * (C.FlySpeed or 50) * (dir.Magnitude > 0 and 1 or 0)
+FlyBg.CFrame = cam.CFrame
+end)
+end
+local function FireAllClickDetectors()
+local n = 0
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("ClickDetector") then
+if type(fireclickdetector) == "function" then
+pcall(fireclickdetector, v)
+else
+pcall(function() v.MouseClick:Fire() end)
+end
+n = n + 1
+end
+end
+print("[CheatMenu] 已触发 " .. n .. " 个 ClickDetector")
+end
+local function NoClickLimit()
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("ClickDetector") then pcall(function() v.MaxActivationDistance = math.huge end) end
+end
+end
+local PropWatchConn = nil
+local function PropWatchEnable()
+if PropWatchConn then return end
+local ch = LP.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if not hum then return end
+PropWatchConn = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+if T.WalkSpeedLock and T.Speed then
+hum.WalkSpeed = (C.SpeedMul or 2) * 16
+end
+end)
+end
+local function listConnections()
+local n = 0
+if type(getconnections) == "function" then
+local ok, conns = pcall(getconnections, LP.Idled)
+if ok and type(conns) == "table" then n = #conns end
+end
+print("[CheatMenu] getconnections 可用，Idled 连接数=" .. n)
+end
+local function setQueueOnTeleport(code)
+if type(queue_on_teleport) == "function" then
+pcall(queue_on_teleport, code or "")
+print("[CheatMenu] queue_on_teleport 已设置")
+else
+print("[CheatMenu] 执行器不支持 queue_on_teleport")
+end
+end
+local SavedPositions = {}
+local function savePosSlot(slot)
+local _, _, r = GC()
+if r then SavedPositions[slot] = r.CFrame print("[CheatMenu] 已保存位置 " .. slot) end
+end
+local function tpToSlot(slot)
+local _, _, r = GC()
+if r and SavedPositions[slot] then r.CFrame = SavedPositions[slot] end
+end
+local function copyToClipboard(text)
+if type(setclipboard) == "function" then
+pcall(setclipboard, tostring(text or ""))
+Fluent:Notify({ Title = "剪贴板", Content = "已复制", Duration = 2 })
+end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2488,7 +2585,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.8.0",
+SubTitle = "v3.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2538,6 +2635,7 @@ Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then CM.FlyEnable() else CM.FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddToggle("FlyPhys", { Title = "物理飞行(BodyVelocity 模式)", Default = false, Callback = function(v) T.FlyPhys = v if v then FlyPhysEnable() else FlyPhysDisable() end end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then CM.SpeedEnable() else CM.SpeedDisable() end end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then CM.InfiniteJumpEnable() end end })
@@ -2560,6 +2658,9 @@ Tabs.World:AddToggle("AutoTouch", { Title = "自动触摸(模拟触摸互动)", 
 Tabs.World:AddToggle("NoPromptLimit", { Title = "互动无距离限制", Default = false, Callback = function(v) T.NoPromptLimit = v if v then NoPromptLimitEnable() end end })
 Tabs.World:AddToggle("NoPromptCooldown", { Title = "互动无冷却", Default = false, Callback = function(v) T.NoPromptCooldown = v if v then NoPromptCooldownEnable() end end })
 Tabs.World:AddButton({ Title = "触发所有触摸互动", Callback = function() FireAllTouches() end })
+Tabs.World:AddButton({ Title = "触发所有 ClickDetector", Callback = function() FireAllClickDetectors() end })
+Tabs.World:AddToggle("NoClickLimit", { Title = "ClickDetector 无距离", Default = false, Callback = function(v) T.NoClickLimit = v if v then NoClickLimit() end end })
+Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then PropWatchEnable() end end })
 Tabs.World:AddToggle("Xray", { Title = "Xray 透视", Default = false, Callback = function(v) T.Xray = v if v then CM.XrayEnable() else CM.XrayDisable() end end })
 Tabs.World:AddToggle("SelfGlow", { Title = "自发光", Default = false, Callback = function(v) T.SelfGlow = v if v then CM.SelfGlowEnable() else CM.SelfGlowDisable() end end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
@@ -2671,6 +2772,8 @@ Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, 
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() CM.ServerHop() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() CM.Rejoin() end })
 Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
+Tabs.Setting:AddButton({ Title = "复制脚本加载链接", Callback = function() copyToClipboard('loadstring(game:HttpGet("https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"))()') end })
+Tabs.Setting:AddButton({ Title = "查看连接数(getconnections)", Callback = function() listConnections() end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -2722,6 +2825,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.8.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.9.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.8.0")
+print("[CheatMenu] ✅ 加载完成 v3.9.0")
