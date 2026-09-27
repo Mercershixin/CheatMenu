@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:33 sha 32fbfc5a bytes 128321'):format('2026-09-28 02:33','32fbfc5a',128321))
-print("[CheatMenu] ===== 加载开始 · v4.8.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:35 sha f50c2d81 bytes 128304'):format('2026-09-28 02:35','f50c2d81',128304))
+print("[CheatMenu] ===== 加载开始 · v4.8.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -95,8 +95,7 @@ pcall(function()
 if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end
 end)
 end
-local function loadTransCache()
-LoadConfig()
+local function LoadConfig()
 pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local raw = readfile(SaveFile)
@@ -3183,7 +3182,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.8.0",
+SubTitle = "v4.8.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3428,9 +3427,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.8.0")
+print("[CheatMenu] ✅ 加载完成 v4.8.1")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
