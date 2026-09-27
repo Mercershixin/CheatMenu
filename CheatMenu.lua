@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:16 sha 2abc02ac bytes 35744'):format('2026-09-27 19:16','2abc02ac',35744))
-print("[CheatMenu] ===== 加载开始 · v1.3.1 =====")
+print(('[CheatMenu] build 2026-09-27 19:19 sha bd64856f bytes 41097'):format('2026-09-27 19:19','bd64856f',41097))
+print("[CheatMenu] ===== 加载开始 · v1.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -857,10 +857,148 @@ if unit == "M" then return base * 1000000 end
 end
 return nil
 end
+local AimConn = nil
+local function AimDisable()
+if AimConn then AimConn:Disconnect() AimConn = nil end
+end
+local function getAimTarget()
+local cam = workspace.CurrentCamera
+local fovRadius = C.AimFOV or 200
+local best, bestDist = nil, math.huge
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+local skip = (not (hrp and hrp.Parent and hum and hum.Health > 0))
+if T.AimTeamCheck and pl.Team == LP.Team then skip = true end
+if not skip and T.AimWallCheck then
+local origin = cam.CFrame.Position
+local dir = hrp.Position - origin
+local params = RaycastParams.new()
+params.FilterDescendantsInstances = { LP.Character, pl.Character }
+params.FilterType = Enum.RaycastFilterType.Exclude
+local hit = workspace:Raycast(origin, dir, params)
+if hit then skip = true end
+end
+if not skip then
+local screenPos, onScreen = cam:WorldToScreenPoint(hrp.Position)
+if onScreen then
+local dist = (Vector2.new(screenPos.X, screenPos.Y) - cam.ViewportSize / 2).Magnitude
+if dist < bestDist and dist < fovRadius then
+bestDist = dist
+best = hrp
+end
+end
+end
+end
+end
+return best
+end
+local function AimEnable()
+AimDisable()
+AimConn = RS.RenderStepped:Connect(function()
+if not T.Aim then return end
+local target = getAimTarget()
+if not target then return end
+local cam = workspace.CurrentCamera
+local smooth = math.max(1, C.AimSmooth or 5)
+cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, target.Position), 1 / smooth)
+end)
+end
+local HitboxList = {}
+local function addHitbox(pl)
+if pl == LP then return end
+local ch = pl.Character
+if not ch then return end
+local hrp = ch:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+local box = Instance.new("Part")
+box.Size = Vector3.new(5, 5, 5)
+box.Transparency = 0.7
+box.CanCollide = true
+box.CanQuery = true
+box.Anchored = true
+box.Name = "CheatHitbox"
+box.Parent = ch
+local conn = RS.RenderStepped:Connect(function()
+if box.Parent and hrp.Parent then
+box.CFrame = hrp.CFrame
+end
+end)
+table.insert(HitboxList, { box = box, conn = conn })
+end
+local function HitboxEnable()
+for _, pl in ipairs(Players:GetPlayers()) do addHitbox(pl) end
+Players.PlayerAdded:Connect(function(pl)
+pl.CharacterAdded:Connect(function() addHitbox(pl) end)
+end)
+end
+local function HitboxDisable()
+for _, e in ipairs(HitboxList) do
+pcall(function() e.conn:Disconnect() end)
+pcall(function() e.box:Destroy() end)
+end
+HitboxList = {}
+end
+local GodConn = nil
+local function GodEnable()
+if GodConn then return end
+local function apply()
+local _, hum = GC()
+if hum then
+hum.MaxHealth = math.huge
+hum.Health = math.huge
+end
+end
+apply()
+GodConn = RS.Stepped:Connect(apply)
+end
+local function GodDisable()
+if GodConn then GodConn:Disconnect() GodConn = nil end
+end
+local function InvisibleEnable()
+local ch = LP.Character
+if not ch then return end
+for _, part in ipairs(ch:GetDescendants()) do
+if part:IsA("BasePart") then part.Transparency = 1 end
+end
+end
+local function InvisibleDisable()
+local ch = LP.Character
+if not ch then return end
+for _, part in ipairs(ch:GetDescendants()) do
+if part:IsA("BasePart") then part.Transparency = 0 end
+end
+end
+local ESPMap = {}
+local function espAdd(pl)
+if pl == LP then return end
+local ch = pl.Character
+if not ch then return end
+local hl = Instance.new("Highlight")
+hl.Name = "CheatESP"
+hl.FillColor = Color3.fromRGB(255, 90, 90)
+hl.FillTransparency = 0.6
+hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+hl.OutlineTransparency = 0
+hl.Parent = ch
+ESPMap[pl] = hl
+end
+local function ESPEnable()
+for _, pl in ipairs(Players:GetPlayers()) do espAdd(pl) end
+Players.PlayerAdded:Connect(function(pl)
+pl.CharacterAdded:Connect(function() espAdd(pl) end)
+end)
+end
+local function ESPDisable()
+for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
+ESPMap = {}
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.3.1",
+SubTitle = "v1.4.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -872,6 +1010,7 @@ AFK   = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Move  = Window:AddTab({ Title = "移动", Icon = "move" }),
 World = Window:AddTab({ Title = "世界", Icon = "globe" }),
 TP    = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+Combat = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 AC    = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 }
 Tabs.AFK:AddSection("防踢")
@@ -940,6 +1079,16 @@ if not name then return end
 local target = Players:FindFirstChild(name)
 TeleportToPlayer(target)
 end })
+Tabs.Combat:AddSection("战斗")
+Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then AimEnable() else AimDisable() end end })
+Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
+Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
+Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
+Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱", Default = false, Callback = function(v) T.Hitbox = v if v then HitboxEnable() else HitboxDisable() end end })
+Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then GodEnable() else GodDisable() end end })
+Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
+Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("NamecallHook", { Title = "防踢拦截", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
 Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
@@ -993,5 +1142,5 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.3.1", Duration = 5 })
-print("[CheatMenu] ✅ 加载完成 v1.3.1")
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.4.0", Duration = 5 })
+print("[CheatMenu] ✅ 加载完成 v1.4.0")
