@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:24 sha dd142c52 bytes 43399'):format('2026-09-27 19:24','dd142c52',43399))
-print("[CheatMenu] ===== 加载开始 · v1.5.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:26 sha 7acbc025 bytes 44254'):format('2026-09-27 19:26','7acbc025',44254))
+print("[CheatMenu] ===== 加载开始 · v1.5.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -915,7 +915,7 @@ local hrp = ch:FindFirstChild("HumanoidRootPart")
 if not hrp then return end
 local box = Instance.new("Part")
 box.Size = Vector3.new(5, 5, 5)
-box.Transparency = 0.7
+box.Transparency = 1
 box.CanCollide = true
 box.CanQuery = true
 box.Anchored = true
@@ -995,9 +995,25 @@ local function ESPDisable()
 for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
 ESPMap = {}
 end
+local HideConn = nil
+local function HideEnable()
+if HideConn then return end
+local baseY = nil
+HideConn = RS.RenderStepped:Connect(function()
+if not T.Hide then return end
+local _, _, root = GC()
+if not root then return end
+if not baseY then baseY = root.Position.Y end
+root.CFrame = CFrame.new(root.Position.X, baseY - (C.HideDepth or 10), root.Position.Z)
+root.AssemblyLinearVelocity = Vector3.zero
+end)
+end
+local function HideDisable()
+if HideConn then HideConn:Disconnect() HideConn = nil end
+end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HitboxDisable,
+local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HitboxDisable, HideDisable,
 ESPDisable, InvisibleDisable, KickGuardDisable, AntiFlingDisable, FullBrightDisable, NoFogDisable, SpeedDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
@@ -1013,6 +1029,7 @@ if T.Fly then FlyEnable() end
 if T.Speed then SpeedEnable() end
 if T.InfiniteJump then InfiniteJumpEnable() end
 if T.NoClip then NoClipEnable() end
+if T.Hide then HideEnable() end
 if T.FullBright then FullBrightEnable() end
 if T.NoFog then NoFogEnable() end
 if T.Aim then AimEnable() end
@@ -1042,7 +1059,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.5.0",
+SubTitle = "v1.5.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1105,6 +1122,8 @@ Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = fun
 Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 500, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
+Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
+Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度", Min = 1, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.World:AddSection("世界")
 Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
 Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
@@ -1190,6 +1209,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.5.0")
+print("[CheatMenu] ✅ 加载完成 v1.5.1")
