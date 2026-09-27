@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:02 sha b931cc2b bytes 96128'):format('2026-09-28 02:02','b931cc2b',96128))
-print("[CheatMenu] ===== 加载开始 · v3.6.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:03 sha 2c463044 bytes 98350'):format('2026-09-28 02:03','2c463044',98350))
+print("[CheatMenu] ===== 加载开始 · v3.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2341,6 +2341,65 @@ local function disconnectAllConns()
 for _, c in ipairs(AllConns) do pcall(function() c:Disconnect() end) end
 AllConns = {}
 end
+local AutoTouchConn = nil
+local function AutoTouchEnable()
+if AutoTouchConn then return end
+if type(firetouchinterest) ~= "function" then
+print("[CheatMenu] 执行器不支持 firetouchinterest，自动触摸不可用")
+return
+end
+AutoTouchConn = RS.Heartbeat:Connect(function()
+if not T.AutoTouch then return end
+local _, _, root = GC()
+if not root then return end
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("BasePart") and v.CanTouch then
+pcall(function()
+firetouchinterest(v, root, 0)
+firetouchinterest(v, root, 1)
+end)
+end
+end
+task.wait(0.5)
+end)
+end
+local function AutoTouchDisable()
+if AutoTouchConn then AutoTouchConn:Disconnect() AutoTouchConn = nil end
+end
+local function NoPromptLimitEnable()
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("ProximityPrompt") or v:IsA("ClickDetector") then
+pcall(function() v.MaxActivationDistance = math.huge end)
+end
+end
+print("[CheatMenu] 互动无距离已开启")
+end
+local function NoPromptCooldownEnable()
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("ProximityPrompt") then
+pcall(function()
+v.HoldDuration = 0
+v.MaxActivationDistance = math.huge
+end)
+end
+end
+end
+local function FireAllTouches()
+if type(firetouchinterest) ~= "function" then return end
+local _, _, root = GC()
+if not root then return end
+local n = 0
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("BasePart") and v.CanTouch then
+pcall(function()
+firetouchinterest(v, root, 0)
+firetouchinterest(v, root, 1)
+end)
+n = n + 1
+end
+end
+print("[CheatMenu] 已触发 " .. n .. " 个触摸互动")
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2414,7 +2473,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.6.0",
+SubTitle = "v3.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2476,6 +2535,10 @@ Tabs.World:AddToggle("NightVision", { Title = "夜视", Default = false, Callbac
 Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then CM.NoFogEnable() else CM.NoFogDisable() end end })
 Tabs.World:AddToggle("AutoInteract", { Title = "自动互动", Default = false, Callback = function(v) T.AutoInteract = v if v then CM.AutoInteractEnable() else CM.AutoInteractDisable() end end })
 Tabs.World:AddToggle("InstantPrompt", { Title = "瞬时互动(免长按)", Default = false, Callback = function(v) T.InstantPrompt = v if v then CM.InstantPromptEnable() end end })
+Tabs.World:AddToggle("AutoTouch", { Title = "自动触摸(模拟触摸互动)", Default = false, Callback = function(v) T.AutoTouch = v if v then AutoTouchEnable() else AutoTouchDisable() end end })
+Tabs.World:AddToggle("NoPromptLimit", { Title = "互动无距离限制", Default = false, Callback = function(v) T.NoPromptLimit = v if v then NoPromptLimitEnable() end end })
+Tabs.World:AddToggle("NoPromptCooldown", { Title = "互动无冷却", Default = false, Callback = function(v) T.NoPromptCooldown = v if v then NoPromptCooldownEnable() end end })
+Tabs.World:AddButton({ Title = "触发所有触摸互动", Callback = function() FireAllTouches() end })
 Tabs.World:AddToggle("Xray", { Title = "Xray 透视", Default = false, Callback = function(v) T.Xray = v if v then CM.XrayEnable() else CM.XrayDisable() end end })
 Tabs.World:AddToggle("SelfGlow", { Title = "自发光", Default = false, Callback = function(v) T.SelfGlow = v if v then CM.SelfGlowEnable() else CM.SelfGlowDisable() end end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
@@ -2638,6 +2701,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.6.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.7.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.6.0")
+print("[CheatMenu] ✅ 加载完成 v3.7.0")
