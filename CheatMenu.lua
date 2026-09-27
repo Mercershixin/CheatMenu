@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 01:59 sha cffe654c bytes 91566'):format('2026-09-28 01:59','cffe654c',91566))
-print("[CheatMenu] ===== 加载开始 · v3.5.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:02 sha b931cc2b bytes 96128'):format('2026-09-28 02:02','b931cc2b',96128))
+print("[CheatMenu] ===== 加载开始 · v3.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1811,29 +1811,132 @@ for _, part in ipairs(ch:GetDescendants()) do
 if part:IsA("BasePart") then part.Transparency = 0 end
 end
 end
-local ESPMap = {}
-local function espAdd(pl)
-if pl == LP or not T.ESP then return end
+local ESPGui = nil
+local ESPObjs = {}
+local ESPConn = nil
+local ESPHue = 0
+local function espInit()
+if ESPGui and ESPGui.Parent then return end
+ESPGui = Instance.new("ScreenGui")
+ESPGui.Name = "CheatMenu_ESP"
+ESPGui.ResetOnSpawn = false
+ESPGui.IgnoreGuiInset = true
+ESPGui.Parent = gethui and gethui() or game:GetService("CoreGui")
+end
+local function espRemove(pl)
+local o = ESPObjs[pl]
+if o then
+for _, inst in pairs(o) do pcall(function() inst:Destroy() end) end
+ESPObjs[pl] = nil
+end
+end
+local function espCreate(pl)
+if pl == LP or ESPObjs[pl] then return end
+espInit()
+local o = {}
+local function edge(parent)
+local e = Instance.new("Frame")
+e.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
+e.BorderSizePixel = 0
+e.Parent = parent
+return e
+end
+o.box = Instance.new("Frame")
+o.box.BackgroundTransparency = 1
+o.box.BorderSizePixel = 0
+o.box.Parent = ESPGui
+o.top = edge(o.box)
+o.bottom = edge(o.box)
+o.left = edge(o.box)
+o.right = edge(o.box)
+o.name = Instance.new("TextLabel")
+o.name.BackgroundTransparency = 1
+o.name.TextColor3 = Color3.fromRGB(255, 255, 255)
+o.name.TextSize = 13
+o.name.Font = Enum.Font.GothamBold
+o.name.TextStrokeTransparency = 0.5
+o.name.Parent = ESPGui
+o.dist = Instance.new("TextLabel")
+o.dist.BackgroundTransparency = 1
+o.dist.TextColor3 = Color3.fromRGB(210, 210, 210)
+o.dist.TextSize = 12
+o.dist.Font = Enum.Font.Gotham
+o.dist.TextStrokeTransparency = 0.5
+o.dist.Parent = ESPGui
+o.hp = Instance.new("Frame")
+o.hp.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+o.hp.BorderSizePixel = 0
+o.hp.Parent = ESPGui
+o.tracer = Instance.new("Frame")
+o.tracer.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
+o.tracer.BorderSizePixel = 0
+o.tracer.Parent = ESPGui
+ESPObjs[pl] = o
+end
+local function espUpdate()
+if T.ESPRainbow then ESPHue = (ESPHue + 0.008) % 1 end
+local col = T.ESPRainbow and Color3.fromHSV(ESPHue, 1, 1) or Color3.fromRGB(255, 90, 90)
+local cam = workspace.CurrentCamera
+if not cam then return end
+local vp = cam.ViewportSize
+for pl, o in pairs(ESPObjs) do
 local ch = pl.Character
-if not ch then return end
-local hl = Instance.new("Highlight")
-hl.Name = "CheatESP"
-hl.FillColor = Color3.fromRGB(255, 90, 90)
-hl.FillTransparency = 0.6
-hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-hl.OutlineTransparency = 0
-hl.Parent = ch
-ESPMap[pl] = hl
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hrp and hum and hum.Health > 0 then
+local pos, onScreen = cam:WorldToScreenPoint(hrp.Position)
+if onScreen then
+local dist = (cam.CFrame.Position - hrp.Position).Magnitude
+local h = math.clamp(600 / math.max(1, dist), 20, 320)
+local w = h * 0.6
+local x, y = pos.X - w / 2, pos.Y - h / 2
+o.box.Visible = T.ESPBox ~= false
+o.box.Position = UDim2.fromOffset(x, y)
+o.box.Size = UDim2.fromOffset(w, h)
+o.top.Position = UDim2.fromOffset(0, 0) o.top.Size = UDim2.new(1, 0, 0, 1) o.top.BackgroundColor3 = col
+o.bottom.Position = UDim2.new(0, 0, 1, -1) o.bottom.Size = UDim2.new(1, 0, 0, 1) o.bottom.BackgroundColor3 = col
+o.left.Position = UDim2.fromOffset(0, 0) o.left.Size = UDim2.new(0, 1, 1, 0) o.left.BackgroundColor3 = col
+o.right.Position = UDim2.new(1, -1, 0, 0) o.right.Size = UDim2.new(0, 1, 1, 0) o.right.BackgroundColor3 = col
+o.name.Visible = T.ESPName ~= false
+o.name.Position = UDim2.fromOffset(x, y - 16)
+o.name.Size = UDim2.fromOffset(w, 16)
+o.name.Text = pl.Name
+o.dist.Visible = T.ESPDist ~= false
+o.dist.Position = UDim2.fromOffset(x, y + h)
+o.dist.Size = UDim2.fromOffset(w, 14)
+o.dist.Text = ("[%.0f]"):format(dist)
+o.hp.Visible = T.ESPHealth ~= false
+o.hp.Position = UDim2.fromOffset(x - 6, y)
+o.hp.Size = UDim2.new(0, 3, math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1), 0)
+o.tracer.Visible = T.ESPTracer ~= false
+local dx, dy = pos.X - vp.X / 2, pos.Y - vp.Y
+local len = math.sqrt(dx * dx + dy * dy)
+local ang = math.deg(math.atan2(dy, dx))
+o.tracer.Position = UDim2.fromOffset(vp.X / 2, vp.Y)
+o.tracer.Size = UDim2.fromOffset(len, 1)
+o.tracer.Rotation = ang
+o.tracer.BackgroundColor3 = col
+else
+o.box.Visible = false o.name.Visible = false o.dist.Visible = false o.hp.Visible = false o.tracer.Visible = false
+end
+else
+o.box.Visible = false o.name.Visible = false o.dist.Visible = false o.hp.Visible = false o.tracer.Visible = false
+end
+end
 end
 local function ESPEnable()
-for _, pl in ipairs(Players:GetPlayers()) do espAdd(pl) end
+espInit()
+for _, pl in ipairs(Players:GetPlayers()) do espCreate(pl) end
 Players.PlayerAdded:Connect(function(pl)
-pl.CharacterAdded:Connect(function() espAdd(pl) end)
+pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
 end)
+Players.PlayerRemoving:Connect(espRemove)
+if not ESPConn then ESPConn = RS.RenderStepped:Connect(espUpdate) end
 end
 local function ESPDisable()
-for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
-ESPMap = {}
+if ESPConn then ESPConn:Disconnect() ESPConn = nil end
+for pl in pairs(ESPObjs) do espRemove(pl) end
+ESPObjs = {}
 end
 local BulletHls = {}
 local BulletConn = nil
@@ -2311,7 +2414,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.5.0",
+SubTitle = "v3.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2341,7 +2444,14 @@ Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = fa
 Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() CM.FlingTarget() end })
 Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
-Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then CM.ESPEnable() else CM.ESPDisable() end end })
+Tabs.Combat:AddSection("ESP 透视")
+Tabs.Combat:AddToggle("ESP", { Title = "ESP 总开关", Default = false, Callback = function(v) T.ESP = v if v then CM.ESPEnable() else CM.ESPDisable() end end })
+Tabs.Combat:AddToggle("ESPBox", { Title = "2D 方框", Default = true, Callback = function(v) T.ESPBox = v end })
+Tabs.Combat:AddToggle("ESPName", { Title = "显示名称", Default = true, Callback = function(v) T.ESPName = v end })
+Tabs.Combat:AddToggle("ESPDist", { Title = "显示距离", Default = true, Callback = function(v) T.ESPDist = v end })
+Tabs.Combat:AddToggle("ESPHealth", { Title = "显示血条", Default = true, Callback = function(v) T.ESPHealth = v end })
+Tabs.Combat:AddToggle("ESPTracer", { Title = "追踪线", Default = false, Callback = function(v) T.ESPTracer = v end })
+Tabs.Combat:AddToggle("ESPRainbow", { Title = "彩虹色", Default = false, Callback = function(v) T.ESPRainbow = v end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Move:AddSection("移动")
@@ -2528,6 +2638,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.5.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.6.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.5.0")
+print("[CheatMenu] ✅ 加载完成 v3.6.0")
