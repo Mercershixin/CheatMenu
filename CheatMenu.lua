@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:18 sha 814c9aee bytes 69868'):format('2026-09-27 21:18','814c9aee',69868))
-print("[CheatMenu] ===== 加载开始 · v2.0.1 =====")
+print(('[CheatMenu] build 2026-09-27 21:22 sha 230ef3d2 bytes 69868'):format('2026-09-27 21:22','230ef3d2',69868))
+print("[CheatMenu] ===== 加载开始 · v2.0.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -95,8 +95,7 @@ pcall(function()
 if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end
 end)
 end
-local function loadTransCache()
-LoadConfig()
+local function LoadConfig()
 pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local raw = readfile(SaveFile)
@@ -1682,10 +1681,11 @@ if BulletConn then BulletConn:Disconnect() BulletConn = nil end
 for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
 BulletHls = {}
 end
+loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.1",
+SubTitle = "v2.0.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1895,6 +1895,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.1")
+print("[CheatMenu] ✅ 加载完成 v2.0.2")
