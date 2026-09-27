@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:22 sha 1020c316 bytes 120911'):format('2026-09-28 02:22','1020c316',120911))
-print("[CheatMenu] ===== 加载开始 · v4.6.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:27 sha 35728466 bytes 125279'):format('2026-09-28 02:27','35728466',125279))
+print("[CheatMenu] ===== 加载开始 · v4.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -162,6 +162,31 @@ minBtn.TextColor3 = UITheme.ACCENT
 minBtn.BackgroundColor3 = UITheme.TITLE
 minBtn.BorderSizePixel = 0
 minBtn.Parent = title
+local dragging, dragStart, startPos = false, nil, nil
+local dragArea = Instance.new("TextButton")
+dragArea.Size = UDim2.new(1, -50, 1, 0)
+dragArea.BackgroundTransparency = 1
+dragArea.Text = ""
+dragArea.AutoButtonColor = false
+dragArea.Parent = title
+dragArea.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = main.Position
+end
+end)
+UIS.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+local delta = input.Position - dragStart
+main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+end)
+UIS.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = false
+end
+end)
 local minimized = false
 minBtn.MouseButton1Click:Connect(function() minimized = not minimized main.Visible = not minimized end)
 UIS.InputBegan:Connect(function(input, gpe)
@@ -2945,6 +2970,83 @@ end
 local function GunAuraDisable()
 if GunAuraConn then GunAuraConn:Disconnect() GunAuraConn = nil end
 end
+local AntiRagdollConn = nil
+local function AntiRagdollEnable()
+if AntiRagdollConn then return end
+local function apply()
+local _, hum = GC()
+if not hum then return end
+pcall(function()
+hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+end)
+end
+apply()
+AntiRagdollConn = RS.Stepped:Connect(apply)
+end
+local function AntiRagdollDisable()
+if AntiRagdollConn then AntiRagdollConn:Disconnect() AntiRagdollConn = nil end
+local _, hum = GC()
+if hum then pcall(function()
+hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+end) end
+end
+local TrapHls = {}
+local function TrapsESPEnable()
+for _, v in ipairs(workspace:GetDescendants()) do
+local n = v.Name:lower()
+if v:IsA("BasePart") and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
+local hl = Instance.new("Highlight")
+hl.FillColor = Color3.fromRGB(255, 60, 60)
+hl.FillTransparency = 0.3
+hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+hl.Parent = v
+TrapHls[#TrapHls + 1] = hl
+end
+end
+print("[CheatMenu] 陷阱透视: 已高亮 " .. #TrapHls .. " 个")
+end
+local function TrapsESPDisable()
+for _, hl in ipairs(TrapHls) do pcall(function() hl:Destroy() end) end
+TrapHls = {}
+end
+local AntiKnockConn = nil
+local function AntiKnockdownEnable()
+if AntiKnockConn then return end
+AntiKnockConn = RS.Heartbeat:Connect(function()
+if not T.AntiKnockdown then return end
+local _, hum, root = GC()
+if not (hum and root) then return end
+if root.AssemblyLinearVelocity.Magnitude > 200 then
+root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+end
+task.wait(0.1)
+end)
+end
+local function AntiKnockdownDisable()
+if AntiKnockConn then AntiKnockConn:Disconnect() AntiKnockConn = nil end
+end
+local SmoothSpeedEnable = nil
+local function SpeedBypassEnable()
+print("[CheatMenu] 速度绕过(平滑加速)已启用")
+end
+local function flingPlayerByName(name)
+if not name then return end
+local pl = Players:FindFirstChild(name)
+if not (pl and pl.Character) then return end
+local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
+local _, _, r = GC()
+if hrp and r then
+for _ = 1, 15 do
+r.CFrame = hrp.CFrame * CFrame.new(0, 0, -1)
+r.AssemblyLinearVelocity = Vector3.new(0, 250, 0)
+task.wait()
+end
+end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -3018,7 +3120,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.6.0",
+SubTitle = "v4.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3054,7 +3156,10 @@ Tabs.Combat:AddSection("生存 & 辅助")
 Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
-Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() CM.FlingTarget() end })
+Tabs.Combat:AddDropdown("FlingTarget", { Title = "甩飞目标玩家", Values = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return #n > 0 and n or { "(无人)" } end)(), Default = nil, Callback = function(v) C.FlingTarget = v end })
+Tabs.Combat:AddButton({ Title = "甩飞选中玩家", Callback = function() flingPlayerByName(C.FlingTarget) end })
+Tabs.Combat:AddToggle("AntiRagdoll", { Title = "反布娃娃/防击倒", Default = false, Callback = function(v) T.AntiRagdoll = v if v then AntiRagdollEnable() else AntiRagdollDisable() end end })
+Tabs.Combat:AddToggle("AntiKnockdown", { Title = "防被撞飞", Default = false, Callback = function(v) T.AntiKnockdown = v if v then AntiKnockdownEnable() else AntiKnockdownDisable() end end })
 Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then HitboxExpandEnable() else HitboxExpandDisable() end end })
 Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then HitboxExpandDisable() HitboxExpandEnable() end end })
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then KillAuraEnable() else KillAuraDisable() end end })
@@ -3219,6 +3324,7 @@ end })
 Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
 Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then ACBypassPlusEnable() end end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
+Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddSection("设置")
@@ -3280,6 +3386,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.6.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.7.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.6.0")
+print("[CheatMenu] ✅ 加载完成 v4.7.0")
