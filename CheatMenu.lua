@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:09 sha bdc0ca12 bytes 103918'):format('2026-09-28 02:09','bdc0ca12',103918))
-print("[CheatMenu] ===== 加载开始 · v3.9.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:13 sha b15b35a7 bytes 104387'):format('2026-09-28 02:13','b15b35a7',104387))
+print("[CheatMenu] ===== 加载开始 · v4.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1322,10 +1322,12 @@ return d.choices[1].message and d.choices[1].message.content
 end
 local function shouldTranslate(s)
 if type(s) ~= "string" or s == "" then return false end
-local hasCJK = string.find(s, "[8-]") ~= nil
-local hasAlpha = string.find(s, "[%a]") ~= nil
+if #s > 200 then return false end
+local hasCJK = s:find("[\228-\233]") ~= nil
+local hasAlpha = s:find("%a") ~= nil
 if not hasCJK and not hasAlpha then return false end
 if s:find("$", 1, true) or s:find("€", 1, true) or s:find("¥", 1, true) then return false end
+if s:match("^[%d%.,%%%+%-%s/()]+$") then return false end
 local lang = C.TransLang or "zh"
 if lang == "zh" and hasCJK then return false end
 return true
@@ -1336,6 +1338,9 @@ text = text:gsub("^%s+", ""):gsub("%s+$", "")
 if text == "" then return nil end
 if not force and not shouldTranslate(text) then return nil end
 if TransCache[text] then return TransCache[text] end
+local now = os.clock()
+if not force and (now - (Trans._lastAt or 0)) < (C.TransInterval or 0.15) then return nil end
+Trans._lastAt = now
 local r = TransRequest(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
@@ -1385,15 +1390,11 @@ translateGuiEl(obj)
 end
 end
 end
-for _, obj in ipairs(workspace:GetDescendants()) do
+for _, obj in ipairs(workspace:GetChildren()) do
 if obj:IsA("ProximityPrompt") then
 if obj.ActionText and obj.ActionText ~= "" then
 local tr = Trans.Translate(obj.ActionText, true)
 if tr then obj.ActionText = tr end
-end
-elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-for _, child in ipairs(obj:GetDescendants()) do
-translateGuiEl(child)
 end
 end
 end
@@ -1404,7 +1405,7 @@ if TransLoop then return end
 scanAndTranslate()
 TransLoop = task.spawn(function()
 while T.Translate do
-task.wait(2)
+task.wait(1)
 scanAndTranslate()
 end
 TransLoop = nil
@@ -2585,7 +2586,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.9.0",
+SubTitle = "v4.0.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2725,6 +2726,8 @@ C.TransLang = map[v] or "zh"
 end })
 Tabs.Trans:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
 Tabs.Trans:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
+Tabs.Trans:AddSlider("TransInterval", { Title = "翻译请求间隔(秒,越大越不影响游戏)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
+Tabs.Trans:AddButton({ Title = "清空翻译缓存", Callback = function() TransCache = {} saveTransCache() Fluent:Notify({ Title = "翻译", Content = "缓存已清空", Duration = 2 }) end })
 Tabs.Trans:AddButton({ Title = "翻译文本", Callback = function()
 local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
 if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
@@ -2825,6 +2828,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.9.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.0.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.9.0")
+print("[CheatMenu] ✅ 加载完成 v4.0.0")
