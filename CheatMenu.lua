@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:34 sha 8283e93e bytes 73006'):format('2026-09-27 21:34','8283e93e',73006))
-print("[CheatMenu] ===== 加载开始 · v2.0.4 =====")
+print(('[CheatMenu] build 2026-09-27 21:38 sha 895ba7c1 bytes 73765'):format('2026-09-27 21:38','895ba7c1',73765))
+print("[CheatMenu] ===== 加载开始 · v2.0.5 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1246,15 +1246,26 @@ local smooth = math.max(1, C.AimSmooth or 5)
 cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, target.Position), 1 / smooth)
 end)
 end
-local function cleanupHitbox(ch)
+local function cleanupHitbox()
+pcall(function()
+for _, o in ipairs(workspace:GetDescendants()) do
+if o.Name == "CheatHitbox" then o:Destroy() end
+end
+end)
+end
+cleanupHitbox()
+task.spawn(function()
+task.wait(3) cleanupHitbox()
+task.wait(8) cleanupHitbox()
+end)
+LP.CharacterAdded:Connect(function(ch)
+task.wait(0.5)
 pcall(function()
 for _, o in ipairs(ch:GetDescendants()) do
 if o.Name == "CheatHitbox" then o:Destroy() end
 end
 end)
-end
-if LP.Character then cleanupHitbox(LP.Character) end
-LP.CharacterAdded:Connect(function(ch) task.wait(0.5) cleanupHitbox(ch) end)
+end)
 local GodConn = nil
 local function GodEnable()
 if GodConn then return end
@@ -1734,6 +1745,16 @@ return
 end
 print("[测试] ❌ 找不到 remote: " .. name)
 end
+local function scanAndTest()
+scanRemotes()
+local name = Fluent.Options.TestRemoteName and Fluent.Options.TestRemoteName.Value
+if name and name ~= "" then
+local args = Fluent.Options.TestRemoteArgs and Fluent.Options.TestRemoteArgs.Value
+testRemote(name, args)
+else
+Fluent:Notify({ Title = "扫描", Content = "已列全部远程事件到控制台(F9)", Duration = 4 })
+end
+end
 local AlertNames = { "CheatWarningEvent", "ShowSecretGuard", "AdminAbuseRequest", "AdminAbuseBossSync", "ToggleCheatAlert" }
 local function AlertBlockEnable()
 for _, name in ipairs(AlertNames) do
@@ -1760,11 +1781,22 @@ end)
 end
 print("[CheatMenu] 反作弊告警拦截已开启")
 end
+local function diagnoseCharacter()
+local ch = LP.Character
+if not ch then print("[诊断] 无角色") return end
+print("[诊断] === 角色部件列表 ===")
+for _, o in ipairs(ch:GetDescendants()) do
+if o:IsA("BasePart") then
+print(("[诊断] %s | 透明=%.2f | 锚定=%s | 大小=%s"):format(
+o.Name, o.Transparency, tostring(o.Anchored), tostring(o.Size)))
+end
+end
+end
 loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.4",
+SubTitle = "v2.0.5",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1921,17 +1953,13 @@ Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = functi
 Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
 Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() else ChatBypassCleanup() end end })
 Tabs.AC:AddToggle("AlertBlock", { Title = "反作弊告警拦截", Default = false, Callback = function(v) T.AlertBlock = v if v then AlertBlockEnable() end end })
-Tabs.AC:AddSection("Remote 测试器")
-Tabs.AC:AddInput("TestRemoteName", { Title = "remote名", Default = "", Placeholder = "如 AddWin / BuyWins" })
+Tabs.AC:AddSection("抓包扫描")
+Tabs.AC:AddInput("TestRemoteName", { Title = "remote名(测试,可空)", Default = "", Placeholder = "如 AddWin / BuyWins" })
 Tabs.AC:AddInput("TestRemoteArgs", { Title = "参数(逗号分隔,可空)", Default = "", Placeholder = "如 1,100" })
-Tabs.AC:AddButton({ Title = "测试发送 remote", Callback = function()
-local name = Fluent.Options.TestRemoteName and Fluent.Options.TestRemoteName.Value
-local args = Fluent.Options.TestRemoteArgs and Fluent.Options.TestRemoteArgs.Value
-testRemote(name, args)
-end })
-Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
+Tabs.AC:AddButton({ Title = "抓包扫描(列出全部+测试发送)", Callback = function() scanAndTest() end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
+Tabs.Setting:AddButton({ Title = "诊断角色部件(查灰方块)", Callback = function() diagnoseCharacter() Fluent:Notify({ Title = "诊断", Content = "已打印角色部件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -1983,6 +2011,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.4", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.5", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.4")
+print("[CheatMenu] ✅ 加载完成 v2.0.5")
