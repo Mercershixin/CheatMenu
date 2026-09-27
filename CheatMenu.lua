@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:38 sha 895ba7c1 bytes 73765'):format('2026-09-27 21:38','895ba7c1',73765))
-print("[CheatMenu] ===== 加载开始 · v2.0.5 =====")
+print(('[CheatMenu] build 2026-09-27 21:43 sha 1a146ff3 bytes 73596'):format('2026-09-27 21:43','1a146ff3',73596))
+print("[CheatMenu] ===== 加载开始 · v2.0.6 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1796,7 +1796,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.5",
+SubTitle = "v2.0.6",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1954,9 +1954,7 @@ Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Call
 Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() else ChatBypassCleanup() end end })
 Tabs.AC:AddToggle("AlertBlock", { Title = "反作弊告警拦截", Default = false, Callback = function(v) T.AlertBlock = v if v then AlertBlockEnable() end end })
 Tabs.AC:AddSection("抓包扫描")
-Tabs.AC:AddInput("TestRemoteName", { Title = "remote名(测试,可空)", Default = "", Placeholder = "如 AddWin / BuyWins" })
-Tabs.AC:AddInput("TestRemoteArgs", { Title = "参数(逗号分隔,可空)", Default = "", Placeholder = "如 1,100" })
-Tabs.AC:AddButton({ Title = "抓包扫描(列出全部+测试发送)", Callback = function() scanAndTest() end })
+Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
 Tabs.Setting:AddButton({ Title = "诊断角色部件(查灰方块)", Callback = function() diagnoseCharacter() Fluent:Notify({ Title = "诊断", Content = "已打印角色部件到控制台(F9)", Duration = 4 }) end })
@@ -2011,6 +2009,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.5", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.6", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.5")
+print("[CheatMenu] ✅ 加载完成 v2.0.6")
