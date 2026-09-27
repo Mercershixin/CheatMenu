@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:16 sha 2c25dcd8 bytes 107363'):format('2026-09-28 02:16','2c25dcd8',107363))
-print("[CheatMenu] ===== 加载开始 · v4.2.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:17 sha 96301190 bytes 108218'):format('2026-09-28 02:17','96301190',108218))
+print("[CheatMenu] ===== 加载开始 · v4.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1889,13 +1889,28 @@ o.tracer.BorderSizePixel = 0
 o.tracer.Parent = ESPGui
 ESPObjs[pl] = o
 end
+local function espIsTeammate(pl)
+if not T.ESPTeamColor then return false end
+return pl.Team ~= nil and pl.Team == LP.Team
+end
+local function espIsFriend(pl)
+if not T.ESPFriendColor then return false end
+local ok, res = pcall(function() return LP:IsFriendsWith(pl.UserId) end)
+return ok and res == true
+end
+local function espColorFor(pl)
+if T.ESPRainbow then return Color3.fromHSV(ESPHue, 1, 1) end
+if espIsTeammate(pl) then return Color3.fromRGB(90, 220, 120) end
+if espIsFriend(pl) then return Color3.fromRGB(90, 160, 255) end
+return Color3.fromRGB(255, 90, 90)
+end
 local function espUpdate()
 if T.ESPRainbow then ESPHue = (ESPHue + 0.008) % 1 end
-local col = T.ESPRainbow and Color3.fromHSV(ESPHue, 1, 1) or Color3.fromRGB(255, 90, 90)
 local cam = workspace.CurrentCamera
 if not cam then return end
 local vp = cam.ViewportSize
 for pl, o in pairs(ESPObjs) do
+local col = espColorFor(pl)
 local ch = pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
@@ -1916,7 +1931,12 @@ o.right.Position = UDim2.new(1, -1, 0, 0) o.right.Size = UDim2.new(0, 1, 1, 0) o
 o.name.Visible = T.ESPName ~= false
 o.name.Position = UDim2.fromOffset(x, y - 16)
 o.name.Size = UDim2.fromOffset(w, 16)
-o.name.Text = pl.Name
+local tag = ""
+if espIsTeammate(pl) then tag = " [队]"
+elseif espIsFriend(pl) then tag = " [友]"
+elseif T.ESPTeamColor then tag = " [敌]" end
+o.name.Text = pl.Name .. tag
+o.name.TextColor3 = col
 o.dist.Visible = T.ESPDist ~= false
 o.dist.Position = UDim2.fromOffset(x, y + h)
 o.dist.Size = UDim2.fromOffset(w, 14)
@@ -2714,7 +2734,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.2.0",
+SubTitle = "v4.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2768,6 +2788,7 @@ else
 T.ESPBox = true T.ESPName = true T.ESPDist = true T.ESPHealth = true T.ESPTracer = false T.ESPRainbow = false
 end
 end })
+Tabs.Combat:AddToggle("ESPTeamColor", { Title = "敌我识别(敌红/友蓝/队绿)", Default = false, Callback = function(v) T.ESPTeamColor = v T.ESPFriendColor = v end })
 Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then ArrowEnable() else ArrowDisable() end end })
 Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then SkeletonEnable() else SkeletonDisable() end end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
@@ -2947,6 +2968,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.2.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.3.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.2.0")
+print("[CheatMenu] ✅ 加载完成 v4.3.0")
