@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:34 sha 24f27751 bytes 48353'):format('2026-09-27 19:34','24f27751',48353))
-print("[CheatMenu] ===== 加载开始 · v1.6.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:40 sha e93e6c8d bytes 49384'):format('2026-09-27 19:40','e93e6c8d',49384))
+print("[CheatMenu] ===== 加载开始 · v1.6.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -525,16 +525,30 @@ end
 return nil
 end
 local function sellHeld()
-local rf = RFunction("B_Sell")
+local rfNames = { "B_Sell", "Sell", "SellItem", "SellTool", "RequestSell" }
+for _, name in ipairs(rfNames) do
+local rf = RFunction(name)
 if rf then
 local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok then return true end
+if ok and res ~= nil then
+print("[CheatMenu] 卖出成功 remote=" .. name .. " 返回=" .. tostring(res))
+return true
+elseif ok then
+print("[CheatMenu] 卖出 remote=" .. name .. " 返回空(可能没卖掉)")
+return false
 end
-local re = REvent("B_Sell")
+end
+end
+local reNames = { "B_Sell", "Sell", "SellItem" }
+for _, name in ipairs(reNames) do
+local re = REvent(name)
 if re then
 pcall(function() re:FireServer() end)
+print("[CheatMenu] 已发卖出事件 remote=" .. name)
 return true
 end
+end
+print("[CheatMenu] ❌ 找不到任何卖出 remote (B_Sell/Sell/SellItem 都不存在)")
 return false
 end
 local function moveToSeller()
@@ -560,13 +574,18 @@ local _, hum = GC()
 if not hum then SellThread = nil return end
 moveToSeller()
 local total = 0
+local scanToolCount, scanEntityCount = 0, 0
 for round = 1, 200 do
 if not T.AutoSell then break end
 local picks = {}
 local function scan(list)
 if not list then return end
 for _, t in ipairs(list:GetChildren()) do
-if isEntityTool(t) and not isExclusive(t) then
+if t:IsA("Tool") then
+scanToolCount = scanToolCount + 1
+if isEntityTool(t) then
+scanEntityCount = scanEntityCount + 1
+if not isExclusive(t) then
 local cps = getBrainrotCPS(t)
 local th = tonumber(C.SellMinCPS) or 100000
 if cps and cps < th then
@@ -575,9 +594,20 @@ end
 end
 end
 end
+end
+end
 scan(LP.Character)
 scan(LP:FindFirstChild("Backpack"))
-if #picks == 0 then break end
+if round == 1 then
+print(("[CheatMenu] 扫描: 工具%d 脑红%d 待卖%d (门槛%g)"):format(
+scanToolCount, scanEntityCount, #picks, tonumber(C.SellMinCPS) or 100000))
+end
+if #picks == 0 then
+if round == 1 then
+print("[CheatMenu] ⚠️ 没有找到可卖的脑红 —— 检查: 是否带 EntityTool 标签? CPS 属性是否可读? 门槛是否太高?")
+end
+break
+end
 for _, e in ipairs(picks) do
 if not T.AutoSell then break end
 local tool = e.Tool
@@ -1164,7 +1194,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.6.0",
+SubTitle = "v1.6.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1344,6 +1374,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.6.0")
+print("[CheatMenu] ✅ 加载完成 v1.6.1")
