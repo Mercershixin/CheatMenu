@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:20 sha 1bea9edb bytes 115466'):format('2026-09-28 02:20','1bea9edb',115466))
-print("[CheatMenu] ===== 加载开始 · v4.5.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:22 sha 1020c316 bytes 120911'):format('2026-09-28 02:22','1020c316',120911))
+print("[CheatMenu] ===== 加载开始 · v4.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2821,6 +2821,130 @@ end
 task.wait(1)
 end)
 end
+local BringConn = nil
+local BRING_KEYS = {"money", "bond", "item", "loot", "bag", "coin", "drop", "ore", "gold", "cash", "gem", "crate", "supply", "ammo", "weapon", "armor"}
+local function BringItemsEnable()
+if BringConn then return end
+BringConn = RS.Heartbeat:Connect(function()
+if not T.BringItems then return end
+local _, _, root = GC()
+if not root then return end
+for _, v in ipairs(workspace:GetDescendants()) do
+if v ~= LP.Character and (v:IsA("BasePart") or v:IsA("Model")) then
+local n = v.Name:lower()
+local match = false
+for _, k in ipairs(BRING_KEYS) do if n:find(k, 1, true) then match = true break end end
+if match then
+local part = v:IsA("BasePart") and v or v.PrimaryPart
+if part and not part.Anchored and (root.Position - part.Position).Magnitude <= (C.BringRange or 80) then
+pcall(function() part.CFrame = root.CFrame + Vector3.new(0, -2, 0) end)
+end
+end
+end
+end
+task.wait(0.5)
+end)
+end
+local function BringItemsDisable()
+if BringConn then BringConn:Disconnect() BringConn = nil end
+end
+local HealConn = nil
+local function AutoHealEnable()
+if HealConn then return end
+HealConn = RS.Heartbeat:Connect(function()
+if not T.AutoHeal then return end
+local _, hum = GC()
+if hum and hum.Health > 0 and hum.Health < (C.AutoHealHP or 50) then
+local ch = LP.Character
+if ch then
+for _, t in ipairs(ch:GetChildren()) do
+if t:IsA("Tool") then
+local n = t.Name:lower()
+if n:find("bandage") or n:find("medkit") or n:find("heal") or n:find("potion") or n:find("food") then
+pcall(function() t:Activate() end)
+end
+end
+end
+end
+end
+task.wait(1)
+end)
+end
+local function AutoHealDisable()
+if HealConn then HealConn:Disconnect() HealConn = nil end
+end
+local ThirdPersonBackup = nil
+local function ThirdPersonEnable()
+pcall(function()
+local pl = LP
+ThirdPersonBackup = { min = pl.CameraMinZoomDistance, max = pl.CameraMaxZoomDistance }
+pl.CameraMode = Enum.CameraMode.Classic
+pl.CameraMinZoomDistance = 0.5
+pl.CameraMaxZoomDistance = 128
+end)
+end
+local function ThirdPersonDisable()
+if ThirdPersonBackup then
+pcall(function()
+LP.CameraMinZoomDistance = ThirdPersonBackup.min
+LP.CameraMaxZoomDistance = ThirdPersonBackup.max
+end)
+end
+end
+local ReviveConn = nil
+local function AutoReviveEnable()
+if ReviveConn then return end
+ReviveConn = RS.Heartbeat:Connect(function()
+if not T.AutoRevive then return end
+local _, _, root = GC()
+if not root then return end
+if type(fireproximityprompt) ~= "function" then return end
+for _, p in ipairs(workspace:GetDescendants()) do
+if p:IsA("ProximityPrompt") and p.Enabled then
+local n = (p.ActionText or ""):lower() .. (p.ObjectText or ""):lower()
+if n:find("revive") or n:find("rescue") or n:find("help") or n:find("复活") then
+local part = p.Parent
+if part and part:IsA("BasePart") and (root.Position - part.Position).Magnitude <= (p.MaxActivationDistance or 10) then
+pcall(fireproximityprompt, p)
+end
+end
+end
+end
+task.wait(0.5)
+end)
+end
+local function AutoReviveDisable()
+if ReviveConn then ReviveConn:Disconnect() ReviveConn = nil end
+end
+local GunAuraConn = nil
+local function GunAuraEnable()
+if GunAuraConn then return end
+GunAuraConn = RS.Heartbeat:Connect(function()
+if not T.GunAura then return end
+local cam = workspace.CurrentCamera
+local _, _, root = GC()
+if not (cam and root) then return end
+local best, bestD = nil, (C.GunAuraRange or 100)
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
+local hum = pl.Character:FindFirstChildOfClass("Humanoid")
+if hrp and hum and hum.Health > 0 and not (T.AimTeamCheck and pl.Team == LP.Team) then
+local d = (root.Position - hrp.Position).Magnitude
+if d < bestD then bestD = d best = hrp end
+end
+end
+end
+if best then
+cam.CFrame = CFrame.lookAt(cam.CFrame.Position, best.Position)
+if type(mouse1click) == "function" then pcall(mouse1click) end
+end
+task.wait(0.05)
+end)
+end
+local function GunAuraDisable()
+if GunAuraConn then GunAuraConn:Disconnect() GunAuraConn = nil end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2894,7 +3018,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.5.0",
+SubTitle = "v4.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2936,6 +3060,8 @@ Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then KillAuraEnable() else KillAuraDisable() end end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
 Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(锁定相机)", Default = false, Callback = function(v) T.NoRecoil = v if v then NoRecoilEnable() else NoRecoilDisable() end end })
+Tabs.Combat:AddToggle("GunAura", { Title = "Gun Aura(自动朝敌人开火)", Default = false, Callback = function(v) T.GunAura = v if v then GunAuraEnable() else GunAuraDisable() end end })
+Tabs.Combat:AddSlider("GunAuraRange", { Title = "开火范围", Min = 20, Max = 300, Default = 100, Rounding = 0, Callback = function(v) C.GunAuraRange = v end })
 Tabs.Combat:AddSection("ESP 透视")
 Tabs.Combat:AddToggle("ESP", { Title = "ESP 透视(默认方框+名称+距离+血条)", Default = false, Callback = function(v)
 T.ESP = v
@@ -3005,6 +3131,13 @@ Tabs.World:AddButton({ Title = "触发所有互动(触摸+ClickDetector)", Callb
 Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then PropWatchEnable() end end })
 Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then AutoPickupEnable() else AutoPickupDisable() end end })
 Tabs.World:AddSlider("PickupRange", { Title = "拾取范围", Min = 5, Max = 50, Default = 15, Rounding = 0, Callback = function(v) C.PickupRange = v end })
+Tabs.World:AddSection("生存辅助")
+Tabs.World:AddToggle("BringItems", { Title = "物品拉取(把掉落物拉过来)", Default = false, Callback = function(v) T.BringItems = v if v then BringItemsEnable() else BringItemsDisable() end end })
+Tabs.World:AddSlider("BringRange", { Title = "拉取范围", Min = 10, Max = 200, Default = 80, Rounding = 0, Callback = function(v) C.BringRange = v end })
+Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", Default = false, Callback = function(v) T.AutoHeal = v if v then AutoHealEnable() else AutoHealDisable() end end })
+Tabs.World:AddSlider("AutoHealHP", { Title = "治疗血量阈值", Min = 10, Max = 100, Default = 50, Rounding = 0, Callback = function(v) C.AutoHealHP = v end })
+Tabs.World:AddToggle("AutoRevive", { Title = "自动复活队友", Default = false, Callback = function(v) T.AutoRevive = v if v then AutoReviveEnable() else AutoReviveDisable() end end })
+Tabs.World:AddToggle("ThirdPerson", { Title = "第三人称相机", Default = false, Callback = function(v) T.ThirdPerson = v if v then ThirdPersonEnable() else ThirdPersonDisable() end end })
 Tabs.TP:AddSection("传送")
 local tpNames = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return n end)()
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = tpNames, Default = tpNames[1] })
@@ -3147,6 +3280,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.5.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.6.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.5.0")
+print("[CheatMenu] ✅ 加载完成 v4.6.0")
