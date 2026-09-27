@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:29 sha 40b4e15d bytes 55105'):format('2026-09-27 20:29','40b4e15d',55105))
-print("[CheatMenu] ===== 加载开始 · v1.8.2 =====")
+print(('[CheatMenu] build 2026-09-27 20:36 sha df0be224 bytes 61761'):format('2026-09-27 20:36','df0be224',61761))
+print("[CheatMenu] ===== 加载开始 · v1.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1380,10 +1380,147 @@ end)
 if not ok then warn("[CheatMenu] 热更新失败: " .. tostring(err)) end
 end)
 end
+local SpinConn = nil
+local function SpinEnable()
+if SpinConn then return end
+SpinConn = RS.RenderStepped:Connect(function()
+if not T.Spin then return end
+local _, _, r = GC()
+if r then r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(C.SpinSpeed or 10), 0) end
+end)
+end
+local function SpinDisable()
+if SpinConn then SpinConn:Disconnect() SpinConn = nil end
+end
+local savedNV = nil
+local function NightVisionEnable()
+local L = game:GetService("Lighting")
+if not savedNV then savedNV = { Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient } end
+L.Brightness = 1.5
+L.ClockTime = 0
+L.Ambient = Color3.fromRGB(90, 255, 90)
+end
+local function NightVisionDisable()
+local L = game:GetService("Lighting")
+if not savedNV then return end
+L.Brightness = savedNV.Brightness
+L.ClockTime = savedNV.ClockTime
+L.Ambient = savedNV.Ambient
+end
+local XrayHls = {}
+local function XrayEnable()
+local ch = LP.Character
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
+local hl = Instance.new("Highlight")
+hl.FillTransparency = 1
+hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+hl.OutlineTransparency = 0.4
+hl.Parent = obj
+XrayHls[#XrayHls + 1] = hl
+end
+end
+end
+local function XrayDisable()
+for _, hl in ipairs(XrayHls) do pcall(function() hl:Destroy() end) end
+XrayHls = {}
+end
+local function MuteEnable()
+for _, s in ipairs(workspace:GetDescendants()) do
+if s:IsA("Sound") then s.Volume = 0 end
+end
+end
+local SelfGlowHl = nil
+local function SelfGlowEnable()
+local ch = LP.Character
+if not ch then return end
+if SelfGlowHl then SelfGlowHl:Destroy() end
+SelfGlowHl = Instance.new("Highlight")
+SelfGlowHl.FillColor = Color3.fromRGB(255, 200, 80)
+SelfGlowHl.FillTransparency = 0.3
+SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
+SelfGlowHl.Parent = ch
+end
+local function SelfGlowDisable()
+if SelfGlowHl then SelfGlowHl:Destroy() SelfGlowHl = nil end
+end
+local function FOVEnable()
+workspace.CurrentCamera.FieldOfView = C.FOV or 100
+end
+local function FOVDisable()
+workspace.CurrentCamera.FieldOfView = 70
+end
+local function ZoomEnable()
+LP.CameraMaxZoomDistance = C.Zoom or 400
+LP.CameraMinZoomDistance = 0.5
+end
+local function ZoomDisable()
+LP.CameraMaxZoomDistance = 128
+LP.CameraMinZoomDistance = 0.5
+end
+local CircleConn = nil
+local function getTPTargetPlayer()
+local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
+if not name then return nil end
+return Players:FindFirstChild(name)
+end
+local function CircleEnable()
+if CircleConn then return end
+local angle = 0
+CircleConn = RS.RenderStepped:Connect(function()
+if not T.Circle then return end
+local target = getTPTargetPlayer()
+local _, _, r = GC()
+if not (target and target.Character and r) then return end
+local tr = target.Character:FindFirstChild("HumanoidRootPart")
+if not tr then return end
+angle = angle + math.rad(C.CircleSpeed or 5)
+local rad = C.CircleRadius or 10
+r.CFrame = CFrame.new(tr.Position + Vector3.new(math.cos(angle) * rad, 3, math.sin(angle) * rad))
+end)
+end
+local function CircleDisable()
+if CircleConn then CircleConn:Disconnect() CircleConn = nil end
+end
+local function SpectateEnable()
+local target = getTPTargetPlayer()
+if target and target.Character then
+local hum = target.Character:FindFirstChildOfClass("Humanoid")
+if hum then workspace.CurrentCamera.CameraSubject = hum end
+end
+end
+local function SpectateDisable()
+local ch = LP.Character
+if ch then
+local hum = ch:FindFirstChildOfClass("Humanoid")
+if hum then workspace.CurrentCamera.CameraSubject = hum end
+end
+end
+local ClickerConn = nil
+local function ClickerEnable()
+if ClickerConn then return end
+ClickerConn = RS.Stepped:Connect(function()
+if not T.Clicker then return end
+if type(mouse1click) == "function" then
+mouse1click()
+elseif type(mouse1press) == "function" then
+mouse1press()
+task.wait(0.01)
+mouse1release()
+end
+end)
+end
+local function ClickerDisable()
+if ClickerConn then ClickerConn:Disconnect() ClickerConn = nil end
+end
+local function ServerHop()
+local ts = game:GetService("TeleportService")
+pcall(function() ts:Teleport(game.PlaceId, LP) end)
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.8.2",
+SubTitle = "v1.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1394,9 +1531,9 @@ if getgenv then getgenv().CM_Window = Window end
 local Tabs = {
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
-Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 World   = Window:AddTab({ Title = "世界", Icon = "globe" }),
 TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
@@ -1468,9 +1605,19 @@ Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Call
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
+Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then SpinEnable() else SpinDisable() end end })
+Tabs.Move:AddSlider("SpinSpeed", { Title = "自转速度", Min = 1, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.SpinSpeed = v end })
 Tabs.World:AddSection("世界")
 Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
 Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
+Tabs.World:AddToggle("NightVision", { Title = "夜视", Default = false, Callback = function(v) T.NightVision = v if v then NightVisionEnable() else NightVisionDisable() end end })
+Tabs.World:AddToggle("Xray", { Title = "Xray 透视", Default = false, Callback = function(v) T.Xray = v if v then XrayEnable() else XrayDisable() end end })
+Tabs.World:AddToggle("SelfGlow", { Title = "自发光", Default = false, Callback = function(v) T.SelfGlow = v if v then SelfGlowEnable() else SelfGlowDisable() end end })
+Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then MuteEnable() end end })
+Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then FOVEnable() end end })
+Tabs.World:AddToggle("FOVToggle", { Title = "启用自定义 FOV", Default = false, Callback = function(v) T.FOV = v if v then FOVEnable() else FOVDisable() end end })
+Tabs.World:AddSlider("Zoom", { Title = "无限缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then ZoomEnable() end end })
+Tabs.World:AddToggle("ZoomToggle", { Title = "启用无限缩放", Default = false, Callback = function(v) T.Zoom = v if v then ZoomEnable() else ZoomDisable() end end })
 local function getPlayerNames()
 local names = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -1487,6 +1634,10 @@ if not name then return end
 local target = Players:FindFirstChild(name)
 TeleportToPlayer(target)
 end })
+Tabs.TP:AddToggle("Circle", { Title = "环绕传送", Default = false, Callback = function(v) T.Circle = v if v then CircleEnable() else CircleDisable() end end })
+Tabs.TP:AddSlider("CircleRadius", { Title = "环绕半径", Min = 3, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.CircleRadius = v end })
+Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.CircleSpeed = v end })
+Tabs.TP:AddToggle("Spectate", { Title = "观察目标", Default = false, Callback = function(v) T.Spectate = v if v then SpectateEnable() else SpectateDisable() end end })
 Tabs.Combat:AddSection("战斗")
 Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then AimEnable() else AimDisable() end end })
 Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
@@ -1512,6 +1663,8 @@ end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
+Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
+Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -1563,6 +1716,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.9.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.8.2")
+print("[CheatMenu] ✅ 加载完成 v1.9.0")
