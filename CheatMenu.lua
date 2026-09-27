@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:47 sha e68ecec1 bytes 51587'):format('2026-09-27 19:47','e68ecec1',51587))
-print("[CheatMenu] ===== 加载开始 · v1.6.2 =====")
+print(('[CheatMenu] build 2026-09-27 19:52 sha da043d75 bytes 51964'):format('2026-09-27 19:52','da043d75',51964))
+print("[CheatMenu] ===== 加载开始 · v1.6.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -675,29 +675,49 @@ print("[CheatMenu] ⚠️ 没有找到可卖的脑红 —— 检查: 是否带 E
 end
 break
 end
-local function countBrainrots()
-local n = 0
-for _, list in ipairs({ LP.Character, LP:FindFirstChild("Backpack") }) do
-if list then
-for _, t in ipairs(list:GetChildren()) do
-if isEntityTool(t) then n = n + 1 end
+local function sellHeldBrainrot()
+local rf = RFunction("B_Sell")
+if rf then
+local ok, res = pcall(function() return rf:InvokeServer() end)
+if ok then return true, res end
+end
+local re = REvent("B_Sell")
+if re then
+pcall(function() re:FireServer() end)
+return true, nil
+end
+return false, nil
+end
+triggerSellerPrompt()
+task.wait(0.1)
+local sold = 0
+for _, e in ipairs(picks) do
+if not T.AutoSell then break end
+local tool = e.Tool
+if tool and tool.Parent then
+pcall(function() hum:UnequipTools() end)
+task.wait(0.06)
+pcall(function() hum:EquipTool(tool) end)
+task.wait(0.16)
+if tool.Parent == LP.Character then
+sellHeldBrainrot()
+local deadline = os.clock() + 0.85
+while os.clock() < deadline and tool.Parent do task.wait(0.025) end
+if not tool.Parent then
+sold = sold + 1
+total = total + 1
 end
 end
 end
-return n
 end
-local before = countBrainrots()
-print("[CheatMenu] 卖出前脑红数: " .. before)
-sellAllViaUI()
-task.wait(0.8)
-local after = countBrainrots()
-local sold = before - after
 if sold > 0 then
-print("[CheatMenu] ✅ Sell All 卖出 " .. sold .. " 个脑红")
-total = sold
+print("[CheatMenu] ✅ 快速卖出 " .. sold .. " 个脑红")
 break
 else
-print("[CheatMenu] ⚠️ Sell All 后脑红没减少(可能 UI 按钮没找到/确认没点到/道具本就不该卖)")
+print("[CheatMenu] ⚠️ B_Sell 没卖出，改用 Sell All UI 兜底")
+if sellAllViaUI() then
+total = total + 1
+end
 break
 end
 end
@@ -1269,7 +1289,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.6.2",
+SubTitle = "v1.6.3",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1449,6 +1469,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.6.3", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.6.2")
+print("[CheatMenu] ✅ 加载完成 v1.6.3")
