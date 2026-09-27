@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:17 sha c0739d8b bytes 53592'):format('2026-09-27 20:17','c0739d8b',53592))
-print("[CheatMenu] ===== 加载开始 · v1.8.0 =====")
+print(('[CheatMenu] build 2026-09-27 20:21 sha 553aa7a1 bytes 54934'):format('2026-09-27 20:21','553aa7a1',54934))
+print("[CheatMenu] ===== 加载开始 · v1.8.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1061,16 +1061,22 @@ r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
 local SpeedConn = nil
+local SpeedConn2 = nil
 local function SpeedEnable()
 if SpeedConn then return end
-SpeedConn = RS.Stepped:Connect(function()
+local function apply()
 if not T.Speed then return end
 local _, hum = GC()
 if hum then hum.WalkSpeed = C.Speed or 30 end
-end)
+end
+apply()
+SpeedConn = RS.Stepped:Connect(apply)
+SpeedConn2 = RS.RenderStepped:Connect(apply)
+print("[CheatMenu] 加速已开 · WalkSpeed=" .. tostring(C.Speed or 30))
 end
 local function SpeedDisable()
 if SpeedConn then SpeedConn:Disconnect() SpeedConn = nil end
+if SpeedConn2 then SpeedConn2:Disconnect() SpeedConn2 = nil end
 local _, hum = GC()
 if hum then hum.WalkSpeed = 16 end
 end
@@ -1150,6 +1156,28 @@ if not tchar then return end
 local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
 root.CFrame = troot.CFrame + Vector3.new(0, 3, 0)
+end
+local function scanRemotes()
+local events, functions = {}, {}
+for _, obj in ipairs(RStorage:GetDescendants()) do
+if obj:IsA("RemoteEvent") then events[#events + 1] = obj.Name
+elseif obj:IsA("RemoteFunction") then functions[#functions + 1] = obj.Name end
+end
+local function dedup(list)
+local seen, out = {}, {}
+for _, v in ipairs(list) do if not seen[v] then seen[v] = true out[#out + 1] = v end end
+table.sort(out)
+return out
+end
+events, functions = dedup(events), dedup(functions)
+print("[抓包] ===== RemoteEvent 共 " .. #events .. " 个 =====")
+for _, n in ipairs(events) do print("[抓包] Event: " .. n) end
+print("[抓包] ===== RemoteFunction 共 " .. #functions .. " 个 =====")
+for _, n in ipairs(functions) do print("[抓包] Function: " .. n) end
+local result = {}
+for _, n in ipairs(events) do result[#result + 1] = "E:" .. n end
+for _, n in ipairs(functions) do result[#result + 1] = "F:" .. n end
+return result
 end
 local function parseAmount(s)
 s = tostring(s or ""):upper():gsub("%s+", ""):gsub(",", "")
@@ -1289,7 +1317,6 @@ local _, _, r = GC()
 if not r then return end
 local depth = math.min(C.HideDepth or 5, 10)
 r.CFrame = CFrame.new(r.Position.X, HideBaseY - depth, r.Position.Z)
-r.AssemblyLinearVelocity = Vector3.zero
 local cam = workspace.CurrentCamera
 if cam then
 local cp = cam.CFrame.Position
@@ -1356,7 +1383,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.8.0",
+SubTitle = "v1.8.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1434,7 +1461,7 @@ Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，�
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
-Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 500, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
+Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 1000, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
@@ -1482,6 +1509,7 @@ end
 end })
 Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.AC:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
+Tabs.AC:AddButton({ Title = "抓包扫描(列全部远程事件)", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已打印全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.AC:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -1533,6 +1561,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.8.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.8.0")
+print("[CheatMenu] ✅ 加载完成 v1.8.1")
