@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:15 sha 822f75c2 bytes 102994'):format('2026-09-28 02:15','822f75c2',102994))
-print("[CheatMenu] ===== 加载开始 · v4.1.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:16 sha 2c25dcd8 bytes 107363'):format('2026-09-28 02:16','2c25dcd8',107363))
+print("[CheatMenu] ===== 加载开始 · v4.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2513,6 +2513,134 @@ pcall(setclipboard, tostring(text or ""))
 Fluent:Notify({ Title = "剪贴板", Content = "已复制", Duration = 2 })
 end
 end
+local SKELETON = {
+{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},{"LowerTorso","LeftUpperLeg"},
+{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
+{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
+{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
+}
+local SkeletonLines = {}
+local function SkeletonEnable()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+for i = 1, #SKELETON do
+local line = Instance.new("LineHandleAdornment")
+line.Adornee = pl.Character
+line.Thickness = 2
+line.Color3 = Color3.fromRGB(0, 255, 150)
+line.Transparency = 0
+line.AlwaysOnTop = true
+line.ZIndex = 5
+line.Parent = pl.Character
+SkeletonLines[#SkeletonLines + 1] = line
+end
+end
+end
+end
+local function SkeletonDisable()
+for _, l in ipairs(SkeletonLines) do pcall(function() l:Destroy() end) end
+SkeletonLines = {}
+end
+local ArrowConns = {}
+local function ArrowEnable()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+local ch = pl.Character
+local bb = Instance.new("BillboardGui")
+bb.Name = "CheatArrow"
+bb.Size = UDim2.fromOffset(40, 40)
+bb.StudsOffset = Vector3.new(0, 3.5, 0)
+bb.AlwaysOnTop = true
+bb.Parent = ch
+local lbl = Instance.new("TextLabel")
+lbl.Size = UDim2.fromScale(1, 1)
+lbl.BackgroundTransparency = 1
+lbl.Text = "▼"
+lbl.TextSize = 40
+lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+lbl.Parent = bb
+end
+end
+end
+local function ArrowDisable()
+for _, pl in ipairs(Players:GetPlayers()) do
+local ch = pl.Character
+if ch then
+local bb = ch:FindFirstChild("CheatArrow")
+if bb then bb:Destroy() end
+end
+end
+end
+local ACBreakers = {}
+local function ACBypassPlusEnable()
+if type(getconnections) == "function" then
+pcall(function()
+for _, c in ipairs(getconnections(game:GetService("ScriptContext").Error)) do
+if c.Disconnect then pcall(function() c:Disconnect() end) end
+end
+end)
+end
+if type(getgc) == "function" and type(getrawmetatable) == "function" then
+pcall(function()
+for _, o in ipairs(getgc(true)) do
+if type(o) == "table" then
+local mt = getrawmetatable(o)
+if mt then ACBreakers[#ACBreakers + 1] = {o = o, mt = mt} end
+end
+end
+end)
+end
+print("[CheatMenu] 反作弊绕过增强已执行")
+end
+local VCBackup = nil
+local function VoiceBypassEnable()
+pcall(function()
+local vcs = game:GetService("VoiceChatService")
+if vcs then
+VCBackup = {}
+for _, k in ipairs({"EnableVoiceChat", "EnableVoiceChatForUser"}) do
+pcall(function() VCBackup[k] = vcs[k] end)
+end
+pcall(function() vcs.EnableVoiceChat = true end)
+end
+end)
+pcall(function()
+for _, attr in ipairs({"VoiceChatEnabled", "voiceEnabled", "VCEnabled", "MicEnabled", "isMuted", "Muted"}) do
+if LP:GetAttribute(attr) ~= nil then LP:SetAttribute(attr, true) end
+end
+end)
+if hookmetamethod and newcclosure then
+pcall(function()
+local gmt = getrawmetatable(game)
+if gmt then
+local old = gmt.__namecall
+if old then
+setreadonly(gmt, false)
+gmt.__namecall = newcclosure(function(self, ...)
+local method = getnamecallmethod and getnamecallmethod() or ""
+if T.VoiceBypass and type(method) == "string"
+and (method:lower():find("mute") or method:lower():find("voice")) then
+return true
+end
+return old(self, ...)
+end)
+setreadonly(gmt, true)
+end
+end
+end)
+end
+print("[CheatMenu] 语音绕过已开启(客户端尽力启用)")
+end
+local function VoiceBypassDisable()
+if VCBackup then
+pcall(function()
+local vcs = game:GetService("VoiceChatService")
+for k, v in pairs(VCBackup) do if v ~= nil then vcs[k] = v end end
+end)
+VCBackup = nil
+end
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2586,7 +2714,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.1.0",
+SubTitle = "v4.2.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2640,6 +2768,8 @@ else
 T.ESPBox = true T.ESPName = true T.ESPDist = true T.ESPHealth = true T.ESPTracer = false T.ESPRainbow = false
 end
 end })
+Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then ArrowEnable() else ArrowDisable() end end })
+Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then SkeletonEnable() else SkeletonDisable() end end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
@@ -2754,6 +2884,8 @@ AntiFlingDisable()
 end
 end })
 Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
+Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then ACBypassPlusEnable() end end })
+Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddSection("设置")
@@ -2815,6 +2947,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.1.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.2.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.1.0")
+print("[CheatMenu] ✅ 加载完成 v4.2.0")
