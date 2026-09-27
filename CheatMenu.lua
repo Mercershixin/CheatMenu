@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 23:09 sha b8d4c21e bytes 89688'):format('2026-09-27 23:09','b8d4c21e',89688))
-print("[CheatMenu] ===== 加载开始 · v3.4.0 =====")
+print(('[CheatMenu] build 2026-09-28 01:59 sha cffe654c bytes 91566'):format('2026-09-28 01:59','cffe654c',91566))
+print("[CheatMenu] ===== 加载开始 · v3.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2177,6 +2177,67 @@ ToolGlowDisable = ToolGlowDisable,
 }
 end)()
 if getgenv then getgenv().CM = CM end
+local function tblHasFunc(t, key)
+if type(t) ~= "table" then return false end
+local ok, v = pcall(rawget, t, key)
+return ok and type(v) == "function"
+end
+local function tblHasVal(t, key)
+if type(t) ~= "table" then return false end
+local ok, v = pcall(rawget, t, key)
+return ok and v ~= nil
+end
+local function scanGameModules()
+print("[模块扫描] ===== getloadedmodules 已加载模块 =====")
+local modCount = 0
+if type(getloadedmodules) == "function" then
+local ok, mods = pcall(getloadedmodules)
+if ok and type(mods) == "table" then
+for _, m in ipairs(mods) do
+if typeof(m) == "Instance" and m:IsA("ModuleScript") then
+modCount = modCount + 1
+print("[模块扫描] " .. m:GetFullName())
+end
+end
+end
+end
+print("[模块扫描] 共 " .. modCount .. " 个 ModuleScript")
+print("[模块扫描] ===== getgc 特征对象(>=3字段) =====")
+local objCount = 0
+if type(getgc) == "function" then
+local ok, objs = pcall(getgc, true)
+if ok and type(objs) == "table" then
+for _, o in ipairs(objs) do
+if type(o) == "table" then
+local keys, n = {}, 0
+for k, v in pairs(o) do
+n = n + 1
+if n <= 8 then
+keys[#keys + 1] = tostring(k) .. (type(v) == "function" and "()" or "")
+end
+end
+if n >= 3 then
+objCount = objCount + 1
+if objCount <= 40 then
+print("[模块扫描] {" .. table.concat(keys, ", ") .. "}")
+end
+end
+end
+end
+end
+end
+print("[模块扫描] 共 " .. objCount .. " 个候选对象（已显示前 40 个）")
+return modCount, objCount
+end
+local AllConns = {}
+local function addConn(conn)
+if conn then table.insert(AllConns, conn) end
+return conn
+end
+local function disconnectAllConns()
+for _, c in ipairs(AllConns) do pcall(function() c:Disconnect() end) end
+AllConns = {}
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -2250,7 +2311,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.4.0",
+SubTitle = "v3.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2408,6 +2469,7 @@ Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Call
 Tabs.AC:AddToggle("MetaBypass", { Title = "元表清空(反检测)", Default = false, Callback = function(v) T.MetaBypass = v if v then CM.MetaBypassEnable() end end })
 Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
+Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddSection("设置")
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
@@ -2466,6 +2528,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.4.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.5.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.4.0")
+print("[CheatMenu] ✅ 加载完成 v3.5.0")
