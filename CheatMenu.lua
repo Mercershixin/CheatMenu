@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 20:01 sha 53b91816 bytes 51100'):format('2026-09-27 20:01','53b91816',51100))
-print("[CheatMenu] ===== 加载开始 · v1.7.0 =====")
+print(('[CheatMenu] build 2026-09-27 20:06 sha a9807dee bytes 51793'):format('2026-09-27 20:06','a9807dee',51793))
+print("[CheatMenu] ===== 加载开始 · v1.7.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -735,6 +735,9 @@ local CollectThread = nil
 local function collectAllCash()
 if CollectThread then return end
 CollectThread = task.spawn(function()
+local _, _, root = GC()
+if not root then CollectThread = nil return end
+local returnCF = root.CFrame
 local plots = WS:FindFirstChild("Plots")
 if not plots then
 for _, obj in ipairs(WS:GetChildren()) do
@@ -760,24 +763,50 @@ print("[CheatMenu] ❌ 找不到你的基地")
 CollectThread = nil return
 end
 local slots = myPlot:FindFirstChild("Slots")
+local done = 0
 if slots then
 for _, slot in ipairs(slots:GetChildren()) do
 local idx = tonumber(tostring(slot.Name):match("(%d+)"))
 if idx and idx >= 1 and idx <= 30 then
 local has = false
+local part
 for _, c in ipairs(slot:GetDescendants()) do
-if c:GetAttribute("ID") ~= nil then has = true break end
+if c:GetAttribute("ID") ~= nil then
+has = true
+if c:IsA("BasePart") then part = c end
+break
+end
 end
 if has then
+local targetPos
+if part then targetPos = part.Position
+elseif slot:IsA("BasePart") then targetPos = slot.Position end
+if not targetPos then
+pcall(function()
+local pv = slot:GetPivot()
+if pv then targetPos = pv.Position end
+end)
+end
+if targetPos then
+root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+root.AssemblyLinearVelocity = Vector3.zero
+task.wait(0.03)
+end
 Fire("B_Collect", idx)
-task.wait(0.05)
+done = done + 1
+task.wait(0.03)
 end
 end
 end
 else
 for i = 1, 30 do Fire("B_Collect", i) task.wait(0.03) end
 end
-print("[CheatMenu] ✅ 收起货币完成")
+task.wait(0.15)
+pcall(function()
+root.CFrame = returnCF
+root.AssemblyLinearVelocity = Vector3.zero
+end)
+print("[CheatMenu] ✅ 收起货币完成 · 领取 " .. done .. " 个槽位")
 CollectThread = nil
 end)
 end
@@ -1267,7 +1296,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.7.0",
+SubTitle = "v1.7.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1444,6 +1473,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.7.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.7.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.7.0")
+print("[CheatMenu] ✅ 加载完成 v1.7.1")
