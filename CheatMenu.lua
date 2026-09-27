@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:04 sha 326e002c bytes 32940'):format('2026-09-27 19:04','326e002c',32940))
-print("[CheatMenu] ===== 加载开始 · v1.2.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:09 sha c775fbcb bytes 35674'):format('2026-09-27 19:09','c775fbcb',35674))
+print("[CheatMenu] ===== 加载开始 · v1.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -212,6 +212,7 @@ local function KickRejoinEnable()
 if KG.rjConn then return true end
 KG.rjConn = Players.PlayerRemoving:Connect(function(p)
 if p ~= LP then return end
+if not T.KickRejoin then return end
 KG.rjTries = KG.rjTries + 1
 pcall(function()
 local ts = game:GetService("TeleportService")
@@ -666,12 +667,23 @@ Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
 The word Robux is kept as-is too.
 If the text is already Chinese or contains CJK, output it unchanged.]]
 local TransCache = {}
+local TransLangs = {
+zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
+th = "Thai", ru = "Russian", ar = "Arabic",
+}
+local function promptFor(code)
+if not code or code == "zh" then return SYS_PROMPT end
+local lang = TransLangs[code] or "Chinese"
+return "Translate the following game UI text into " .. lang
+.. ". Output ONLY the translation: no explanation, no quotes, no extra words."
+.. " Keep numbers, emoji, URLs and player names unchanged."
+end
 local function TransRequest(text)
 if not HS then return nil end
 local body = HS:JSONEncode({
 model = MODEL,
 messages = {
-{ role = "system", content = SYS_PROMPT },
+{ role = "system", content = promptFor(C.TransLang) },
 { role = "user", content = text },
 },
 temperature = 0.1,
@@ -827,10 +839,24 @@ local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
 root.CFrame = troot.CFrame + Vector3.new(0, 3, 0)
 end
+local function parseAmount(s)
+s = tostring(s or ""):upper():gsub("%s+", ""):gsub(",", "")
+if s == "" then return nil end
+local plain = tonumber(s)
+if plain then return plain end
+local num, unit = s:match("^(%d+%.?%d*)([KM])$")
+if num and unit then
+local base = tonumber(num)
+if not base then return nil end
+if unit == "K" then return base * 1000 end
+if unit == "M" then return base * 1000000 end
+end
+return nil
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.2.0",
+SubTitle = "v1.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -844,30 +870,48 @@ World = Window:AddTab({ Title = "世界", Icon = "globe" }),
 TP    = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 AC    = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 }
-Tabs.AFK:AddSection("挂机防踢")
-Tabs.AFK:AddToggle("AntiAFK", { Title = "挂机防踢 (AntiAFK)", Default = (T.AntiAFK ~= false), Callback = function(v) T.AntiAFK = v if v then AntiAFKEnable() end end })
-Tabs.AFK:AddToggle("KickGuard", { Title = "本地防踢 (KickGuard)", Default = false, Callback = function(v) T.KickGuard = v if v then KickGuardEnable() else KickGuardDisable() end end })
-Tabs.AFK:AddToggle("KickRejoin", { Title = "前兆抢传 (KickRejoin)", Default = false, Callback = function(v) T.KickRejoin = v if v then KickRejoinEnable() end end })
+Tabs.AFK:AddSection("防踢")
+Tabs.AFK:AddToggle("KickProtect", { Title = "防踢（挂机防踢 + 本地拦截 + 前兆抢传）", Default = true, Callback = function(v)
+T.KickProtect = v
+T.AntiAFK = v
+T.KickGuard = v
+T.KickRejoin = v
+if v then
+AntiAFKEnable()
+KickGuardEnable()
+KickRejoinEnable()
+else
+KickGuardDisable()
+end
+end })
 Tabs.AFK:AddSection("训练")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "自动训练 (踢击力量)", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
+Tabs.AFK:AddToggle("AutoTrain", { Title = "自动训练", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
 Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取训练加成", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
 Tabs.AFK:AddSection("健身房")
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼 (AutoGym)", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
 Tabs.AFK:AddSection("基地操作")
-Tabs.AFK:AddToggle("AutoSell", { Title = "自动售卖 CPS (每轮)", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
-Tabs.AFK:AddSlider("SellMinCPS", { Title = "CPS 售卖门槛", Min = 1000, Max = 1000000, Default = 100000, Rounding = 0, Callback = function(v) C.SellMinCPS = v end })
+Tabs.AFK:AddToggle("AutoSell", { Title = "自动售卖", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
+Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数字)", Default = "100K", Placeholder = "例如 1M = 100万", Callback = function(v)
+local n = parseAmount(v)
+if n and n > 0 then C.SellMinCPS = n end
+end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
 Tabs.AFK:AddSection("翻译")
+Tabs.AFK:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文" }, Default = "中文", Callback = function(v)
+local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar" }
+C.TransLang = map[v] or "zh"
+end })
 Tabs.AFK:AddToggle("Translate", { Title = "界面翻译", Default = false, Callback = function(v) T.Translate = v end })
-Tabs.AFK:AddButton({ Title = "翻译测试 (Hello World)", Callback = function()
+Tabs.AFK:AddButton({ Title = "翻译测试", Callback = function()
 local r = Trans.Translate("Collect all eggs")
 print("[CheatMenu] 翻译测试: " .. tostring(r))
 Fluent:Notify({ Title = "翻译", Content = tostring(r), Duration = 4 })
 end })
 Tabs.Move:AddSection("移动")
-Tabs.Move:AddToggle("Fly", { Title = "飞行 (WASD+空格/左Ctrl)", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
+Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
+Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 200, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
 Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
@@ -893,10 +937,57 @@ local target = Players:FindFirstChild(name)
 TeleportToPlayer(target)
 end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("NamecallHook", { Title = "namecall 拦截 (防踢)", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
-Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞 (AntiFling)", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
+Tabs.AC:AddToggle("NamecallHook", { Title = "防踢拦截", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
+Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
 Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
+T.KickProtect = true
 T.AntiAFK = true
+T.KickGuard = true
+T.KickRejoin = true
 AntiAFKEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.1.0 (呼出键 G)", Duration = 5 })
-print("[CheatMenu] ✅ 加载完成 v1.2.0 (呼出键 G)")
+KickGuardEnable()
+KickRejoinEnable()
+local function addToggleButton()
+local sg = Instance.new("ScreenGui")
+sg.Name = "CheatMenu_Toggle"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.Parent = gethui and gethui() or game:GetService("CoreGui")
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.fromOffset(46, 46)
+btn.Position = UDim2.new(1, -56, 0.5, -23)
+btn.Text = "☰"
+btn.TextSize = 22
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+btn.BackgroundTransparency = 0.25
+btn.BorderSizePixel = 0
+btn.AutoButtonColor = false
+btn.Parent = sg
+Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+local dragging, dragStart, btnStart = false, nil, nil
+btn.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+btnStart = btn.Position
+end
+end)
+UIS.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+local delta = input.Position - dragStart
+btn.Position = UDim2.new(btnStart.X.Scale, btnStart.X.Offset + delta.X, btnStart.Y.Scale, btnStart.Y.Offset + delta.Y)
+end
+end)
+UIS.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = false
+end
+end)
+btn.MouseButton1Click:Connect(function()
+Window:Minimize()
+end)
+end
+addToggleButton()
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.3.0", Duration = 5 })
+print("[CheatMenu] ✅ 加载完成 v1.3.0")
