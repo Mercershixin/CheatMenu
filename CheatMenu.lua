@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 22:22 sha 57f98cf6 bytes 36039'):format('2026-09-27 22:22','57f98cf6',36039))
-print("[CheatMenu] ===== 加载开始 · v3.0.0 =====")
+print(('[CheatMenu] build 2026-09-27 22:30 sha ea7ef4bd bytes 45404'):format('2026-09-27 22:30','ea7ef4bd',45404))
+print("[CheatMenu] ===== 加载开始 · v3.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -95,7 +95,8 @@ pcall(function()
 if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end
 end)
 end
-local function LoadConfig()
+local function loadTransCache()
+LoadConfig()
 pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local raw = readfile(SaveFile)
@@ -293,6 +294,61 @@ end
 end
 end
 return nil
+end
+local GymThread = nil
+local function liveMachines()
+local r = {}
+local ok, t = pcall(CS.GetTagged, CS, "LiftMachine")
+if ok and type(t) == "table" then
+for _, m in ipairs(t) do
+if m and m.Parent and m:IsDescendantOf(WS) then r[#r + 1] = m end
+end
+end
+return r
+end
+local function AutoGymEnable()
+if GymThread then return end
+GymThread = task.spawn(function()
+while T.AutoGym do
+local machines = liveMachines()
+local _, _, root = GC()
+if #machines > 0 and root then
+local best, bestDist = nil, math.huge
+for _, m in ipairs(machines) do
+local pos
+if m:IsA("Model") then
+local ok, pivot = pcall(m.GetPivot, m)
+if ok then pos = pivot.Position end
+elseif m:IsA("BasePart") then
+pos = m.Position
+end
+if pos then
+local d = (root.Position - pos).Magnitude
+if d < bestDist then bestDist = d best = m end
+end
+end
+if best then
+local lv = math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)
+if lv <= 1 then
+local pos
+if best:IsA("Model") then
+local ok, pivot = pcall(best.GetPivot, best)
+if ok then pos = pivot.Position end
+elseif best:IsA("BasePart") then
+pos = best.Position
+end
+if pos then
+root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+root.AssemblyLinearVelocity = Vector3.zero
+end
+else
+equipSquatTool()
+end
+end
+end
+task.wait(1)
+end
+end)
 end
 local TrainThread = nil
 local function AutoTrainEnable()
@@ -871,6 +927,184 @@ print("[CheatMenu] ✅ 收起货币完成 · 领取 " .. done .. " 个槽位")
 CollectThread = nil
 end)
 end
+local Trans = {}
+local HOST = "http://127.0.0.1:8080"
+local KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
+local MODEL = "hymt2-7b"
+local SYS_PROMPT = [[Translate the following game UI text into Chinese.
+Output ONLY the translation: no explanation, no quotes, no extra words.
+Preserve the original line breaks and number of lines.
+Keep numbers, emoji, URLs and player names unchanged.
+Translate game terms CONSISTENTLY:
+Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地, Mutation->词缀, Level->等级,
+Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,
+Squat->举铁, Train->训练, Bonus->加成,
+Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,
+Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
+Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
+Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
+Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
+Keep CPS as "CPS".
+Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
+The word Robux is kept as-is too.
+If the text is already Chinese or contains CJK, output it unchanged.]]
+local TransCache = {}
+local TransCacheFile = "CheatMenu_TransCache.json"
+local function loadTransCache()
+pcall(function()
+if not (readfile and isfile and isfile(TransCacheFile)) then return end
+local raw = readfile(TransCacheFile)
+local d = HS:JSONDecode(raw)
+if type(d) == "table" then
+local n = 0
+for k, v in pairs(d) do TransCache[k] = v n = n + 1 end
+print("[CheatMenu] 已加载翻译缓存 " .. n .. " 条")
+end
+end)
+end
+local function saveTransCache()
+pcall(function()
+if not writefile then return end
+writefile(TransCacheFile, HS:JSONEncode(TransCache))
+end)
+end
+local TransLangs = {
+zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
+th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
+}
+local function promptFor(code)
+if not code or code == "zh" then return SYS_PROMPT end
+local lang = TransLangs[code] or "Chinese"
+return "Translate the following game UI text into " .. lang
+.. ". Output ONLY the translation: no explanation, no quotes, no extra words."
+.. " Keep numbers, emoji, URLs and player names unchanged."
+end
+local requestFn = (type(syn) == "table" and syn.request) or (type(http) == "table" and http.request) or http_request or request
+local function TransRequest(text)
+if not requestFn then
+print("[CheatMenu] ❌ 翻译失败: 执行器没有 request 函数")
+return nil
+end
+local body = HS:JSONEncode({
+model = MODEL,
+messages = {
+{ role = "system", content = promptFor(C.TransLang) },
+{ role = "user", content = text },
+},
+temperature = 0.1,
+top_p = 0.6,
+max_tokens = 128,
+stream = false,
+})
+local ok, res = pcall(function()
+return requestFn({
+Url = HOST .. "/v1/chat/completions",
+Method = "POST",
+Headers = {
+["Content-Type"] = "application/json",
+["Authorization"] = "Bearer " .. KEY,
+},
+Body = body,
+})
+end)
+if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
+print("[CheatMenu] ❌ 翻译请求失败: " .. tostring(res and res.StatusCode))
+return nil
+end
+local ok2, d = pcall(HS.JSONDecode, HS, res.Body)
+if not ok2 or not d or not d.choices or not d.choices[1] then return nil end
+return d.choices[1].message and d.choices[1].message.content
+end
+local function shouldTranslate(s)
+if type(s) ~= "string" or s == "" then return false end
+local hasCJK = string.find(s, "[8-]") ~= nil
+local hasAlpha = string.find(s, "[%a]") ~= nil
+if not hasCJK and not hasAlpha then return false end
+if s:find("$", 1, true) or s:find("€", 1, true) or s:find("¥", 1, true) then return false end
+local lang = C.TransLang or "zh"
+if lang == "zh" and hasCJK then return false end
+return true
+end
+function Trans.Translate(text, force)
+if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
+text = text:gsub("^%s+", ""):gsub("%s+$", "")
+if text == "" then return nil end
+if not force and not shouldTranslate(text) then return nil end
+if TransCache[text] then return TransCache[text] end
+local r = TransRequest(text)
+if r and r ~= "" and r ~= text then
+r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
+TransCache[text] = r
+saveTransCache()
+return r
+end
+return nil
+end
+local function sendChat(text)
+if not text or text == "" then return false end
+local tcs = game:GetService("TextChatService")
+if tcs and tcs.TextChannels then
+local channel = tcs.TextChannels:FindFirstChild("RBXGeneral")
+if channel and channel.SendAsync then
+pcall(function() channel:SendAsync(text) end)
+return true
+end
+end
+local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
+if chatEvents then
+local say = chatEvents:FindFirstChild("SayMessageRequest")
+if say then
+pcall(function() say:FireServer(text, "All") end)
+return true
+end
+end
+return false
+end
+local function translateGuiEl(obj)
+if not obj then return end
+if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+local txt = obj.Text
+if txt and shouldTranslate(txt) then
+local tr = Trans.Translate(txt, true)
+if tr and tr ~= txt then obj.Text = tr end
+end
+end
+end
+local function scanAndTranslate()
+local roots = { PG, CoreGui }
+if gethui then table.insert(roots, gethui()) end
+for _, root in ipairs(roots) do
+if root then
+for _, obj in ipairs(root:GetDescendants()) do
+translateGuiEl(obj)
+end
+end
+end
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("ProximityPrompt") then
+if obj.ActionText and obj.ActionText ~= "" then
+local tr = Trans.Translate(obj.ActionText, true)
+if tr then obj.ActionText = tr end
+end
+elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
+for _, child in ipairs(obj:GetDescendants()) do
+translateGuiEl(child)
+end
+end
+end
+end
+local TransLoop = nil
+local function startTranslateLoop()
+if TransLoop then return end
+scanAndTranslate()
+TransLoop = task.spawn(function()
+while T.Translate do
+task.wait(2)
+scanAndTranslate()
+end
+TransLoop = nil
+end)
+end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -940,7 +1174,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.0.0",
+SubTitle = "v3.1.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -950,6 +1184,7 @@ MinimizeKey = Enum.KeyCode.G,
 if getgenv then getgenv().CM_Window = Window end
 local Tabs = {
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
+Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
@@ -971,6 +1206,8 @@ Tabs.AFK:AddSection("踢击训练")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
 Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
+Tabs.AFK:AddSection("自动锻炼")
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
 Tabs.AFK:AddSection("基地操作")
 Tabs.AFK:AddToggle("AutoSell", { Title = "卖 CPS 脑红", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
 Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数字)", Default = "100K", Placeholder = "例如 1M = 100万", Callback = function(v)
@@ -979,6 +1216,35 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
+Tabs.Trans:AddSection("翻译")
+Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
+local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar", ["印尼语"] = "id" }
+C.TransLang = map[v] or "zh"
+end })
+Tabs.Trans:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
+Tabs.Trans:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
+Tabs.Trans:AddButton({ Title = "翻译文本", Callback = function()
+local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
+if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
+local r = Trans.Translate(txt, true)
+if r then
+Fluent:Notify({ Title = "翻译结果", Content = r, Duration = 6 })
+else
+Fluent:Notify({ Title = "翻译", Content = "翻译失败(检查本地翻译服务是否开启)", Duration = 4 })
+end
+end })
+Tabs.Trans:AddButton({ Title = "翻译并发送到聊天", Callback = function()
+local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
+if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
+local r = Trans.Translate(txt, true)
+if r then
+sendChat(r)
+Fluent:Notify({ Title = "已发送", Content = r, Duration = 4 })
+else
+sendChat(txt)
+Fluent:Notify({ Title = "已发送(原文)", Content = txt, Duration = 4 })
+end
+end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键: 防踢+拦远程+防甩飞)", Default = false, Callback = function(v)
 T.ACBypass = v
@@ -1047,6 +1313,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.0.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.1.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.0.0")
+print("[CheatMenu] ✅ 加载完成 v3.1.0")
