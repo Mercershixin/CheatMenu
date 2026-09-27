@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:19 sha bd64856f bytes 41097'):format('2026-09-27 19:19','bd64856f',41097))
-print("[CheatMenu] ===== 加载开始 · v1.4.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:24 sha dd142c52 bytes 43399'):format('2026-09-27 19:24','dd142c52',43399))
+print("[CheatMenu] ===== 加载开始 · v1.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -908,7 +908,7 @@ end)
 end
 local HitboxList = {}
 local function addHitbox(pl)
-if pl == LP then return end
+if pl == LP or not T.Hitbox then return end
 local ch = pl.Character
 if not ch then return end
 local hrp = ch:FindFirstChild("HumanoidRootPart")
@@ -973,7 +973,7 @@ end
 end
 local ESPMap = {}
 local function espAdd(pl)
-if pl == LP then return end
+if pl == LP or not T.ESP then return end
 local ch = pl.Character
 if not ch then return end
 local hl = Instance.new("Highlight")
@@ -995,16 +995,61 @@ local function ESPDisable()
 for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
 ESPMap = {}
 end
+local function UnloadAll()
+for k in pairs(T) do T[k] = false end
+local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HitboxDisable,
+ESPDisable, InvisibleDisable, KickGuardDisable, AntiFlingDisable, FullBrightDisable, NoFogDisable, SpeedDisable }
+for _, fn in ipairs(disables) do pcall(fn) end
+pcall(function() if AFKConn then AFKConn:Disconnect() end end)
+pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
+pcall(function() if JumpConn then JumpConn:Disconnect() end end)
+pcall(function() if getgenv and getgenv().CM_Window then getgenv().CM_Window:Destroy() getgenv().CM_Window = nil end end)
+pcall(function() if getgenv and getgenv().CM_ToggleSG then getgenv().CM_ToggleSG:Destroy() getgenv().CM_ToggleSG = nil end end)
+print("[CheatMenu] ✅ 已干净卸载")
+end
+local function RestoreFeatures()
+if T.KickProtect or T.AntiAFK then AntiAFKEnable() KickGuardEnable() KickRejoinEnable() end
+if T.Fly then FlyEnable() end
+if T.Speed then SpeedEnable() end
+if T.InfiniteJump then InfiniteJumpEnable() end
+if T.NoClip then NoClipEnable() end
+if T.FullBright then FullBrightEnable() end
+if T.NoFog then NoFogEnable() end
+if T.Aim then AimEnable() end
+if T.Hitbox then HitboxEnable() end
+if T.God then GodEnable() end
+if T.Invisible then InvisibleEnable() end
+if T.ESP then ESPEnable() end
+if T.AutoTrain then AutoTrainEnable() end
+if T.AutoGym then AutoGymEnable() end
+if T.AutoBonus then AutoBonusEnable() end
+if T.NamecallHook then AC.InstallNamecallHook() end
+if T.AntiFling then AntiFlingEnable() end
+end
+local function HotUpdate()
+Fluent:Notify({ Title = "热更新", Content = "保存配置并重新加载...", Duration = 3 })
+SaveConfig()
+task.spawn(function()
+task.wait(0.5)
+UnloadAll()
+task.wait(0.3)
+local ok, err = pcall(function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"))()
+end)
+if not ok then warn("[CheatMenu] 热更新失败: " .. tostring(err)) end
+end)
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.4.0",
+SubTitle = "v1.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
 Theme = "Dark",
 MinimizeKey = Enum.KeyCode.G,
 })
+if getgenv then getgenv().CM_Window = Window end
 local Tabs = {
 AFK   = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Move  = Window:AddTab({ Title = "移动", Icon = "move" }),
@@ -1093,6 +1138,8 @@ Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("NamecallHook", { Title = "防踢拦截", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
 Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
 Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
+Tabs.AC:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
+Tabs.AC:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
 T.KickGuard = true
@@ -1102,6 +1149,7 @@ KickGuardEnable()
 KickRejoinEnable()
 local function addToggleButton()
 local sg = Instance.new("ScreenGui")
+if getgenv then getgenv().CM_ToggleSG = sg end
 sg.Name = "CheatMenu_Toggle"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
@@ -1142,5 +1190,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.4.0", Duration = 5 })
-print("[CheatMenu] ✅ 加载完成 v1.4.0")
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.0", Duration = 5 })
+RestoreFeatures()
+print("[CheatMenu] ✅ 加载完成 v1.5.0")
