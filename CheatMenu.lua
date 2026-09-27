@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:35 sha f50c2d81 bytes 128304'):format('2026-09-28 02:35','f50c2d81',128304))
-print("[CheatMenu] ===== 加载开始 · v4.8.1 =====")
+print(('[CheatMenu] build 2026-09-28 02:38 sha b7b2c627 bytes 117603'):format('2026-09-28 02:38','b7b2c627',117603))
+print("[CheatMenu] ===== 加载开始 · v4.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -106,354 +106,31 @@ if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
 end
 end)
 end
-local Fluent = {
-Options = {},
-Notify = function(cfg)
-pcall(function()
-game:GetService("StarterGui"):SetCore("SendNotification", {
-Title = cfg and cfg.Title or "CheatMenu",
-Text = cfg and cfg.Content or "",
-Duration = (cfg and cfg.Duration) or 4,
-})
-end)
-end,
+local Fluent = nil
+local FLUENT_SOURCES = {
+"https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://ghfast.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://ghproxy.net/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
 }
-local UITheme = {
-BG = Color3.fromRGB(20, 20, 24), TITLE = Color3.fromRGB(30, 30, 36),
-ACCENT = Color3.fromRGB(255, 255, 255), SUB = Color3.fromRGB(150, 150, 160),
-GREEN = Color3.fromRGB(90, 220, 120), BTN = Color3.fromRGB(46, 46, 56),
-}
-function Fluent.CreateWindow(cfg)
-cfg = cfg or {}
-local Key = cfg.MinimizeKey or Enum.KeyCode.G
-local uiRoot = Instance.new("ScreenGui")
-uiRoot.Name = "CheatMenu"
-uiRoot.ResetOnSpawn = false
-uiRoot.IgnoreGuiInset = true
-uiRoot.Parent = gethui and gethui() or game:GetService("CoreGui")
-local main = Instance.new("Frame")
-main.Size = cfg.Size or UDim2.fromOffset(480, 520)
-main.Position = UDim2.new(0.5, -240, 0.5, -260)
-main.BackgroundColor3 = UITheme.BG
-main.BorderSizePixel = 0
-main.Parent = uiRoot
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-local title = Instance.new("Frame")
-title.Size = UDim2.new(1, 0, 0, 36)
-title.BackgroundColor3 = UITheme.TITLE
-title.BorderSizePixel = 0
-title.Parent = main
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -50, 1, 0)
-titleLabel.Position = UDim2.fromOffset(12, 0)
-titleLabel.Text = cfg.Title or "CheatMenu"
-titleLabel.TextColor3 = UITheme.ACCENT
-titleLabel.TextSize = 16
-titleLabel.Font = Enum.Font.Gotham
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.BackgroundTransparency = 1
-titleLabel.Parent = title
-local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.fromOffset(30, 24)
-minBtn.Position = UDim2.new(1, -38, 0, 6)
-minBtn.Text = "—"
-minBtn.TextColor3 = UITheme.ACCENT
-minBtn.BackgroundColor3 = UITheme.TITLE
-minBtn.BorderSizePixel = 0
-minBtn.Parent = title
-local dragging, dragStart, startPos = false, nil, nil
-local dragArea = Instance.new("TextButton")
-dragArea.Size = UDim2.new(1, -50, 1, 0)
-dragArea.BackgroundTransparency = 1
-dragArea.Text = ""
-dragArea.AutoButtonColor = false
-dragArea.Parent = title
-dragArea.InputBegan:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-dragging = true
-dragStart = input.Position
-startPos = main.Position
-end
-end)
-UIS.InputChanged:Connect(function(input)
-if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-local delta = input.Position - dragStart
-main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-end)
-UIS.InputEnded:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-dragging = false
-end
-end)
-local minimized = false
-minBtn.MouseButton1Click:Connect(function() minimized = not minimized main.Visible = not minimized end)
-UIS.InputBegan:Connect(function(input, gpe)
-if gpe then return end
-if input.KeyCode == Key then minimized = not minimized main.Visible = not minimized end
-end)
-local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1, 0, 0, 34)
-tabBar.Position = UDim2.fromOffset(0, 36)
-tabBar.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-tabBar.BorderSizePixel = 0
-tabBar.Parent = main
-local pages = Instance.new("Frame")
-pages.Size = UDim2.new(1, 0, 1, -70)
-pages.Position = UDim2.fromOffset(0, 70)
-pages.BackgroundTransparency = 1
-pages.Parent = main
-local win = { Root = uiRoot, Main = main, Minimized = false }
-local tabs = {}
-local function makeLabel(parent, text, size, color, align)
-local l = Instance.new("TextLabel")
-l.Text = tostring(text)
-l.TextSize = size or 14
-l.TextColor3 = color or UITheme.ACCENT
-l.BackgroundTransparency = 1
-l.Font = Enum.Font.Gotham
-l.TextXAlignment = align or Enum.TextXAlignment.Left
-l.TextWrapped = true
-l.Parent = parent
-return l
-end
-function win:Minimize()
-minimized = not minimized
-main.Visible = not minimized
-win.Minimized = minimized
-end
-function win:AddTab(tcfg)
-tcfg = tcfg or {}
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(0, 90, 1, 0)
-btn.Position = UDim2.fromOffset(#tabs * 90, 0)
-btn.Text = tcfg.Title or ""
-btn.TextSize = 14
-btn.TextColor3 = UITheme.SUB
-btn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-btn.BorderSizePixel = 0
-btn.AutoButtonColor = false
-btn.Parent = tabBar
-local holder = Instance.new("ScrollingFrame")
-holder.Size = UDim2.fromScale(1, 1)
-holder.BackgroundTransparency = 1
-holder.ScrollBarThickness = 3
-holder.CanvasSize = UDim2.fromScale(0, 0)
-holder.AutomaticCanvasSize = Enum.AutomaticSize.Y
-holder.Visible = false
-holder.Parent = pages
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 6)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = holder
-local pad = Instance.new("UIPadding")
-pad.PaddingLeft = UDim.new(0, 12)
-pad.PaddingRight = UDim.new(0, 12)
-pad.PaddingTop = UDim.new(0, 10)
-pad.PaddingBottom = UDim.new(0, 10)
-pad.Parent = holder
-local tab = { Holder = holder, Button = btn }
-btn.MouseButton1Click:Connect(function()
-for _, t in ipairs(tabs) do t.Holder.Visible = false t.Button.TextColor3 = UITheme.SUB end
-holder.Visible = true
-btn.TextColor3 = UITheme.ACCENT
-end)
-tabs[#tabs + 1] = tab
-if #tabs == 1 then holder.Visible = true btn.TextColor3 = UITheme.ACCENT end
-function tab:AddSection(titleText)
-return makeLabel(holder, titleText or "", 13, UITheme.ACCENT)
-end
-function tab:AddParagraph(pcfg)
-return makeLabel(holder, pcfg and pcfg.Title or "", 13, UITheme.SUB)
-end
-function tab:AddToggle(key, tcfg)
-tcfg = tcfg or {}
-local row = Instance.new("Frame")
-row.Size = UDim2.new(1, 0, 0, 30)
-row.BackgroundTransparency = 1
-row.Parent = holder
-makeLabel(row, tcfg.Title or "", 14, UITheme.ACCENT)
-local box = Instance.new("TextButton")
-box.Size = UDim2.fromOffset(40, 20)
-box.Position = UDim2.new(1, -40, 0, 5)
-box.Text = ""
-box.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
-box.BorderSizePixel = 0
-box.AutoButtonColor = false
-box.Parent = row
-local dot = Instance.new("Frame")
-dot.Size = UDim2.fromOffset(16, 16)
-dot.Position = UDim2.fromOffset(2, 2)
-dot.BackgroundColor3 = UITheme.SUB
-dot.BorderSizePixel = 0
-dot.Parent = box
-Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-local state = tcfg.Default or false
-Fluent.Options[key] = { Value = state }
-local function render()
-dot.BackgroundColor3 = state and UITheme.GREEN or UITheme.SUB
-dot.Position = state and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)
-end
-render()
-box.MouseButton1Click:Connect(function()
-state = not state
-Fluent.Options[key].Value = state
-render()
-if tcfg.Callback then pcall(tcfg.Callback, state) end
-end)
-return row
-end
-function tab:AddButton(bcfg)
-local btn2 = Instance.new("TextButton")
-btn2.Size = UDim2.new(1, 0, 0, 30)
-btn2.Text = bcfg and bcfg.Title or ""
-btn2.TextSize = 14
-btn2.TextColor3 = UITheme.ACCENT
-btn2.BackgroundColor3 = UITheme.BTN
-btn2.BorderSizePixel = 0
-btn2.AutoButtonColor = false
-btn2.Parent = holder
-Instance.new("UICorner", btn2).CornerRadius = UDim.new(0, 6)
-btn2.MouseButton1Click:Connect(function()
-if bcfg and bcfg.Callback then pcall(bcfg.Callback) end
-end)
-return btn2
-end
-function tab:AddSlider(key, scfg)
-scfg = scfg or {}
-local row = Instance.new("Frame")
-row.Size = UDim2.new(1, 0, 0, 36)
-row.BackgroundTransparency = 1
-row.Parent = holder
-local valLabel = makeLabel(row, "", 13, UITheme.GREEN, Enum.TextXAlignment.Right)
-local bar = Instance.new("TextButton")
-bar.Size = UDim2.new(1, 0, 0, 12)
-bar.Position = UDim2.fromOffset(0, 20)
-bar.Text = ""
-bar.BackgroundColor3 = Color3.fromRGB(50, 50, 58)
-bar.BorderSizePixel = 0
-bar.AutoButtonColor = false
-bar.Parent = row
-Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-local fill = Instance.new("Frame")
-fill.Size = UDim2.fromScale(0.3, 1)
-fill.BackgroundColor3 = UITheme.GREEN
-fill.BorderSizePixel = 0
-fill.Parent = bar
-Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-local v = scfg.Default or scfg.Min or 0
-Fluent.Options[key] = { Value = v }
-local function render()
-local pct = (v - scfg.Min) / math.max(1e-6, scfg.Max - scfg.Min)
-fill.Size = UDim2.fromScale(math.clamp(pct, 0, 1), 1)
-local disp = v
-if scfg.Rounding == 0 then disp = math.floor(v + 0.5) end
-valLabel.Text = tostring(scfg.Title or "") .. ": " .. tostring(disp)
-end
-render()
-local function setFromMouse(x)
-local pct = math.clamp((x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X), 0, 1)
-v = scfg.Min + (scfg.Max - scfg.Min) * pct
-if scfg.Rounding and scfg.Rounding > 0 then
-v = scfg.Min + math.floor((v - scfg.Min) / scfg.Rounding + 0.5) * scfg.Rounding
-end
-v = math.clamp(v, scfg.Min, scfg.Max)
-Fluent.Options[key].Value = v
-render()
-if scfg.Callback then pcall(scfg.Callback, v) end
-end
-local sliding = false
-bar.InputBegan:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-sliding = true
-setFromMouse(input.Position.X)
-end
-end)
-UIS.InputChanged:Connect(function(input)
-if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-setFromMouse(input.Position.X)
-end
-end)
-UIS.InputEnded:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-sliding = false
-end
-end)
-return row
-end
-function tab:AddInput(key, icfg)
-icfg = icfg or {}
-local box = Instance.new("TextBox")
-box.Size = UDim2.new(1, 0, 0, 30)
-box.Text = icfg.Default or ""
-box.PlaceholderText = icfg.Placeholder or ""
-box.TextSize = 14
-box.TextColor3 = UITheme.ACCENT
-box.BackgroundColor3 = UITheme.BTN
-box.BorderSizePixel = 0
-box.Parent = holder
-Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
-Fluent.Options[key] = { Value = icfg.Default or "" }
-box.FocusLost:Connect(function(enter)
-Fluent.Options[key].Value = box.Text
-if icfg.Callback then pcall(icfg.Callback, box.Text) end
-end)
-return box
-end
-function tab:AddDropdown(key, dcfg)
-dcfg = dcfg or {}
-local btn3 = Instance.new("TextButton")
-btn3.Size = UDim2.new(1, 0, 0, 30)
-btn3.TextSize = 14
-btn3.TextColor3 = UITheme.ACCENT
-btn3.BackgroundColor3 = UITheme.BTN
-btn3.BorderSizePixel = 0
-btn3.AutoButtonColor = false
-btn3.Parent = holder
-Instance.new("UICorner", btn3).CornerRadius = UDim.new(0, 6)
-local list = Instance.new("Frame")
-list.Size = UDim2.new(1, 0, 0, 0)
-list.BackgroundColor3 = Color3.fromRGB(34, 34, 42)
-list.BorderSizePixel = 0
-list.ClipsDescendants = true
-list.Parent = holder
-Instance.new("UICorner", list).CornerRadius = UDim.new(0, 6)
-Instance.new("UIListLayout", list)
-local current = dcfg.Default or (dcfg.Values and dcfg.Values[1]) or ""
-Fluent.Options[key] = { Value = current }
-btn3.Text = tostring(dcfg.Title or "") .. ": " .. tostring(current)
-local open = false
-local function rebuild()
-for _, c in ipairs(list:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-for _, opt in ipairs(dcfg.Values or {}) do
-local ob = Instance.new("TextButton")
-ob.Size = UDim2.new(1, 0, 0, 26)
-ob.Text = tostring(opt)
-ob.TextSize = 13
-ob.TextColor3 = UITheme.ACCENT
-ob.BackgroundTransparency = 1
-ob.AutoButtonColor = false
-ob.Parent = list
-ob.MouseButton1Click:Connect(function()
-current = opt
-Fluent.Options[key].Value = opt
-btn3.Text = tostring(dcfg.Title or "") .. ": " .. tostring(opt)
-open = false
-list.Size = UDim2.new(1, 0, 0, 0)
-if dcfg.Callback then pcall(dcfg.Callback, opt) end
-end)
+for _, url in ipairs(FLUENT_SOURCES) do
+local ok, body = pcall(function() return game:HttpGet(url) end)
+if ok and type(body) == "string" and #body > 5000 then
+local ok2, chunk = pcall(loadstring, body)
+if ok2 and chunk then
+local ok3, loaded = pcall(chunk)
+if ok3 and loaded then
+Fluent = loaded
+print("[CheatMenu] Fluent 加载成功 <- " .. url)
+break
 end
 end
-rebuild()
-btn3.MouseButton1Click:Connect(function()
-open = not open
-list.Size = open and UDim2.new(1, 0, 0, 26 * #(dcfg.Values or {})) or UDim2.new(1, 0, 0, 0)
-end)
-return btn3
 end
-return tab
 end
-return win
+if not Fluent then
+error("[CheatMenu] ❌ Fluent UI 加载失败(检查网络/执行器 loadstring)")
 end
 local AC = {}
 function AC.InstallNamecallHook()
@@ -3182,7 +2859,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.8.1",
+SubTitle = "v4.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3427,9 +3104,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.8.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.9.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.8.1")
+print("[CheatMenu] ✅ 加载完成 v4.9.0")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
