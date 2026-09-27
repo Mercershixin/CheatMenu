@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 18:59 sha 4517db13 bytes 27199'):format('2026-09-27 18:59','4517db13',27199))
-print("[CheatMenu] ===== 加载开始 · v1.1.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:04 sha 326e002c bytes 32940'):format('2026-09-27 19:04','326e002c',32940))
+print("[CheatMenu] ===== 加载开始 · v1.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -715,19 +715,134 @@ return r
 end
 return nil
 end
+local FlyConn = nil
+local FlyParts = {}
+local function FlyDisable()
+if FlyConn then FlyConn:Disconnect() FlyConn = nil end
+for _, obj in ipairs(FlyParts) do pcall(function() obj:Destroy() end) end
+FlyParts = {}
+local _, hum = GC()
+if hum then hum.PlatformStand = false end
+end
+local function FlyEnable()
+local _, hum, root = GC()
+if not (hum and root) then return end
+FlyDisable()
+hum.PlatformStand = true
+local bv = Instance.new("BodyVelocity")
+bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+bv.Velocity = Vector3.zero
+bv.Parent = root
+local bg = Instance.new("BodyGyro")
+bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+bg.CFrame = root.CFrame
+bg.D = 100
+bg.P = 10000
+bg.Parent = root
+FlyParts = { bv, bg }
+FlyConn = RS.RenderStepped:Connect(function()
+if not T.Fly then FlyDisable() return end
+local _, h, r = GC()
+if not (h and r) then return end
+local cam = workspace.CurrentCamera
+local dir = Vector3.zero
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+local sp = C.FlySpeed or 50
+bv.Velocity = (dir.Magnitude > 0) and (dir.Unit * sp) or Vector3.zero
+end)
+end
+local function SpeedEnable()
+local _, hum = GC()
+if hum then hum.WalkSpeed = C.Speed or 30 end
+end
+local function SpeedDisable()
+local _, hum = GC()
+if hum then hum.WalkSpeed = 16 end
+end
+local JumpConn = nil
+local function InfiniteJumpEnable()
+if JumpConn then return end
+JumpConn = UIS.JumpRequest:Connect(function()
+if not T.InfiniteJump then return end
+local _, hum = GC()
+if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+end)
+end
+local function NoClipEnable()
+local _, _, root = GC()
+if root then root.CanCollide = false end
+end
+local function NoClipDisable()
+local _, _, root = GC()
+if root then root.CanCollide = true end
+end
+local savedLight = nil
+local function FullBrightEnable()
+local L = game:GetService("Lighting")
+if not savedLight then
+savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd,
+GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient }
+end
+L.Brightness = 2
+L.ClockTime = 14
+L.FogEnd = 100000
+L.GlobalShadows = false
+L.Ambient = Color3.fromRGB(255, 255, 255)
+L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+end
+local function FullBrightDisable()
+local L = game:GetService("Lighting")
+if not savedLight then return end
+L.Brightness = savedLight.Brightness
+L.ClockTime = savedLight.ClockTime
+L.FogEnd = savedLight.FogEnd
+L.GlobalShadows = savedLight.GlobalShadows
+L.Ambient = savedLight.Ambient
+L.OutdoorAmbient = savedLight.OutdoorAmbient
+end
+local savedFog = nil
+local function NoFogEnable()
+local L = game:GetService("Lighting")
+if not savedFog then savedFog = { FogEnd = L.FogEnd, FogStart = L.FogStart } end
+L.FogEnd = 100000
+L.FogStart = 100000
+end
+local function NoFogDisable()
+local L = game:GetService("Lighting")
+if not savedFog then return end
+L.FogEnd = savedFog.FogEnd
+L.FogStart = savedFog.FogStart
+end
+local function TeleportToPlayer(target)
+local _, _, root = GC()
+if not root or not target then return end
+local tchar = target.Character
+if not tchar then return end
+local troot = tchar:FindFirstChild("HumanoidRootPart")
+if not troot then return end
+root.CFrame = troot.CFrame + Vector3.new(0, 3, 0)
+end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.1.0",
+SubTitle = "v1.2.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
-Acrylic = true,
+Acrylic = false,
 Theme = "Dark",
 MinimizeKey = Enum.KeyCode.G,
 })
 local Tabs = {
-AFK = Window:AddTab({ Title = "挂机", Icon = "home" }),
-AC  = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
+AFK   = Window:AddTab({ Title = "挂机", Icon = "home" }),
+Move  = Window:AddTab({ Title = "移动", Icon = "move" }),
+World = Window:AddTab({ Title = "世界", Icon = "globe" }),
+TP    = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+AC    = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 }
 Tabs.AFK:AddSection("挂机防踢")
 Tabs.AFK:AddToggle("AntiAFK", { Title = "挂机防踢 (AntiAFK)", Default = (T.AntiAFK ~= false), Callback = function(v) T.AntiAFK = v if v then AntiAFKEnable() end end })
@@ -751,6 +866,32 @@ local r = Trans.Translate("Collect all eggs")
 print("[CheatMenu] 翻译测试: " .. tostring(r))
 Fluent:Notify({ Title = "翻译", Content = tostring(r), Duration = 4 })
 end })
+Tabs.Move:AddSection("移动")
+Tabs.Move:AddToggle("Fly", { Title = "飞行 (WASD+空格/左Ctrl)", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
+Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 200, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
+Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
+Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
+Tabs.Move:AddToggle("NoClip", { Title = "无碰撞", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
+Tabs.World:AddSection("世界")
+Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
+Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
+local function getPlayerNames()
+local names = {}
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then names[#names + 1] = pl.Name end
+end
+return names
+end
+Tabs.TP:AddSection("传送")
+local tpNames = getPlayerNames()
+Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = tpNames, Default = tpNames[1] })
+Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
+local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
+if not name then return end
+local target = Players:FindFirstChild(name)
+TeleportToPlayer(target)
+end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("NamecallHook", { Title = "namecall 拦截 (防踢)", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
 Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞 (AntiFling)", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
@@ -758,4 +899,4 @@ Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() F
 T.AntiAFK = true
 AntiAFKEnable()
 Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.1.0 (呼出键 G)", Duration = 5 })
-print("[CheatMenu] ✅ 加载完成 v1.1.0 (呼出键 G)")
+print("[CheatMenu] ✅ 加载完成 v1.2.0 (呼出键 G)")
