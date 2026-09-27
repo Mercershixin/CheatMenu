@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:43 sha 1a146ff3 bytes 73596'):format('2026-09-27 21:43','1a146ff3',73596))
-print("[CheatMenu] ===== 加载开始 · v2.0.6 =====")
+print(('[CheatMenu] build 2026-09-27 21:51 sha 8aadc1d2 bytes 74181'):format('2026-09-27 21:51','8aadc1d2',74181))
+print("[CheatMenu] ===== 加载开始 · v2.0.7 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -713,6 +713,23 @@ T.AutoSell = false
 end
 end)
 end
+local function sellAllBrainrots()
+local rf = RFunction("B_SellAll")
+if rf then
+local ok, res = pcall(function() return rf:InvokeServer() end)
+if ok then
+print("[CheatMenu] ✅ 一键卖全部 · 返回=" .. tostring(res))
+return true
+end
+end
+local re = RFunction("B_Sell")
+if re then
+local ok, res = pcall(function() return re:InvokeServer() end)
+if ok then print("[CheatMenu] 兜底 B_Sell · 返回=" .. tostring(res)) return true end
+end
+print("[CheatMenu] ❌ 找不到 B_SellAll / B_Sell remote")
+return false
+end
 local WithdrawThread = nil
 local function withdrawAllBrainrots()
 if WithdrawThread then return end
@@ -1375,8 +1392,6 @@ if T.Aim then AimEnable() end
 if T.God then GodEnable() end
 if T.Invisible then InvisibleEnable() end
 if T.ESP then ESPEnable() end
-if T.AutoTrain then AutoTrainEnable() end
-if T.AutoGym then AutoGymEnable() end
 if T.AutoBonus then AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
@@ -1671,28 +1686,36 @@ pcall(function() hookfunction(gs.GetGroupsAsync, function() return {} end) end)
 end)
 print("[CheatMenu] 徽章/群组本地绕过已开启(仅对客户端检查有效)")
 end
-local function ChatBypassCleanup()
-pcall(function()
-local root = gethui and gethui() or game:GetService("CoreGui")
-for _, gui in ipairs(root:GetChildren()) do
-if gui:IsA("ScreenGui") then
-local n = gui.Name:lower()
-if n:match("anna") or n:match("bypasser") then
-gui:Destroy()
-end
-end
-end
-end)
-end
 local function ChatBypassEnable()
-local urls = {
-"https://raw.githubusercontent.com/AnnaRoblox/AnnaBypasser/refs/heads/main/AnnaBypasser.lua",
-}
-for _, u in ipairs(urls) do
-local ok = pcall(function() loadstring(game:HttpGet(u))() end)
-if ok then return end
+if not hookfunction then
+print("[CheatMenu] 执行器不支持 hookfunction，聊天绕过不可用")
+return
 end
-print("[CheatMenu] 聊天绕过脚本加载失败")
+local tcs = game:GetService("TextChatService")
+if not (tcs and tcs.TextChannels) then
+print("[CheatMenu] 未找到 TextChatService，聊天绕过不可用")
+return
+end
+local hooked = false
+for _, channel in ipairs(tcs.TextChannels:GetChildren()) do
+if channel:IsA("TextChannel") and channel.SendAsync then
+local oldSend = channel.SendAsync
+pcall(function()
+hookfunction(oldSend, function(self, text, ...)
+if T.ChatBypass and type(text) == "string" then
+text = text:gsub("(.)", "%1\226\128\139")
+end
+return oldSend(self, text, ...)
+end)
+end)
+hooked = true
+end
+end
+if hooked then
+print("[CheatMenu] 自动聊天绕过已开启(直接在正常聊天框发)")
+else
+print("[CheatMenu] 未找到 TextChannel，聊天绕过不可用")
+end
 end
 local BulletHls = {}
 local BulletConn = nil
@@ -1796,7 +1819,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.6",
+SubTitle = "v2.0.7",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1840,6 +1863,7 @@ Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数�
 local n = parseAmount(v)
 if n and n > 0 then C.SellMinCPS = n end
 end })
+Tabs.AFK:AddButton({ Title = "一键卖全部", Callback = function() sellAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
 Tabs.Trans:AddSection("翻译")
@@ -1951,13 +1975,12 @@ end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
-Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() else ChatBypassCleanup() end end })
+Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() end end })
 Tabs.AC:AddToggle("AlertBlock", { Title = "反作弊告警拦截", Default = false, Callback = function(v) T.AlertBlock = v if v then AlertBlockEnable() end end })
 Tabs.AC:AddSection("抓包扫描")
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
-Tabs.Setting:AddButton({ Title = "诊断角色部件(查灰方块)", Callback = function() diagnoseCharacter() Fluent:Notify({ Title = "诊断", Content = "已打印角色部件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -2009,6 +2032,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.6", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.7", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.6")
+print("[CheatMenu] ✅ 加载完成 v2.0.7")
