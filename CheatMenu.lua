@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:03 sha 2c463044 bytes 98350'):format('2026-09-28 02:03','2c463044',98350))
-print("[CheatMenu] ===== 加载开始 · v3.7.0 =====")
+print(('[CheatMenu] build 2026-09-28 02:07 sha f5524749 bytes 99555'):format('2026-09-28 02:07','f5524749',99555))
+print("[CheatMenu] ===== 加载开始 · v3.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1685,6 +1685,19 @@ pcall(function() ts:Teleport(game.PlaceId, LP) end)
 end
 local AimConn = nil
 local function AimDisable() if AimConn then AimConn:Disconnect() AimConn = nil end end
+local function aimPartOf(ch)
+local mode = C.AimHitPart or "head"
+if mode == "head" then return ch:FindFirstChild("Head") end
+if mode == "torso" then return ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso") end
+return ch:FindFirstChild("HumanoidRootPart")
+end
+local function predictPos(part)
+if not T.AimPrediction then return part.Position end
+local vel = part.AssemblyLinearVelocity
+local dist = (workspace.CurrentCamera.CFrame.Position - part.Position).Magnitude
+local travel = dist / math.max(1, C.AimBulletSpeed or 500)
+return part.Position + vel * travel
+end
 local function getAimTarget()
 local cam = workspace.CurrentCamera
 local fovRadius = C.AimFOV or 200
@@ -1694,7 +1707,8 @@ if pl ~= LP then
 local ch = pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local skip = (not (hrp and hrp.Parent and hum and hum.Health > 0))
+if hrp and hrp.Parent and hum and hum.Health > 0 then
+local skip = false
 if T.AimTeamCheck and pl.Team == LP.Team then skip = true end
 if not skip and T.AimWallCheck then
 local origin = cam.CFrame.Position
@@ -1702,16 +1716,17 @@ local dir = hrp.Position - origin
 local params = RaycastParams.new()
 params.FilterDescendantsInstances = { LP.Character, pl.Character }
 params.FilterType = Enum.RaycastFilterType.Exclude
-local hit = workspace:Raycast(origin, dir, params)
-if hit then skip = true end
+if workspace:Raycast(origin, dir, params) then skip = true end
 end
 if not skip then
+local part = aimPartOf(ch) or hrp
 local screenPos, onScreen = cam:WorldToScreenPoint(hrp.Position)
 if onScreen then
 local dist = (Vector2.new(screenPos.X, screenPos.Y) - cam.ViewportSize / 2).Magnitude
 if dist < bestDist and dist < fovRadius then
 bestDist = dist
-best = hrp
+best = part
+end
 end
 end
 end
@@ -1727,7 +1742,7 @@ local target = getAimTarget()
 if not target then return end
 local cam = workspace.CurrentCamera
 local smooth = math.max(1, C.AimSmooth or 5)
-cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, target.Position), 1 / smooth)
+cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, predictPos(target)), 1 / smooth)
 end)
 end
 local SilentAimConn = nil
@@ -1737,7 +1752,7 @@ SilentAimConn = RS.RenderStepped:Connect(function()
 if not T.SilentAim then return end
 local target = getAimTarget()
 if not target then return end
-workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, target.Position)
+workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, predictPos(target))
 end)
 end
 local function SilentAimDisable()
@@ -2473,7 +2488,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.7.0",
+SubTitle = "v3.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2497,6 +2512,12 @@ Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, 
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
+Tabs.Combat:AddDropdown("AimHitPart", { Title = "命中部位", Values = { "头部", "上身", "身体" }, Default = "头部", Callback = function(v)
+local map = { ["头部"] = "head", ["上身"] = "torso", ["身体"] = "body" }
+C.AimHitPart = map[v] or "head"
+end })
+Tabs.Combat:AddToggle("AimPrediction", { Title = "弹道预测(打移动目标)", Default = false, Callback = function(v) T.AimPrediction = v end })
+Tabs.Combat:AddSlider("AimBulletSpeed", { Title = "弹速(用于预测)", Min = 100, Max = 2000, Default = 500, Rounding = 0, Callback = function(v) C.AimBulletSpeed = v end })
 Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
 Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then CM.SingleAimEnable() else CM.SingleAimDisable() end end })
 Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then CM.FaceLockEnable() else CM.FaceLockDisable() end end })
@@ -2701,6 +2722,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.7.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.8.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.7.0")
+print("[CheatMenu] ✅ 加载完成 v3.8.0")
