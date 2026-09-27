@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 22:36 sha 45bdb777 bytes 68657'):format('2026-09-27 22:36','45bdb777',68657))
-print("[CheatMenu] ===== 加载开始 · v3.2.0 =====")
+print(('[CheatMenu] build 2026-09-27 22:54 sha 83567f0e bytes 79797'):format('2026-09-27 22:54','83567f0e',79797))
+print("[CheatMenu] ===== 加载开始 · v3.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1112,6 +1112,7 @@ end
 TransLoop = nil
 end)
 end
+local CM = (function()
 local FlyConn = nil
 local function FlyDisable()
 if FlyConn then FlyConn:Disconnect() FlyConn = nil end
@@ -1604,6 +1605,280 @@ hookfunction(gs.IsInGroup, function() return true end)
 end)
 print("[CheatMenu] 徽章/群组本地绕过已开启(仅对客户端检查有效)")
 end
+local function MetaBypassEnable()
+if not (getgc and islclosure) then return end
+local function wipeMeta(v)
+if type(v) == "userdata" then
+pcall(function() setmetatable(v, nil) end)
+end
+end
+local function findAndWipe(kw)
+for _, v in ipairs(getgc()) do
+if type(v) == "function" and islclosure(v) then
+local ok, info = pcall(debug.getinfo, v, "n")
+if ok and info and info.name and info.name:lower():find(kw, 1, true) then
+for i = 1, 20 do
+local n, uv = debug.getupvalue(v, i)
+if not n then break end
+wipeMeta(uv)
+if type(uv) == "table" then
+for _, sub in pairs(uv) do wipeMeta(sub) end
+end
+end
+end
+end
+end
+end
+for _, kw in ipairs({ "anti", "detect", "ban", "cheat", "flag" }) do findAndWipe(kw) end
+print("[CheatMenu] MetaBypass 已执行(函数定位+元表清空)")
+end
+local function ChatBypassEnable()
+if not hookfunction then
+print("[CheatMenu] 执行器不支持 hookfunction，聊天绕过不可用")
+return
+end
+local tcs = game:GetService("TextChatService")
+if not (tcs and tcs.TextChannels) then return end
+local hooked = false
+for _, channel in ipairs(tcs.TextChannels:GetChildren()) do
+if channel:IsA("TextChannel") and channel.SendAsync then
+local oldSend = channel.SendAsync
+pcall(function()
+hookfunction(oldSend, function(self, text, ...)
+if T.ChatBypass and type(text) == "string" then
+text = text:gsub("(.)", "%1\226\128\139")
+end
+return oldSend(self, text, ...)
+end)
+end)
+hooked = true
+end
+end
+if hooked then print("[CheatMenu] 自动聊天绕过已开启(正常聊天框直接发)") end
+end
+local HitboxList = {}
+local function addHitbox(pl)
+if pl == LP or not T.Hitbox then return end
+local ch = pl.Character
+if not ch then return end
+local hrp = ch:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+local box = Instance.new("Part")
+box.Size = Vector3.new(6, 6, 6)
+box.Transparency = 1
+box.CanCollide = true
+box.CanQuery = true
+box.Anchored = true
+box.Name = "CheatHitbox"
+box.Parent = ch
+local conn = RS.RenderStepped:Connect(function()
+if box.Parent and hrp.Parent then box.CFrame = hrp.CFrame end
+end)
+table.insert(HitboxList, { box = box, conn = conn })
+end
+local function HitboxEnable()
+for _, pl in ipairs(Players:GetPlayers()) do addHitbox(pl) end
+Players.PlayerAdded:Connect(function(pl)
+pl.CharacterAdded:Connect(function() addHitbox(pl) end)
+end)
+end
+local function HitboxDisable()
+for _, e in ipairs(HitboxList) do
+pcall(function() e.conn:Disconnect() end)
+pcall(function() e.box:Destroy() end)
+end
+HitboxList = {}
+end
+local FlyCarConn = nil
+local function FlyCarEnable()
+if FlyCarConn then return end
+FlyCarConn = RS.RenderStepped:Connect(function(dt)
+if not T.FlyCar then return end
+local _, _, root = GC()
+if not root then return end
+local seat = root.Parent
+if not (seat and seat:IsA("VehicleSeat") or seat and seat:IsA("Seat")) then
+seat = nil
+for _, s in ipairs(workspace:GetDescendants()) do
+if (s:IsA("VehicleSeat") or s:IsA("Seat")) and s.Occupant == LP.Character then seat = s break end
+end
+end
+if not seat then return end
+local car = seat.Parent
+local body = car and (car:IsA("Model") and car.PrimaryPart or (car:IsA("BasePart") and car))
+if not body then return end
+local cam = workspace.CurrentCamera
+local dir = Vector3.zero
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+if dir.Magnitude > 0 then
+body.CFrame = body.CFrame + dir.Unit * (C.FlyCarSpeed or 50) * math.min(dt, 0.1)
+end
+end)
+end
+local function FlyCarDisable()
+if FlyCarConn then FlyCarConn:Disconnect() FlyCarConn = nil end
+end
+local function TeleportOnDeathEnable()
+local target = getTPTargetPlayer()
+LP.CharacterAdded:Connect(function()
+task.wait(0.5)
+if T.TeleportOnDeath then TeleportToPlayer(target) end
+end)
+end
+local function FOVEnable()
+workspace.CurrentCamera.FieldOfView = C.FOV or 100
+end
+local function FOVDisable()
+workspace.CurrentCamera.FieldOfView = 70
+end
+local function ZoomEnable()
+LP.CameraMaxZoomDistance = C.Zoom or 400
+LP.CameraMinZoomDistance = 0.5
+end
+local function ZoomDisable()
+LP.CameraMaxZoomDistance = 128
+LP.CameraMinZoomDistance = 0.5
+end
+local XrayHls = {}
+local function XrayEnable()
+local ch = LP.Character
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
+local hl = Instance.new("Highlight")
+hl.FillTransparency = 1
+hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+hl.OutlineTransparency = 0.4
+hl.Parent = obj
+XrayHls[#XrayHls + 1] = hl
+end
+end
+end
+local function XrayDisable()
+for _, hl in ipairs(XrayHls) do pcall(function() hl:Destroy() end) end
+XrayHls = {}
+end
+local SelfGlowHl = nil
+local function SelfGlowEnable()
+local ch = LP.Character
+if not ch then return end
+if SelfGlowHl then SelfGlowHl:Destroy() end
+SelfGlowHl = Instance.new("Highlight")
+SelfGlowHl.FillColor = Color3.fromRGB(255, 200, 80)
+SelfGlowHl.FillTransparency = 0.3
+SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
+SelfGlowHl.Parent = ch
+end
+local function SelfGlowDisable()
+if SelfGlowHl then SelfGlowHl:Destroy() SelfGlowHl = nil end
+end
+local function MuteEnable()
+for _, s in ipairs(workspace:GetDescendants()) do
+if s:IsA("Sound") then s.Volume = 0 end
+end
+end
+local function Rejoin()
+local ts = game:GetService("TeleportService")
+pcall(function() ts:Teleport(game.PlaceId, LP) end)
+end
+local ToolGlowHl = nil
+local function ToolGlowEnable()
+local ch = LP.Character
+if not ch then return end
+local tool = ch:FindFirstChildOfClass("Tool")
+if not tool then return end
+if ToolGlowHl then ToolGlowHl:Destroy() end
+ToolGlowHl = Instance.new("Highlight")
+ToolGlowHl.FillColor = Color3.fromRGB(150, 200, 255)
+ToolGlowHl.FillTransparency = 0.4
+ToolGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
+ToolGlowHl.Parent = tool
+end
+local function ToolGlowDisable()
+if ToolGlowHl then ToolGlowHl:Destroy() ToolGlowHl = nil end
+end
+return {
+FlyDisable = FlyDisable,
+FlyEnable = FlyEnable,
+SpeedEnable = SpeedEnable,
+SpeedDisable = SpeedDisable,
+InfiniteJumpEnable = InfiniteJumpEnable,
+SpinEnable = SpinEnable,
+SpinDisable = SpinDisable,
+AirWalkEnable = AirWalkEnable,
+AirWalkDisable = AirWalkDisable,
+NoClipEnable = NoClipEnable,
+NoClipDisable = NoClipDisable,
+HideEnable = HideEnable,
+HideDisable = HideDisable,
+FullBrightEnable = FullBrightEnable,
+FullBrightDisable = FullBrightDisable,
+NightVisionEnable = NightVisionEnable,
+NightVisionDisable = NightVisionDisable,
+NoFogEnable = NoFogEnable,
+NoFogDisable = NoFogDisable,
+TeleportToPlayer = TeleportToPlayer,
+getTPTargetPlayer = getTPTargetPlayer,
+CircleEnable = CircleEnable,
+CircleDisable = CircleDisable,
+SpectateEnable = SpectateEnable,
+SpectateDisable = SpectateDisable,
+savePosition = savePosition,
+teleportToSaved = teleportToSaved,
+ClickerEnable = ClickerEnable,
+ClickerDisable = ClickerDisable,
+ServerHop = ServerHop,
+AimDisable = AimDisable,
+getAimTarget = getAimTarget,
+AimEnable = AimEnable,
+SilentAimEnable = SilentAimEnable,
+SilentAimDisable = SilentAimDisable,
+SingleAimEnable = SingleAimEnable,
+SingleAimDisable = SingleAimDisable,
+FaceLockEnable = FaceLockEnable,
+FaceLockDisable = FaceLockDisable,
+FlingTarget = FlingTarget,
+GodEnable = GodEnable,
+GodDisable = GodDisable,
+InvisibleEnable = InvisibleEnable,
+InvisibleDisable = InvisibleDisable,
+espAdd = espAdd,
+ESPEnable = ESPEnable,
+ESPDisable = ESPDisable,
+BulletTracerEnable = BulletTracerEnable,
+BulletTracerDisable = BulletTracerDisable,
+AutoInteractEnable = AutoInteractEnable,
+AutoInteractDisable = AutoInteractDisable,
+InstantPromptEnable = InstantPromptEnable,
+BadgeBypassEnable = BadgeBypassEnable,
+MetaBypassEnable = MetaBypassEnable,
+wipeMeta = wipeMeta,
+findAndWipe = findAndWipe,
+ChatBypassEnable = ChatBypassEnable,
+addHitbox = addHitbox,
+HitboxEnable = HitboxEnable,
+HitboxDisable = HitboxDisable,
+FlyCarEnable = FlyCarEnable,
+FlyCarDisable = FlyCarDisable,
+TeleportOnDeathEnable = TeleportOnDeathEnable,
+FOVEnable = FOVEnable,
+FOVDisable = FOVDisable,
+ZoomEnable = ZoomEnable,
+ZoomDisable = ZoomDisable,
+XrayEnable = XrayEnable,
+XrayDisable = XrayDisable,
+SelfGlowEnable = SelfGlowEnable,
+SelfGlowDisable = SelfGlowDisable,
+MuteEnable = MuteEnable,
+Rejoin = Rejoin,
+ToolGlowEnable = ToolGlowEnable,
+ToolGlowDisable = ToolGlowDisable,
+}
+end)()
+if getgenv then getgenv().CM = CM end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -1673,7 +1948,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v3.2.0",
+SubTitle = "v3.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -1692,39 +1967,49 @@ AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
 Tabs.Combat:AddSection("战斗")
-Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then AimEnable() else AimDisable() end end })
+Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then CM.AimEnable() else CM.AimDisable() end end })
 Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then SilentAimEnable() else SilentAimDisable() end end })
-Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then SingleAimEnable() else SingleAimDisable() end end })
-Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then FaceLockEnable() else FaceLockDisable() end end })
-Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() FlingTarget() end })
-Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then GodEnable() else GodDisable() end end })
-Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
-Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
-Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then BulletTracerEnable() else BulletTracerDisable() end end })
+Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
+Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then CM.SingleAimEnable() else CM.SingleAimDisable() end end })
+Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then CM.FaceLockEnable() else CM.FaceLockDisable() end end })
+Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() CM.FlingTarget() end })
+Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
+Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
+Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then CM.ESPEnable() else CM.ESPDisable() end end })
+Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
+Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
-Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
+Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then CM.FlyEnable() else CM.FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
+Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then CM.SpeedEnable() else CM.SpeedDisable() end end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
-Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
-Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then SpinEnable() else SpinDisable() end end })
+Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then CM.InfiniteJumpEnable() end end })
+Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then CM.SpinEnable() else CM.SpinDisable() end end })
 Tabs.Move:AddSlider("SpinSpeed", { Title = "自转速度", Min = 1, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.SpinSpeed = v end })
-Tabs.Move:AddToggle("AirWalk", { Title = "踏空(空中移动)", Default = false, Callback = function(v) T.AirWalk = v if v then AirWalkEnable() else AirWalkDisable() end end })
+Tabs.Move:AddToggle("AirWalk", { Title = "踏空(空中移动)", Default = false, Callback = function(v) T.AirWalk = v if v then CM.AirWalkEnable() else CM.AirWalkDisable() end end })
 Tabs.Move:AddSlider("AirWalkSpeed", { Title = "踏空速度", Min = 10, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.AirWalkSpeed = v end })
-Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
+Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then CM.NoClipEnable() else CM.NoClipDisable() end end })
+Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then CM.HideEnable() else CM.HideDisable() end end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
+Tabs.Move:AddToggle("FlyCar", { Title = "飞车(载具飞行)", Default = false, Callback = function(v) T.FlyCar = v if v then CM.FlyCarEnable() else CM.FlyCarDisable() end end })
+Tabs.Move:AddSlider("FlyCarSpeed", { Title = "飞车速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FlyCarSpeed = v end })
 Tabs.World:AddSection("视觉")
-Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
-Tabs.World:AddToggle("NightVision", { Title = "夜视", Default = false, Callback = function(v) T.NightVision = v if v then NightVisionEnable() else NightVisionDisable() end end })
-Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
-Tabs.World:AddToggle("AutoInteract", { Title = "自动互动", Default = false, Callback = function(v) T.AutoInteract = v if v then AutoInteractEnable() else AutoInteractDisable() end end })
-Tabs.World:AddToggle("InstantPrompt", { Title = "瞬时互动(免长按)", Default = false, Callback = function(v) T.InstantPrompt = v if v then InstantPromptEnable() end end })
+Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then CM.FullBrightEnable() else CM.FullBrightDisable() end end })
+Tabs.World:AddToggle("NightVision", { Title = "夜视", Default = false, Callback = function(v) T.NightVision = v if v then CM.NightVisionEnable() else CM.NightVisionDisable() end end })
+Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then CM.NoFogEnable() else CM.NoFogDisable() end end })
+Tabs.World:AddToggle("AutoInteract", { Title = "自动互动", Default = false, Callback = function(v) T.AutoInteract = v if v then CM.AutoInteractEnable() else CM.AutoInteractDisable() end end })
+Tabs.World:AddToggle("InstantPrompt", { Title = "瞬时互动(免长按)", Default = false, Callback = function(v) T.InstantPrompt = v if v then CM.InstantPromptEnable() end end })
+Tabs.World:AddToggle("Xray", { Title = "Xray 透视", Default = false, Callback = function(v) T.Xray = v if v then CM.XrayEnable() else CM.XrayDisable() end end })
+Tabs.World:AddToggle("SelfGlow", { Title = "自发光", Default = false, Callback = function(v) T.SelfGlow = v if v then CM.SelfGlowEnable() else CM.SelfGlowDisable() end end })
+Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
+Tabs.World:AddToggle("FOVToggle", { Title = "自定义 FOV", Default = false, Callback = function(v) T.FOV = v if v then CM.FOVEnable() else CM.FOVDisable() end end })
+Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then CM.FOVEnable() end end })
+Tabs.World:AddToggle("ZoomToggle", { Title = "无限缩放", Default = false, Callback = function(v) T.Zoom = v if v then CM.ZoomEnable() else CM.ZoomDisable() end end })
+Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then CM.ZoomEnable() end end })
 local function getPlayerNames()
 local names = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -1739,14 +2024,15 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then return end
 local target = Players:FindFirstChild(name)
-TeleportToPlayer(target)
+CM.TeleportToPlayer(target)
 end })
-Tabs.TP:AddToggle("Circle", { Title = "环绕传送", Default = false, Callback = function(v) T.Circle = v if v then CircleEnable() else CircleDisable() end end })
+Tabs.TP:AddToggle("Circle", { Title = "环绕传送", Default = false, Callback = function(v) T.Circle = v if v then CM.CircleEnable() else CM.CircleDisable() end end })
 Tabs.TP:AddSlider("CircleRadius", { Title = "环绕半径", Min = 3, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.CircleRadius = v end })
 Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.CircleSpeed = v end })
-Tabs.TP:AddToggle("Spectate", { Title = "观察目标", Default = false, Callback = function(v) T.Spectate = v if v then SpectateEnable() else SpectateDisable() end end })
-Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() savePosition() end })
-Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() teleportToSaved() end })
+Tabs.TP:AddToggle("Spectate", { Title = "观察目标", Default = false, Callback = function(v) T.Spectate = v if v then CM.SpectateEnable() else CM.SpectateDisable() end end })
+Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
+Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
+Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then CM.TeleportOnDeathEnable() end end })
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v
 T.AntiAFK = v
@@ -1816,13 +2102,17 @@ else
 AntiFlingDisable()
 end
 end })
-Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
+Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then CM.BadgeBypassEnable() end end })
+Tabs.AC:AddToggle("MetaBypass", { Title = "元表清空(反检测)", Default = false, Callback = function(v) T.MetaBypass = v if v then CM.MetaBypassEnable() end end })
+Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.Setting:AddSection("设置")
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
-Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
-Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
+Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then CM.ClickerEnable() else CM.ClickerDisable() end end })
+Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() CM.ServerHop() end })
+Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() CM.Rejoin() end })
+Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -1874,6 +2164,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.2.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.3.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v3.2.0")
+print("[CheatMenu] ✅ 加载完成 v3.3.0")
