@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:26 sha 7acbc025 bytes 44254'):format('2026-09-27 19:26','7acbc025',44254))
-print("[CheatMenu] ===== 加载开始 · v1.5.1 =====")
+print(('[CheatMenu] build 2026-09-27 19:29 sha c907b5b9 bytes 45896'):format('2026-09-27 19:29','c907b5b9',45896))
+print("[CheatMenu] ===== 加载开始 · v1.5.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -113,6 +113,7 @@ end
 local AC = {}
 function AC.InstallNamecallHook()
 if not hookmetamethod or not newcclosure then return false end
+if AC._nc then return true end
 local old
 old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
@@ -126,9 +127,36 @@ end)
 print("[CheatMenu] 🦶 namecall 拦下 Kick: " .. tostring(msg))
 return nil
 end
+if method == "FireServer" and T.RemoteBlock and not checkcaller() then
+local name = tostring(self and self.Name or ""):lower()
+local blocked = { "iac-respond", "iacrespond", "kick", "ban", "report", "anticheat", "detect", "flag", "exploit" }
+for _, kw in ipairs(blocked) do
+if name:find(kw, 1, true) then
+return nil
+end
+end
+end
 return old(self, ...)
 end))
-return old ~= nil
+if type(old) ~= "function" then return false end
+AC._nc = true
+return true
+end
+function AC.InstallPropertySpoof()
+if not hookmetamethod or not newcclosure then return false end
+if AC._spoofed then return true end
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
+if not checkcaller() and typeof(self) == "Instance" then
+if key == "WalkSpeed" and T.Speed then return 16 end
+if key == "JumpPower" and T.InfiniteJump then return 50 end
+if key == "Health" and T.God then return 100 end
+end
+return oldIndex(self, key)
+end))
+if type(oldIndex) ~= "function" then return false end
+AC._spoofed = true
+return true
 end
 local FlingConns = {}
 local function AntiFlingEnable()
@@ -758,11 +786,17 @@ r.AssemblyLinearVelocity = Vector3.zero
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
+local SpeedConn = nil
 local function SpeedEnable()
+if SpeedConn then return end
+SpeedConn = RS.Stepped:Connect(function()
+if not T.Speed then return end
 local _, hum = GC()
 if hum then hum.WalkSpeed = C.Speed or 30 end
+end)
 end
 local function SpeedDisable()
+if SpeedConn then SpeedConn:Disconnect() SpeedConn = nil end
 local _, hum = GC()
 if hum then hum.WalkSpeed = 16 end
 end
@@ -1041,6 +1075,8 @@ if T.AutoTrain then AutoTrainEnable() end
 if T.AutoGym then AutoGymEnable() end
 if T.AutoBonus then AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
+if T.RemoteBlock then AC.InstallNamecallHook() end
+if T.PropertySpoof then AC.InstallPropertySpoof() end
 if T.AntiFling then AntiFlingEnable() end
 end
 local function HotUpdate()
@@ -1059,7 +1095,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.5.1",
+SubTitle = "v1.5.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -1155,6 +1191,8 @@ Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback
 Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("NamecallHook", { Title = "防踢拦截", Default = false, Callback = function(v) T.NamecallHook = v if v then AC.InstallNamecallHook() end end })
+Tabs.AC:AddToggle("PropertySpoof", { Title = "属性伪装(加速不失效)", Default = false, Callback = function(v) T.PropertySpoof = v if v then AC.InstallPropertySpoof() end end })
+Tabs.AC:AddToggle("RemoteBlock", { Title = "远程阻止(拦反作弊)", Default = false, Callback = function(v) T.RemoteBlock = v if v then AC.InstallNamecallHook() end end })
 Tabs.AC:AddToggle("AntiFling", { Title = "防甩飞", Default = false, Callback = function(v) T.AntiFling = v if v then AntiFlingEnable() else AntiFlingDisable() end end })
 Tabs.AC:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.AC:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
@@ -1209,6 +1247,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.5.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v1.5.1")
+print("[CheatMenu] ✅ 加载完成 v1.5.2")
