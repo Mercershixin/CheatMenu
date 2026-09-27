@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 21:56 sha 584d496f bytes 74150'):format('2026-09-27 21:56','584d496f',74150))
-print("[CheatMenu] ===== 加载开始 · v2.0.9 =====")
+print(('[CheatMenu] build 2026-09-27 22:05 sha 1a3f505c bytes 74718'):format('2026-09-27 22:05','1a3f505c',74718))
+print("[CheatMenu] ===== 加载开始 · v2.0.10 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -577,6 +577,29 @@ task.wait(0.05)
 pcall(function() prompt:InputHoldEnd() end)
 return true
 end
+local function moveToSeller()
+local _, hum, root = GC()
+if not (hum and root) then return end
+local seller = findSeller()
+if not seller then return end
+local target
+local prompt = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+if prompt and prompt.Parent and prompt.Parent:IsA("BasePart") then
+target = prompt.Parent.Position
+end
+if not target then
+local part = seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart
+or seller:FindFirstChildWhichIsA("BasePart", true)
+if part then target = part.Position end
+end
+if not target then return end
+local flatAway = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
+if flatAway.Magnitude < 0.1 then flatAway = Vector3.new(1, 0, 0) end
+local stand = target + flatAway.Unit * 4
+root.CFrame = CFrame.lookAt(Vector3.new(stand.X, target.Y, stand.Z), Vector3.new(target.X, target.Y, target.Z))
+root.AssemblyLinearVelocity = Vector3.zero
+task.wait(0.2)
+end
 local function findSellAllButton()
 local best, bestScore = nil, -1
 for _, btn in ipairs(visibleGuiButtons()) do
@@ -617,15 +640,6 @@ break
 end
 end
 return true
-end
-local SELLER_CFRAME = CFrame.new(134.125, 0.125, 83.866) * CFrame.Angles(0, -1.5707963267948966, 0)
-local function moveToSeller()
-local _, hum, root = GC()
-if not (hum and root) then return end
-root.CFrame = SELLER_CFRAME * CFrame.new(0, hum.HipHeight or 0, 0)
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-task.wait(0.2)
 end
 local SellThread = nil
 local function sellLowCPSTools()
@@ -1812,7 +1826,7 @@ loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.9",
+SubTitle = "v2.0.10",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -2024,6 +2038,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.9", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.10", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.9")
+print("[CheatMenu] ✅ 加载完成 v2.0.10")
