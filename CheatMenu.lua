@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 19:09 sha c775fbcb bytes 35674'):format('2026-09-27 19:09','c775fbcb',35674))
-print("[CheatMenu] ===== 加载开始 · v1.3.0 =====")
+print(('[CheatMenu] build 2026-09-27 19:16 sha 2abc02ac bytes 35744'):format('2026-09-27 19:16','2abc02ac',35744))
+print("[CheatMenu] ===== 加载开始 · v1.3.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -728,11 +728,8 @@ end
 return nil
 end
 local FlyConn = nil
-local FlyParts = {}
 local function FlyDisable()
 if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-for _, obj in ipairs(FlyParts) do pcall(function() obj:Destroy() end) end
-FlyParts = {}
 local _, hum = GC()
 if hum then hum.PlatformStand = false end
 end
@@ -741,18 +738,7 @@ local _, hum, root = GC()
 if not (hum and root) then return end
 FlyDisable()
 hum.PlatformStand = true
-local bv = Instance.new("BodyVelocity")
-bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-bv.Velocity = Vector3.zero
-bv.Parent = root
-local bg = Instance.new("BodyGyro")
-bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-bg.CFrame = root.CFrame
-bg.D = 100
-bg.P = 10000
-bg.Parent = root
-FlyParts = { bv, bg }
-FlyConn = RS.RenderStepped:Connect(function()
+FlyConn = RS.RenderStepped:Connect(function(dt)
 if not T.Fly then FlyDisable() return end
 local _, h, r = GC()
 if not (h and r) then return end
@@ -764,8 +750,12 @@ if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-local sp = C.FlySpeed or 50
-bv.Velocity = (dir.Magnitude > 0) and (dir.Unit * sp) or Vector3.zero
+if dir.Magnitude > 0 then
+local sp = (C.FlySpeed or 50) * math.min(dt, 0.1)
+r.CFrame = r.CFrame + (dir.Unit * sp)
+end
+r.AssemblyLinearVelocity = Vector3.zero
+r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
 local function SpeedEnable()
@@ -785,13 +775,27 @@ local _, hum = GC()
 if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 end
+local NoClipConn = nil
 local function NoClipEnable()
-local _, _, root = GC()
-if root then root.CanCollide = false end
+if NoClipConn then return end
+local function noclip()
+local ch = LP.Character
+if not ch then return end
+for _, part in ipairs(ch:GetDescendants()) do
+if part:IsA("BasePart") then part.CanCollide = false end
+end
+end
+noclip()
+NoClipConn = RS.Stepped:Connect(noclip)
 end
 local function NoClipDisable()
-local _, _, root = GC()
-if root then root.CanCollide = true end
+if NoClipConn then NoClipConn:Disconnect() NoClipConn = nil end
+local ch = LP.Character
+if ch then
+for _, part in ipairs(ch:GetDescendants()) do
+if part:IsA("BasePart") then part.CanCollide = true end
+end
+end
 end
 local savedLight = nil
 local function FullBrightEnable()
@@ -856,7 +860,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v1.3.0",
+SubTitle = "v1.3.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 540),
 Acrylic = false,
@@ -912,11 +916,11 @@ end })
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
-Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 200, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
-Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
+Tabs.Move:AddSlider("SpeedVal", { Title = "移动速度", Min = 16, Max = 500, Default = 30, Rounding = 0, Callback = function(v) C.Speed = v if T.Speed then SpeedEnable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
-Tabs.Move:AddToggle("NoClip", { Title = "无碰撞", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
+Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
 Tabs.World:AddSection("世界")
 Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
 Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
@@ -989,5 +993,5 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.3.0", Duration = 5 })
-print("[CheatMenu] ✅ 加载完成 v1.3.0")
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v1.3.1", Duration = 5 })
+print("[CheatMenu] ✅ 加载完成 v1.3.1")
