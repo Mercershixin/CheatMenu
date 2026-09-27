@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-27 22:09 sha 32eafeeb bytes 75627'):format('2026-09-27 22:09','32eafeeb',75627))
-print("[CheatMenu] ===== 加载开始 · v2.0.11 =====")
+print(('[CheatMenu] build 2026-09-27 22:22 sha 57f98cf6 bytes 36039'):format('2026-09-27 22:22','57f98cf6',36039))
+print("[CheatMenu] ===== 加载开始 · v3.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -264,17 +264,6 @@ local GYM_WEIGHT_NAMES = {
 ["Giant Gold Star Barbell"] = true, ["Emerald Barbell"] = true, ["Planet Barbell"] = true,
 ["Big Jupiter"] = true, ["Black Hole Barbell"] = true,
 }
-local GymThread = nil
-local function liveMachines()
-local r = {}
-local ok, t = pcall(CS.GetTagged, CS, "LiftMachine")
-if ok and type(t) == "table" then
-for _, m in ipairs(t) do
-if m and m.Parent and m:IsDescendantOf(WS) then r[#r + 1] = m end
-end
-end
-return r
-end
 local function equipSquatTool()
 local _, hum = GC()
 if not hum then return end
@@ -304,50 +293,6 @@ end
 end
 end
 return nil
-end
-local function AutoGymEnable()
-if GymThread then return end
-GymThread = task.spawn(function()
-while T.AutoGym do
-local machines = liveMachines()
-local _, _, root = GC()
-if #machines > 0 and root then
-local best, bestDist = nil, math.huge
-for _, m in ipairs(machines) do
-local pos
-if m:IsA("Model") then
-local ok, pivot = pcall(m.GetPivot, m)
-if ok then pos = pivot.Position end
-elseif m:IsA("BasePart") then
-pos = m.Position
-end
-if pos then
-local d = (root.Position - pos).Magnitude
-if d < bestDist then bestDist = d best = m end
-end
-end
-if best then
-local m = math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)
-if m <= 1 then
-local pos
-if best:IsA("Model") then
-local ok, pivot = pcall(best.GetPivot, best)
-if ok then pos = pivot.Position end
-elseif best:IsA("BasePart") then
-pos = best.Position
-end
-if pos then
-root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-root.AssemblyLinearVelocity = Vector3.zero
-end
-else
-equipSquatTool()
-end
-end
-end
-task.wait(1)
-end
-end)
 end
 local TrainThread = nil
 local function AutoTrainEnable()
@@ -563,42 +508,68 @@ if ok then return true end
 end
 return false
 end
+local function sellerDistance()
+local _, _, root = GC()
+local seller = findSeller()
+local prompt = seller and seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+local part
+if prompt and prompt.Parent and prompt.Parent:IsA("BasePart") then
+part = prompt.Parent
+end
+if not part and seller then
+part = seller:FindFirstChild("Hitbox", true) or seller:FindFirstChildWhichIsA("BasePart", true)
+end
+if not root then return math.huge, seller, prompt, part end
+local position = part and part.Position
+if not position then return math.huge, seller, prompt, part end
+return (root.Position - position).Magnitude, seller, prompt, part
+end
 local function triggerSellerPrompt()
 local seller = findSeller()
 if not seller then return false end
 local prompt = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
 if not prompt or not prompt.Enabled then return false end
+local distance = sellerDistance()
+local allowed = tonumber(prompt.MaxActivationDistance) or 10
+if distance > allowed + 1 then return false end
+local triggered = false
 if type(fireproximityprompt) == "function" then
-local ok = pcall(fireproximityprompt, prompt)
-if ok then return true end
+triggered = pcall(function() fireproximityprompt(prompt) end)
 end
-pcall(function() prompt:InputHoldBegin() end)
-task.wait(0.05)
-pcall(function() prompt:InputHoldEnd() end)
-return true
+if not triggered then
+triggered = pcall(function()
+prompt:InputHoldBegin()
+task.wait(math.max(0.03, tonumber(prompt.HoldDuration) or 0) + 0.03)
+prompt:InputHoldEnd()
+end)
 end
-local function moveToSeller()
+return triggered
+end
+local function moveToSeller(forceNear)
 local _, hum, root = GC()
-if not (hum and root) then return end
-local seller = findSeller()
-if not seller then return end
-local target
-local prompt = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
-if prompt and prompt.Parent and prompt.Parent:IsA("BasePart") then
-target = prompt.Parent.Position
+if not root or not hum or root.Anchored then return false end
+local distance, seller, prompt, part = sellerDistance()
+local allowed = 12
+if prompt then
+allowed = math.max(3, math.min(18, (tonumber(prompt.MaxActivationDistance) or 10) - 1))
 end
-if not target then
-local part = seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart
-or seller:FindFirstChildWhichIsA("BasePart", true)
-if part then target = part.Position end
-end
-if not target then return end
+if not forceNear and distance <= allowed then return true end
+if part then
+local target = part.Position
 local flatAway = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
 if flatAway.Magnitude < 0.1 then flatAway = Vector3.new(1, 0, 0) end
-local stand = target + flatAway.Unit * 4
-root.CFrame = CFrame.lookAt(Vector3.new(stand.X, target.Y, stand.Z), Vector3.new(target.X, target.Y, target.Z))
+local standDistance = math.max(2.5, math.min(4, allowed * 0.45))
+local standPosition = target + flatAway.Unit * standDistance
+standPosition = Vector3.new(standPosition.X, root.Position.Y, standPosition.Z)
+pcall(function()
+root.CFrame = CFrame.lookAt(standPosition, Vector3.new(target.X, standPosition.Y, target.Z))
 root.AssemblyLinearVelocity = Vector3.zero
-task.wait(0.2)
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+task.wait(0.10)
+end
+distance = sellerDistance()
+return distance <= math.max(allowed, 18)
 end
 local function findSellAllButton()
 local best, bestScore = nil, -1
@@ -900,319 +871,6 @@ print("[CheatMenu] ✅ 收起货币完成 · 领取 " .. done .. " 个槽位")
 CollectThread = nil
 end)
 end
-local Trans = {}
-local HOST = "http://127.0.0.1:8080"
-local KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
-local MODEL = "hymt2-7b"
-local SYS_PROMPT = [[Translate the following game UI text into Chinese.
-Output ONLY the translation: no explanation, no quotes, no extra words.
-Preserve the original line breaks and number of lines.
-Keep numbers, emoji, URLs and player names unchanged.
-Use natural, colloquial Chinese.
-Translate game terms CONSISTENTLY:
-Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地, Mutation->词缀, Level->等级,
-Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,
-Squat->举铁, Train->训练, Bonus->加成,
-Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,
-Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
-Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
-Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
-Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
-Keep CPS as "CPS".
-Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
-The word Robux is kept as-is too.
-If the text is already Chinese or contains CJK, output it unchanged.]]
-local TransCache = {}
-local TransCacheFile = "CheatMenu_TransCache.json"
-local function loadTransCache()
-pcall(function()
-if not (readfile and isfile and isfile(TransCacheFile)) then return end
-local raw = readfile(TransCacheFile)
-local d = HS:JSONDecode(raw)
-if type(d) == "table" then
-local n = 0
-for k, v in pairs(d) do TransCache[k] = v n = n + 1 end
-print("[CheatMenu] 已加载翻译缓存 " .. n .. " 条")
-end
-end)
-end
-local function saveTransCache()
-pcall(function()
-if not writefile then return end
-writefile(TransCacheFile, HS:JSONEncode(TransCache))
-end)
-end
-local TransLangs = {
-zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
-th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
-}
-local function promptFor(code)
-if not code or code == "zh" then return SYS_PROMPT end
-local lang = TransLangs[code] or "Chinese"
-return "Translate the following game UI text into " .. lang
-.. ". Output ONLY the translation: no explanation, no quotes, no extra words."
-.. " Keep numbers, emoji, URLs and player names unchanged."
-end
-local requestFn = (type(syn) == "table" and syn.request) or (type(http) == "table" and http.request) or http_request or request
-local function TransRequest(text)
-if not requestFn then
-print("[CheatMenu] ❌ 翻译失败: 执行器没有 request 函数")
-return nil
-end
-local body = HS:JSONEncode({
-model = MODEL,
-messages = {
-{ role = "system", content = promptFor(C.TransLang) },
-{ role = "user", content = text },
-},
-temperature = 0.1,
-top_p = 0.6,
-max_tokens = 128,
-stream = false,
-})
-local ok, res = pcall(function()
-return requestFn({
-Url = HOST .. "/v1/chat/completions",
-Method = "POST",
-Headers = {
-["Content-Type"] = "application/json",
-["Authorization"] = "Bearer " .. KEY,
-},
-Body = body,
-})
-end)
-if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
-print("[CheatMenu] ❌ 翻译请求失败: " .. tostring(res and res.StatusCode))
-return nil
-end
-local ok2, d = pcall(HS.JSONDecode, HS, res.Body)
-if not ok2 or not d or not d.choices or not d.choices[1] then return nil end
-local out = d.choices[1].message and d.choices[1].message.content
-return out
-end
-local function shouldTranslate(s)
-if type(s) ~= "string" or s == "" then return false end
-local hasCJK = string.find(s, "[\228-\233]") ~= nil
-local hasAlpha = string.find(s, "[%a]") ~= nil
-if not hasCJK and not hasAlpha then return false end
-if s:find("$", 1, true) or s:find("€", 1, true) or s:find("¥", 1, true) then return false end
-local lang = C.TransLang or "zh"
-if lang == "zh" and hasCJK then return false end
-return true
-end
-function Trans.Translate(text, force)
-if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
-text = text:gsub("^%s+", ""):gsub("%s+$", "")
-if text == "" then return nil end
-if not force and not shouldTranslate(text) then return nil end
-if TransCache[text] then return TransCache[text] end
-local r = TransRequest(text)
-if r and r ~= "" and r ~= text then
-r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
-TransCache[text] = r
-saveTransCache()
-return r
-end
-return nil
-end
-local function sendChat(text)
-if not text or text == "" then return false end
-local tcs = game:GetService("TextChatService")
-if tcs and tcs.TextChannels then
-local channel = tcs.TextChannels:FindFirstChild("RBXGeneral")
-if channel and channel.SendAsync then
-pcall(function() channel:SendAsync(text) end)
-return true
-end
-end
-local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
-if chatEvents then
-local say = chatEvents:FindFirstChild("SayMessageRequest")
-if say then
-pcall(function() say:FireServer(text, "All") end)
-return true
-end
-end
-return false
-end
-local function translateGuiEl(obj)
-if not obj then return end
-if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-local txt = obj.Text
-if txt and shouldTranslate(txt) then
-local tr = Trans.Translate(txt, true)
-if tr and tr ~= txt then obj.Text = tr end
-end
-end
-end
-local function scanAndTranslate()
-local roots = { PG, CoreGui }
-if gethui then table.insert(roots, gethui()) end
-for _, root in ipairs(roots) do
-if root then
-for _, obj in ipairs(root:GetDescendants()) do
-translateGuiEl(obj)
-end
-end
-end
-for _, obj in ipairs(workspace:GetDescendants()) do
-if obj:IsA("ProximityPrompt") then
-if obj.ActionText and obj.ActionText ~= "" then
-local tr = Trans.Translate(obj.ActionText, true)
-if tr then obj.ActionText = tr end
-end
-elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-for _, child in ipairs(obj:GetDescendants()) do
-translateGuiEl(child)
-end
-end
-end
-end
-local TransLoop = nil
-local function startTranslateLoop()
-if TransLoop then return end
-scanAndTranslate()
-TransLoop = task.spawn(function()
-while T.Translate do
-task.wait(2)
-scanAndTranslate()
-end
-TransLoop = nil
-end)
-end
-local FlyConn = nil
-local function FlyDisable()
-if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-local _, hum = GC()
-if hum then hum.PlatformStand = false end
-end
-local function FlyEnable()
-local _, hum, root = GC()
-if not (hum and root) then return end
-FlyDisable()
-hum.PlatformStand = true
-FlyConn = RS.RenderStepped:Connect(function(dt)
-if not T.Fly then FlyDisable() return end
-local _, h, r = GC()
-if not (h and r) then return end
-local cam = workspace.CurrentCamera
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-if dir.Magnitude > 0 then
-local sp = (C.FlySpeed or 50) * math.min(dt, 0.1)
-r.CFrame = r.CFrame + (dir.Unit * sp)
-end
-r.AssemblyLinearVelocity = Vector3.zero
-r.AssemblyAngularVelocity = Vector3.zero
-end)
-end
-local SpeedConn = nil
-local SpeedConn2 = nil
-local baseWalk = nil
-local function SpeedEnable()
-if SpeedConn then return end
-local function apply()
-if not T.Speed then return end
-local _, hum = GC()
-if hum then
-if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
-hum.WalkSpeed = baseWalk * (C.SpeedMul or 2)
-end
-end
-apply()
-SpeedConn = RS.Stepped:Connect(apply)
-SpeedConn2 = RS.RenderStepped:Connect(apply)
-print("[CheatMenu] 加速已开 · 基准=" .. tostring(baseWalk) .. " × " .. tostring(C.SpeedMul or 2))
-end
-local function SpeedDisable()
-if SpeedConn then SpeedConn:Disconnect() SpeedConn = nil end
-if SpeedConn2 then SpeedConn2:Disconnect() SpeedConn2 = nil end
-local _, hum = GC()
-if hum and baseWalk then hum.WalkSpeed = baseWalk end
-baseWalk = nil
-end
-local JumpConn = nil
-local function InfiniteJumpEnable()
-if JumpConn then return end
-JumpConn = UIS.JumpRequest:Connect(function()
-if not T.InfiniteJump then return end
-local _, hum = GC()
-if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-end)
-end
-local NoClipConn = nil
-local function NoClipEnable()
-if NoClipConn then return end
-local function noclip()
-local ch = LP.Character
-if not ch then return end
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.CanCollide = false end
-end
-end
-noclip()
-NoClipConn = RS.Stepped:Connect(noclip)
-end
-local function NoClipDisable()
-if NoClipConn then NoClipConn:Disconnect() NoClipConn = nil end
-local ch = LP.Character
-if ch then
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.CanCollide = true end
-end
-end
-end
-local savedLight = nil
-local function FullBrightEnable()
-local L = game:GetService("Lighting")
-if not savedLight then
-savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd,
-GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient }
-end
-L.Brightness = 2
-L.ClockTime = 14
-L.FogEnd = 100000
-L.GlobalShadows = false
-L.Ambient = Color3.fromRGB(255, 255, 255)
-L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-end
-local function FullBrightDisable()
-local L = game:GetService("Lighting")
-if not savedLight then return end
-L.Brightness = savedLight.Brightness
-L.ClockTime = savedLight.ClockTime
-L.FogEnd = savedLight.FogEnd
-L.GlobalShadows = savedLight.GlobalShadows
-L.Ambient = savedLight.Ambient
-L.OutdoorAmbient = savedLight.OutdoorAmbient
-end
-local savedFog = nil
-local function NoFogEnable()
-local L = game:GetService("Lighting")
-if not savedFog then savedFog = { FogEnd = L.FogEnd, FogStart = L.FogStart } end
-L.FogEnd = 100000
-L.FogStart = 100000
-end
-local function NoFogDisable()
-local L = game:GetService("Lighting")
-if not savedFog then return end
-L.FogEnd = savedFog.FogEnd
-L.FogStart = savedFog.FogStart
-end
-local function TeleportToPlayer(target)
-local _, _, root = GC()
-if not root or not target then return end
-local tchar = target.Character
-if not tchar then return end
-local troot = tchar:FindFirstChild("HumanoidRootPart")
-if not troot then return end
-root.CFrame = troot.CFrame + Vector3.new(0, 3, 0)
-end
 local function scanRemotes()
 local events, functions = {}, {}
 for _, obj in ipairs(RStorage:GetDescendants()) do
@@ -1249,184 +907,18 @@ if unit == "M" then return base * 1000000 end
 end
 return nil
 end
-local AimConn = nil
-local function AimDisable()
-if AimConn then AimConn:Disconnect() AimConn = nil end
-end
-local function getAimTarget()
-local cam = workspace.CurrentCamera
-local fovRadius = C.AimFOV or 200
-local best, bestDist = nil, math.huge
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local skip = (not (hrp and hrp.Parent and hum and hum.Health > 0))
-if T.AimTeamCheck and pl.Team == LP.Team then skip = true end
-if not skip and T.AimWallCheck then
-local origin = cam.CFrame.Position
-local dir = hrp.Position - origin
-local params = RaycastParams.new()
-params.FilterDescendantsInstances = { LP.Character, pl.Character }
-params.FilterType = Enum.RaycastFilterType.Exclude
-local hit = workspace:Raycast(origin, dir, params)
-if hit then skip = true end
-end
-if not skip then
-local screenPos, onScreen = cam:WorldToScreenPoint(hrp.Position)
-if onScreen then
-local dist = (Vector2.new(screenPos.X, screenPos.Y) - cam.ViewportSize / 2).Magnitude
-if dist < bestDist and dist < fovRadius then
-bestDist = dist
-best = hrp
-end
-end
-end
-end
-end
-return best
-end
-local function AimEnable()
-AimDisable()
-AimConn = RS.RenderStepped:Connect(function()
-if not T.Aim then return end
-local target = getAimTarget()
-if not target then return end
-local cam = workspace.CurrentCamera
-local smooth = math.max(1, C.AimSmooth or 5)
-cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, target.Position), 1 / smooth)
-end)
-end
-local function cleanupHitbox()
-pcall(function()
-for _, o in ipairs(workspace:GetDescendants()) do
-if o.Name == "CheatHitbox" then o:Destroy() end
-end
-end)
-end
-cleanupHitbox()
-task.spawn(function()
-task.wait(3) cleanupHitbox()
-task.wait(8) cleanupHitbox()
-end)
-LP.CharacterAdded:Connect(function(ch)
-task.wait(0.5)
-pcall(function()
-for _, o in ipairs(ch:GetDescendants()) do
-if o.Name == "CheatHitbox" then o:Destroy() end
-end
-end)
-end)
-local GodConn = nil
-local function GodEnable()
-if GodConn then return end
-local function apply()
-local _, hum = GC()
-if hum then
-hum.MaxHealth = math.huge
-hum.Health = math.huge
-end
-end
-apply()
-GodConn = RS.Stepped:Connect(apply)
-end
-local function GodDisable()
-if GodConn then GodConn:Disconnect() GodConn = nil end
-end
-local function InvisibleEnable()
-local ch = LP.Character
-if not ch then return end
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.Transparency = 1 end
-end
-end
-local function InvisibleDisable()
-local ch = LP.Character
-if not ch then return end
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.Transparency = 0 end
-end
-end
-local ESPMap = {}
-local function espAdd(pl)
-if pl == LP or not T.ESP then return end
-local ch = pl.Character
-if not ch then return end
-local hl = Instance.new("Highlight")
-hl.Name = "CheatESP"
-hl.FillColor = Color3.fromRGB(255, 90, 90)
-hl.FillTransparency = 0.6
-hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-hl.OutlineTransparency = 0
-hl.Parent = ch
-ESPMap[pl] = hl
-end
-local function ESPEnable()
-for _, pl in ipairs(Players:GetPlayers()) do espAdd(pl) end
-Players.PlayerAdded:Connect(function(pl)
-pl.CharacterAdded:Connect(function() espAdd(pl) end)
-end)
-end
-local function ESPDisable()
-for _, hl in pairs(ESPMap) do pcall(function() hl:Destroy() end) end
-ESPMap = {}
-end
-local HideConn = nil
-local HideBaseY = nil
-local function HideEnable()
-if HideConn then return end
-local _, _, root = GC()
-if root then HideBaseY = root.Position.Y end
-HideConn = RS.RenderStepped:Connect(function()
-if not T.Hide then return end
-local _, _, r = GC()
-if not r then return end
-local depth = math.min(C.HideDepth or 5, 10)
-r.CFrame = CFrame.new(r.Position.X, HideBaseY - depth, r.Position.Z)
-local cam = workspace.CurrentCamera
-if cam then
-local cp = cam.CFrame.Position
-if cp.Y < HideBaseY - 0.5 then
-cam.CFrame = CFrame.new(cp.X, HideBaseY, cp.Z) * (cam.CFrame - cam.CFrame.Position)
-end
-end
-end)
-end
-local function HideDisable()
-if HideConn then HideConn:Disconnect() HideConn = nil end
-pcall(function()
-local _, _, r = GC()
-if r and HideBaseY then
-r.CFrame = CFrame.new(r.Position.X, HideBaseY + 2, r.Position.Z)
-end
-end)
-end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { FlyDisable, AimDisable, GodDisable, NoClipDisable, HideDisable,
-ESPDisable, InvisibleDisable, KickGuardDisable, AntiFlingDisable, FullBrightDisable, NoFogDisable, SpeedDisable }
+local disables = { KickGuardDisable, AntiFlingDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
-pcall(function() if JumpConn then JumpConn:Disconnect() end end)
 pcall(function() if getgenv and getgenv().CM_Window then getgenv().CM_Window:Destroy() getgenv().CM_Window = nil end end)
 pcall(function() if getgenv and getgenv().CM_ToggleSG then getgenv().CM_ToggleSG:Destroy() getgenv().CM_ToggleSG = nil end end)
 print("[CheatMenu] ✅ 已干净卸载")
 end
 local function RestoreFeatures()
 if T.KickProtect or T.AntiAFK then AntiAFKEnable() KickGuardEnable() KickRejoinEnable() end
-if T.Fly then FlyEnable() end
-if T.Speed then SpeedEnable() end
-if T.InfiniteJump then InfiniteJumpEnable() end
-if T.NoClip then NoClipEnable() end
-if T.Hide then HideEnable() end
-if T.FullBright then FullBrightEnable() end
-if T.NoFog then NoFogEnable() end
-if T.Aim then AimEnable() end
-if T.God then GodEnable() end
-if T.Invisible then InvisibleEnable() end
-if T.ESP then ESPEnable() end
 if T.AutoBonus then AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
@@ -1445,435 +937,24 @@ end)
 if not ok then warn("[CheatMenu] 热更新失败: " .. tostring(err)) end
 end)
 end
-local SpinConn = nil
-local function SpinEnable()
-if SpinConn then return end
-SpinConn = RS.RenderStepped:Connect(function()
-if not T.Spin then return end
-local _, _, r = GC()
-if r then r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(C.SpinSpeed or 10), 0) end
-end)
-end
-local function SpinDisable()
-if SpinConn then SpinConn:Disconnect() SpinConn = nil end
-end
-local savedNV = nil
-local function NightVisionEnable()
-local L = game:GetService("Lighting")
-if not savedNV then savedNV = { Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient } end
-L.Brightness = 1.5
-L.ClockTime = 0
-L.Ambient = Color3.fromRGB(90, 255, 90)
-end
-local function NightVisionDisable()
-local L = game:GetService("Lighting")
-if not savedNV then return end
-L.Brightness = savedNV.Brightness
-L.ClockTime = savedNV.ClockTime
-L.Ambient = savedNV.Ambient
-end
-local XrayHls = {}
-local function XrayEnable()
-local ch = LP.Character
-for _, obj in ipairs(workspace:GetDescendants()) do
-if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
-local hl = Instance.new("Highlight")
-hl.FillTransparency = 1
-hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-hl.OutlineTransparency = 0.4
-hl.Parent = obj
-XrayHls[#XrayHls + 1] = hl
-end
-end
-end
-local function XrayDisable()
-for _, hl in ipairs(XrayHls) do pcall(function() hl:Destroy() end) end
-XrayHls = {}
-end
-local function MuteEnable()
-for _, s in ipairs(workspace:GetDescendants()) do
-if s:IsA("Sound") then s.Volume = 0 end
-end
-end
-local SelfGlowHl = nil
-local function SelfGlowEnable()
-local ch = LP.Character
-if not ch then return end
-if SelfGlowHl then SelfGlowHl:Destroy() end
-SelfGlowHl = Instance.new("Highlight")
-SelfGlowHl.FillColor = Color3.fromRGB(255, 200, 80)
-SelfGlowHl.FillTransparency = 0.3
-SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
-SelfGlowHl.Parent = ch
-end
-local function SelfGlowDisable()
-if SelfGlowHl then SelfGlowHl:Destroy() SelfGlowHl = nil end
-end
-local function FOVEnable()
-workspace.CurrentCamera.FieldOfView = C.FOV or 100
-end
-local function FOVDisable()
-workspace.CurrentCamera.FieldOfView = 70
-end
-local function ZoomEnable()
-LP.CameraMaxZoomDistance = C.Zoom or 400
-LP.CameraMinZoomDistance = 0.5
-end
-local function ZoomDisable()
-LP.CameraMaxZoomDistance = 128
-LP.CameraMinZoomDistance = 0.5
-end
-local CircleConn = nil
-local function getTPTargetPlayer()
-local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
-if not name then return nil end
-return Players:FindFirstChild(name)
-end
-local function CircleEnable()
-if CircleConn then return end
-local angle = 0
-CircleConn = RS.RenderStepped:Connect(function()
-if not T.Circle then return end
-local target = getTPTargetPlayer()
-local _, _, r = GC()
-if not (target and target.Character and r) then return end
-local tr = target.Character:FindFirstChild("HumanoidRootPart")
-if not tr then return end
-angle = angle + math.rad(C.CircleSpeed or 5)
-local rad = C.CircleRadius or 10
-r.CFrame = CFrame.new(tr.Position + Vector3.new(math.cos(angle) * rad, 3, math.sin(angle) * rad))
-end)
-end
-local function CircleDisable()
-if CircleConn then CircleConn:Disconnect() CircleConn = nil end
-end
-local function SpectateEnable()
-local target = getTPTargetPlayer()
-if target and target.Character then
-local hum = target.Character:FindFirstChildOfClass("Humanoid")
-if hum then workspace.CurrentCamera.CameraSubject = hum end
-end
-end
-local function SpectateDisable()
-local ch = LP.Character
-if ch then
-local hum = ch:FindFirstChildOfClass("Humanoid")
-if hum then workspace.CurrentCamera.CameraSubject = hum end
-end
-end
-local ClickerConn = nil
-local function ClickerEnable()
-if ClickerConn then return end
-ClickerConn = RS.Stepped:Connect(function()
-if not T.Clicker then return end
-if type(mouse1click) == "function" then
-mouse1click()
-elseif type(mouse1press) == "function" then
-mouse1press()
-task.wait(0.01)
-mouse1release()
-end
-end)
-end
-local function ClickerDisable()
-if ClickerConn then ClickerConn:Disconnect() ClickerConn = nil end
-end
-local function ServerHop()
-local ts = game:GetService("TeleportService")
-pcall(function() ts:Teleport(game.PlaceId, LP) end)
-end
-local SilentAimConn = nil
-local function SilentAimEnable()
-if SilentAimConn then return end
-SilentAimConn = RS.RenderStepped:Connect(function()
-if not T.SilentAim then return end
-local target = getAimTarget()
-if not target then return end
-workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, target.Position)
-end)
-end
-local function SilentAimDisable()
-if SilentAimConn then SilentAimConn:Disconnect() SilentAimConn = nil end
-end
-local SingleAimConn = nil
-local function SingleAimEnable()
-if SingleAimConn then return end
-SingleAimConn = RS.RenderStepped:Connect(function()
-if not T.SingleAim then return end
-local target = getTPTargetPlayer()
-if not (target and target.Character) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-if hrp then workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, hrp.Position) end
-end)
-end
-local function SingleAimDisable()
-if SingleAimConn then SingleAimConn:Disconnect() SingleAimConn = nil end
-end
-local FaceLockConn = nil
-local function FaceLockEnable()
-if FaceLockConn then return end
-FaceLockConn = RS.RenderStepped:Connect(function()
-if not T.FaceLock then return end
-local target = getTPTargetPlayer()
-local _, _, r = GC()
-if not (target and target.Character and r) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-if hrp then r.CFrame = CFrame.lookAt(r.Position, Vector3.new(hrp.Position.X, r.Position.Y, hrp.Position.Z)) end
-end)
-end
-local function FaceLockDisable()
-if FaceLockConn then FaceLockConn:Disconnect() FaceLockConn = nil end
-end
-local AirWalkConn = nil
-local function AirWalkEnable()
-if AirWalkConn then return end
-AirWalkConn = RS.RenderStepped:Connect(function(dt)
-if not T.AirWalk then return end
-local _, hum, r = GC()
-if not (hum and r) then return end
-if hum.FloorMaterial ~= Enum.Material.Air then return end
-local cam = workspace.CurrentCamera
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-if dir.Magnitude > 0 then
-r.CFrame = r.CFrame + dir.Unit * (C.AirWalkSpeed or 30) * math.min(dt, 0.1)
-end
-end)
-end
-local function AirWalkDisable()
-if AirWalkConn then AirWalkConn:Disconnect() AirWalkConn = nil end
-end
-local function FlingTarget()
-local target = getTPTargetPlayer()
-if not (target and target.Character) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-local _, _, r = GC()
-if not (hrp and r) then return end
-for i = 1, 12 do
-r.CFrame = hrp.CFrame * CFrame.new(0, 0, -1)
-r.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
-task.wait()
-end
-end
-local function TeleportOnDeathEnable()
-if not T.TeleportOnDeath then return end
-local target = getTPTargetPlayer()
-LP.CharacterAdded:Connect(function()
-task.wait(0.5)
-if T.TeleportOnDeath then TeleportToPlayer(target) end
-end)
-end
-local SavedPos = nil
-local function savePosition()
-local _, _, r = GC()
-if r then SavedPos = r.CFrame print("[CheatMenu] 已保存当前位置") end
-end
-local function teleportToSaved()
-local _, _, r = GC()
-if r and SavedPos then r.CFrame = SavedPos end
-end
-local AutoInteractConn = nil
-local function AutoInteractEnable()
-if AutoInteractConn then return end
-AutoInteractConn = RS.Stepped:Connect(function()
-if not T.AutoInteract then return end
-local _, _, r = GC()
-if not r then return end
-for _, p in ipairs(workspace:GetDescendants()) do
-if p:IsA("ProximityPrompt") and p.Enabled then
-local pp = p.Parent
-local pos = pp and (pp:IsA("BasePart") and pp.Position or (pp:IsA("Model") and (function() local ok,pv = pcall(pp.GetPivot,pp) return ok and pv.Position or nil end)()) or nil)
-if pos and (r.Position - pos).Magnitude <= (p.MaxActivationDistance or 10) then
-if type(fireproximityprompt) == "function" then
-pcall(fireproximityprompt, p)
-else
-pcall(function() p:InputHoldBegin() task.wait(0.05) p:InputHoldEnd() end)
-end
-end
-end
-end
-task.wait(1)
-end)
-end
-local function AutoInteractDisable()
-if AutoInteractConn then AutoInteractConn:Disconnect() AutoInteractConn = nil end
-end
-local function InstantPromptEnable()
-for _, p in ipairs(workspace:GetDescendants()) do
-if p:IsA("ProximityPrompt") then p.HoldDuration = 0 end
-end
-end
-local function BadgeBypassEnable()
-if not hookfunction then return end
-pcall(function()
-local bs = game:GetService("BadgeService")
-hookfunction(bs.UserHasBadgeAsync, function() return true end)
-hookfunction(bs.UserOwnsBadgeAsync, function() return true end)
-pcall(function() hookfunction(bs.GetBadgeInfoAsync, function() return { IsOwned = true } end) end)
-end)
-pcall(function()
-local gs = game:GetService("GroupService")
-hookfunction(gs.IsInGroup, function() return true end)
-pcall(function() hookfunction(gs.GetGroupsAsync, function() return {} end) end)
-end)
-print("[CheatMenu] 徽章/群组本地绕过已开启(仅对客户端检查有效)")
-end
-local function ChatBypassEnable()
-if not hookfunction then
-print("[CheatMenu] 执行器不支持 hookfunction，聊天绕过不可用")
-return
-end
-local tcs = game:GetService("TextChatService")
-if not (tcs and tcs.TextChannels) then
-print("[CheatMenu] 未找到 TextChatService，聊天绕过不可用")
-return
-end
-local hooked = false
-for _, channel in ipairs(tcs.TextChannels:GetChildren()) do
-if channel:IsA("TextChannel") and channel.SendAsync then
-local oldSend = channel.SendAsync
-pcall(function()
-hookfunction(oldSend, function(self, text, ...)
-if T.ChatBypass and type(text) == "string" then
-text = text:gsub("(.)", "%1\226\128\139")
-end
-return oldSend(self, text, ...)
-end)
-end)
-hooked = true
-end
-end
-if hooked then
-print("[CheatMenu] 自动聊天绕过已开启(直接在正常聊天框发)")
-else
-print("[CheatMenu] 未找到 TextChannel，聊天绕过不可用")
-end
-end
-local BulletHls = {}
-local BulletConn = nil
-local function BulletTracerEnable()
-if BulletConn then return end
-local function tag(part)
-if not (part:IsA("BasePart") and T.BulletTracer) then return end
-local n = part.Name:lower()
-if n:match("bullet") or n:match("projectile") or n:match("shot") or n:match("rocket") or n:match("bolt") then
-local hl = Instance.new("Highlight")
-hl.FillColor = Color3.fromRGB(255, 255, 0)
-hl.FillTransparency = 0.5
-hl.OutlineColor = Color3.fromRGB(255, 120, 0)
-hl.OutlineTransparency = 0
-hl.Parent = part
-BulletHls[#BulletHls + 1] = hl
-end
-end
-BulletConn = workspace.DescendantAdded:Connect(tag)
-for _, part in ipairs(workspace:GetDescendants()) do tag(part) end
-print("[CheatMenu] 子弹追踪已开启")
-end
-local function BulletTracerDisable()
-if BulletConn then BulletConn:Disconnect() BulletConn = nil end
-for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
-BulletHls = {}
-end
-local function testRemote(name, argsStr)
-name = tostring(name or ""):gsub("%s+", "")
-if name == "" then return end
-local args = {}
-if argsStr and argsStr ~= "" then
-for part in string.gmatch(tostring(argsStr), "[^,]+") do
-part = part:gsub("^%s+", ""):gsub("%s+$", "")
-local n = tonumber(part)
-args[#args + 1] = n or part
-end
-end
-local re = REvent(name)
-if re then
-local ok = pcall(function() re:FireServer(unpack(args)) end)
-print("[测试] FireServer " .. name .. " 参数数=" .. #args .. (ok and " (已发)" or " (失败)"))
-return
-end
-local rf = RFunction(name)
-if rf then
-local ok, res = pcall(function() return rf:InvokeServer(unpack(args)) end)
-print("[测试] InvokeServer " .. name .. " 返回=" .. tostring(res))
-return
-end
-print("[测试] ❌ 找不到 remote: " .. name)
-end
-local function scanAndTest()
-scanRemotes()
-local name = Fluent.Options.TestRemoteName and Fluent.Options.TestRemoteName.Value
-if name and name ~= "" then
-local args = Fluent.Options.TestRemoteArgs and Fluent.Options.TestRemoteArgs.Value
-testRemote(name, args)
-else
-Fluent:Notify({ Title = "扫描", Content = "已列全部远程事件到控制台(F9)", Duration = 4 })
-end
-end
-local AlertNames = { "CheatWarningEvent", "ShowSecretGuard", "AdminAbuseRequest", "AdminAbuseBossSync", "ToggleCheatAlert" }
-local function AlertBlockEnable()
-for _, name in ipairs(AlertNames) do
-OnRemote(name, function(...)
-print("[CheatMenu] ⚠️ 触发反作弊告警: " .. name)
-task.spawn(function()
-task.wait(0.2)
-pcall(function()
-for _, root in ipairs({ PG, gethui and gethui() or game:GetService("CoreGui") }) do
-if root then
-for _, gui in ipairs(root:GetDescendants()) do
-if gui:IsA("ScreenGui") or gui:IsA("Frame") then
-local n = gui.Name:lower()
-if n:match("warn") or n:match("cheat") or n:match("guard") or n:match("alert") then
-gui:Destroy()
-end
-end
-end
-end
-end
-end)
-end)
-end)
-end
-print("[CheatMenu] 反作弊告警拦截已开启")
-end
-local function diagnoseCharacter()
-local ch = LP.Character
-if not ch then print("[诊断] 无角色") return end
-print("[诊断] === 角色部件列表 ===")
-for _, o in ipairs(ch:GetDescendants()) do
-if o:IsA("BasePart") then
-print(("[诊断] %s | 透明=%.2f | 锚定=%s | 大小=%s"):format(
-o.Name, o.Transparency, tostring(o.Anchored), tostring(o.Size)))
-end
-end
-end
-loadTransCache()
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v2.0.11",
+SubTitle = "v3.0.0",
 TabWidth = 100,
-Size = UDim2.fromOffset(480, 540),
+Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
 Theme = "Dark",
 MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
 local Tabs = {
-Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
-Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
-World   = Window:AddTab({ Title = "视觉", Icon = "globe" }),
-TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
-Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
-Tabs.AFK:AddSection("防踢")
-Tabs.AFK:AddToggle("KickProtect", { Title = "防踢（挂机防踢 + 本地拦截 + 前兆抢传）", Default = true, Callback = function(v)
+Tabs.AFK:AddSection("挂机防踢")
+Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v
 T.AntiAFK = v
 T.KickGuard = v
@@ -1886,115 +967,20 @@ else
 KickGuardDisable()
 end
 end })
-Tabs.AFK:AddSection("训练")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "自动训练", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取训练加成", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
+Tabs.AFK:AddSection("踢击训练")
+Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
+Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
-Tabs.AFK:AddSection("健身房")
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
 Tabs.AFK:AddSection("基地操作")
-Tabs.AFK:AddToggle("AutoSell", { Title = "自动售卖", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
+Tabs.AFK:AddToggle("AutoSell", { Title = "卖 CPS 脑红", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
 Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数字)", Default = "100K", Placeholder = "例如 1M = 100万", Callback = function(v)
 local n = parseAmount(v)
 if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
-Tabs.AFK:AddButton({ Title = "一键收起货币", Callback = function() collectAllCash() end })
-Tabs.Trans:AddSection("翻译")
-Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "中文", "英文", "日文", "韩文", "泰文", "俄文", "阿拉伯文", "印尼语" }, Default = "中文", Callback = function(v)
-local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"] = "ko", ["泰文"] = "th", ["俄文"] = "ru", ["阿拉伯文"] = "ar", ["印尼语"] = "id" }
-C.TransLang = map[v] or "zh"
-end })
-Tabs.Trans:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
-Tabs.Trans:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
-Tabs.Trans:AddButton({ Title = "翻译文本", Callback = function()
-local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
-if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
-local r = Trans.Translate(txt, true)
-if r then
-Fluent:Notify({ Title = "翻译结果", Content = r, Duration = 6 })
-else
-Fluent:Notify({ Title = "翻译", Content = "翻译失败(检查本地翻译服务是否开启)", Duration = 4 })
-end
-end })
-Tabs.Trans:AddButton({ Title = "翻译并发送到聊天", Callback = function()
-local txt = Fluent.Options.TransInput and Fluent.Options.TransInput.Value
-if not txt or txt == "" then Fluent:Notify({ Title = "翻译", Content = "请先输入文本", Duration = 3 }) return end
-local r = Trans.Translate(txt, true)
-if r then
-sendChat(r)
-Fluent:Notify({ Title = "已发送", Content = r, Duration = 4 })
-else
-sendChat(txt)
-Fluent:Notify({ Title = "已发送(原文)", Content = txt, Duration = 4 })
-end
-end })
-Tabs.Move:AddSection("移动")
-Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
-Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then FlyEnable() else FlyDisable() end end })
-Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then SpeedEnable() else SpeedDisable() end end })
-Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
-Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then InfiniteJumpEnable() end end })
-Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then NoClipEnable() else NoClipDisable() end end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then HideEnable() else HideDisable() end end })
-Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
-Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then SpinEnable() else SpinDisable() end end })
-Tabs.Move:AddSlider("SpinSpeed", { Title = "自转速度", Min = 1, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.SpinSpeed = v end })
-Tabs.Move:AddToggle("AirWalk", { Title = "踏空(空中移动)", Default = false, Callback = function(v) T.AirWalk = v if v then AirWalkEnable() else AirWalkDisable() end end })
-Tabs.Move:AddSlider("AirWalkSpeed", { Title = "踏空速度", Min = 10, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.AirWalkSpeed = v end })
-Tabs.World:AddSection("世界")
-Tabs.World:AddToggle("FullBright", { Title = "全亮", Default = false, Callback = function(v) T.FullBright = v if v then FullBrightEnable() else FullBrightDisable() end end })
-Tabs.World:AddToggle("NoFog", { Title = "去雾", Default = false, Callback = function(v) T.NoFog = v if v then NoFogEnable() else NoFogDisable() end end })
-Tabs.World:AddToggle("NightVision", { Title = "夜视", Default = false, Callback = function(v) T.NightVision = v if v then NightVisionEnable() else NightVisionDisable() end end })
-Tabs.World:AddToggle("Xray", { Title = "Xray 透视", Default = false, Callback = function(v) T.Xray = v if v then XrayEnable() else XrayDisable() end end })
-Tabs.World:AddToggle("SelfGlow", { Title = "自发光", Default = false, Callback = function(v) T.SelfGlow = v if v then SelfGlowEnable() else SelfGlowDisable() end end })
-Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then MuteEnable() end end })
-Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then FOVEnable() end end })
-Tabs.World:AddToggle("FOVToggle", { Title = "启用自定义 FOV", Default = false, Callback = function(v) T.FOV = v if v then FOVEnable() else FOVDisable() end end })
-Tabs.World:AddSlider("Zoom", { Title = "无限缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then ZoomEnable() end end })
-Tabs.World:AddToggle("ZoomToggle", { Title = "启用无限缩放", Default = false, Callback = function(v) T.Zoom = v if v then ZoomEnable() else ZoomDisable() end end })
-Tabs.World:AddToggle("AutoInteract", { Title = "自动互动", Default = false, Callback = function(v) T.AutoInteract = v if v then AutoInteractEnable() else AutoInteractDisable() end end })
-Tabs.World:AddToggle("InstantPrompt", { Title = "瞬时互动(免长按)", Default = false, Callback = function(v) T.InstantPrompt = v if v then InstantPromptEnable() end end })
-local function getPlayerNames()
-local names = {}
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then names[#names + 1] = pl.Name end
-end
-return names
-end
-Tabs.TP:AddSection("传送")
-local tpNames = getPlayerNames()
-Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = tpNames, Default = tpNames[1] })
-Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
-local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
-if not name then return end
-local target = Players:FindFirstChild(name)
-TeleportToPlayer(target)
-end })
-Tabs.TP:AddToggle("Circle", { Title = "环绕传送", Default = false, Callback = function(v) T.Circle = v if v then CircleEnable() else CircleDisable() end end })
-Tabs.TP:AddSlider("CircleRadius", { Title = "环绕半径", Min = 3, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.CircleRadius = v end })
-Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.CircleSpeed = v end })
-Tabs.TP:AddToggle("Spectate", { Title = "观察目标", Default = false, Callback = function(v) T.Spectate = v if v then SpectateEnable() else SpectateDisable() end end })
-Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then TeleportOnDeathEnable() end end })
-Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() savePosition() end })
-Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() teleportToSaved() end })
-Tabs.Combat:AddSection("战斗")
-Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then AimEnable() else AimDisable() end end })
-Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
-Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
-Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("God", { Title = "无敌", Default = false, Callback = function(v) T.God = v if v then GodEnable() else GodDisable() end end })
-Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
-Tabs.Combat:AddToggle("ESP", { Title = "透视高亮", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
-Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then SilentAimEnable() else SilentAimDisable() end end })
-Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then SingleAimEnable() else SingleAimDisable() end end })
-Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then FaceLockEnable() else FaceLockDisable() end end })
-Tabs.Combat:AddButton({ Title = "甩飞目标", Callback = function() FlingTarget() end })
-Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then BulletTracerEnable() else BulletTracerDisable() end end })
+Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键全开: 防踢+拦远程+防甩飞)", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("ACBypass", { Title = "反作弊(一键: 防踢+拦远程+防甩飞)", Default = false, Callback = function(v)
 T.ACBypass = v
 T.NamecallHook = v
 T.RemoteBlock = v
@@ -2006,15 +992,10 @@ else
 AntiFlingDisable()
 end
 end })
+Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
+Tabs.Setting:AddSection("设置")
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
-Tabs.AC:AddToggle("BadgeBypass", { Title = "徽章绕过", Default = false, Callback = function(v) T.BadgeBypass = v if v then BadgeBypassEnable() end end })
-Tabs.AC:AddToggle("ChatBypass", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then ChatBypassEnable() end end })
-Tabs.AC:AddToggle("AlertBlock", { Title = "反作弊告警拦截", Default = false, Callback = function(v) T.AlertBlock = v if v then AlertBlockEnable() end end })
-Tabs.AC:AddSection("抓包扫描")
-Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
-Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then ClickerEnable() else ClickerDisable() end end })
-Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() ServerHop() end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -2066,6 +1047,6 @@ Window:Minimize()
 end)
 end
 addToggleButton()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v2.0.11", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v3.0.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v2.0.11")
+print("[CheatMenu] ✅ 加载完成 v3.0.0")
