@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:01 sha 7e3edd74 bytes 165656'):format('2026-09-28 17:01','7e3edd74',165656))
+print(('[CheatMenu] build 2026-09-28 17:05 sha 28fbf151 bytes 168847'):format('2026-09-28 17:05','28fbf151',168847))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.4.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3771,6 +3771,66 @@ end
 print("[CheatMenu] 已生成 " .. n .. " 个 " .. tostring(name))
 return n
 end
+function F.ItemMagnetEnable()
+if F._magnetConn then return end
+F._magnetConn = RS.Heartbeat:Connect(function()
+if not T.ItemMagnet then return end
+local _, _, root = GC()
+if not root then return end
+local radius = C.MagnetRadius or 60
+local kw = tostring(C.MagnetKeyword or ""):lower()
+for _, obj in ipairs(workspace:GetChildren()) do
+local isItem = obj:IsA("Tool") or obj:IsA("Model")
+if isItem then
+local match = (kw == "") or obj.Name:lower():find(kw, 1, true)
+if match then
+local primary = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+if primary then
+local pos = obj:IsA("Model") and obj:GetPivot().Position or primary.Position
+if (pos - root.Position).Magnitude <= radius then
+pcall(function()
+if obj:IsA("Model") then
+obj:PivotTo(root.CFrame + Vector3.new(0, 2, 0))
+else
+obj.CFrame = root.CFrame
+end
+end)
+end
+end
+end
+end
+end
+end)
+print("[CheatMenu] 物品吸附已开启")
+end
+function F.ItemMagnetDisable()
+if F._magnetConn then F._magnetConn:Disconnect() F._magnetConn = nil end
+end
+function F.CallRemote(remoteName, argsStr)
+if not remoteName or remoteName == "" then print("[CheatMenu] 请先填 remote 名") return end
+local rem = (REvent and REvent(remoteName)) or (RFunction and RFunction(remoteName))
+if not rem and findRemote then rem = findRemote(remoteName) end
+if not rem then print("[CheatMenu] 未找到 remote: " .. tostring(remoteName)) return end
+local args = {}
+if argsStr and argsStr ~= "" then
+for a in tostring(argsStr):gmatch("[^,]+") do
+local t = a:match("^%s*(.-)%s*$")
+if t ~= "" then args[#args + 1] = tonumber(t) or t end
+end
+end
+local ok, err = pcall(function()
+if rem:IsA("RemoteEvent") then
+rem:FireServer(table.unpack(args))
+elseif rem:IsA("RemoteFunction") then
+return rem:InvokeServer(table.unpack(args))
+end
+end)
+if ok then
+print("[CheatMenu] 已调用 " .. rem.Name .. "(" .. table.concat(args, ",") .. ")")
+else
+print("[CheatMenu] remote 调用失败: " .. tostring(err))
+end
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3911,7 +3971,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3955,7 +4015,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.4.1",
+SubTitle = "v5.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4210,6 +4270,19 @@ else
 Fluent:Notify({ Title = "物品生成", Content = "请先扫描并选择物品", Duration = 3 })
 end
 end })
+Tabs.AFK:AddSection("物品吸附 / Remote 工具箱")
+Tabs.AFK:AddToggle("ItemMagnet", { Title = "物品吸附(拉附近物品过来)", Default = false, Callback = function(v) T.ItemMagnet = v if v then F.ItemMagnetEnable() else F.ItemMagnetDisable() end end })
+Tabs.AFK:AddInput("MagnetKeyword", { Title = "吸附关键词(留空=全部)", Default = "", Placeholder = "如 bond / coal / 脑红", Callback = function(v) C.MagnetKeyword = v end })
+Tabs.AFK:AddSlider("MagnetRadius", { Title = "吸附半径", Min = 10, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.MagnetRadius = v end })
+Tabs.AFK:AddInput("RemoteName", { Title = "Remote 名(配合扫描抓包)", Default = "", Placeholder = "如 GiveItem / Buy", Callback = function(v) C.RemoteName = v end })
+Tabs.AFK:AddInput("RemoteArgs", { Title = "Remote 参数(逗号分隔)", Default = "", Placeholder = "如 1,true,string", Callback = function(v) C.RemoteArgs = v end })
+Tabs.AFK:AddButton({ Title = "调用该 Remote", Callback = function()
+if C.RemoteName and C.RemoteName ~= "" then
+F.CallRemote(C.RemoteName, C.RemoteArgs)
+else
+Fluent:Notify({ Title = "Remote", Content = "请先填 remote 名", Duration = 3 })
+end
+end })
 Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
 Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
 Tabs.AFK:AddToggle("AutoUpgrade", { Title = "自动升级(脑红/踢力)", Default = false, Callback = function(v) T.AutoUpgrade = v if v then GAME.AutoUpgradeEnable() end end })
@@ -4307,9 +4380,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.4.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.5.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.4.1")
+print("[CheatMenu] ✅ 加载完成 v5.5.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
