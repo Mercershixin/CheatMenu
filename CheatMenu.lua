@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 12:19 sha 29273a5b bytes 147212'):format('2026-09-28 12:19','29273a5b',147212))
+print(('[CheatMenu] build 2026-09-28 12:36 sha 6712e5fc bytes 149753'):format('2026-09-28 12:36','6712e5fc',149753))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.1.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.1.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -26,12 +26,6 @@ local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 local root = hum and ch:FindFirstChild("HumanoidRootPart")
 return ch, hum, root
-end
-local function Notify(text, color)
-pcall(function()
-local sg = game:GetService("StarterGui")
-sg:SetCore("SendNotification", { Title = "CheatMenu", Text = tostring(text), Duration = 4 })
-end)
 end
 local RRemoteCache = {}
 local function findRemote(name, cls)
@@ -2544,16 +2538,6 @@ BlockESPDisable = BlockESPDisable,
 end)()
 if getgenv then getgenv().GAME = GAME end
 end
-local function tblHasFunc(t, key)
-if type(t) ~= "table" then return false end
-local ok, v = pcall(rawget, t, key)
-return ok and type(v) == "function"
-end
-local function tblHasVal(t, key)
-if type(t) ~= "table" then return false end
-local ok, v = pcall(rawget, t, key)
-return ok and v ~= nil
-end
 local function scanGameModules()
 local modCount = 0
 print("[模块扫描] ===== 已加载模块 =====")
@@ -2624,15 +2608,6 @@ end)
 print(string.format("[模块扫描] 扫 %d 个函数，反作弊特征 %d 个", funcTotal, acFuncCount))
 end
 return modCount, funcTotal, acFuncCount
-end
-local AllConns = {}
-local function addConn(conn)
-if conn then table.insert(AllConns, conn) end
-return conn
-end
-local function disconnectAllConns()
-for _, c in ipairs(AllConns) do pcall(function() c:Disconnect() end) end
-AllConns = {}
 end
 local AutoTouchConn = nil
 function F.AutoTouchEnable()
@@ -2758,31 +2733,6 @@ if T.WalkSpeedLock and T.Speed then
 hum.WalkSpeed = (C.SpeedMul or 2) * 16
 end
 end)
-end
-local function listConnections()
-local n = 0
-if type(getconnections) == "function" then
-local ok, conns = pcall(getconnections, LP.Idled)
-if ok and type(conns) == "table" then n = #conns end
-end
-print("[CheatMenu] getconnections 可用，Idled 连接数=" .. n)
-end
-local function setQueueOnTeleport(code)
-if type(queue_on_teleport) == "function" then
-pcall(queue_on_teleport, code or "")
-print("[CheatMenu] queue_on_teleport 已设置")
-else
-print("[CheatMenu] 执行器不支持 queue_on_teleport")
-end
-end
-local SavedPositions = {}
-local function savePosSlot(slot)
-local _, _, r = GC()
-if r then SavedPositions[slot] = r.CFrame print("[CheatMenu] 已保存位置 " .. slot) end
-end
-local function tpToSlot(slot)
-local _, _, r = GC()
-if r and SavedPositions[slot] then r.CFrame = SavedPositions[slot] end
 end
 local function copyToClipboard(text)
 if type(setclipboard) == "function" then
@@ -3389,6 +3339,93 @@ task.wait()
 end
 end
 end
+function F.FreecamEnable()
+if F._freecamConn then return end
+local cam = workspace.CurrentCamera
+if not cam then return end
+F._freecamSaved = { Type = cam.CameraType, Subject = cam.CameraSubject }
+local cf = cam.CFrame
+local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z)
+local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
+cam.CameraType = Enum.CameraType.Scriptable
+pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end)
+F._freecamConn = RS.RenderStepped:Connect(function(dt)
+if not T.Freecam then F.FreecamDisable() return end
+local c = workspace.CurrentCamera
+if not c then return end
+local delta = UIS:GetMouseDelta()
+yaw = yaw - delta.X * 0.003
+pitch = math.clamp(pitch - delta.Y * 0.003, -1.45, 1.45)
+local rot = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0)
+local dir = Vector3.zero
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + rot.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - rot.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - rot.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + rot.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.E) then dir = dir + Vector3.new(0, 1, 0) end
+if UIS:IsKeyDown(Enum.KeyCode.Q) then dir = dir - Vector3.new(0, 1, 0) end
+local sp = C.FreecamSpeed or 50
+if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then sp = sp * 3 end
+local pos = c.CFrame.Position
+if dir.Magnitude > 0 then pos = pos + dir.Unit * sp * math.min(dt, 0.1) end
+c.CFrame = CFrame.new(pos) * rot
+end)
+print("[CheatMenu] Freecam 已开启(鼠标转向 / WASD 移动 / QE 升降 / Shift 加速)")
+end
+function F.FreecamDisable()
+if F._freecamConn then F._freecamConn:Disconnect() F._freecamConn = nil end
+pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
+local cam = workspace.CurrentCamera
+if cam and F._freecamSaved then
+cam.CameraType = F._freecamSaved.Type or Enum.CameraType.Custom
+cam.CameraSubject = F._freecamSaved.Subject
+F._freecamSaved = nil
+end
+end
+function F.FreezePlayerEnable()
+if F._freezeConn then return end
+F._freezeConn = RS.Heartbeat:Connect(function()
+if not T.FreezePlayer then return end
+local pl = C.FlingTarget and Players:FindFirstChild(C.FlingTarget)
+local ch = pl and pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if hrp then
+F._freezeCF = F._freezeCF or hrp.CFrame
+pcall(function()
+hrp.CFrame = F._freezeCF
+hrp.AssemblyLinearVelocity = Vector3.zero
+end)
+end
+end)
+end
+function F.FreezePlayerDisable()
+if F._freezeConn then F._freezeConn:Disconnect() F._freezeConn = nil end
+F._freezeCF = nil
+end
+function F.HidePlayerEnable()
+F._hiddenPlayers = F._hiddenPlayers or {}
+local pl = C.FlingTarget and Players:FindFirstChild(C.FlingTarget)
+local ch = pl and pl.Character
+if not (pl and ch) then return end
+F._hiddenPlayers[pl] = true
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end
+end
+print("[CheatMenu] 已本地隐藏 " .. pl.Name)
+end
+function F.HidePlayerDisable()
+if F._hiddenPlayers then
+for pl in pairs(F._hiddenPlayers) do
+local ch = pl.Character
+if ch then
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then d.LocalTransparencyModifier = 0 end
+end
+end
+end
+end
+F._hiddenPlayers = {}
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3529,7 +3566,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3570,9 +3607,10 @@ if not ok then warn("[CheatMenu] 热更新失败: " .. tostring(err)) end
 end)
 end
 LoadConfig()
+loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.1.0",
+SubTitle = "v5.1.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3623,6 +3661,8 @@ Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Combat:AddDropdown("FlingTarget", { Title = "甩飞目标玩家", Values = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return #n > 0 and n or { "(无人)" } end)(), Default = nil, Callback = function(v) C.FlingTarget = v end })
 Tabs.Combat:AddButton({ Title = "甩飞选中玩家", Callback = function() flingPlayerByName(C.FlingTarget) end })
+Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结选中玩家(本地)", Default = false, Callback = function(v) T.FreezePlayer = v if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end end })
+Tabs.Combat:AddToggle("HidePlayer", { Title = "本地隐藏选中玩家", Default = false, Callback = function(v) T.HidePlayer = v if v then F.HidePlayerEnable() else F.HidePlayerDisable() end end })
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "反布娃娃/防击倒", Default = false, Callback = function(v) T.AntiRagdoll = v if v then F.AntiRagdollEnable() else F.AntiRagdollDisable() end end })
 Tabs.Combat:AddToggle("AntiKnockdown", { Title = "防被撞飞", Default = false, Callback = function(v) T.AntiKnockdown = v if v then F.AntiKnockdownEnable() else F.AntiKnockdownDisable() end end })
 Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
@@ -3697,6 +3737,8 @@ Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default
 Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then CM.ZoomEnable() end end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
 Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
+Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(鼠标转向/WASD/QE)", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
+Tabs.World:AddSlider("FreecamSpeed", { Title = "自由视角速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
 Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
@@ -3861,9 +3903,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.1.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.1.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.1.0")
+print("[CheatMenu] ✅ 加载完成 v5.1.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
