@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 22:19 sha e6d14ea0 bytes 190903'):format('2026-09-28 22:19','e6d14ea0',190903))
+print(('[CheatMenu] build 2026-09-28 22:28 sha bfa437b8 bytes 187423'):format('2026-09-28 22:28','bfa437b8',187423))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.1.0 =====")
+print("[CheatMenu] ===== 加载开始 · v6.1.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4212,17 +4212,42 @@ end
 function F.BringPlayerDisable()
 if F._bringConn then F._bringConn:Disconnect() F._bringConn = nil end
 end
+function F.WaypointLabels()
+F._waypoints = F._waypoints or {}
+local out = {}
+for i = 1, 5 do
+local k = tostring(i)
+local cf = F._waypoints[k]
+if cf then
+local p = cf.Position
+out[i] = string.format("%s: %.0f,%.0f,%.0f", k, p.X, p.Y, p.Z)
+else
+out[i] = k .. ": (空)"
+end
+end
+return out
+end
+local function wpSlot(v)
+return tostring(v or "1"):match("^(%d+)") or "1"
+end
+function F.RefreshWaypointUI()
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options.WPSlot
+if op and op.SetValues then op:SetValues(F.WaypointLabels()) end
+end)
+end
 function F.SaveWaypoint(slot)
 local _, _, root = GC()
 if not root then return end
 F._waypoints = F._waypoints or {}
-F._waypoints[slot] = root.CFrame
-print("[CheatMenu] 已保存路径点 " .. tostring(slot))
+F._waypoints[wpSlot(slot)] = root.CFrame
+print("[CheatMenu] 已保存路径点 " .. wpSlot(slot))
+F.RefreshWaypointUI()
 end
 function F.TpWaypoint(slot)
 F._waypoints = F._waypoints or {}
-local cf = F._waypoints[slot]
-if not cf then print("[CheatMenu] 路径点 " .. tostring(slot) .. " 为空") return end
+local cf = F._waypoints[wpSlot(slot)]
+if not cf then print("[CheatMenu] 路径点 " .. wpSlot(slot) .. " 为空") return end
 local _, _, r = GC()
 CM.smoothTP(cf)
 print("[CheatMenu] 已传送到路径点 " .. tostring(slot))
@@ -4669,7 +4694,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.1.0",
+SubTitle = "v6.1.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4825,29 +4850,6 @@ Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, De
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
 Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then CM.AntilagEnable() else CM.AntilagDisable() end end })
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(鼠标转向/WASD/QE)", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
-Tabs.World:AddSlider("FreecamSpeed", { Title = "自由视角速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
-Tabs.World:AddToggle("Hud", { Title = "FPS/Ping 显示(右下角)", Default = false, Callback = function(v) T.Hud = v if v then F.HudEnable() else F.HudDisable() end end })
-Tabs.World:AddToggle("Crosshair", { Title = "准星(屏幕中心十字)", Default = false, Callback = function(v) T.Crosshair = v if v then F.CrosshairEnable() else F.CrosshairDisable() end end })
-Tabs.World:AddToggle("LockCam", { Title = "锁定相机朝向", Default = false, Callback = function(v) T.LockCam = v if v then F.LockCamEnable() else F.LockCamDisable() end end })
-Tabs.World:AddButton({ Title = "移除所有饰品/帽子", Callback = function() F.RemoveAccessories() end })
-Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
-T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
-if v then
-CM.AutoInteractEnable() F.AutoTouchEnable() CM.InstantPromptEnable() F.NoPromptLimitEnable() F.NoPromptCooldownEnable() NoClickLimit()
-else
-CM.AutoInteractDisable() F.AutoTouchDisable()
-end
-end })
-Tabs.World:AddButton({ Title = "触发所有互动(触摸+ClickDetector)", Callback = function() FireAllTouches() FireAllClickDetectors() end })
-Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then F.PropWatchEnable() end end })
-Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then F.AutoPickupEnable() else F.AutoPickupDisable() end end })
-Tabs.World:AddSlider("PickupRange", { Title = "拾取范围", Min = 5, Max = 50, Default = 15, Rounding = 0, Callback = function(v) C.PickupRange = v end })
-Tabs.World:AddToggle("BringItems", { Title = "物品拉取(把掉落物拉过来)", Default = false, Callback = function(v) T.BringItems = v if v then F.BringItemsEnable() else F.BringItemsDisable() end end })
-Tabs.World:AddSlider("BringRange", { Title = "拉取范围", Min = 10, Max = 200, Default = 80, Rounding = 0, Callback = function(v) C.BringRange = v end })
-Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", Default = false, Callback = function(v) T.AutoHeal = v if v then F.AutoHealEnable() else F.AutoHealDisable() end end })
-Tabs.World:AddSlider("AutoHealHP", { Title = "治疗血量阈值", Min = 10, Max = 100, Default = 50, Rounding = 0, Callback = function(v) C.AutoHealHP = v end })
-Tabs.World:AddToggle("AutoRevive", { Title = "自动复活队友", Default = false, Callback = function(v) T.AutoRevive = v if v then F.AutoReviveEnable() else F.AutoReviveDisable() end end })
-Tabs.World:AddToggle("ThirdPerson", { Title = "第三人称相机", Default = false, Callback = function(v) T.ThirdPerson = v if v then F.ThirdPersonEnable() else F.ThirdPersonDisable() end end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -4857,16 +4859,11 @@ local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then return end
 CM.TeleportToPlayer(Players:FindFirstChild(name))
 end })
-Tabs.TP:AddToggle("Spectate", { Title = "观察目标", Default = false, Callback = function(v) T.Spectate = v if v then CM.SpectateEnable() else CM.SpectateDisable() end end })
-Tabs.TP:AddToggle("Circle", { Title = "环绕传送", Default = false, Callback = function(v) T.Circle = v if v then CM.CircleEnable() else CM.CircleDisable() end end })
-Tabs.TP:AddSlider("CircleRadius", { Title = "环绕半径", Min = 3, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.CircleRadius = v end })
-Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.CircleSpeed = v end })
-Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then CM.TeleportOnDeathEnable() end end })
-Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
-Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
-Tabs.TP:AddDropdown("WPSlot", { Title = "路径点槽位(1-5)", Values = { "1", "2", "3", "4", "5" }, Default = "1", Callback = function(v) C.WPSlot = v end })
-Tabs.TP:AddButton({ Title = "保存到该槽位", Callback = function() F.SaveWaypoint(C.WPSlot or "1") end })
-Tabs.TP:AddButton({ Title = "传送到该槽位", Callback = function() F.TpWaypoint(C.WPSlot or "1") end })
+Tabs.TP:AddSection("位置管理(多个位置·显示坐标)")
+Tabs.TP:AddDropdown("WPSlot", { Title = "位置槽位(1-5, 显示坐标)", Values = F.WaypointLabels(), Default = "1: (空)", Callback = function(v) C.WPSlot = v end })
+Tabs.TP:AddButton({ Title = "保存当前位置到该槽位", Callback = function() F.SaveWaypoint(C.WPSlot) end })
+Tabs.TP:AddButton({ Title = "传送到该位置", Callback = function() F.TpWaypoint(C.WPSlot) end })
+Tabs.TP:AddButton({ Title = "刷新位置列表", Callback = function() F.RefreshWaypointUI() Fluent:Notify({ Title = "位置管理", Content = "列表已刷新", Duration = 3 }) end })
 Tabs.TP:AddToggle("Flashback", { Title = "记录死亡点(死后可传回)", Default = false, Callback = function(v) T.Flashback = v if v then F.FlashbackEnable() else F.FlashbackDisable() end end })
 Tabs.TP:AddButton({ Title = "传回死亡点", Callback = function() F.FlashbackGo() end })
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
@@ -4881,7 +4878,6 @@ if x then tpToCoords(x, y, z) end
 end })
 Tabs.TP:AddToggle("AntiVoid", { Title = "防掉虚空", Default = false, Callback = function(v) T.AntiVoid = v if v then F.AntiVoidEnable() else F.AntiVoidDisable() end end })
 Tabs.TP:AddSlider("VoidY", { Title = "虚空高度阈值", Min = -200, Max = 0, Default = -50, Rounding = 0, Callback = function(v) C.VoidY = v end })
-Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then F.AutoRespawnEnable() end end })
 end
 do
 Tabs.AFK:AddSection("自动化")
@@ -5052,9 +5048,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.1.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.1.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.1.0")
+print("[CheatMenu] ✅ 加载完成 v6.1.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
