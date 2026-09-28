@@ -1,5 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 12:02 sha bbd01c01 bytes 143973'):format('2026-09-28 12:02','bbd01c01',143973))
-print("[CheatMenu] ===== 加载开始 · v5.0.3 =====")
+print(('[CheatMenu] build 2026-09-28 12:19 sha 29273a5b bytes 147212'):format('2026-09-28 12:19','29273a5b',147212))
+local F = {}
+print("[CheatMenu] ===== 加载开始 · v5.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -168,6 +169,8 @@ AC.BlockedRemotes = {}
 AC.BlockedCount = 0
 AC._propLockOn = false
 AC._propLockOld = nil
+AC._idxMaskOn = false
+AC._idxMaskOld = nil
 AC.SUS_KEYS = {
 "iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "detect",
 "ban", "kick", "flag", "report", "exploit", "cheat", "x-15", "x-16",
@@ -280,6 +283,39 @@ AC._propLockOn = true
 print("[CheatMenu] 属性锁定已安装(WalkSpeed/JumpPower)")
 end
 end
+function AC.InstallIndexMask()
+if AC._idxMaskOn or not hookmetamethod or not newcclosure then return end
+local ok, res = pcall(function()
+return hookmetamethod(game, "__index", newcclosure(function(t, k)
+if (T.SpeedMask or T.ACBypass or T.UniversalAC) and not checkcaller() then
+if (k == "WalkSpeed" or k == "JumpPower") and typeof(t) == "Instance" then
+local isHum = false
+pcall(function() isHum = t:IsA("Humanoid") end)
+if isHum then
+local _, hum = GC()
+if hum and t == hum then
+if k == "WalkSpeed" then return C._baseWalk or 16 end
+return 50
+end
+end
+end
+end
+return AC._idxMaskOld(t, k)
+end))
+end)
+if ok and type(res) == "function" then
+AC._idxMaskOld = res
+AC._idxMaskOn = true
+print("[CheatMenu] 属性伪装回读已安装(AC 读 WalkSpeed 看到正常值)")
+end
+end
+function AC.UninstallIndexMask()
+if AC._idxMaskOn and hookmetamethod and AC._idxMaskOld then
+pcall(function() hookmetamethod(game, "__index", AC._idxMaskOld) end)
+end
+AC._idxMaskOn = false
+AC._idxMaskOld = nil
+end
 AC._antiTPOld = nil
 AC._antiTPAsyncOld = nil
 function AC.InstallAntiTP()
@@ -312,7 +348,7 @@ end
 AC._antiTPOld = nil
 end
 local FlingConns = {}
-local function AntiFlingEnable()
+function F.AntiFlingEnable()
 if T.AntiFling then return end
 T.AntiFling = true
 local function disable(part)
@@ -334,13 +370,13 @@ hookChar(LP.Character)
 local conn = LP.CharacterAdded:Connect(hookChar)
 table.insert(FlingConns, conn)
 end
-local function AntiFlingDisable()
+function F.AntiFlingDisable()
 T.AntiFling = false
 for _, c in ipairs(FlingConns) do pcall(function() c:Disconnect() end) end
 FlingConns = {}
 end
 local AFKConn = nil
-local function AntiAFKEnable()
+function F.AntiAFKEnable()
 if AFKConn then return end
 AFKConn = LP.Idled:Connect(function()
 if VirtualUser then
@@ -360,7 +396,7 @@ end
 end)
 end
 local KG = { hooked = false, target = nil, hits = 0, lastReason = "", rjConn = nil, rjTries = 0 }
-local function KickGuardEnable()
+function F.KickGuardEnable()
 if KG.hooked then return true end
 local pl = LP
 if not pl then return false end
@@ -390,13 +426,13 @@ KG.target = kf
 KG.hooked = true
 return true
 end
-local function KickGuardDisable()
+function F.KickGuardDisable()
 if KG.hooked and hookfunction and KG.target then
 pcall(function() hookfunction(KG.target, KG.target) end)
 end
 KG.hooked = false
 end
-local function KickRejoinEnable()
+function F.KickRejoinEnable()
 if KG.rjConn then return true end
 KG.rjConn = Players.PlayerRemoving:Connect(function(p)
 if p ~= LP then return end
@@ -459,7 +495,7 @@ end
 end
 return r
 end
-local function AutoGymEnable()
+function F.AutoGymEnable()
 if GymThread then return end
 GymThread = task.spawn(function()
 while T.AutoGym do
@@ -504,7 +540,7 @@ end
 end)
 end
 local TrainThread = nil
-local function AutoTrainEnable()
+function F.AutoTrainEnable()
 if TrainThread then return end
 TrainThread = task.spawn(function()
 while T.AutoTrain do
@@ -559,7 +595,7 @@ end
 end
 end
 local BonusThread = nil
-local function AutoBonusEnable()
+function F.AutoBonusEnable()
 if BonusThread then return end
 OnRemote("TaviMishkal", function(m)
 if T.AutoBonus then
@@ -2599,7 +2635,7 @@ for _, c in ipairs(AllConns) do pcall(function() c:Disconnect() end) end
 AllConns = {}
 end
 local AutoTouchConn = nil
-local function AutoTouchEnable()
+function F.AutoTouchEnable()
 if AutoTouchConn then return end
 if type(firetouchinterest) ~= "function" then
 print("[CheatMenu] 执行器不支持 firetouchinterest，自动触摸不可用")
@@ -2620,10 +2656,10 @@ end
 task.wait(0.5)
 end)
 end
-local function AutoTouchDisable()
+function F.AutoTouchDisable()
 if AutoTouchConn then AutoTouchConn:Disconnect() AutoTouchConn = nil end
 end
-local function NoPromptLimitEnable()
+function F.NoPromptLimitEnable()
 for _, v in ipairs(workspace:GetDescendants()) do
 if v:IsA("ProximityPrompt") or v:IsA("ClickDetector") then
 pcall(function() v.MaxActivationDistance = math.huge end)
@@ -2631,7 +2667,7 @@ end
 end
 print("[CheatMenu] 互动无距离已开启")
 end
-local function NoPromptCooldownEnable()
+function F.NoPromptCooldownEnable()
 for _, v in ipairs(workspace:GetDescendants()) do
 if v:IsA("ProximityPrompt") then
 pcall(function()
@@ -2658,14 +2694,14 @@ end
 print("[CheatMenu] 已触发 " .. n .. " 个触摸互动")
 end
 local FlyBv, FlyBg, FlyBvConn = nil, nil, nil
-local function FlyPhysDisable()
+function F.FlyPhysDisable()
 if FlyBv then pcall(function() FlyBv:Destroy() end) FlyBv = nil end
 if FlyBg then pcall(function() FlyBg:Destroy() end) FlyBg = nil end
 end
-local function FlyPhysEnable()
+function F.FlyPhysEnable()
 local _, hum, root = GC()
 if not (hum and root) then return end
-FlyPhysDisable()
+F.FlyPhysDisable()
 hum.PlatformStand = true
 FlyBv = Instance.new("BodyVelocity")
 FlyBv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
@@ -2677,7 +2713,7 @@ FlyBg.P = 1e4
 FlyBg.Parent = root
 if FlyBvConn then FlyBvConn:Disconnect() end
 FlyBvConn = RS.RenderStepped:Connect(function()
-if not T.FlyPhys then FlyPhysDisable() return end
+if not T.FlyPhys then F.FlyPhysDisable() return end
 local _, _, r = GC()
 if not r or not FlyBv then return end
 local cam = workspace.CurrentCamera
@@ -2712,7 +2748,7 @@ if v:IsA("ClickDetector") then pcall(function() v.MaxActivationDistance = math.h
 end
 end
 local PropWatchConn = nil
-local function PropWatchEnable()
+function F.PropWatchEnable()
 if PropWatchConn then return end
 local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
@@ -2762,7 +2798,7 @@ local SKELETON = {
 {"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
 }
 local SkeletonLines = {}
-local function SkeletonEnable()
+function F.SkeletonEnable()
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP and pl.Character then
 for i = 1, #SKELETON do
@@ -2779,12 +2815,12 @@ end
 end
 end
 end
-local function SkeletonDisable()
+function F.SkeletonDisable()
 for _, l in ipairs(SkeletonLines) do pcall(function() l:Destroy() end) end
 SkeletonLines = {}
 end
 local ArrowConns = {}
-local function ArrowEnable()
+function F.ArrowEnable()
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP and pl.Character then
 local ch = pl.Character
@@ -2804,7 +2840,7 @@ lbl.Parent = bb
 end
 end
 end
-local function ArrowDisable()
+function F.ArrowDisable()
 for _, pl in ipairs(Players:GetPlayers()) do
 local ch = pl.Character
 if ch then
@@ -2814,7 +2850,7 @@ end
 end
 end
 local ACBreakers = {}
-local function ACBypassPlusEnable()
+function F.ACBypassPlusEnable()
 if type(getconnections) == "function" then
 pcall(function()
 for _, c in ipairs(getconnections(game:GetService("ScriptContext").Error)) do
@@ -2851,7 +2887,7 @@ function AC.AntiPauseDisable()
 if AC._noPauseConn then AC._noPauseConn:Disconnect() AC._noPauseConn = nil end
 end
 local VCBackup = nil
-local function VoiceBypassEnable()
+function F.VoiceBypassEnable()
 pcall(function()
 local vcs = game:GetService("VoiceChatService")
 if vcs then
@@ -2889,7 +2925,7 @@ end)
 end
 print("[CheatMenu] 语音绕过已开启(客户端尽力启用)")
 end
-local function VoiceBypassDisable()
+function F.VoiceBypassDisable()
 if VCBackup then
 pcall(function()
 local vcs = game:GetService("VoiceChatService")
@@ -2899,7 +2935,7 @@ VCBackup = nil
 end
 end
 local HitboxBackup = {}
-local function HitboxExpandEnable()
+function F.HitboxExpandEnable()
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP and pl.Character and not HitboxBackup[pl] then
 local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
@@ -2916,7 +2952,7 @@ end
 end
 end
 end
-local function HitboxExpandDisable()
+function F.HitboxExpandDisable()
 for pl, size in pairs(HitboxBackup) do
 local ch = pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -2925,7 +2961,7 @@ end
 HitboxBackup = {}
 end
 local KillAuraConn = nil
-local function KillAuraEnable()
+function F.KillAuraEnable()
 if KillAuraConn then return end
 KillAuraConn = RS.Heartbeat:Connect(function()
 if not T.KillAura then return end
@@ -2948,11 +2984,11 @@ end
 task.wait(0.1)
 end)
 end
-local function KillAuraDisable()
+function F.KillAuraDisable()
 if KillAuraConn then KillAuraConn:Disconnect() KillAuraConn = nil end
 end
 local RecoilConn = nil
-local function NoRecoilEnable()
+function F.NoRecoilEnable()
 if RecoilConn then return end
 local cam = workspace.CurrentCamera
 RecoilConn = RS.RenderStepped:Connect(function()
@@ -2963,11 +2999,11 @@ c.CFrame = CFrame.new(c.CFrame.Position, c.CFrame.Position + c.CFrame.LookVector
 end
 end)
 end
-local function NoRecoilDisable()
+function F.NoRecoilDisable()
 if RecoilConn then RecoilConn:Disconnect() RecoilConn = nil end
 end
 local PickupConn = nil
-local function AutoPickupEnable()
+function F.AutoPickupEnable()
 if PickupConn then return end
 PickupConn = RS.Heartbeat:Connect(function()
 if not T.AutoPickup then return end
@@ -2985,11 +3021,11 @@ end
 task.wait(0.2)
 end)
 end
-local function AutoPickupDisable()
+function F.AutoPickupDisable()
 if PickupConn then PickupConn:Disconnect() PickupConn = nil end
 end
 local ClickTPConn = nil
-local function ClickTPEnable()
+function F.ClickTPEnable()
 if ClickTPConn then return end
 ClickTPConn = UIS.InputBegan:Connect(function(input, gpe)
 if gpe or not T.ClickTP then return end
@@ -3008,7 +3044,7 @@ end
 end
 end)
 end
-local function ClickTPDisable()
+function F.ClickTPDisable()
 if ClickTPConn then ClickTPConn:Disconnect() ClickTPConn = nil end
 end
 local function tpToCoords(x, y, z)
@@ -3018,7 +3054,7 @@ smoothTP(CFrame.new(tonumber(x), tonumber(y), tonumber(z)))
 end
 end
 local VoidConn = nil
-local function AntiVoidEnable()
+function F.AntiVoidEnable()
 if VoidConn then return end
 local lastSafe = nil
 VoidConn = RS.Heartbeat:Connect(function()
@@ -3033,11 +3069,11 @@ end
 task.wait(0.3)
 end)
 end
-local function AntiVoidDisable()
+function F.AntiVoidDisable()
 if VoidConn then VoidConn:Disconnect() VoidConn = nil end
 end
 local AutoRespawnConn = nil
-local function AutoRespawnEnable()
+function F.AutoRespawnEnable()
 if AutoRespawnConn then return end
 AutoRespawnConn = LP.CharacterAdded:Connect(function()
 task.wait(0.5)
@@ -3060,7 +3096,7 @@ end)
 end
 local BringConn = nil
 local BRING_KEYS = {"money", "bond", "item", "loot", "bag", "coin", "drop", "ore", "gold", "cash", "gem", "crate", "supply", "ammo", "weapon", "armor"}
-local function BringItemsEnable()
+function F.BringItemsEnable()
 if BringConn then return end
 BringConn = RS.Heartbeat:Connect(function()
 if not T.BringItems then return end
@@ -3082,11 +3118,11 @@ end
 task.wait(0.5)
 end)
 end
-local function BringItemsDisable()
+function F.BringItemsDisable()
 if BringConn then BringConn:Disconnect() BringConn = nil end
 end
 local HealConn = nil
-local function AutoHealEnable()
+function F.AutoHealEnable()
 if HealConn then return end
 HealConn = RS.Heartbeat:Connect(function()
 if not T.AutoHeal then return end
@@ -3107,11 +3143,11 @@ end
 task.wait(1)
 end)
 end
-local function AutoHealDisable()
+function F.AutoHealDisable()
 if HealConn then HealConn:Disconnect() HealConn = nil end
 end
 local ThirdPersonBackup = nil
-local function ThirdPersonEnable()
+function F.ThirdPersonEnable()
 pcall(function()
 local pl = LP
 ThirdPersonBackup = { min = pl.CameraMinZoomDistance, max = pl.CameraMaxZoomDistance }
@@ -3120,7 +3156,7 @@ pl.CameraMinZoomDistance = 0.5
 pl.CameraMaxZoomDistance = 128
 end)
 end
-local function ThirdPersonDisable()
+function F.ThirdPersonDisable()
 if ThirdPersonBackup then
 pcall(function()
 LP.CameraMinZoomDistance = ThirdPersonBackup.min
@@ -3129,7 +3165,7 @@ end)
 end
 end
 local ReviveConn = nil
-local function AutoReviveEnable()
+function F.AutoReviveEnable()
 if ReviveConn then return end
 ReviveConn = RS.Heartbeat:Connect(function()
 if not T.AutoRevive then return end
@@ -3150,11 +3186,11 @@ end
 task.wait(0.5)
 end)
 end
-local function AutoReviveDisable()
+function F.AutoReviveDisable()
 if ReviveConn then ReviveConn:Disconnect() ReviveConn = nil end
 end
 local GunAuraConn = nil
-local function GunAuraEnable()
+function F.GunAuraEnable()
 if GunAuraConn then return end
 GunAuraConn = RS.Heartbeat:Connect(function()
 if not T.GunAura then return end
@@ -3179,11 +3215,11 @@ end
 task.wait(0.05)
 end)
 end
-local function GunAuraDisable()
+function F.GunAuraDisable()
 if GunAuraConn then GunAuraConn:Disconnect() GunAuraConn = nil end
 end
 local AntiRagdollConn = nil
-local function AntiRagdollEnable()
+function F.AntiRagdollEnable()
 if AntiRagdollConn then return end
 local function apply()
 local ch, hum = GC()
@@ -3200,7 +3236,7 @@ end
 apply()
 AntiRagdollConn = RS.Stepped:Connect(apply)
 end
-local function AntiRagdollDisable()
+function F.AntiRagdollDisable()
 if AntiRagdollConn then AntiRagdollConn:Disconnect() AntiRagdollConn = nil end
 local ch, hum = GC()
 if hum then pcall(function()
@@ -3215,7 +3251,7 @@ if rc then pcall(function() rc.Enabled = true end) end
 end
 end
 local TrapHls = {}
-local function TrapsESPEnable()
+function F.TrapsESPEnable()
 for _, v in ipairs(workspace:GetDescendants()) do
 local n = v.Name:lower()
 if v:IsA("BasePart") and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
@@ -3229,7 +3265,7 @@ end
 end
 print("[CheatMenu] 陷阱透视: 已高亮 " .. #TrapHls .. " 个")
 end
-local function TrapsESPDisable()
+function F.TrapsESPDisable()
 for _, hl in ipairs(TrapHls) do pcall(function() hl:Destroy() end) end
 TrapHls = {}
 end
@@ -3279,7 +3315,7 @@ end
 AC.TrapDisable.data = {}
 end
 local AntiKnockConn = nil
-local function AntiKnockdownEnable()
+function F.AntiKnockdownEnable()
 if AntiKnockConn then return end
 AntiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then return end
@@ -3291,12 +3327,53 @@ end
 task.wait(0.1)
 end)
 end
-local function AntiKnockdownDisable()
+function F.AntiKnockdownDisable()
 if AntiKnockConn then AntiKnockConn:Disconnect() AntiKnockConn = nil end
 end
-local SmoothSpeedEnable = nil
-local function SpeedBypassEnable()
-print("[CheatMenu] 速度绕过(平滑加速)已启用")
+function F.SpeedBypassEnable()
+AC.InstallPropertyLock()
+AC.InstallIndexMask()
+T.SpeedMask = true
+print("[CheatMenu] 加速全绕过已启用(属性锁 + 属性伪装回读 + 平滑加速)")
+end
+function F.SpeedCFrameEnable()
+if F._speedCConn then return end
+F._speedCConn = RS.RenderStepped:Connect(function(dt)
+if not T.SpeedCFrame then return end
+local _, hum, root = GC()
+if not (hum and root) then return end
+local md = hum.MoveDirection
+if md.Magnitude < 0.01 then return end
+local sp = (C.SpeedCFrameMul or 2) * 16 * math.min(dt, 0.1)
+root.CFrame = root.CFrame + md.Unit * sp
+end)
+print("[CheatMenu] CFrame 位移式加速已启用(不动 WalkSpeed, 最隐蔽)")
+end
+function F.SpeedCFrameDisable()
+if F._speedCConn then F._speedCConn:Disconnect() F._speedCConn = nil end
+end
+function F.FlyStealthEnable()
+if F._flyStealthThread then return end
+T.FlyStealth = true
+if (C.FlySpeed or 50) > 80 then C.FlySpeed = 80 end
+F._flyStealthThread = task.spawn(function()
+while T.FlyStealth do
+if T.Fly or T.FlyPhys then
+local _, _, root = GC()
+if root then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, -25, 0) end)
+task.wait(0.12)
+end
+end
+task.wait(3)
+end
+F._flyStealthThread = nil
+end)
+print("[CheatMenu] 飞行抗检测已启用(限速 + 定期假落地)")
+end
+function F.FlyStealthDisable()
+T.FlyStealth = false
+F._flyStealthThread = nil
 end
 local function flingPlayerByName(name)
 if not name then return end
@@ -3313,7 +3390,7 @@ end
 end
 end
 local LockHealthConn = nil
-local function LockHealthEnable()
+function F.LockHealthEnable()
 if LockHealthConn then return end
 LockHealthConn = RS.Heartbeat:Connect(function()
 if not T.LockHealth then return end
@@ -3325,11 +3402,11 @@ end
 task.wait(0.05)
 end)
 end
-local function LockHealthDisable()
+function F.LockHealthDisable()
 if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end
 end
 local RegenConn = nil
-local function RegenEnable()
+function F.RegenEnable()
 if RegenConn then return end
 RegenConn = RS.Heartbeat:Connect(function()
 if not T.Regen then return end
@@ -3340,11 +3417,11 @@ end
 task.wait(0.2)
 end)
 end
-local function RegenDisable()
+function F.RegenDisable()
 if RegenConn then RegenConn:Disconnect() RegenConn = nil end
 end
 local StealthGodConn = nil
-local function StealthGodEnable()
+function F.StealthGodEnable()
 if StealthGodConn then return end
 local _, hum0 = GC()
 if hum0 then pcall(function() if hum0.MaxHealth > 1e6 then hum0.MaxHealth = 100 end end) end
@@ -3357,11 +3434,11 @@ end
 task.wait(0.05)
 end)
 end
-local function StealthGodDisable()
+function F.StealthGodDisable()
 if StealthGodConn then StealthGodConn:Disconnect() StealthGodConn = nil end
 end
 local NoDeathConn = nil
-local function NoDeathEnable()
+function F.NoDeathEnable()
 if NoDeathConn then return end
 NoDeathConn = RS.Heartbeat:Connect(function()
 if not T.NoDeath then return end
@@ -3372,7 +3449,7 @@ end
 task.wait(0.1)
 end)
 end
-local function NoDeathDisable()
+function F.NoDeathDisable()
 if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end
 end
 local function scanRemotes()
@@ -3452,7 +3529,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3461,16 +3538,19 @@ pcall(function() if getgenv and getgenv().CM_ToggleSG then getgenv().CM_ToggleSG
 print("[CheatMenu] ✅ 已干净卸载")
 end
 local function RestoreFeatures()
-if T.KickProtect or T.AntiAFK then AntiAFKEnable() KickGuardEnable() KickRejoinEnable() end
-if T.AutoBonus then AutoBonusEnable() end
+if T.KickProtect or T.AntiAFK then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() end
+if T.AutoBonus then F.AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
-if T.AntiFling then AntiFlingEnable() end
+if T.AntiFling then F.AntiFlingEnable() end
 if T.UniversalAC then AC.InstallPropertyLock() AC.DeepScanBlock() end
 if T.AntiTP then AC.InstallAntiTP() end
 if T.AntiPause then AC.AntiPauseEnable() end
 if T.NoClip then NoClipEnable() end
 if T.Antilag then AntilagEnable() end
+if T.SpeedBypass then F.SpeedBypassEnable() end
+if T.SpeedCFrame then F.SpeedCFrameEnable() end
+if T.FlyStealth then F.FlyStealthEnable() end
 end
 local function HotUpdate()
 Fluent:Notify({ Title = "热更新", Content = "保存配置并重新加载...", Duration = 3 })
@@ -3492,7 +3572,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.0.3",
+SubTitle = "v5.1.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3533,24 +3613,24 @@ Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = fa
 Tabs.Combat:AddSection("生存 & 辅助")
 Tabs.Combat:AddSection("生命保护")
 Tabs.Combat:AddToggle("God", { Title = "无敌(MaxHealth=∞)", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
-Tabs.Combat:AddToggle("StealthGod", { Title = "隐蔽无敌(锁满血,难检测)", Default = false, Callback = function(v) T.StealthGod = v if v then StealthGodEnable() else StealthGodDisable() end end })
-Tabs.Combat:AddToggle("LockHealth", { Title = "锁血", Default = false, Callback = function(v) T.LockHealth = v if v then LockHealthEnable() else LockHealthDisable() end end })
+Tabs.Combat:AddToggle("StealthGod", { Title = "隐蔽无敌(锁满血,难检测)", Default = false, Callback = function(v) T.StealthGod = v if v then F.StealthGodEnable() else F.StealthGodDisable() end end })
+Tabs.Combat:AddToggle("LockHealth", { Title = "锁血", Default = false, Callback = function(v) T.LockHealth = v if v then F.LockHealthEnable() else F.LockHealthDisable() end end })
 Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
-Tabs.Combat:AddToggle("Regen", { Title = "回血(主动快速回血)", Default = false, Callback = function(v) T.Regen = v if v then RegenEnable() else RegenDisable() end end })
+Tabs.Combat:AddToggle("Regen", { Title = "回血(主动快速回血)", Default = false, Callback = function(v) T.Regen = v if v then F.RegenEnable() else F.RegenDisable() end end })
 Tabs.Combat:AddSlider("RegenRate", { Title = "回血速度(每0.2秒)", Min = 1, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
-Tabs.Combat:AddToggle("NoDeath", { Title = "防死亡", Default = false, Callback = function(v) T.NoDeath = v if v then NoDeathEnable() else NoDeathDisable() end end })
+Tabs.Combat:AddToggle("NoDeath", { Title = "防死亡", Default = false, Callback = function(v) T.NoDeath = v if v then F.NoDeathEnable() else F.NoDeathDisable() end end })
 Tabs.Combat:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v) T.Invisible = v if v then CM.InvisibleEnable() else CM.InvisibleDisable() end end })
 Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then CM.HitboxEnable() else CM.HitboxDisable() end end })
 Tabs.Combat:AddDropdown("FlingTarget", { Title = "甩飞目标玩家", Values = (function() local n = {} for _, pl in ipairs(Players:GetPlayers()) do if pl ~= LP then n[#n+1] = pl.Name end end return #n > 0 and n or { "(无人)" } end)(), Default = nil, Callback = function(v) C.FlingTarget = v end })
 Tabs.Combat:AddButton({ Title = "甩飞选中玩家", Callback = function() flingPlayerByName(C.FlingTarget) end })
-Tabs.Combat:AddToggle("AntiRagdoll", { Title = "反布娃娃/防击倒", Default = false, Callback = function(v) T.AntiRagdoll = v if v then AntiRagdollEnable() else AntiRagdollDisable() end end })
-Tabs.Combat:AddToggle("AntiKnockdown", { Title = "防被撞飞", Default = false, Callback = function(v) T.AntiKnockdown = v if v then AntiKnockdownEnable() else AntiKnockdownDisable() end end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then HitboxExpandEnable() else HitboxExpandDisable() end end })
-Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then HitboxExpandDisable() HitboxExpandEnable() end end })
-Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then KillAuraEnable() else KillAuraDisable() end end })
+Tabs.Combat:AddToggle("AntiRagdoll", { Title = "反布娃娃/防击倒", Default = false, Callback = function(v) T.AntiRagdoll = v if v then F.AntiRagdollEnable() else F.AntiRagdollDisable() end end })
+Tabs.Combat:AddToggle("AntiKnockdown", { Title = "防被撞飞", Default = false, Callback = function(v) T.AntiKnockdown = v if v then F.AntiKnockdownEnable() else F.AntiKnockdownDisable() end end })
+Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
+Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then F.HitboxExpandDisable() F.HitboxExpandEnable() end end })
+Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then F.KillAuraEnable() else F.KillAuraDisable() end end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
-Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(锁定相机)", Default = false, Callback = function(v) T.NoRecoil = v if v then NoRecoilEnable() else NoRecoilDisable() end end })
-Tabs.Combat:AddToggle("GunAura", { Title = "Gun Aura(自动朝敌人开火)", Default = false, Callback = function(v) T.GunAura = v if v then GunAuraEnable() else GunAuraDisable() end end })
+Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(锁定相机)", Default = false, Callback = function(v) T.NoRecoil = v if v then F.NoRecoilEnable() else F.NoRecoilDisable() end end })
+Tabs.Combat:AddToggle("GunAura", { Title = "Gun Aura(自动朝敌人开火)", Default = false, Callback = function(v) T.GunAura = v if v then F.GunAuraEnable() else F.GunAuraDisable() end end })
 Tabs.Combat:AddSlider("GunAuraRange", { Title = "开火范围", Min = 20, Max = 300, Default = 100, Rounding = 0, Callback = function(v) C.GunAuraRange = v end })
 Tabs.Combat:AddSection("ESP 透视")
 Tabs.Combat:AddToggle("ESP", { Title = "ESP 透视(默认方框+名称+距离+血条)", Default = false, Callback = function(v)
@@ -3570,8 +3650,8 @@ T.ESPBox = true T.ESPName = true T.ESPDist = true T.ESPHealth = true T.ESPTracer
 end
 end })
 Tabs.Combat:AddToggle("ESPTeamColor", { Title = "敌我识别(敌红/友蓝/队绿)", Default = false, Callback = function(v) T.ESPTeamColor = v T.ESPFriendColor = v end })
-Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then ArrowEnable() else ArrowDisable() end end })
-Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then SkeletonEnable() else SkeletonDisable() end end })
+Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then F.ArrowEnable() else F.ArrowDisable() end end })
+Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then F.SkeletonEnable() else F.SkeletonDisable() end end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
 end
 do
@@ -3579,9 +3659,13 @@ Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
 Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then CM.FlyEnable() else CM.FlyDisable() end end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddToggle("FlyPhys", { Title = "物理飞行(BodyVelocity 模式)", Default = false, Callback = function(v) T.FlyPhys = v if v then FlyPhysEnable() else FlyPhysDisable() end end })
+Tabs.Move:AddToggle("FlyPhys", { Title = "物理飞行(BodyVelocity 模式)", Default = false, Callback = function(v) T.FlyPhys = v if v then F.FlyPhysEnable() else F.FlyPhysDisable() end end })
 Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then CM.SpeedEnable() else CM.SpeedDisable() end end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
+Tabs.Move:AddToggle("SpeedBypass", { Title = "加速全绕过(属性锁+伪装回读)", Default = false, Callback = function(v) T.SpeedBypass = v if v then F.SpeedBypassEnable() else AC.UninstallIndexMask() T.SpeedMask = false end end })
+Tabs.Move:AddToggle("SpeedCFrame", { Title = "CFrame 位移加速(不动 WalkSpeed·最隐蔽)", Default = false, Callback = function(v) T.SpeedCFrame = v if v then F.SpeedCFrameEnable() else F.SpeedCFrameDisable() end end })
+Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
+Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地绕滞空)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then CM.InfiniteJumpEnable() end end })
 Tabs.Move:AddSection("移动增强")
 Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then CM.SpinEnable() else CM.SpinDisable() end end })
@@ -3617,22 +3701,22 @@ Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
 if v then
-CM.AutoInteractEnable() AutoTouchEnable() CM.InstantPromptEnable() NoPromptLimitEnable() NoPromptCooldownEnable() NoClickLimit()
+CM.AutoInteractEnable() F.AutoTouchEnable() CM.InstantPromptEnable() F.NoPromptLimitEnable() F.NoPromptCooldownEnable() NoClickLimit()
 else
-CM.AutoInteractDisable() AutoTouchDisable()
+CM.AutoInteractDisable() F.AutoTouchDisable()
 end
 end })
 Tabs.World:AddButton({ Title = "触发所有互动(触摸+ClickDetector)", Callback = function() FireAllTouches() FireAllClickDetectors() end })
-Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then PropWatchEnable() end end })
-Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then AutoPickupEnable() else AutoPickupDisable() end end })
+Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then F.PropWatchEnable() end end })
+Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then F.AutoPickupEnable() else F.AutoPickupDisable() end end })
 Tabs.World:AddSlider("PickupRange", { Title = "拾取范围", Min = 5, Max = 50, Default = 15, Rounding = 0, Callback = function(v) C.PickupRange = v end })
 Tabs.World:AddSection("生存辅助")
-Tabs.World:AddToggle("BringItems", { Title = "物品拉取(把掉落物拉过来)", Default = false, Callback = function(v) T.BringItems = v if v then BringItemsEnable() else BringItemsDisable() end end })
+Tabs.World:AddToggle("BringItems", { Title = "物品拉取(把掉落物拉过来)", Default = false, Callback = function(v) T.BringItems = v if v then F.BringItemsEnable() else F.BringItemsDisable() end end })
 Tabs.World:AddSlider("BringRange", { Title = "拉取范围", Min = 10, Max = 200, Default = 80, Rounding = 0, Callback = function(v) C.BringRange = v end })
-Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", Default = false, Callback = function(v) T.AutoHeal = v if v then AutoHealEnable() else AutoHealDisable() end end })
+Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", Default = false, Callback = function(v) T.AutoHeal = v if v then F.AutoHealEnable() else F.AutoHealDisable() end end })
 Tabs.World:AddSlider("AutoHealHP", { Title = "治疗血量阈值", Min = 10, Max = 100, Default = 50, Rounding = 0, Callback = function(v) C.AutoHealHP = v end })
-Tabs.World:AddToggle("AutoRevive", { Title = "自动复活队友", Default = false, Callback = function(v) T.AutoRevive = v if v then AutoReviveEnable() else AutoReviveDisable() end end })
-Tabs.World:AddToggle("ThirdPerson", { Title = "第三人称相机", Default = false, Callback = function(v) T.ThirdPerson = v if v then ThirdPersonEnable() else ThirdPersonDisable() end end })
+Tabs.World:AddToggle("AutoRevive", { Title = "自动复活队友", Default = false, Callback = function(v) T.AutoRevive = v if v then F.AutoReviveEnable() else F.AutoReviveDisable() end end })
+Tabs.World:AddToggle("ThirdPerson", { Title = "第三人称相机", Default = false, Callback = function(v) T.ThirdPerson = v if v then F.ThirdPersonEnable() else F.ThirdPersonDisable() end end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -3652,7 +3736,7 @@ Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.te
 Tabs.TP:AddSection("传送增强")
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
 Tabs.TP:AddSlider("TPSmoothSeg", { Title = "分段数(越多越隐蔽)", Min = 3, Max = 20, Default = 8, Rounding = 0, Callback = function(v) C.TPSmoothSeg = v end })
-Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(点地面即传过去)", Default = false, Callback = function(v) T.ClickTP = v if v then ClickTPEnable() else ClickTPDisable() end end })
+Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(点地面即传过去)", Default = false, Callback = function(v) T.ClickTP = v if v then F.ClickTPEnable() else F.ClickTPDisable() end end })
 Tabs.TP:AddInput("TPCoords", { Title = "坐标传送(X,Y,Z 逗号分隔)", Default = "", Placeholder = "如 100,50,200" })
 Tabs.TP:AddButton({ Title = "传送到坐标", Callback = function()
 local s = Fluent.Options.TPCoords and Fluent.Options.TPCoords.Value
@@ -3660,22 +3744,22 @@ if not s or s == "" then return end
 local x, y, z = s:match("([^,]+),([^,]+),([^,]+)")
 if x then tpToCoords(x, y, z) end
 end })
-Tabs.TP:AddToggle("AntiVoid", { Title = "防掉虚空", Default = false, Callback = function(v) T.AntiVoid = v if v then AntiVoidEnable() else AntiVoidDisable() end end })
+Tabs.TP:AddToggle("AntiVoid", { Title = "防掉虚空", Default = false, Callback = function(v) T.AntiVoid = v if v then F.AntiVoidEnable() else F.AntiVoidDisable() end end })
 Tabs.TP:AddSlider("VoidY", { Title = "虚空高度阈值", Min = -200, Max = 0, Default = -50, Rounding = 0, Callback = function(v) C.VoidY = v end })
-Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then AutoRespawnEnable() end end })
+Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then F.AutoRespawnEnable() end end })
 end
 do
 Tabs.AFK:AddSection("挂机防踢")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
-if v then AntiAFKEnable() KickGuardEnable() KickRejoinEnable() else KickGuardDisable() end
+if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() else F.KickGuardDisable() end
 end })
 Tabs.AFK:AddSection("踢击训练")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then AutoTrainEnable() end end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then AutoBonusEnable() end end })
+Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then F.AutoTrainEnable() end end })
+Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then F.AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
 Tabs.AFK:AddSection("自动锻炼")
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then AutoGymEnable() end end })
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then F.AutoGymEnable() end end })
 Tabs.AFK:AddSection("基地操作")
 Tabs.AFK:AddToggle("AutoSell", { Title = "卖 CPS 脑红(按门槛)", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
 Tabs.AFK:AddInput("SellMinCPS", { Title = "售卖门槛(可填 1M / 500K / 数字)", Default = "100K", Placeholder = "例如 1M = 100万", Callback = function(v)
@@ -3729,13 +3813,13 @@ Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACBypass", { Title = "反作弊一键(防踢+拦远程+防甩飞+元表清空)", Default = false, Callback = function(v)
 T.ACBypass = v T.NamecallHook = v T.RemoteBlock = v T.AntiFling = v T.MetaBypass = v T.BadgeBypass = v
 if v then
-AC.InstallNamecallHook() AC.InstallPropertyLock() AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
+AC.InstallNamecallHook() AC.InstallPropertyLock() F.AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
 else
-AntiFlingDisable()
+F.AntiFlingDisable()
 end
 end })
 Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
-Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then ACBypassPlusEnable() end end })
+Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then F.ACBypassPlusEnable() end end })
 Tabs.AC:AddToggle("UniversalAC", { Title = "通用反作弊v2(拦上报+深度扫描+属性锁)", Default = false, Callback = function(v)
 T.UniversalAC = v T.PropertyLock = v
 if v then
@@ -3744,10 +3828,10 @@ else
 AC.UnblockRemotes()
 end
 end })
-Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
+Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then F.VoiceBypassEnable() else F.VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("AntiTP", { Title = "防传送(拦截被踢/传送走)", Default = false, Callback = function(v) T.AntiTP = v if v then AC.InstallAntiTP() else AC.UninstallAntiTP() end end })
 Tabs.AC:AddToggle("AntiPause", { Title = "防游戏暂停(销毁网络暂停界面)", Default = false, Callback = function(v) T.AntiPause = v if v then AC.AntiPauseEnable() else AC.AntiPauseDisable() end end })
-Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
+Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then F.TrapsESPEnable() else F.TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
 Tabs.AC:AddSection("扫描 / 抓包")
 Tabs.AC:AddButton({ Title = "扫描抓包(深度·含隐藏remote)", Callback = function() local r, sus = scanRemotes() Fluent:Notify({ Title = "深度抓包", Content = "共 " .. #r .. " 个远程，可疑 " .. sus .. " 个，详见控制台(F9)", Duration = 5 }) end })
@@ -3774,12 +3858,12 @@ T.KickProtect = true
 T.AntiAFK = true
 T.KickGuard = true
 T.KickRejoin = true
-AntiAFKEnable()
-KickGuardEnable()
-KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.3", Duration = 5 })
+F.AntiAFKEnable()
+F.KickGuardEnable()
+F.KickRejoinEnable()
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.1.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.0.3")
+print("[CheatMenu] ✅ 加载完成 v5.1.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
