@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-29 00:27 sha 906b74ad bytes 163525'):format('2026-09-29 00:27','906b74ad',163525))
+print(('[CheatMenu] build 2026-09-29 00:47 sha 9cf7cf75 bytes 180672'):format('2026-09-29 00:47','9cf7cf75',180672))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.5.0 =====")
+print("[CheatMenu] ===== 加载开始 · v6.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -197,6 +197,7 @@ if ok and type(res) == "function" then
 orig = res
 AC.BlockedRemotes[remote] = res
 AC.BlockedCount = AC.BlockedCount + 1
+AC.markHooked(fn)
 end
 end
 function AC.UnblockRemotes()
@@ -391,9 +392,17 @@ AC.markOwn = function(fn)
 if type(fn) == "function" then AC._ownFns[fn] = true end
 return fn
 end
+AC._hookedFns = setmetatable({}, { __mode = "k" })
+AC.markHooked = function(fn)
+if type(fn) == "function" then AC._hookedFns[fn] = true end
+return fn
+end
 AC.srcOf = function(fn)
 if type(fn) ~= "function" then return nil end
+local keep = F._scavenging
+F._scavenging = true
 local ok, info = pcall(debug.getinfo, fn, "s")
+F._scavenging = keep
 return (ok and info and info.source) or nil
 end
 AC.selfSrc = function()
@@ -482,6 +491,8 @@ end
 function AC.DisableACConnections(force)
 local out = { scanned = 0, disabled = 0 }
 if type(getconnections) ~= "function" then return 0, 0 end
+local keepScav = F._scavenging
+F._scavenging = true
 pcall(F.markOwnClosures)
 local ch, hum, root = GC()
 local hardSigs, softSigs = {}, {}
@@ -507,13 +518,12 @@ for i = 1, #hardSigs do AC.disableSignalConns(hardSigs[i], force ~= false, out) 
 AC._forceConnSignals = false
 for i = 1, #softSigs do AC.disableSignalConns(softSigs[i], false, out) end
 if not force then
-F._scavenging = true
 for _, obj in ipairs(F.GuardedGetGC(true, true)) do
 if typeof(obj) == "RBXScriptSignal" then AC.disableSignalConns(obj, false, out) end
 end
-F._scavenging = false
 end
 AC._forceConnSignals = keepForce
+F._scavenging = keepScav
 AC._connDisabled = AC._connDisabled + out.disabled
 print(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条", out.scanned, out.disabled))
 return out.disabled, out.scanned
@@ -596,14 +606,43 @@ if type(getgc) ~= "function" then return {} end
 local ok, r = pcall(getgc, pass)
 return (ok and type(r) == "table") and r or {}
 end
-F.GC_SPOOF_KEYS = { "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
+F.GC_SPOOF_KEYS = { "info", "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
 F._scavenging = false
 F._debugHookOn = false
-F._debugOrig = nil
+F._stealthOn = false
+F._stealthRestore = {}
+F._stealthHooked = setmetatable({}, { __mode = "k" })
+F._stealthLayers = {}
+F.StealthAggressive = true
+function F.getGameEnv()
+if type(getrenv) ~= "function" then return nil end
+local ok, env = pcall(getrenv)
+return (ok and type(env) == "table") and env or nil
+end
+function F.isProtectedFn(f)
+return type(f) == "function" and (AC._ownFns[f] == true or AC._hookedFns[f] == true)
+end
+function F.stealthHook(obj, wrapperFactory)
+if type(obj) ~= "function" then return nil end
+if F._stealthHooked[obj] then return nil end
+if not (hookfunction and newcclosure) then return nil end
+local box = { orig = nil }
+local wrapper = wrapperFactory(box)
+local ok, res = pcall(function() return hookfunction(obj, newcclosure(wrapper)) end)
+if ok and type(res) == "function" then
+box.orig = res
+F._stealthHooked[obj] = true
+F._stealthRestore[#F._stealthRestore + 1] = { obj = obj, orig = res }
+return res
+end
+return nil
+end
 function F.markOwnClosures()
 if type(getgc) ~= "function" then return 0 end
 local mine = AC.selfSrc()
 if not (mine and mine ~= "") then return 0 end
+local keep = F._scavenging
+F._scavenging = true
 local n, seen = 0, 0
 for _, obj in ipairs(F.GuardedGetGC(true, true)) do
 seen = seen + 1
@@ -616,48 +655,355 @@ n = n + 1
 end
 end
 end
+F._scavenging = keep
 return n
 end
-function F.SpoofGCMetadata()
-local marked = F.markOwnClosures()
-if F._debugHookOn then return true, marked end
-if not (hookfunction and newcclosure) then return false, marked end
-F._debugOrig = F._debugOrig or {}
+function F.StealthDebugLayer()
+if F._debugHookOn then return 0, true end
 local installed = 0
 for i = 1, #F.GC_SPOOF_KEYS do
 local key = F.GC_SPOOF_KEYS[i]
-if not F._debugOrig[key] and type(debug[key]) == "function" then
-local orig = debug[key]
-local ok, res = pcall(function()
-return hookfunction(orig, newcclosure(function(f, ...)
-if not F._scavenging and type(f) == "function" and AC._ownFns[f] and not checkcaller() then
+if type(debug[key]) == "function" then
+local got = F.stealthHook(debug[key], function(box)
+return function(f, t, ...)
+if not F._scavenging and not checkcaller() and type(f) == "function" then
+local luaFn = (not islclosure) or islclosure(f)
+local aggressive = (key == "info") and F.StealthAggressive and luaFn
+if F.isProtectedFn(f) or aggressive then
+if t == "s" then return "[C]" end
+if t == "l" or t == "f" then return 0 end
 if key == "getconstants" or key == "getprotos" then return {} end
+if type(t) == "string" and #t > 1 then
+local r = box.orig(f, t, ...)
+if type(r) == "table" then
+if r.source ~= nil then r.source = "[C]" end
+if r.linedefined ~= nil then r.linedefined = 0 end
+if r.currentline ~= nil then r.currentline = 0 end
+if r.what ~= nil then r.what = "C" end
+end
+return r
+end
+if key == "info" then return box.orig(f, t, ...) end
 return nil
 end
-return F._debugOrig[key](f, ...)
-end))
-end)
-if ok and type(res) == "function" then
-F._debugOrig[key] = res
-installed = installed + 1
 end
+return box.orig(f, t, ...)
+end
+end)
+if got then installed = installed + 1 end
 end
 end
 F._debugHookOn = installed > 0
-print(string.format("[CheatMenu] GC 元数据防护: 登记自身闭包 %d 个, 过滤 debug.* %d 项", marked, installed))
-return F._debugHookOn, marked
+return installed, F._debugHookOn
+end
+function F.StealthGameDebugLayer()
+local env = F.getGameEnv()
+local dbg = env and env.debug
+if type(dbg) ~= "table" or type(dbg.info) ~= "function" then return false, false end
+if dbg.info == debug.info or dbg.info == debug.getinfo then return false, true end
+local got = F.stealthHook(dbg.info, function(box)
+return function(f, t, ...)
+if not F._scavenging and not checkcaller() and type(f) == "function" then
+local luaFn = (not islclosure) or islclosure(f)
+if F.isProtectedFn(f) or (F.StealthAggressive and luaFn) then
+if t == "s" then return "[C]" end
+if t == "l" or t == "f" then return 0 end
+if type(t) == "string" and #t > 1 then
+local r = box.orig(f, t, ...)
+if type(r) == "table" then
+if r.source ~= nil then r.source = "[C]" end
+if r.linedefined ~= nil then r.linedefined = 0 end
+if r.currentline ~= nil then r.currentline = 0 end
+if r.what ~= nil then r.what = "C" end
+end
+return r
+end
+end
+end
+return box.orig(f, t, ...)
+end
+end)
+return got ~= nil, false
+end
+function F.StealthGameGetfenvLayer()
+local env = F.getGameEnv()
+if type(env) ~= "table" or type(env.getfenv) ~= "function" then return false, false end
+if env.getfenv == getfenv then return false, true end
+local got = F.stealthHook(env.getfenv, function(box)
+return function(l, ...)
+if not F._scavenging and not checkcaller() and type(l) == "number" and l >= 1 and l <= 10 then
+return box.orig(10)
+end
+return box.orig(l, ...)
+end
+end)
+return got ~= nil, false
+end
+function F.StealthIdentityLayer()
+local installed = 0
+local names = { "getthreadidentity", "getidentity" }
+local holders = {}
+local env = F.getGameEnv()
+if env then holders[#holders + 1] = env end
+if type(getgenv) == "function" then
+local ok, g = pcall(getgenv)
+if ok and type(g) == "table" and g ~= env then holders[#holders + 1] = g end
+end
+holders[#holders + 1] = _G
+for i = 1, #names do
+local nm = names[i]
+for j = 1, #holders do
+local h = holders[j]
+if type(h) == "table" and type(h[nm]) == "function" then
+local got = F.stealthHook(h[nm], function(box)
+return function(...)
+if not F._scavenging and not checkcaller() then return 2 end
+return box.orig(...)
+end
+end)
+if got then installed = installed + 1 end
+end
+end
+end
+return installed > 0
+end
+function F.StealthTracebackLayer()
+local targets = { debug.traceback }
+local env = F.getGameEnv()
+if env and env.debug and type(env.debug.traceback) == "function"
+and env.debug.traceback ~= debug.traceback then
+targets[#targets + 1] = env.debug.traceback
+end
+local installed = 0
+for i = 1, #targets do
+local got = F.stealthHook(targets[i], function(box)
+return function(...)
+local r = box.orig(...)
+if not F._scavenging and type(r) == "string" then
+local mine = AC._mySrc
+local out = {}
+for line in (r .. "\n"):gmatch("([^\n]*)\n") do
+local hit = false
+if mine and mine ~= "" and line:find(mine, 1, true) then hit = true end
+if line:find("CheatMenu", 1, true) then hit = true end
+if not hit then out[#out + 1] = line end
+end
+return table.concat(out, "\n")
+end
+return r
+end
+end)
+if got then installed = installed + 1 end
+end
+return installed > 0
+end
+function F.StealthEnable()
+local marked = F.markOwnClosures()
+local nA, okA = F.StealthDebugLayer()
+local okB, sameB = F.StealthGameDebugLayer()
+local okC, sameC = F.StealthGameGetfenvLayer()
+local okD = F.StealthIdentityLayer()
+local okE = F.StealthTracebackLayer()
+local cnt = (okA and 1 or 0) + (okB and 1 or 0) + (okC and 1 or 0) + (okD and 1 or 0) + (okE and 1 or 0)
+F._stealthOn = cnt > 0
+F._stealthLayers = {
+debug = okA and 1 or 0, gameDebug = okB and 1 or 0, gameGetfenv = okC and 1 or 0,
+identity = okD and 1 or 0, traceback = okE and 1 or 0,
+}
+print(string.format("[CheatMenu] 隐身 %d/5 层 (debug=%s 游戏debug=%s 游戏getfenv=%s 身份=%s 回溯=%s) · 登记闭包 %d 个",
+cnt, tostring(okA), tostring(okB), tostring(okC), tostring(okD), tostring(okE), marked))
+if sameB then print("[CheatMenu]   (注: getrenv().debug.info 与全局是同一对象, 已由第 1 层覆盖)") end
+if sameC then print("[CheatMenu]   (注: getrenv().getfenv 与全局是同一对象, 无需重复盖)") end
+return F._stealthOn, marked
+end
+function F.StealthDisable()
+if hookfunction and F._stealthRestore then
+for i = #F._stealthRestore, 1, -1 do
+local rec = F._stealthRestore[i]
+pcall(function() hookfunction(rec.obj, rec.orig) end)
+end
+end
+F._stealthRestore = {}
+F._stealthHooked = setmetatable({}, { __mode = "k" })
+F._debugHookOn = false
+F._stealthOn = false
+print("[CheatMenu] 隐身影身层已卸载")
+end
+function F.SpoofGCMetadata()
+local ok, marked = F.StealthEnable()
+return ok, marked
 end
 function F.UnspoofGCMetadata()
-if not (F._debugHookOn and hookfunction and F._debugOrig) then return end
-for i = 1, #F.GC_SPOOF_KEYS do
-local key = F.GC_SPOOF_KEYS[i]
-if F._debugOrig[key] then pcall(function() hookfunction(debug[key], F._debugOrig[key]) end) end
+F.StealthDisable()
 end
-F._debugHookOn = false
+function AC.FindFn(name, wantAll)
+if type(name) ~= "string" or name == "" then return nil end
+local out = {}
+if type(filtergc) == "function" then
+local ok, r = pcall(filtergc, "function", { Name = name }, true)
+if ok and type(r) == "table" then
+for i = 1, #r do out[#out + 1] = r[i] end
+elseif ok and type(r) == "function" then
+out[1] = r
+end
+end
+if #out == 0 and type(getgc) == "function" then
+local keepScav = F._scavenging
+F._scavenging = true
+for _, f in ipairs(F.GuardedGetGC(true, true)) do
+if type(f) == "function" and (not islclosure or islclosure(f)) then
+local oki, info = pcall(debug.getinfo, f, "n")
+if oki and info and info.name == name then out[#out + 1] = f end
+end
+end
+F._scavenging = false
+F._scavenging = keepScav
+end
+if #out == 0 then return nil, nil end
+if wantAll then return out[1], out end
+return out[1], out
+end
+function AC.FnDesc(f)
+if type(f) ~= "function" then return "(不是函数)" end
+local keep = F._scavenging
+F._scavenging = true
+local oki, info = pcall(debug.getinfo, f, "nS")
+F._scavenging = keep
+if not oki or not info then return "(元数据不可读)" end
+return string.format("%s @ %s:%s", tostring(info.name or "?"), tostring(info.source or "?"), tostring(info.linedefined or "?"))
+end
+AC.NEUTRALIZE_NAMES = {
+"GetPlayerBanned", "IsPlayerBanned", "BanPlayer", "PunishPlayer", "ReportPlayer",
+"SuspendPlayer", "FlagPlayer", "AntiCheatDetected", "ACDetected", "OnDetected",
+"Detected", "detected", "FlagPlayerForCheating",
+}
+function AC.NeutralizeByName(extra)
+local hit, found = 0, 0
+local function kill(nm)
+local _, list = AC.FindFn(nm, true)
+if type(list) ~= "table" then return 0, 0 end
+local k, seenN = 0, 0
+for i = 1, #list do
+local fn = list[i]
+if type(fn) == "function" then
+seenN = seenN + 1
+if not AC._hookedFns[fn] then
+local got = F.stealthHook(fn, function(box)
+return function() return nil end
+end)
+if got then AC.markHooked(fn) k = k + 1 end
+end
+end
+end
+if k > 0 then
+print(string.format("[CheatMenu] 按名中和: %s x%d (首个: %s)", nm, k, AC.FnDesc(list[1])))
+end
+return k, seenN
+end
+for i = 1, #AC.NEUTRALIZE_NAMES do
+local k, s = kill(AC.NEUTRALIZE_NAMES[i])
+hit = hit + k found = found + s
+end
+if type(extra) == "table" then
+for i = 1, #extra do
+if type(extra[i]) == "string" and extra[i] ~= "" then
+local k, s = kill(extra[i])
+hit = hit + k found = found + s
+end
+end
+end
+print(string.format("[CheatMenu] 按名中和完成: 命中 %d 个具名函数, 已中和 %d 个", found, hit))
+return hit, found
+end
+function AC.ScaleSignalHandler(sig, factor)
+if not sig or type(getconnections) ~= "function" or type(factor) ~= "number" then return 0 end
+local ok, conns = pcall(getconnections, sig)
+if not (ok and type(conns) == "table") then return 0 end
+local n = 0
+for i = 1, #conns do
+local c = conns[i]
+local fn = nil
+pcall(function() fn = c.Function end)
+if type(fn) == "function" and not AC.isOwnConn(fn) and not AC._hookedFns[fn] then
+local got = F.stealthHook(fn, function(box)
+return function(...)
+local args = { ... }
+local touched = false
+for j = 1, #args do
+if typeof(args[j]) == "Vector3" then
+args[j] = args[j] * factor
+touched = true
+end
+end
+if not touched then return box.orig(...) end
+return box.orig(table.unpack(args))
+end
+end)
+if got then AC.markHooked(fn) n = n + 1 end
+end
+end
+return n
+end
+AC.KNOCK_KEYS = { "knockback", "knock", "velocity", "impulse", "push", "launch", "ragdoll" }
+function AC.ScaleKnockback(factor)
+local total, sigs = 0, 0
+local keepScav = F._scavenging
+F._scavenging = true
+pcall(function()
+for _, d in ipairs(RStorage:GetDescendants()) do
+if d:IsA("RemoteEvent") then
+local n = d.Name:lower()
+for i = 1, #AC.KNOCK_KEYS do
+if n:find(AC.KNOCK_KEYS[i], 1, true) then
+sigs = sigs + 1
+total = total + AC.ScaleSignalHandler(d.OnClientEvent, factor)
+break
+end
+end
+end
+end
+end)
+F._scavenging = false
+F._scavenging = keepScav
+print(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
+return total
+end
+function AC.StripMetatable(keyName)
+if type(keyName) ~= "string" or keyName == "" then return 0 end
+local n = 0
+local keepScav = F._scavenging
+F._scavenging = true
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+if type(obj) == "table" and not AC._ownFns[obj] then
+local ok, v = pcall(rawget, obj, keyName)
+if ok and v ~= nil then
+local ok2 = pcall(function()
+local mt = getmetatable(obj)
+if mt then setmetatable(obj, {}) end
+end)
+if ok2 then n = n + 1 end
+end
+end
+end
+F._scavenging = false
+F._scavenging = keepScav
+print(string.format("[CheatMenu] 元表剥离: 含键 %q 的表 %d 个", keyName, n))
+return n
+end
+function AC.PokeUpvalue(fnName, idx, value)
+local f = AC.FindFn(fnName)
+if type(f) ~= "function" or type(idx) ~= "number" then return false end
+local ok = pcall(function()
+local okset = (type(setupvalue) == "function")
+if okset then setupvalue(f, idx, value) else debug.setupvalue(f, idx, value) end
+end)
+print(string.format("[CheatMenu] 原地改 upvalue: %s[%s] = %s -> %s", tostring(fnName), tostring(idx), tostring(value), ok and "成功" or "失败"))
+return ok
 end
 function F.UnifiedACPass()
 if F._unifiedRunning then return 0 end
 F._unifiedRunning = true
+local keepScav = F._scavenging
 F._scavenging = true
 local blocked, hooked, cleared, spoofed = 0, 0, 0, 0
 pcall(F.SpoofGCMetadata)
@@ -684,13 +1030,13 @@ AC.hookOneRemote(obj)
 elseif typeof(obj) == "table" then
 local detected = rawget(obj, "Detected")
 if detected and type(detected) == "function" and hookfunction then
-pcall(hookfunction, detected, function() return true end)
-hooked = hooked + 1
+local got = F.stealthHook(detected, function(box) return function() return nil end end)
+if got then AC.markHooked(detected) hooked = hooked + 1 end
 end
 local killfunc = rawget(obj, "Kill")
 if killfunc and type(killfunc) == "function" and rawget(obj, "Variables") and rawget(obj, "Process") then
-pcall(hookfunction, killfunc, function() end)
-hooked = hooked + 1
+local got = F.stealthHook(killfunc, function(box) return function() end end)
+if got then AC.markHooked(killfunc) hooked = hooked + 1 end
 end
 local hitLog = false
 local n = rawget(obj, "Name") or rawget(obj, "name")
@@ -728,11 +1074,11 @@ end
 if hitAC or hitTel then break end
 end
 if hitAC then
-pcall(hookfunction, obj, function() return nil end)
-hooked = hooked + 1
+local got = F.stealthHook(obj, function(box) return function() return nil end end)
+if got then AC.markHooked(obj) hooked = hooked + 1 end
 elseif hitTel then
-pcall(hookfunction, obj, function(...) return true end)
-spoofed = spoofed + 1
+local got = F.stealthHook(obj, function(box) return function(...) return true end end)
+if got then AC.markHooked(obj) spoofed = spoofed + 1 end
 end
 end
 end
@@ -742,10 +1088,12 @@ blocked = AC.BlockedCount
 end)
 F._unifiedRunning = false
 F._scavenging = false
+F._scavenging = keepScav
 print(string.format("[CheatMenu] 统一扫描 · 拦 remote=%d 中和=%d 清日志=%d 伪造遥测=%d", blocked, hooked, cleared, spoofed))
 return blocked
 end
 function F.ScanRemotes()
+local keepScav = F._scavenging
 F._scavenging = true
 local found, order = {}, {}
 local function addRemote(obj, src)
@@ -794,9 +1142,11 @@ print(string.format("[抓包] %s [%s] %s", it.suspicious and "可疑" or " 普�
 end
 print(string.format("[抓包] 共 %d 个远程，可疑 %d 个", total, susCount))
 F._scavenging = false
+F._scavenging = keepScav
 return susCount
 end
 function F.ScanGameModules()
+local keepScav = F._scavenging
 F._scavenging = true
 local modCount = 0
 print("[模块扫描] ===== 已加载模块 =====")
@@ -851,9 +1201,11 @@ end
 end)
 print("[模块扫描] 共 " .. modCount .. " 个 ModuleScript, 疑似反作弊函数 " .. acFunc .. " 个")
 F._scavenging = false
+F._scavenging = keepScav
 return modCount, acFunc
 end
 function AC.ScanAndBlock()
+local keepScav = F._scavenging
 F._scavenging = true
 local n = 0
 pcall(function()
@@ -872,6 +1224,7 @@ end
 end)
 pcall(F.UnifiedACPass)
 F._scavenging = false
+F._scavenging = keepScav
 print("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.BlockedCount .. " 个")
 return AC.BlockedCount
 end
@@ -1993,6 +2346,39 @@ end
 F.HitboxBackup = {}
 F._hbProg = nil
 end
+F._authorityServer = nil
+F._authorityMode = nil
+function F.AuthorityGuard(verbose)
+local mode = nil
+pcall(function() mode = workspace.AuthorityMode end)
+if mode == nil then pcall(function() mode = workspace:GetAttribute("AuthorityMode") end) end
+local srv = false
+if mode ~= nil then
+local s = tostring(mode):lower()
+srv = (s:find("server", 1, true) ~= nil)
+end
+F._authorityServer = srv
+F._authorityMode = mode
+if srv and verbose then
+print("[CheatMenu] ⚠ AuthorityMode=Server: 位移/速度由服务端权威裁决, 飞行/加速命中率会明显下降")
+end
+return mode, srv
+end
+function F.Jitter(base)
+local j = tonumber(C.MoveJitter) or 20
+if j <= 0 then return base end
+return base * (1 - j / 100 + math.random() * (2 * j / 100))
+end
+function F.FlyHeightCap(root, baseY)
+local maxH = tonumber(C.FlyMaxHeight) or 400
+if maxH <= 0 or not baseY then return false end
+if root.Position.Y - baseY > maxH then
+local cf = root.CFrame
+root.CFrame = CFrame.new(Vector3.new(cf.Position.X, baseY + maxH, cf.Position.Z)) * (cf - cf.Position)
+return true
+end
+return false
+end
 local FlyConn = nil
 local function FlyDisable()
 if FlyConn then FlyConn:Disconnect() FlyConn = nil end
@@ -2003,7 +2389,9 @@ local function FlyEnable()
 local _, hum, root = GC()
 if not (hum and root) then return end
 FlyDisable()
+pcall(F.AuthorityGuard, true)
 hum.PlatformStand = true
+F._flyBaseY = root.Position.Y
 FlyConn = RS.RenderStepped:Connect(function(dt)
 if not T.Fly then FlyDisable() return end
 local _, h, r = GC()
@@ -2016,11 +2404,21 @@ if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+local moved = false
 if dir.Magnitude > 0 then
 local sp = math.min(C.FlySpeed or 50, 1000) * math.min(dt, 0.1)
+sp = F.Jitter(sp)
 r.CFrame = r.CFrame + (dir.Unit * sp)
+moved = true
 end
+F.FlyHeightCap(r, F._flyBaseY)
+if T.FlyVelSpoof ~= false then
+local cap = math.min(math.min(C.FlySpeed or 50, 1000), 60)
+local want = moved and (dir.Unit * cap) or Vector3.zero
+r.AssemblyLinearVelocity = r.AssemblyLinearVelocity:Lerp(want, 0.5)
+else
 r.AssemblyLinearVelocity = Vector3.zero
+end
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
@@ -2033,7 +2431,9 @@ function F.FlyPhysEnable()
 local _, hum, root = GC()
 if not (hum and root) then return end
 F.FlyPhysDisable()
+pcall(F.AuthorityGuard, true)
 hum.PlatformStand = true
+F._flyBaseY = root.Position.Y
 FlyBv = Instance.new("BodyVelocity")
 FlyBv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
 FlyBv.Velocity = Vector3.zero
@@ -2055,9 +2455,11 @@ if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-local targetVel = dir.Unit * (C.FlySpeed or 50) * (dir.Magnitude > 0 and 1 or 0)
+local spd = F.Jitter(C.FlySpeed or 50)
+local targetVel = dir.Unit * spd * (dir.Magnitude > 0 and 1 or 0)
 FlyBv.Velocity = FlyBv.Velocity:Lerp(targetVel, 0.35)
 FlyBg.CFrame = cam.CFrame
+F.FlyHeightCap(r, F._flyBaseY)
 end)
 end
 local SpeedConn, SpeedConn2, baseWalk
@@ -2098,6 +2500,7 @@ end
 function F.SpeedCFrameEnable()
 if F._speedCConn then return end
 F._speedCLeft = 0
+pcall(F.AuthorityGuard, true)
 F._speedCConn = RS.RenderStepped:Connect(function(dt)
 if not T.SpeedCFrame then F._speedCLeft = 0 return end
 local _, hum, root = GC()
@@ -2106,7 +2509,12 @@ dt = math.min(dt, 0.1)
 local mult = math.max(1, tonumber(C.SpeedCFrameMul) or 2)
 local md = hum.MoveDirection
 if md.Magnitude < 0.01 then F._speedCLeft = 0 return end
+if T.SpeedCFrameGroundOnly ~= false and hum.FloorMaterial == Enum.Material.Air then
+F._speedCLeft = 0
+return
+end
 local maxPerFrame = math.clamp(tonumber(C.SpeedCFrameStep) or 4, 0.5, 16)
+maxPerFrame = math.max(0.5, F.Jitter(maxPerFrame))
 local want = 16 * mult * dt + (F._speedCLeft or 0)
 local move = math.min(want, maxPerFrame)
 F._speedCLeft = want - move
@@ -2125,6 +2533,7 @@ end
 function F.DesyncSpeedEnable()
 if AC._desyncOn then return end
 AC._desyncOn = true
+pcall(F.AuthorityGuard, true)
 AC._desyncLoc = CFrame.new()
 AC._desyncOffset = Vector3.new(
 tonumber(C.DesyncSide) or 0,
@@ -2142,8 +2551,15 @@ if not root then return end
 AC._desyncLoc = root.CFrame
 local fakePos = AC._desyncLoc.Position + AC._desyncOffset
 root.CFrame = CFrame.new(fakePos, fakePos + AC._desyncLoc.LookVector)
-RS.RenderStepped:Wait()
-if root.Parent then root.CFrame = AC._desyncLoc end
+pcall(function()
+RS:UnbindFromRenderStep("CMDesyncRevert")
+end)
+pcall(function()
+RS:BindToRenderStep("CMDesyncRevert", Enum.RenderPriority.Camera.Value + 1, function()
+RS:UnbindFromRenderStep("CMDesyncRevert")
+if root.Parent then pcall(function() root.CFrame = AC._desyncLoc end) end
+end)
+end)
 end)
 local old
 old = hookmetamethod(game, "__index", newcclosure(function(self, key)
@@ -2160,6 +2576,7 @@ end
 function F.DesyncSpeedDisable()
 AC._desyncOn = false
 if AC._desyncConn then pcall(function() AC._desyncConn:Disconnect() end) AC._desyncConn = nil end
+pcall(function() RS:UnbindFromRenderStep("CMDesyncRevert") end)
 if AC._desyncHook and AC._desyncHookOld and hookmetamethod then
 pcall(function() hookmetamethod(game, "__index", AC._desyncHookOld) end)
 end
@@ -3781,7 +4198,7 @@ F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, F.UnspoofGCMetadata,
-F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
+F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
@@ -3811,6 +4228,7 @@ if T.UniversalAC then AC.InstallPropertyLock() end
 if T.PropertyLock then AC.InstallPropertyLock() end
 if T.ACIndexHook or T.SpeedMask then AC.InstallIndexMask() end
 if T.ACBypass then pcall(AC.InstallSetmetatableHook) pcall(F.SpoofGCMetadata) end
+if T.StealthMode then pcall(F.StealthEnable) end
 if T.GuiProtect then pcall(F.GuiProtectionEnable) end
 if T.AntiTP then AC.InstallAntiTP() end
 if T.AntiPause then AC.AntiPauseEnable() end
@@ -3836,7 +4254,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.5.0",
+SubTitle = "v6.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -3973,6 +4391,17 @@ if T.Fly then FlyEnable()
 elseif T.FlyPhys then F.FlyPhysEnable() end
 end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddSlider("FlyMaxHeight", { Title = "飞行高度上限(0=不限)", Min = 0, Max = 2000, Default = 400, Rounding = 0, Callback = function(v) C.FlyMaxHeight = v end })
+Tabs.Move:AddToggle("FlyVelSpoof", { Title = "飞行速度伪装(复制的是人力量级)", Default = true, Callback = function(v) T.FlyVelSpoof = v end })
+Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动幅度(%, 0=关)", Min = 0, Max = 40, Default = 20, Rounding = 0, Callback = function(v) C.MoveJitter = v end })
+Tabs.Move:AddButton({ Title = "服务端权威检查(AuthorityMode)", Callback = function()
+local mode, srv = F.AuthorityGuard(false)
+local txt = (mode == nil) and "本游戏没有 AuthorityMode 字段, 位移走客户端权威(可放心用)"
+or (srv and ("AuthorityMode=" .. tostring(mode) .. " → 位移由服务端裁决, 飞行/加速会被引擎拒绝或回弹")
+or ("AuthorityMode=" .. tostring(mode) .. " → 客户端权威, 位移类功能可用"))
+if Fluent and Fluent.Notify then Fluent:Notify({ Title = "服务端权威", Content = txt, Duration = 8 }) end
+print("[CheatMenu] " .. txt)
+end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
 "关闭", "普通加速", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
@@ -3991,6 +4420,7 @@ end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "单帧位移上限(越小越隐蔽)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
+Tabs.Move:AddToggle("SpeedCFrameGroundOnly", { Title = "只在地面提速(空中不提)", Default = true, Callback = function(v) T.SpeedCFrameGroundOnly = v end })
 Tabs.Move:AddSlider("DesyncOffset", { Title = "Desync 下移偏移", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.DesyncOffset = v end })
 Tabs.Move:AddSlider("DesyncSide", { Title = "Desync 侧向偏移", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v) C.DesyncSide = v end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end end })
@@ -4107,33 +4537,39 @@ if v then
 T.ACBypass = true T.NamecallHook = true T.RemoteBlock = true
 T.AntiFling = true T.UniversalAC = true T.PropertyLock = true
 T.SpeedMask = true T.ACIndexHook = true
+T.StealthMode = true T.GuiProtect = true
 AC.InstallNamecallHook() AC.InstallPropertyLock() AC.InstallIndexMask()
 pcall(AC.InstallSetmetatableHook)
 pcall(AC.WatchNewScriptsEnable)
 F.AntiFlingEnable()
 T.CharPersist = true
 task.spawn(function()
+local stealth = select(1, F.StealthEnable())
 local blocked = F.UnifiedACPass()
 local killed = AC.DisableACConnections(true)
+local neutral = AC.NeutralizeByName(nil)
 AC.WatchNewRemotesEnable()
 F.ProtectGui()
 pcall(F.GuiProtectionEnable)
-T.GuiProtect = true
+pcall(F.AuthorityGuard, true)
 Fluent:Notify({
 Title = "反作弊",
-Content = "已开启全部绕过 · 拦 remote " .. tostring(blocked) .. " 个 · 断连接 " .. tostring(killed) .. " 条",
-Duration = 6,
+Content = "已开启全部绕过 · 隐身 " .. (stealth and "开" or "关") ..
+" · 拦 remote " .. tostring(blocked) .. " · 断连接 " .. tostring(killed) ..
+" · 中和函数 " .. tostring(neutral),
+Duration = 8,
 })
 end)
 else
 T.ACBypass = false T.NamecallHook = false T.RemoteBlock = false
 T.AntiFling = false T.UniversalAC = false T.PropertyLock = false
-T.SpeedMask = false T.ACIndexHook = false T.GuiProtect = false
+T.SpeedMask = false T.ACIndexHook = false T.GuiProtect = false T.StealthMode = false
 F.AntiFlingDisable() AC.UnblockRemotes()
 pcall(AC.WatchNewScriptsDisable)
 AC.WatchNewRemotesDisable()
 AC.UninstallSetmetatableHook()
 pcall(F.GuiProtectionDisable)
+pcall(F.StealthDisable)
 end
 end })
 Tabs.AC:AddButton({ Title = "统一扫描(一次 getgc 全做完)", Callback = function()
@@ -4182,6 +4618,46 @@ Tabs.AC:AddToggle("GuiProtect", { Title = "界面自我保护(被销毁自动重
 T.GuiProtect = v
 if v then pcall(F.GuiProtectionEnable) else pcall(F.GuiProtectionDisable) end
 end })
+Tabs.AC:AddSection("隐身 / 反检测")
+Tabs.AC:AddToggle("StealthMode", { Title = "隐身(5 层: debug/游戏debug/getfenv/身份/回溯)", Default = false, Callback = function(v)
+T.StealthMode = v
+if v then
+task.spawn(function() pcall(F.StealthEnable) end)
+else
+pcall(F.StealthDisable)
+end
+end })
+Tabs.AC:AddToggle("StealthAggressive", { Title = "激进隐身(把所有 Lua 闭包都伪装成 C 函数)", Default = true, Callback = function(v)
+F.StealthAggressive = v
+end })
+Tabs.AC:AddButton({ Title = "按名中和反作弊函数(filtergc 定位)", Callback = function()
+task.spawn(function()
+local extra = {}
+local s = C.NeutralizeExtra
+if type(s) == "string" and s ~= "" then
+for part in s:gmatch("[^,，%s]+") do extra[#extra + 1] = part end
+end
+local hit, found = AC.NeutralizeByName(extra)
+Fluent:Notify({ Title = "按名中和", Content = "命中 " .. tostring(found) .. " 个具名函数, 已中和 " .. tostring(hit) .. " 个", Duration = 6 })
+end)
+end })
+Tabs.AC:AddInput("NeutralizeExtra", { Title = "额外中和的函数名(逗号分隔)", Default = "", Placeholder = "如 GetPlayerBanned,Detected", Callback = function(v) C.NeutralizeExtra = v end })
+Tabs.AC:AddButton({ Title = "元表剥离(让身份判定失效)", Callback = function()
+task.spawn(function()
+local key = tostring(C.StripKey or "applyImpulse")
+local n = AC.StripMetatable(key)
+Fluent:Notify({ Title = "元表剥离", Content = "含键 " .. key .. " 的表: " .. tostring(n) .. " 个已剥离", Duration = 6 })
+end)
+end })
+Tabs.AC:AddInput("StripKey", { Title = "剥离用的表键名", Default = "applyImpulse", Callback = function(v) C.StripKey = v end })
+Tabs.AC:AddButton({ Title = "缩放击退 / 速度(改游戏自己的回调)", Callback = function()
+task.spawn(function()
+local f = (tonumber(C.KnockScale) or 0) / 100
+local n = AC.ScaleKnockback(f)
+Fluent:Notify({ Title = "击退缩放", Content = "已改写 " .. tostring(n) .. " 个回调 (倍率 " .. tostring(f) .. ")", Duration = 6 })
+end)
+end })
+Tabs.AC:AddSlider("KnockScale", { Title = "击退/速度保留比例(%)", Min = 0, Max = 100, Default = 0, Rounding = 0, Callback = function(v) C.KnockScale = v end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -4218,9 +4694,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.5.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.6.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.5.0")
+print("[CheatMenu] ✅ 加载完成 v6.6.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
