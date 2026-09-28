@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:40 sha ec2f36de bytes 178217'):format('2026-09-28 17:40','ec2f36de',178217))
+print(('[CheatMenu] build 2026-09-28 18:17 sha fade48ce bytes 178455'):format('2026-09-28 18:17','fade48ce',178455))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.6.3 =====")
+print("[CheatMenu] ===== 加载开始 · v5.6.4 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2286,10 +2286,18 @@ local _, _, root = GC()
 if not root then return end
 local seat = root.Parent
 if not (seat and seat:IsA("VehicleSeat") or seat and seat:IsA("Seat")) then
+if os.clock() - (F._flyCarSeekAt or 0) > 0.5 then
+F._flyCarSeekAt = os.clock()
 seat = nil
 for _, s in ipairs(workspace:GetDescendants()) do
 if (s:IsA("VehicleSeat") or s:IsA("Seat")) and s.Occupant == LP.Character then seat = s break end
 end
+F._flyCarSeat = seat
+else
+seat = F._flyCarSeat
+end
+else
+F._flyCarSeat = seat
 end
 if not seat then return end
 local car = seat.Parent
@@ -3813,6 +3821,8 @@ function F.ItemMagnetEnable()
 if F._magnetConn then return end
 F._magnetConn = RS.Heartbeat:Connect(function()
 if not T.ItemMagnet then return end
+if os.clock() - (F._magnetAt or 0) < 0.1 then return end
+F._magnetAt = os.clock()
 local _, _, root = GC()
 if not root then return end
 local radius = C.MagnetRadius or 60
@@ -4213,7 +4223,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.6.3",
+SubTitle = "v5.6.4",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4592,9 +4602,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.3", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.4", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.6.3")
+print("[CheatMenu] ✅ 加载完成 v5.6.4")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
