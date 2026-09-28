@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:27 sha ba26d15c bytes 177322'):format('2026-09-28 17:27','ba26d15c',177322))
+print(('[CheatMenu] build 2026-09-28 17:34 sha 3ec98a60 bytes 177482'):format('2026-09-28 17:34','3ec98a60',177482))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.6.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.6.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2485,6 +2485,11 @@ XrayDisable = XrayDisable,
 SelfGlowEnable = SelfGlowEnable,
 SelfGlowDisable = SelfGlowDisable,
 MuteEnable = MuteEnable,
+NoClipEnable = NoClipEnable,
+NoClipDisable = NoClipDisable,
+AntilagEnable = AntilagEnable,
+AntilagDisable = AntilagDisable,
+smoothTP = smoothTP,
 Rejoin = Rejoin,
 ToolGlowEnable = ToolGlowEnable,
 ToolGlowDisable = ToolGlowDisable,
@@ -3105,7 +3110,7 @@ end
 local function tpToCoords(x, y, z)
 local _, _, root = GC()
 if root and tonumber(x) and tonumber(y) and tonumber(z) then
-smoothTP(CFrame.new(tonumber(x), tonumber(y), tonumber(z)))
+CM.smoothTP(CFrame.new(tonumber(x), tonumber(y), tonumber(z)))
 end
 end
 local VoidConn = nil
@@ -4159,8 +4164,8 @@ if T.AntiFling then F.AntiFlingEnable() end
 if T.UniversalAC then AC.InstallPropertyLock() AC.DeepScanBlock() end
 if T.AntiTP then AC.InstallAntiTP() end
 if T.AntiPause then AC.AntiPauseEnable() end
-if T.NoClip then NoClipEnable() end
-if T.Antilag then AntilagEnable() end
+if T.NoClip then CM.NoClipEnable() end
+if T.Antilag then CM.AntilagEnable() end
 if T.SpeedBypass then F.SpeedBypassEnable() end
 if T.SpeedCFrame then F.SpeedCFrameEnable() end
 if T.FlyStealth then F.FlyStealthEnable() end
@@ -4186,7 +4191,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.6.1",
+SubTitle = "v5.6.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4338,7 +4343,7 @@ end })
 Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then CM.FOVEnable() end end })
 Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then CM.ZoomEnable() end end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
-Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
+Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then CM.AntilagEnable() else CM.AntilagDisable() end end })
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(鼠标转向/WASD/QE)", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
 Tabs.World:AddSlider("FreecamSpeed", { Title = "自由视角速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping 显示(右下角)", Default = false, Callback = function(v) T.Hud = v if v then F.HudEnable() else F.HudDisable() end end })
@@ -4565,9 +4570,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.6.1")
+print("[CheatMenu] ✅ 加载完成 v5.6.2")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
