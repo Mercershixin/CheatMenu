@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:34 sha 3ec98a60 bytes 177482'):format('2026-09-28 17:34','3ec98a60',177482))
+print(('[CheatMenu] build 2026-09-28 17:40 sha ec2f36de bytes 178217'):format('2026-09-28 17:40','ec2f36de',178217))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.6.2 =====")
+print("[CheatMenu] ===== 加载开始 · v5.6.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1269,13 +1269,36 @@ end
 end
 return false
 end
+local TRANS_MAX_CONCURRENT = 6
+local TransActive = 0
+local TransQueue = {}
+local transDrain
+transDrain = function()
+while TransActive < TRANS_MAX_CONCURRENT and #TransQueue > 0 do
+local item = table.remove(TransQueue, 1)
+TransActive = TransActive + 1
+task.spawn(function()
+local ok, tr = pcall(Trans.Translate, item.text, true)
+if ok and tr and tr ~= item.text then pcall(item.apply, tr) end
+TransActive = TransActive - 1
+transDrain()
+end)
+end
+end
+local function transAsync(text, applyFn)
+if not T.Translate then return end
+local hit = TransCache[text] or QUICK_DICT[text:lower()]
+if hit then pcall(applyFn, hit) return end
+if #TransQueue > 200 then return end
+TransQueue[#TransQueue + 1] = { text = text, apply = applyFn }
+transDrain()
+end
 local function translateGuiEl(obj)
 if not obj then return end
 if obj:IsA("TextLabel") or obj:IsA("TextButton") then
 local txt = obj.Text
 if txt and shouldTranslate(txt) then
-local tr = Trans.Translate(txt, true)
-if tr and tr ~= txt then obj.Text = tr end
+transAsync(txt, function(tr) if obj.Parent then obj.Text = tr end end)
 end
 end
 end
@@ -1292,8 +1315,7 @@ end
 for _, obj in ipairs(workspace:GetChildren()) do
 if obj:IsA("ProximityPrompt") then
 if obj.ActionText and obj.ActionText ~= "" then
-local tr = Trans.Translate(obj.ActionText, true)
-if tr then obj.ActionText = tr end
+transAsync(obj.ActionText, function(tr) if obj.Parent then obj.ActionText = tr end end)
 end
 end
 end
@@ -4191,7 +4213,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.6.2",
+SubTitle = "v5.6.3",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4570,9 +4592,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.3", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.6.2")
+print("[CheatMenu] ✅ 加载完成 v5.6.3")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
