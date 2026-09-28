@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:06 sha 5d95d166 bytes 188493'):format('2026-09-28 21:06','5d95d166',188493))
+print(('[CheatMenu] build 2026-09-28 21:10 sha 4ad31e45 bytes 188646'):format('2026-09-28 21:10','4ad31e45',188646))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.4 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.5 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4483,10 +4483,10 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.4",
+SubTitle = "v5.10.5",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
-Acrylic = true,
+Acrylic = false,
 Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
@@ -4872,9 +4872,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.4", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.5", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.4")
+print("[CheatMenu] ✅ 加载完成 v5.10.5")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -4942,7 +4942,13 @@ dragging = false
 end
 end)
 btn.MouseButton1Click:Connect(function()
-Window:Minimize()
+local w = Window or (getgenv and getgenv().CM_Window)
+local gui = w and w.escmenu
+if gui then
+gui.Visible = not gui.Visible
+elseif w and w.Minimize then
+w:Minimize()
+end
 end)
 end
 addToggleButton(Window)
