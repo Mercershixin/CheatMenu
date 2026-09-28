@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 11:35 sha 957d2e7a bytes 140027'):format('2026-09-28 11:35','957d2e7a',140027))
-print("[CheatMenu] ===== 加载开始 · v5.0.1 =====")
+print(('[CheatMenu] build 2026-09-28 11:38 sha 1c04abe8 bytes 140065'):format('2026-09-28 11:38','1c04abe8',140065))
+print("[CheatMenu] ===== 加载开始 · v5.0.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3382,7 +3382,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.0.1",
+SubTitle = "v5.0.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3636,6 +3636,7 @@ end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
+Tabs.AC:AddSection("扫描 / 抓包")
 Tabs.AC:AddButton({ Title = "扫描抓包(深度·含隐藏remote)", Callback = function() local r, sus = scanRemotes() Fluent:Notify({ Title = "深度抓包", Content = "共 " .. #r .. " 个远程，可疑 " .. sus .. " 个，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块(深度·含常量)", Callback = function() local m, ft, ac = scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "模块 " .. m .. " / 函数 " .. ft .. " / 反作弊特征 " .. ac .. "，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = function() local n = AC.ScanAndBlock() Fluent:Notify({ Title = "自动拦截", Content = "已 hook 可疑 remote 数=" .. n .. "，详见控制台(F9)", Duration = 5 }) end })
@@ -3663,9 +3664,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.0.1")
+print("[CheatMenu] ✅ 加载完成 v5.0.2")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
