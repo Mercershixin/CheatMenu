@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 02:29 sha 96bc277d bytes 232086'):format('2026-09-29 02:29','96bc277d',232086))
+print(('[CheatMenu] build 2026-09-29 03:28 sha 3f1aaa79 bytes 247350'):format('2026-09-29 03:28','3f1aaa79',247350))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.2.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4316,6 +4316,7 @@ if T.AntiRagdoll then pcall(F.AntiRagdollEnable) end
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
 if T.AntiSit then pcall(F.AntiSitEnable) end
 if T.AntiAnchor then pcall(F.AntiAnchorEnable) end
+if T.Translate then pcall(F.TranslateEnable) end
 if T.ESP then pcall(ESPEnable) end
 end
 function F.CharPersistEnable() T.CharPersist = true end
@@ -4779,7 +4780,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ FlyDisable, SpeedDisable, ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, FlyCarDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -5362,7 +5363,315 @@ CollectThread = nil
 end)
 end
 local Trans = {}
-function Trans.Translate(text, force) return nil end
+Trans.HOST = "http://127.0.0.1:8080"
+Trans.KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
+Trans.MODEL = "hymt2-7b"
+Trans.FILE = "CheatMenu_TransCache.json"
+Trans.Cache = {}
+Trans.Queue = {}
+Trans.Active = 0
+Trans.Max = 8
+Trans.Loop = nil
+Trans._lastAt = 0
+Trans.SYS_PROMPT = [[Translate the following game UI text into Chinese.
+Output ONLY the translation: no explanation, no quotes, no extra words.
+Preserve the original line breaks and number of lines.
+Keep numbers, emoji, URLs and player names unchanged.
+Translate game terms CONSISTENTLY:
+Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地, Mutation->词缀, Level->等级,
+Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,
+Squat->举铁, Train->训练, Bonus->加成,
+Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,
+Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
+Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
+Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
+Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
+Keep CPS as "CPS".
+Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
+The word Robux is kept as-is too.
+If the text is already Chinese or contains CJK, output it unchanged.]]
+Trans.QUICK = {
+["play"] = "开始", ["settings"] = "设置", ["shop"] = "商店", ["buy"] = "购买", ["sell"] = "售卖",
+["sell all"] = "全部售卖", ["claim"] = "领取", ["collect"] = "收取", ["level"] = "等级",
+["reward"] = "奖励", ["rewards"] = "奖励", ["free"] = "免费", ["coins"] = "金币", ["cash"] = "金币",
+["gold"] = "金币", ["gems"] = "宝石", ["yes"] = "是", ["no"] = "否", ["ok"] = "确定", ["confirm"] = "确认",
+["cancel"] = "取消", ["close"] = "关闭", ["back"] = "返回", ["next"] = "下一步", ["continue"] = "继续",
+["start"] = "开始", ["upgrade"] = "升级", ["rebirth"] = "重生", ["spin"] = "转盘", ["skip"] = "跳过",
+["inventory"] = "背包", ["trade"] = "交易", ["quest"] = "任务", ["rank"] = "段位", ["damage"] = "伤害",
+["health"] = "生命", ["open"] = "开启", ["max"] = "最大", ["unlock"] = "解锁", ["locked"] = "已锁定",
+["owned"] = "已拥有", ["equipped"] = "已装备", ["win"] = "胜利", ["lose"] = "失败", ["ready"] = "准备",
+["equip"] = "装备", ["use"] = "使用", ["slots"] = "槽位", ["plot"] = "基地", ["gems shop"] = "宝石商店",
+}
+Trans.LANGS = {
+zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
+th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
+}
+function Trans.Prompt(code)
+if not code or code == "zh" then return Trans.SYS_PROMPT end
+local lang = Trans.LANGS[code] or "Chinese"
+return "Translate the following game UI text into " .. lang
+.. ". Output ONLY the translation: no explanation, no quotes, no extra words."
+.. " Keep numbers, emoji, URLs and player names unchanged."
+end
+function Trans.Load()
+pcall(function()
+if not (type(readfile) == "function" and isfile and isfile(Trans.FILE)) then return end
+local d = HS:JSONDecode(readfile(Trans.FILE))
+if type(d) == "table" then
+local n = 0
+for k, v in pairs(d) do Trans.Cache[k] = v n = n + 1 end
+F.Out("[翻译] 已加载本地缓存 " .. n .. " 条")
+end
+end)
+end
+function Trans.Save()
+pcall(function()
+if type(writefile) ~= "function" then return end
+writefile(Trans.FILE, HS:JSONEncode(Trans.Cache))
+end)
+end
+function Trans.Req()
+return (type(syn) == "table" and syn.request) or AC.cap("request")
+or (type(http) == "table" and http.request) or AC.cap("http_request")
+end
+function Trans.Request(text)
+local rf = Trans.Req()
+if type(rf) ~= "function" then
+F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
+return nil
+end
+local body = HS:JSONEncode({
+model = Trans.MODEL,
+messages = {
+{ role = "system", content = Trans.Prompt(C.TransLang) },
+{ role = "user", content = text },
+},
+temperature = 0.1, top_p = 0.6, max_tokens = 128, stream = false,
+})
+local ok, res = pcall(function()
+return rf({
+Url = Trans.HOST .. "/v1/chat/completions",
+Method = "POST",
+Headers = { ["Content-Type"] = "application/json", ["Authorization"] = "Bearer " .. Trans.KEY },
+Body = body,
+})
+end)
+if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
+return nil, "HTTP " .. tostring(res and res.StatusCode or "fail")
+end
+local ok2, d = pcall(HS.JSONDecode, res.Body)
+if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "bad json" end
+local msg = d.choices[1].message
+return msg and msg.content, nil
+end
+function Trans.Should(s)
+if type(s) ~= "string" then return false end
+s = s:gsub("^%s+", ""):gsub("%s+$", "")
+if #s < 2 or #s > 300 then return false end
+if not s:find("[%a\128-\255]") then return false end
+if s:match("^[%d%.,%%%+%-%s/():;!?*#&@'\"|\\~`%[%]{}<>=]+$") then return false end
+if s:match("^https?://") or s:find("www%.%w+") or s:find("%.com") or s:find("%.net") or s:find("%.org") then return false end
+if s:match("^/") then return false end
+if s:find("€", 1, true) or s:find("¥", 1, true) then return false end
+local hasCJK = s:find("[\228-\233]") ~= nil
+if (C.TransLang or "zh") == "zh" and hasCJK then return false end
+return true
+end
+function Trans.Translate(text, force)
+if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
+text = text:gsub("^%s+", ""):gsub("%s+$", "")
+if text == "" then return nil end
+if not force and not Trans.Should(text) then return nil end
+if Trans.Cache[text] then return Trans.Cache[text] end
+local quick = Trans.QUICK[text:lower()]
+if quick then Trans.Cache[text] = quick return quick end
+local now = os.clock()
+if not force and (now - (Trans._lastAt or 0)) < (C.TransInterval or 0.15) then return nil end
+Trans._lastAt = now
+local r = Trans.Request(text)
+if r and r ~= "" and r ~= text then
+r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
+Trans.Cache[text] = r
+Trans.Save()
+return r
+end
+return nil
+end
+Trans.Drain = function()
+while Trans.Active < Trans.Max and #Trans.Queue > 0 do
+local item = table.remove(Trans.Queue, 1)
+Trans.Active = Trans.Active + 1
+task.spawn(function()
+local ok, tr = pcall(Trans.Translate, item.text, true)
+if ok and tr and tr ~= item.text then pcall(item.apply, tr) end
+Trans.Active = Trans.Active - 1
+if Trans.Active < Trans.Max and #Trans.Queue > 0 then Trans.Drain() end
+end)
+end
+end
+function Trans.Async(text, applyFn)
+if not T.Translate then return end
+local hit = Trans.Cache[text] or Trans.QUICK[text:lower()]
+if hit then pcall(applyFn, hit) return end
+if #Trans.Queue > 200 then return end
+Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
+Trans.Drain()
+end
+function Trans.Prewarm()
+task.spawn(function()
+local ok, r = pcall(Trans.Translate, "warmup", true)
+if ok and r then Trans.Cache["warmup"] = r end
+F.Out("[翻译] 服务预热完成(system prompt 的 KV 缓存已就绪)")
+end)
+end
+function Trans.GuiEl(obj)
+if not obj then return end
+if obj.Visible == false then return end
+if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+local txt = obj.Text
+if txt and Trans.Should(txt) then
+Trans.Async(txt, function(tr)
+if obj.Parent and obj.Visible ~= false then obj.Text = tr end
+end)
+end
+end
+end
+function Trans.Scan()
+local pg = LP:FindFirstChild("PlayerGui")
+local roots = { pg, CoreGui }
+if gethui then table.insert(roots, gethui()) end
+for _, root in ipairs(roots) do
+if root then
+for _, obj in ipairs(root:GetDescendants()) do Trans.GuiEl(obj) end
+end
+end
+for _, obj in ipairs(workspace:GetChildren()) do
+if obj:IsA("ProximityPrompt") and obj.ActionText and obj.ActionText ~= "" then
+Trans.Async(obj.ActionText, function(tr) if obj.Parent then obj.ActionText = tr end end)
+end
+end
+end
+function Trans.Health()
+local rf = Trans.Req()
+if type(rf) ~= "function" then return false, "执行器没有 request" end
+local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+if not ok or type(res) ~= "table" then return false, "请求失败" end
+if (res.StatusCode or 0) ~= 200 then return false, "HTTP " .. tostring(res.StatusCode) end
+return true, tostring(res.Body or ""):sub(1, 120)
+end
+function Trans.Disable()
+T.Translate = false
+if Trans.Loop then Trans.Loop = nil end
+if T.ChatTranslate then F.ChatTranslateDisable() end
+if T.BubbleTranslate then F.BubbleTranslateDisable() end
+pcall(Trans.Save)
+end
+function Trans.Enable()
+T.Translate = true
+Trans.Load()
+local ok, body = Trans.Health()
+if not ok then
+F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") —— 先双击「翻译模型开关.bat」, 或点本页的「启动指引」")
+end
+if Trans.Loop then return true end
+Trans.Prewarm()
+Trans.Scan()
+Trans.Loop = task.spawn(function()
+while T.Translate do
+task.wait(1)
+Trans.Scan()
+end
+Trans.Loop = nil
+end)
+return true
+end
+function F.SendChat(text)
+if not text or text == "" then return false end
+local tcs = game:GetService("TextChatService")
+if tcs and tcs.TextChannels then
+local channel = tcs.TextChannels:FindFirstChild("RBXGeneral")
+if channel and channel.SendAsync then pcall(function() channel:SendAsync(text) end) return true end
+end
+local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
+if chatEvents then
+local say = chatEvents:FindFirstChild("SayMessageRequest")
+if say then pcall(function() say:FireServer(text, "All") end) return true end
+end
+return false
+end
+function F.ChatTranslateEnable()
+if F._chatTransHooked then return end
+local tcs = game:GetService("TextChatService")
+if not tcs then F.Out("[翻译] 本游戏没有 TextChatService, 聊天翻译不可用") return end
+F._oldOnIncoming = tcs.OnIncomingMessage
+local ok = pcall(function()
+tcs.OnIncomingMessage = function(message)
+local props = nil
+if F._oldOnIncoming then
+local ok2, p = pcall(F._oldOnIncoming, message)
+if ok2 then props = p end
+end
+if T.ChatTranslate and message and message.Text then
+local src = message.TextSource
+if not src or src.Name ~= LP.Name then
+local tr = Trans.Translate(message.Text, true)
+if tr and tr ~= "" and tr ~= message.Text then
+props = props or Instance.new("TextChatMessageProperties")
+props.Text = message.Text .. "\n【" .. tr .. "】"
+end
+end
+end
+return props
+end
+end)
+if ok then F._chatTransHooked = true F.Out("[翻译] 公屏聊天翻译已开启") end
+end
+function F.ChatTranslateDisable()
+if not F._chatTransHooked then return end
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if tcs then tcs.OnIncomingMessage = F._oldOnIncoming end
+end)
+F._chatTransHooked = false
+end
+function F.BubbleTranslateEnable()
+if F._bubbleTransHooked then return end
+local tcs = game:GetService("TextChatService")
+if not tcs then return end
+F._oldOnBubble = tcs.OnBubbleAdded
+local ok = pcall(function()
+tcs.OnBubbleAdded = function(message, adornee)
+local props = nil
+if F._oldOnBubble then
+local ok2, p = pcall(F._oldOnBubble, message, adornee)
+if ok2 then props = p end
+end
+if T.BubbleTranslate and message and message.Text then
+local src = message.TextSource
+if not src or src.Name ~= LP.Name then
+local tr = Trans.Translate(message.Text, true)
+if tr and tr ~= "" and tr ~= message.Text then
+props = props or Instance.new("BubbleChatMessageProperties")
+props.Text = tr
+end
+end
+end
+return props
+end
+end)
+if ok then F._bubbleTransHooked = true F.Out("[翻译] 气泡翻译已开启") end
+end
+function F.BubbleTranslateDisable()
+if not F._bubbleTransHooked then return end
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if tcs then tcs.OnBubbleAdded = F._oldOnBubble end
+end)
+F._bubbleTransHooked = false
+end
+function F.TranslateText(s) return Trans.Translate(s, true) end
+function F.TranslateDisable() Trans.Disable() end
+function F.TranslateEnable() return Trans.Enable() end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
@@ -5381,7 +5690,7 @@ AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMas
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.UnspoofGCMetadata,
 F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
-F.CaptureDisable,
+F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
@@ -5425,6 +5734,9 @@ if T.Fly then pcall(FlyEnable) end
 if T.FlyPhys then pcall(F.FlyPhysEnable) end
 if T.God then pcall(GodEnable) end
 if T.StealthGod then pcall(StealthGodEnable) end
+if T.Translate then pcall(F.TranslateEnable) end
+if T.ChatTranslate then pcall(F.ChatTranslateEnable) end
+if T.BubbleTranslate then pcall(F.BubbleTranslateEnable) end
 if T.ESP then pcall(ESPEnable) end
 if T.Invisible then pcall(InvisibleEnable) end
 if T.AntiSit then pcall(F.AntiSitEnable) end
@@ -5437,7 +5749,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.2.0",
+SubTitle = "v7.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5453,6 +5765,7 @@ Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 World   = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
+Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
 Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
@@ -5718,6 +6031,64 @@ Tabs.AFK:AddInput("RemoteArgs", { Title = "Remote 参数(逗号分隔)", Default
 Tabs.AFK:AddButton({ Title = "调用该 Remote", Callback = function() F.CallRemote(C.RemoteName, C.RemoteArgs) end })
 end
 do
+Tabs.Trans:AddSection("本地翻译服务")
+Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
+if v then
+F.TranslateEnable()
+else
+F.TranslateDisable()
+end
+end })
+Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
+Default = "zh", Callback = function(v) C.TransLang = v end })
+Tabs.Trans:AddSlider("TransMax", { Title = "并发上限(要与 bat 的 -np 对齐)", Min = 1, Max = 16, Default = 8, Rounding = 0,
+Callback = function(v) Trans.Max = v end })
+Tabs.Trans:AddSlider("TransInterval", { Title = "最小请求间隔(秒, 防堆积)", Min = 0, Max = 2, Default = 0.15, Rounding = 2,
+Callback = function(v) C.TransInterval = v end })
+Tabs.Trans:AddSection("聊天 / 气泡")
+Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
+T.ChatTranslate = v
+if v then F.ChatTranslateEnable() else F.ChatTranslateDisable() end
+end })
+Tabs.Trans:AddToggle("BubbleTranslate", { Title = "气泡聊天翻译(官方钩子)", Default = false, Callback = function(v)
+T.BubbleTranslate = v
+if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
+end })
+Tabs.Trans:AddSection("诊断")
+Tabs.Trans:AddButton({ Title = "服务体检(不经过模型)", Callback = function()
+local ok, info = Trans.Health()
+F.Out("[翻译] 体检: " .. (ok and ("正常 " .. info) or ("失败: " .. tostring(info))))
+Fluent:Notify({
+Title = "翻译服务",
+Content = ok and ("本地服务正常 · " .. tostring(info)) or ("连不上 " .. Trans.HOST .. " —— " .. tostring(info) .. " · 先双击「翻译模型开关.bat」"),
+Duration = 10,
+})
+end })
+Tabs.Trans:AddInput("TransTestIn", { Title = "测试文本", Default = "Sell All", Callback = function(v) C.TransTest = v end })
+Tabs.Trans:AddButton({ Title = "翻译这段(同步, 看真实返回)", Callback = function()
+task.spawn(function()
+local txt = C.TransTest or "Sell All"
+local t0 = os.clock()
+local r = Trans.Translate(txt, true)
+local ms = math.floor((os.clock() - t0) * 1000)
+F.Out(string.format("[翻译] %q -> %q (%dms)", txt, tostring(r), ms))
+Fluent:Notify({ Title = "翻译测试", Content = tostring(r) .. "  (" .. ms .. "ms)", Duration = 8 })
+end)
+end })
+Tabs.Trans:AddButton({ Title = "清空翻译缓存(含本地文件)", Callback = function()
+Trans.Cache = {}
+Trans.Save()
+Fluent:Notify({ Title = "翻译", Content = "缓存已清空", Duration = 5 })
+end })
+Tabs.Trans:AddButton({ Title = "把译文发到公屏(测 SendAsync)", Callback = function()
+local t = Trans.Translate(C.TransTest or "hello", true)
+if t then
+local ok = F.SendChat(t)
+Fluent:Notify({ Title = "翻译", Content = ok and ("已发送: " .. t) or "发送失败(本服聊天通道不可用)", Duration = 6 })
+else
+Fluent:Notify({ Title = "翻译", Content = "没拿到译文(先开总开关并确认服务在跑)", Duration = 6 })
+end
+end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACMaster", { Title = "反作弊主开关(全绕过+防护)", Default = false, Callback = function(v)
 if v then
@@ -6020,9 +6391,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.2.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.3.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.2.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.3.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
