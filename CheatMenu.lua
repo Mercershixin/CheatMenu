@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 16:56 sha 821765b4 bytes 160793'):format('2026-09-28 16:56','821765b4',160793))
+print(('[CheatMenu] build 2026-09-28 16:58 sha d767a62e bytes 163299'):format('2026-09-28 16:58','d767a62e',163299))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.3.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3681,6 +3681,52 @@ function F.DupeAttemptDisable()
 T.DupeAttempt = false
 F._dupeThread = nil
 end
+local TOOL_PRESETS = {
+["Linked Sword(经典剑)"] = 125013769,
+["Darkheart(吸血剑)"] = 16895215,
+["Illumina(高伤剑)"] = 16641274,
+["Venomshank(毒牙)"] = 131896478,
+["Ice Dagger(冰匕首)"] = 124138310,
+["Windforce(风之刃)"] = 77443704,
+["Gravity Coil(跳高线圈)"] = 16688968,
+["Speed Coil(加速线圈)"] = 99119158,
+["Fusion Coil(融合线圈)"] = 28457223,
+["Grappling Hook(钩爪)"] = 30393548,
+["Rocket Launcher(火箭筒)"] = 32356064,
+["Hyperlaser(激光枪)"] = 130113146,
+["Magic Carpet(飞毯)"] = 225921000,
+["Golden Boombox(音响)"] = 14275812,
+}
+function F.SpawnToolById(assetId)
+if not assetId then return false end
+local id = tostring(assetId):match("%d+")
+if not id then print("[CheatMenu] 无效 asset ID") return false end
+local objs
+local ok = pcall(function() objs = game:GetObjects("rbxassetid://" .. id) end)
+if not ok or not objs then
+ok = pcall(function()
+local inst = game:GetService("InsertService"):LoadAsset(tonumber(id))
+objs = inst and inst:GetChildren() or nil
+end)
+end
+if not ok or not objs then
+print("[CheatMenu] 生成失败(执行器不支持 GetObjects/LoadAsset 或无权访问该 asset)")
+return false
+end
+local bp = LP:FindFirstChild("Backpack") or LP
+local n = 0
+for _, o in ipairs(objs) do
+if o:IsA("Tool") or o:IsA("HopperBin") then
+pcall(function() o.Parent = bp end)
+n = n + 1
+elseif o:IsA("Model") or o:IsA("BasePart") then
+pcall(function() o.Parent = workspace end)
+n = n + 1
+end
+end
+print("[CheatMenu] 已生成 " .. n .. " 个物品(本地)")
+return n > 0
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3865,7 +3911,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.3.1",
+SubTitle = "v5.4.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4094,6 +4140,16 @@ Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCas
 Tabs.AFK:AddSection("物品辅助")
 Tabs.AFK:AddButton({ Title = "丢出所有工具(清背包)", Callback = function() F.DropAllTools() end })
 Tabs.AFK:AddToggle("DupeAttempt", { Title = "刷物品尝试(丢物+重生·依赖游戏bug)", Default = false, Callback = function(v) T.DupeAttempt = v if v then F.DupeAttemptEnable() else F.DupeAttemptDisable() end end })
+Tabs.AFK:AddDropdown("ToolPreset", { Title = "物品生成器(经典工具)", Values = (function() local n = {} for k in pairs(TOOL_PRESETS) do n[#n+1] = k end table.sort(n) return #n > 0 and n or { "(无)" } end)(), Default = "Linked Sword(经典剑)", Callback = function(v) C.ToolPreset = v end })
+Tabs.AFK:AddButton({ Title = "生成选中物品(本地)", Callback = function()
+local id = TOOL_PRESETS[C.ToolPreset]
+if id then F.SpawnToolById(id) else Fluent:Notify({ Title = "物品生成", Content = "请先选择物品", Duration = 3 }) end
+end })
+Tabs.AFK:AddInput("ToolAssetId", { Title = "自定义 asset ID", Default = "", Placeholder = "填任意 Roblox asset 数字 ID" })
+Tabs.AFK:AddButton({ Title = "生成自定义 asset", Callback = function()
+local s = Fluent.Options.ToolAssetId and Fluent.Options.ToolAssetId.Value
+if s and s ~= "" then F.SpawnToolById(s) else Fluent:Notify({ Title = "物品生成", Content = "请先填 asset ID", Duration = 3 }) end
+end })
 Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
 Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
 Tabs.AFK:AddToggle("AutoUpgrade", { Title = "自动升级(脑红/踢力)", Default = false, Callback = function(v) T.AutoUpgrade = v if v then GAME.AutoUpgradeEnable() end end })
@@ -4191,9 +4247,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.3.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.4.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.3.1")
+print("[CheatMenu] ✅ 加载完成 v5.4.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
