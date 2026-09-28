@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:21 sha 2e96caea bytes 174863'):format('2026-09-28 17:21','2e96caea',174863))
+print(('[CheatMenu] build 2026-09-28 17:27 sha ba26d15c bytes 177322'):format('2026-09-28 17:27','ba26d15c',177322))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.6.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.6.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2121,6 +2121,8 @@ local function AutoInteractEnable()
 if AutoInteractConn then return end
 AutoInteractConn = RS.Stepped:Connect(function()
 if not T.AutoInteract then return end
+if os.clock() - (F._thr2335 or 0) < 1 then return end
+F._thr2335 = os.clock()
 local _, _, r = GC()
 if not r then return end
 for _, p in ipairs(workspace:GetDescendants()) do
@@ -2136,7 +2138,6 @@ end
 end
 end
 end
-task.wait(1)
 end)
 end
 local function AutoInteractDisable()
@@ -2719,6 +2720,8 @@ return
 end
 AutoTouchConn = RS.Heartbeat:Connect(function()
 if not T.AutoTouch then return end
+if os.clock() - (F._thr3005 or 0) < 0.5 then return end
+F._thr3005 = os.clock()
 local _, _, root = GC()
 if not root then return end
 for _, v in ipairs(workspace:GetDescendants()) do
@@ -2729,7 +2732,6 @@ firetouchinterest(v, root, 1)
 end)
 end
 end
-task.wait(0.5)
 end)
 end
 function F.AutoTouchDisable()
@@ -3016,6 +3018,8 @@ function F.KillAuraEnable()
 if KillAuraConn then return end
 KillAuraConn = RS.Heartbeat:Connect(function()
 if not T.KillAura then return end
+if os.clock() - (F._thr3348 or 0) < 0.1 then return end
+F._thr3348 = os.clock()
 local _, _, root = GC()
 if not root then return end
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -3032,7 +3036,6 @@ break
 end
 end
 end
-task.wait(0.1)
 end)
 end
 function F.KillAuraDisable()
@@ -3058,6 +3061,8 @@ function F.AutoPickupEnable()
 if PickupConn then return end
 PickupConn = RS.Heartbeat:Connect(function()
 if not T.AutoPickup then return end
+if os.clock() - (F._thr3394 or 0) < 0.2 then return end
+F._thr3394 = os.clock()
 local _, _, root = GC()
 if not root then return end
 if type(firetouchinterest) ~= "function" then return end
@@ -3069,7 +3074,6 @@ firetouchinterest(v, root, 1)
 end)
 end
 end
-task.wait(0.2)
 end)
 end
 function F.AutoPickupDisable()
@@ -3110,6 +3114,8 @@ if VoidConn then return end
 local lastSafe = nil
 VoidConn = RS.Heartbeat:Connect(function()
 if not T.AntiVoid then return end
+if os.clock() - (F._thr3456 or 0) < 0.3 then return end
+F._thr3456 = os.clock()
 local _, _, root = GC()
 if not root then return end
 if root.Position.Y > (C.VoidY or -50) then
@@ -3117,7 +3123,6 @@ lastSafe = root.CFrame
 else
 if lastSafe then root.CFrame = lastSafe end
 end
-task.wait(0.3)
 end)
 end
 function F.AntiVoidDisable()
@@ -3137,12 +3142,13 @@ end
 end)
 RS.Heartbeat:Connect(function()
 if not T.AutoRespawn then return end
+if os.clock() - (F._thr3485 or 0) < 1 then return end
+F._thr3485 = os.clock()
 local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 if hum and hum.Health <= 0 then
 pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
 end
-task.wait(1)
 end)
 end
 local BringConn = nil
@@ -3151,6 +3157,8 @@ function F.BringItemsEnable()
 if BringConn then return end
 BringConn = RS.Heartbeat:Connect(function()
 if not T.BringItems then return end
+if os.clock() - (F._thr3505 or 0) < 0.5 then return end
+F._thr3505 = os.clock()
 local _, _, root = GC()
 if not root then return end
 for _, v in ipairs(workspace:GetDescendants()) do
@@ -3166,7 +3174,6 @@ end
 end
 end
 end
-task.wait(0.5)
 end)
 end
 function F.BringItemsDisable()
@@ -3177,6 +3184,8 @@ function F.AutoHealEnable()
 if HealConn then return end
 HealConn = RS.Heartbeat:Connect(function()
 if not T.AutoHeal then return end
+if os.clock() - (F._thr3533 or 0) < 1 then return end
+F._thr3533 = os.clock()
 local _, hum = GC()
 if hum and hum.Health > 0 and hum.Health < (C.AutoHealHP or 50) then
 local ch = LP.Character
@@ -3191,7 +3200,6 @@ end
 end
 end
 end
-task.wait(1)
 end)
 end
 function F.AutoHealDisable()
@@ -3220,6 +3228,8 @@ function F.AutoReviveEnable()
 if ReviveConn then return end
 ReviveConn = RS.Heartbeat:Connect(function()
 if not T.AutoRevive then return end
+if os.clock() - (F._thr3580 or 0) < 0.5 then return end
+F._thr3580 = os.clock()
 local _, _, root = GC()
 if not root then return end
 if type(fireproximityprompt) ~= "function" then return end
@@ -3234,7 +3244,6 @@ end
 end
 end
 end
-task.wait(0.5)
 end)
 end
 function F.AutoReviveDisable()
@@ -3245,6 +3254,8 @@ function F.GunAuraEnable()
 if GunAuraConn then return end
 GunAuraConn = RS.Heartbeat:Connect(function()
 if not T.GunAura then return end
+if os.clock() - (F._thr3607 or 0) < 0.05 then return end
+F._thr3607 = os.clock()
 local cam = workspace.CurrentCamera
 local _, _, root = GC()
 if not (cam and root) then return end
@@ -3263,7 +3274,6 @@ if best then
 cam.CFrame = CFrame.lookAt(cam.CFrame.Position, best.Position)
 if type(mouse1click) == "function" then pcall(mouse1click) end
 end
-task.wait(0.05)
 end)
 end
 function F.GunAuraDisable()
@@ -3370,12 +3380,13 @@ function F.AntiKnockdownEnable()
 if AntiKnockConn then return end
 AntiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then return end
+if os.clock() - (F._thr3746 or 0) < 0.1 then return end
+F._thr3746 = os.clock()
 local _, hum, root = GC()
 if not (hum and root) then return end
 if root.AssemblyLinearVelocity.Magnitude > 200 then
 root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
 end
-task.wait(0.1)
 end)
 end
 function F.AntiKnockdownDisable()
@@ -3946,17 +3957,58 @@ end
 function F.KeybindDisable()
 if F._keybindConn then F._keybindConn:Disconnect() F._keybindConn = nil end
 end
+F.Conn = { list = {} }
+function F.Conn.Add(id, conn)
+if not conn then return nil end
+if F.Conn.list[id] then pcall(function() F.Conn.list[id]:Disconnect() end) end
+F.Conn.list[id] = conn
+return conn
+end
+function F.Conn.Remove(id)
+if F.Conn.list[id] then pcall(function() F.Conn.list[id]:Disconnect() end) F.Conn.list[id] = nil end
+end
+function F.Conn.ClearAll()
+for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
+F.Conn.list = {}
+end
+function F.Conn.Count()
+local n = 0
+for _ in pairs(F.Conn.list) do n = n + 1 end
+return n
+end
+function F.DiagConnections()
+print("[CheatMenu] === 连接诊断 ===")
+if type(getconnections) ~= "function" then
+print("  执行器不支持 getconnections，无法诊断")
+return
+end
+local checks = {
+["RenderStepped"] = RS.RenderStepped,
+["Heartbeat"] = RS.Heartbeat,
+["Stepped"] = RS.Stepped,
+["Idled"] = LP.Idled,
+["PlayerAdded"] = Players.PlayerAdded,
+["PlayerRemoving"] = Players.PlayerRemoving,
+}
+for name, ev in pairs(checks) do
+local ok, conns = pcall(getconnections, ev)
+print(string.format("  %s: %d 个连接", name, (ok and type(conns) == "table") and #conns or 0))
+end
+print(string.format("  脚本自管连接: %d 个", F.Conn.Count()))
+print("[CheatMenu] === 诊断结束 ===")
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
 LockHealthConn = RS.Heartbeat:Connect(function()
 if not T.LockHealth then return end
+if os.clock() - (F._thr4402 or 0) < 0.05 then return end
+F._thr4402 = os.clock()
 local _, hum = GC()
 if hum and hum.Health > 0 then
 local target = C.LockHealthValue or 100
 if hum.Health ~= target then hum.Health = target end
 end
-task.wait(0.05)
 end)
 end
 function F.LockHealthDisable()
@@ -3967,11 +4019,12 @@ function F.RegenEnable()
 if RegenConn then return end
 RegenConn = RS.Heartbeat:Connect(function()
 if not T.Regen then return end
+if os.clock() - (F._thr4420 or 0) < 0.2 then return end
+F._thr4420 = os.clock()
 local _, hum = GC()
 if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
 hum.Health = math.min(hum.MaxHealth, hum.Health + (C.RegenRate or 10))
 end
-task.wait(0.2)
 end)
 end
 function F.RegenDisable()
@@ -3984,11 +4037,12 @@ local _, hum0 = GC()
 if hum0 then pcall(function() if hum0.MaxHealth > 1e6 then hum0.MaxHealth = 100 end end) end
 StealthGodConn = RS.Heartbeat:Connect(function()
 if not T.StealthGod then return end
+if os.clock() - (F._thr4439 or 0) < 0.05 then return end
+F._thr4439 = os.clock()
 local _, hum = GC()
 if hum and hum.Health > 0 then
 hum.Health = hum.MaxHealth
 end
-task.wait(0.05)
 end)
 end
 function F.StealthGodDisable()
@@ -3999,11 +4053,12 @@ function F.NoDeathEnable()
 if NoDeathConn then return end
 NoDeathConn = RS.Heartbeat:Connect(function()
 if not T.NoDeath then return end
+if os.clock() - (F._thr4456 or 0) < 0.1 then return end
+F._thr4456 = os.clock()
 local _, hum = GC()
 if hum and hum.Health <= 0 then
 pcall(function() hum.Health = hum.MaxHealth end)
 end
-task.wait(0.1)
 end)
 end
 function F.NoDeathDisable()
@@ -4092,6 +4147,7 @@ pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
 pcall(function() if getgenv and getgenv().CM_Window then getgenv().CM_Window:Destroy() getgenv().CM_Window = nil end end)
 pcall(function() if getgenv and getgenv().CM_ToggleSG then getgenv().CM_ToggleSG:Destroy() getgenv().CM_ToggleSG = nil end end)
+pcall(F.Conn.ClearAll)
 print("[CheatMenu] ✅ 已干净卸载")
 end
 local function RestoreFeatures()
@@ -4130,7 +4186,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.6.0",
+SubTitle = "v5.6.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4501,6 +4557,7 @@ Tabs.Setting:AddButton({ Title = "复制脚本加载链接", Callback = function
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "热更新(保存并重载)", Callback = function() HotUpdate() end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
+Tabs.Setting:AddButton({ Title = "连接诊断(查事件连接数)", Callback = function() F.DiagConnections() Fluent:Notify({ Title = "连接诊断", Content = "结果见控制台 (F9)", Duration = 5 }) end })
 T.KickProtect = true
 T.AntiAFK = true
 T.KickGuard = true
@@ -4508,9 +4565,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.6.0")
+print("[CheatMenu] ✅ 加载完成 v5.6.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
