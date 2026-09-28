@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 03:28 sha 3f1aaa79 bytes 247350'):format('2026-09-29 03:28','3f1aaa79',247350))
+print(('[CheatMenu] build 2026-09-29 07:08 sha 5c027ca7 bytes 248552'):format('2026-09-29 07:08','5c027ca7',248552))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.3.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -5749,7 +5749,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.3.0",
+SubTitle = "v7.4.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5776,6 +5776,7 @@ Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式(6合1)", Values = {
 "静默自瞄·无痕(观战看不出)", "静默自瞄·鼠标(镜头不动)",
 "统一静默自瞄(多方法·推荐)",
 }, Default = "关闭", Callback = function(v)
+C.AimMode = v
 T.Aim = (v == "自瞄(镜头锁定)")
 T.SilentAim = (v == "静默自瞄(硬锁)")
 T.SilentAimGhost = (v == "静默自瞄·无痕(观战看不出)")
@@ -5801,6 +5802,7 @@ Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
 Tabs.Combat:AddButton({ Title = "清除优先级/黑名单", Callback = function() C.PriorityTargets = {} C.Blacklist = {} end })
 Tabs.Combat:AddDropdown("AimExtra", { Title = "自瞄附加(2合1)", Values = { "无", "指定玩家(用传送目标)", "面锁(面向目标)" }, Default = "无", Callback = function(v)
+C.AimExtra = v
 T.SingleAim = (v == "指定玩家(用传送目标)")
 T.FaceLock = (v == "面锁(面向目标)")
 SingleAimDisable() FaceLockDisable()
@@ -5812,6 +5814,7 @@ Tabs.Combat:AddDropdown("GodMode", { Title = "生命保护(4合1)", Values = {
 "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血)",
 "锁血(指定值)", "防死亡+回血",
 }, Default = "关闭", Callback = function(v)
+C.GodMode = v
 T.God = (v == "无敌(MaxHealth=∞)")
 T.StealthGod = (v == "隐蔽无敌(锁满血)")
 T.LockHealth = (v == "锁血(指定值)")
@@ -5833,6 +5836,7 @@ Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结选中玩家(本地)", De
 Tabs.Combat:AddToggle("HidePlayer", { Title = "本地隐藏选中玩家", Default = false, Callback = function(v) T.HidePlayer = v if v then F.HidePlayerEnable() else F.HidePlayerDisable() end end })
 Tabs.Combat:AddToggle("BringPlayer", { Title = "拉选中玩家过来(本地)", Default = false, Callback = function(v) T.BringPlayer = v if v then F.BringPlayerEnable() else F.BringPlayerDisable() end end })
 Tabs.Combat:AddDropdown("AntiRagdollMode", { Title = "防击倒(2合1)", Values = { "关闭", "反布娃娃", "防被撞飞", "全部开启" }, Default = "关闭", Callback = function(v)
+C.AntiRagdollMode = v
 T.AntiRagdoll = (v == "反布娃娃" or v == "全部开启")
 T.AntiKnockdown = (v == "防被撞飞" or v == "全部开启")
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
@@ -5854,6 +5858,7 @@ Tabs.Combat:AddDropdown("ESPStyle", { Title = "ESP 附加(11合1)", Values = {
 "骨骼线", "方向箭头", "Chams 材质透视", "子弹追踪",
 "陷阱透视", "Xray 透视", "自发光",
 }, Default = "完整(框+名称+距离+血条)", Callback = function(v)
+C.ESPStyle = v
 T.ESPBox, T.ESPName, T.ESPDist, T.ESPHealth, T.ESPTracer, T.ESPRainbow = false, false, false, false, false, false
 T.ESPSkeleton = false T.ESPArrow = false
 T.Chams = false T.BulletTracer = false T.TrapsESP = false T.Xray = false T.SelfGlow = false
@@ -5880,6 +5885,7 @@ do
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键: WASD 移动, 空格上升, 左Ctrl 下降", Content = "" })
 Tabs.Move:AddDropdown("FlyMode", { Title = "飞行模式", Values = { "关闭", "飞行(CFrame)", "物理飞行(更平滑)" }, Default = "关闭", Callback = function(v)
+C.FlyMode = v
 T.Fly = (v == "飞行(CFrame)")
 T.FlyPhys = (v == "物理飞行(更平滑)")
 FlyDisable() F.FlyPhysDisable()
@@ -5906,6 +5912,7 @@ Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)",
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
 "关闭", "普通加速", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
 }, Default = "关闭", Callback = function(v)
+C.SpeedMode = v
 T.Speed = (v == "普通加速")
 T.SpeedBypass = (v == "全绕过(属性锁+伪装回读)")
 T.SpeedCFrame = (v == "CFrame位移(最隐蔽)")
@@ -6042,7 +6049,7 @@ end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v) C.TransLang = v end })
 Tabs.Trans:AddSlider("TransMax", { Title = "并发上限(要与 bat 的 -np 对齐)", Min = 1, Max = 16, Default = 8, Rounding = 0,
-Callback = function(v) Trans.Max = v end })
+Callback = function(v) Trans.Max = v C.TransMax = v end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "最小请求间隔(秒, 防堆积)", Min = 0, Max = 2, Default = 0.15, Rounding = 2,
 Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
@@ -6359,6 +6366,7 @@ end
 do
 Tabs.Setting:AddSection("设置")
 Tabs.Setting:AddDropdown("Theme", { Title = "界面主题", Values = { "Aqua(青绿)", "Dark(深灰)", "Darker(更暗)", "Light(亮色)", "Amethyst(紫)", "Rose(玫瑰)" }, Default = "Aqua(青绿)", Callback = function(v)
+C.Theme = v
 local map = { ["Aqua(青绿)"]="Aqua", ["Dark(深灰)"]="Dark", ["Darker(更暗)"]="Darker", ["Light(亮色)"]="Light", ["Amethyst(紫)"]="Amethyst", ["Rose(玫瑰)"]="Rose" }
 pcall(function() Fluent:SetTheme(map[v] or "Aqua") end)
 end })
@@ -6369,10 +6377,10 @@ Tabs.Setting:AddToggle("AutoSave", { Title = "配置自动保存(每25秒)", Def
 Tabs.Setting:AddButton({ Title = "刷新玩家列表", Callback = function() F.RefreshPlayerDropdowns() end })
 Tabs.Setting:AddSection("按键绑定")
 Tabs.Setting:AddToggle("Keybind", { Title = "按键绑定(启用)", Default = false, Callback = function(v) T.Keybind = v if v then F.KeybindEnable() else F.KeybindDisable() end end })
-Tabs.Setting:AddDropdown("BindF2", { Title = "F2 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F2", v) end })
-Tabs.Setting:AddDropdown("BindF3", { Title = "F3 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F3", v) end })
-Tabs.Setting:AddDropdown("BindF4", { Title = "F4 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F4", v) end })
-Tabs.Setting:AddDropdown("BindF5", { Title = "F5 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F5", v) end })
+Tabs.Setting:AddDropdown("BindF2", { Title = "F2 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F2", v) C.BindF2 = v end })
+Tabs.Setting:AddDropdown("BindF3", { Title = "F3 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F3", v) C.BindF3 = v end })
+Tabs.Setting:AddDropdown("BindF4", { Title = "F4 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F4", v) C.BindF4 = v end })
+Tabs.Setting:AddDropdown("BindF5", { Title = "F5 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F5", v) C.BindF5 = v end })
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddButton({ Title = "换服(实为重进当前服, Roblox 无公开服务器列表 API)", Callback = function() ServerHop() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() Rejoin() end })
@@ -6391,9 +6399,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.3.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.4.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.3.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.4.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -6471,20 +6479,65 @@ addToggleButton(Window)
 startTogglePolish()
 end
 buildMenu()
+function F.CfgSyncUI()
+local op = Fluent and Fluent.Options
+if type(op) ~= "table" then return 0 end
+local n = 0
+for name, opt in pairs(op) do
+if type(name) == "string" and type(opt) == "table" and type(opt.Set) == "function" then
+local dyn = false
+for _, k in ipairs(F.PLAYER_DROPDOWNS) do
+if k == name then dyn = true break end
+end
+if not dyn then
+local cur = opt.Value
+local ty = opt.Type
+if type(ty) ~= "string" then
+if type(cur) == "boolean" then ty = "Toggle"
+elseif type(cur) == "number" then ty = "Slider"
+elseif type(cur) == "table" then ty = "Dropdown"
+elseif type(cur) == "string" then ty = "Input" end
+end
+local want
+if ty == "Toggle" then
+want = T[name]
+else
+want = C[name]
+if want == nil then want = F[name] end
+if want == nil then want = T[name] end
+end
+if want ~= nil and type(want) == type(cur) and want ~= cur then
+local ok = true
+if ty == "Dropdown" then
+ok = false
+pcall(function()
+for _, x in pairs(opt.Values or {}) do
+if x == want then ok = true break end
+end
+end)
+if not ok then
+pcall(function()
+for x in pairs(opt.Values or {}) do
+if x == want then ok = true break end
+end
+end)
+end
+end
+if ok and pcall(function() opt:Set(want) end) then n = n + 1 end
+end
+end
+end
+end
+return n
+end
 task.spawn(function()
 pcall(function()
-if not (Fluent and Fluent.Options) then return end
-local n = 0
-for name, opt in pairs(Fluent.Options) do
-if type(T[name]) == "boolean" and opt and type(opt.Set) == "function" then
-local ty = nil
-pcall(function() ty = opt.Type end)
-if ty == "Toggle" and opt.Value ~= T[name] then
-pcall(function() opt:Set(T[name]) end)
-n = n + 1
+for i = 2, 5 do
+local k = "F" .. i
+local act = C["Bind" .. k]
+if type(act) == "string" then F.BindKey(k, act) end
 end
-end
-end
-if n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个开关的界面状态") end
+local n = F.CfgSyncUI()
+if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
 end)
 end)
