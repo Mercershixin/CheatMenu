@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:17 sha fade48ce bytes 178455'):format('2026-09-28 18:17','fade48ce',178455))
+print(('[CheatMenu] build 2026-09-28 18:20 sha 482938aa bytes 181894'):format('2026-09-28 18:20','482938aa',181894))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.6.4 =====")
+print("[CheatMenu] ===== 加载开始 · v5.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1295,10 +1295,11 @@ transDrain()
 end
 local function translateGuiEl(obj)
 if not obj then return end
+if obj.Visible == false then return end
 if obj:IsA("TextLabel") or obj:IsA("TextButton") then
 local txt = obj.Text
 if txt and shouldTranslate(txt) then
-transAsync(txt, function(tr) if obj.Parent then obj.Text = tr end end)
+transAsync(txt, function(tr) if obj.Parent and obj.Visible ~= false then obj.Text = tr end end)
 end
 end
 end
@@ -4034,6 +4035,88 @@ end
 print(string.format("  脚本自管连接: %d 个", F.Conn.Count()))
 print("[CheatMenu] === 诊断结束 ===")
 end
+function F.LockCamEnable()
+if F._lockCamConn then return end
+local cam = workspace.CurrentCamera
+F._lockCamCF = cam and cam.CFrame or CFrame.new()
+F._lockCamConn = RS.RenderStepped:Connect(function()
+if not T.LockCam then return end
+local c = workspace.CurrentCamera
+if c then pcall(function() c.CFrame = F._lockCamCF end) end
+end)
+end
+function F.LockCamDisable()
+if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
+F._lockCamCF = nil
+end
+function F.FlashbackEnable()
+if F._flashConn then return end
+local ch = LP.Character
+local function hook(h)
+local hum = h and h:FindFirstChildOfClass("Humanoid")
+if hum then
+hum.Died:Connect(function()
+local _, _, r = GC()
+if r then F._lastDeathCF = r.CFrame end
+end)
+end
+end
+hook(ch)
+F._flashConn = LP.CharacterAdded:Connect(function(h) task.wait(0.3) hook(h) end)
+end
+function F.FlashbackDisable()
+if F._flashConn then F._flashConn:Disconnect() F._flashConn = nil end
+end
+function F.FlashbackGo()
+if F._lastDeathCF then
+local _, _, r = GC()
+if r then pcall(function() r:PivotTo(F._lastDeathCF) end) print("[CheatMenu] 已传回死亡点") end
+else
+print("[CheatMenu] 暂未记录死亡点(需先死一次)")
+end
+end
+function F.Thrust(dist)
+local _, _, root = GC()
+if not root then return end
+local cam = workspace.CurrentCamera
+local dir = cam and cam.CFrame.LookVector or root.CFrame.LookVector
+pcall(function() root:PivotTo(root.CFrame + dir * (tonumber(dist) or 50)) end)
+end
+function F.RemoveAccessories()
+local n = 0
+for _, pl in ipairs(Players:GetPlayers()) do
+local ch = pl.Character
+if ch then
+for _, o in ipairs(ch:GetChildren()) do
+if o:IsA("Accessory") or o:IsA("Hat") then
+pcall(function() o:Destroy() end)
+n = n + 1
+end
+end
+end
+end
+print("[CheatMenu] 已移除 " .. n .. " 个饰品")
+return n
+end
+function F.SwimEnable()
+if F._swimConn then return end
+F._swimConn = RS.Heartbeat:Connect(function()
+if not T.Swim then return end
+local _, hum = GC()
+if hum then
+pcall(function()
+if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
+hum:ChangeState(Enum.HumanoidStateType.Swimming)
+end
+end)
+end
+end)
+end
+function F.SwimDisable()
+if F._swimConn then F._swimConn:Disconnect() F._swimConn = nil end
+local _, hum = GC()
+if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end) end
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -4178,7 +4261,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4223,7 +4306,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.6.4",
+SubTitle = "v5.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4356,6 +4439,9 @@ Tabs.Move:AddToggle("Hide", { Title = "藏地下(自己视角正常)", Default =
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.Move:AddToggle("FlyCar", { Title = "飞车(载具飞行)", Default = false, Callback = function(v) T.FlyCar = v if v then CM.FlyCarEnable() else CM.FlyCarDisable() end end })
 Tabs.Move:AddSlider("FlyCarSpeed", { Title = "飞车速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FlyCarSpeed = v end })
+Tabs.Move:AddToggle("Swim", { Title = "空中游泳(强制游泳状态)", Default = false, Callback = function(v) T.Swim = v if v then F.SwimEnable() else F.SwimDisable() end end })
+Tabs.Move:AddInput("ThrustDist", { Title = "前冲距离(studs)", Default = "50", Placeholder = "如 50", Callback = function(v) C.ThrustDist = v end })
+Tabs.Move:AddButton({ Title = "前冲(朝相机方向)", Callback = function() F.Thrust(C.ThrustDist or 50) end })
 end
 do
 Tabs.World:AddSection("视觉增强")
@@ -4380,6 +4466,8 @@ Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(鼠标转向/WAS
 Tabs.World:AddSlider("FreecamSpeed", { Title = "自由视角速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping 显示(右下角)", Default = false, Callback = function(v) T.Hud = v if v then F.HudEnable() else F.HudDisable() end end })
 Tabs.World:AddToggle("Crosshair", { Title = "准星(屏幕中心十字)", Default = false, Callback = function(v) T.Crosshair = v if v then F.CrosshairEnable() else F.CrosshairDisable() end end })
+Tabs.World:AddToggle("LockCam", { Title = "锁定相机朝向", Default = false, Callback = function(v) T.LockCam = v if v then F.LockCamEnable() else F.LockCamDisable() end end })
+Tabs.World:AddButton({ Title = "移除所有饰品/帽子", Callback = function() F.RemoveAccessories() end })
 Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
@@ -4420,6 +4508,8 @@ Tabs.TP:AddSection("路径点系统")
 Tabs.TP:AddDropdown("WPSlot", { Title = "路径点槽位(1-5)", Values = { "1", "2", "3", "4", "5" }, Default = "1", Callback = function(v) C.WPSlot = v end })
 Tabs.TP:AddButton({ Title = "保存到该槽位", Callback = function() F.SaveWaypoint(C.WPSlot or "1") end })
 Tabs.TP:AddButton({ Title = "传送到该槽位", Callback = function() F.TpWaypoint(C.WPSlot or "1") end })
+Tabs.TP:AddToggle("Flashback", { Title = "记录死亡点(死后可传回)", Default = false, Callback = function(v) T.Flashback = v if v then F.FlashbackEnable() else F.FlashbackDisable() end end })
+Tabs.TP:AddButton({ Title = "传回死亡点", Callback = function() F.FlashbackGo() end })
 Tabs.TP:AddSection("传送增强")
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
 Tabs.TP:AddSlider("TPSmoothSeg", { Title = "分段数(越多越隐蔽)", Min = 3, Max = 20, Default = 8, Rounding = 0, Callback = function(v) C.TPSmoothSeg = v end })
@@ -4602,9 +4692,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.4", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.7.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.6.4")
+print("[CheatMenu] ✅ 加载完成 v5.7.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
