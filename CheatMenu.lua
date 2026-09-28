@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:21 sha 65b82857 bytes 188612'):format('2026-09-28 21:21','65b82857',188612))
+print(('[CheatMenu] build 2026-09-28 21:24 sha cdda8e0d bytes 188609'):format('2026-09-28 21:24','cdda8e0d',188609))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.8 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.9 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -274,6 +274,17 @@ for _, obj in ipairs(getgc(true)) do
 seen = seen + 1
 if seen > 5000 then break end
 if seen % 200 == 0 then task.wait() end
+if typeof(obj) == "table" then
+local detected = rawget(obj, "Detected")
+if detected and type(detected) == "function" then
+local already = false
+pcall(function() if isfunctionhooked and isfunctionhooked(detected) then already = true end end)
+if not already then
+pcall(hookfunction, detected, function() return task.wait(9e9) end)
+hooked = hooked + 1
+end
+end
+end
 if type(obj) == "function" and islclosure and islclosure(obj) then
 local already = false
 pcall(function() if isfunctionhooked and isfunctionhooked(obj) then already = true end end)
@@ -4492,7 +4503,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.8",
+SubTitle = "v5.10.9",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4830,7 +4841,7 @@ Tabs.AC:AddToggle("AntiTP", { Title = "防传送(拦截被踢/传送走)", Defau
 Tabs.AC:AddToggle("AntiPause", { Title = "防游戏暂停(销毁网络暂停界面)", Default = false, Callback = function(v) T.AntiPause = v if v then AC.AntiPauseEnable() else AC.AntiPauseDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then F.TrapsESPEnable() else F.TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
-Tabs.AC:AddButton({ Title = "一键反作弊处理(扫描+拦截+中和+监控)", Callback = function()
+Tabs.AC:AddButton({ Title = "一键反作弊处理(扫描+拦截+中和+监控+GUI保护+随机化)", Callback = function()
 task.spawn(function()
 local keyCount = AC.ExpandSuspiciousKeys()
 local blocked = AC.ScanAndBlock()
@@ -4838,11 +4849,11 @@ pcall(function() local r, sus = scanRemotes() print("[CheatMenu] 深度抓包: �
 pcall(function() local m, ft, ac = scanGameModules() print("[CheatMenu] 模块扫描: 模块 " .. m .. " / 函数 " .. ft .. " / AC特征 " .. ac) end)
 AC.NeutralizeACFunctions()
 AC.WatchNewRemotesEnable()
-Fluent:Notify({ Title = "反作弊处理", Content = "关键词 " .. keyCount .. " · 拦截 " .. blocked .. " · 中和后台执行 · 监控已开(详见F9)", Duration = 6 })
+local guiN = F.ProtectGui()
+T.BehaviorRandom = true F.BehaviorRandomEnable()
+Fluent:Notify({ Title = "反作弊处理", Content = "拦截 " .. blocked .. " · GUI保护 " .. guiN .. " · 中和后台 · 监控+随机化已开(详见F9)", Duration = 6 })
 end)
 end })
-Tabs.AC:AddButton({ Title = "GUI 防扫描(保护菜单不被AC发现)", Callback = function() local n = F.ProtectGui() Fluent:Notify({ Title = "GUI 保护", Content = "已保护 " .. n .. " 个界面", Duration = 4 }) end })
-Tabs.AC:AddToggle("BehaviorRandom", { Title = "行为随机化(速度微抖动防模式检测)", Default = false, Callback = function(v) T.BehaviorRandom = v if v then F.BehaviorRandomEnable() else F.BehaviorRandomDisable() end end })
 Tabs.AC:AddToggle("StealthMode", { Title = "全局隐蔽模式(一键降所有功能参数)", Default = false, Callback = function(v) if v then F.StealthModeEnable() else F.StealthModeDisable() end end })
 end
 do
@@ -4877,9 +4888,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.8", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.9", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.8")
+print("[CheatMenu] ✅ 加载完成 v5.10.9")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
