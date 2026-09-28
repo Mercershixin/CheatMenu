@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:24 sha cdda8e0d bytes 188609'):format('2026-09-28 21:24','cdda8e0d',188609))
+print(('[CheatMenu] build 2026-09-28 21:29 sha 00e51f8e bytes 188613'):format('2026-09-28 21:29','00e51f8e',188613))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.9 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.10 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4503,7 +4503,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.9",
+SubTitle = "v5.10.10",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4888,9 +4888,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.9", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.10", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.9")
+print("[CheatMenu] ✅ 加载完成 v5.10.10")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -4968,6 +4968,6 @@ end
 end)
 end
 addToggleButton(Window)
+startTogglePolish()
 end
 buildMenu()
-startTogglePolish()
