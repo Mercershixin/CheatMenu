@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-29 00:47 sha 9cf7cf75 bytes 180672'):format('2026-09-29 00:47','9cf7cf75',180672))
+print(('[CheatMenu] build 2026-09-29 01:09 sha ca808edf bytes 188249'):format('2026-09-29 01:09','ca808edf',188249))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.6.0 =====")
+print("[CheatMenu] ===== 加载开始 · v6.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -175,12 +175,21 @@ if type(old) ~= "function" then return false end
 AC._nc = true
 return true
 end
+AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
+function AC.isRemoteLike(inst)
+if not (inst and typeof(inst) == "Instance") then return nil end
+for i = 1, #AC.REMOTE_CLASSES do
+local cls = AC.REMOTE_CLASSES[i]
+local ok, hit = pcall(function() return inst:IsA(cls) end)
+if ok and hit then return cls end
+end
+return nil
+end
 function AC.hookOneRemote(remote)
 if not (remote and typeof(remote) == "Instance") then return end
-local isE, isF = false, false
-pcall(function() isE = remote:IsA("RemoteEvent") end)
-pcall(function() isF = remote:IsA("RemoteFunction") end)
-if not (isE or isF) then return end
+local cls = AC.isRemoteLike(remote)
+if not cls then return end
+local isE = (cls ~= "RemoteFunction")
 if AC.BlockedRemotes[remote] then return end
 if not AC.isSuspicious(remote.Name) then return end
 if not hookfunction then return end
@@ -323,7 +332,7 @@ AC._watchConn = nil
 function AC.WatchNewRemotesEnable()
 if AC._watchConn then return end
 AC._watchConn = RStorage.DescendantAdded:Connect(function(d)
-if (d:IsA("RemoteEvent") or d:IsA("RemoteFunction")) and AC.isSuspicious(d.Name) then
+if AC.isRemoteLike(d) and AC.isSuspicious(d.Name) then
 AC.hookOneRemote(d)
 end
 end)
@@ -950,8 +959,9 @@ local total, sigs = 0, 0
 local keepScav = F._scavenging
 F._scavenging = true
 pcall(function()
-for _, d in ipairs(RStorage:GetDescendants()) do
-if d:IsA("RemoteEvent") then
+local rs = AC.svc("ReplicatedStorage") or RStorage
+for _, d in ipairs(rs:GetDescendants()) do
+if AC.isRemoteLike(d) then
 local n = d.Name:lower()
 for i = 1, #AC.KNOCK_KEYS do
 if n:find(AC.KNOCK_KEYS[i], 1, true) then
@@ -967,6 +977,119 @@ F._scavenging = false
 F._scavenging = keepScav
 print(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
 return total
+end
+AC.cap = function(name)
+if type(name) ~= "string" or name == "" then return nil end
+local tries = {
+function()
+if type(getgenv) ~= "function" then return nil end
+local ok, g = pcall(getgenv)
+return (ok and type(g) == "table") and g[name] or nil
+end,
+function()
+if type(getfenv) ~= "function" then return nil end
+local ok, e = pcall(getfenv)
+return (ok and type(e) == "table") and e[name] or nil
+end,
+function() return rawget(_G, name) end,
+}
+for i = 1, #tries do
+local ok, v = pcall(tries[i])
+if ok and v ~= nil then return v end
+end
+return nil
+end
+AC.cloneref = function(obj)
+local cr = AC.cap("cloneref")
+if type(cr) == "function" then
+local ok, r = pcall(cr, obj)
+if ok and r ~= nil then return r end
+end
+return obj
+end
+AC.svc = function(name)
+return AC.cloneref(game:GetService(name))
+end
+AC.AC_TABLE_KEYS = {
+"Detected", "RLocked", "detected", "Detect", "AntiCheat", "ACDetected", "Flag", "Punish",
+}
+AC.NeutralizeTable = function(t, cap)
+if type(t) ~= "table" then return 0 end
+if AC._neutTables[t] then return 0 end
+AC._neutTables[t] = true
+local n, lim = 0, tonumber(cap) or 64
+for k, v in pairs(t) do
+if n >= lim then break end
+if type(v) == "function" and not AC._hookedFns[v] then
+local got = F.stealthHook(v, function(box) return function() return nil end end)
+if got then
+AC.markHooked(v)
+AC._neutFns[#AC._neutFns + 1] = { key = tostring(k), fn = v }
+n = n + 1
+end
+end
+end
+return n
+end
+AC._neutTables = setmetatable({}, { __mode = "k" })
+AC._neutFns = {}
+function AC.isACTable(t)
+if type(t) ~= "table" then return nil end
+for i = 1, #AC.AC_TABLE_KEYS do
+local k = AC.AC_TABLE_KEYS[i]
+local ok, v = pcall(rawget, t, k)
+if ok and v ~= nil then return k end
+end
+return nil
+end
+F.SCAN_ATTR_ROOTS = { workspace, LP, RStorage }
+function F.ScanAttributes(keyword, roots, limit)
+local kw = type(keyword) == "string" and keyword:lower() or ""
+local maxN = tonumber(limit) or 4000
+local hits, seen, scanned = {}, 0, 0
+local list = roots or F.SCAN_ATTR_ROOTS
+F._scavenging = true
+for i = 1, #list do
+local root = list[i]
+if root then
+pcall(function()
+local bag = { root }
+for _, d in ipairs(root:GetDescendants()) do
+bag[#bag + 1] = d
+end
+for j = 1, #bag do
+scanned = scanned + 1
+if scanned > maxN then break end
+if scanned % 500 == 0 then task.wait() end
+local obj = bag[j]
+local okA, attrs = pcall(function() return obj:GetAttributes() end)
+if okA and type(attrs) == "table" then
+for k, v in pairs(attrs) do
+seen = seen + 1
+if kw == "" or tostring(k):lower():find(kw, 1, true) then
+local sv = tostring(v)
+if #sv > 40 then sv = sv:sub(1, 40) .. "…" end
+local okN, full = pcall(function() return obj:GetFullName() end)
+local path = (okN and type(full) == "string") and full or tostring(obj)
+hits[#hits + 1] = { path = path, key = tostring(k), value = sv }
+end
+end
+end
+end
+end)
+end
+end
+F._scavenging = false
+print(string.format("[属性扫描] 扫过 %d 个实例, 共 %d 条属性, 命中 %d 条%s",
+scanned, seen, #hits, kw ~= "" and (" (关键词 " .. kw .. ")") or ""))
+local shown = 0
+for i = 1, #hits do
+if shown >= 80 then print("  … 其余省略, 共 " .. #hits .. " 条") break end
+local h = hits[i]
+print(string.format("  · %s  [%s = %s]", h.path, h.key, h.value))
+shown = shown + 1
+end
+return hits, scanned, seen
 end
 function AC.StripMetatable(keyName)
 if type(keyName) ~= "string" or keyName == "" then return 0 end
@@ -1000,6 +1123,81 @@ end)
 print(string.format("[CheatMenu] 原地改 upvalue: %s[%s] = %s -> %s", tostring(fnName), tostring(idx), tostring(value), ok and "成功" or "失败"))
 return ok
 end
+F.CAP_LIST = {
+{ "getgc", "扫描 GC 对象 —— 整个扫描模块的地基" },
+{ "filtergc", "按名一步定位函数(反作弊中和强烈依赖)" },
+{ "getconnections", "断反作弊监听 / 改写游戏自己的回调" },
+{ "getnilinstances", "扫隐藏实例(反作弊藏 remote 的常用手法)" },
+{ "getloadedmodules", "列出已加载模块" },
+{ "hookfunction", "hook 具名函数 / 中和反作弊检测函数" },
+{ "hookmetamethod", "拦 __namecall / __index / __newindex" },
+{ "newcclosure", "把我们的 hook 伪装成 C 闭包" },
+{ "getnamecallmethod", "缺它就拦不到 Kick / FireServer" },
+{ "getrawmetatable", "直接读写元表" },
+{ "setreadonly", "解锁只读表" },
+{ "islclosure", "区分 Lua 闭包与 C 函数" },
+{ "checkcaller", "区分「游戏调用」与「自己调用」" },
+{ "getrenv", "拿游戏侧环境副本 —— 隐身第 2/3 层靠它" },
+{ "cloneref", "安全取服务引用" },
+{ "getthreadidentity", "线程身份伪装" },
+{ "setupvalue", "原地改 upvalue(零 hook 指纹)" },
+{ "fireproximityprompt", "直接触发交互" },
+{ "sethiddenproperty", "写隐藏属性" },
+{ "request", "HTTP 请求" },
+{ "Drawing", "Drawing API(骨骼线/角框高性能绘制)" },
+}
+function F.capProbe(name)
+if type(name) ~= "string" then return false end
+if name:find(".", 1, true) then
+local a, b = name:match("^([%w_]+)%.([%w_]+)$")
+if not a then return false end
+local holder = AC.cap(a)
+return type(holder) == "table" and type(holder[b]) == "function"
+end
+local v = AC.cap(name)
+if name == "request" and v == nil then
+local syn = AC.cap("syn")
+if type(syn) == "table" then v = syn.request end
+end
+return v ~= nil
+end
+function F.ProbeCapabilities(verbose)
+local res, okN, miss = {}, 0, {}
+local extra = { "debug.getinfo", "debug.getconstants", "debug.getupvalues" }
+for i = 1, #extra do
+local has = F.capProbe(extra[i])
+res[extra[i]] = has
+if has then okN = okN + 1 else miss[#miss + 1] = extra[i] end
+end
+for i = 1, #F.CAP_LIST do
+local name = F.CAP_LIST[i][1]
+local has = F.capProbe(name)
+res[name] = has
+if has then okN = okN + 1 else miss[#miss + 1] = name end
+end
+F._caps = res
+local total = #F.CAP_LIST + #extra
+if verbose ~= false then
+print(string.format("[能力探测] 可用 %d/%d", okN, total))
+for i = 1, #F.CAP_LIST do
+local name, desc = F.CAP_LIST[i][1], F.CAP_LIST[i][2]
+print(string.format("  %s %-20s %s", res[name] and "✓" or "✗", name, desc))
+end
+print(string.format("  %s %-20s %s", res["debug.getinfo"] and "✓" or "✗", "debug.getinfo", "读闭包元数据"))
+print(string.format("  %s %-20s %s", res["debug.getconstants"] and "✓" or "✗", "debug.getconstants", "读闭包常量(关键词定位)"))
+print(string.format("  %s %-20s %s", res["debug.getupvalues"] and "✓" or "✗", "debug.getupvalues", "读闭包 upvalue"))
+if #miss > 0 then
+print("[能力探测] ⚠ 缺失: " .. table.concat(miss, ", ") .. " —— 相关功能会自动降级, 不是「没扫到」")
+end
+end
+return res, okN, total
+end
+function F.capSummary()
+local res = F._caps or select(1, F.ProbeCapabilities(false))
+local n, t = 0, 0
+for _, v in pairs(res) do t = t + 1 if v then n = n + 1 end end
+return n, t
+end
 function F.UnifiedACPass()
 if F._unifiedRunning then return 0 end
 F._unifiedRunning = true
@@ -1017,7 +1215,7 @@ if typeof(inst) == "Instance" then AC.hookOneRemote(inst) end
 end
 end
 for _, d in ipairs(RStorage:GetDescendants()) do
-if d:IsA("RemoteEvent") or d:IsA("RemoteFunction") then AC.hookOneRemote(d) end
+if AC.isRemoteLike(d) then AC.hookOneRemote(d) end
 end
 if type(getgc) ~= "function" then return end
 local seen = 0
@@ -1028,15 +1226,18 @@ if seen % 250 == 0 then task.wait() end
 if typeof(obj) == "Instance" then
 AC.hookOneRemote(obj)
 elseif typeof(obj) == "table" then
-local detected = rawget(obj, "Detected")
-if detected and type(detected) == "function" and hookfunction then
-local got = F.stealthHook(detected, function(box) return function() return nil end end)
-if got then AC.markHooked(detected) hooked = hooked + 1 end
+local marker = AC.isACTable(obj)
+if marker and hookfunction then
+local got = AC.NeutralizeTable(obj)
+if got > 0 then
+hooked = hooked + got
+print(string.format("[CheatMenu] 检测表中和(指纹 %s): %d 个成员函数", marker, got))
+end
 end
 local killfunc = rawget(obj, "Kill")
 if killfunc and type(killfunc) == "function" and rawget(obj, "Variables") and rawget(obj, "Process") then
-local got = F.stealthHook(killfunc, function(box) return function() end end)
-if got then AC.markHooked(killfunc) hooked = hooked + 1 end
+local got2 = F.stealthHook(killfunc, function(box) return function() end end)
+if got2 then AC.markHooked(killfunc) hooked = hooked + 1 end
 end
 local hitLog = false
 local n = rawget(obj, "Name") or rawget(obj, "name")
@@ -1098,10 +1299,8 @@ F._scavenging = true
 local found, order = {}, {}
 local function addRemote(obj, src)
 if typeof(obj) ~= "Instance" then return end
-local okA, isE = pcall(function() return obj:IsA("RemoteEvent") end)
-local okB, isF = pcall(function() return obj:IsA("RemoteFunction") end)
-if (not okA or not isE) and (not okB or not isF) then return end
-local cls = isE and "RemoteEvent" or "RemoteFunction"
+local cls = AC.isRemoteLike(obj)
+if not cls then return end
 local name = tostring(obj.Name)
 local key = cls .. "\0" .. name
 if not found[key] then
@@ -1111,6 +1310,12 @@ end
 found[key].srcs[src] = true
 end
 pcall(function() for _, d in ipairs(RStorage:GetDescendants()) do addRemote(d, "RS") end end)
+pcall(function()
+local cloned = AC.svc("ReplicatedStorage")
+if cloned and cloned ~= RStorage then
+for _, d in ipairs(cloned:GetDescendants()) do addRemote(d, "RS-clone") end
+end
+end)
 if type(getnilinstances) == "function" then
 pcall(function() for _, inst in ipairs(getnilinstances()) do addRemote(inst, "nil") end end)
 end
@@ -1212,9 +1417,7 @@ pcall(function()
 if type(getnilinstances) == "function" then
 for _, inst in ipairs(getnilinstances()) do
 if typeof(inst) == "Instance" then
-local okE, isE = pcall(function() return inst:IsA("RemoteEvent") end)
-local okF, isF = pcall(function() return inst:IsA("RemoteFunction") end)
-if (okE and isE) or (okF and isF) then
+if AC.isRemoteLike(inst) then
 AC.hookOneRemote(inst)
 n = n + 1
 end
@@ -3872,7 +4075,7 @@ end)
 F._remoteDownConns = {}
 pcall(function()
 for _, d in ipairs(RStorage:GetDescendants()) do
-if d:IsA("RemoteEvent") then
+if AC.isRemoteLike(d) then
 local conn = d.OnClientEvent:Connect(function(...)
 if T.RemoteSpy then print(string.format("[下行] %s", d.Name)) end
 end)
@@ -3906,8 +4109,9 @@ if t ~= "" then args[#args + 1] = tonumber(t) or t end
 end
 end
 pcall(function()
-if rem:IsA("RemoteEvent") then rem:FireServer(table.unpack(args))
-elseif rem:IsA("RemoteFunction") then rem:InvokeServer(table.unpack(args)) end
+local cls = AC.isRemoteLike(rem)
+if cls == "RemoteFunction" then rem:InvokeServer(table.unpack(args))
+elseif cls then rem:FireServer(table.unpack(args)) end
 end)
 end
 F._saveThread = nil
@@ -4254,7 +4458,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.6.0",
+SubTitle = "v6.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4574,10 +4778,15 @@ end
 end })
 Tabs.AC:AddButton({ Title = "统一扫描(一次 getgc 全做完)", Callback = function()
 task.spawn(function()
+local _, capOk, capTotal = F.ProbeCapabilities(false)
 local n = F.UnifiedACPass()
 pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
-Fluent:Notify({ Title = "扫描完成", Content = "拦 remote " .. tostring(n) .. " 个", Duration = 6 })
+Fluent:Notify({
+Title = "扫描完成",
+Content = "拦 remote " .. tostring(n) .. " 个 · 执行器能力 " .. tostring(capOk) .. "/" .. tostring(capTotal) .. " —— 明细见控制台 F9",
+Duration = 8,
+})
 end)
 end })
 Tabs.AC:AddButton({ Title = "抓包+模块扫描", Callback = function()
@@ -4599,6 +4808,27 @@ local d, s = AC.DisableACConnections(true)
 Fluent:Notify({ Title = "反作弊", Content = "扫描 " .. tostring(s) .. " 条, 已禁用 " .. tostring(d) .. " 条", Duration = 6 })
 end)
 end })
+Tabs.AC:AddButton({ Title = "能力探测(哪些扫描能用 / 为什么没结果)", Callback = function()
+task.spawn(function()
+local _, okN, total = F.ProbeCapabilities(true)
+Fluent:Notify({
+Title = "能力探测",
+Content = "执行器可用 " .. tostring(okN) .. "/" .. tostring(total) .. " 项 —— 明细见控制台 F9",
+Duration = 8,
+})
+end)
+end })
+Tabs.AC:AddButton({ Title = "属性扫描(游戏状态 / 反作弊标记)", Callback = function()
+task.spawn(function()
+local hits, scanned = F.ScanAttributes(C.AttrKeyword or "")
+Fluent:Notify({
+Title = "属性扫描",
+Content = "扫过 " .. tostring(scanned) .. " 个实例, 命中 " .. tostring(#hits) .. " 条属性 —— 明细见控制台 F9",
+Duration = 8,
+})
+end)
+end })
+Tabs.AC:AddInput("AttrKeyword", { Title = "属性名关键词(留空=全列)", Default = "", Placeholder = "如 Owner, Cash, IsHunter, Health", Callback = function(v) C.AttrKeyword = v end })
 Tabs.AC:AddButton({ Title = "删除 AnimationHandler(绕过部分反作弊)", Callback = function()
 local n = AC.RemoveAnimationHandler()
 Fluent:Notify({ Title = "反作弊", Content = "已删除 " .. n .. " 个 AnimationHandler", Duration = 4 })
@@ -4694,9 +4924,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.6.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.7.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.6.0")
+print("[CheatMenu] ✅ 加载完成 v6.7.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
