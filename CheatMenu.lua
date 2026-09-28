@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 10:35 sha 6ea79a8d bytes 126120'):format('2026-09-28 10:35','6ea79a8d',126120))
-print("[CheatMenu] ===== 加载开始 · v4.10.1 =====")
+print(('[CheatMenu] build 2026-09-28 10:45 sha afcf272f bytes 128906'):format('2026-09-28 10:45','afcf272f',128906))
+print("[CheatMenu] ===== 加载开始 · v4.10.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -229,6 +229,17 @@ end
 end)
 end
 print("[CheatMenu] 深度扫描完成，已拦反作弊 remote 数=" .. AC.BlockedCount)
+end
+function AC.ScanAndBlock()
+if type(getnilinstances) == "function" then
+pcall(function()
+for _, inst in ipairs(getnilinstances()) do
+if typeof(inst) == "Instance" and inst:IsA("RemoteEvent") then AC.hookOneRemote(inst) end
+end
+end)
+end
+AC.DeepScanBlock()
+return AC.BlockedCount
 end
 function AC.UnblockRemotes()
 if hookfunction then
@@ -2201,8 +2212,8 @@ local ok, v = pcall(rawget, t, key)
 return ok and v ~= nil
 end
 local function scanGameModules()
-print("[模块扫描] ===== getloadedmodules 已加载模块 =====")
 local modCount = 0
+print("[模块扫描] ===== 已加载模块 =====")
 if type(getloadedmodules) == "function" then
 local ok, mods = pcall(getloadedmodules)
 if ok and type(mods) == "table" then
@@ -2215,32 +2226,61 @@ end
 end
 end
 print("[模块扫描] 共 " .. modCount .. " 个 ModuleScript")
-print("[模块扫描] ===== getgc 特征对象(>=3字段) =====")
-local objCount = 0
+local nilCount = 0
+if type(getnilinstances) == "function" then
+print("[模块扫描] ===== nil-parented 隐藏实例 =====")
+pcall(function()
+for _, inst in ipairs(getnilinstances()) do
+if typeof(inst) == "Instance" then
+nilCount = nilCount + 1
+if nilCount <= 60 then
+local cls = "?"
+pcall(function() cls = inst.ClassName end)
+print("[模块扫描] nil# " .. cls .. " :: " .. tostring(inst.Name))
+end
+end
+end
+end)
+print("[模块扫描] 共 " .. nilCount .. " 个 nil-parented 实例")
+end
+print("[模块扫描] ===== 函数反作弊特征(名字/常量) =====")
+local funcTotal, acFuncCount = 0, 0
 if type(getgc) == "function" then
-local ok, objs = pcall(getgc, true)
-if ok and type(objs) == "table" then
-for _, o in ipairs(objs) do
-if type(o) == "table" then
-local keys, n = {}, 0
-for k, v in pairs(o) do
-n = n + 1
-if n <= 8 then
-keys[#keys + 1] = tostring(k) .. (type(v) == "function" and "()" or "")
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 8000 then break end
+if type(obj) == "function" then
+funcTotal = funcTotal + 1
+local fname, fsrc = "?", "?"
+pcall(function()
+local info = debug.getinfo(obj, "nS")
+if info then fname = info.name or "?" fsrc = info.short_src or info.source or "?" end
+end)
+local consts, hasAC = {}, false
+pcall(function()
+local cs = debug.getconstants(obj)
+for _, c in ipairs(cs) do
+if type(c) == "string" then
+if AC.isSuspicious(c) then hasAC = true end
+if #consts < 6 then consts[#consts + 1] = c end
 end
 end
-if n >= 3 then
-objCount = objCount + 1
-if objCount <= 40 then
-print("[模块扫描] {" .. table.concat(keys, ", ") .. "}")
+end)
+if AC.isSuspicious(fname) or AC.isSuspicious(fsrc) then hasAC = true end
+if hasAC then
+acFuncCount = acFuncCount + 1
+if acFuncCount <= 50 then
+print(string.format("[模块扫描] ⚠ name=%s src=%s 常量=[%s]", fname, fsrc, table.concat(consts, ",")))
 end
 end
 end
 end
+end)
+print(string.format("[模块扫描] 扫 %d 个函数，反作弊特征 %d 个", funcTotal, acFuncCount))
 end
-end
-print("[模块扫描] 共 " .. objCount .. " 个候选对象（已显示前 40 个）")
-return modCount, objCount
+return modCount, funcTotal, acFuncCount
 end
 local AllConns = {}
 local function addConn(conn)
@@ -3013,26 +3053,65 @@ local function NoDeathDisable()
 if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end
 end
 local function scanRemotes()
-local events, functions = {}, {}
-for _, obj in ipairs(RStorage:GetDescendants()) do
-if obj:IsA("RemoteEvent") then events[#events + 1] = obj.Name
-elseif obj:IsA("RemoteFunction") then functions[#functions + 1] = obj.Name end
+local found = {}
+local order = {}
+local function addRemote(obj, src)
+if typeof(obj) ~= "Instance" then return end
+local okA, isE = pcall(function() return obj:IsA("RemoteEvent") end)
+local okB, isF = pcall(function() return obj:IsA("RemoteFunction") end)
+if (not okA or not isE) and (not okB or not isF) then return end
+local cls = isE and "RemoteEvent" or "RemoteFunction"
+local name = tostring(obj.Name)
+local key = cls .. "\0" .. name
+if not found[key] then
+found[key] = { name = name, class = cls, srcs = {}, suspicious = AC.isSuspicious(name) }
+order[#order + 1] = key
 end
-local function dedup(list)
-local seen, out = {}, {}
-for _, v in ipairs(list) do if not seen[v] then seen[v] = true out[#out + 1] = v end end
-table.sort(out)
-return out
+found[key].srcs[src] = true
 end
-events, functions = dedup(events), dedup(functions)
-print("[抓包] ===== RemoteEvent 共 " .. #events .. " 个 =====")
-for _, n in ipairs(events) do print("[抓包] Event: " .. n) end
-print("[抓包] ===== RemoteFunction 共 " .. #functions .. " 个 =====")
-for _, n in ipairs(functions) do print("[抓包] Function: " .. n) end
+pcall(function()
+for _, d in ipairs(RStorage:GetDescendants()) do addRemote(d, "RS") end
+end)
+if type(getnilinstances) == "function" then
+pcall(function()
+for _, inst in ipairs(getnilinstances()) do addRemote(inst, "nil") end
+end)
+end
+if type(getgc) == "function" then
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 8000 then break end
+if typeof(obj) == "Instance" then
+addRemote(obj, "gc")
+elseif type(obj) == "function" and islclosure and islclosure(obj) then
+for i = 1, 40 do
+local ok2, uname, v = pcall(debug.getupvalue, obj, i)
+if not ok2 or not uname then break end
+addRemote(v, "gc-up")
+end
+end
+end
+end)
+end
+local total, susCount = 0, 0
+print("[抓包] ===== 深度抓包结果(RS + nil + getgc) =====")
+for _, key in ipairs(order) do
+local it = found[key]
+total = total + 1
+local srcs = {}
+for s in pairs(it.srcs) do srcs[#srcs + 1] = s end
+if it.suspicious then susCount = susCount + 1 end
+print(string.format("[抓包] %s [%s] %s  <- %s", it.suspicious and "⚠可疑" or " 普通", it.class, it.name, table.concat(srcs, ",")))
+end
+print(string.format("[抓包] 共 %d 个远程，可疑 %d 个", total, susCount))
 local result = {}
-for _, n in ipairs(events) do result[#result + 1] = "E:" .. n end
-for _, n in ipairs(functions) do result[#result + 1] = "F:" .. n end
-return result
+for _, key in ipairs(order) do
+local it = found[key]
+result[#result + 1] = string.format("%s%s:%s", it.suspicious and "⚠" or "", it.class == "RemoteEvent" and "E" or "F", it.name)
+end
+return result, susCount
 end
 local function parseAmount(s)
 s = tostring(s or ""):upper():gsub("%s+", ""):gsub(",", "")
@@ -3086,7 +3165,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.10.1",
+SubTitle = "v4.10.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3321,8 +3400,9 @@ end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
-Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
-Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
+Tabs.AC:AddButton({ Title = "扫描抓包(深度·含隐藏remote)", Callback = function() local r, sus = scanRemotes() Fluent:Notify({ Title = "深度抓包", Content = "共 " .. #r .. " 个远程，可疑 " .. sus .. " 个，详见控制台(F9)", Duration = 5 }) end })
+Tabs.AC:AddButton({ Title = "扫描游戏模块(深度·含常量)", Callback = function() local m, ft, ac = scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "模块 " .. m .. " / 函数 " .. ft .. " / 反作弊特征 " .. ac .. "，详见控制台(F9)", Duration = 5 }) end })
+Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = function() local n = AC.ScanAndBlock() Fluent:Notify({ Title = "自动拦截", Content = "已 hook 可疑 remote 数=" .. n .. "，详见控制台(F9)", Duration = 5 }) end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -3341,9 +3421,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.10.1")
+print("[CheatMenu] ✅ 加载完成 v4.10.2")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
