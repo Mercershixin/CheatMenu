@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:26 sha 7b4f6e72 bytes 186169'):format('2026-09-28 18:26','7b4f6e72',186169))
+print(('[CheatMenu] build 2026-09-28 18:31 sha 4993fe6b bytes 186463'):format('2026-09-28 18:31','4993fe6b',186463))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.8.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -534,7 +534,7 @@ equipSquatTool()
 end
 end
 end
-task.wait(1)
+task.wait(F.HumanSpeed(1))
 end
 end)
 end
@@ -544,7 +544,7 @@ if TrainThread then return end
 TrainThread = task.spawn(function()
 while T.AutoTrain do
 equipSquatTool()
-task.wait(math.max(0.5, C.AutoTrainSec or 5))
+task.wait(F.HumanSpeed(math.max(0.5, C.AutoTrainSec or 5)))
 end
 end)
 end
@@ -608,7 +608,7 @@ end)
 BonusThread = task.spawn(function()
 while T.AutoBonus do
 AutoBonusScan()
-task.wait(1)
+task.wait(F.HumanSpeed(1))
 end
 end)
 end
@@ -2592,7 +2592,7 @@ end
 end
 end
 end
-task.wait(1)
+task.wait(F.HumanSpeed(1))
 end
 end)
 end
@@ -2621,7 +2621,7 @@ task.wait(0.08)
 end
 end
 end
-task.wait(2)
+task.wait(F.HumanSpeed(2))
 end
 end)
 end
@@ -3025,14 +3025,20 @@ end
 end
 local HitboxBackup = {}
 function F.HitboxExpandEnable()
+if F._hbProg then return end
+F._hbProg = task.spawn(function()
+for step = 1, 4 do
+if not T.HitboxExpand then break end
 for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and pl.Character and not HitboxBackup[pl] then
+if pl ~= LP and pl.Character then
 local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
 if hrp then
-HitboxBackup[pl] = hrp.Size
-local s = C.HitboxSize or 10
+if not HitboxBackup[pl] then HitboxBackup[pl] = hrp.Size end
+local orig = HitboxBackup[pl].X
+local target = C.HitboxSize or 10
+local cur = orig + (target - orig) * (step / 4)
 pcall(function()
-hrp.Size = Vector3.new(s, s, s)
+hrp.Size = Vector3.new(cur, cur, cur)
 hrp.Transparency = C.HitboxVisible and 0.6 or 1
 hrp.CanCollide = false
 hrp.Massless = true
@@ -3040,6 +3046,10 @@ end)
 end
 end
 end
+task.wait(F.HumanSpeed(0.15))
+end
+F._hbProg = nil
+end)
 end
 function F.HitboxExpandDisable()
 for pl, size in pairs(HitboxBackup) do
@@ -3416,7 +3426,7 @@ function F.AntiKnockdownEnable()
 if AntiKnockConn then return end
 AntiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then return end
-if os.clock() - (F._thr3746 or 0) < 0.1 then return end
+if os.clock() - (F._thr3746 or 0) < F.HumanSpeed(0.1) then return end
 F._thr3746 = os.clock()
 local _, hum, root = GC()
 if not (hum and root) then return end
@@ -3951,7 +3961,7 @@ F._waypoints = F._waypoints or {}
 local cf = F._waypoints[slot]
 if not cf then print("[CheatMenu] 路径点 " .. tostring(slot) .. " 为空") return end
 local _, _, r = GC()
-if r then pcall(function() r:PivotTo(cf) end) end
+CM.smoothTP(cf)
 print("[CheatMenu] 已传送到路径点 " .. tostring(slot))
 end
 F._binds = {}
@@ -4070,7 +4080,7 @@ end
 function F.FlashbackGo()
 if F._lastDeathCF then
 local _, _, r = GC()
-if r then pcall(function() r:PivotTo(F._lastDeathCF) end) print("[CheatMenu] 已传回死亡点") end
+CM.smoothTP(F._lastDeathCF) print("[CheatMenu] 已传回死亡点")
 else
 print("[CheatMenu] 暂未记录死亡点(需先死一次)")
 end
@@ -4080,7 +4090,7 @@ local _, _, root = GC()
 if not root then return end
 local cam = workspace.CurrentCamera
 local dir = cam and cam.CFrame.LookVector or root.CFrame.LookVector
-pcall(function() root:PivotTo(root.CFrame + dir * (tonumber(dist) or 50)) end)
+CM.smoothTP(root.CFrame + dir * (tonumber(dist) or 50))
 end
 function F.RemoveAccessories()
 local n = 0
@@ -4229,7 +4239,7 @@ function F.RegenEnable()
 if RegenConn then return end
 RegenConn = RS.Heartbeat:Connect(function()
 if not T.Regen then return end
-if os.clock() - (F._thr4420 or 0) < 0.2 then return end
+if os.clock() - (F._thr4420 or 0) < F.HumanSpeed(0.2) then return end
 F._thr4420 = os.clock()
 local _, hum = GC()
 if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
@@ -4263,7 +4273,7 @@ function F.NoDeathEnable()
 if NoDeathConn then return end
 NoDeathConn = RS.Heartbeat:Connect(function()
 if not T.NoDeath then return end
-if os.clock() - (F._thr4456 or 0) < 0.1 then return end
+if os.clock() - (F._thr4456 or 0) < F.HumanSpeed(0.1) then return end
 F._thr4456 = os.clock()
 local _, hum = GC()
 if hum and hum.Health <= 0 then
@@ -4396,7 +4406,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.8.1",
+SubTitle = "v5.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4787,9 +4797,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.8.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.9.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.8.1")
+print("[CheatMenu] ✅ 加载完成 v5.9.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
