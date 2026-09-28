@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 11:24 sha b81f0968 bytes 138673'):format('2026-09-28 11:24','b81f0968',138673))
-print("[CheatMenu] ===== 加载开始 · v5.0.0 =====")
+print(('[CheatMenu] build 2026-09-28 11:35 sha 957d2e7a bytes 140027'):format('2026-09-28 11:35','957d2e7a',140027))
+print("[CheatMenu] ===== 加载开始 · v5.0.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3382,14 +3382,15 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.0.0",
+SubTitle = "v5.0.1",
 TabWidth = 100,
-Size = UDim2.fromOffset(480, 520),
-Acrylic = false,
-Theme = "Dark",
+Size = UDim2.fromOffset(500, 540),
+Acrylic = true,
+Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
+pcall(function() Fluent:ToggleTransparency(true) end)
 local function buildMenu()
 local GAME = getgenv() and getgenv().GAME or {}
 local Tabs = {
@@ -3641,6 +3642,12 @@ Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = functio
 end
 do
 Tabs.Setting:AddSection("设置")
+Tabs.Setting:AddDropdown("Theme", { Title = "界面主题", Values = { "Aqua(青绿)", "Dark(深灰)", "Darker(更暗)", "Light(亮色)", "Amethyst(紫)", "Rose(玫瑰)" }, Default = "Aqua(青绿)", Callback = function(v)
+local map = { ["Aqua(青绿)"] = "Aqua", ["Dark(深灰)"] = "Dark", ["Darker(更暗)"] = "Darker", ["Light(亮色)"] = "Light", ["Amethyst(紫)"] = "Amethyst", ["Rose(玫瑰)"] = "Rose" }
+local theme = map[v] or "Aqua"
+pcall(function() Fluent:SetTheme(theme) end)
+C.Theme = theme
+end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then CM.ClickerEnable() else CM.ClickerDisable() end end })
 Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() CM.ServerHop() end })
@@ -3656,9 +3663,36 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.0.0")
+print("[CheatMenu] ✅ 加载完成 v5.0.1")
+end
+local function polishToggleVisuals()
+if not (Fluent and Fluent.GUI) then return end
+local ok, desc = pcall(function() return Fluent.GUI:GetDescendants() end)
+if not ok or not desc then return end
+for _, obj in ipairs(desc) do
+if obj:IsA("ImageLabel") and tostring(obj.Image or ""):find("12266946128", 1, true) then
+local isOn = obj.Position.X.Offset >= 15
+if isOn then
+obj.ImageColor3 = Color3.fromRGB(255, 255, 255)
+obj.ImageTransparency = 0
+else
+obj.ImageColor3 = Color3.fromRGB(150, 150, 150)
+obj.ImageTransparency = 0.45
+end
+end
+end
+end
+local function startTogglePolish()
+if getgenv and getgenv().CM_TogglePolish then return end
+if getgenv then getgenv().CM_TogglePolish = true end
+task.spawn(function()
+while true do
+polishToggleVisuals()
+task.wait(0.3)
+end
+end)
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
@@ -3705,3 +3739,4 @@ end
 addToggleButton(Window)
 end
 buildMenu()
+startTogglePolish()
