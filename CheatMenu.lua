@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:14 sha 47afaf06 bytes 188927'):format('2026-09-28 21:14','47afaf06',188927))
+print(('[CheatMenu] build 2026-09-28 21:15 sha e1f04b8c bytes 188833'):format('2026-09-28 21:15','e1f04b8c',188833))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.6 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.7 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4491,7 +4491,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.6",
+SubTitle = "v5.10.7",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4775,7 +4775,6 @@ Tabs.AFK:AddInput("SniperName", { Title = "狙目标名字(关键词)", Default 
 Tabs.AFK:AddInput("SniperMutation", { Title = "狙目标词缀(关键词)", Default = "", Placeholder = "如 Rainbow / Astral", Callback = function(v) C.SniperMutation = v end })
 Tabs.AFK:AddToggle("PlaceBest", { Title = "自动放最优脑红(最高CPS)", Default = false, Callback = function(v) T.PlaceBest = v if v then GAME.AutoPlaceBestEnable() else GAME.AutoPlaceBestDisable() end end })
 Tabs.AFK:AddSlider("PlaceBestSlots", { Title = "放置槽位数", Min = 1, Max = 50, Default = 30, Rounding = 0, Callback = function(v) C.PlaceBestSlots = v end })
-Tabs.AFK:AddSection("块/脑红 ESP")
 Tabs.AFK:AddToggle("BlockESP", { Title = "幸运块透视(高亮)", Default = false, Callback = function(v) T.BlockESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
 Tabs.AFK:AddToggle("BrainrotESP", { Title = "脑红透视(高亮)", Default = false, Callback = function(v) T.BrainrotESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
 end
@@ -4843,7 +4842,6 @@ AC.WatchNewRemotesEnable()
 Fluent:Notify({ Title = "反作弊处理", Content = "关键词 " .. keyCount .. " · 拦截 " .. blocked .. " · 中和后台执行 · 监控已开(详见F9)", Duration = 6 })
 end)
 end })
-Tabs.AC:AddSection("绕过增强(反扫描/防检测)")
 Tabs.AC:AddButton({ Title = "GUI 防扫描(保护菜单不被AC发现)", Callback = function() local n = F.ProtectGui() Fluent:Notify({ Title = "GUI 保护", Content = "已保护 " .. n .. " 个界面", Duration = 4 }) end })
 Tabs.AC:AddToggle("BehaviorRandom", { Title = "行为随机化(速度微抖动防模式检测)", Default = false, Callback = function(v) T.BehaviorRandom = v if v then F.BehaviorRandomEnable() else F.BehaviorRandomDisable() end end })
 Tabs.AC:AddToggle("StealthMode", { Title = "全局隐蔽模式(一键降所有功能参数)", Default = false, Callback = function(v) if v then F.StealthModeEnable() else F.StealthModeDisable() end end })
@@ -4880,9 +4878,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.6", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.7", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.6")
+print("[CheatMenu] ✅ 加载完成 v5.10.7")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
