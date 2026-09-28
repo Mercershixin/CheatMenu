@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:45 sha 4c749915 bytes 189050'):format('2026-09-28 18:45','4c749915',189050))
+print(('[CheatMenu] build 2026-09-28 20:41 sha 8915769a bytes 189265'):format('2026-09-28 20:41','8915769a',189265))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -213,6 +213,7 @@ local seen = 0
 for _, obj in ipairs(getgc(true)) do
 seen = seen + 1
 if seen > 8000 then break end
+if seen % 200 == 0 then task.wait() end
 if typeof(obj) == "Instance" then
 if obj:IsA("RemoteEvent") then AC.hookOneRemote(obj) end
 elseif type(obj) == "function" and islclosure and islclosure(obj) then
@@ -263,13 +264,16 @@ return #AC.SUS_KEYS
 end
 function AC.NeutralizeACFunctions()
 if type(getgc) ~= "function" or not hookfunction then return 0 end
+if AC._neutThread then return 0 end
+AC._neutThread = task.spawn(function()
 local keys = { "anticheat", "anti-cheat", "detected", "exploit", "cheat", "ban", "iac", "reportabuse", "flag" }
 local hooked = 0
 pcall(function()
 local seen = 0
 for _, obj in ipairs(getgc(true)) do
 seen = seen + 1
-if seen > 12000 then break end
+if seen > 5000 then break end
+if seen % 200 == 0 then task.wait() end
 if type(obj) == "function" and islclosure and islclosure(obj) then
 local already = false
 pcall(function() if isfunctionhooked and isfunctionhooked(obj) then already = true end end)
@@ -294,8 +298,10 @@ end
 end
 end
 end)
+AC._neutThread = nil
 print("[CheatMenu] 已中和 " .. hooked .. " 个反作弊检测函数")
-return hooked
+end)
+return 0
 end
 function AC.WatchNewRemotesEnable()
 if AC._watchConn then return end
@@ -4377,6 +4383,7 @@ local seen = 0
 for _, obj in ipairs(getgc(true)) do
 seen = seen + 1
 if seen > 8000 then break end
+if seen % 200 == 0 then task.wait() end
 if typeof(obj) == "Instance" then
 addRemote(obj, "gc")
 elseif type(obj) == "function" and islclosure and islclosure(obj) then
@@ -4468,7 +4475,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.0",
+SubTitle = "v5.10.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4861,9 +4868,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.0")
+print("[CheatMenu] ✅ 加载完成 v5.10.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
