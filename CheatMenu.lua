@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:24 sha accc8e76 bytes 184216'):format('2026-09-28 18:24','accc8e76',184216))
+print(('[CheatMenu] build 2026-09-28 18:26 sha 7b4f6e72 bytes 186169'):format('2026-09-28 18:26','7b4f6e72',186169))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.8.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.8.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3054,7 +3054,7 @@ function F.KillAuraEnable()
 if KillAuraConn then return end
 KillAuraConn = RS.Heartbeat:Connect(function()
 if not T.KillAura then return end
-if os.clock() - (F._thr3348 or 0) < 0.1 then return end
+if os.clock() - (F._thr3348 or 0) < F.HumanSpeed(0.1) then return end
 F._thr3348 = os.clock()
 local _, _, root = GC()
 if not root then return end
@@ -3097,7 +3097,7 @@ function F.AutoPickupEnable()
 if PickupConn then return end
 PickupConn = RS.Heartbeat:Connect(function()
 if not T.AutoPickup then return end
-if os.clock() - (F._thr3394 or 0) < 0.2 then return end
+if os.clock() - (F._thr3394 or 0) < F.HumanSpeed(0.2) then return end
 F._thr3394 = os.clock()
 local _, _, root = GC()
 if not root then return end
@@ -3822,7 +3822,7 @@ function F.ItemMagnetEnable()
 if F._magnetConn then return end
 F._magnetConn = RS.Heartbeat:Connect(function()
 if not T.ItemMagnet then return end
-if os.clock() - (F._magnetAt or 0) < 0.1 then return end
+if os.clock() - (F._magnetAt or 0) < F.HumanSpeed(0.1) then return end
 F._magnetAt = os.clock()
 local _, _, root = GC()
 if not root then return end
@@ -4169,6 +4169,44 @@ function F.SafeMouseClick()
 if type(mouse1click) == "function" then pcall(mouse1click) return true end
 return false
 end
+function F.HumanSpeed(base)
+return (tonumber(base) or 0.1) * (0.8 + math.random() * 0.4)
+end
+function F.NoClipStealthEnable()
+if F._ncStealthConn then return end
+F._ncStealthConn = RS.Heartbeat:Connect(function()
+if not T.NoClipStealth then return end
+if os.clock() - (F._ncSAt or 0) < 0.05 then return end
+F._ncSAt = os.clock()
+local _, hum, root = GC()
+if not root then return end
+local moving = hum and hum.MoveDirection.Magnitude > 0.1
+pcall(function() root.CanCollide = not moving end)
+end)
+print("[CheatMenu] 隐蔽穿墙已开启(仅移动时无碰撞)")
+end
+function F.NoClipStealthDisable()
+if F._ncStealthConn then F._ncStealthConn:Disconnect() F._ncStealthConn = nil end
+local _, _, root = GC()
+if root then pcall(function() root.CanCollide = true end) end
+end
+function F.StealthModeEnable()
+C.SpeedMul = 1.5
+C.FlySpeed = 60
+C.SpeedCFrameMul = 1.3
+C.KillAuraRange = 12
+C.PickupRange = 8
+C.MagnetRadius = 30
+C.HitboxSize = 5
+if not T.FlyStealth then T.FlyStealth = true F.FlyStealthEnable() end
+if not T.BehaviorRandom then T.BehaviorRandom = true F.BehaviorRandomEnable() end
+print("[CheatMenu] 隐蔽模式已开启：速度/飞行限速 + 行为随机化 + 安全参数(全部功能降检测)")
+end
+function F.StealthModeDisable()
+if T.FlyStealth then T.FlyStealth = false F.FlyStealthDisable() end
+if T.BehaviorRandom then T.BehaviorRandom = false F.BehaviorRandomDisable() end
+print("[CheatMenu] 隐蔽模式已关闭")
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -4313,7 +4351,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, F.NoClipStealthDisable, F.StealthModeDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4358,7 +4396,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.8.0",
+SubTitle = "v5.8.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4487,6 +4525,7 @@ Tabs.Move:AddSlider("SpinSpeed", { Title = "自转速度", Min = 1, Max = 60, De
 Tabs.Move:AddToggle("AirWalk", { Title = "踏空(空中移动)", Default = false, Callback = function(v) T.AirWalk = v if v then CM.AirWalkEnable() else CM.AirWalkDisable() end end })
 Tabs.Move:AddSlider("AirWalkSpeed", { Title = "踏空速度", Min = 10, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.AirWalkSpeed = v end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then CM.NoClipEnable() else CM.NoClipDisable() end end })
+Tabs.Move:AddToggle("NoClipStealth", { Title = "隐蔽穿墙(仅移动时无碰撞)", Default = false, Callback = function(v) T.NoClipStealth = v if v then F.NoClipStealthEnable() else F.NoClipStealthDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下(自己视角正常)", Default = false, Callback = function(v) T.Hide = v if v then CM.HideEnable() else CM.HideDisable() end end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(浅=可交互)", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.Move:AddToggle("FlyCar", { Title = "飞车(载具飞行)", Default = false, Callback = function(v) T.FlyCar = v if v then CM.FlyCarEnable() else CM.FlyCarDisable() end end })
@@ -4714,6 +4753,7 @@ Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = functio
 Tabs.AC:AddSection("绕过增强(反扫描/防检测)")
 Tabs.AC:AddButton({ Title = "GUI 防扫描(保护菜单不被AC发现)", Callback = function() local n = F.ProtectGui() Fluent:Notify({ Title = "GUI 保护", Content = "已保护 " .. n .. " 个界面", Duration = 4 }) end })
 Tabs.AC:AddToggle("BehaviorRandom", { Title = "行为随机化(速度微抖动防模式检测)", Default = false, Callback = function(v) T.BehaviorRandom = v if v then F.BehaviorRandomEnable() else F.BehaviorRandomDisable() end end })
+Tabs.AC:AddToggle("StealthMode", { Title = "全局隐蔽模式(一键降所有功能参数)", Default = false, Callback = function(v) if v then F.StealthModeEnable() else F.StealthModeDisable() end end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -4747,9 +4787,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.8.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.8.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.8.0")
+print("[CheatMenu] ✅ 加载完成 v5.8.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
