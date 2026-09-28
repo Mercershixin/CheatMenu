@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:20 sha 482938aa bytes 181894'):format('2026-09-28 18:20','482938aa',181894))
+print(('[CheatMenu] build 2026-09-28 18:24 sha accc8e76 bytes 184216'):format('2026-09-28 18:24','accc8e76',184216))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.7.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4117,6 +4117,58 @@ if F._swimConn then F._swimConn:Disconnect() F._swimConn = nil end
 local _, hum = GC()
 if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end) end
 end
+function F.ProtectGui()
+local targets = {}
+pcall(function() if Fluent and Fluent.GUI then table.insert(targets, Fluent.GUI) end end)
+pcall(function()
+for _, g in ipairs(CoreGui:GetChildren()) do
+if g.Name:find("CheatMenu") or g.Name:find("Fluent") then table.insert(targets, g) end
+end
+end)
+local n = 0
+for _, sg in ipairs(targets) do
+pcall(function() if syn and syn.protect_gui then syn.protect_gui(sg) end end)
+pcall(function() if protect_gui then protect_gui(sg) end end)
+pcall(function() if gethui then sg.Parent = gethui() end end)
+n = n + 1
+end
+print("[CheatMenu] 已保护 " .. n .. " 个 GUI(防反作弊扫描)")
+return n
+end
+function F.GuardedGetGC(pass)
+local now = os.clock()
+if now - (F._lastGetGC or 0) < 2 then return {} end
+F._lastGetGC = now
+if type(getgc) ~= "function" then return {} end
+local ok, r = pcall(getgc, pass)
+return (ok and type(r) == "table") and r or {}
+end
+function F.BehaviorRandomEnable()
+if F._randConn then return end
+F._randConn = RS.Heartbeat:Connect(function()
+if not T.BehaviorRandom then return end
+if os.clock() - (F._randAt or 0) < 1 then return end
+F._randAt = os.clock()
+local _, hum = GC()
+if hum and T.Speed then
+local base = (C.SpeedMul or 2) * 16
+local jitter = base * (0.97 + math.random() * 0.06)
+pcall(function() if math.abs(hum.WalkSpeed - jitter) > 0.5 then hum.WalkSpeed = jitter end end)
+end
+end)
+print("[CheatMenu] 行为随机化已开启")
+end
+function F.BehaviorRandomDisable()
+if F._randConn then F._randConn:Disconnect() F._randConn = nil end
+end
+function F.SafeKeyPress(keyCode)
+if type(keypress) == "function" then pcall(keypress, tonumber(keyCode) or keyCode) return true end
+return false
+end
+function F.SafeMouseClick()
+if type(mouse1click) == "function" then pcall(mouse1click) return true end
+return false
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -4261,7 +4313,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4306,7 +4358,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.7.0",
+SubTitle = "v5.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4659,6 +4711,9 @@ Tabs.AC:AddSection("扫描 / 抓包")
 Tabs.AC:AddButton({ Title = "扫描抓包(深度·含隐藏remote)", Callback = function() local r, sus = scanRemotes() Fluent:Notify({ Title = "深度抓包", Content = "共 " .. #r .. " 个远程，可疑 " .. sus .. " 个，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块(深度·含常量)", Callback = function() local m, ft, ac = scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "模块 " .. m .. " / 函数 " .. ft .. " / 反作弊特征 " .. ac .. "，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = function() local n = AC.ScanAndBlock() Fluent:Notify({ Title = "自动拦截", Content = "已 hook 可疑 remote 数=" .. n .. "，详见控制台(F9)", Duration = 5 }) end })
+Tabs.AC:AddSection("绕过增强(反扫描/防检测)")
+Tabs.AC:AddButton({ Title = "GUI 防扫描(保护菜单不被AC发现)", Callback = function() local n = F.ProtectGui() Fluent:Notify({ Title = "GUI 保护", Content = "已保护 " .. n .. " 个界面", Duration = 4 }) end })
+Tabs.AC:AddToggle("BehaviorRandom", { Title = "行为随机化(速度微抖动防模式检测)", Default = false, Callback = function(v) T.BehaviorRandom = v if v then F.BehaviorRandomEnable() else F.BehaviorRandomDisable() end end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -4692,9 +4747,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.7.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.8.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.7.0")
+print("[CheatMenu] ✅ 加载完成 v5.8.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
