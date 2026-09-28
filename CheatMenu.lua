@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 16:48 sha a763cd1d bytes 158877'):format('2026-09-28 16:48','a763cd1d',158877))
+print(('[CheatMenu] build 2026-09-28 16:56 sha 821765b4 bytes 160793'):format('2026-09-28 16:56','821765b4',160793))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.3.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.3.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -370,6 +370,7 @@ for _, c in ipairs(FlingConns) do pcall(function() c:Disconnect() end) end
 FlingConns = {}
 end
 local AFKConn = nil
+local AFKConn2 = nil
 function F.AntiAFKEnable()
 if AFKConn then return end
 AFKConn = LP.Idled:Connect(function()
@@ -378,7 +379,7 @@ pcall(function() VirtualUser:CaptureController() end)
 pcall(function() VirtualUser:ClickButton2(Vector2.new(0, 0)) end)
 end
 end)
-RS.Heartbeat:Connect(function()
+AFKConn2 = RS.Heartbeat:Connect(function()
 if not T.AntiAFK then return end
 if (os.clock() - (AC._afkAt or 0)) < 5 then return end
 AC._afkAt = os.clock()
@@ -388,6 +389,10 @@ if hum and root and (root.AssemblyLinearVelocity.Magnitude < 1) then
 hum.Jump = true
 end
 end)
+end
+function F.AntiAFKDisable()
+if AFKConn then AFKConn:Disconnect() AFKConn = nil end
+if AFKConn2 then AFKConn2:Disconnect() AFKConn2 = nil end
 end
 local KG = { hooked = false, target = nil, hits = 0, lastReason = "", rjConn = nil, rjTries = 0 }
 function F.KickGuardEnable()
@@ -2067,17 +2072,22 @@ o.box.Visible = false o.name.Visible = false o.dist.Visible = false o.hp.Visible
 end
 end
 end
+local ESPAddedConn, ESPRemovedConn = nil, nil
 local function ESPEnable()
 espInit()
 for _, pl in ipairs(Players:GetPlayers()) do espCreate(pl) end
-Players.PlayerAdded:Connect(function(pl)
+if ESPAddedConn then ESPAddedConn:Disconnect() end
+if ESPRemovedConn then ESPRemovedConn:Disconnect() end
+ESPAddedConn = Players.PlayerAdded:Connect(function(pl)
 pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
 end)
-Players.PlayerRemoving:Connect(espRemove)
+ESPRemovedConn = Players.PlayerRemoving:Connect(espRemove)
 if not ESPConn then ESPConn = RS.RenderStepped:Connect(espUpdate) end
 end
 local function ESPDisable()
 if ESPConn then ESPConn:Disconnect() ESPConn = nil end
+if ESPAddedConn then ESPAddedConn:Disconnect() ESPAddedConn = nil end
+if ESPRemovedConn then ESPRemovedConn:Disconnect() ESPRemovedConn = nil end
 for pl in pairs(ESPObjs) do espRemove(pl) end
 ESPObjs = {}
 end
@@ -3628,6 +3638,49 @@ end
 function F.PanicKeyDisable()
 if F._panicConn then F._panicConn:Disconnect() F._panicConn = nil end
 end
+function F.DropAllTools()
+local _, _, root = GC()
+local bp = LP:FindFirstChild("Backpack")
+local ch = LP.Character
+local n = 0
+for _, parent in ipairs({ bp, ch }) do
+if parent then
+for _, t in ipairs(parent:GetChildren()) do
+if t:IsA("Tool") then
+local ok = pcall(function() t.Parent = workspace end)
+if not ok then pcall(function() t.Parent = workspace end) end
+n = n + 1
+end
+end
+end
+end
+print("[CheatMenu] 已丢出 " .. n .. " 个工具")
+return n
+end
+function F.DupeAttemptEnable()
+if F._dupeThread then return end
+F._dupeThread = task.spawn(function()
+while T.DupeAttempt do
+local ch, hum, root = GC()
+if ch and hum and root then
+local pos = root.CFrame
+F.DropAllTools()
+task.wait(0.25)
+pcall(function() ch.Head:Destroy() end)
+task.wait(6)
+local _, _, r = GC()
+if r then pcall(function() r.CFrame = pos end) end
+end
+task.wait(0.3)
+end
+F._dupeThread = nil
+end)
+print("[CheatMenu] 刷物品尝试已开启(依赖游戏 bug, 多数无效, 风险自负)")
+end
+function F.DupeAttemptDisable()
+T.DupeAttempt = false
+F._dupeThread = nil
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3768,9 +3821,9 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
-pcall(function() if AFKConn then AFKConn:Disconnect() end end)
+pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
 pcall(function() if getgenv and getgenv().CM_Window then getgenv().CM_Window:Destroy() getgenv().CM_Window = nil end end)
 pcall(function() if getgenv and getgenv().CM_ToggleSG then getgenv().CM_ToggleSG:Destroy() getgenv().CM_ToggleSG = nil end end)
@@ -3812,7 +3865,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.3.0",
+SubTitle = "v5.3.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4022,7 +4075,7 @@ do
 Tabs.AFK:AddSection("挂机防踢")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
-if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() else F.KickGuardDisable() end
+if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() else F.KickGuardDisable() F.AntiAFKDisable() end
 end })
 Tabs.AFK:AddSection("踢击训练")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then F.AutoTrainEnable() end end })
@@ -4038,6 +4091,9 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
+Tabs.AFK:AddSection("物品辅助")
+Tabs.AFK:AddButton({ Title = "丢出所有工具(清背包)", Callback = function() F.DropAllTools() end })
+Tabs.AFK:AddToggle("DupeAttempt", { Title = "刷物品尝试(丢物+重生·依赖游戏bug)", Default = false, Callback = function(v) T.DupeAttempt = v if v then F.DupeAttemptEnable() else F.DupeAttemptDisable() end end })
 Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
 Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
 Tabs.AFK:AddToggle("AutoUpgrade", { Title = "自动升级(脑红/踢力)", Default = false, Callback = function(v) T.AutoUpgrade = v if v then GAME.AutoUpgradeEnable() end end })
@@ -4135,9 +4191,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.3.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.3.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.3.0")
+print("[CheatMenu] ✅ 加载完成 v5.3.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
