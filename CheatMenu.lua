@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:29 sha 00e51f8e bytes 188613'):format('2026-09-28 21:29','00e51f8e',188613))
+print(('[CheatMenu] build 2026-09-28 21:33 sha dd0980b5 bytes 189349'):format('2026-09-28 21:33','dd0980b5',189349))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.10 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.11 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -313,6 +313,90 @@ AC._neutThread = nil
 print("[CheatMenu] 已中和 " .. hooked .. " 个反作弊检测函数")
 end)
 return 0
+end
+function AC.ClearThreatLogs()
+if type(getgc) ~= "function" then return 0 end
+local keys = { "threat", "violation", "flag", "warn", "detect", "suspect", "ban", "kick", "log", "strike", "offense", "infraction" }
+local cleared = 0
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 8000 then break end
+if seen % 200 == 0 then task.wait() end
+if typeof(obj) == "table" then
+local hit = false
+local n = rawget(obj, "Name") or rawget(obj, "name")
+if type(n) == "string" then
+for _, kw in ipairs(keys) do
+if n:lower():find(kw, 1, true) then hit = true break end
+end
+end
+if not hit then
+for _, kw in ipairs(keys) do
+if rawget(obj, kw) ~= nil then hit = true break end
+end
+end
+if hit then
+for k, v in pairs(obj) do
+if type(v) == "number" then pcall(function() rawset(obj, k, 0) end) end
+if type(v) == "table" then pcall(function() table.clear(v) end) end
+end
+cleared = cleared + 1
+end
+end
+end
+end)
+print("[CheatMenu] 已清除 " .. cleared .. " 个威胁日志表")
+return cleared
+end
+function AC.SpoofTelemetry()
+if not hookfunction then return 0 end
+local keys = { "telemetry", "report", "upload", "ping", "heartbeat" }
+local spoofed = 0
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 8000 then break end
+if seen % 200 == 0 then task.wait() end
+if type(obj) == "function" and islclosure and islclosure(obj) then
+local already = false
+pcall(function() if isfunctionhooked and isfunctionhooked(obj) then already = true end end)
+if not already then
+local ok, consts = pcall(debug.getconstants, obj)
+if ok and consts then
+local hit = false
+for _, c in ipairs(consts) do
+if type(c) == "string" then
+for _, kw in ipairs(keys) do
+if c:lower():find(kw, 1, true) then hit = true break end
+end
+end
+if hit then break end
+end
+if hit then
+pcall(hookfunction, obj, function(...) return true end)
+spoofed = spoofed + 1
+end
+end
+end
+end
+end
+end)
+print("[CheatMenu] 已伪造 " .. spoofed .. " 个遥测上报函数")
+return spoofed
+end
+function F.TweenMoveTo(cf, duration)
+local _, _, root = GC()
+if not root then return end
+local ok = pcall(function()
+local ts = game:GetService("TweenService")
+local ti = TweenInfo.new(duration or 0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+local tween = ts:Create(root, ti, { CFrame = cf })
+tween:Play()
+end)
+return ok
 end
 function AC.WatchNewRemotesEnable()
 if AC._watchConn then return end
@@ -4503,7 +4587,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.10",
+SubTitle = "v5.10.11",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4817,44 +4901,40 @@ Tabs.Trans:AddButton({ Title = "清空翻译缓存", Callback = function() Trans
 end
 do
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddDropdown("ACLevel", { Title = "反作弊强度", Values = { "关闭", "基础(防踢+拦远程+防甩飞)", "增强(+断检测连接+清元表)", "全量(+深度扫描+属性锁·最防封)" }, Default = "关闭", Callback = function(v)
-T.ACBypass = false T.NamecallHook = false T.RemoteBlock = false T.AntiFling = false T.MetaBypass = false T.BadgeBypass = false
-T.ACBypassPlus = false T.UniversalAC = false T.PropertyLock = false
-F.AntiFlingDisable() AC.UnblockRemotes()
-local lv = (v == "基础(防踢+拦远程+防甩飞)") and 1 or (v == "增强(+断检测连接+清元表)") and 2 or (v == "全量(+深度扫描+属性锁·最防封)") and 3 or 0
-if lv >= 1 then
+Tabs.AC:AddToggle("ACMaster", { Title = "反作弊(一键全部绕过+防护)", Default = false, Callback = function(v)
+if v then
 T.ACBypass = true T.NamecallHook = true T.RemoteBlock = true T.AntiFling = true T.MetaBypass = true T.BadgeBypass = true
+T.ACBypassPlus = true T.UniversalAC = true T.PropertyLock = true
 AC.InstallNamecallHook() AC.InstallPropertyLock() F.AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
-end
-if lv >= 2 then
-T.ACBypassPlus = true
-F.ACBypassPlusEnable()
-end
-if lv >= 3 then
-T.UniversalAC = true T.PropertyLock = true
-AC.InstallPropertyLock() AC.DeepScanBlock()
-end
-end })
-Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
-Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then F.VoiceBypassEnable() else F.VoiceBypassDisable() end end })
-Tabs.AC:AddToggle("AntiTP", { Title = "防传送(拦截被踢/传送走)", Default = false, Callback = function(v) T.AntiTP = v if v then AC.InstallAntiTP() else AC.UninstallAntiTP() end end })
-Tabs.AC:AddToggle("AntiPause", { Title = "防游戏暂停(销毁网络暂停界面)", Default = false, Callback = function(v) T.AntiPause = v if v then AC.AntiPauseEnable() else AC.AntiPauseDisable() end end })
-Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then F.TrapsESPEnable() else F.TrapsESPDisable() end end })
-Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
-Tabs.AC:AddButton({ Title = "一键反作弊处理(扫描+拦截+中和+监控+GUI保护+随机化)", Callback = function()
+F.ACBypassPlusEnable() AC.DeepScanBlock()
+T.ChatBypass = true CM.ChatBypassEnable()
+T.VoiceBypass = true F.VoiceBypassEnable()
+T.AntiTP = true AC.InstallAntiTP()
+T.AntiPause = true AC.AntiPauseEnable()
+T.TrapsESP = true F.TrapsESPEnable()
+T.TrapDisable = true AC.TrapDisable.Enable()
 task.spawn(function()
-local keyCount = AC.ExpandSuspiciousKeys()
+AC.ExpandSuspiciousKeys()
 local blocked = AC.ScanAndBlock()
-pcall(function() local r, sus = scanRemotes() print("[CheatMenu] 深度抓包: 共 " .. #r .. " 个远程, 可疑 " .. sus .. " 个") end)
-pcall(function() local m, ft, ac = scanGameModules() print("[CheatMenu] 模块扫描: 模块 " .. m .. " / 函数 " .. ft .. " / AC特征 " .. ac) end)
 AC.NeutralizeACFunctions()
 AC.WatchNewRemotesEnable()
-local guiN = F.ProtectGui()
+F.ProtectGui()
 T.BehaviorRandom = true F.BehaviorRandomEnable()
-Fluent:Notify({ Title = "反作弊处理", Content = "拦截 " .. blocked .. " · GUI保护 " .. guiN .. " · 中和后台 · 监控+随机化已开(详见F9)", Duration = 6 })
+AC.ClearThreatLogs()
+AC.SpoofTelemetry()
+Fluent:Notify({ Title = "反作弊", Content = "已开启全部绕过(拦截 " .. blocked .. " · 中和 · 清日志 · 遥测伪造 · GUI保护)", Duration = 6 })
 end)
+F.StealthModeEnable()
+else
+T.ACBypass = false T.NamecallHook = false T.RemoteBlock = false T.AntiFling = false T.MetaBypass = false T.BadgeBypass = false
+T.ACBypassPlus = false T.UniversalAC = false T.PropertyLock = false T.ChatBypass = false T.VoiceBypass = false
+T.AntiTP = false T.AntiPause = false T.TrapsESP = false T.TrapDisable = false T.BehaviorRandom = false
+F.AntiFlingDisable() AC.UnblockRemotes()
+F.VoiceBypassDisable() AC.UninstallAntiTP() AC.AntiPauseDisable() F.TrapsESPDisable() AC.TrapDisable.Disable()
+F.BehaviorRandomDisable() AC.WatchNewRemotesDisable()
+F.StealthModeDisable()
+end
 end })
-Tabs.AC:AddToggle("StealthMode", { Title = "全局隐蔽模式(一键降所有功能参数)", Default = false, Callback = function(v) if v then F.StealthModeEnable() else F.StealthModeDisable() end end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -4888,9 +4968,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.10", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.11", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.10")
+print("[CheatMenu] ✅ 加载完成 v5.10.11")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
