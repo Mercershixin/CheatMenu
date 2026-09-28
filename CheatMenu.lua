@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 22:14 sha 2cf40761 bytes 188966'):format('2026-09-28 22:14','2cf40761',188966))
+print(('[CheatMenu] build 2026-09-28 22:19 sha e6d14ea0 bytes 190903'):format('2026-09-28 22:19','e6d14ea0',190903))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.0.1 =====")
+print("[CheatMenu] ===== 加载开始 · v6.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4074,6 +4074,60 @@ end
 function F.ItemMagnetDisable()
 if F._magnetConn then F._magnetConn:Disconnect() F._magnetConn = nil end
 end
+function F.RemoteSpyEnable()
+if F._spyHooked then return end
+if type(hookmetamethod) ~= "function" or type(getrawmetatable) ~= "function" then
+print("[CheatMenu] 执行器不支持 hookmetamethod/getrawmetatable，无法开启流量监听")
+return
+end
+local mt = getrawmetatable(game)
+if not mt then return end
+F._spyOld = mt.__namecall
+if not F._spyOld then return end
+F._spyHooked = true
+mt.__namecall = hookmetamethod(game, "__namecall", function(self, ...)
+local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
+if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
+local mine = false
+if type(checkcaller) == "function" then mine = checkcaller() end
+if not mine then
+local args = { ... }
+local ok, txt = pcall(function()
+local out = {}
+for i, a in ipairs(args) do
+local s
+if typeof(a) == "Instance" then
+s = tostring(a.Name) .. "[" .. a.ClassName .. "]"
+elseif type(a) == "string" then
+s = '"' .. tostring(a) .. '"'
+elseif type(a) == "table" then
+local n = 0
+for _ in pairs(a) do n = n + 1 end
+s = "{table:" .. n .. "}"
+else
+s = tostring(a)
+end
+out[#out + 1] = s
+end
+return table.concat(out, ", ")
+end)
+print(string.format("[流量] %s:%s(%s)", tostring(self.Name), method, (ok and txt) or "?"))
+end
+end
+return F._spyOld(self, ...)
+end)
+print("[CheatMenu] Remote 流量监听已开启：游戏内任何操作都会打印调用的 remote + 参数（见控制台 F9）")
+end
+function F.RemoteSpyDisable()
+if not F._spyHooked then return end
+pcall(function()
+local mt = getrawmetatable(game)
+if mt and F._spyOld then mt.__namecall = F._spyOld end
+end)
+F._spyHooked = nil
+F._spyOld = nil
+print("[CheatMenu] Remote 流量监听已关闭")
+end
 function F.CallRemote(remoteName, argsStr)
 if not remoteName or remoteName == "" then print("[CheatMenu] 请先填 remote 名") return end
 local rem = (REvent and REvent(remoteName)) or (RFunction and RFunction(remoteName))
@@ -4570,7 +4624,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, F.NoClipStealthDisable, F.StealthModeDisable, AC.WatchNewRemotesDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, F.NoClipStealthDisable, F.StealthModeDisable, F.RemoteSpyDisable, AC.WatchNewRemotesDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4615,7 +4669,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.0.1",
+SubTitle = "v6.1.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4880,7 +4934,8 @@ end })
 Tabs.AFK:AddToggle("ItemMagnet", { Title = "物品吸附(拉附近物品过来)", Default = false, Callback = function(v) T.ItemMagnet = v if v then F.ItemMagnetEnable() else F.ItemMagnetDisable() end end })
 Tabs.AFK:AddInput("MagnetKeyword", { Title = "吸附关键词(留空=全部)", Default = "", Placeholder = "如 bond / coal / 脑红", Callback = function(v) C.MagnetKeyword = v end })
 Tabs.AFK:AddSlider("MagnetRadius", { Title = "吸附半径", Min = 10, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.MagnetRadius = v end })
-Tabs.AFK:AddInput("RemoteName", { Title = "Remote 名(配合扫描抓包)", Default = "", Placeholder = "如 GiveItem / Buy", Callback = function(v) C.RemoteName = v end })
+Tabs.AFK:AddToggle("RemoteSpy", { Title = "Remote 流量监听(抓真实调用)", Default = false, Callback = function(v) T.RemoteSpy = v if v then F.RemoteSpyEnable() else F.RemoteSpyDisable() end end })
+Tabs.AFK:AddInput("RemoteName", { Title = "Remote 名(配合流量监听)", Default = "", Placeholder = "如 Reliable / Request", Callback = function(v) C.RemoteName = v end })
 Tabs.AFK:AddInput("RemoteArgs", { Title = "Remote 参数(逗号分隔)", Default = "", Placeholder = "如 1,true,string", Callback = function(v) C.RemoteArgs = v end })
 Tabs.AFK:AddButton({ Title = "调用该 Remote", Callback = function()
 if C.RemoteName and C.RemoteName ~= "" then
@@ -4997,9 +5052,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.0.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.1.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.0.1")
+print("[CheatMenu] ✅ 加载完成 v6.1.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
