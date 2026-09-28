@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 11:38 sha 1c04abe8 bytes 140065'):format('2026-09-28 11:38','1c04abe8',140065))
-print("[CheatMenu] ===== 加载开始 · v5.0.2 =====")
+print(('[CheatMenu] build 2026-09-28 12:02 sha bbd01c01 bytes 143973'):format('2026-09-28 12:02','bbd01c01',143973))
+print("[CheatMenu] ===== 加载开始 · v5.0.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -279,6 +279,37 @@ AC._propLockOld = res
 AC._propLockOn = true
 print("[CheatMenu] 属性锁定已安装(WalkSpeed/JumpPower)")
 end
+end
+AC._antiTPOld = nil
+AC._antiTPAsyncOld = nil
+function AC.InstallAntiTP()
+if AC._antiTPOld then return true end
+if not hookfunction then return false end
+local ts = game:GetService("TeleportService")
+local old
+local wrapper = function(self, placeId, player, ...)
+if not checkcaller() and not (T.KickRejoin and placeId == game.PlaceId) then
+print("[CheatMenu] 🚫 拦截被传送: " .. tostring(placeId))
+return nil
+end
+return old(self, placeId, player, ...)
+end
+local ok, res = pcall(function()
+if newcclosure then return hookfunction(ts.Teleport, newcclosure(wrapper)) else return hookfunction(ts.Teleport, wrapper) end
+end)
+if ok and type(res) == "function" then
+old = res
+AC._antiTPOld = res
+print("[CheatMenu] 防传送已安装(拦截 TeleportService.Teleport)")
+return true
+end
+return false
+end
+function AC.UninstallAntiTP()
+if AC._antiTPOld and hookfunction then
+pcall(function() hookfunction(game:GetService("TeleportService").Teleport, AC._antiTPOld) end)
+end
+AC._antiTPOld = nil
 end
 local FlingConns = {}
 local function AntiFlingEnable()
@@ -1329,13 +1360,17 @@ local function AirWalkDisable()
 if AirWalkConn then AirWalkConn:Disconnect() AirWalkConn = nil end
 end
 local NoClipConn = nil
+local NoClipParts = {}
 local function NoClipEnable()
 if NoClipConn then return end
 local function noclip()
 local ch = LP.Character
 if not ch then return end
 for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.CanCollide = false end
+if part:IsA("BasePart") and part.CanCollide then
+part.CanCollide = false
+NoClipParts[part] = true
+end
 end
 end
 noclip()
@@ -1343,12 +1378,12 @@ NoClipConn = RS.Stepped:Connect(noclip)
 end
 local function NoClipDisable()
 if NoClipConn then NoClipConn:Disconnect() NoClipConn = nil end
-local ch = LP.Character
-if ch then
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.CanCollide = true end
+for part, _ in pairs(NoClipParts) do
+if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
+part.CanCollide = true
 end
 end
+NoClipParts = {}
 end
 local HideConn = nil
 local HideBaseY = nil
@@ -1430,11 +1465,21 @@ if not savedFog then return end
 L.FogEnd = savedFog.FogEnd
 L.FogStart = savedFog.FogStart
 end
+local function breakVelocity()
+local _, _, root = GC()
+if root then
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+end
+end
 local function smoothTP(targetCF, useSmooth)
 local _, _, root = GC()
 if not root then return end
 if not (T.TPSmooth and useSmooth ~= false) then
-root.CFrame = targetCF
+pcall(function() root:PivotTo(targetCF) end)
+breakVelocity()
 return
 end
 local start = root.CFrame
@@ -1443,6 +1488,7 @@ for i = 1, seg do
 root.CFrame = start:Lerp(targetCF, i / seg)
 task.wait(0.015)
 end
+breakVelocity()
 end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
@@ -2168,6 +2214,50 @@ for _, s in ipairs(workspace:GetDescendants()) do
 if s:IsA("Sound") then s.Volume = 0 end
 end
 end
+local savedLag = nil
+local function AntilagEnable()
+local L = game:GetService("Lighting")
+if not savedLag then
+savedLag = {
+GlobalShadows = L.GlobalShadows, FogEnd = L.FogEnd, FogStart = L.FogStart,
+Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient,
+}
+end
+local Terrain = workspace:FindFirstChildWhichIsA("Terrain")
+if Terrain then
+pcall(function()
+Terrain.WaterWaveSize = 0
+Terrain.WaterWaveSpeed = 0
+Terrain.WaterReflectance = 0
+Terrain.WaterTransparency = 1
+end)
+end
+L.GlobalShadows = false
+L.FogEnd = 9e9
+L.FogStart = 9e9
+L.Brightness = 1
+local ok, settingsTable = pcall(function() return settings() end)
+if ok and settingsTable then
+pcall(function() settingsTable.Rendering.QualityLevel = 1 end)
+end
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("BasePart") then
+pcall(function() v.CastShadow = false end)
+end
+end
+print("[CheatMenu] 降画质已开启(关阴影/去水波/关雾)")
+end
+local function AntilagDisable()
+local L = game:GetService("Lighting")
+if not savedLag then return end
+L.GlobalShadows = savedLag.GlobalShadows
+L.FogEnd = savedLag.FogEnd
+L.FogStart = savedLag.FogStart
+L.Brightness = savedLag.Brightness
+L.ClockTime = savedLag.ClockTime
+L.Ambient = savedLag.Ambient
+savedLag = nil
+end
 local function Rejoin()
 local ts = game:GetService("TeleportService")
 pcall(function() ts:Teleport(game.PlaceId, LP) end)
@@ -2743,6 +2833,22 @@ end
 end)
 end
 print("[CheatMenu] 反作弊绕过增强已执行")
+end
+function AC.AntiPauseEnable()
+if AC._noPauseConn then return end
+AC._noPauseConn = CoreGui.RobloxGui.ChildAdded:Connect(function(obj)
+if obj.Name == "CoreScripts/NetworkPause" then
+pcall(function() obj:Destroy() end)
+end
+end)
+pcall(function()
+local np = CoreGui.RobloxGui:FindFirstChild("CoreScripts/NetworkPause")
+if np then np:Destroy() end
+end)
+print("[CheatMenu] 防游戏暂停已开启(销毁 NetworkPause)")
+end
+function AC.AntiPauseDisable()
+if AC._noPauseConn then AC._noPauseConn:Disconnect() AC._noPauseConn = nil end
 end
 local VCBackup = nil
 local function VoiceBypassEnable()
@@ -3346,7 +3452,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable, AC.UnblockRemotes }
+local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3361,6 +3467,10 @@ if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
 if T.AntiFling then AntiFlingEnable() end
 if T.UniversalAC then AC.InstallPropertyLock() AC.DeepScanBlock() end
+if T.AntiTP then AC.InstallAntiTP() end
+if T.AntiPause then AC.AntiPauseEnable() end
+if T.NoClip then NoClipEnable() end
+if T.Antilag then AntilagEnable() end
 end
 local function HotUpdate()
 Fluent:Notify({ Title = "热更新", Content = "保存配置并重新加载...", Duration = 3 })
@@ -3382,7 +3492,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.0.2",
+SubTitle = "v5.0.3",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3502,6 +3612,7 @@ end })
 Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then CM.FOVEnable() end end })
 Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then CM.ZoomEnable() end end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then CM.MuteEnable() end end })
+Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
 Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
@@ -3634,6 +3745,8 @@ AC.UnblockRemotes()
 end
 end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
+Tabs.AC:AddToggle("AntiTP", { Title = "防传送(拦截被踢/传送走)", Default = false, Callback = function(v) T.AntiTP = v if v then AC.InstallAntiTP() else AC.UninstallAntiTP() end end })
+Tabs.AC:AddToggle("AntiPause", { Title = "防游戏暂停(销毁网络暂停界面)", Default = false, Callback = function(v) T.AntiPause = v if v then AC.AntiPauseEnable() else AC.AntiPauseDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
 Tabs.AC:AddSection("扫描 / 抓包")
@@ -3664,9 +3777,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.3", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.0.2")
+print("[CheatMenu] ✅ 加载完成 v5.0.3")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
