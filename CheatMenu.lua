@@ -1,6 +1,62 @@
-print(('[CheatMenu] build 2026-09-29 02:00 sha aa28d2ab bytes 222323'):format('2026-09-29 02:00','aa28d2ab',222323))
+print(('[CheatMenu] build 2026-09-29 02:16 sha bbf42773 bytes 229797'):format('2026-09-29 02:16','bbf42773',229797))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v7.0.0 =====")
+F.SANITIZE = {
+{"cloneref", "cref"},
+{"secure_call", "secure-call"},
+{"run_secure_function", "run-secure-function"},
+{"create_secure_function", "create-secure-function"},
+{"getscriptclosure", "script-closure"}, {"getcallingscript", "calling-script"},
+{"getscripthash", "script-hash"}, {"getnilinstances", "nil-inst"},
+{"getloadedmodules", "loaded-mod"}, {"getconnections", "conn-list"},
+{"getnamecallmethod", "nc-method-get"}, {"setnamecallmethod", "nc-method-set"},
+{"getrawmetatable", "raw-mt-get"}, {"setrawmetatable", "raw-mt-set"},
+{"hookmetamethod", "mt-hook"}, {"hookfunction", "fn-hook"}, {"newcclosure", "c-closure"},
+{"getconstants", "const-list"}, {"getconstant", "const-get"}, {"setconstant", "const-set"},
+{"getupvalues", "upval-list"}, {"getupvalue", "upval-get"}, {"setupvalue", "upval-set"},
+{"getprotos", "proto-list"}, {"getproto", "proto-get"}, {"setproto", "proto-set"},
+{"setclipboard", "clip-set"}, {"write_clipboard", "clip-write"},
+{"fireproximityprompt", "fire-prompt"}, {"firetouchinterest", "fire-touch"},
+{"firesignal", "fire-signal"}, {"sethiddenproperty", "hidden-set"},
+{"gethiddenproperty", "hidden-get"}, {"setscriptable", "scriptable-set"},
+{"setsimulationradius", "simradius-set"}, {"getsimulationradius", "simradius-get"},
+{"getcustomasset", "asset-get"}, {"getsynasset", "asset-get-syn"},
+{"protect_gui", "gui-guard"}, {"unprotect_gui", "gui-unguard"},
+{"identifyexecutor", "exec-id"}, {"queue_on_teleport", "qot"}, {"saveinstance", "inst-save"},
+{"getspecialinfo", "special-info"}, {"setthreadcontext", "thread-ctx"},
+{"getregistry", "registry-get"}, {"getstack", "stack-get"}, {"setstack", "stack-set"},
+{"checkcaller", "caller-chk"}, {"islclosure", "lclosure-chk"},
+{"setreadonly", "ro-flag-set"}, {"isreadonly", "ro-flag-chk"},
+{"rconsoleprint", "rcon"}, {"rconsoleinfo", "rcon"}, {"rconsolewarn", "rcon"},
+{"rconsoleerr", "rcon"}, {"rconsoleclear", "rcon"}, {"rconsolename", "rcon"},
+{"rconsoleinput", "rcon"},
+{"appendfile", "file-append"}, {"delfolder", "folder-del"}, {"makefolder", "folder-new"},
+{"listfiles", "file-list"}, {"delfile", "file-del"}, {"readfile", "file-read"},
+{"writefile", "file-write"}, {"isfile", "file-chk"}, {"loadfile", "file-load"},
+{"gethui", "ui-hidden"}, {"getgenv", "genv-get"}, {"getrenv", "renv-get"},
+{"getsenv", "senv-get"}, {"getmenv", "menv-get"}, {"gettenv", "tenv-get"},
+{"HttpGet", "http-get"}, {"hooksignal", "signal-hook"}, {"replicatesignal", "signal-rep"},
+{"cache_replace", "cache-rep"}, {"cache_invalidate", "cache-inv"},
+}
+function F.Sanitize(s)
+s = tostring(s)
+for i = 1, #F.SANITIZE do
+local from = F.SANITIZE[i][1]
+if s:find(from, 1, true) then s = s:gsub(from, F.SANITIZE[i][2]) end
+end
+return s
+end
+F._logBuf = F._logBuf or {}
+F.LOG_BUF_MAX = F.LOG_BUF_MAX or 300
+function F.Out(...)
+local n = select("#", ...)
+local parts = {}
+for i = 1, n do parts[i] = F.Sanitize(select(i, ...)) end
+local line = table.concat(parts, " ")
+print(line)
+F._logBuf[#F._logBuf + 1] = line
+if F.LogFlush and #F._logBuf >= F.LOG_BUF_MAX then pcall(F.LogFlush, "自动") end
+end
+F.Out("[CheatMenu] ===== 加载开始 · v7.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -120,7 +176,7 @@ if ok and type(body) == "string" and #body > 5000 then
 local ok2, chunk = pcall(loadstring, body)
 if ok2 and chunk then
 local ok3, loaded = pcall(chunk)
-if ok3 and loaded then Fluent = loaded print("[CheatMenu] Fluent 加载成功") break end
+if ok3 and loaded then Fluent = loaded F.Out("[CheatMenu] Fluent 加载成功") break end
 end
 end
 end
@@ -165,6 +221,77 @@ for i = 1, #AC.SUS_KEYS do
 if name:find(AC.SUS_KEYS[i], 1, true) then return true end
 end
 return false
+end
+AC.KNOWN_LIMITS = {
+{ src = "Sentinel", key = "MaxTeleportDistance", val = 50,  unit = "studs / 0.1s 窗口", ours = "smoothTP 每 0.1s <45" },
+{ src = "Sentinel", key = "MaxPlayerSpeed",      val = 100, unit = "studs/s",          ours = "CFrame 加速每 0.1s<=4 => 40/s" },
+{ src = "Sentinel", key = "MaxRemoteCallsPerSecond", val = 30, unit = "次/秒",          ours = "自动攻击上限 25/s" },
+{ src = "Sentinel", key = "FlyDetectionTime",    val = 2,   unit = "秒(滞空)",          ours = "飞行高度上限 + 假落地" },
+{ src = "Sentinel", key = "DetectionThreshold",  val = 5,   unit = "次(累计才处置)",     ours = "尽量不产生任何一次" },
+{ src = "Adonis",   key = "Speed(GetRealPhysicsFPS)", val = 0, unit = "物理帧率超阈值即 kill", ours = "不动 WalkSpeed 上限, 优先 CFrame" },
+{ src = "Adonis",   key = "HumanoidState==StrafingNoPhysics", val = 0, unit = "立即 kill(NoClipping)", ours = "穿墙时禁用该状态" },
+{ src = "Adonis",   key = "日志黑名单(执行器函数名)", val = 0, unit = "命中即 kill",      ours = "F.Sanitize 全量消毒" },
+{ src = "Sentinel", key = "按实例名扫 {exploit,inject,cheat,...}", val = 0, unit = "建实例即标记", ours = "实例名已去特征化" },
+}
+function AC.ThresholdReport()
+F.Out("════ 强反作弊阈值对齐自查 ════")
+local ac = AC.DetectStrongAC(false)
+F.Out("  本服指纹: " .. (ac and ("检测到 " .. ac) or "未检测到已知强反作弊(不等于没有, 服务端实现客户端看不见)"))
+for i = 1, #AC.KNOWN_LIMITS do
+local L = AC.KNOWN_LIMITS[i]
+F.Out(string.format("  [%s] %s = %s %s  ->  我方: %s", L.src, L.key, tostring(L.val), L.unit, L.ours))
+end
+F.Out("  提示: 服务端判定的阈值只能从公开实现反推; 上述数字全部取自公开源码, 不是猜的。")
+return ac
+end
+AC._strongAC = nil
+function AC.DetectStrongAC(verbose)
+if AC._strongAC ~= nil then return AC._strongAC end
+local found = nil
+local keepScav = F._scavenging
+F._scavenging = true
+pcall(function()
+if type(getnilinstances) ~= "function" then return end
+for _, inst in ipairs(getnilinstances()) do
+if typeof(inst) == "Instance" then
+local n = inst.Name
+if #n >= 6 and n:gsub("%s", "") == "ModuleScript" and n:find(string.char(10), 1, true) then
+found = "Adonis"; break
+end
+end
+end
+end)
+if not found then
+pcall(function()
+local marks = { "Adonis", "Adonis_Loader", "Adonis_Server" }
+for i = 1, #marks do
+local m = marks[i]
+if RStorage:FindFirstChild(m) or (LP and LP:FindFirstChild(m)) then found = "Adonis" break end
+end
+end)
+end
+if not found then
+pcall(function()
+local generic = { "Kronos", "Sentinel", "Falcon", "CheckMe", "AntiCheat" }
+for i = 1, #generic do
+if RStorage:FindFirstChild(generic[i], true) then found = generic[i] break end
+end
+end)
+end
+F._scavenging = keepScav
+AC._strongAC = found or false
+if verbose then
+F.Out("[强反作弊识别] " .. (found and ("检测到: " .. found .. " —— 已自动开启静默消毒输出") or "未检测到已知强反作弊指纹"))
+end
+return found
+end
+AC._quiet = false
+function AC.SetQuiet(on)
+AC._quiet = on and true or false
+end
+function AC.IsStrongAC()
+local a = AC.DetectStrongAC(false)
+return a ~= false and a ~= nil
 end
 F.MetaLayers = {}
 F._metaSeq = 0
@@ -232,7 +359,7 @@ local got = F.MetaInstall("__namecall", game, "AC", function(box)
 return function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
 if method == "Kick" and self == LP and T.NamecallHook then
-print("[CheatMenu] 拦下 Kick: " .. tostring(select(1, ...)))
+F.Out("[CheatMenu] 拦下 Kick: " .. tostring(select(1, ...)))
 return nil
 end
 if (method == "FireServer" or method == "InvokeServer") and T.RemoteBlock and not checkcaller() then
@@ -311,7 +438,7 @@ if type(mode) == "string" and (mode:find("k", 1, true) or mode:find("v", 1, true
 AC._weakSeen = AC._weakSeen + 1
 if type(tbl) == "table" then pcall(rawset, AC._weakTables, tbl, true) end
 if T.ACBypass then
-print("[CheatMenu] 拦截弱表 setmetatable: __mode=" .. mode .. " (累计 " .. AC._weakSeen .. ")")
+F.Out("[CheatMenu] 拦截弱表 setmetatable: __mode=" .. mode .. " (累计 " .. AC._weakSeen .. ")")
 end
 end
 end
@@ -320,7 +447,7 @@ end))
 end)
 if ok and type(res) == "function" then
 AC._stblOld = res
-print("[CheatMenu] setmetatable Hook 已安装")
+F.Out("[CheatMenu] setmetatable Hook 已安装")
 return true
 end
 return false
@@ -350,7 +477,7 @@ end)
 if not ok then end
 if seen > 30000 then break end
 end
-if removed > 0 then print("[CheatMenu] 已删除 " .. removed .. " 个 AnimationHandler") end
+if removed > 0 then F.Out("[CheatMenu] 已删除 " .. removed .. " 个 AnimationHandler") end
 return removed
 end
 AC.KILL_SUB = {
@@ -411,7 +538,7 @@ AC._scriptWatchConn = game.DescendantAdded:Connect(function(d)
 if not (d:IsA("LocalScript") or d:IsA("ModuleScript")) then return end
 local hit, strong = AC.killHit(d.Name)
 if hit then
-print("[CheatMenu] 拦截可疑脚本: " .. d:GetFullName() .. (strong and " (强特征·延迟销毁)" or " (词元特征·仅禁用)"))
+F.Out("[CheatMenu] 拦截可疑脚本: " .. d:GetFullName() .. (strong and " (强特征·延迟销毁)" or " (词元特征·仅禁用)"))
 AC.killScript(d, strong)
 end
 end)
@@ -621,7 +748,7 @@ end
 AC._forceConnSignals = keepForce
 F._scavenging = keepScav
 AC._connDisabled = AC._connDisabled + out.disabled
-print(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条", out.scanned, out.disabled))
+F.Out(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条", out.scanned, out.disabled))
 return out.disabled, out.scanned
 end
 AC._antiTPOld = nil
@@ -660,7 +787,7 @@ pcall(function()
 rg = CoreGui and (CoreGui.RobloxGui or CoreGui:FindFirstChild("RobloxGui"))
 end)
 if not rg then
-print("[CheatMenu] 防暂停: 当前容器里没有 RobloxGui, 本项跳过(不影响其它功能)")
+F.Out("[CheatMenu] 防暂停: 当前容器里没有 RobloxGui, 本项跳过(不影响其它功能)")
 return
 end
 AC._noPauseConn = rg.ChildAdded:Connect(function(obj)
@@ -954,10 +1081,10 @@ F._stealthLayers = {
 debug = okA and 1 or 0, gameDebug = okB and 1 or 0, gameGetfenv = okC and 1 or 0,
 identity = okD and 1 or 0, traceback = okE and 1 or 0,
 }
-print(string.format("[CheatMenu] 隐身 %d/5 层 (debug=%s 游戏debug=%s 游戏getfenv=%s 身份=%s 回溯=%s) · 登记闭包 %d 个",
+F.Out(string.format("[CheatMenu] 隐身 %d/5 层 (debug=%s 游戏debug=%s 游戏getfenv=%s 身份=%s 回溯=%s) · 登记闭包 %d 个",
 cnt, tostring(okA), tostring(okB), tostring(okC), tostring(okD), tostring(okE), marked))
-if sameB then print("[CheatMenu]   (注: getrenv().debug.info 与全局是同一对象, 已由第 1 层覆盖)") end
-if sameC then print("[CheatMenu]   (注: getrenv().getfenv 与全局是同一对象, 无需重复盖)") end
+if sameB then F.Out("[CheatMenu]   (注: getrenv().debug.info 与全局是同一对象, 已由第 1 层覆盖)") end
+if sameC then F.Out("[CheatMenu]   (注: getrenv().getfenv 与全局是同一对象, 无需重复盖)") end
 return F._stealthOn, marked
 end
 function F.StealthDisable()
@@ -971,7 +1098,7 @@ F._stealthRestore = {}
 F._stealthHooked = setmetatable({}, { __mode = "k" })
 F._debugHookOn = false
 F._stealthOn = false
-print("[CheatMenu] 隐身影身层已卸载")
+F.Out("[CheatMenu] 隐身影身层已卸载")
 end
 function F.SpoofGCMetadata()
 local ok, marked = F.StealthEnable()
@@ -1108,7 +1235,7 @@ end
 end
 end)
 F._scavenging = keepScav
-print(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
+F.Out(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
 return total
 end
 AC.cap = function(name)
@@ -1253,7 +1380,7 @@ end
 end
 end
 F._scavenging = keepScav
-print(string.format("[CheatMenu] 元表剥离: 含键 %q 的表 %d 个", keyName, n))
+F.Out(string.format("[CheatMenu] 元表剥离: 含键 %q 的表 %d 个", keyName, n))
 return n
 end
 function AC.PokeUpvalue(fnName, idx, value)
@@ -1263,7 +1390,7 @@ local ok = pcall(function()
 local okset = (type(setupvalue) == "function")
 if okset then setupvalue(f, idx, value) else debug.setupvalue(f, idx, value) end
 end)
-print(string.format("[CheatMenu] 原地改 upvalue: %s[%s] = %s -> %s", tostring(fnName), tostring(idx), tostring(value), ok and "成功" or "失败"))
+F.Out(string.format("[CheatMenu] 原地改 upvalue: %s[%s] = %s -> %s", tostring(fnName), tostring(idx), tostring(value), ok and "成功" or "失败"))
 return ok
 end
 F.CAP_LIST = {
@@ -1754,18 +1881,10 @@ path = tostring(dir):gsub("[\\/]+$", "") .. "\\" .. F.LogBaseName() .. ".txt"
 else
 path = "(执行器工作目录)\\" .. F.LogBaseName() .. ".txt"
 end
-print("[日志] 执行器: " .. tostring(exec or "未知"))
-print("[日志] 文件路径: " .. path)
-print("[日志] 命名: " .. F.LogBaseName() .. ".txt (游戏名 + PlaceId, 不同游戏不冲突; 超 1.5MB 自动轮转 _2/_3)")
+F.Out("[日志] 执行器: " .. tostring(exec or "未知"))
+F.Out("[日志] 文件路径: " .. path)
+F.Out("[日志] 命名: " .. F.LogBaseName() .. ".txt (游戏名 + PlaceId, 不同游戏不冲突; 超 1.5MB 自动轮转 _2/_3)")
 return path, exec
-end
-function F.Out(...)
-print(...)
-local n = select("#", ...)
-local parts = {}
-for i = 1, n do parts[i] = tostring(select(i, ...)) end
-F._logBuf[#F._logBuf + 1] = table.concat(parts, " ")
-if #F._logBuf >= F.LOG_BUF_MAX then pcall(F.LogFlush, "自动") end
 end
 function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
@@ -1778,7 +1897,7 @@ local usedName = nil
 local hasRW = false
 pcall(function() hasRW = (type(writefile) == "function" and type(readfile) == "function") end)
 if not hasRW then
-print("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「一键全量导出」可复制)")
+F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「一键全量导出」可复制)")
 return nil
 end
 for idx = 1, 20 do
@@ -1803,14 +1922,14 @@ end)
 if ok then
 okWrite = true
 usedName = name
-print(string.format("[日志] %s 已写入 %s (%d 字节, 本次追加 %d 字符)", tostring(tag or ""), name, size + #body, #body))
+F.Out(string.format("[日志] %s 已写入 %s (%d 字节, 本次追加 %d 字符)", tostring(tag or ""), name, size + #body, #body))
 end
 break
 end
 end
 if not okWrite then
 F._logBuf = pending
-print("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许), 内容已留在缓冲, 可稍后重试")
+F.Out("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许), 内容已留在缓冲, 可稍后重试")
 end
 return usedName, #body
 end
@@ -2123,7 +2242,7 @@ if type(kf) ~= "function" or not hookfunction then return false end
 local orig
 local wrapper = function(self, msg)
 if self == LP and (type(msg) == "string" or type(msg) == "number") then
-print("[CheatMenu] 本地拦截 Kick: " .. tostring(msg))
+F.Out("[CheatMenu] 本地拦截 Kick: " .. tostring(msg))
 return nil
 end
 if orig then return orig(self, msg) end
@@ -2476,7 +2595,7 @@ end)
 if not got then return end
 F._saUnifiedHooked = true
 F._saUnifiedLayer = got
-print("[CheatMenu] 统一静默自瞄已开启")
+F.Out("[CheatMenu] 统一静默自瞄已开启")
 end
 function F.SilentAimUnifiedDisable()
 if F._saUnifiedHooked then
@@ -2604,7 +2723,7 @@ local ESPHue = 0
 local function espInit()
 if ESPGui and ESPGui.Parent then return end
 ESPGui = Instance.new("ScreenGui")
-ESPGui.Name = "CheatMenu_ESP"
+ESPGui.Name = "PlayerTags"
 ESPGui.ResetOnSpawn = false
 ESPGui.IgnoreGuiInset = true
 ESPGui.Parent = gethui and gethui() or CoreGui
@@ -2835,7 +2954,7 @@ task.wait(0.8)
 F.SkeletonDisable()
 if T.ESPSkeleton then F.SkeletonEnable() end
 end)
-print("[CheatMenu] 骨骼线: 使用 Drawing API (" .. #F._skeletonDrawings .. " 条)")
+F.Out("[CheatMenu] 骨骼线: 使用 Drawing API (" .. #F._skeletonDrawings .. " 条)")
 return
 end
 if F._skeletonDrawings then
@@ -2844,7 +2963,7 @@ F._skeletonDrawings = nil
 end
 end
 local sg = Instance.new("ScreenGui")
-sg.Name = "CheatMenu_Skeleton"
+sg.Name = "BoneLines"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = gethui and gethui() or CoreGui
@@ -2905,7 +3024,7 @@ if #F._arrowBbs > 0 then return end
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP and pl.Character then
 local bb = Instance.new("BillboardGui")
-bb.Name = "CheatArrow"
+bb.Name = "FacingMark"
 bb.Size = UDim2.fromOffset(40, 40)
 bb.StudsOffset = Vector3.new(0, 3.5, 0)
 bb.AlwaysOnTop = true
@@ -2930,7 +3049,7 @@ local existing = false
 for _, e in ipairs(F._arrowBbs) do if e.pl == pl then existing = true break end end
 if existing or pl == LP or not pl.Character then return end
 local bb = Instance.new("BillboardGui")
-bb.Name = "CheatArrow"
+bb.Name = "FacingMark"
 bb.Size = UDim2.fromOffset(40, 40)
 bb.StudsOffset = Vector3.new(0, 3.5, 0)
 bb.AlwaysOnTop = true
@@ -3275,7 +3394,7 @@ end
 F._authorityServer = srv
 F._authorityMode = mode
 if srv and verbose then
-print("[CheatMenu] ⚠ AuthorityMode=Server: 位移/速度由服务端权威裁决, 飞行/加速命中率会明显下降")
+F.Out("[CheatMenu] ⚠ AuthorityMode=Server: 位移/速度由服务端权威裁决, 飞行/加速命中率会明显下降")
 end
 return mode, srv
 end
@@ -3544,6 +3663,11 @@ end
 F.NoClipConn = nil
 F.NoClipParts = {}
 function F.NoClipDisable()
+pcall(function()
+local ch = LP.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum then hum:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, true) end
+end)
 if F.NoClipConn then F.NoClipConn:Disconnect() F.NoClipConn = nil end
 for part in pairs(F.NoClipParts) do
 if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then part.CanCollide = true end
@@ -3555,6 +3679,8 @@ if F.NoClipConn then return end
 local function noclip()
 local ch = LP.Character
 if not ch then return end
+local hum = ch:FindFirstChildOfClass("Humanoid")
+if hum then pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, false) end) end
 for _, part in ipairs(ch:GetDescendants()) do
 if part:IsA("BasePart") and part.CanCollide then
 part.CanCollide = false
@@ -3644,12 +3770,17 @@ breakVelocity()
 return
 end
 local start = root.CFrame
-local seg = math.max(3, tonumber(C.TPSmoothSeg) or 8)
+local dist = (start.Position - targetCF.Position).Magnitude
+local need = math.ceil(dist * 8 / 45)
+local seg = math.max(3, tonumber(C.TPSmoothSeg) or 8, need)
+seg = math.min(seg, 600)
+local stepWait = 0.012
+if dist > 2000 then stepWait = 0.008 end
 for i = 1, seg do
 local t = i / seg
 local eased = (t < 0.5) and (2 * t * t) or (1 - ((-2 * t + 2) ^ 2) / 2)
 root.CFrame = start:Lerp(targetCF, eased)
-task.wait(0.012)
+task.wait(stepWait)
 end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
@@ -3726,7 +3857,11 @@ local _, _, root = GC()
 if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, -25, 0) end)
 task.wait(0.12)
-pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end)
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+local v = root.AssemblyLinearVelocity
+if v.Y > 20 then root.AssemblyLinearVelocity = Vector3.new(v.X, 20, v.Z) end
+end)
 end
 end
 task.wait(1)
@@ -3990,7 +4125,7 @@ box.Transparency = 1
 box.CanCollide = true
 box.CanQuery = true
 box.Anchored = true
-box.Name = "CheatHitbox"
+box.Name = "HitZone"
 box.Parent = ch
 local conn = RS.RenderStepped:Connect(function()
 if box.Parent and hrp.Parent then box.CFrame = hrp.CFrame end
@@ -4153,7 +4288,7 @@ local targets = {}
 pcall(function() if Fluent and Fluent.GUI then table.insert(targets, Fluent.GUI) end end)
 pcall(function()
 for _, g in ipairs(CoreGui:GetChildren()) do
-if g.Name:find("CheatMenu") or g.Name:find("Fluent") then table.insert(targets, g) end
+if F.isOwnGuiName(g.Name) then table.insert(targets, g) end
 end
 end)
 for _, sg in ipairs(targets) do
@@ -4163,6 +4298,15 @@ end
 end
 F._guiProtConn = nil
 F._guiProtQueue = false
+F.OWN_GUI_NAMES = {
+PlayerTags = true, BoneLines = true, FacingMark = true, HitZone = true,
+StatOverlay = true, CrosshairDot = true, ReticleRing = true, MenuButton = true,
+}
+function F.isOwnGuiName(name)
+if type(name) ~= "string" then return false end
+if F.OWN_GUI_NAMES[name] then return true end
+return name:find("Fluent") ~= nil
+end
 function F.GuiName(inst)
 local n = ""
 pcall(function() n = tostring(inst.Name or "") end)
@@ -4179,12 +4323,12 @@ local parent = parents[i]
 local ok = pcall(function()
 local c = parent.DescendantRemoving:Connect(function(obj)
 local n = F.GuiName(obj)
-if not (n:find("CheatMenu") or n:find("Fluent")) then return end
+if not F.isOwnGuiName(n) then return end
 if F._guiProtQueue then return end
 F._guiProtQueue = true
 task.delay(0.5, function()
 F._guiProtQueue = false
-print("[CheatMenu] 检测到 GUI 被移除(" .. n .. "), 正在重建...")
+F.Out("[CheatMenu] 检测到 GUI 被移除(" .. n .. "), 正在重建...")
 pcall(F.ProtectGui)
 task.spawn(function()
 pcall(function() if T.ESP then ESPEnable() end end)
@@ -4216,7 +4360,7 @@ F._hudGui, F._hudConn = nil, nil
 function F.HudEnable()
 if F._hudGui then return end
 local sg = Instance.new("ScreenGui")
-sg.Name = "CheatMenu_HUD"
+sg.Name = "StatOverlay"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = CoreGui
@@ -4255,7 +4399,7 @@ F._crossGui = nil
 function F.CrosshairEnable()
 if F._crossGui then return end
 local sg = Instance.new("ScreenGui")
-sg.Name = "CheatMenu_Cross"
+sg.Name = "CrosshairDot"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = CoreGui
@@ -4277,7 +4421,7 @@ F._fovGui, F._fovConn = nil, nil
 function F.FovCircleEnable()
 if F._fovGui then return end
 local sg = Instance.new("ScreenGui")
-sg.Name = "CheatMenu_FOV"
+sg.Name = "ReticleRing"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = CoreGui
@@ -4637,7 +4781,7 @@ end)
 if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态 (F1)", Duration = 3 })
 end
-print("[CheatMenu] Panic: 全部功能已关闭, 属性/外观/连接已恢复")
+F.Out("[CheatMenu] Panic: 全部功能已关闭, 属性/外观/连接已恢复")
 end
 function F.PanicKeyEnable()
 if F._panicConn then return end
@@ -4846,7 +4990,7 @@ return function(self, ...)
 local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
 if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
 if not checkcaller() then
-print(string.format("[流量] %s:%s", tostring(self.Name), method))
+F.Out(string.format("[流量] %s:%s", tostring(self.Name), method))
 end
 end
 return box.orig(self, ...)
@@ -4860,7 +5004,7 @@ pcall(function()
 for _, d in ipairs(RStorage:GetDescendants()) do
 if AC.isRemoteLike(d) then
 local conn = d.OnClientEvent:Connect(function(...)
-if T.RemoteSpy then print(string.format("[下行] %s", d.Name)) end
+if T.RemoteSpy then F.Out(string.format("[下行] %s", d.Name)) end
 end)
 F._remoteDownConns[#F._remoteDownConns + 1] = conn
 end
@@ -4916,11 +5060,11 @@ for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
 F.Conn.list = {}
 end
 function F.DiagConnections()
-print("[CheatMenu] === 连接诊断 ===")
+F.Out("[CheatMenu] === 连接诊断 ===")
 if type(getconnections) == "function" then
 for name, ev in pairs({ ["RenderStepped"] = RS.RenderStepped, ["Heartbeat"] = RS.Heartbeat, ["Stepped"] = RS.Stepped }) do
 local ok, conns = pcall(getconnections, ev)
-print(string.format("  %s: %d", name, (ok and type(conns) == "table") and #conns or 0))
+F.Out(string.format("  %s: %d", name, (ok and type(conns) == "table") and #conns or 0))
 end
 end
 end
@@ -5203,7 +5347,7 @@ getgenv().CM_Window = nil
 end
 end)
 pcall(F.Conn.ClearAll)
-print("[CheatMenu] 已干净卸载")
+F.Out("[CheatMenu] 已干净卸载")
 end
 local function RestoreFeatures()
 if T.KickProtect or T.AntiAFK then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() end
@@ -5243,7 +5387,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.0.0",
+SubTitle = "v7.1.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5336,7 +5480,7 @@ Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false
 Tabs.Combat:AddSlider("HitboxSize", { Title = "命中框大小", Min = 2, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v end })
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then F.KillAuraEnable() else F.KillAuraDisable() end end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
-Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 30, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
+Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒, 上限25避开30/s检测)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Combat:AddToggle("AimPriorityNearest", { Title = "只打最近的目标", Default = false, Callback = function(v) T.AimPriorityNearest = v end })
 Tabs.Combat:AddToggle("AntiAim", { Title = "Anti-Aim 反瞄准(旋转)", Default = false, Callback = function(v) T.AntiAim = v if v then F.AntiAimEnable() else F.AntiAimDisable() end end })
 Tabs.Combat:AddSlider("AntiAimSpeed", { Title = "Anti-Aim 旋转速度", Min = 5, Max = 180, Default = 30, Rounding = 0, Callback = function(v) C.AntiAimSpeed = v end })
@@ -5389,7 +5533,7 @@ local txt = (mode == nil) and "本游戏没有 AuthorityMode 字段, 位移走�
 or (srv and ("AuthorityMode=" .. tostring(mode) .. " → 位移由服务端裁决, 飞行/加速会被引擎拒绝或回弹")
 or ("AuthorityMode=" .. tostring(mode) .. " → 客户端权威, 位移类功能可用"))
 if Fluent and Fluent.Notify then Fluent:Notify({ Title = "服务端权威", Content = txt, Duration = 8 }) end
-print("[CheatMenu] " .. txt)
+F.Out("[CheatMenu] " .. txt)
 end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
@@ -5533,6 +5677,8 @@ pcall(AC.WatchNewScriptsEnable)
 F.AntiFlingEnable()
 T.CharPersist = true
 task.spawn(function()
+local acName = AC.DetectStrongAC(true)
+if acName then AC.SetQuiet(true) end
 local stealth = select(1, F.StealthEnable())
 local blocked = F.UnifiedACPass()
 local killed = AC.DisableACConnections(true)
@@ -5617,10 +5763,22 @@ Duration = 8,
 end)
 end })
 Tabs.AC:AddInput("AttrKeyword", { Title = "属性名关键词(留空=全列)", Default = "", Placeholder = "如 Owner, Cash, IsHunter, Health", Callback = function(v) C.AttrKeyword = v end })
+Tabs.AC:AddButton({ Title = "强反作弊识别(Adonis 指纹 + 阈值对齐自查)", Callback = function()
+task.spawn(function()
+local ac = AC.ThresholdReport()
+F.LogFlush("反作弊识别")
+Fluent:Notify({
+Title = "强反作弊识别",
+Content = (ac and ("检测到 " .. ac .. ", 已进入静默消毒输出") or "未检测到已知客户端指纹(服务端实现看不见)") ..
+" —— 阈值对齐明细见 F9",
+Duration = 12,
+})
+end)
+end })
 Tabs.AC:AddButton({ Title = "元方法槽位自检(排查「开关亮着却不工作」)", Callback = function()
 local txt = F.MetaReport()
-print("[CheatMenu] " .. txt)
-print("[CheatMenu] 提示: 若某个开关是开的但槽位里没有它, 就是这个开关的 hook 已经被别人挤掉了")
+F.Out("[CheatMenu] " .. txt)
+F.Out("[CheatMenu] 提示: 若某个开关是开的但槽位里没有它, 就是这个开关的 hook 已经被别人挤掉了")
 Fluent:Notify({ Title = "槽位自检", Content = txt, Duration = 10 })
 end })
 Tabs.AC:AddSection("全量采集与导出")
@@ -5804,9 +5962,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.0.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.1.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v7.0.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.1.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -5838,7 +5996,7 @@ end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
 if getgenv then getgenv().CM_ToggleSG = sg end
-sg.Name = "CheatMenu_Toggle"
+sg.Name = "MenuButton"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = gethui and gethui() or game:GetService("CoreGui")
@@ -5898,6 +6056,6 @@ n = n + 1
 end
 end
 end
-if n > 0 then print("[CheatMenu] 已按存档同步 " .. n .. " 个开关的界面状态") end
+if n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个开关的界面状态") end
 end)
 end)
