@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-29 01:28 sha d5b15256 bytes 206117'):format('2026-09-29 01:28','d5b15256',206117))
+print(('[CheatMenu] build 2026-09-29 01:36 sha fd334d20 bytes 213079'):format('2026-09-29 01:36','fd334d20',213079))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.8.0 =====")
+print("[CheatMenu] ===== 加载开始 · v6.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -173,7 +173,16 @@ return old(self, ...)
 end))
 if type(old) ~= "function" then return false end
 AC._nc = true
+AC._ncOrig = old
+AC.markHooked(old)
 return true
+end
+function AC.UninstallNamecallHook()
+if not (AC._nc and hookmetamethod and AC._ncOrig) then return false end
+local ok = pcall(function() hookmetamethod(game, "__namecall", AC._ncOrig) end)
+AC._nc = false
+AC._ncOrig = nil
+return ok
 end
 AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
 function AC.isRemoteLike(inst)
@@ -680,7 +689,8 @@ local luaFn = (not islclosure) or islclosure(f)
 local aggressive = (key == "info") and F.StealthAggressive and luaFn
 if F.isProtectedFn(f) or aggressive then
 if t == "s" then return "[C]" end
-if t == "l" or t == "f" then return 0 end
+if t == "l" then return 0 end
+if t == "f" then return f end
 if key == "getconstants" or key == "getprotos" then return {} end
 if type(t) == "string" and #t > 1 then
 local r = box.orig(f, t, ...)
@@ -716,7 +726,8 @@ if not F._scavenging and not checkcaller() and type(f) == "function" then
 local luaFn = (not islclosure) or islclosure(f)
 if F.isProtectedFn(f) or (F.StealthAggressive and luaFn) then
 if t == "s" then return "[C]" end
-if t == "l" or t == "f" then return 0 end
+if t == "l" then return 0 end
+if t == "f" then return f end
 if type(t) == "string" and #t > 1 then
 local r = box.orig(f, t, ...)
 if type(r) == "table" then
@@ -905,7 +916,7 @@ end
 end
 end
 if k > 0 then
-print(string.format("[CheatMenu] 按名中和: %s x%d (首个: %s)", nm, k, AC.FnDesc(list[1])))
+F.Out(string.format("[CheatMenu] 按名中和: %s x%d (首个: %s)", nm, k, AC.FnDesc(list[1])))
 end
 return k, seenN
 end
@@ -921,7 +932,7 @@ hit = hit + k found = found + s
 end
 end
 end
-print(string.format("[CheatMenu] 按名中和完成: 命中 %d 个具名函数, 已中和 %d 个", found, hit))
+F.Out(string.format("[CheatMenu] 按名中和完成: 命中 %d 个具名函数, 已中和 %d 个", found, hit))
 return hit, found
 end
 function AC.ScaleSignalHandler(sig, factor)
@@ -973,7 +984,6 @@ end
 end
 end
 end)
-F._scavenging = false
 F._scavenging = keepScav
 print(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
 return total
@@ -1048,6 +1058,7 @@ local kw = type(keyword) == "string" and keyword:lower() or ""
 local maxN = tonumber(limit) or 4000
 local hits, seen, scanned = {}, 0, 0
 local list = roots or F.SCAN_ATTR_ROOTS
+local keepScav = F._scavenging
 F._scavenging = true
 for i = 1, #list do
 local root = list[i]
@@ -1079,14 +1090,14 @@ end
 end)
 end
 end
-F._scavenging = false
-print(string.format("[属性扫描] 扫过 %d 个实例, 共 %d 条属性, 命中 %d 条%s",
+F._scavenging = keepScav
+F.Out(string.format("[属性扫描] 扫过 %d 个实例, 共 %d 条属性, 命中 %d 条%s",
 scanned, seen, #hits, kw ~= "" and (" (关键词 " .. kw .. ")") or ""))
 local shown = 0
 for i = 1, #hits do
-if shown >= 80 then print("  … 其余省略, 共 " .. #hits .. " 条") break end
+if shown >= 80 then F.Out("  … 其余省略, 共 " .. #hits .. " 条") break end
 local h = hits[i]
-print(string.format("  · %s  [%s = %s]", h.path, h.key, h.value))
+F.Out(string.format("  · %s  [%s = %s]", h.path, h.key, h.value))
 shown = shown + 1
 end
 return hits, scanned, seen
@@ -1097,7 +1108,17 @@ local n = 0
 local keepScav = F._scavenging
 F._scavenging = true
 for _, obj in ipairs(F.GuardedGetGC(true, true)) do
-if type(obj) == "table" and not AC._ownFns[obj] then
+local isMine = false
+if type(obj) == "table" then
+local okm, mine = pcall(function()
+for _, v in pairs(obj) do
+if type(v) == "function" and AC._ownFns[v] then return true end
+end
+return false
+end)
+isMine = (okm and mine) or false
+end
+if type(obj) == "table" and not isMine then
 local ok, v = pcall(rawget, obj, keyName)
 if ok and v ~= nil then
 local ok2 = pcall(function()
@@ -1108,7 +1129,6 @@ if ok2 then n = n + 1 end
 end
 end
 end
-F._scavenging = false
 F._scavenging = keepScav
 print(string.format("[CheatMenu] 元表剥离: 含键 %q 的表 %d 个", keyName, n))
 return n
@@ -1178,16 +1198,16 @@ end
 F._caps = res
 local total = #F.CAP_LIST + #extra
 if verbose ~= false then
-print(string.format("[能力探测] 可用 %d/%d", okN, total))
+F.Out(string.format("[能力探测] 可用 %d/%d", okN, total))
 for i = 1, #F.CAP_LIST do
 local name, desc = F.CAP_LIST[i][1], F.CAP_LIST[i][2]
-print(string.format("  %s %-20s %s", res[name] and "✓" or "✗", name, desc))
+F.Out(string.format("  %s %-20s %s", res[name] and "✓" or "✗", name, desc))
 end
-print(string.format("  %s %-20s %s", res["debug.getinfo"] and "✓" or "✗", "debug.getinfo", "读闭包元数据"))
-print(string.format("  %s %-20s %s", res["debug.getconstants"] and "✓" or "✗", "debug.getconstants", "读闭包常量(关键词定位)"))
-print(string.format("  %s %-20s %s", res["debug.getupvalues"] and "✓" or "✗", "debug.getupvalues", "读闭包 upvalue"))
+F.Out(string.format("  %s %-20s %s", res["debug.getinfo"] and "✓" or "✗", "debug.getinfo", "读闭包元数据"))
+F.Out(string.format("  %s %-20s %s", res["debug.getconstants"] and "✓" or "✗", "debug.getconstants", "读闭包常量(关键词定位)"))
+F.Out(string.format("  %s %-20s %s", res["debug.getupvalues"] and "✓" or "✗", "debug.getupvalues", "读闭包 upvalue"))
 if #miss > 0 then
-print("[能力探测] ⚠ 缺失: " .. table.concat(miss, ", ") .. " —— 相关功能会自动降级, 不是「没扫到」")
+F.Out("[能力探测] ⚠ 缺失: " .. table.concat(miss, ", ") .. " —— 相关功能会自动降级, 不是「没扫到」")
 end
 end
 return res, okN, total
@@ -1302,10 +1322,10 @@ function F.SnapshotSave()
 local snap = F.SnapshotCollect()
 local ok = pcall(function() writefile(F.SnapshotFile(), HS:JSONEncode(snap)) end)
 if ok then
-print(string.format("[快照] 已保存: remote %d · 反作弊碎片 %d · 属性名 %d · 脚本指纹 %d",
+F.Out(string.format("[快照] 已保存: remote %d · 反作弊碎片 %d · 属性名 %d · 脚本指纹 %d",
 #snap.remotes, #snap.acfns, #snap.attrs, #snap.scripthashes))
 else
-print("[快照] ⚠ 写文件失败(执行器可能不支持 writefile), 快照只保留在内存里")
+F.Out("[快照] ⚠ 写文件失败(执行器可能不支持 writefile), 快照只保留在内存里")
 F._snapMem = snap
 end
 return snap
@@ -1322,7 +1342,7 @@ end
 function F.SnapshotDiff()
 local old = F.SnapshotLoad()
 if type(old) ~= "table" then
-print("[对比] 没有旧快照 —— 先点一次「保存扫描快照」, 之后游戏更新再点这个")
+F.Out("[对比] 没有旧快照 —— 先点一次「保存扫描快照」, 之后游戏更新再点这个")
 return nil
 end
 local new = F.SnapshotCollect()
@@ -1360,24 +1380,24 @@ if type(old.caps) == "table" and type(new.caps) == "table" then
 for k, v in pairs(old.caps) do if v and not new.caps[k] then d.capsLost[#d.capsLost + 1] = k end end
 end
 d.oldT, d.newT = old.t, new.t
-print("═══ 快照对比(客户端可见面) ═══")
-print(string.format("  新 remote %d · 少 remote %d · remote 变了 %d",
+F.Out("═══ 快照对比(客户端可见面) ═══")
+F.Out(string.format("  新 remote %d · 少 remote %d · remote 变了 %d",
 #d.remoteNew, #d.remoteGone, #d.remoteChanged))
-for i = 1, math.min(#d.remoteNew, 25) do print("    + remote: " .. d.remoteNew[i].n .. " [" .. d.remoteNew[i].c .. "] 来源 " .. d.remoteNew[i].src) end
-for i = 1, math.min(#d.remoteChanged, 25) do print("    ~ remote: " .. d.remoteChanged[i].n .. "  " .. d.remoteChanged[i].old .. " -> " .. d.remoteChanged[i].new) end
-for i = 1, math.min(#d.remoteGone, 15) do print("    - remote: " .. d.remoteGone[i].n) end
-print(string.format("  反作弊碎片: 新增 %d · 消失 %d", #d.acNew, #d.acGone))
-for i = 1, math.min(#d.acNew, 20) do print("    + " .. d.acNew[i]) end
-print(string.format("  属性名: 新增 %d · 消失 %d", #d.attrNew, #d.attrGone))
-for i = 1, math.min(#d.attrNew, 20) do print("    + 属性: " .. d.attrNew[i]) end
+for i = 1, math.min(#d.remoteNew, 25) do F.Out("    + remote: " .. d.remoteNew[i].n .. " [" .. d.remoteNew[i].c .. "] 来源 " .. d.remoteNew[i].src) end
+for i = 1, math.min(#d.remoteChanged, 25) do F.Out("    ~ remote: " .. d.remoteChanged[i].n .. "  " .. d.remoteChanged[i].old .. " -> " .. d.remoteChanged[i].new) end
+for i = 1, math.min(#d.remoteGone, 15) do F.Out("    - remote: " .. d.remoteGone[i].n) end
+F.Out(string.format("  反作弊碎片: 新增 %d · 消失 %d", #d.acNew, #d.acGone))
+for i = 1, math.min(#d.acNew, 20) do F.Out("    + " .. d.acNew[i]) end
+F.Out(string.format("  属性名: 新增 %d · 消失 %d", #d.attrNew, #d.attrGone))
+for i = 1, math.min(#d.attrNew, 20) do F.Out("    + 属性: " .. d.attrNew[i]) end
 if #d.hashChanged > 0 then
-print(string.format("  ★ 客户端脚本被改过 %d 个(这是最直接的「更新了哪个客户端脚本」证据)", #d.hashChanged))
-for i = 1, math.min(#d.hashChanged, 15) do print("    ~ " .. d.hashChanged[i].p) end
+F.Out(string.format("  ★ 客户端脚本被改过 %d 个(这是最直接的「更新了哪个客户端脚本」证据)", #d.hashChanged))
+for i = 1, math.min(#d.hashChanged, 15) do F.Out("    ~ " .. d.hashChanged[i].p) end
 else
-print("  客户端脚本指纹: 无变化(或执行器不支持 getscripthash)")
+F.Out("  客户端脚本指纹: 无变化(或执行器不支持 getscripthash)")
 end
-if #d.capsLost > 0 then print("  ⚠ 执行器能力丢失: " .. table.concat(d.capsLost, ", ")) end
-print("  ⚠ 服务端侧变化**看不见**: " .. F.AC_INVISIBLE[1])
+if #d.capsLost > 0 then F.Out("  ⚠ 执行器能力丢失: " .. table.concat(d.capsLost, ", ")) end
+F.Out("  ⚠ 服务端侧变化**看不见**: " .. F.AC_INVISIBLE[1])
 F._lastDiff = d
 return d
 end
@@ -1388,23 +1408,23 @@ for i = 1, #snap.remotes do
 if snap.remotes[i].s == 1 then sus = sus + 1 end
 if snap.remotes[i].down == 1 then down = down + 1 end
 end
-print("══════════ 反作弊面测绘 ══════════")
-print(string.format("【能看到 · 客户端可见面】"))
-print(string.format("  1) Remote 面: 共 %d 个(可下行 %d), 其中名字可疑 %d 个", #snap.remotes, down, sus))
+F.Out("══════════ 反作弊面测绘 ══════════")
+F.Out(string.format("【能看到 · 客户端可见面】"))
+F.Out(string.format("  1) Remote 面: 共 %d 个(可下行 %d), 其中名字可疑 %d 个", #snap.remotes, down, sus))
 for i = 1, math.min(#snap.remotes, 30) do
 local r = snap.remotes[i]
-print(string.format("     %s [%s]%s 来源 %s", r.n, r.c, r.s == 1 and " ⚠可疑" or "", r.src))
+F.Out(string.format("     %s [%s]%s 来源 %s", r.n, r.c, r.s == 1 and " ⚠可疑" or "", r.src))
 end
-print(string.format("  2) 客户端侧反作弊碎片: %d 个函数(名字/source/常量命中关键词)", #snap.acfns))
-for i = 1, math.min(#snap.acfns, 30) do print("     " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
-print(string.format("  3) 服务端写下来的属性名: %d 种(服务端权威数据的可见副本)", #snap.attrs))
-print(string.format("  4) 客户端脚本指纹: %d 个(执行器%s getscripthash)",
+F.Out(string.format("  2) 客户端侧反作弊碎片: %d 个函数(名字/source/常量命中关键词)", #snap.acfns))
+for i = 1, math.min(#snap.acfns, 30) do F.Out("     " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
+F.Out(string.format("  3) 服务端写下来的属性名: %d 种(服务端权威数据的可见副本)", #snap.attrs))
+F.Out(string.format("  4) 客户端脚本指纹: %d 个(执行器%s getscripthash)",
 #snap.scripthashes, #snap.scripthashes > 0 and "支持" or "不支持"))
-print(string.format("  5) 位移权威: AuthorityMode = %s", tostring(snap.authority or "(无此字段)")))
-print("【看不见 · 原理上不可见(与本脚本无关)】")
-for i = 1, #F.AC_INVISIBLE do print("  ✗ " .. F.AC_INVISIBLE[i]) end
-print("⇒ 结论: 扫描给的是「客户端可见面 + 更新差异」, **不是**服务器判定逻辑。")
-print("  想看服务端怎么判, 唯一办法是它自己泄漏出来: 客户端上报脚本 + 它发的 remote 参数 + 服务端回写的值。")
+F.Out(string.format("  5) 位移权威: AuthorityMode = %s", tostring(snap.authority or "(无此字段)")))
+F.Out("【看不见 · 原理上不可见(与本脚本无关)】")
+for i = 1, #F.AC_INVISIBLE do F.Out("  ✗ " .. F.AC_INVISIBLE[i]) end
+F.Out("⇒ 结论: 扫描给的是「客户端可见面 + 更新差异」, **不是**服务器判定逻辑。")
+F.Out("  想看服务端怎么判, 唯一办法是它自己泄漏出来: 客户端上报脚本 + 它发的 remote 参数 + 服务端回写的值。")
 return snap
 end
 F._capOn = false
@@ -1459,9 +1479,9 @@ return false
 end
 F._capOld = old
 AC.markHooked(old)
-print("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
-print("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
-print("[采集] 玩完点「一键全量导出」, 内容会复制到剪贴板, 直接粘给我即可")
+F.Out("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
+F.Out("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
+F.Out("[采集] 玩完点「一键全量导出」, 内容会复制到剪贴板, 直接粘给我即可")
 return true
 end
 function F.CaptureDisable()
@@ -1470,7 +1490,7 @@ if F._capOld and hookmetamethod then
 pcall(function() hookmetamethod(game, "__namecall", F._capOld) end)
 end
 F._capOld = nil
-print("[采集] 已停止, 本次记录 " .. #F._capLog .. " 条")
+F.Out("[采集] 已停止, 本次记录 " .. #F._capLog .. " 条")
 return #F._capLog
 end
 function F.DumpAll()
@@ -1561,20 +1581,106 @@ pcall(function()
 local sc = AC.cap("setclipboard")
 if type(sc) == "function" then sc(text) copied = true end
 end)
-print("══════ 全量导出 ══════")
-print("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
+F.Out("══════ 全量导出 ══════")
+F.Out("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
 " · 复制剪贴板 " .. (copied and "成功(直接粘给我)" or "失败(手动从 F9 复制)"))
-print("  内容: 远程 " .. #snap.remotes .. " · 反作弊碎片 " .. #snap.acfns ..
+F.Out("  内容: 远程 " .. #snap.remotes .. " · 反作弊碎片 " .. #snap.acfns ..
 " · 属性 " .. #snap.attrs .. " 种 · 脚本指纹 " .. #snap.scripthashes ..
 " · 上行采集 " .. #F._capLog .. " 条")
-print("  ⚠ 服务端判定逻辑不在其中(原理上不可见), 但上面的[5]是服务端判定的**输入面**。")
+F.Out("  ⚠ 服务端判定逻辑不在其中(原理上不可见), 但上面的[5]是服务端判定的**输入面**。")
 if not copied then
-print("────── 以下为可复制正文 ──────")
-print(text)
-print("────── 正文结束 ──────")
+F.Out("────── 以下为可复制正文 ──────")
+F.Out(text)
+F.Out("────── 正文结束 ──────")
 end
 F._dumpText = text
 return text
+end
+F.LOG_MAX = 1500000
+F.LOG_BUF_MAX = 300
+F._logBuf = {}
+function F.LogBaseName()
+local gname = "Unknown"
+pcall(function()
+local ok, n = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
+if ok and type(n) == "string" and n ~= "" then gname = n end
+end)
+if gname == "Unknown" then
+pcall(function() if game.PlaceId then gname = "Place" .. tostring(game.PlaceId) end end)
+end
+gname = tostring(gname):gsub('[\\/:*?"<>|]', "_"):gsub("%s+", "_")
+if #gname > 40 then gname = gname:sub(1, 40) end
+local pid = "?"
+pcall(function() pid = tostring(game.PlaceId) end)
+return string.format("CheatMenu_日志_%s_%s", gname, pid)
+end
+function F.LogWhere()
+local dir, exec = nil, nil
+pcall(function() local gw = AC.cap("getworkspace") if type(gw) == "function" then dir = gw() end end)
+pcall(function() if type(getexecutorname) == "function" then exec = getexecutorname() end end)
+local path = (dir and (tostring(dir):gsub("[\\/]+$", "") .. "\\")) or "(执行器工作目录)\\" .. F.LogBaseName() .. ".txt"
+if dir then path = tostring(dir):gsub("[\\/]+$", "") .. "\\" .. F.LogBaseName() .. ".txt" end
+print("[日志] 执行器: " .. tostring(exec or "未知"))
+print("[日志] 文件路径: " .. path)
+print("[日志] 命名: " .. F.LogBaseName() .. ".txt (游戏名 + PlaceId, 不同游戏不冲突; 超 1.5MB 自动轮转 _2/_3)")
+return path, exec
+end
+function F.Out(...)
+print(...)
+local n = select("#", ...)
+local parts = {}
+for i = 1, n do parts[i] = tostring(select(i, ...)) end
+F._logBuf[#F._logBuf + 1] = table.concat(parts, " ")
+if #F._logBuf >= F.LOG_BUF_MAX then pcall(F.LogFlush, "自动") end
+end
+function F.LogFlush(tag)
+if #F._logBuf == 0 then return nil end
+local body = table.concat(F._logBuf, "\n") .. "\n"
+F._logBuf = {}
+local base = F.LogBaseName()
+local okWrite = false
+local usedName = nil
+local hasRW = false
+pcall(function() hasRW = (type(writefile) == "function" and type(readfile) == "function") end)
+if not hasRW then
+print("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「一键全量导出」可复制)")
+return nil
+end
+for idx = 1, 20 do
+local name = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
+local existed, size = false, 0
+pcall(function()
+if isfile and isfile(name) then
+existed = true
+local old = readfile(name)
+size = #old
+end
+end)
+if (not existed) or (size + #body <= F.LOG_MAX) then
+local ok = pcall(function()
+local old = ""
+local oks = pcall(function()
+if isfile and isfile(name) then old = readfile(name) end
+end)
+if not oks then old = "" end
+writefile(name, old .. body)
+end)
+if ok then
+okWrite = true
+usedName = name
+print(string.format("[日志] %s 已写入 %s (%d 字节, 本次追加 %d 字符)", tostring(tag or ""), name, size + #body, #body))
+end
+break
+end
+end
+if not okWrite then print("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许)") end
+return usedName, #body
+end
+function F.LogDump(text, tag)
+if type(text) == "string" and #text > 0 then
+F._logBuf[#F._logBuf + 1] = text
+end
+return F.LogFlush(tag)
 end
 function F.UnifiedACPass()
 if F._unifiedRunning then return 0 end
@@ -1609,7 +1715,7 @@ if marker and hookfunction then
 local got = AC.NeutralizeTable(obj)
 if got > 0 then
 hooked = hooked + got
-print(string.format("[CheatMenu] 检测表中和(指纹 %s): %d 个成员函数", marker, got))
+F.Out(string.format("[CheatMenu] 检测表中和(指纹 %s): %d 个成员函数", marker, got))
 end
 end
 local killfunc = rawget(obj, "Kill")
@@ -1666,9 +1772,8 @@ end
 blocked = AC.BlockedCount
 end)
 F._unifiedRunning = false
-F._scavenging = false
 F._scavenging = keepScav
-print(string.format("[CheatMenu] 统一扫描 · 拦 remote=%d 中和=%d 清日志=%d 伪造遥测=%d", blocked, hooked, cleared, spoofed))
+F.Out(string.format("[CheatMenu] 统一扫描 · 拦 remote=%d 中和=%d 清日志=%d 伪造遥测=%d", blocked, hooked, cleared, spoofed))
 return blocked
 end
 function F.ScanRemotes()
@@ -1716,15 +1821,14 @@ end
 end)
 end
 local total, susCount = 0, 0
-print("[抓包] ===== 深度抓包结果 =====")
+F.Out("[抓包] ===== 深度抓包结果 =====")
 for _, key in ipairs(order) do
 local it = found[key]
 total = total + 1
 if it.suspicious then susCount = susCount + 1 end
-print(string.format("[抓包] %s [%s] %s", it.suspicious and "可疑" or " 普通", it.class, it.name))
+F.Out(string.format("[抓包] %s [%s] %s", it.suspicious and "可疑" or " 普通", it.class, it.name))
 end
-print(string.format("[抓包] 共 %d 个远程，可疑 %d 个", total, susCount))
-F._scavenging = false
+F.Out(string.format("[抓包] 共 %d 个远程，可疑 %d 个", total, susCount))
 F._scavenging = keepScav
 return susCount
 end
@@ -1732,14 +1836,14 @@ function F.ScanGameModules()
 local keepScav = F._scavenging
 F._scavenging = true
 local modCount = 0
-print("[模块扫描] ===== 已加载模块 =====")
+F.Out("[模块扫描] ===== 已加载模块 =====")
 if type(getloadedmodules) == "function" then
 local ok, mods = pcall(getloadedmodules)
 if ok and type(mods) == "table" then
 for _, m in ipairs(mods) do
 if typeof(m) == "Instance" and m:IsA("ModuleScript") then
 modCount = modCount + 1
-print("[模块扫描] " .. m:GetFullName())
+F.Out("[模块扫描] " .. m:GetFullName())
 end
 end
 end
@@ -1749,7 +1853,7 @@ pcall(function()
 if type(getnilinstances) == "function" then
 for _, inst in ipairs(getnilinstances()) do
 if typeof(inst) == "Instance" and AC.isSuspicious(inst.Name) then
-print("[模块扫描] ⚠ 隐藏实例(nil parent): " .. tostring(inst.ClassName) .. " · " .. tostring(inst.Name))
+F.Out("[模块扫描] ⚠ 隐藏实例(nil parent): " .. tostring(inst.ClassName) .. " · " .. tostring(inst.Name))
 end
 end
 end
@@ -1776,14 +1880,13 @@ end
 end
 if hit then
 acFunc = acFunc + 1
-print("[模块扫描] ⚠ 疑似反作弊函数: " .. (nm ~= "" and nm or "(匿名)") .. " @ " .. src)
+F.Out("[模块扫描] ⚠ 疑似反作弊函数: " .. (nm ~= "" and nm or "(匿名)") .. " @ " .. src)
 end
 end
 end
 end
 end)
-print("[模块扫描] 共 " .. modCount .. " 个 ModuleScript, 疑似反作弊函数 " .. acFunc .. " 个")
-F._scavenging = false
+F.Out("[模块扫描] 共 " .. modCount .. " 个 ModuleScript, 疑似反作弊函数 " .. acFunc .. " 个")
 F._scavenging = keepScav
 return modCount, acFunc
 end
@@ -1804,9 +1907,8 @@ end
 end
 end)
 pcall(F.UnifiedACPass)
-F._scavenging = false
 F._scavenging = keepScav
-print("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.BlockedCount .. " 个")
+F.Out("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.BlockedCount .. " 个")
 return AC.BlockedCount
 end
 F._afkConn = nil
@@ -1837,8 +1939,14 @@ F._flingConns = {}
 function F.AntiFlingEnable()
 if T.AntiFling and #F._flingConns > 0 then return end
 T.AntiFling = true
+F._flingBackup = F._flingBackup or {}
 local function disable(part)
 if part:IsA("BasePart") then
+if F._flingBackup[part] == nil then
+F._flingBackup[part] = {
+CanCollide = part.CanCollide, CanTouch = part.CanTouch, CanQuery = part.CanQuery,
+}
+end
 part.CanCollide = false
 part.CanTouch = false
 part.CanQuery = false
@@ -1856,6 +1964,18 @@ function F.AntiFlingDisable()
 T.AntiFling = false
 for _, c in ipairs(F._flingConns) do pcall(function() c:Disconnect() end) end
 F._flingConns = {}
+if F._flingBackup then
+for part, bak in pairs(F._flingBackup) do
+if typeof(part) == "Instance" and part.Parent then
+pcall(function()
+part.CanCollide = bak.CanCollide
+part.CanTouch = bak.CanTouch
+part.CanQuery = bak.CanQuery
+end)
+end
+end
+F._flingBackup = nil
+end
 end
 local KG = { hooked = false, target = nil, rjConn = nil }
 function F.KickGuardEnable()
@@ -1876,14 +1996,16 @@ end)
 if not ok or type(result) ~= "function" then return false end
 orig = result
 KG.target = kf
+KG.orig = result
 KG.hooked = true
 return true
 end
 function F.KickGuardDisable()
-if KG.hooked and hookfunction and KG.target then
-pcall(function() hookfunction(KG.target, KG.target) end)
+if KG.hooked and hookfunction and KG.target and KG.orig then
+pcall(function() hookfunction(KG.target, KG.orig) end)
 end
 KG.hooked = false
+KG.orig = nil
 end
 function F.KickRejoinEnable()
 if KG.rjConn then return true end
@@ -2090,7 +2212,10 @@ end
 return old(self, ...)
 end))
 end)
-if ok and type(res) == "function" then SilentAimGhostHook = AC.markOwn(res) end
+if ok and type(res) == "function" then
+old = res
+SilentAimGhostHook = AC.markOwn(res)
+end
 end
 F._saMouseOn = false
 F._saMouseOld = nil
@@ -2141,6 +2266,8 @@ F.SilentAimHitPart = "HumanoidRootPart"
 F._saUnifiedHooked = false
 F._saUnifiedOld = nil
 local function getClosestForUnified()
+local now = os.clock()
+if F._sauCache and (now - (F._sauCacheAt or 0)) < 0.03 and F._sauCache.Parent then return F._sauCache end
 local best, bestDist
 local cam = workspace.CurrentCamera
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -2165,6 +2292,7 @@ if dist <= (C.AimFOV or 200) and (not bestDist or dist < bestDist) then
 best = part bestDist = dist
 end
 end
+F._sauCache, F._sauCacheAt = best, now
 return best
 end
 function F.SilentAimUnifiedEnable()
@@ -2487,13 +2615,27 @@ espInit()
 for _, pl in ipairs(Players:GetPlayers()) do espCreate(pl) end
 if ESPAddedConn then ESPAddedConn:Disconnect() end
 if ESPRemovedConn then ESPRemovedConn:Disconnect() end
+F._espPlConns = F._espPlConns or {}
 ESPAddedConn = Players.PlayerAdded:Connect(function(pl)
-pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
+if F._espPlConns[pl] then return end
+F._espPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
 end)
-ESPRemovedConn = Players.PlayerRemoving:Connect(espRemove)
+for _, pl in ipairs(Players:GetPlayers()) do
+if not F._espPlConns[pl] then
+F._espPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
+end
+end
+ESPRemovedConn = Players.PlayerRemoving:Connect(function(pl)
+if F._espPlConns[pl] then pcall(function() F._espPlConns[pl]:Disconnect() end) F._espPlConns[pl] = nil end
+espRemove(pl)
+end)
 if not ESPConn then ESPConn = RS.RenderStepped:Connect(espUpdate) end
 end
 local function ESPDisable()
+if F._espPlConns then
+for pl, c in pairs(F._espPlConns) do pcall(function() c:Disconnect() end) end
+F._espPlConns = {}
+end
 if ESPConn then ESPConn:Disconnect() ESPConn = nil end
 if ESPAddedConn then ESPAddedConn:Disconnect() ESPAddedConn = nil end
 if ESPRemovedConn then ESPRemovedConn:Disconnect() ESPRemovedConn = nil end
@@ -2512,13 +2654,14 @@ local SKELETON = {
 }
 function F.SkeletonEnable()
 if #F._skeletonLines > 0 or F._skeletonDrawings then return end
-if Drawing and Drawing.new then
+local Dw = AC.cap("Drawing")
+if type(Dw) == "table" and type(Dw.new) == "function" then
 local okAll = pcall(function()
 local list = {}
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP and pl.Character then
 for _, pair in ipairs(SKELETON) do
-local line = Drawing.new("Line")
+local line = Dw.new("Line")
 line.Thickness = 1.5
 line.Color = Color3.fromRGB(0, 255, 150)
 line.Visible = false
@@ -2715,9 +2858,16 @@ end
 local function applyAll() for _, pl in ipairs(Players:GetPlayers()) do apply(pl) end end
 applyAll()
 if F._chamsAddedConn then F._chamsAddedConn:Disconnect() end
+F._chamsPlConns = F._chamsPlConns or {}
 F._chamsAddedConn = Players.PlayerAdded:Connect(function(pl)
-pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
+if F._chamsPlConns[pl] then return end
+F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
 end)
+for _, pl in ipairs(Players:GetPlayers()) do
+if not F._chamsPlConns[pl] then
+F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
+end
+end
 F._chamsLoop = task.spawn(function()
 while T.Chams do task.wait(1) applyAll() end
 F._chamsLoop = nil
@@ -3604,7 +3754,7 @@ local function MetaBypassEnable()
 if not (getgc and islclosure) then return end
 local function wipeMeta(v) if type(v) == "userdata" then pcall(function() setmetatable(v, nil) end) end end
 local function findAndWipe(kw)
-for _, v in ipairs(F.GuardedGetGC()) do
+for _, v in ipairs(F.GuardedGetGC(true, true)) do
 if type(v) == "function" and islclosure(v) then
 local ok, info = pcall(debug.getinfo, v, "n")
 if ok and info and info.name and info.name:lower():find(kw, 1, true) then
@@ -3626,15 +3776,17 @@ local tcs = game:GetService("TextChatService")
 if not (tcs and tcs.TextChannels) then return end
 for _, channel in ipairs(tcs.TextChannels:GetChildren()) do
 if channel:IsA("TextChannel") and channel.SendAsync then
-local oldSend = channel.SendAsync
+local sendFn = channel.SendAsync
+local origSend
 pcall(function()
-hookfunction(oldSend, function(self, text, ...)
+origSend = hookfunction(sendFn, function(self, text, ...)
 if T.ChatBypass and type(text) == "string" then
 text = text:gsub("(.)", "%1\226\128\139")
 end
-return oldSend(self, text, ...)
+if origSend then return origSend(self, text, ...) end
 end)
 end)
+if type(origSend) == "function" then AC.markHooked(sendFn) end
 end
 end
 end
@@ -3660,7 +3812,18 @@ table.insert(HitboxList, { box = box, conn = conn })
 end
 local function HitboxEnable()
 for _, pl in ipairs(Players:GetPlayers()) do addHitbox(pl) end
-Players.PlayerAdded:Connect(function(pl) pl.CharacterAdded:Connect(function() addHitbox(pl) end) end)
+F._hbPlConns = F._hbPlConns or {}
+if not F._hbAddedConn then
+F._hbAddedConn = Players.PlayerAdded:Connect(function(pl)
+if F._hbPlConns[pl] then return end
+F._hbPlConns[pl] = pl.CharacterAdded:Connect(function() addHitbox(pl) end)
+end)
+end
+for _, pl in ipairs(Players:GetPlayers()) do
+if not F._hbPlConns[pl] then
+F._hbPlConns[pl] = pl.CharacterAdded:Connect(function() addHitbox(pl) end)
+end
+end
 end
 local function HitboxDisable()
 for _, e in ipairs(HitboxList) do
@@ -4011,6 +4174,10 @@ local pl = name and Players:FindFirstChild(name)
 local ch = pl and pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 if hrp then
+if F._freezeWho ~= name then
+F._freezeWho = name
+F._freezeCF = nil
+end
 F._freezeCF = F._freezeCF or hrp.CFrame
 pcall(function() hrp.CFrame = F._freezeCF hrp.AssemblyLinearVelocity = Vector3.zero end)
 end
@@ -4197,32 +4364,9 @@ end
 F._panicConn = nil
 function F.PanicKeyDisableAll()
 for k in pairs(T) do T[k] = false end
-pcall(function()
-FlyDisable() SpeedDisable() ESPDisable() AimDisable()
-SilentAimDisable() SilentAimGhostDisable() InvisibleDisable() GodDisable()
-SingleAimDisable() FaceLockDisable() HitboxDisable() FOVDisable() ZoomDisable()
-AntilagDisable() FlyCarDisable() XrayDisable() SelfGlowDisable()
-BulletTracerDisable() AutoInteractDisable() LockHealthDisable()
-RegenDisable() StealthGodDisable() NoDeathDisable()
-end)
-pcall(function()
-F.FlyPhysDisable() F.SpeedCFrameDisable() F.HudDisable() F.CrosshairDisable()
-F.FovCircleDisable() F.FreecamDisable() F.FreezePlayerDisable() F.HidePlayerDisable()
-F.KillAuraDisable() F.AntiRagdollDisable() F.AntiKnockdownDisable()
-F.SilentAimMouseDisable() F.SilentAimUnifiedDisable() F.AntiSitDisable()
-F.AntiAnchorDisable() F.AntiAimDisable() F.DesyncSpeedDisable()
-F.HitboxExpandDisable() F.AntiVoidDisable() F.SkeletonDisable() F.ArrowDisable()
-F.TrapsESPDisable() F.ChamsDisable() F.NoClipDisable() F.HideDisable()
-F.InfiniteJumpDisable() F.SpinDisable() F.AirWalkDisable() F.ClickerDisable()
-F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() F.ItemMagnetDisable()
-end)
-pcall(function()
-F.UnspoofGCMetadata()
-AC.UninstallIndexMask() AC.UnblockRemotes() AC.UninstallAntiTP()
-AC.UninstallPropertyLock() AC.UninstallSetmetatableHook()
-AC.WatchNewScriptsDisable() AC.WatchNewRemotesDisable()
-AC.AntiPauseDisable() AC.TrapDisable.Disable()
-end)
+for _, fn in ipairs({ FlyDisable, SpeedDisable, ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, FlyCarDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.UnspoofGCMetadata, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -4290,7 +4434,10 @@ function F.DropAllTools()
 local bp = LP:FindFirstChild("Backpack")
 local ch = LP.Character
 local n = 0
-for _, parent in ipairs({ bp, ch }) do
+local parents = {}
+if bp then parents[#parents + 1] = bp end
+if ch then parents[#parents + 1] = ch end
+for _, parent in ipairs(parents) do
 if parent then
 for _, t in ipairs(parent:GetChildren()) do
 if t:IsA("Tool") then
@@ -4438,18 +4585,26 @@ function F.RemoteSpyEnable()
 if F._spyHooked then return end
 local mt = getrawmetatable(game)
 if not mt then return end
-F._spyOld = mt.__namecall
-if not F._spyOld then return end
-F._spyHooked = true
-mt.__namecall = hookmetamethod(game, "__namecall", function(self, ...)
+local prev = mt.__namecall
+if type(prev) ~= "function" then return end
+if not (hookmetamethod and newcclosure and getnamecallmethod) then return end
+local origSpy
+local okSpy = pcall(function()
+origSpy = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
 local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
 if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
 if not checkcaller() then
 print(string.format("[流量] %s:%s", tostring(self.Name), method))
 end
 end
-return F._spyOld(self, ...)
+if origSpy then return origSpy(self, ...) end
+end))
 end)
+if not (okSpy and type(origSpy) == "function") then return end
+F._spyOld = prev
+F._spyOrig = origSpy
+F._spyHooked = true
+AC.markHooked(prev)
 F._remoteDownConns = {}
 pcall(function()
 for _, d in ipairs(RStorage:GetDescendants()) do
@@ -4465,8 +4620,7 @@ end
 function F.RemoteSpyDisable()
 if not F._spyHooked then return end
 pcall(function()
-local mt = getrawmetatable(game)
-if mt and F._spyOld then mt.__namecall = F._spyOld end
+if hookmetamethod and F._spyOrig then hookmetamethod(game, "__namecall", F._spyOrig) end
 end)
 if F._remoteDownConns then
 for _, c in ipairs(F._remoteDownConns) do pcall(function() c:Disconnect() end) end
@@ -4660,6 +4814,8 @@ end
 local BonusThread = nil
 function F.AutoBonusEnable()
 if BonusThread and T.AutoBonus then return end
+if F._bonusRemoteHooked then return end
+F._bonusRemoteHooked = true
 OnRemote("TaviMishkal", function()
 if T.AutoBonus then
 task.spawn(function() task.wait(0.03) AutoBonusScan() Fire("TaviMishkal") end)
@@ -4779,7 +4935,8 @@ F.DesyncSpeedDisable, F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
 F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
-AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, F.UnspoofGCMetadata,
+AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
+F.UnspoofGCMetadata,
 F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable,
@@ -4837,7 +4994,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.8.0",
+SubTitle = "v6.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5161,6 +5318,7 @@ local _, capOk, capTotal = F.ProbeCapabilities(false)
 local n = F.UnifiedACPass()
 pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
+pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
 Content = "拦 remote " .. tostring(n) .. " 个 · 执行器能力 " .. tostring(capOk) .. "/" .. tostring(capTotal) .. " —— 明细见控制台 F9",
@@ -5190,6 +5348,7 @@ end })
 Tabs.AC:AddButton({ Title = "能力探测(哪些扫描能用 / 为什么没结果)", Callback = function()
 task.spawn(function()
 local _, okN, total = F.ProbeCapabilities(true)
+pcall(F.LogFlush, "能力探测")
 Fluent:Notify({
 Title = "能力探测",
 Content = "执行器可用 " .. tostring(okN) .. "/" .. tostring(total) .. " 项 —— 明细见控制台 F9",
@@ -5200,6 +5359,7 @@ end })
 Tabs.AC:AddButton({ Title = "属性扫描(游戏状态 / 反作弊标记)", Callback = function()
 task.spawn(function()
 local hits, scanned = F.ScanAttributes(C.AttrKeyword or "")
+pcall(F.LogFlush, "属性扫描")
 Fluent:Notify({
 Title = "属性扫描",
 Content = "扫过 " .. tostring(scanned) .. " 个实例, 命中 " .. tostring(#hits) .. " 条属性 —— 明细见控制台 F9",
@@ -5224,6 +5384,7 @@ end })
 Tabs.AC:AddButton({ Title = "一键全量导出(内容复制到剪贴板)", Callback = function()
 task.spawn(function()
 local txt = F.DumpAll()
+pcall(F.LogDump, txt, "全量导出")
 Fluent:Notify({
 Title = "全量导出",
 Content = "已生成 " .. tostring(#txt) .. " 字符; 已尝试复制到剪贴板, 直接粘贴即可。含服务端判定输入面(上行 remote 参数)",
@@ -5258,9 +5419,31 @@ Duration = 12,
 })
 end)
 end })
+Tabs.AC:AddButton({ Title = "导出日志到本地文件(按游戏名分文件)", Callback = function()
+task.spawn(function()
+local name, n = F.LogFlush("手动")
+F.LogWhere()
+Fluent:Notify({
+Title = "日志",
+Content = name and ("已追加 " .. tostring(n) .. " 字符 -> " .. name) or "本次没有待写内容(先跑一次扫描)",
+Duration = 10,
+})
+end)
+end })
+Tabs.AC:AddButton({ Title = "查看日志文件路径", Callback = function()
+task.spawn(function()
+F.LogWhere()
+Fluent:Notify({ Title = "日志路径", Content = "路径已打印到 F9 控制台", Duration = 8 })
+end)
+end })
+Tabs.AC:AddButton({ Title = "清空日志缓冲(不删文件)", Callback = function()
+F._logBuf = {}
+Fluent:Notify({ Title = "日志", Content = "内存缓冲已清空(磁盘文件保留)", Duration = 5 })
+end })
 Tabs.AC:AddButton({ Title = "反作弊面测绘(能看见什么/看不见什么)", Callback = function()
 task.spawn(function()
 local snap = F.ACSurfaceReport()
+pcall(F.LogFlush, "反作弊面测绘")
 Fluent:Notify({
 Title = "反作弊面",
 Content = "可见: remote " .. tostring(#snap.remotes) .. " · 客户端碎片 " .. tostring(#snap.acfns) ..
@@ -5364,9 +5547,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.8.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.9.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.8.0")
+print("[CheatMenu] ✅ 加载完成 v6.9.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
