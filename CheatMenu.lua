@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:15 sha e1f04b8c bytes 188833'):format('2026-09-28 21:15','e1f04b8c',188833))
+print(('[CheatMenu] build 2026-09-28 21:21 sha 65b82857 bytes 188612'):format('2026-09-28 21:21','65b82857',188612))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.7 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.8 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3595,6 +3595,8 @@ F._freecamConn = RS.RenderStepped:Connect(function(dt)
 if not T.Freecam then F.FreecamDisable() return end
 local c = workspace.CurrentCamera
 if not c then return end
+if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
+if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end) end
 local delta = UIS:GetMouseDelta()
 yaw = yaw - delta.X * 0.003
 pitch = math.clamp(pitch - delta.Y * 0.003, -1.45, 1.45)
@@ -4223,7 +4225,6 @@ local n = 0
 for _, sg in ipairs(targets) do
 pcall(function() if syn and syn.protect_gui then syn.protect_gui(sg) end end)
 pcall(function() if protect_gui then protect_gui(sg) end end)
-pcall(function() if gethui then sg.Parent = gethui() end end)
 n = n + 1
 end
 print("[CheatMenu] 已保护 " .. n .. " 个 GUI(防反作弊扫描)")
@@ -4491,7 +4492,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.7",
+SubTitle = "v5.10.8",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4775,8 +4776,6 @@ Tabs.AFK:AddInput("SniperName", { Title = "狙目标名字(关键词)", Default 
 Tabs.AFK:AddInput("SniperMutation", { Title = "狙目标词缀(关键词)", Default = "", Placeholder = "如 Rainbow / Astral", Callback = function(v) C.SniperMutation = v end })
 Tabs.AFK:AddToggle("PlaceBest", { Title = "自动放最优脑红(最高CPS)", Default = false, Callback = function(v) T.PlaceBest = v if v then GAME.AutoPlaceBestEnable() else GAME.AutoPlaceBestDisable() end end })
 Tabs.AFK:AddSlider("PlaceBestSlots", { Title = "放置槽位数", Min = 1, Max = 50, Default = 30, Rounding = 0, Callback = function(v) C.PlaceBestSlots = v end })
-Tabs.AFK:AddToggle("BlockESP", { Title = "幸运块透视(高亮)", Default = false, Callback = function(v) T.BlockESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
-Tabs.AFK:AddToggle("BrainrotESP", { Title = "脑红透视(高亮)", Default = false, Callback = function(v) T.BrainrotESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
 end
 do
 Tabs.Trans:AddSection("翻译")
@@ -4878,9 +4877,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.7", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.8", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.7")
+print("[CheatMenu] ✅ 加载完成 v5.10.8")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
