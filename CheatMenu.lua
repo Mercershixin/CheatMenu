@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 12:41 sha ff0a9b58 bytes 153769'):format('2026-09-28 12:41','ff0a9b58',153769))
+print(('[CheatMenu] build 2026-09-28 14:01 sha dc0ecb4f bytes 153942'):format('2026-09-28 14:01','dc0ecb4f',153942))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.2.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.2.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3701,7 +3701,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.2.0",
+SubTitle = "v5.2.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3724,9 +3724,15 @@ Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
 }
 do
 Tabs.Combat:AddSection("战斗")
-Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then CM.AimEnable() else CM.AimDisable() end end })
-Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
-Tabs.Combat:AddToggle("SilentAimGhost", { Title = "静默自瞄·无痕(镜头不动,观战看不出)", Default = false, Callback = function(v) T.SilentAimGhost = v if v then CM.SilentAimGhostEnable() else CM.SilentAimGhostDisable() end end })
+Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式", Values = { "关闭", "自瞄(镜头锁定)", "静默自瞄(硬锁)", "静默自瞄·无痕(观战看不出)" }, Default = "关闭", Callback = function(v)
+T.Aim = (v == "自瞄(镜头锁定)")
+T.SilentAim = (v == "静默自瞄(硬锁)")
+T.SilentAimGhost = (v == "静默自瞄·无痕(观战看不出)")
+CM.AimDisable() CM.SilentAimDisable() CM.SilentAimGhostDisable()
+if T.Aim then CM.AimEnable()
+elseif T.SilentAim then CM.SilentAimEnable()
+elseif T.SilentAimGhost then CM.SilentAimGhostEnable() end
+end })
 Tabs.Combat:AddToggle("TriggerBot", { Title = "开火才锁(TriggerBot,更隐蔽)", Default = false, Callback = function(v) T.TriggerBot = v end })
 Tabs.Combat:AddToggle("AimPrediction", { Title = "弹道预测(打移动目标)", Default = false, Callback = function(v) T.AimPrediction = v end })
 Tabs.Combat:AddDropdown("AimHitPart", { Title = "命中部位", Values = { "头部", "上身", "身体" }, Default = "头部", Callback = function(v)
@@ -3741,9 +3747,15 @@ Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = fal
 Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then CM.FaceLockEnable() else CM.FaceLockDisable() end end })
 Tabs.Combat:AddSection("生存 & 辅助")
 Tabs.Combat:AddSection("生命保护")
-Tabs.Combat:AddToggle("God", { Title = "无敌(MaxHealth=∞)", Default = false, Callback = function(v) T.God = v if v then CM.GodEnable() else CM.GodDisable() end end })
-Tabs.Combat:AddToggle("StealthGod", { Title = "隐蔽无敌(锁满血,难检测)", Default = false, Callback = function(v) T.StealthGod = v if v then F.StealthGodEnable() else F.StealthGodDisable() end end })
-Tabs.Combat:AddToggle("LockHealth", { Title = "锁血", Default = false, Callback = function(v) T.LockHealth = v if v then F.LockHealthEnable() else F.LockHealthDisable() end end })
+Tabs.Combat:AddDropdown("GodMode", { Title = "无敌模式", Values = { "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血·难检测)", "锁血(指定值)" }, Default = "关闭", Callback = function(v)
+T.God = (v == "无敌(MaxHealth=∞)")
+T.StealthGod = (v == "隐蔽无敌(锁满血·难检测)")
+T.LockHealth = (v == "锁血(指定值)")
+CM.GodDisable() F.StealthGodDisable() F.LockHealthDisable()
+if T.God then CM.GodEnable()
+elseif T.StealthGod then F.StealthGodEnable()
+elseif T.LockHealth then F.LockHealthEnable() end
+end })
 Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
 Tabs.Combat:AddToggle("Regen", { Title = "回血(主动快速回血)", Default = false, Callback = function(v) T.Regen = v if v then F.RegenEnable() else F.RegenDisable() end end })
 Tabs.Combat:AddSlider("RegenRate", { Title = "回血速度(每0.2秒)", Min = 1, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
@@ -3788,13 +3800,24 @@ end
 do
 Tabs.Move:AddSection("移动")
 Tabs.Move:AddParagraph({ Title = "飞行按键：WASD 移动，空格上升，左Ctrl 下降", Content = "" })
-Tabs.Move:AddToggle("Fly", { Title = "飞行", Default = false, Callback = function(v) T.Fly = v if v then CM.FlyEnable() else CM.FlyDisable() end end })
+Tabs.Move:AddDropdown("FlyMode", { Title = "飞行模式", Values = { "关闭", "飞行(CFrame)", "物理飞行(更平滑)" }, Default = "关闭", Callback = function(v)
+T.Fly = (v == "飞行(CFrame)")
+T.FlyPhys = (v == "物理飞行(更平滑)")
+CM.FlyDisable() F.FlyPhysDisable()
+if T.Fly then CM.FlyEnable()
+elseif T.FlyPhys then F.FlyPhysEnable() end
+end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddToggle("FlyPhys", { Title = "物理飞行(BodyVelocity 模式)", Default = false, Callback = function(v) T.FlyPhys = v if v then F.FlyPhysEnable() else F.FlyPhysDisable() end end })
-Tabs.Move:AddToggle("Speed", { Title = "加速", Default = false, Callback = function(v) T.Speed = v if v then CM.SpeedEnable() else CM.SpeedDisable() end end })
+Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式", Values = { "关闭", "普通加速(改WalkSpeed)", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)" }, Default = "关闭", Callback = function(v)
+T.Speed = (v == "普通加速(改WalkSpeed)")
+T.SpeedBypass = (v == "全绕过(属性锁+伪装回读)")
+T.SpeedCFrame = (v == "CFrame位移(最隐蔽)")
+CM.SpeedDisable() AC.UninstallIndexMask() T.SpeedMask = false F.SpeedCFrameDisable()
+if T.Speed then CM.SpeedEnable()
+elseif T.SpeedBypass then F.SpeedBypassEnable()
+elseif T.SpeedCFrame then F.SpeedCFrameEnable() end
+end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
-Tabs.Move:AddToggle("SpeedBypass", { Title = "加速全绕过(属性锁+伪装回读)", Default = false, Callback = function(v) T.SpeedBypass = v if v then F.SpeedBypassEnable() else AC.UninstallIndexMask() T.SpeedMask = false end end })
-Tabs.Move:AddToggle("SpeedCFrame", { Title = "CFrame 位移加速(不动 WalkSpeed·最隐蔽)", Default = false, Callback = function(v) T.SpeedCFrame = v if v then F.SpeedCFrameEnable() else F.SpeedCFrameDisable() end end })
 Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地绕滞空)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then CM.InfiniteJumpEnable() end end })
@@ -3945,24 +3968,25 @@ Tabs.Trans:AddButton({ Title = "清空翻译缓存", Callback = function() Trans
 end
 do
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACBypass", { Title = "反作弊一键(防踢+拦远程+防甩飞+元表清空)", Default = false, Callback = function(v)
-T.ACBypass = v T.NamecallHook = v T.RemoteBlock = v T.AntiFling = v T.MetaBypass = v T.BadgeBypass = v
-if v then
+Tabs.AC:AddDropdown("ACLevel", { Title = "反作弊强度", Values = { "关闭", "基础(防踢+拦远程+防甩飞)", "增强(+断检测连接+清元表)", "全量(+深度扫描+属性锁·最防封)" }, Default = "关闭", Callback = function(v)
+T.ACBypass = false T.NamecallHook = false T.RemoteBlock = false T.AntiFling = false T.MetaBypass = false T.BadgeBypass = false
+T.ACBypassPlus = false T.UniversalAC = false T.PropertyLock = false
+F.AntiFlingDisable() AC.UnblockRemotes()
+local lv = (v == "基础(防踢+拦远程+防甩飞)") and 1 or (v == "增强(+断检测连接+清元表)") and 2 or (v == "全量(+深度扫描+属性锁·最防封)") and 3 or 0
+if lv >= 1 then
+T.ACBypass = true T.NamecallHook = true T.RemoteBlock = true T.AntiFling = true T.MetaBypass = true T.BadgeBypass = true
 AC.InstallNamecallHook() AC.InstallPropertyLock() F.AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
-else
-F.AntiFlingDisable()
+end
+if lv >= 2 then
+T.ACBypassPlus = true
+F.ACBypassPlusEnable()
+end
+if lv >= 3 then
+T.UniversalAC = true T.PropertyLock = true
+AC.InstallPropertyLock() AC.DeepScanBlock()
 end
 end })
 Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
-Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then F.ACBypassPlusEnable() end end })
-Tabs.AC:AddToggle("UniversalAC", { Title = "通用反作弊v2(拦上报+深度扫描+属性锁)", Default = false, Callback = function(v)
-T.UniversalAC = v T.PropertyLock = v
-if v then
-AC.InstallPropertyLock() AC.DeepScanBlock()
-else
-AC.UnblockRemotes()
-end
-end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then F.VoiceBypassEnable() else F.VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("AntiTP", { Title = "防传送(拦截被踢/传送走)", Default = false, Callback = function(v) T.AntiTP = v if v then AC.InstallAntiTP() else AC.UninstallAntiTP() end end })
 Tabs.AC:AddToggle("AntiPause", { Title = "防游戏暂停(销毁网络暂停界面)", Default = false, Callback = function(v) T.AntiPause = v if v then AC.AntiPauseEnable() else AC.AntiPauseDisable() end end })
@@ -3996,9 +4020,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.2.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.2.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.2.0")
+print("[CheatMenu] ✅ 加载完成 v5.2.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
