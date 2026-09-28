@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 10:08 sha 5698c9bd bytes 119791'):format('2026-09-28 10:08','5698c9bd',119791))
-print("[CheatMenu] ===== 加载开始 · v4.9.1 =====")
+print(('[CheatMenu] build 2026-09-28 10:27 sha 7b15c6fd bytes 123992'):format('2026-09-28 10:27','7b15c6fd',123992))
+print("[CheatMenu] ===== 加载开始 · v4.10.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -151,7 +151,7 @@ return nil
 end
 if method == "FireServer" and T.RemoteBlock and not checkcaller() then
 local name = tostring(self and self.Name or ""):lower()
-local blocked = { "iac-respond", "iacrespond", "kick", "ban", "report", "anticheat", "detect", "flag", "exploit" }
+local blocked = { "iac-respond", "iacrespond", "kick", "ban", "report", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "detect", "flag", "exploit", "verify", "suspend", "watchdog", "sentinel", "moderation", "moderator", "x-15", "x-16", "cheat", "speedcheck", "flycheck", "clientcheck", "guard" }
 for _, kw in ipairs(blocked) do
 if name:find(kw, 1, true) then
 return nil
@@ -163,6 +163,111 @@ end))
 if type(old) ~= "function" then return false end
 AC._nc = true
 return true
+end
+AC.BlockedRemotes = {}
+AC.BlockedCount = 0
+AC._propLockOn = false
+AC._propLockOld = nil
+AC.SUS_KEYS = {
+"iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "detect",
+"ban", "kick", "flag", "report", "exploit", "cheat", "x-15", "x-16",
+"verify", "suspend", "watchdog", "sentinel", "moderation", "moderator",
+"guard", "spy", "speedcheck", "flycheck", "clientcheck",
+}
+function AC.isSuspicious(name)
+name = tostring(name):lower()
+for _, kw in ipairs(AC.SUS_KEYS) do
+if name:find(kw, 1, true) then return true end
+end
+return false
+end
+function AC.hookOneRemote(remote)
+if not (remote and typeof(remote) == "Instance") then return end
+if not (pcall(function() return remote:IsA("RemoteEvent") end)) then return end
+if not remote:IsA("RemoteEvent") then return end
+if AC.BlockedRemotes[remote] then return end
+if not AC.isSuspicious(remote.Name) then return end
+if not hookfunction then return end
+local orig
+local wrapper = function(self, ...)
+if (T.RemoteBlock or T.ACBypass or T.UniversalAC) and not checkcaller() then
+return nil
+end
+if orig then return orig(self, ...) end
+end
+local ok, res = pcall(function()
+if newcclosure then return hookfunction(remote.FireServer, newcclosure(wrapper)) else return hookfunction(remote.FireServer, wrapper) end
+end)
+if ok and type(res) == "function" then
+orig = res
+AC.BlockedRemotes[remote] = res
+AC.BlockedCount = AC.BlockedCount + 1
+end
+end
+function AC.DeepScanBlock()
+pcall(function()
+for _, d in ipairs(RStorage:GetDescendants()) do
+if d:IsA("RemoteEvent") then AC.hookOneRemote(d) end
+end
+end)
+if type(getgc) == "function" then
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 8000 then break end
+if typeof(obj) == "Instance" then
+if obj:IsA("RemoteEvent") then AC.hookOneRemote(obj) end
+elseif type(obj) == "function" and islclosure and islclosure(obj) then
+for i = 1, 40 do
+local ok2, n, v = pcall(debug.getupvalue, obj, i)
+if not ok2 or not n then break end
+if typeof(v) == "Instance" and v:IsA("RemoteEvent") then AC.hookOneRemote(v) end
+end
+end
+end
+end)
+end
+print("[CheatMenu] 深度扫描完成，已拦反作弊 remote 数=" .. AC.BlockedCount)
+end
+function AC.UnblockRemotes()
+if hookfunction then
+for remote, orig in pairs(AC.BlockedRemotes) do
+pcall(function() hookfunction(remote.FireServer, orig) end)
+end
+end
+AC.BlockedRemotes = {}
+AC.BlockedCount = 0
+end
+function AC.InstallPropertyLock()
+if AC._propLockOn or not hookmetamethod or not newcclosure then return end
+local ok, res = pcall(function()
+return hookmetamethod(game, "__newindex", newcclosure(function(t, k, v)
+if (T.ACBypass or T.UniversalAC or T.PropertyLock) and not checkcaller() then
+if typeof(t) == "Instance" and (k == "WalkSpeed" or k == "JumpPower") then
+local isHum = false
+pcall(function() isHum = t:IsA("Humanoid") end)
+if isHum then
+local _, hum = GC()
+if hum and t == hum then
+if k == "WalkSpeed" and T.Speed then
+local base = C._baseWalk or 16
+v = base * (C.SpeedMul or 2)
+elseif k == "JumpPower" and (T.InfiniteJump or T.Speed) then
+v = 50
+end
+end
+end
+end
+end
+return AC._propLockOld(t, k, v)
+end))
+end)
+if ok and type(res) == "function" then
+AC._propLockOld = res
+AC._propLockOn = true
+print("[CheatMenu] 属性锁定已安装(WalkSpeed/JumpPower)")
+end
 end
 local FlingConns = {}
 local function AntiFlingEnable()
@@ -1137,7 +1242,7 @@ if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
 if dir.Magnitude > 0 then
-local sp = (C.FlySpeed or 50) * math.min(dt, 0.1)
+local sp = math.min(C.FlySpeed or 50, 300) * math.min(dt, 0.1)
 r.CFrame = r.CFrame + (dir.Unit * sp)
 end
 r.AssemblyLinearVelocity = Vector3.zero
@@ -1154,6 +1259,7 @@ if not T.Speed then return end
 local _, hum = GC()
 if hum then
 if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
+C._baseWalk = baseWalk
 hum.WalkSpeed = baseWalk * (C.SpeedMul or 2)
 end
 end
@@ -1440,6 +1546,7 @@ local function AimEnable()
 AimDisable()
 AimConn = RS.RenderStepped:Connect(function()
 if not T.Aim then return end
+if T.TriggerBot and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 local target = getAimTarget()
 if not target then return end
 local cam = workspace.CurrentCamera
@@ -1452,6 +1559,7 @@ local function SilentAimEnable()
 if SilentAimConn then return end
 SilentAimConn = RS.RenderStepped:Connect(function()
 if not T.SilentAim then return end
+if T.TriggerBot and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 local target = getAimTarget()
 if not target then return end
 workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, predictPos(target))
@@ -2877,7 +2985,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable }
+local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable, AC.UnblockRemotes }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -2891,6 +2999,7 @@ if T.AutoBonus then AutoBonusEnable() end
 if T.NamecallHook then AC.InstallNamecallHook() end
 if T.RemoteBlock then AC.InstallNamecallHook() end
 if T.AntiFling then AntiFlingEnable() end
+if T.UniversalAC then AC.InstallPropertyLock() AC.DeepScanBlock() end
 end
 local function HotUpdate()
 Fluent:Notify({ Title = "热更新", Content = "保存配置并重新加载...", Duration = 3 })
@@ -2912,7 +3021,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.9.1",
+SubTitle = "v4.10.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -2935,6 +3044,7 @@ do
 Tabs.Combat:AddSection("战斗")
 Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then CM.AimEnable() else CM.AimDisable() end end })
 Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
+Tabs.Combat:AddToggle("TriggerBot", { Title = "开火才锁(TriggerBot,更隐蔽)", Default = false, Callback = function(v) T.TriggerBot = v end })
 Tabs.Combat:AddToggle("AimPrediction", { Title = "弹道预测(打移动目标)", Default = false, Callback = function(v) T.AimPrediction = v end })
 Tabs.Combat:AddDropdown("AimHitPart", { Title = "命中部位", Values = { "头部", "上身", "身体" }, Default = "头部", Callback = function(v)
 local map = { ["头部"] = "head", ["上身"] = "torso", ["身体"] = "body" }
@@ -3128,13 +3238,21 @@ Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACBypass", { Title = "反作弊一键(防踢+拦远程+防甩飞+元表清空)", Default = false, Callback = function(v)
 T.ACBypass = v T.NamecallHook = v T.RemoteBlock = v T.AntiFling = v T.MetaBypass = v T.BadgeBypass = v
 if v then
-AC.InstallNamecallHook() AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
+AC.InstallNamecallHook() AC.InstallPropertyLock() AntiFlingEnable() CM.MetaBypassEnable() CM.BadgeBypassEnable()
 else
 AntiFlingDisable()
 end
 end })
 Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接发)", Default = false, Callback = function(v) T.ChatBypass = v if v then CM.ChatBypassEnable() end end })
 Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then ACBypassPlusEnable() end end })
+Tabs.AC:AddToggle("UniversalAC", { Title = "通用反作弊v2(拦上报+深度扫描+属性锁)", Default = false, Callback = function(v)
+T.UniversalAC = v T.PropertyLock = v
+if v then
+AC.InstallPropertyLock() AC.DeepScanBlock()
+else
+AC.UnblockRemotes()
+end
+end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
 Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
@@ -3158,9 +3276,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.9.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.9.1")
+print("[CheatMenu] ✅ 加载完成 v4.10.0")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
