@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 14:01 sha dc0ecb4f bytes 153942'):format('2026-09-28 14:01','dc0ecb4f',153942))
+print(('[CheatMenu] build 2026-09-28 16:48 sha a763cd1d bytes 158877'):format('2026-09-28 16:48','a763cd1d',158877))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.2.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3517,6 +3517,117 @@ end
 end
 F._hiddenPlayers = {}
 end
+function F.HudEnable()
+if F._hudGui then return end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CheatMenu_HUD"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.Parent = CoreGui
+local lbl = Instance.new("TextLabel")
+lbl.Size = UDim2.new(0, 230, 0, 20)
+lbl.Position = UDim2.new(1, -240, 1, -28)
+lbl.BackgroundTransparency = 1
+lbl.TextColor3 = Color3.fromRGB(0, 255, 120)
+lbl.TextStrokeTransparency = 0.4
+lbl.TextSize = 14
+lbl.Font = Enum.Font.Code
+lbl.TextXAlignment = Enum.TextXAlignment.Right
+lbl.Text = "FPS -- | Ping -- ms"
+lbl.Parent = sg
+F._hudGui = sg
+local frames, lastT = 0, os.clock()
+F._hudConn = RS.RenderStepped:Connect(function()
+frames = frames + 1
+local now = os.clock()
+if now - lastT >= 1 then
+local fps = frames
+frames = 0
+lastT = now
+local ping = 0
+pcall(function() ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+local mem = 0
+pcall(function() mem = math.floor(game:GetService("Stats"):GetTotalMemoryUsageMb()) end)
+lbl.Text = string.format("FPS %d | Ping %d ms | %d MB", fps, ping, mem)
+end
+end)
+print("[CheatMenu] FPS/Ping HUD 已开启")
+end
+function F.HudDisable()
+if F._hudConn then F._hudConn:Disconnect() F._hudConn = nil end
+if F._hudGui then F._hudGui:Destroy() F._hudGui = nil end
+end
+function F.CrosshairEnable()
+if F._crossGui then return end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CheatMenu_Cross"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.Parent = CoreGui
+local function bar(w, h)
+local f = Instance.new("Frame")
+f.Size = UDim2.fromOffset(w, h)
+f.Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2)
+f.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+f.BorderSizePixel = 0
+f.Parent = sg
+end
+bar(2, 14) bar(14, 2)
+F._crossGui = sg
+end
+function F.CrosshairDisable()
+if F._crossGui then F._crossGui:Destroy() F._crossGui = nil end
+end
+function F.FovCircleEnable()
+if F._fovGui then return end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CheatMenu_FOV"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.Parent = CoreGui
+local circle = Instance.new("Frame")
+circle.AnchorPoint = Vector2.new(0.5, 0.5)
+circle.Position = UDim2.fromScale(0.5, 0.5)
+circle.BackgroundTransparency = 1
+circle.BorderSizePixel = 0
+circle.Size = UDim2.fromOffset(400, 400)
+circle.Parent = sg
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = circle
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 255, 120)
+stroke.Thickness = 1
+stroke.Transparency = 0.35
+stroke.Parent = circle
+F._fovGui = sg
+F._fovConn = RS.RenderStepped:Connect(function()
+if not T.FovCircle then return end
+local fov = C.AimFOV or 200
+circle.Size = UDim2.fromOffset(fov * 2, fov * 2)
+end)
+end
+function F.FovCircleDisable()
+if F._fovConn then F._fovConn:Disconnect() F._fovConn = nil end
+if F._fovGui then F._fovGui:Destroy() F._fovGui = nil end
+end
+function F.PanicKeyEnable()
+if F._panicConn then return end
+F._panicConn = UIS.InputBegan:Connect(function(input, processed)
+if processed then return end
+if input.KeyCode ~= Enum.KeyCode.F1 then return end
+for k in pairs(T) do T[k] = false end
+pcall(function() CM.FlyDisable() CM.SpeedDisable() CM.ESPDisable() CM.AimDisable() CM.SilentAimDisable() CM.SilentAimGhostDisable() CM.NoClipDisable() CM.InvisibleDisable() end)
+pcall(function() F.FlyPhysDisable() F.SpeedCFrameDisable() F.FlyStealthDisable() F.HudDisable() F.CrosshairDisable() F.FovCircleDisable() F.FreecamDisable() F.FreezePlayerDisable() F.HidePlayerDisable() F.LockHealthDisable() F.StealthGodDisable() F.RegenDisable() F.NoDeathDisable() F.KillAuraDisable() F.GunAuraDisable() F.AntiRagdollDisable() end)
+pcall(function() AC.UninstallIndexMask() AC.UnblockRemotes() AC.UninstallAntiTP() end)
+if Fluent and Fluent.Notify then Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能 (F1)", Duration = 3 }) end
+print("[CheatMenu] Panic Key 触发：已关闭所有功能")
+end)
+print("[CheatMenu] Panic Key 已启用 (F1 一键关所有)")
+end
+function F.PanicKeyDisable()
+if F._panicConn then F._panicConn:Disconnect() F._panicConn = nil end
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3657,7 +3768,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3701,7 +3812,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.2.1",
+SubTitle = "v5.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3740,6 +3851,7 @@ local map = { ["头部"] = "head", ["上身"] = "torso", ["身体"] = "body" }
 C.AimHitPart = map[v] or "head"
 end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈(可视化自瞄范围)", Default = false, Callback = function(v) T.FovCircle = v if v then F.FovCircleEnable() else F.FovCircleDisable() end end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
 Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
@@ -3853,6 +3965,8 @@ Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = fun
 Tabs.World:AddToggle("Antilag", { Title = "降画质(关阴影/去水波/关雾)", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(鼠标转向/WASD/QE)", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
 Tabs.World:AddSlider("FreecamSpeed", { Title = "自由视角速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
+Tabs.World:AddToggle("Hud", { Title = "FPS/Ping 显示(右下角)", Default = false, Callback = function(v) T.Hud = v if v then F.HudEnable() else F.HudDisable() end end })
+Tabs.World:AddToggle("Crosshair", { Title = "准星(屏幕中心十字)", Default = false, Callback = function(v) T.Crosshair = v if v then F.CrosshairEnable() else F.CrosshairDisable() end end })
 Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
@@ -4007,6 +4121,7 @@ C.Theme = theme
 end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then CM.ClickerEnable() else CM.ClickerDisable() end end })
 Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
+Tabs.Setting:AddToggle("PanicKey", { Title = "Panic Key(F1 一键关闭所有功能)", Default = false, Callback = function(v) T.PanicKey = v if v then F.PanicKeyEnable() else F.PanicKeyDisable() end end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() CM.ServerHop() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() CM.Rejoin() end })
 Tabs.Setting:AddButton({ Title = "复制脚本加载链接", Callback = function() copyToClipboard('loadstring(game:HttpGet("https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"))()') end })
@@ -4020,9 +4135,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.2.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.3.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.2.1")
+print("[CheatMenu] ✅ 加载完成 v5.3.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
