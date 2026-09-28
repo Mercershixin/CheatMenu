@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:33 sha dd0980b5 bytes 189349'):format('2026-09-28 21:33','dd0980b5',189349))
+print(('[CheatMenu] build 2026-09-28 21:37 sha 37d7be5b bytes 189401'):format('2026-09-28 21:37','37d7be5b',189401))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.11 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.12 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2974,10 +2974,11 @@ local _, _, root = GC()
 if not root then return end
 local n = 0
 for _, v in ipairs(workspace:GetDescendants()) do
+if n > 200 then break end
 if v:IsA("BasePart") and v.CanTouch then
 pcall(function()
-firetouchinterest(v, root, 0)
 firetouchinterest(v, root, 1)
+firetouchinterest(v, root, 0)
 end)
 n = n + 1
 end
@@ -3022,6 +3023,7 @@ end
 local function FireAllClickDetectors()
 local n = 0
 for _, v in ipairs(workspace:GetDescendants()) do
+if n > 200 then break end
 if v:IsA("ClickDetector") then
 if type(fireclickdetector) == "function" then
 pcall(fireclickdetector, v)
@@ -4587,7 +4589,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.11",
+SubTitle = "v5.10.12",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4968,9 +4970,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.11", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.12", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.11")
+print("[CheatMenu] ✅ 加载完成 v5.10.12")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
