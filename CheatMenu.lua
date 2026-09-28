@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 02:38 sha b7b2c627 bytes 117603'):format('2026-09-28 02:38','b7b2c627',117603))
-print("[CheatMenu] ===== 加载开始 · v4.9.0 =====")
+print(('[CheatMenu] build 2026-09-28 10:08 sha 5698c9bd bytes 119791'):format('2026-09-28 10:08','5698c9bd',119791))
+print("[CheatMenu] ===== 加载开始 · v4.9.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2650,13 +2650,15 @@ local AntiRagdollConn = nil
 local function AntiRagdollEnable()
 if AntiRagdollConn then return end
 local function apply()
-local _, hum = GC()
+local ch, hum = GC()
 if not hum then return end
 pcall(function()
 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
 hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+local rc = ch and ch:FindFirstChild("RagdollClient")
+if rc then rc.Enabled = false end
 end)
 end
 apply()
@@ -2664,11 +2666,17 @@ AntiRagdollConn = RS.Stepped:Connect(apply)
 end
 local function AntiRagdollDisable()
 if AntiRagdollConn then AntiRagdollConn:Disconnect() AntiRagdollConn = nil end
-local _, hum = GC()
+local ch, hum = GC()
 if hum then pcall(function()
 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
 hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, true)
 end) end
+if ch then
+local rc = ch:FindFirstChild("RagdollClient")
+if rc then pcall(function() rc.Enabled = true end) end
+end
 end
 local TrapHls = {}
 local function TrapsESPEnable()
@@ -2688,6 +2696,51 @@ end
 local function TrapsESPDisable()
 for _, hl in ipairs(TrapHls) do pcall(function() hl:Destroy() end) end
 TrapHls = {}
+end
+AC.TrapDisable = { data = {}, conn = nil }
+function AC.TrapDisable.isName(s)
+local n = tostring(s):lower()
+return n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")
+end
+function AC.TrapDisable.part(p)
+if not (p:IsA("BasePart") and p.Parent) then return end
+if AC.TrapDisable.data[p] ~= nil then return end
+AC.TrapDisable.data[p] = p.CanTouch
+p.CanTouch = false
+end
+function AC.TrapDisable.scan()
+local n = 0
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("BasePart") and AC.TrapDisable.isName(v.Name) then AC.TrapDisable.part(v) n = n + 1 end
+end
+for _, v in ipairs(workspace:GetDescendants()) do
+if v:IsA("Model") and v.Name:lower():find("trap") then
+for _, p in ipairs(v:GetDescendants()) do
+if p:IsA("BasePart") then AC.TrapDisable.part(p) n = n + 1 end
+end
+end
+end
+return n
+end
+function AC.TrapDisable.Enable()
+if AC.TrapDisable.conn then return end
+local n = AC.TrapDisable.scan()
+AC.TrapDisable.conn = workspace.DescendantAdded:Connect(function(v)
+if v:IsA("BasePart") and AC.TrapDisable.isName(v.Name) then AC.TrapDisable.part(v) end
+if v:IsA("Model") and v.Name:lower():find("trap") then
+for _, p in ipairs(v:GetDescendants()) do
+if p:IsA("BasePart") then AC.TrapDisable.part(p) end
+end
+end
+end)
+print("[CheatMenu] 陷阱不触发: 已关闭 " .. n .. " 个陷阱部件的 CanTouch")
+end
+function AC.TrapDisable.Disable()
+if AC.TrapDisable.conn then AC.TrapDisable.conn:Disconnect() AC.TrapDisable.conn = nil end
+for p, orig in pairs(AC.TrapDisable.data) do
+if p and p.Parent then pcall(function() p.CanTouch = orig end) end
+end
+AC.TrapDisable.data = {}
 end
 local AntiKnockConn = nil
 local function AntiKnockdownEnable()
@@ -2824,7 +2877,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { KickGuardDisable, AntiFlingDisable }
+local disables = { KickGuardDisable, AntiFlingDisable, AntiRagdollDisable, AC.TrapDisable.Disable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -2859,7 +2912,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.9.0",
+SubTitle = "v4.9.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3084,6 +3137,7 @@ Tabs.AC:AddToggle("ChatBypass2", { Title = "聊天绕过(正常聊天框直接�
 Tabs.AC:AddToggle("ACBypassPlus", { Title = "反作弊绕过增强(断检测连接+清元表)", Default = false, Callback = function(v) T.ACBypassPlus = v if v then ACBypassPlusEnable() end end })
 Tabs.AC:AddToggle("VoiceBypass", { Title = "语音绕过(VC Bypass)", Default = false, Callback = function(v) T.VoiceBypass = v if v then VoiceBypassEnable() else VoiceBypassDisable() end end })
 Tabs.AC:AddToggle("TrapsESP", { Title = "陷阱透视(高亮陷阱/哨兵)", Default = false, Callback = function(v) T.TrapsESP = v if v then TrapsESPEnable() else TrapsESPDisable() end end })
+Tabs.AC:AddToggle("TrapDisable", { Title = "陷阱不触发(关陷阱 CanTouch)", Default = false, Callback = function(v) T.TrapDisable = v if v then AC.TrapDisable.Enable() else AC.TrapDisable.Disable() end end })
 Tabs.AC:AddButton({ Title = "扫描抓包", Callback = function() scanRemotes() Fluent:Notify({ Title = "抓包", Content = "已列全部远程事件到控制台(F9)", Duration = 4 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块", Callback = function() scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "已列出模块/对象到控制台(F9)", Duration = 4 }) end })
 end
@@ -3104,9 +3158,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.9.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.9.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.9.0")
+print("[CheatMenu] ✅ 加载完成 v4.9.1")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
