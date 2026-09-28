@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 10:27 sha 7b15c6fd bytes 123992'):format('2026-09-28 10:27','7b15c6fd',123992))
-print("[CheatMenu] ===== 加载开始 · v4.10.0 =====")
+print(('[CheatMenu] build 2026-09-28 10:35 sha 6ea79a8d bytes 126120'):format('2026-09-28 10:35','6ea79a8d',126120))
+print("[CheatMenu] ===== 加载开始 · v4.10.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1622,18 +1622,83 @@ end
 local function GodDisable()
 if GodConn then GodConn:Disconnect() GodConn = nil end
 end
-local function InvisibleEnable()
-local ch = LP.Character
+local function InvisibleApply(ch, on)
 if not ch then return end
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.Transparency = 1 end
+CM._invBackup = CM._invBackup or {}
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then
+if on then
+CM._invBackup[d] = d.Transparency
+d.Transparency = 1
+d.CastShadow = false
+else
+d.Transparency = CM._invBackup[d] or ((d.Name == "HumanoidRootPart") and 1 or 0)
+d.CastShadow = true
 end
+elseif d:IsA("Decal") or d:IsA("Texture") then
+if on then CM._invBackup[d] = d.Transparency d.Transparency = 1 else d.Transparency = CM._invBackup[d] or 0 end
+elseif d:IsA("Accessory") then
+local h = d:FindFirstChild("Handle")
+if h and h:IsA("BasePart") then
+if on then CM._invBackup[h] = h.Transparency h.Transparency = 1 h.CastShadow = false
+else h.Transparency = CM._invBackup[h] or 0 h.CastShadow = true end
+end
+elseif d:IsA("ParticleEmitter") or d:IsA("Trail") then
+d.Enabled = not on
+elseif d:IsA("BillboardGui") or d:IsA("Highlight") then
+d.Enabled = not on
+end
+end
+end
+local function InvisibleEnable()
+if CM._invConn then return end
+local ch, hum = GC()
+if not ch then return end
+if hum then
+CM._invDisplayBackup = hum.DisplayDistanceType
+pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+end
+InvisibleApply(ch, true)
+CM._invAddedConn = ch.DescendantAdded:Connect(function(d)
+pcall(function()
+if d:IsA("BasePart") then
+d.Transparency = 1
+d.CastShadow = false
+elseif d:IsA("Decal") or d:IsA("Texture") then
+d.Transparency = 1
+elseif d:IsA("Accessory") then
+local h = d:FindFirstChild("Handle")
+if h and h:IsA("BasePart") then
+h.Transparency = 1
+h.CastShadow = false
+end
+elseif d:IsA("BillboardGui") or d:IsA("Highlight") then
+d.Enabled = false
+elseif d:IsA("ParticleEmitter") or d:IsA("Trail") then
+d.Enabled = false
+end
+end)
+end)
+CM._invConn = RS.RenderStepped:Connect(function()
+if not T.Invisible then return end
+local c = LP.Character
+if not c then return end
+InvisibleApply(c, true)
+local h = c:FindFirstChildOfClass("Humanoid")
+if h and h.DisplayDistanceType ~= Enum.HumanoidDisplayDistanceType.None then
+pcall(function() h.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+end
+end)
 end
 local function InvisibleDisable()
-local ch = LP.Character
-if not ch then return end
-for _, part in ipairs(ch:GetDescendants()) do
-if part:IsA("BasePart") then part.Transparency = 0 end
+if CM._invConn then CM._invConn:Disconnect() CM._invConn = nil end
+if CM._invAddedConn then CM._invAddedConn:Disconnect() CM._invAddedConn = nil end
+local ch, hum = GC()
+InvisibleApply(ch, false)
+CM._invBackup = nil
+if hum and CM._invDisplayBackup ~= nil then
+pcall(function() hum.DisplayDistanceType = CM._invDisplayBackup end)
+CM._invDisplayBackup = nil
 end
 end
 local ESPGui = nil
@@ -3021,7 +3086,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.10.0",
+SubTitle = "v4.10.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3276,9 +3341,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.10.0")
+print("[CheatMenu] ✅ 加载完成 v4.10.1")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
