@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 16:58 sha d767a62e bytes 163299'):format('2026-09-28 16:58','d767a62e',163299))
+print(('[CheatMenu] build 2026-09-28 17:01 sha 7e3edd74 bytes 165656'):format('2026-09-28 17:01','7e3edd74',165656))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.4.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.4.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3697,10 +3697,14 @@ local TOOL_PRESETS = {
 ["Magic Carpet(飞毯)"] = 225921000,
 ["Golden Boombox(音响)"] = 14275812,
 }
-function F.SpawnToolById(assetId)
+function F.SpawnToolById(assetId, count)
 if not assetId then return false end
 local id = tostring(assetId):match("%d+")
 if not id then print("[CheatMenu] 无效 asset ID") return false end
+count = math.max(1, math.min(50, tonumber(count) or 1))
+local bp = LP:FindFirstChild("Backpack") or LP
+local n = 0
+for _ = 1, count do
 local objs
 local ok = pcall(function() objs = game:GetObjects("rbxassetid://" .. id) end)
 if not ok or not objs then
@@ -3709,12 +3713,7 @@ local inst = game:GetService("InsertService"):LoadAsset(tonumber(id))
 objs = inst and inst:GetChildren() or nil
 end)
 end
-if not ok or not objs then
-print("[CheatMenu] 生成失败(执行器不支持 GetObjects/LoadAsset 或无权访问该 asset)")
-return false
-end
-local bp = LP:FindFirstChild("Backpack") or LP
-local n = 0
+if ok and objs then
 for _, o in ipairs(objs) do
 if o:IsA("Tool") or o:IsA("HopperBin") then
 pcall(function() o.Parent = bp end)
@@ -3724,8 +3723,53 @@ pcall(function() o.Parent = workspace end)
 n = n + 1
 end
 end
+end
+end
+if n == 0 then print("[CheatMenu] 生成失败(执行器不支持 GetObjects/LoadAsset 或无权访问该 asset)") end
 print("[CheatMenu] 已生成 " .. n .. " 个物品(本地)")
 return n > 0
+end
+function F.ScanGameItems()
+local names, protos, seen = {}, {}, {}
+for _, root in ipairs({ workspace, RStorage }) do
+pcall(function()
+for _, d in ipairs(root:GetDescendants()) do
+if (d:IsA("Tool") or d:IsA("Model")) and d:FindFirstChildWhichIsA("BasePart", true) then
+local nm = tostring(d.Name)
+if nm ~= "" and not seen[nm] then
+seen[nm] = true
+names[#names + 1] = nm
+protos[nm] = d
+end
+end
+end
+end)
+end
+F._gameItemProtos = protos
+table.sort(names)
+print("[CheatMenu] 扫描到 " .. #names .. " 种游戏内物品")
+return names
+end
+function F.SpawnGameItem(name, count)
+local protos = F._gameItemProtos or {}
+local proto = protos[name]
+if not proto then print("[CheatMenu] 未找到物品原型: " .. tostring(name)) return 0 end
+count = math.max(1, math.min(50, tonumber(count) or 1))
+local bp = LP:FindFirstChild("Backpack") or LP
+local n = 0
+for _ = 1, count do
+local ok, clone = pcall(function() return proto:Clone() end)
+if ok and clone then
+if clone:IsA("Tool") then
+pcall(function() clone.Parent = bp end)
+else
+pcall(function() clone.Parent = workspace end)
+end
+n = n + 1
+end
+end
+print("[CheatMenu] 已生成 " .. n .. " 个 " .. tostring(name))
+return n
 end
 local LockHealthConn = nil
 function F.LockHealthEnable()
@@ -3911,7 +3955,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.4.0",
+SubTitle = "v5.4.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4143,12 +4187,28 @@ Tabs.AFK:AddToggle("DupeAttempt", { Title = "刷物品尝试(丢物+重生·依�
 Tabs.AFK:AddDropdown("ToolPreset", { Title = "物品生成器(经典工具)", Values = (function() local n = {} for k in pairs(TOOL_PRESETS) do n[#n+1] = k end table.sort(n) return #n > 0 and n or { "(无)" } end)(), Default = "Linked Sword(经典剑)", Callback = function(v) C.ToolPreset = v end })
 Tabs.AFK:AddButton({ Title = "生成选中物品(本地)", Callback = function()
 local id = TOOL_PRESETS[C.ToolPreset]
-if id then F.SpawnToolById(id) else Fluent:Notify({ Title = "物品生成", Content = "请先选择物品", Duration = 3 }) end
+if id then F.SpawnToolById(id, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先选择物品", Duration = 3 }) end
 end })
 Tabs.AFK:AddInput("ToolAssetId", { Title = "自定义 asset ID", Default = "", Placeholder = "填任意 Roblox asset 数字 ID" })
 Tabs.AFK:AddButton({ Title = "生成自定义 asset", Callback = function()
 local s = Fluent.Options.ToolAssetId and Fluent.Options.ToolAssetId.Value
-if s and s ~= "" then F.SpawnToolById(s) else Fluent:Notify({ Title = "物品生成", Content = "请先填 asset ID", Duration = 3 }) end
+if s and s ~= "" then F.SpawnToolById(s, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先填 asset ID", Duration = 3 }) end
+end })
+Tabs.AFK:AddSection("游戏内物品生成(clone 原型·名字一致)")
+Tabs.AFK:AddButton({ Title = "扫描游戏内物品", Callback = function()
+local names = F.ScanGameItems()
+local dd = Fluent.Options and Fluent.Options.GameItem
+if dd and dd.SetValues then pcall(function() dd:SetValues(names) end) end
+Fluent:Notify({ Title = "物品扫描", Content = "扫到 " .. #names .. " 种物品(详见控制台 F9)", Duration = 5 })
+end })
+Tabs.AFK:AddDropdown("GameItem", { Title = "游戏内物品名", Values = { "(先点上方扫描)" }, Default = nil, Callback = function(v) C.GameItem = v end })
+Tabs.AFK:AddSlider("SpawnCount", { Title = "生成数量", Min = 1, Max = 50, Default = 1, Rounding = 0, Callback = function(v) C.SpawnCount = v end })
+Tabs.AFK:AddButton({ Title = "生成选中物品(按游戏内名字)", Callback = function()
+if C.GameItem and C.GameItem ~= "(先点上方扫描)" then
+F.SpawnGameItem(C.GameItem, C.SpawnCount or 1)
+else
+Fluent:Notify({ Title = "物品生成", Content = "请先扫描并选择物品", Duration = 3 })
+end
 end })
 Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
 Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
@@ -4247,9 +4307,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.4.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.4.1", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.4.0")
+print("[CheatMenu] ✅ 加载完成 v5.4.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
