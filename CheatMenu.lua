@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-29 01:09 sha ca808edf bytes 188249'):format('2026-09-29 01:09','ca808edf',188249))
+print(('[CheatMenu] build 2026-09-29 01:28 sha d5b15256 bytes 206117'):format('2026-09-29 01:28','d5b15256',206117))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.7.0 =====")
+print("[CheatMenu] ===== 加载开始 · v6.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1197,6 +1197,384 @@ local res = F._caps or select(1, F.ProbeCapabilities(false))
 local n, t = 0, 0
 for _, v in pairs(res) do t = t + 1 if v then n = n + 1 end end
 return n, t
+end
+F.AC_INVISIBLE = {
+"服务器脚本源码(ServerScriptService / ServerStorage 不下发到客户端)",
+"服务端判定逻辑与阈值(在服务端跑, 客户端不可见)",
+"Roblox 自带反作弊 Hyperion(原生二进制, 非 Lua)",
+"服务端玩家的真实位置/速度(只得到复制后的结果)",
+}
+function F.SnapshotCollect()
+local snap = { t = os.time(), remotes = {}, acfns = {}, hidden = {}, attrs = {}, scripthashes = {},
+caps = {}, authority = nil }
+local keepScav = F._scavenging
+F._scavenging = true
+pcall(function() snap.authority = tostring(workspace.AuthorityMode) end)
+pcall(function()
+local seen = {}
+local function add(obj, src)
+local cls = AC.isRemoteLike(obj)
+if not cls then return end
+local nm = tostring(obj.Name)
+local key = cls .. "\0" .. nm
+if seen[key] then seen[key].src = seen[key].src .. "," .. src return end
+seen[key] = { n = nm, c = cls, src = src, s = AC.isSuspicious(nm) and 1 or 0,
+down = (obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent")) and 1 or 0 }
+end
+for _, d in ipairs(RStorage:GetDescendants()) do add(d, "RS") end
+if type(getnilinstances) == "function" then
+for _, inst in ipairs(getnilinstances()) do add(inst, "nil") end
+end
+for _, v in pairs(seen) do snap.remotes[#snap.remotes + 1] = v end
+table.sort(snap.remotes, function(a, b) return a.n < b.n end)
+end)
+pcall(function()
+if type(getgc) ~= "function" then return end
+local seen, n = {}, 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+n = n + 1
+if n > 6000 then break end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local oki, info = pcall(debug.getinfo, obj, "nS")
+local nm = (oki and info and info.name) or ""
+local src = (oki and info and info.source) or ""
+local hit = AC.isSuspicious(nm) or AC.isSuspicious(src)
+if not hit then
+local okc, consts = pcall(debug.getconstants, obj)
+if okc and type(consts) == "table" then
+for i = 1, #consts do
+if type(consts[i]) == "string" and AC.isSuspicious(consts[i]) then hit = true break end
+end
+end
+end
+if hit then
+local k = tostring(nm) .. "@" .. tostring(src)
+if not seen[k] then
+seen[k] = true
+snap.acfns[#snap.acfns + 1] = { f = tostring(nm), s = tostring(src) }
+end
+end
+end
+end
+table.sort(snap.acfns, function(a, b) return a.f < b.f end)
+end)
+pcall(function()
+local cnt = {}
+local roots = { workspace, LP, RStorage }
+for i = 1, #roots do
+local r = roots[i]
+if r then
+local bag = { r }
+for _, d in ipairs(r:GetDescendants()) do bag[#bag + 1] = d end
+for j = 1, #bag do
+local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
+if okA and type(attrs) == "table" then
+for k in pairs(attrs) do cnt[tostring(k)] = (cnt[tostring(k)] or 0) + 1 end
+end
+end
+end
+end
+for k, v in pairs(cnt) do snap.attrs[#snap.attrs + 1] = { k = k, n = v } end
+table.sort(snap.attrs, function(a, b) return a.k < b.k end)
+end)
+pcall(function()
+local hasher = AC.cap("getscripthash")
+if type(hasher) ~= "function" then return end
+if type(getloadedmodules) ~= "function" then return end
+local ok, mods = pcall(getloadedmodules)
+if not ok or type(mods) ~= "table" then return end
+for i = 1, #mods do
+local m = mods[i]
+if typeof(m) == "Instance" then
+local okH, h = pcall(hasher, m)
+if okH and h ~= nil then
+snap.scripthashes[#snap.scripthashes + 1] = { p = m:GetFullName(), h = tostring(h) }
+end
+end
+end
+end)
+F._scavenging = keepScav
+snap.caps = F._caps or select(1, F.ProbeCapabilities(false))
+return snap
+end
+function F.SnapshotFile() return "CheatMenu_ACSnapshot.json" end
+function F.SnapshotSave()
+local snap = F.SnapshotCollect()
+local ok = pcall(function() writefile(F.SnapshotFile(), HS:JSONEncode(snap)) end)
+if ok then
+print(string.format("[快照] 已保存: remote %d · 反作弊碎片 %d · 属性名 %d · 脚本指纹 %d",
+#snap.remotes, #snap.acfns, #snap.attrs, #snap.scripthashes))
+else
+print("[快照] ⚠ 写文件失败(执行器可能不支持 writefile), 快照只保留在内存里")
+F._snapMem = snap
+end
+return snap
+end
+function F.SnapshotLoad()
+local snap
+pcall(function()
+if readfile and isfile and isfile(F.SnapshotFile()) then
+snap = HS:JSONDecode(readfile(F.SnapshotFile()))
+end
+end)
+return snap or F._snapMem
+end
+function F.SnapshotDiff()
+local old = F.SnapshotLoad()
+if type(old) ~= "table" then
+print("[对比] 没有旧快照 —— 先点一次「保存扫描快照」, 之后游戏更新再点这个")
+return nil
+end
+local new = F.SnapshotCollect()
+local d = { remoteNew = {}, remoteGone = {}, remoteChanged = {}, acNew = {}, acGone = {},
+attrNew = {}, attrGone = {}, hashChanged = {}, capsLost = {} }
+local function idx(list, key)
+local m = {}
+if type(list) == "table" then for i = 1, #list do m[list[i][key]] = list[i] end end
+return m
+end
+local om, nm = idx(old.remotes, "n"), idx(new.remotes, "n")
+for k, v in pairs(nm) do
+if not om[k] then d.remoteNew[#d.remoteNew + 1] = v
+elseif tostring(om[k].c) ~= tostring(v.c) or tostring(om[k].s) ~= tostring(v.s) then
+d.remoteChanged[#d.remoteChanged + 1] = { n = k, old = om[k].c .. "/可疑" .. tostring(om[k].s), new = v.c .. "/可疑" .. tostring(v.s) }
+end
+end
+for k, v in pairs(om) do if not nm[k] then d.remoteGone[#d.remoteGone + 1] = v end end
+local okk, nkk = {}, {}
+if type(old.acfns) == "table" then for i = 1, #old.acfns do okk[old.acfns[i].f .. "@" .. old.acfns[i].s] = true end end
+if type(new.acfns) == "table" then for i = 1, #new.acfns do nkk[new.acfns[i].f .. "@" .. new.acfns[i].s] = true end end
+for k in pairs(nkk) do if not okk[k] then d.acNew[#d.acNew + 1] = k end end
+for k in pairs(okk) do if not nkk[k] then d.acGone[#d.acGone + 1] = k end end
+local oa, na = idx(old.attrs, "k"), idx(new.attrs, "k")
+for k in pairs(na) do if not oa[k] then d.attrNew[#d.attrNew + 1] = k end end
+for k in pairs(oa) do if not na[k] then d.attrGone[#d.attrGone + 1] = k end end
+local oh, nh = {}, {}
+if type(old.scripthashes) == "table" then for i = 1, #old.scripthashes do oh[old.scripthashes[i].p] = tostring(old.scripthashes[i].h) end end
+if type(new.scripthashes) == "table" then for i = 1, #new.scripthashes do
+local p, h = new.scripthashes[i].p, tostring(new.scripthashes[i].h)
+nh[p] = h
+if oh[p] and oh[p] ~= h then d.hashChanged[#d.hashChanged + 1] = { p = p, old = oh[p], new = h } end
+end end
+if type(old.caps) == "table" and type(new.caps) == "table" then
+for k, v in pairs(old.caps) do if v and not new.caps[k] then d.capsLost[#d.capsLost + 1] = k end end
+end
+d.oldT, d.newT = old.t, new.t
+print("═══ 快照对比(客户端可见面) ═══")
+print(string.format("  新 remote %d · 少 remote %d · remote 变了 %d",
+#d.remoteNew, #d.remoteGone, #d.remoteChanged))
+for i = 1, math.min(#d.remoteNew, 25) do print("    + remote: " .. d.remoteNew[i].n .. " [" .. d.remoteNew[i].c .. "] 来源 " .. d.remoteNew[i].src) end
+for i = 1, math.min(#d.remoteChanged, 25) do print("    ~ remote: " .. d.remoteChanged[i].n .. "  " .. d.remoteChanged[i].old .. " -> " .. d.remoteChanged[i].new) end
+for i = 1, math.min(#d.remoteGone, 15) do print("    - remote: " .. d.remoteGone[i].n) end
+print(string.format("  反作弊碎片: 新增 %d · 消失 %d", #d.acNew, #d.acGone))
+for i = 1, math.min(#d.acNew, 20) do print("    + " .. d.acNew[i]) end
+print(string.format("  属性名: 新增 %d · 消失 %d", #d.attrNew, #d.attrGone))
+for i = 1, math.min(#d.attrNew, 20) do print("    + 属性: " .. d.attrNew[i]) end
+if #d.hashChanged > 0 then
+print(string.format("  ★ 客户端脚本被改过 %d 个(这是最直接的「更新了哪个客户端脚本」证据)", #d.hashChanged))
+for i = 1, math.min(#d.hashChanged, 15) do print("    ~ " .. d.hashChanged[i].p) end
+else
+print("  客户端脚本指纹: 无变化(或执行器不支持 getscripthash)")
+end
+if #d.capsLost > 0 then print("  ⚠ 执行器能力丢失: " .. table.concat(d.capsLost, ", ")) end
+print("  ⚠ 服务端侧变化**看不见**: " .. F.AC_INVISIBLE[1])
+F._lastDiff = d
+return d
+end
+function F.ACSurfaceReport()
+local snap = F.SnapshotCollect()
+local sus, down = 0, 0
+for i = 1, #snap.remotes do
+if snap.remotes[i].s == 1 then sus = sus + 1 end
+if snap.remotes[i].down == 1 then down = down + 1 end
+end
+print("══════════ 反作弊面测绘 ══════════")
+print(string.format("【能看到 · 客户端可见面】"))
+print(string.format("  1) Remote 面: 共 %d 个(可下行 %d), 其中名字可疑 %d 个", #snap.remotes, down, sus))
+for i = 1, math.min(#snap.remotes, 30) do
+local r = snap.remotes[i]
+print(string.format("     %s [%s]%s 来源 %s", r.n, r.c, r.s == 1 and " ⚠可疑" or "", r.src))
+end
+print(string.format("  2) 客户端侧反作弊碎片: %d 个函数(名字/source/常量命中关键词)", #snap.acfns))
+for i = 1, math.min(#snap.acfns, 30) do print("     " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
+print(string.format("  3) 服务端写下来的属性名: %d 种(服务端权威数据的可见副本)", #snap.attrs))
+print(string.format("  4) 客户端脚本指纹: %d 个(执行器%s getscripthash)",
+#snap.scripthashes, #snap.scripthashes > 0 and "支持" or "不支持"))
+print(string.format("  5) 位移权威: AuthorityMode = %s", tostring(snap.authority or "(无此字段)")))
+print("【看不见 · 原理上不可见(与本脚本无关)】")
+for i = 1, #F.AC_INVISIBLE do print("  ✗ " .. F.AC_INVISIBLE[i]) end
+print("⇒ 结论: 扫描给的是「客户端可见面 + 更新差异」, **不是**服务器判定逻辑。")
+print("  想看服务端怎么判, 唯一办法是它自己泄漏出来: 客户端上报脚本 + 它发的 remote 参数 + 服务端回写的值。")
+return snap
+end
+F._capOn = false
+F._capLog = {}
+F._capOld = nil
+F.CAP_MAX = 240
+function F.CaptureEnable()
+if F._capOn then return true end
+if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
+F._capOn = true
+F._capLog = {}
+local old
+local ok = pcall(function()
+old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+if F._capOn and not checkcaller() and typeof(self) == "Instance" then
+local m = getnamecallmethod()
+if m == "FireServer" or m == "InvokeServer" then
+if #F._capLog < F.CAP_MAX then
+local args = { ... }
+local parts = {}
+local top = math.min(#args, 6)
+for i = 1, top do
+local v = args[i]
+local t = typeof(v)
+if t == "Instance" then
+parts[i] = v.ClassName .. ":" .. tostring(v.Name)
+elseif t == "Vector3" then
+parts[i] = string.format("V3(%.1f,%.1f,%.1f)", v.X, v.Y, v.Z)
+elseif t == "string" then
+parts[i] = (#v > 60) and (v:sub(1, 60) .. "...") or v
+elseif t == "table" then
+parts[i] = "{n=" .. tostring(#v) .. "}"
+elseif t == "CFrame" then
+parts[i] = string.format("CF(%.1f,%.1f,%.1f)", v.X, v.Y, v.Z)
+else
+parts[i] = tostring(v)
+end
+end
+F._capLog[#F._capLog + 1] = {
+n = tostring(self.Name), c = tostring(self.ClassName),
+m = m, a = table.concat(parts, ", "),
+}
+end
+end
+end
+return old(self, ...)
+end))
+end)
+if not (ok and type(old) == "function") then
+F._capOn = false
+return false
+end
+F._capOld = old
+AC.markHooked(old)
+print("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
+print("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
+print("[采集] 玩完点「一键全量导出」, 内容会复制到剪贴板, 直接粘给我即可")
+return true
+end
+function F.CaptureDisable()
+F._capOn = false
+if F._capOld and hookmetamethod then
+pcall(function() hookmetamethod(game, "__namecall", F._capOld) end)
+end
+F._capOld = nil
+print("[采集] 已停止, 本次记录 " .. #F._capLog .. " 条")
+return #F._capLog
+end
+function F.DumpAll()
+local snap = F.SnapshotCollect()
+local T = {}
+local function w(s) T[#T + 1] = s end
+w("===== CheatMenu 客户端反作弊面全量导出 =====")
+w(string.format("时间: %s   版本字面量: 见 SubTitle", os.date("%Y-%m-%d %H:%M:%S")))
+local okP, pid = pcall(function() return game.PlaceId end)
+w("PlaceId: " .. tostring(okP and pid or "?"))
+local okJ, jid = pcall(function() return game.JobId end)
+w("JobId: " .. tostring(okJ and jid or "?"))
+w("AuthorityMode: " .. tostring(snap.authority or "(无此字段)"))
+local cok, ctot = 0, 0
+for _, v in pairs(snap.caps or {}) do ctot = ctot + 1 if v then cok = cok + 1 end end
+w("执行器能力: " .. cok .. "/" .. ctot)
+local missCaps = {}
+for k, v in pairs(snap.caps or {}) do if not v then missCaps[#missCaps + 1] = k end end
+if #missCaps > 0 then w("  缺失: " .. table.concat(missCaps, ", ")) end
+w("")
+w("--- [1] 远程面(名称 | 类别 | 名字可疑 | 可下行 | 来源) ---")
+w("共 " .. #snap.remotes .. " 个")
+for i = 1, #snap.remotes do
+local r = snap.remotes[i]
+w(string.format("  %s | %s | %s | %s | %s", r.n, r.c,
+r.s == 1 and "可疑" or "-", r.down == 1 and "是" or "否", r.src))
+end
+w("")
+w("--- [2] 客户端侧反作弊函数碎片(函数名 @ 来源) ---")
+w("共 " .. #snap.acfns .. " 个")
+for i = 1, #snap.acfns do w("  " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
+w("")
+w("--- [3] 属性(名称 | 出现次数 | 样例值) ---")
+local attrSamples = {}
+pcall(function()
+local roots = { workspace, LP, RStorage }
+local seen = {}
+for i = 1, #roots do
+local r = roots[i]
+if r then
+local bag = { r }
+for _, d in ipairs(r:GetDescendants()) do bag[#bag + 1] = d end
+for j = 1, #bag do
+local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
+if okA and type(attrs) == "table" then
+for k, v in pairs(attrs) do
+local key = tostring(k)
+if not attrSamples[key] then
+local sv = tostring(v)
+if #sv > 40 then sv = sv:sub(1, 40) .. "..." end
+attrSamples[key] = sv
+end
+end
+end
+end
+end
+end
+end)
+w("共 " .. #snap.attrs .. " 种")
+for i = 1, #snap.attrs do
+local a = snap.attrs[i]
+w(string.format("  %s | x%d | %s", a.k, a.n, tostring(attrSamples[a.k] or "-")))
+end
+w("")
+w("--- [4] 客户端脚本指纹(getscripthash) ---")
+w("共 " .. #snap.scripthashes .. " 个")
+for i = 1, #snap.scripthashes do
+local h = snap.scripthashes[i]
+w("  " .. tostring(h.h) .. "  " .. tostring(h.p))
+end
+w("")
+w("--- [5] remote 上行采集(客户端实际发出去的参数 = 服务端的输入面) ---")
+w("共 " .. #F._capLog .. " 条")
+for i = 1, #F._capLog do
+local c = F._capLog[i]
+w(string.format("  %s [%s] %s(%s)", c.n, c.c, c.m, c.a))
+end
+w("")
+w("--- [6] 不可见边界(原理上拿不到, 与本脚本无关) ---")
+for i = 1, #F.AC_INVISIBLE do w("  " .. F.AC_INVISIBLE[i]) end
+w("")
+w("===== 导出结束 =====")
+local text = table.concat(T, "\n")
+local wrote = false
+pcall(function() writefile("CheatMenu_Capture.txt", text) wrote = true end)
+local copied = false
+pcall(function()
+local sc = AC.cap("setclipboard")
+if type(sc) == "function" then sc(text) copied = true end
+end)
+print("══════ 全量导出 ══════")
+print("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
+" · 复制剪贴板 " .. (copied and "成功(直接粘给我)" or "失败(手动从 F9 复制)"))
+print("  内容: 远程 " .. #snap.remotes .. " · 反作弊碎片 " .. #snap.acfns ..
+" · 属性 " .. #snap.attrs .. " 种 · 脚本指纹 " .. #snap.scripthashes ..
+" · 上行采集 " .. #F._capLog .. " 条")
+print("  ⚠ 服务端判定逻辑不在其中(原理上不可见), 但上面的[5]是服务端判定的**输入面**。")
+if not copied then
+print("────── 以下为可复制正文 ──────")
+print(text)
+print("────── 正文结束 ──────")
+end
+F._dumpText = text
+return text
 end
 function F.UnifiedACPass()
 if F._unifiedRunning then return 0 end
@@ -4403,6 +4781,7 @@ AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, F.UnspoofGCMetadata,
 F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
+F.CaptureDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
@@ -4458,7 +4837,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.7.0",
+SubTitle = "v6.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4829,6 +5208,67 @@ Duration = 8,
 end)
 end })
 Tabs.AC:AddInput("AttrKeyword", { Title = "属性名关键词(留空=全列)", Default = "", Placeholder = "如 Owner, Cash, IsHunter, Health", Callback = function(v) C.AttrKeyword = v end })
+Tabs.AC:AddSection("全量采集与导出")
+Tabs.AC:AddButton({ Title = "开始采集 remote 调用(玩 5-10 分钟)", Callback = function()
+local ok = F.CaptureEnable()
+Fluent:Notify({
+Title = "采集",
+Content = ok and "已开始记录上行 remote 参数 —— 正常玩一会儿, 再点「一键全量导出」" or "开启失败(执行器不支持 hookmetamethod)",
+Duration = 8,
+})
+end })
+Tabs.AC:AddButton({ Title = "停止采集", Callback = function()
+local n = F.CaptureDisable()
+Fluent:Notify({ Title = "采集", Content = "已停止, 共记录 " .. tostring(n) .. " 条", Duration = 5 })
+end })
+Tabs.AC:AddButton({ Title = "一键全量导出(内容复制到剪贴板)", Callback = function()
+task.spawn(function()
+local txt = F.DumpAll()
+Fluent:Notify({
+Title = "全量导出",
+Content = "已生成 " .. tostring(#txt) .. " 字符; 已尝试复制到剪贴板, 直接粘贴即可。含服务端判定输入面(上行 remote 参数)",
+Duration = 10,
+})
+end)
+end })
+Tabs.AC:AddButton({ Title = "保存扫描快照(更新前先存一次)", Callback = function()
+task.spawn(function()
+local s = F.SnapshotSave()
+Fluent:Notify({
+Title = "快照",
+Content = "remote " .. tostring(#s.remotes) .. " · 反作弊碎片 " .. tostring(#s.acfns) ..
+" · 属性 " .. tostring(#s.attrs) .. " 种 · 脚本指纹 " .. tostring(#s.scripthashes),
+Duration = 8,
+})
+end)
+end })
+Tabs.AC:AddButton({ Title = "与快照对比(游戏更新后用)", Callback = function()
+task.spawn(function()
+local d = F.SnapshotDiff()
+if not d then
+Fluent:Notify({ Title = "对比", Content = "还没有旧快照 —— 更新前先点一次「保存扫描快照」", Duration = 8 })
+return
+end
+Fluent:Notify({
+Title = "更新对比",
+Content = "新 remote " .. tostring(#d.remoteNew) .. " · 变了 " .. tostring(#d.remoteChanged) ..
+" · 反作弊碎片新增 " .. tostring(#d.acNew) .. " · 属性新增 " .. tostring(#d.attrNew) ..
+" · 脚本被改 " .. tostring(#d.hashChanged) .. " —— 明细见 F9",
+Duration = 12,
+})
+end)
+end })
+Tabs.AC:AddButton({ Title = "反作弊面测绘(能看见什么/看不见什么)", Callback = function()
+task.spawn(function()
+local snap = F.ACSurfaceReport()
+Fluent:Notify({
+Title = "反作弊面",
+Content = "可见: remote " .. tostring(#snap.remotes) .. " · 客户端碎片 " .. tostring(#snap.acfns) ..
+" · 属性 " .. tostring(#snap.attrs) .. " 种。服务端判定逻辑不可见(原理限制, 详见 F9)",
+Duration = 12,
+})
+end)
+end })
 Tabs.AC:AddButton({ Title = "删除 AnimationHandler(绕过部分反作弊)", Callback = function()
 local n = AC.RemoveAnimationHandler()
 Fluent:Notify({ Title = "反作弊", Content = "已删除 " .. n .. " 个 AnimationHandler", Duration = 4 })
@@ -4924,9 +5364,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.7.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.8.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.7.0")
+print("[CheatMenu] ✅ 加载完成 v6.8.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
