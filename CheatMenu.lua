@@ -1,5 +1,5 @@
-print(('[CheatMenu] build 2026-09-28 10:45 sha afcf272f bytes 128906'):format('2026-09-28 10:45','afcf272f',128906))
-print("[CheatMenu] ===== 加载开始 · v4.10.2 =====")
+print(('[CheatMenu] build 2026-09-28 11:24 sha b81f0968 bytes 138673'):format('2026-09-28 11:24','b81f0968',138673))
+print("[CheatMenu] ===== 加载开始 · v5.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1430,6 +1430,20 @@ if not savedFog then return end
 L.FogEnd = savedFog.FogEnd
 L.FogStart = savedFog.FogStart
 end
+local function smoothTP(targetCF, useSmooth)
+local _, _, root = GC()
+if not root then return end
+if not (T.TPSmooth and useSmooth ~= false) then
+root.CFrame = targetCF
+return
+end
+local start = root.CFrame
+local seg = math.max(3, tonumber(C.TPSmoothSeg) or 8)
+for i = 1, seg do
+root.CFrame = start:Lerp(targetCF, i / seg)
+task.wait(0.015)
+end
+end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
 if not root or not target then return end
@@ -1437,7 +1451,7 @@ local tchar = target.Character
 if not tchar then return end
 local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
-root.CFrame = troot.CFrame + Vector3.new(0, 3, 0)
+smoothTP(troot.CFrame + Vector3.new(0, 3, 0))
 end
 local function getTPTargetPlayer()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
@@ -1578,6 +1592,47 @@ end)
 end
 local function SilentAimDisable()
 if SilentAimConn then SilentAimConn:Disconnect() SilentAimConn = nil end
+end
+local SilentAimGhostHook = nil
+local function SilentAimGhostEnable()
+if SilentAimGhostHook then return end
+if not (hookmetamethod and newcclosure and getnamecallmethod) then return end
+local mt = getrawmetatable(game)
+local old
+local ok, res = pcall(function()
+return hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local method = getnamecallmethod()
+if T.SilentAimGhost and not checkcaller() then
+if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "RaycastParams" then
+local target = getAimTarget()
+if target then
+local origin = select(1, ...)
+if typeof(origin) == "Vector3" then
+local goal = predictPos(target)
+local dir = (goal - origin).Unit
+local dist = (goal - origin).Magnitude
+local args = { ... }
+if method == "Raycast" then
+return old(self, origin, dir * dist, select(3, ...))
+end
+return old(self, origin, dir * dist, select(3, ...))
+end
+end
+end
+end
+return old(self, ...)
+end))
+end)
+if ok and type(res) == "function" then
+SilentAimGhostHook = res
+print("[CheatMenu] 静默自瞄·无痕版已开启(镜头不动, 射线拐目标)")
+end
+end
+local function SilentAimGhostDisable()
+if SilentAimGhostHook and hookmetamethod then
+pcall(function() hookmetamethod(game, "__namecall", SilentAimGhostHook) end)
+end
+SilentAimGhostHook = nil
 end
 local SingleAimConn = nil
 local function SingleAimEnable()
@@ -1884,6 +1939,7 @@ for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
 BulletHls = {}
 end
 local AutoInteractConn = nil
+local InstantPromptConn = nil
 local function AutoInteractEnable()
 if AutoInteractConn then return end
 AutoInteractConn = RS.Stepped:Connect(function()
@@ -1910,8 +1966,18 @@ local function AutoInteractDisable()
 if AutoInteractConn then AutoInteractConn:Disconnect() AutoInteractConn = nil end
 end
 local function InstantPromptEnable()
-for _, p in ipairs(workspace:GetDescendants()) do
-if p:IsA("ProximityPrompt") then p.HoldDuration = 0 end
+local function maxOut(p)
+if not (p and p:IsA("ProximityPrompt")) then return end
+p.HoldDuration = 0
+pcall(function() p.MaxActivationDistance = math.huge end)
+pcall(function() p.RequiresLineOfSight = false end)
+pcall(function() p.Cooldown = 0 end)
+end
+for _, p in ipairs(workspace:GetDescendants()) do maxOut(p) end
+if not InstantPromptConn then
+InstantPromptConn = workspace.DescendantAdded:Connect(function(d)
+if T.InteractBoost or T.InstantPrompt then maxOut(d) end
+end)
 end
 end
 local function BadgeBypassEnable()
@@ -2158,6 +2224,8 @@ getAimTarget = getAimTarget,
 AimEnable = AimEnable,
 SilentAimEnable = SilentAimEnable,
 SilentAimDisable = SilentAimDisable,
+SilentAimGhostEnable = SilentAimGhostEnable,
+SilentAimGhostDisable = SilentAimGhostDisable,
 SingleAimEnable = SingleAimEnable,
 SingleAimDisable = SingleAimDisable,
 FaceLockEnable = FaceLockEnable,
@@ -2201,6 +2269,155 @@ ToolGlowDisable = ToolGlowDisable,
 }
 end)()
 if getgenv then getgenv().CM = CM end
+do local GAME = (function()
+local function getBackpackTools()
+local out = {}
+local bp = LP:FindFirstChild("Backpack")
+local ch = LP.Character
+for _, parent in ipairs({ bp, ch }) do
+if parent then
+for _, t in ipairs(parent:GetChildren()) do
+if t:IsA("Tool") and isEntityTool(t) then out[#out + 1] = t end
+end
+end
+end
+return out
+end
+local UIKeywordThreads = {}
+local function uiKeywordLoop(id, keywords, interval, afterFire)
+if UIKeywordThreads[id] then return end
+UIKeywordThreads[id] = task.spawn(function()
+while T[id] do
+local hit = false
+for _, btn in ipairs(visibleGuiButtons()) do
+local blob = guiTextBlob(btn)
+for _, kw in ipairs(keywords) do
+if blob:find(kw, 1, true) then
+if clickGuiButton(btn) then
+hit = true
+if afterFire then task.delay(0.02, afterFire) end
+break
+end
+end
+end
+if hit then break end
+end
+task.wait(interval or 1)
+end
+UIKeywordThreads[id] = nil
+end)
+end
+local function AutoRebirthEnable() uiKeywordLoop("AutoRebirth", { "rebirth", "reborn", "prestige" }, 2) end
+local function AutoUpgradeEnable() uiKeywordLoop("AutoUpgrade", { "upgrade" }, 1) end
+local function AutoSpinEnable() uiKeywordLoop("AutoSpin", { "spin", "wheel", "lucky wheel" }, 2) end
+local function AutoClaimEnable() uiKeywordLoop("AutoClaim", { "claim", "reward", "free", "offline", "gift", "daily" }, 2) end
+local function AutoSkipWaveEnable() uiKeywordLoop("AutoSkipWave", { "skip", "skip wave", "next wave" }, 1) end
+local SniperThread = nil
+local function SniperEnable()
+if SniperThread then return end
+SniperThread = task.spawn(function()
+while T.Sniper do
+local tName = tostring(C.SniperName or ""):lower()
+local tMut = tostring(C.SniperMutation or ""):lower()
+if tName ~= "" or tMut ~= "" then
+local _, hum = GC()
+if hum then
+for _, t in ipairs(getBackpackTools()) do
+local nm = t.Name:lower()
+local mut = tostring(t:GetAttribute("Mutation") or ""):lower()
+local nameHit = tName ~= "" and nm:find(tName, 1, true)
+local mutHit = tMut ~= "" and mut:find(tMut, 1, true)
+if nameHit or mutHit then
+pcall(function() hum:EquipTool(t) end)
+break
+end
+end
+end
+end
+task.wait(1)
+end
+end)
+end
+local function SniperDisable() SniperThread = nil end
+local PlaceBestThread = nil
+local function AutoPlaceBestEnable()
+if PlaceBestThread then return end
+PlaceBestThread = task.spawn(function()
+while T.PlaceBest do
+local _, hum = GC()
+if hum then
+local best, bestCPS = nil, -1
+for _, t in ipairs(getBackpackTools()) do
+local cps = getBrainrotCPS(t)
+if cps and cps > bestCPS then bestCPS = cps best = t end
+end
+if best then
+pcall(function() hum:UnequipTools() end)
+task.wait(0.1)
+pcall(function() hum:EquipTool(best) end)
+task.wait(0.3)
+for slot = 1, (C.PlaceBestSlots or 30) do
+if not T.PlaceBest then break end
+Fire("S_Interact", slot)
+task.wait(0.08)
+end
+end
+end
+task.wait(2)
+end
+end)
+end
+local function AutoPlaceBestDisable() PlaceBestThread = nil end
+local BlockESPObjs = {}
+local BlockESPConn = nil
+local function blockESPTag(obj)
+if not (T.BlockESP or T.BrainrotESP) then return end
+if not (obj:IsA("BasePart") or obj:IsA("Model")) then return end
+local nm = obj.Name:lower()
+local isBlock = nm:find("lucky", 1, true) or nm:find("block", 1, true) or nm:find("kick", 1, true)
+local isBrainrot = nm:find("brainrot", 1, true) or nm:find("brain", 1, true) or obj:FindFirstChildOfClass("Tool") ~= nil
+if (T.BlockESP and isBlock) or (T.BrainrotESP and isBrainrot) then
+local hl = Instance.new("Highlight")
+hl.FillColor = isBlock and Color3.fromRGB(255, 220, 0) or Color3.fromRGB(0, 255, 200)
+hl.FillTransparency = 0.55
+hl.OutlineColor = hl.FillColor
+hl.OutlineTransparency = 0
+hl.Parent = obj
+BlockESPObjs[#BlockESPObjs + 1] = hl
+end
+end
+local function BlockESPEnable()
+if BlockESPConn then return end
+for _, obj in ipairs(workspace:GetDescendants()) do blockESPTag(obj) end
+BlockESPConn = workspace.DescendantAdded:Connect(blockESPTag)
+end
+local function BlockESPDisable()
+if T.BlockESP or T.BrainrotESP then
+for _, hl in ipairs(BlockESPObjs) do pcall(function() hl:Destroy() end) end
+BlockESPObjs = {}
+for _, obj in ipairs(workspace:GetDescendants()) do blockESPTag(obj) end
+return
+end
+if BlockESPConn then BlockESPConn:Disconnect() BlockESPConn = nil end
+for _, hl in ipairs(BlockESPObjs) do pcall(function() hl:Destroy() end) end
+BlockESPObjs = {}
+end
+return {
+AutoRebirthEnable = AutoRebirthEnable,
+AutoUpgradeEnable = AutoUpgradeEnable,
+AutoSpinEnable = AutoSpinEnable,
+AutoClaimEnable = AutoClaimEnable,
+AutoSkipWaveEnable = AutoSkipWaveEnable,
+SniperEnable = SniperEnable,
+SniperDisable = SniperDisable,
+AutoPlaceBestEnable = AutoPlaceBestEnable,
+AutoPlaceBestDisable = AutoPlaceBestDisable,
+BlockESPEnable = BlockESPEnable,
+BlockESPDisable = BlockESPDisable,
+}
+end)()
+if getgenv then getgenv().GAME = GAME end
+end
 local function tblHasFunc(t, key)
 if type(t) ~= "table" then return false end
 local ok, v = pcall(rawget, t, key)
@@ -2691,7 +2908,7 @@ end
 local function tpToCoords(x, y, z)
 local _, _, root = GC()
 if root and tonumber(x) and tonumber(y) and tonumber(z) then
-root.CFrame = CFrame.new(tonumber(x), tonumber(y), tonumber(z))
+smoothTP(CFrame.new(tonumber(x), tonumber(y), tonumber(z)))
 end
 end
 local VoidConn = nil
@@ -3165,7 +3382,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v4.10.2",
+SubTitle = "v5.0.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(480, 520),
 Acrylic = false,
@@ -3174,6 +3391,7 @@ MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
 local function buildMenu()
+local GAME = getgenv() and getgenv().GAME or {}
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
@@ -3188,6 +3406,7 @@ do
 Tabs.Combat:AddSection("战斗")
 Tabs.Combat:AddToggle("Aim", { Title = "自瞄", Default = false, Callback = function(v) T.Aim = v if v then CM.AimEnable() else CM.AimDisable() end end })
 Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(硬锁)", Default = false, Callback = function(v) T.SilentAim = v if v then CM.SilentAimEnable() else CM.SilentAimDisable() end end })
+Tabs.Combat:AddToggle("SilentAimGhost", { Title = "静默自瞄·无痕(镜头不动,观战看不出)", Default = false, Callback = function(v) T.SilentAimGhost = v if v then CM.SilentAimGhostEnable() else CM.SilentAimGhostDisable() end end })
 Tabs.Combat:AddToggle("TriggerBot", { Title = "开火才锁(TriggerBot,更隐蔽)", Default = false, Callback = function(v) T.TriggerBot = v end })
 Tabs.Combat:AddToggle("AimPrediction", { Title = "弹道预测(打移动目标)", Default = false, Callback = function(v) T.AimPrediction = v end })
 Tabs.Combat:AddDropdown("AimHitPart", { Title = "命中部位", Values = { "头部", "上身", "身体" }, Default = "头部", Callback = function(v)
@@ -3319,6 +3538,8 @@ Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default 
 Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
 Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
 Tabs.TP:AddSection("传送增强")
+Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
+Tabs.TP:AddSlider("TPSmoothSeg", { Title = "分段数(越多越隐蔽)", Min = 3, Max = 20, Default = 8, Rounding = 0, Callback = function(v) C.TPSmoothSeg = v end })
 Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(点地面即传过去)", Default = false, Callback = function(v) T.ClickTP = v if v then ClickTPEnable() else ClickTPDisable() end end })
 Tabs.TP:AddInput("TPCoords", { Title = "坐标传送(X,Y,Z 逗号分隔)", Default = "", Placeholder = "如 100,50,200" })
 Tabs.TP:AddButton({ Title = "传送到坐标", Callback = function()
@@ -3351,6 +3572,20 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
+Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
+Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
+Tabs.AFK:AddToggle("AutoUpgrade", { Title = "自动升级(脑红/踢力)", Default = false, Callback = function(v) T.AutoUpgrade = v if v then GAME.AutoUpgradeEnable() end end })
+Tabs.AFK:AddToggle("AutoSpin", { Title = "自动转盘", Default = false, Callback = function(v) T.AutoSpin = v if v then GAME.AutoSpinEnable() end end })
+Tabs.AFK:AddToggle("AutoClaim", { Title = "自动领奖(离线/免费/每日)", Default = false, Callback = function(v) T.AutoClaim = v if v then GAME.AutoClaimEnable() end end })
+Tabs.AFK:AddToggle("AutoSkipWave", { Title = "自动跳弱波", Default = false, Callback = function(v) T.AutoSkipWave = v if v then GAME.AutoSkipWaveEnable() end end })
+Tabs.AFK:AddToggle("Sniper", { Title = "定向脑红(按名字/词缀自动装备)", Default = false, Callback = function(v) T.Sniper = v if v then GAME.SniperEnable() else GAME.SniperDisable() end end })
+Tabs.AFK:AddInput("SniperName", { Title = "狙目标名字(关键词)", Default = "", Placeholder = "如 Plan Red", Callback = function(v) C.SniperName = v end })
+Tabs.AFK:AddInput("SniperMutation", { Title = "狙目标词缀(关键词)", Default = "", Placeholder = "如 Rainbow / Astral", Callback = function(v) C.SniperMutation = v end })
+Tabs.AFK:AddToggle("PlaceBest", { Title = "自动放最优脑红(最高CPS)", Default = false, Callback = function(v) T.PlaceBest = v if v then GAME.AutoPlaceBestEnable() else GAME.AutoPlaceBestDisable() end end })
+Tabs.AFK:AddSlider("PlaceBestSlots", { Title = "放置槽位数", Min = 1, Max = 50, Default = 30, Rounding = 0, Callback = function(v) C.PlaceBestSlots = v end })
+Tabs.AFK:AddSection("块/脑红 ESP")
+Tabs.AFK:AddToggle("BlockESP", { Title = "幸运块透视(高亮)", Default = false, Callback = function(v) T.BlockESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
+Tabs.AFK:AddToggle("BrainrotESP", { Title = "脑红透视(高亮)", Default = false, Callback = function(v) T.BrainrotESP = v if v then GAME.BlockESPEnable() else GAME.BlockESPDisable() end end })
 end
 do
 Tabs.Trans:AddSection("翻译")
@@ -3421,9 +3656,9 @@ T.KickRejoin = true
 AntiAFKEnable()
 KickGuardEnable()
 KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v4.10.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.0.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v4.10.2")
+print("[CheatMenu] ✅ 加载完成 v5.0.0")
 end
 local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
