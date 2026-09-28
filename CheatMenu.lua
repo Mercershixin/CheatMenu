@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 12:36 sha 6712e5fc bytes 149753'):format('2026-09-28 12:36','6712e5fc',149753))
+print(('[CheatMenu] build 2026-09-28 12:41 sha ff0a9b58 bytes 153769'):format('2026-09-28 12:41','ff0a9b58',153769))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.1.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1131,6 +1131,18 @@ Keep CPS as "CPS".
 Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
 The word Robux is kept as-is too.
 If the text is already Chinese or contains CJK, output it unchanged.]]
+local QUICK_DICT = {
+["play"]="开始", ["settings"]="设置", ["shop"]="商店", ["buy"]="购买", ["sell"]="售卖",
+["sell all"]="全部售卖", ["claim"]="领取", ["collect"]="收取", ["level"]="等级",
+["reward"]="奖励", ["rewards"]="奖励", ["free"]="免费", ["coins"]="金币", ["cash"]="金币",
+["gold"]="金币", ["gems"]="宝石", ["yes"]="是", ["no"]="否", ["ok"]="确定", ["confirm"]="确认",
+["cancel"]="取消", ["close"]="关闭", ["back"]="返回", ["next"]="下一步", ["continue"]="继续",
+["start"]="开始", ["upgrade"]="升级", ["rebirth"]="重生", ["spin"]="转盘", ["skip"]="跳过",
+["inventory"]="背包", ["trade"]="交易", ["quest"]="任务", ["rank"]="段位", ["damage"]="伤害",
+["health"]="生命", ["open"]="开启", ["max"]="最大", ["unlock"]="解锁", ["locked"]="已锁定",
+["owned"]="已拥有", ["equipped"]="已装备", ["win"]="胜利", ["lose"]="失败", ["ready"]="准备",
+["equip"]="装备", ["use"]="使用", ["slots"]="槽位", ["plot"]="基地", ["gems shop"]="宝石商店",
+}
 local TransCache = {}
 local TransCacheFile = "CheatMenu_TransCache.json"
 local function loadTransCache()
@@ -1199,13 +1211,15 @@ if not ok2 or not d or not d.choices or not d.choices[1] then return nil end
 return d.choices[1].message and d.choices[1].message.content
 end
 local function shouldTranslate(s)
-if type(s) ~= "string" or s == "" then return false end
-if #s > 200 then return false end
+if type(s) ~= "string" then return false end
+s = s:gsub("^%s+", ""):gsub("%s+$", "")
+if #s < 2 or #s > 300 then return false end
+if not s:find("[%a\128-\255]") then return false end
+if s:match("^[%d%.,%%%+%-%s/():;!?*#&@'\"|\\~`%[%]{}<>=]+$") then return false end
+if s:match("^https?://") or s:find("www%.%w+") or s:find("%.com") or s:find("%.net") or s:find("%.org") then return false end
+if s:match("^/") then return false end
+if s:find("€", 1, true) or s:find("¥", 1, true) then return false end
 local hasCJK = s:find("[\228-\233]") ~= nil
-local hasAlpha = s:find("%a") ~= nil
-if not hasCJK and not hasAlpha then return false end
-if s:find("$", 1, true) or s:find("€", 1, true) or s:find("¥", 1, true) then return false end
-if s:match("^[%d%.,%%%+%-%s/()]+$") then return false end
 local lang = C.TransLang or "zh"
 if lang == "zh" and hasCJK then return false end
 return true
@@ -1216,6 +1230,8 @@ text = text:gsub("^%s+", ""):gsub("%s+$", "")
 if text == "" then return nil end
 if not force and not shouldTranslate(text) then return nil end
 if TransCache[text] then return TransCache[text] end
+local quick = QUICK_DICT[text:lower()]
+if quick then TransCache[text] = quick return quick end
 local now = os.clock()
 if not force and (now - (Trans._lastAt or 0)) < (C.TransInterval or 0.15) then return nil end
 Trans._lastAt = now
@@ -1288,6 +1304,81 @@ scanAndTranslate()
 end
 TransLoop = nil
 end)
+end
+function F.ChatTranslateEnable()
+if F._chatTransHooked then return end
+local tcs = game:GetService("TextChatService")
+if not tcs then print("[CheatMenu] 无 TextChatService，聊天翻译不可用") return end
+F._oldOnIncoming = tcs.OnIncomingMessage
+local ok = pcall(function()
+tcs.OnIncomingMessage = function(message)
+local props = nil
+if F._oldOnIncoming then
+local ok2, p = pcall(F._oldOnIncoming, message)
+if ok2 then props = p end
+end
+if T.ChatTranslate and message and message.Text then
+local src = message.TextSource
+if not src or src.Name ~= LP.Name then
+local tr = Trans.Translate(message.Text, true)
+if tr and tr ~= "" and tr ~= message.Text then
+props = props or Instance.new("TextChatMessageProperties")
+props.Text = message.Text .. "\n【" .. tr .. "】"
+end
+end
+end
+return props
+end
+end)
+if ok then F._chatTransHooked = true print("[CheatMenu] 公屏聊天翻译已开启") end
+end
+function F.ChatTranslateDisable()
+if F._chatTransHooked then
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if tcs then tcs.OnIncomingMessage = F._oldOnIncoming end
+end)
+F._chatTransHooked = false
+end
+end
+function F.BubbleTranslateEnable()
+if F._bubbleTransHooked then return end
+local tcs = game:GetService("TextChatService")
+if not tcs then return end
+F._oldOnBubble = tcs.OnBubbleAdded
+local ok = pcall(function()
+tcs.OnBubbleAdded = function(message, adornee)
+local props = nil
+if F._oldOnBubble then
+local ok2, p = pcall(F._oldOnBubble, message, adornee)
+if ok2 then props = p end
+end
+if T.BubbleTranslate and message and message.Text then
+local src = message.TextSource
+if not src or src.Name ~= LP.Name then
+local tr = Trans.Translate(message.Text, true)
+if tr and tr ~= "" and tr ~= message.Text then
+props = props or Instance.new("BubbleChatMessageProperties")
+props.Text = tr
+end
+end
+end
+return props
+end
+end)
+if ok then F._bubbleTransHooked = true print("[CheatMenu] 气泡翻译已开启") end
+end
+function F.BubbleTranslateDisable()
+if F._bubbleTransHooked then
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if tcs then tcs.OnBubbleAdded = F._oldOnBubble end
+end)
+F._bubbleTransHooked = false
+end
+end
+function F.TranslateText(s)
+return Trans.Translate(s, true)
 end
 local CM = (function()
 local FlyConn = nil
@@ -3566,7 +3657,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if AFKConn then AFKConn:Disconnect() end end)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -3610,7 +3701,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.1.1",
+SubTitle = "v5.2.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -3832,6 +3923,8 @@ local map = { ["中文"] = "zh", ["英文"] = "en", ["日文"] = "ja", ["韩文"
 C.TransLang = map[v] or "zh"
 end })
 Tabs.Trans:AddToggle("Translate", { Title = "界面翻译(自动翻译游戏内文字)", Default = false, Callback = function(v) T.Translate = v if v then startTranslateLoop() end end })
+Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(其他玩家消息)", Default = false, Callback = function(v) T.ChatTranslate = v if v then F.ChatTranslateEnable() else F.ChatTranslateDisable() end end })
+Tabs.Trans:AddToggle("BubbleTranslate", { Title = "气泡翻译(头顶气泡)", Default = false, Callback = function(v) T.BubbleTranslate = v if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "翻译请求间隔(秒,越大越不影响游戏)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddInput("TransInput", { Title = "输入文本", Default = "", Placeholder = "输入要翻译/发送的文字" })
 Tabs.Trans:AddButton({ Title = "翻译文本", Callback = function()
@@ -3903,9 +3996,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.1.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.2.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.1.1")
+print("[CheatMenu] ✅ 加载完成 v5.2.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
