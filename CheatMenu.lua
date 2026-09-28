@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 20:46 sha ea55b96c bytes 189494'):format('2026-09-28 20:46','ea55b96c',189494))
+print(('[CheatMenu] build 2026-09-28 20:56 sha b9f3ce29 bytes 189116'):format('2026-09-28 20:56','b9f3ce29',189116))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.2 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4483,7 +4483,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.2",
+SubTitle = "v5.10.3",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4528,7 +4528,6 @@ Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, 
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查(穿墙不锁)", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("SingleAim", { Title = "指定玩家自瞄", Default = false, Callback = function(v) T.SingleAim = v if v then CM.SingleAimEnable() else CM.SingleAimDisable() end end })
 Tabs.Combat:AddToggle("FaceLock", { Title = "面锁(面向目标)", Default = false, Callback = function(v) T.FaceLock = v if v then CM.FaceLockEnable() else CM.FaceLockDisable() end end })
-Tabs.Combat:AddSection("生存 & 辅助")
 Tabs.Combat:AddSection("生命保护")
 Tabs.Combat:AddDropdown("GodMode", { Title = "无敌模式", Values = { "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血·难检测)", "锁血(指定值)" }, Default = "关闭", Callback = function(v)
 T.God = (v == "无敌(MaxHealth=∞)")
@@ -4606,7 +4605,6 @@ Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50,
 Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地绕滞空)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then CM.InfiniteJumpEnable() end end })
-Tabs.Move:AddSection("移动增强")
 Tabs.Move:AddToggle("Spin", { Title = "自转", Default = false, Callback = function(v) T.Spin = v if v then CM.SpinEnable() else CM.SpinDisable() end end })
 Tabs.Move:AddSlider("SpinSpeed", { Title = "自转速度", Min = 1, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.SpinSpeed = v end })
 Tabs.Move:AddToggle("AirWalk", { Title = "踏空(空中移动)", Default = false, Callback = function(v) T.AirWalk = v if v then CM.AirWalkEnable() else CM.AirWalkDisable() end end })
@@ -4646,7 +4644,6 @@ Tabs.World:AddToggle("Hud", { Title = "FPS/Ping 显示(右下角)", Default = fa
 Tabs.World:AddToggle("Crosshair", { Title = "准星(屏幕中心十字)", Default = false, Callback = function(v) T.Crosshair = v if v then F.CrosshairEnable() else F.CrosshairDisable() end end })
 Tabs.World:AddToggle("LockCam", { Title = "锁定相机朝向", Default = false, Callback = function(v) T.LockCam = v if v then F.LockCamEnable() else F.LockCamDisable() end end })
 Tabs.World:AddButton({ Title = "移除所有饰品/帽子", Callback = function() F.RemoveAccessories() end })
-Tabs.World:AddSection("互动增强")
 Tabs.World:AddToggle("InteractBoost", { Title = "互动增强(自动互动+触摸+无距离+无冷却)", Default = false, Callback = function(v)
 T.AutoInteract = v T.AutoTouch = v T.InstantPrompt = v T.NoPromptLimit = v T.NoPromptCooldown = v T.NoClickLimit = v
 if v then
@@ -4659,7 +4656,6 @@ Tabs.World:AddButton({ Title = "触发所有互动(触摸+ClickDetector)", Callb
 Tabs.World:AddToggle("WalkSpeedLock", { Title = "速度锁定(WalkSpeed 被改自动恢复)", Default = false, Callback = function(v) T.WalkSpeedLock = v if v then F.PropWatchEnable() end end })
 Tabs.World:AddToggle("AutoPickup", { Title = "自动拾取(靠近触碰掉落物)", Default = false, Callback = function(v) T.AutoPickup = v if v then F.AutoPickupEnable() else F.AutoPickupDisable() end end })
 Tabs.World:AddSlider("PickupRange", { Title = "拾取范围", Min = 5, Max = 50, Default = 15, Rounding = 0, Callback = function(v) C.PickupRange = v end })
-Tabs.World:AddSection("生存辅助")
 Tabs.World:AddToggle("BringItems", { Title = "物品拉取(把掉落物拉过来)", Default = false, Callback = function(v) T.BringItems = v if v then F.BringItemsEnable() else F.BringItemsDisable() end end })
 Tabs.World:AddSlider("BringRange", { Title = "拉取范围", Min = 10, Max = 200, Default = 80, Rounding = 0, Callback = function(v) C.BringRange = v end })
 Tabs.World:AddToggle("AutoHeal", { Title = "自动治疗(低血用治疗品)", Default = false, Callback = function(v) T.AutoHeal = v if v then F.AutoHealEnable() else F.AutoHealDisable() end end })
@@ -4682,13 +4678,11 @@ Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, De
 Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then CM.TeleportOnDeathEnable() end end })
 Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
 Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
-Tabs.TP:AddSection("路径点系统")
 Tabs.TP:AddDropdown("WPSlot", { Title = "路径点槽位(1-5)", Values = { "1", "2", "3", "4", "5" }, Default = "1", Callback = function(v) C.WPSlot = v end })
 Tabs.TP:AddButton({ Title = "保存到该槽位", Callback = function() F.SaveWaypoint(C.WPSlot or "1") end })
 Tabs.TP:AddButton({ Title = "传送到该槽位", Callback = function() F.TpWaypoint(C.WPSlot or "1") end })
 Tabs.TP:AddToggle("Flashback", { Title = "记录死亡点(死后可传回)", Default = false, Callback = function(v) T.Flashback = v if v then F.FlashbackEnable() else F.FlashbackDisable() end end })
 Tabs.TP:AddButton({ Title = "传回死亡点", Callback = function() F.FlashbackGo() end })
-Tabs.TP:AddSection("传送增强")
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
 Tabs.TP:AddSlider("TPSmoothSeg", { Title = "分段数(越多越隐蔽)", Min = 3, Max = 20, Default = 8, Rounding = 0, Callback = function(v) C.TPSmoothSeg = v end })
 Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(点地面即传过去)", Default = false, Callback = function(v) T.ClickTP = v if v then F.ClickTPEnable() else F.ClickTPDisable() end end })
@@ -4704,16 +4698,14 @@ Tabs.TP:AddSlider("VoidY", { Title = "虚空高度阈值", Min = -200, Max = 0, 
 Tabs.TP:AddToggle("AutoRespawn", { Title = "自动重生", Default = false, Callback = function(v) T.AutoRespawn = v if v then F.AutoRespawnEnable() end end })
 end
 do
-Tabs.AFK:AddSection("挂机防踢")
+Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(挂机+本地拦截+前兆抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
 if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() else F.KickGuardDisable() F.AntiAFKDisable() end
 end })
-Tabs.AFK:AddSection("踢击训练")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then F.AutoTrainEnable() end end })
 Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then F.AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
-Tabs.AFK:AddSection("自动锻炼")
 Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then F.AutoGymEnable() end end })
 Tabs.AFK:AddSection("基地操作")
 Tabs.AFK:AddToggle("AutoSell", { Title = "卖 CPS 脑红(按门槛)", Default = false, Callback = function(v) T.AutoSell = v if v then sellLowCPSTools() end end })
@@ -4723,20 +4715,11 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() collectAllCash() end })
-Tabs.AFK:AddSection("物品辅助")
+Tabs.AFK:AddSection("物品")
 Tabs.AFK:AddButton({ Title = "丢出所有工具(清背包)", Callback = function() F.DropAllTools() end })
 Tabs.AFK:AddToggle("DupeAttempt", { Title = "刷物品尝试(丢物+重生·依赖游戏bug)", Default = false, Callback = function(v) T.DupeAttempt = v if v then F.DupeAttemptEnable() else F.DupeAttemptDisable() end end })
-Tabs.AFK:AddDropdown("ToolPreset", { Title = "物品生成器(经典工具)", Values = (function() local n = {} for k in pairs(TOOL_PRESETS) do n[#n+1] = k end table.sort(n) return #n > 0 and n or { "(无)" } end)(), Default = "Linked Sword(经典剑)", Callback = function(v) C.ToolPreset = v end })
-Tabs.AFK:AddButton({ Title = "生成选中物品(本地)", Callback = function()
-local id = TOOL_PRESETS[C.ToolPreset]
-if id then F.SpawnToolById(id, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先选择物品", Duration = 3 }) end
-end })
-Tabs.AFK:AddInput("ToolAssetId", { Title = "自定义 asset ID", Default = "", Placeholder = "填任意 Roblox asset 数字 ID" })
-Tabs.AFK:AddButton({ Title = "生成自定义 asset", Callback = function()
-local s = Fluent.Options.ToolAssetId and Fluent.Options.ToolAssetId.Value
-if s and s ~= "" then F.SpawnToolById(s, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先填 asset ID", Duration = 3 }) end
-end })
-Tabs.AFK:AddSection("游戏内物品生成(clone 原型·名字一致)")
+Tabs.AFK:AddDropdown("ItemSource", { Title = "物品来源", Values = { "经典工具", "游戏内物品", "自定义 asset ID" }, Default = "经典工具", Callback = function(v) C.ItemSource = v end })
+Tabs.AFK:AddDropdown("ToolPreset", { Title = "经典工具", Values = (function() local n = {} for k in pairs(TOOL_PRESETS) do n[#n+1] = k end table.sort(n) return #n > 0 and n or { "(无)" } end)(), Default = "Linked Sword(经典剑)", Callback = function(v) C.ToolPreset = v end })
 Tabs.AFK:AddButton({ Title = "扫描游戏内物品", Callback = function()
 local names = F.ScanGameItems()
 local dd = Fluent.Options and Fluent.Options.GameItem
@@ -4744,15 +4727,24 @@ if dd and dd.SetValues then pcall(function() dd:SetValues(names) end) end
 Fluent:Notify({ Title = "物品扫描", Content = "扫到 " .. #names .. " 种物品(详见控制台 F9)", Duration = 5 })
 end })
 Tabs.AFK:AddDropdown("GameItem", { Title = "游戏内物品名", Values = { "(先点上方扫描)" }, Default = nil, Callback = function(v) C.GameItem = v end })
+Tabs.AFK:AddInput("ToolAssetId", { Title = "自定义 asset ID", Default = "", Placeholder = "填任意 Roblox asset 数字 ID" })
 Tabs.AFK:AddSlider("SpawnCount", { Title = "生成数量", Min = 1, Max = 50, Default = 1, Rounding = 0, Callback = function(v) C.SpawnCount = v end })
-Tabs.AFK:AddButton({ Title = "生成选中物品(按游戏内名字)", Callback = function()
+Tabs.AFK:AddButton({ Title = "生成物品", Callback = function()
+local src = C.ItemSource or "经典工具"
+if src == "经典工具" then
+local id = TOOL_PRESETS[C.ToolPreset]
+if id then F.SpawnToolById(id, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先选择经典工具", Duration = 3 }) end
+elseif src == "游戏内物品" then
 if C.GameItem and C.GameItem ~= "(先点上方扫描)" then
 F.SpawnGameItem(C.GameItem, C.SpawnCount or 1)
 else
-Fluent:Notify({ Title = "物品生成", Content = "请先扫描并选择物品", Duration = 3 })
+Fluent:Notify({ Title = "物品生成", Content = "请先扫描并选择游戏内物品", Duration = 3 })
+end
+else
+local s = Fluent.Options.ToolAssetId and Fluent.Options.ToolAssetId.Value
+if s and s ~= "" then F.SpawnToolById(s, C.SpawnCount or 1) else Fluent:Notify({ Title = "物品生成", Content = "请先填 asset ID", Duration = 3 }) end
 end
 end })
-Tabs.AFK:AddSection("物品吸附 / Remote 工具箱")
 Tabs.AFK:AddToggle("ItemMagnet", { Title = "物品吸附(拉附近物品过来)", Default = false, Callback = function(v) T.ItemMagnet = v if v then F.ItemMagnetEnable() else F.ItemMagnetDisable() end end })
 Tabs.AFK:AddInput("MagnetKeyword", { Title = "吸附关键词(留空=全部)", Default = "", Placeholder = "如 bond / coal / 脑红", Callback = function(v) C.MagnetKeyword = v end })
 Tabs.AFK:AddSlider("MagnetRadius", { Title = "吸附半径", Min = 10, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.MagnetRadius = v end })
@@ -4765,7 +4757,6 @@ else
 Fluent:Notify({ Title = "Remote", Content = "请先填 remote 名", Duration = 3 })
 end
 end })
-Tabs.AFK:AddSection("进阶自动化(学自 Axon/Stree/Fartez)")
 Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动重生转生", Default = false, Callback = function(v) T.AutoRebirth = v if v then GAME.AutoRebirthEnable() end end })
 Tabs.AFK:AddToggle("AutoUpgrade", { Title = "自动升级(脑红/踢力)", Default = false, Callback = function(v) T.AutoUpgrade = v if v then GAME.AutoUpgradeEnable() end end })
 Tabs.AFK:AddToggle("AutoSpin", { Title = "自动转盘", Default = false, Callback = function(v) T.AutoSpin = v if v then GAME.AutoSpinEnable() end end })
@@ -4876,9 +4867,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.2", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.3", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.2")
+print("[CheatMenu] ✅ 加载完成 v5.10.3")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
