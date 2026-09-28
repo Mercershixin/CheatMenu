@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 18:37 sha a0cd665c bytes 186518'):format('2026-09-28 18:37','a0cd665c',186518))
+print(('[CheatMenu] build 2026-09-28 18:45 sha 4c749915 bytes 189050'):format('2026-09-28 18:45','4c749915',189050))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.9.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -246,6 +246,68 @@ end
 end
 AC.BlockedRemotes = {}
 AC.BlockedCount = 0
+end
+function AC.ExpandSuspiciousKeys()
+local extra = {
+"reportabuse", "antihack", "anti-hack", "cheatdetector", "cheat-detector",
+"teleport", "tpcheck", "positioncheck", "position-check", "velocitycheck",
+"velocity-check", "healthcheck", "jumpcheck", "toolcheck", "adminabuse",
+"ac_", "banned", "punish", "penalty", "violation", "infraction",
+}
+for _, kw in ipairs(extra) do
+local exists = false
+for _, k in ipairs(AC.SUS_KEYS) do if k == kw then exists = true break end end
+if not exists then table.insert(AC.SUS_KEYS, kw) end
+end
+return #AC.SUS_KEYS
+end
+function AC.NeutralizeACFunctions()
+if type(getgc) ~= "function" or not hookfunction then return 0 end
+local keys = { "anticheat", "anti-cheat", "detected", "exploit", "cheat", "ban", "iac", "reportabuse", "flag" }
+local hooked = 0
+pcall(function()
+local seen = 0
+for _, obj in ipairs(getgc(true)) do
+seen = seen + 1
+if seen > 12000 then break end
+if type(obj) == "function" and islclosure and islclosure(obj) then
+local already = false
+pcall(function() if isfunctionhooked and isfunctionhooked(obj) then already = true end end)
+if not already then
+local ok, consts = pcall(debug.getconstants, obj)
+if ok and consts then
+local hit = false
+for _, c in ipairs(consts) do
+if type(c) == "string" then
+for _, kw in ipairs(keys) do
+if c:lower():find(kw, 1, true) then hit = true break end
+end
+end
+if hit then break end
+end
+if hit then
+pcall(hookfunction, obj, function() return nil end)
+hooked = hooked + 1
+end
+end
+end
+end
+end
+end)
+print("[CheatMenu] 已中和 " .. hooked .. " 个反作弊检测函数")
+return hooked
+end
+function AC.WatchNewRemotesEnable()
+if AC._watchConn then return end
+AC._watchConn = RStorage.DescendantAdded:Connect(function(d)
+if d:IsA("RemoteEvent") and AC.isSuspicious(d.Name) then
+AC.hookOneRemote(d)
+end
+end)
+print("[CheatMenu] 反作弊 remote 监控已开启(新出现的可疑 remote 自动拦截)")
+end
+function AC.WatchNewRemotesDisable()
+if AC._watchConn then AC._watchConn:Disconnect() AC._watchConn = nil end
 end
 function AC.InstallPropertyLock()
 if AC._propLockOn or not hookmetamethod or not newcclosure then return end
@@ -4361,7 +4423,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, F.NoClipStealthDisable, F.StealthModeDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable, F.FlashbackDisable, F.BehaviorRandomDisable, F.NoClipStealthDisable, F.StealthModeDisable, AC.WatchNewRemotesDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4406,7 +4468,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.9.1",
+SubTitle = "v5.10.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4760,6 +4822,8 @@ Tabs.AC:AddSection("扫描 / 抓包")
 Tabs.AC:AddButton({ Title = "扫描抓包(深度·含隐藏remote)", Callback = function() local r, sus = scanRemotes() Fluent:Notify({ Title = "深度抓包", Content = "共 " .. #r .. " 个远程，可疑 " .. sus .. " 个，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描游戏模块(深度·含常量)", Callback = function() local m, ft, ac = scanGameModules() Fluent:Notify({ Title = "模块扫描", Content = "模块 " .. m .. " / 函数 " .. ft .. " / 反作弊特征 " .. ac .. "，详见控制台(F9)", Duration = 5 }) end })
 Tabs.AC:AddButton({ Title = "扫描并自动拦截反作弊", Callback = function() local n = AC.ScanAndBlock() Fluent:Notify({ Title = "自动拦截", Content = "已 hook 可疑 remote 数=" .. n .. "，详见控制台(F9)", Duration = 5 }) end })
+Tabs.AC:AddButton({ Title = "中和反作弊检测函数(getgc+常量匹配)", Callback = function() local n = AC.NeutralizeACFunctions() Fluent:Notify({ Title = "中和函数", Content = "已中和 " .. n .. " 个检测函数，详见控制台(F9)", Duration = 5 }) end })
+Tabs.AC:AddToggle("WatchRemotes", { Title = "监控新可疑remote(自动拦截)", Default = false, Callback = function(v) if v then AC.ExpandSuspiciousKeys() AC.WatchNewRemotesEnable() else AC.WatchNewRemotesDisable() end end })
 Tabs.AC:AddSection("绕过增强(反扫描/防检测)")
 Tabs.AC:AddButton({ Title = "GUI 防扫描(保护菜单不被AC发现)", Callback = function() local n = F.ProtectGui() Fluent:Notify({ Title = "GUI 保护", Content = "已保护 " .. n .. " 个界面", Duration = 4 }) end })
 Tabs.AC:AddToggle("BehaviorRandom", { Title = "行为随机化(速度微抖动防模式检测)", Default = false, Callback = function(v) T.BehaviorRandom = v if v then F.BehaviorRandomEnable() else F.BehaviorRandomDisable() end end })
@@ -4797,9 +4861,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.9.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.9.1")
+print("[CheatMenu] ✅ 加载完成 v5.10.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
