@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 02:16 sha bbf42773 bytes 229797'):format('2026-09-29 02:16','bbf42773',229797))
+print(('[CheatMenu] build 2026-09-29 02:29 sha 96bc277d bytes 232086'):format('2026-09-29 02:29','96bc277d',232086))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -54,9 +54,11 @@ for i = 1, n do parts[i] = F.Sanitize(select(i, ...)) end
 local line = table.concat(parts, " ")
 print(line)
 F._logBuf[#F._logBuf + 1] = line
-if F.LogFlush and #F._logBuf >= F.LOG_BUF_MAX then pcall(F.LogFlush, "自动") end
+if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
+pcall(F.LogFlush, "自动")
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.1.0 =====")
+end
+F.Out("[CheatMenu] ===== 加载开始 · v7.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -106,7 +108,8 @@ if RRemoteCache[ck] then return RRemoteCache[ck] end
 local function ok2(o)
 if not (o and o.Name == name) then return nil end
 if o:IsA(cls) then return o end
-if cls == "RemoteEvent" and AC.isRemoteLike(o) == "UnreliableRemoteEvent" then return o end
+local okU, isU = pcall(function() return o:IsA("UnreliableRemoteEvent") end)
+if cls == "RemoteEvent" and okU and isU then return o end
 return nil
 end
 local sh = RStorage:FindFirstChild("Shared")
@@ -358,7 +361,7 @@ if AC._nc then return true end
 local got = F.MetaInstall("__namecall", game, "AC", function(box)
 return function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
-if method == "Kick" and self == LP and T.NamecallHook then
+if method == "Kick" and rawequal(self, LP) and T.NamecallHook then
 F.Out("[CheatMenu] 拦下 Kick: " .. tostring(select(1, ...)))
 return nil
 end
@@ -878,6 +881,10 @@ if F._stealthHooked[obj] then return nil end
 if not (hookfunction and newcclosure) then return nil end
 local box = { orig = nil }
 local wrapper = wrapperFactory(box)
+if T.CloneHook and type(clonefunction) == "function" then
+local okc, cloned = pcall(clonefunction, wrapper)
+if okc and type(cloned) == "function" then wrapper = cloned end
+end
 local ok, res = pcall(function() return hookfunction(obj, newcclosure(wrapper)) end)
 if ok and type(res) == "function" then
 box.orig = res
@@ -1888,6 +1895,8 @@ return path, exec
 end
 function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
+if F._logFlushing then return nil end
+F._logFlushing = true
 local body = table.concat(F._logBuf, "\n") .. "\n"
 local pending = F._logBuf
 F._logBuf = {}
@@ -1898,6 +1907,7 @@ local hasRW = false
 pcall(function() hasRW = (type(writefile) == "function" and type(readfile) == "function") end)
 if not hasRW then
 F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「一键全量导出」可复制)")
+F._logFlushing = false
 return nil
 end
 for idx = 1, 20 do
@@ -1931,6 +1941,7 @@ if not okWrite then
 F._logBuf = pending
 F.Out("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许), 内容已留在缓冲, 可稍后重试")
 end
+F._logFlushing = false
 return usedName, #body
 end
 function F.LogDump(text, tag)
@@ -2432,7 +2443,7 @@ local got = F.MetaInstall("__namecall", game, "SAGhost", function(box)
 return function(self, ...)
 local method = getnamecallmethod()
 if T.SilentAimGhost and not checkcaller() then
-if method == "Raycast" and self == workspace then
+if method == "Raycast" and rawequal(self, workspace) then
 local args = { ... }
 local origin, direction = args[1], args[2]
 if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
@@ -3462,6 +3473,9 @@ function F.FlyPhysDisable()
 if FlyBvConn then FlyBvConn:Disconnect() FlyBvConn = nil end
 if FlyBv then pcall(function() FlyBv:Destroy() end) FlyBv = nil end
 if FlyBg then pcall(function() FlyBg:Destroy() end) FlyBg = nil end
+if F._flyAp then pcall(function() F._flyAp:Destroy() end) F._flyAp = nil end
+if F._flyAo then pcall(function() F._flyAo:Destroy() end) F._flyAo = nil end
+if F._flyAtt then pcall(function() F._flyAtt:Destroy() end) F._flyAtt = nil end
 local _, hum = GC()
 if hum then pcall(function() hum.PlatformStand = false end) end
 end
@@ -3472,6 +3486,27 @@ F.FlyPhysDisable()
 pcall(F.AuthorityGuard, true)
 hum.PlatformStand = true
 F._flyBaseY = root.Position.Y
+local modern = (T.FlyPhysModern == true)
+F._flyModern = modern
+if modern then
+F._flyAtt = Instance.new("Attachment")
+F._flyAtt.Name = "RootTilt"
+F._flyAtt.Parent = root
+F._flyAp = Instance.new("AlignPosition")
+F._flyAp.Attachment0 = F._flyAtt
+F._flyAp.Mode = Enum.PositionAlignmentMode.OneAttachment
+F._flyAp.MaxForce = 1e9
+F._flyAp.Responsiveness = 40
+F._flyAp.Position = root.Position
+F._flyAp.Parent = root
+F._flyAo = Instance.new("AlignOrientation")
+F._flyAo.Attachment0 = F._flyAtt
+F._flyAo.Mode = Enum.OrientationAlignmentMode.OneAttachment
+F._flyAo.MaxTorque = 1e9
+F._flyAo.Responsiveness = 40
+F._flyAo.CFrame = root.CFrame
+F._flyAo.Parent = root
+else
 FlyBv = Instance.new("BodyVelocity")
 FlyBv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
 FlyBv.Velocity = Vector3.zero
@@ -3480,11 +3515,15 @@ FlyBg = Instance.new("BodyGyro")
 FlyBg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
 FlyBg.P = 1e4
 FlyBg.Parent = root
+end
 if FlyBvConn then FlyBvConn:Disconnect() end
 FlyBvConn = RS.RenderStepped:Connect(function()
 if not T.FlyPhys then F.FlyPhysDisable() return end
 local _, _, r = GC()
-if not r or not FlyBv then return end
+if not r then return end
+if F._flyModern then
+if not F._flyAp then return end
+elseif not FlyBv then return end
 local cam = workspace.CurrentCamera
 local dir = Vector3.zero
 if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
@@ -3495,8 +3534,13 @@ if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
 local spd = F.Jitter(C.FlySpeed or 50)
 local targetVel = dir.Unit * spd * (dir.Magnitude > 0 and 1 or 0)
+if F._flyModern then
+F._flyAp.Position = F._flyAp.Position:Lerp(targetVel * 0.05 + r.Position, 0.35)
+F._flyAo.CFrame = cam.CFrame
+else
 FlyBv.Velocity = FlyBv.Velocity:Lerp(targetVel, 0.35)
 FlyBg.CFrame = cam.CFrame
+end
 F.FlyHeightCap(r, F._flyBaseY)
 end)
 end
@@ -4042,6 +4086,12 @@ if (not p) and part.Parent then p = part.Parent:FindFirstChildWhichIsA("Proximit
 if p and p.Enabled and not seen[p] then
 seen[p] = true
 if type(fireproximityprompt) == "function" then pcall(fireproximityprompt, p) end
+end
+local cd = part:FindFirstChildWhichIsA("ClickDetector")
+if (not cd) and part.Parent then cd = part.Parent:FindFirstChildWhichIsA("ClickDetector") end
+if cd and not seen[cd] then
+seen[cd] = true
+if type(fireclickdetector) == "function" then pcall(fireclickdetector, cd) end
 end
 end
 end
@@ -5387,7 +5437,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.1.0",
+SubTitle = "v7.2.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5522,6 +5572,10 @@ T.FlyPhys = (v == "物理飞行(更平滑)")
 FlyDisable() F.FlyPhysDisable()
 if T.Fly then FlyEnable()
 elseif T.FlyPhys then F.FlyPhysEnable() end
+end })
+Tabs.Move:AddToggle("FlyPhysModern", { Title = "物理飞行·现代约束(Align 代替 BodyMover)", Default = false, Callback = function(v)
+T.FlyPhysModern = v
+if T.FlyPhys then F.FlyPhysDisable() F.FlyPhysEnable() end
 end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddSlider("FlyMaxHeight", { Title = "飞行高度上限(0=不限)", Min = 0, Max = 2000, Default = 400, Rounding = 0, Callback = function(v) C.FlyMaxHeight = v end })
@@ -5898,6 +5952,10 @@ end })
 Tabs.AC:AddToggle("StealthAggressive", { Title = "激进隐身(把所有 Lua 闭包都伪装成 C 函数)", Default = true, Callback = function(v)
 F.StealthAggressive = v
 end })
+Tabs.AC:AddToggle("CloneHook", { Title = "hook 用独立闭包副本(少一条可比对特征)", Default = false, Callback = function(v)
+T.CloneHook = v
+Fluent:Notify({ Title = "hook 加固", Content = v and "已开启: 之后安装的 hook 都会先 clonefunction 复制" or "已关闭", Duration = 6 })
+end })
 Tabs.AC:AddButton({ Title = "按名中和反作弊函数(filtergc 定位)", Callback = function()
 task.spawn(function()
 local extra = {}
@@ -5962,9 +6020,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.1.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.2.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.1.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.2.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
