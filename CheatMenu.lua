@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 21:10 sha 4ad31e45 bytes 188646'):format('2026-09-28 21:10','4ad31e45',188646))
+print(('[CheatMenu] build 2026-09-28 21:14 sha 47afaf06 bytes 188927'):format('2026-09-28 21:14','47afaf06',188927))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.5 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.6 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1527,7 +1527,13 @@ local _, hum = GC()
 if hum then
 if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
 C._baseWalk = baseWalk
-hum.WalkSpeed = baseWalk * (C.SpeedMul or 2)
+local target = baseWalk * (C.SpeedMul or 2)
+local cur = hum.WalkSpeed
+if math.abs(cur - target) > 2 then
+pcall(function() hum.WalkSpeed = cur + (cur < target and 2 or -2) end)
+else
+pcall(function() hum.WalkSpeed = target end)
+end
 end
 end
 apply()
@@ -3529,6 +3535,7 @@ if not (hum and root) then return end
 local md = hum.MoveDirection
 if md.Magnitude < 0.01 then return end
 local sp = (C.SpeedCFrameMul or 2) * 16 * math.min(dt, 0.1)
+sp = math.min(sp, 8)
 root.CFrame = root.CFrame + md.Unit * sp
 end)
 print("[CheatMenu] CFrame 位移式加速已启用(不动 WalkSpeed, 最隐蔽)")
@@ -3543,13 +3550,14 @@ if (C.FlySpeed or 50) > 80 then C.FlySpeed = 80 end
 F._flyStealthThread = task.spawn(function()
 while T.FlyStealth do
 if T.Fly or T.FlyPhys then
-local _, _, root = GC()
+local _, hum, root = GC()
 if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, -25, 0) end)
 task.wait(0.12)
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end)
 end
 end
-task.wait(3)
+task.wait(1)
 end
 F._flyStealthThread = nil
 end)
@@ -4483,7 +4491,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.5",
+SubTitle = "v5.10.6",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -4872,9 +4880,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.5", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.6", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.5")
+print("[CheatMenu] ✅ 加载完成 v5.10.6")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
