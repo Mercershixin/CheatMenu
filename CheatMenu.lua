@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 17:05 sha 28fbf151 bytes 168847'):format('2026-09-28 17:05','28fbf151',168847))
+print(('[CheatMenu] build 2026-09-28 17:21 sha 2e96caea bytes 174863'):format('2026-09-28 17:21','2e96caea',174863))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.5.0 =====")
+print("[CheatMenu] ===== 加载开始 · v5.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3831,6 +3831,121 @@ else
 print("[CheatMenu] remote 调用失败: " .. tostring(err))
 end
 end
+function F.ChamsEnable()
+if F._chamsLoop then return end
+F._chamsBackup = F._chamsBackup or {}
+local function apply(pl)
+local ch = pl.Character
+if not ch then return end
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then
+if not F._chamsBackup[d] then
+F._chamsBackup[d] = { Material = d.Material, Color = d.Color }
+end
+pcall(function()
+d.Material = Enum.Material.Neon
+d.Color = (pl == LP) and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 40, 40)
+end)
+end
+end
+end
+local function applyAll()
+for _, pl in ipairs(Players:GetPlayers()) do apply(pl) end
+end
+applyAll()
+if F._chamsAddedConn then F._chamsAddedConn:Disconnect() end
+F._chamsAddedConn = Players.PlayerAdded:Connect(function(pl)
+pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
+end)
+F._chamsLoop = task.spawn(function()
+while T.Chams do
+task.wait(1)
+applyAll()
+end
+F._chamsLoop = nil
+end)
+print("[CheatMenu] Chams 材质透视已开启")
+end
+function F.ChamsDisable()
+if F._chamsAddedConn then F._chamsAddedConn:Disconnect() F._chamsAddedConn = nil end
+if F._chamsBackup then
+for part, bak in pairs(F._chamsBackup) do
+pcall(function() part.Material = bak.Material part.Color = bak.Color end)
+end
+end
+F._chamsBackup = nil
+end
+function F.BringPlayerEnable()
+if F._bringConn then return end
+F._bringConn = RS.Heartbeat:Connect(function()
+if not T.BringPlayer then return end
+local _, _, root = GC()
+if not root then return end
+local pl = C.FlingTarget and Players:FindFirstChild(C.FlingTarget)
+local hrp = pl and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
+if hrp then pcall(function() hrp.CFrame = root.CFrame * CFrame.new(0, 0, -3) end) end
+end)
+print("[CheatMenu] 拉玩家已开启")
+end
+function F.BringPlayerDisable()
+if F._bringConn then F._bringConn:Disconnect() F._bringConn = nil end
+end
+function F.SaveWaypoint(slot)
+local _, _, root = GC()
+if not root then return end
+F._waypoints = F._waypoints or {}
+F._waypoints[slot] = root.CFrame
+print("[CheatMenu] 已保存路径点 " .. tostring(slot))
+end
+function F.TpWaypoint(slot)
+F._waypoints = F._waypoints or {}
+local cf = F._waypoints[slot]
+if not cf then print("[CheatMenu] 路径点 " .. tostring(slot) .. " 为空") return end
+local _, _, r = GC()
+if r then pcall(function() r:PivotTo(cf) end) end
+print("[CheatMenu] 已传送到路径点 " .. tostring(slot))
+end
+F._binds = {}
+function F.BindKey(keyName, action)
+F._binds[keyName] = action
+end
+function F.KeybindApply(bindTable)
+F._binds = {}
+for action, key in pairs(bindTable) do
+if key and key ~= "无" then F._binds[key] = action end
+end
+end
+function F.KeybindEnable()
+if F._keybindConn then return end
+F._keybindConn = UIS.InputBegan:Connect(function(input, processed)
+if processed then return end
+local action = F._binds and F._binds[input.KeyCode.Name]
+if not action then return end
+if action == "Panic(关所有)" then
+for k in pairs(T) do T[k] = false end
+pcall(function() CM.FlyDisable() CM.SpeedDisable() CM.ESPDisable() CM.NoClipDisable() F.KillAuraDisable() end)
+elseif action == "飞行" then
+T.Fly = not T.Fly
+if T.Fly then CM.FlyEnable() else CM.FlyDisable() end
+elseif action == "自动攻击" then
+T.KillAura = not T.KillAura
+if T.KillAura then F.KillAuraEnable() else F.KillAuraDisable() end
+elseif action == "穿墙" then
+T.NoClip = not T.NoClip
+if T.NoClip then CM.NoClipEnable() else CM.NoClipDisable() end
+elseif action == "ESP 透视" then
+T.ESP = not T.ESP
+if T.ESP then CM.ESPEnable() else CM.ESPDisable() end
+elseif action == "隐身" then
+T.Invisible = not T.Invisible
+if T.Invisible then CM.InvisibleEnable() else CM.InvisibleDisable() end
+end
+end)
+print("[CheatMenu] 按键绑定已开启")
+end
+function F.KeybindDisable()
+if F._keybindConn then F._keybindConn:Disconnect() F._keybindConn = nil end
+end
 local LockHealthConn = nil
 function F.LockHealthEnable()
 if LockHealthConn then return end
@@ -3971,7 +4086,7 @@ return nil
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
-local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
+local disables = { F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.SpeedCFrameDisable, F.FlyStealthDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable, F.BringPlayerDisable, F.KeybindDisable, AC.TrapDisable.Disable, AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask, NoClipDisable }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(F.AntiAFKDisable)
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() end end)
@@ -4015,7 +4130,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.5.0",
+SubTitle = "v5.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4081,6 +4196,7 @@ Tabs.Combat:AddDropdown("FlingTarget", { Title = "甩飞目标玩家", Values = 
 Tabs.Combat:AddButton({ Title = "甩飞选中玩家", Callback = function() flingPlayerByName(C.FlingTarget) end })
 Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结选中玩家(本地)", Default = false, Callback = function(v) T.FreezePlayer = v if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end end })
 Tabs.Combat:AddToggle("HidePlayer", { Title = "本地隐藏选中玩家", Default = false, Callback = function(v) T.HidePlayer = v if v then F.HidePlayerEnable() else F.HidePlayerDisable() end end })
+Tabs.Combat:AddToggle("BringPlayer", { Title = "拉选中玩家过来(本地)", Default = false, Callback = function(v) T.BringPlayer = v if v then F.BringPlayerEnable() else F.BringPlayerDisable() end end })
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "反布娃娃/防击倒", Default = false, Callback = function(v) T.AntiRagdoll = v if v then F.AntiRagdollEnable() else F.AntiRagdollDisable() end end })
 Tabs.Combat:AddToggle("AntiKnockdown", { Title = "防被撞飞", Default = false, Callback = function(v) T.AntiKnockdown = v if v then F.AntiKnockdownEnable() else F.AntiKnockdownDisable() end end })
 Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(增大敌人命中框)", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
@@ -4111,6 +4227,7 @@ Tabs.Combat:AddToggle("ESPTeamColor", { Title = "敌我识别(敌红/友蓝/队�
 Tabs.Combat:AddToggle("ESPArrow", { Title = "方向箭头", Default = false, Callback = function(v) T.ESPArrow = v if v then F.ArrowEnable() else F.ArrowDisable() end end })
 Tabs.Combat:AddToggle("ESPSkeleton", { Title = "骨骼线", Default = false, Callback = function(v) T.ESPSkeleton = v if v then F.SkeletonEnable() else F.SkeletonDisable() end end })
 Tabs.Combat:AddToggle("BulletTracer", { Title = "子弹追踪", Default = false, Callback = function(v) T.BulletTracer = v if v then CM.BulletTracerEnable() else CM.BulletTracerDisable() end end })
+Tabs.Combat:AddToggle("Chams", { Title = "Chams 材质透视(玩家染色发光)", Default = false, Callback = function(v) T.Chams = v if v then F.ChamsEnable() else F.ChamsDisable() end end })
 end
 do
 Tabs.Move:AddSection("移动")
@@ -4206,6 +4323,10 @@ Tabs.TP:AddSlider("CircleSpeed", { Title = "环绕速度", Min = 1, Max = 30, De
 Tabs.TP:AddToggle("TeleportOnDeath", { Title = "死亡后继续传送", Default = false, Callback = function(v) T.TeleportOnDeath = v if v then CM.TeleportOnDeathEnable() end end })
 Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() CM.savePosition() end })
 Tabs.TP:AddButton({ Title = "传送回保存位置", Callback = function() CM.teleportToSaved() end })
+Tabs.TP:AddSection("路径点系统")
+Tabs.TP:AddDropdown("WPSlot", { Title = "路径点槽位(1-5)", Values = { "1", "2", "3", "4", "5" }, Default = "1", Callback = function(v) C.WPSlot = v end })
+Tabs.TP:AddButton({ Title = "保存到该槽位", Callback = function() F.SaveWaypoint(C.WPSlot or "1") end })
+Tabs.TP:AddButton({ Title = "传送到该槽位", Callback = function() F.TpWaypoint(C.WPSlot or "1") end })
 Tabs.TP:AddSection("传送增强")
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送(分段淡入,抗瞬移检测)", Default = false, Callback = function(v) T.TPSmooth = v end })
 Tabs.TP:AddSlider("TPSmoothSeg", { Title = "分段数(越多越隐蔽)", Min = 3, Max = 20, Default = 8, Rounding = 0, Callback = function(v) C.TPSmoothSeg = v end })
@@ -4367,6 +4488,13 @@ end })
 Tabs.Setting:AddToggle("Clicker", { Title = "自动连点器", Default = false, Callback = function(v) T.Clicker = v if v then CM.ClickerEnable() else CM.ClickerDisable() end end })
 Tabs.Setting:AddToggle("ToolGlow", { Title = "道具美化(手持发光)", Default = false, Callback = function(v) T.ToolGlow = v if v then CM.ToolGlowEnable() else CM.ToolGlowDisable() end end })
 Tabs.Setting:AddToggle("PanicKey", { Title = "Panic Key(F1 一键关闭所有功能)", Default = false, Callback = function(v) T.PanicKey = v if v then F.PanicKeyEnable() else F.PanicKeyDisable() end end })
+Tabs.Setting:AddSection("按键绑定")
+Tabs.Setting:AddToggle("Keybind", { Title = "按键绑定(启用·按下即切换)", Default = false, Callback = function(v) T.Keybind = v if v then F.KeybindEnable() else F.KeybindDisable() end end })
+Tabs.Setting:AddDropdown("BindF2", { Title = "F2 键绑定", Values = { "无", "Panic(关所有)", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F2", v) end })
+Tabs.Setting:AddDropdown("BindF3", { Title = "F3 键绑定", Values = { "无", "Panic(关所有)", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F3", v) end })
+Tabs.Setting:AddDropdown("BindF4", { Title = "F4 键绑定", Values = { "无", "Panic(关所有)", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F4", v) end })
+Tabs.Setting:AddDropdown("BindF5", { Title = "F5 键绑定", Values = { "无", "Panic(关所有)", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F5", v) end })
+Tabs.Setting:AddDropdown("BindF6", { Title = "F6 键绑定", Values = { "无", "Panic(关所有)", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F6", v) end })
 Tabs.Setting:AddButton({ Title = "服务器跳转", Callback = function() CM.ServerHop() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() CM.Rejoin() end })
 Tabs.Setting:AddButton({ Title = "复制脚本加载链接", Callback = function() copyToClipboard('loadstring(game:HttpGet("https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"))()') end })
@@ -4380,9 +4508,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.5.0", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.6.0", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.5.0")
+print("[CheatMenu] ✅ 加载完成 v5.6.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
