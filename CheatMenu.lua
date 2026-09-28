@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-29 01:48 sha f3c99d4a bytes 216126'):format('2026-09-29 01:48','f3c99d4a',216126))
+print(('[CheatMenu] build 2026-09-29 02:00 sha aa28d2ab bytes 222323'):format('2026-09-29 02:00','aa28d2ab',222323))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v6.10.0 =====")
+print("[CheatMenu] ===== 加载开始 · v7.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -47,7 +47,12 @@ local RRemoteCache = {}
 local function findRemote(name, cls)
 local ck = cls .. "\1" .. name
 if RRemoteCache[ck] then return RRemoteCache[ck] end
-local function ok2(o) return (o and o:IsA(cls) and o.Name == name) and o or nil end
+local function ok2(o)
+if not (o and o.Name == name) then return nil end
+if o:IsA(cls) then return o end
+if cls == "RemoteEvent" and AC.isRemoteLike(o) == "UnreliableRemoteEvent" then return o end
+return nil
+end
 local sh = RStorage:FindFirstChild("Shared")
 local pk = sh and sh:FindFirstChild("Packages")
 local net = pk and pk:FindFirstChild("Network")
@@ -130,6 +135,14 @@ AC._scriptWatchConn = nil
 AC._desyncOn = false
 AC._desyncLoc = CFrame.new()
 AC._desyncHook = nil
+AC.BLOCK_KEYS = {
+"iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit",
+"detected", "detection", "cheatdetector", "cheat-detector", "antihack", "anti-hack",
+"watchdog", "sentinel", "x-15", "x-16", "speedcheck", "flycheck", "clientcheck",
+"positioncheck", "position-check", "velocitycheck", "velocity-check",
+"movementcheck", "noclipcheck", "godcheck", "integrity", "checksum",
+"reportabuse", "adminabuse", "punishplayer", "banplayer", "flagplayer",
+}
 AC.SUS_KEYS = {
 "iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "detect",
 "ban", "kick", "flag", "report", "exploit", "cheat", "x-15", "x-16",
@@ -153,11 +166,70 @@ if name:find(AC.SUS_KEYS[i], 1, true) then return true end
 end
 return false
 end
+F.MetaLayers = {}
+F._metaSeq = 0
+function F.MetaInstall(slot, target, id, wrapperFactory)
+if not (hookmetamethod and newcclosure and getrawmetatable) then return nil end
+if type(slot) ~= "string" or type(id) ~= "string" or target == nil then return nil end
+local bucket = F.MetaLayers[slot]
+if not bucket then bucket = {} F.MetaLayers[slot] = bucket end
+if bucket[id] then F.MetaUninstall(slot, id) end
+local mt = getrawmetatable(target)
+if type(mt) ~= "table" or type(mt[slot]) ~= "function" then return nil end
+local box = { alive = true, orig = nil, id = id, slot = slot }
+local raw = wrapperFactory(box)
+if type(raw) ~= "function" then return nil end
+F._metaSeq = F._metaSeq + 1
+local rec = { id = id, slot = slot, target = target, box = box, raw = raw, seq = F._metaSeq, alive = true }
+local wrapped
+local okW = pcall(function()
+wrapped = newcclosure(function(self, ...)
+if not rec.alive then return box.orig(self, ...) end
+return raw(self, ...)
+end)
+end)
+if not (okW and type(wrapped) == "function") then return nil end
+local origFn
+local okH = pcall(function() origFn = hookmetamethod(target, slot, wrapped) end)
+if not (okH and type(origFn) == "function") then return nil end
+box.orig = origFn
+rec.wrapper = wrapped
+bucket[id] = rec
+return wrapped
+end
+function F.MetaUninstall(slot, id)
+local bucket = F.MetaLayers[slot]
+if not bucket then return false end
+local rec = bucket[id]
+if not rec or not rec.alive then return false end
+rec.alive = false
+rec.box.alive = false
+bucket[id] = nil
+local mt = getrawmetatable(rec.target)
+if type(mt) == "table" and mt[slot] == rec.wrapper then
+local ok = pcall(function() hookmetamethod(rec.target, slot, rec.box.orig) end)
+return ok
+end
+return true
+end
+function F.MetaActive(slot, id)
+local b = F.MetaLayers[slot]
+return (b and b[id] and b[id].alive) and true or false
+end
+function F.MetaReport()
+local out = {}
+for slot, bucket in pairs(F.MetaLayers) do
+local ids = {}
+for id in pairs(bucket) do ids[#ids + 1] = id end
+if #ids > 0 then out[#out + 1] = slot .. " -> " .. table.concat(ids, ",") end
+end
+if #out == 0 then return "元方法槽位: 空" end
+return "元方法槽位: " .. table.concat(out, " | ")
+end
 function AC.InstallNamecallHook()
-if not hookmetamethod or not newcclosure then return false end
 if AC._nc then return true end
-local old
-old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local got = F.MetaInstall("__namecall", game, "AC", function(box)
+return function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
 if method == "Kick" and self == LP and T.NamecallHook then
 print("[CheatMenu] 拦下 Kick: " .. tostring(select(1, ...)))
@@ -165,22 +237,22 @@ return nil
 end
 if (method == "FireServer" or method == "InvokeServer") and T.RemoteBlock and not checkcaller() then
 local name = tostring(self and self.Name or ""):lower()
-for _, kw in ipairs(AC.SUS_KEYS) do
+for _, kw in ipairs(AC.BLOCK_KEYS) do
 if name:find(kw, 1, true) then return nil end
 end
 end
-return old(self, ...)
-end))
-if type(old) ~= "function" then return false end
-AC._nc = true
-AC._ncOrig = old
-return true
+return box.orig(self, ...)
+end
+end)
+AC._nc = got ~= nil
+AC._ncLayer = got
+return AC._nc
 end
 function AC.UninstallNamecallHook()
-if not (AC._nc and hookmetamethod and AC._ncOrig) then return false end
-local ok = pcall(function() hookmetamethod(game, "__namecall", AC._ncOrig) end)
+if not AC._nc then return false end
+local ok = F.MetaUninstall("__namecall", "AC")
 AC._nc = false
-AC._ncOrig = nil
+AC._ncLayer = nil
 return ok
 end
 AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
@@ -454,10 +526,9 @@ local ok, under = pcall(function() return ch ~= nil and inst:IsDescendantOf(ch) 
 return ok and under or false
 end
 function AC.InstallIndexMask()
-if AC._idxMaskOn then AC.UninstallIndexMask() end
-if not (hookmetamethod and newcclosure) then return false end
-local ok, res = pcall(function()
-return hookmetamethod(game, "__index", newcclosure(function(t, k)
+if AC._idxMaskOn and F.MetaActive("game.__index", "ACIndexMask") then return true end
+local got = F.MetaInstall("game.__index", game, "ACIndexMask", function(box)
+return function(t, k)
 if (T.SpeedMask or T.ACBypass or T.PropertyLock) and not checkcaller() and typeof(t) == "Instance" then
 local _, hum = GC()
 if hum and t == hum then
@@ -471,23 +542,20 @@ end
 end
 if k == "GetFullName" and AC.isOwnChar(t) then return AC._HIDE_FAKE end
 end
-return AC._idxMaskOld(t, k)
-end))
-end)
-if ok and type(res) == "function" then
-AC._idxMaskOld = res
-AC._idxMaskOn = true
-return true
+return box.orig(t, k)
 end
-return false
+end)
+AC._idxMaskOn = got ~= nil
+AC._idxMaskLayer = got
+return AC._idxMaskOn
 end
 AC.InstallIndexHook = function() return AC.InstallIndexMask() end
 function AC.UninstallIndexMask()
-if AC._idxMaskOn and hookmetamethod and AC._idxMaskOld then
-pcall(function() hookmetamethod(game, "__index", AC._idxMaskOld) end)
+if AC._idxMaskOn then
+F.MetaUninstall("game.__index", "ACIndexMask")
 end
 AC._idxMaskOn = false
-AC._idxMaskOld = nil
+AC._idxMaskLayer = nil
 end
 AC._connDisabled = 0
 AC._forceConnSignals = true
@@ -774,14 +842,22 @@ if t == "s" then return "[C]" end
 if t == "l" then return 0 end
 if t == "f" then return f end
 if type(t) == "string" and #t > 1 then
-local r = box.orig(f, t, ...)
-if type(r) == "table" then
-if r.source ~= nil then r.source = "[C]" end
-if r.linedefined ~= nil then r.linedefined = 0 end
-if r.currentline ~= nil then r.currentline = 0 end
-if r.what ~= nil then r.what = "C" end
+local packed = table.pack(box.orig(f, t, ...))
+local first = packed[1]
+if type(first) == "table" then
+if first.source ~= nil then first.source = "[C]" end
+if first.linedefined ~= nil then first.linedefined = 0 end
+if first.currentline ~= nil then first.currentline = 0 end
+if first.what ~= nil then first.what = "C" end
+return first
 end
-return r
+for i = 1, packed.n do
+local v = packed[i]
+if type(v) == "string" and (v:sub(1, 1) == "@" or v:sub(1, 1) == "=") then
+packed[i] = "[C]"
+end
+end
+return table.unpack(packed, 1, packed.n)
 end
 end
 end
@@ -863,6 +939,9 @@ end
 return installed > 0
 end
 function F.StealthEnable()
+if F._stealthOn and next(F._stealthLayers or {}) ~= nil then
+return true, 0
+end
 local marked = F.markOwnClosures()
 local nA, okA = F.StealthDebugLayer()
 local okB, sameB = F.StealthGameDebugLayer()
@@ -921,7 +1000,6 @@ local oki, info = pcall(debug.getinfo, f, "n")
 if oki and info and info.name == name then out[#out + 1] = f end
 end
 end
-F._scavenging = false
 F._scavenging = keepScav
 end
 if #out == 0 then return nil, nil end
@@ -1483,11 +1561,9 @@ F.CAP_MAX = 240
 function F.CaptureEnable()
 if F._capOn then return true end
 if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
-F._capOn = true
 F._capLog = {}
-local old
-local ok = pcall(function()
-old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local got = F.MetaInstall("__namecall", game, "Capture", function(box)
+return function(self, ...)
 if F._capOn and not checkcaller() and typeof(self) == "Instance" then
 local m = getnamecallmethod()
 if m == "FireServer" or m == "InvokeServer" then
@@ -1519,26 +1595,25 @@ m = m, a = table.concat(parts, ", "),
 end
 end
 end
-return old(self, ...)
-end))
+return box.orig(self, ...)
+end
 end)
-if not (ok and type(old) == "function") then
+if not got then
 F._capOn = false
 return false
 end
-F._capOld = old
-AC.markHooked(old)
+F._capOn = true
+F._capLayer = got
 F.Out("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
 F.Out("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
 F.Out("[采集] 玩完点「一键全量导出」, 内容会复制到剪贴板, 直接粘给我即可")
 return true
 end
 function F.CaptureDisable()
+if not F._capOn then return 0 end
+F.MetaUninstall("__namecall", "Capture")
 F._capOn = false
-if F._capOld and hookmetamethod then
-pcall(function() hookmetamethod(game, "__namecall", F._capOld) end)
-end
-F._capOld = nil
+F._capLayer = nil
 F.Out("[采集] 已停止, 本次记录 " .. #F._capLog .. " 条")
 return #F._capLog
 end
@@ -1581,8 +1656,12 @@ for i = 1, #roots do
 local r = roots[i]
 if r then
 local bag = { r }
+local nA = 0
 for _, d in ipairs(r:GetDescendants()) do bag[#bag + 1] = d end
 for j = 1, #bag do
+nA = nA + 1
+if nA % 400 == 0 then task.wait() end
+if nA > 12000 then break end
 local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
 if okA and type(attrs) == "table" then
 for k, v in pairs(attrs) do
@@ -1691,6 +1770,7 @@ end
 function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
 local body = table.concat(F._logBuf, "\n") .. "\n"
+local pending = F._logBuf
 F._logBuf = {}
 local base = F.LogBaseName()
 local okWrite = false
@@ -1728,7 +1808,10 @@ end
 break
 end
 end
-if not okWrite then print("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许)") end
+if not okWrite then
+F._logBuf = pending
+print("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许), 内容已留在缓冲, 可稍后重试")
+end
 return usedName, #body
 end
 function F.LogDump(text, tag)
@@ -2206,7 +2289,7 @@ end
 local SilentAimGhostHook = nil
 local function SilentAimGhostDisable()
 if SilentAimGhostHook and hookmetamethod then
-pcall(function() hookmetamethod(game, "__namecall", SilentAimGhostHook) end)
+F.MetaUninstall("__namecall", "SAGhost")
 end
 SilentAimGhostHook = nil
 end
@@ -2226,9 +2309,8 @@ Distance = dist,
 Material = targetPart.Material or Enum.Material.Plastic,
 }
 end
-local old
-local ok, res = pcall(function()
-return hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local got = F.MetaInstall("__namecall", game, "SAGhost", function(box)
+return function(self, ...)
 local method = getnamecallmethod()
 if T.SilentAimGhost and not checkcaller() then
 if method == "Raycast" and self == workspace then
@@ -2237,14 +2319,14 @@ local origin, direction = args[1], args[2]
 if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
 local target = F.getAimTarget()
 if target then
-local hit = old(self, table.unpack(args))
+local hit = box.orig(self, table.unpack(args))
 if not hit or hit.Instance ~= target then
 return fakeRayResult(target, origin)
 end
 return hit
 end
 end
-return old(self, ...)
+return box.orig(self, ...)
 elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList"
 or method == "FindPartOnRayWithWhitelist" then
 local args = { ... }
@@ -2252,7 +2334,7 @@ local ray = args[1]
 if typeof(ray) == "Ray" then
 local target = F.getAimTarget()
 if target then
-local hitPart, hitPos = old(self, table.unpack(args))
+local hitPart, hitPos = box.orig(self, table.unpack(args))
 if not hitPart or hitPart ~= target then
 local goal = predictPos(target)
 local n = ray.Origin - goal
@@ -2265,13 +2347,10 @@ end
 end
 end
 end
-return old(self, ...)
-end))
-end)
-if ok and type(res) == "function" then
-old = res
-SilentAimGhostHook = AC.markOwn(res)
+return box.orig(self, ...)
 end
+end)
+if got then SilentAimGhostHook = got end
 end
 F._saMouseOn = false
 F._saMouseOld = nil
@@ -2354,22 +2433,21 @@ end
 function F.SilentAimUnifiedEnable()
 if F._saUnifiedHooked then return end
 if not (hookmetamethod and newcclosure) then return end
-local saOrig
-local okSa = pcall(function()
-saOrig = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local got = F.MetaInstall("__namecall", game, "SAUnified", function(box)
+return function(self, ...)
 local method = getnamecallmethod()
-if math.random(0, 100) > F.SilentAimChance then return F._saUnifiedOld(self, ...) end
+if math.random(0, 100) > F.SilentAimChance then return box.orig(self, ...) end
 local target = getClosestForUnified()
-if not target then return F._saUnifiedOld(self, ...) end
+if not target then return box.orig(self, ...) end
 local args = { ... }
 if method == "Raycast" and self == workspace then
 local origin, direction = args[1], args[2]
 if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-return F._saUnifiedOld(self, table.unpack(args))
+return box.orig(self, table.unpack(args))
 end
 local goal = predictPos(target)
 args[2] = (goal - origin).Unit * direction.Magnitude
-local real = F._saUnifiedOld(self, table.unpack(args))
+local real = box.orig(self, table.unpack(args))
 local d = goal - origin
 return {
 Instance = target,
@@ -2381,10 +2459,10 @@ Material = (real and real.Material) or target.Material or Enum.Material.Plastic,
 elseif method == "FindPartOnRay" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRayWithIgnoreList" then
 local ray = args[1]
 local origin = (typeof(ray) == "Ray") and ray.Origin or nil
-if not origin then return F._saUnifiedOld(self, table.unpack(args)) end
+if not origin then return box.orig(self, table.unpack(args)) end
 local goal = predictPos(target)
 args[1] = Ray.new(origin, (goal - origin).Unit * 1000)
-local hitPart, hitPos = F._saUnifiedOld(self, table.unpack(args))
+local hitPart, hitPos = box.orig(self, table.unpack(args))
 if not hitPart or hitPart ~= target then
 local n = origin - goal
 return target, goal, ((n.Magnitude > 0.001) and n.Unit or Vector3.new(0, 1, 0)),
@@ -2392,17 +2470,17 @@ target.Material or Enum.Material.Plastic
 end
 return hitPart, hitPos
 end
-if saOrig then return saOrig(self, ...) end
-end))
+return box.orig(self, ...)
+end
 end)
-if not (okSa and type(saOrig) == "function") then return end
-F._saUnifiedOld = saOrig
+if not got then return end
 F._saUnifiedHooked = true
+F._saUnifiedLayer = got
 print("[CheatMenu] 统一静默自瞄已开启")
 end
 function F.SilentAimUnifiedDisable()
-if F._saUnifiedHooked and hookmetamethod and F._saUnifiedOld then
-pcall(function() hookmetamethod(game, "__namecall", F._saUnifiedOld) end)
+if F._saUnifiedHooked then
+F.MetaUninstall("__namecall", "SAUnified")
 end
 F._saUnifiedHooked = false
 F._saUnifiedOld = nil
@@ -2750,6 +2828,13 @@ d.Visible = false
 end
 end
 end)
+if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
+F._skelQConn = Players.PlayerAdded:Connect(function()
+if not T.ESPSkeleton then return end
+task.wait(0.8)
+F.SkeletonDisable()
+if T.ESPSkeleton then F.SkeletonEnable() end
+end)
 print("[CheatMenu] 骨骼线: 使用 Drawing API (" .. #F._skeletonDrawings .. " 条)")
 return
 end
@@ -2803,6 +2888,7 @@ end
 end)
 end
 function F.SkeletonDisable()
+if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) F._skelQConn = nil end
 if F._skeletonConn then F._skeletonConn:Disconnect() F._skeletonConn = nil end
 if F._skeletonDrawings then
 for _, item in ipairs(F._skeletonDrawings) do pcall(function() item.drawing:Remove() end) end
@@ -2835,6 +2921,30 @@ lbl.Parent = bb
 F._arrowBbs[#F._arrowBbs + 1] = { bb = bb, lbl = lbl, pl = pl }
 end
 end
+if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) end
+F._arrowQConn = Players.PlayerAdded:Connect(function(pl)
+if not T.ESPArrow then return end
+task.wait(0.8)
+if not T.ESPArrow then return end
+local existing = false
+for _, e in ipairs(F._arrowBbs) do if e.pl == pl then existing = true break end end
+if existing or pl == LP or not pl.Character then return end
+local bb = Instance.new("BillboardGui")
+bb.Name = "CheatArrow"
+bb.Size = UDim2.fromOffset(40, 40)
+bb.StudsOffset = Vector3.new(0, 3.5, 0)
+bb.AlwaysOnTop = true
+bb.Parent = pl.Character
+local lbl = Instance.new("TextLabel")
+lbl.Size = UDim2.fromScale(1, 1)
+lbl.BackgroundTransparency = 1
+lbl.Text = "◆"
+lbl.TextSize = 36
+lbl.TextColor3 = Color3.fromRGB(255, 255, 80)
+lbl.TextStrokeTransparency = 0.5
+lbl.Parent = bb
+F._arrowBbs[#F._arrowBbs + 1] = { bb = bb, lbl = lbl, pl = pl }
+end)
 F._arrowConn = RS.RenderStepped:Connect(function()
 if not T.ESPArrow then F.ArrowDisable() return end
 local cam = workspace.CurrentCamera
@@ -2862,6 +2972,7 @@ end
 end)
 end
 function F.ArrowDisable()
+if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) F._arrowQConn = nil end
 if F._arrowConn then F._arrowConn:Disconnect() F._arrowConn = nil end
 for _, entry in ipairs(F._arrowBbs) do
 local bb = entry.bb or entry
@@ -2883,8 +2994,24 @@ hl.Parent = v
 F._trapHls[#F._trapHls + 1] = hl
 end
 end
+local function markOne(v)
+pcall(function()
+if not T.TrapsESP or not v:IsA("BasePart") then return end
+local n2 = v.Name:lower()
+if not (n2:find("trap") or n2:find("mine") or n2:find("spike") or n2:find("sentry")) then return end
+for _, e in ipairs(F._trapHls) do if e.Parent == v then return end end
+local hl = Instance.new("Highlight")
+hl.FillColor = Color3.fromRGB(255, 60, 60)
+hl.FillTransparency = 0.3
+hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+hl.Parent = v
+F._trapHls[#F._trapHls + 1] = hl
+end)
+end
+F._trapConn = workspace.DescendantAdded:Connect(markOne)
 end
 function F.TrapsESPDisable()
+if F._trapConn then pcall(function() F._trapConn:Disconnect() end) F._trapConn = nil end
 for _, hl in ipairs(F._trapHls) do pcall(function() hl:Destroy() end) end
 F._trapHls = {}
 end
@@ -3353,27 +3480,28 @@ if root.Parent then pcall(function() root.CFrame = AC._desyncLoc end) end
 end)
 end)
 end)
-local old
-old = hookmetamethod(game, "__index", newcclosure(function(self, key)
+local got = F.MetaInstall("game.__index", game, "Desync", function(box)
+return function(self, key)
 if AC._desyncOn and T.DesyncSpeed and not checkcaller() and key == "CFrame" then
 local ch = LP.Character
 local root = ch and ch:FindFirstChild("HumanoidRootPart")
 if root and self == root then return AC._desyncLoc end
 end
-return old(self, key)
-end))
-AC._desyncHookOld = old
-AC._desyncHook = true
+return box.orig(self, key)
+end
+end)
+AC._desyncHook = got ~= nil
+AC._desyncLayer = got
 end
 function F.DesyncSpeedDisable()
 AC._desyncOn = false
 if AC._desyncConn then pcall(function() AC._desyncConn:Disconnect() end) AC._desyncConn = nil end
 pcall(function() RS:UnbindFromRenderStep("CMDesyncRevert") end)
-if AC._desyncHook and AC._desyncHookOld and hookmetamethod then
-pcall(function() hookmetamethod(game, "__index", AC._desyncHookOld) end)
+if AC._desyncHook then
+F.MetaUninstall("game.__index", "Desync")
 end
 AC._desyncHook = nil
-AC._desyncHookOld = nil
+AC._desyncLayer = nil
 end
 F.JumpConn = nil
 function F.InfiniteJumpDisable() if F.JumpConn then F.JumpConn:Disconnect() F.JumpConn = nil end end
@@ -3742,9 +3870,7 @@ end
 local function Rejoin()
 pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LP) end)
 end
-local function ServerHop()
-pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LP) end)
-end
+local ServerHop = Rejoin
 local ToolGlowHl = nil
 local function ToolGlowDisable() if ToolGlowHl then ToolGlowHl:Destroy() ToolGlowHl = nil end end
 local function ToolGlowEnable()
@@ -4171,8 +4297,11 @@ stroke.Thickness = 1
 stroke.Transparency = 0.35
 stroke.Parent = circle
 F._fovGui = sg
+local lastFov = -1
 F._fovConn = RS.RenderStepped:Connect(function()
 local fov = C.AimFOV or 200
+if fov == lastFov then return end
+lastFov = fov
 circle.Size = UDim2.fromOffset(fov * 2, fov * 2)
 end)
 end
@@ -4259,6 +4388,8 @@ F._hiddenPlayers[pl] = true
 for _, d in ipairs(ch:GetDescendants()) do
 if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end
 end
+local hum0 = ch:FindFirstChildOfClass("Humanoid")
+if hum0 then pcall(function() hum0.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end) end
 if not F._hidePlConns then F._hidePlConns = {} end
 if not F._hidePlConns[pl] then
 F._hidePlConns[pl] = pl.CharacterAdded:Connect(function(nch)
@@ -4267,6 +4398,8 @@ if not F._hiddenPlayers[pl] then return end
 for _, d in ipairs(nch:GetDescendants()) do
 if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end
 end
+local h2 = nch:FindFirstChildOfClass("Humanoid")
+if h2 then pcall(function() h2.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end) end
 end)
 end
 end
@@ -4337,13 +4470,15 @@ F._flashConn = nil
 F._lastDeathCF = nil
 function F.FlashbackEnable()
 if F._flashConn then return end
+F._diedConns = {}
 local function hook(h)
 local hum = h and h:FindFirstChildOfClass("Humanoid")
 if hum then
-hum.Died:Connect(function()
+local conn = hum.Died:Connect(function()
 local _, _, r = GC()
 if r then F._lastDeathCF = r.CFrame end
 end)
+F._diedConns[#F._diedConns + 1] = conn
 end
 end
 hook(LP.Character)
@@ -4351,6 +4486,10 @@ F._flashConn = LP.CharacterAdded:Connect(function(h) task.wait(0.3) hook(h) end)
 end
 function F.FlashbackDisable()
 if F._flashConn then F._flashConn:Disconnect() F._flashConn = nil end
+if F._diedConns then
+for _, c in ipairs(F._diedConns) do pcall(function() c:Disconnect() end) end
+F._diedConns = nil
+end
 end
 function F.FlashbackGo()
 if F._lastDeathCF then smoothTP(F._lastDeathCF) end
@@ -4441,7 +4580,9 @@ F.PANIC_KEEP = { StealthMode = true, CharPersist = true, AutoSave = true, GuiPro
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
-for k in pairs(T) do T[k] = false end
+for k in pairs(T) do
+if type(T[k]) == "boolean" then T[k] = false end
+end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ FlyDisable, SpeedDisable, ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, FlyCarDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable }) do pcall(fn) end
@@ -4605,6 +4746,13 @@ F._magnetConn = nil
 F.MAGNET_TAGS = { "Brainrot", "Item", "Collectible", "Loot", "Pickup", "Cash", "Money" }
 function F.ItemMagnetEnable()
 if F._magnetConn then return end
+if not F._magnetAddedConn then
+F._magnetAddedConn = workspace.DescendantAdded:Connect(function(v)
+if not T.ItemMagnet then return end
+local okKind, isItem = pcall(function() return v:IsA("Tool") or v:IsA("Model") end)
+if okKind and isItem then F._magnetListAt = 0 end
+end)
+end
 F._magnetConn = RS.Heartbeat:Connect(function()
 if not T.ItemMagnet then return end
 local now = os.clock()
@@ -4626,7 +4774,10 @@ local node = queue[qi]; qi = qi + 1
 for _, ch2 in ipairs(node:GetChildren()) do
 nodes = nodes + 1
 scanList[#scanList + 1] = ch2
-if nodes < 4000 and (ch2:IsA("Folder") or ch2:IsA("Model")) then
+local okKind, isBranch = pcall(function()
+return ch2:IsA("Folder") or ch2:IsA("Model")
+end)
+if nodes < 4000 and okKind and isBranch then
 queue[#queue + 1] = ch2
 end
 end
@@ -4677,6 +4828,8 @@ end)
 end
 function F.ItemMagnetDisable()
 if F._magnetConn then F._magnetConn:Disconnect() F._magnetConn = nil end
+if F._magnetAddedConn then pcall(function() F._magnetAddedConn:Disconnect() end) F._magnetAddedConn = nil end
+F._magnetList, F._magnetListAt = nil, 0
 end
 F._spyHooked = nil
 F._spyOld = nil
@@ -4688,23 +4841,20 @@ if not mt then return end
 local prev = mt.__namecall
 if type(prev) ~= "function" then return end
 if not (hookmetamethod and newcclosure and getnamecallmethod) then return end
-local origSpy
-local okSpy = pcall(function()
-origSpy = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local got = F.MetaInstall("__namecall", game, "RemoteSpy", function(box)
+return function(self, ...)
 local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
 if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
 if not checkcaller() then
 print(string.format("[流量] %s:%s", tostring(self.Name), method))
 end
 end
-if origSpy then return origSpy(self, ...) end
-end))
+return box.orig(self, ...)
+end
 end)
-if not (okSpy and type(origSpy) == "function") then return end
-F._spyOld = prev
-F._spyOrig = origSpy
+if not got then return end
 F._spyHooked = true
-AC.markHooked(prev)
+F._spyLayer = got
 F._remoteDownConns = {}
 pcall(function()
 for _, d in ipairs(RStorage:GetDescendants()) do
@@ -4719,9 +4869,7 @@ end)
 end
 function F.RemoteSpyDisable()
 if not F._spyHooked then return end
-pcall(function()
-if hookmetamethod and F._spyOrig then hookmetamethod(game, "__namecall", F._spyOrig) end
-end)
+F.MetaUninstall("__namecall", "RemoteSpy")
 if F._remoteDownConns then
 for _, c in ipairs(F._remoteDownConns) do pcall(function() c:Disconnect() end) end
 F._remoteDownConns = nil
@@ -5095,7 +5243,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v6.10.0",
+SubTitle = "v7.0.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5469,6 +5617,12 @@ Duration = 8,
 end)
 end })
 Tabs.AC:AddInput("AttrKeyword", { Title = "属性名关键词(留空=全列)", Default = "", Placeholder = "如 Owner, Cash, IsHunter, Health", Callback = function(v) C.AttrKeyword = v end })
+Tabs.AC:AddButton({ Title = "元方法槽位自检(排查「开关亮着却不工作」)", Callback = function()
+local txt = F.MetaReport()
+print("[CheatMenu] " .. txt)
+print("[CheatMenu] 提示: 若某个开关是开的但槽位里没有它, 就是这个开关的 hook 已经被别人挤掉了")
+Fluent:Notify({ Title = "槽位自检", Content = txt, Duration = 10 })
+end })
 Tabs.AC:AddSection("全量采集与导出")
 Tabs.AC:AddButton({ Title = "开始采集 remote 调用(玩 5-10 分钟)", Callback = function()
 local ok = F.CaptureEnable()
@@ -5650,9 +5804,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v6.10.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.0.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v6.10.0")
+print("[CheatMenu] ✅ 加载完成 v7.0.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -5730,3 +5884,20 @@ addToggleButton(Window)
 startTogglePolish()
 end
 buildMenu()
+task.spawn(function()
+pcall(function()
+if not (Fluent and Fluent.Options) then return end
+local n = 0
+for name, opt in pairs(Fluent.Options) do
+if type(T[name]) == "boolean" and opt and type(opt.Set) == "function" then
+local ty = nil
+pcall(function() ty = opt.Type end)
+if ty == "Toggle" and opt.Value ~= T[name] then
+pcall(function() opt:Set(T[name]) end)
+n = n + 1
+end
+end
+end
+if n > 0 then print("[CheatMenu] 已按存档同步 " .. n .. " 个开关的界面状态") end
+end)
+end)
