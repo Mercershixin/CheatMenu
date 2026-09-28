@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-09-28 20:41 sha 8915769a bytes 189265'):format('2026-09-28 20:41','8915769a',189265))
+print(('[CheatMenu] build 2026-09-28 20:46 sha ea55b96c bytes 189494'):format('2026-09-28 20:46','ea55b96c',189494))
 local F = {}
-print("[CheatMenu] ===== 加载开始 · v5.10.1 =====")
+print("[CheatMenu] ===== 加载开始 · v5.10.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1337,7 +1337,7 @@ end
 end
 return false
 end
-local TRANS_MAX_CONCURRENT = 6
+local TRANS_MAX_CONCURRENT = 8
 local TransActive = 0
 local TransQueue = {}
 local transDrain
@@ -1360,6 +1360,13 @@ if hit then pcall(applyFn, hit) return end
 if #TransQueue > 200 then return end
 TransQueue[#TransQueue + 1] = { text = text, apply = applyFn }
 transDrain()
+end
+local function prewarmTranslate()
+task.spawn(function()
+local ok, r = pcall(Trans.Translate, "warmup", true)
+if ok and r then TransCache["warmup"] = r end
+print("[CheatMenu] 翻译服务预热完成")
+end)
 end
 local function translateGuiEl(obj)
 if not obj then return end
@@ -1392,6 +1399,7 @@ end
 local TransLoop = nil
 local function startTranslateLoop()
 if TransLoop then return end
+prewarmTranslate()
 scanAndTranslate()
 TransLoop = task.spawn(function()
 while T.Translate do
@@ -4475,7 +4483,7 @@ LoadConfig()
 loadTransCache()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v5.10.1",
+SubTitle = "v5.10.2",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = true,
@@ -4868,9 +4876,9 @@ T.KickRejoin = true
 F.AntiAFKEnable()
 F.KickGuardEnable()
 F.KickRejoinEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.1", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v5.10.2", Duration = 5 })
 RestoreFeatures()
-print("[CheatMenu] ✅ 加载完成 v5.10.1")
+print("[CheatMenu] ✅ 加载完成 v5.10.2")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
