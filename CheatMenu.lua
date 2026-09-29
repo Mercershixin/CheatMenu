@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 10:48 sha 28bb0b4d bytes 257070'):format('2026-09-29 10:48','28bb0b4d',257070))
+print(('[CheatMenu] build 2026-09-29 10:50 sha 222950d7 bytes 258764'):format('2026-09-29 10:50','222950d7',258764))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.5.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.5.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3536,6 +3536,33 @@ if onDone then pcall(onDone, F._srv.snap, per) end
 end
 end)
 end
+function F.SrvProbe(step, sec)
+local _, _, root = GC()
+if not root then return nil end
+step = tonumber(step) or 1.5
+sec = tonumber(sec) or 2
+local cam = workspace.CurrentCamera
+local dir = cam and cam.CFrame.LookVector or Vector3.new(1, 0, 0)
+dir = Vector3.new(dir.X, 0, dir.Z)
+if dir.Magnitude < 0.01 then dir = Vector3.new(1, 0, 0) end
+dir = dir.Unit
+local startPos = root.Position
+local intended, n, t0 = 0, 0, os.clock()
+while os.clock() - t0 < sec do
+local _, _, r = GC()
+if not r then break end
+r.CFrame = r.CFrame + dir * step
+intended = intended + step
+n = n + 1
+RS.Heartbeat:Wait()
+end
+local _, _, r2 = GC()
+if not r2 then return nil end
+local actual = (r2.Position - startPos):Dot(dir)
+local ratio = (intended > 0) and (actual / intended) or 0
+return { step = step, sec = sec, frames = n, intended = intended,
+actual = actual, ratio = ratio, fps = n / math.max(sec, 0.001) }
+end
 function F.SrvReport()
 task.spawn(function()
 local e = F.SafeEnvelope()
@@ -3553,12 +3580,14 @@ F.Out("⑥ 当前出厂参数     : 加速度上限 200 studs/s · 单帧 " .. s
 F.Out("⑦ 结论             : " .. (o.serverOwned
 and "服务端持有所有权 ⇒ 客户端位移会被覆盖, 属**机制性不可行**; 先点「夺取网络所有权」再谈参数"
 or "所有权在本地 ⇒ 位移可行; 仍被拉回则是服务端的速度/瞬移校验, 用「自适应测速」压进包线"))
+local pr = F.SrvProbe(tonumber(C.SpeedCFrameStep) or e.maxStep, 2)
+F.Out("⑧ 位移探针(2s)     : " .. (pr and string.format("意图 %.0f studs / 实走 %.0f ⇒ 通过率 %.0f%%",
+pr.intended, pr.actual, pr.ratio * 100) or "无角色") .. "   (需 >=90% 才算没被拉回)")
 F.Out("──────────────────────────────")
 end)
 end
 function F.SrvAutoTune(sec)
 task.spawn(function()
-sec = tonumber(sec) or 6
 local e = F.SafeEnvelope()
 F.Out(string.format("[Srv] 自适应测速开始: 物理帧率 %.0f · 安全包线 速度<%d · 每帧<%.2f · 瞬移<%.0f/0.1s",
 e.fps, e.maxSpeed, e.maxStep, e.maxTP))
@@ -3575,25 +3604,25 @@ for _ = 1, 6 do
 cand[#cand + 1] = v
 v = math.max(0.5, v * 0.7)
 end
-local best = nil
+local best, bestRatio = nil, -1
 for _, step in ipairs(cand) do
-C.SpeedCFrameStep = step
-local n, done = -1, false
-F.SrvSnapWatch(sec, function(cnt) n = cnt done = true end)
-local t = os.clock()
-while not done and os.clock() - t < sec + 3 do task.wait(0.1) end
-tried[#tried + 1] = string.format("%.2f→%d", step, n)
-if n == 0 then best = step break end
+local r = F.SrvProbe(step, 2)
+local ratio = (r and r.ratio) or 0
+if ratio > bestRatio then bestRatio = ratio end
+tried[#tried + 1] = string.format("%.2f→%.0f%%", step, ratio * 100)
+if ratio >= 0.9 then best = step break end
+task.wait(0.3)
 end
 if best then
 C.SpeedCFrameStep = best
-F.Out(string.format("[Srv] ✅ 自适应结果: 单帧 %.2f studs (≈%d studs/s) 在 %ds 内 0 次拉回, 已写入配置",
-best, math.floor(best * e.fps), sec))
+F.Out(string.format("[Srv] ✅ 自适应结果: 单帧 %.2f studs (≈%d studs/s) 位移通过率>=90%%, 已写入配置",
+best, math.floor(best * e.fps)))
 else
 C.SpeedCFrameStep = e.maxStep
-F.Out(string.format("[Srv] ⚠ 所有档位都被拉回, 已回落到安全包线 %.2f studs/帧 —— 该服务器的位移判定比公开阈值更严。", e.maxStep))
+F.Out(string.format("[Srv] ⚠ 所有档位通过率都不足 90%%(最好 %.0f%%), 已回落到安全包线 %.2f studs/帧 —— 该服务器的位移判定比公开阈值更严。",
+bestRatio * 100, e.maxStep))
 end
-F.Out("[Srv] 明细(档位→拉回次数): " .. table.concat(tried, ", "))
+F.Out("[Srv] 明细(单帧 studs→位移通过率): " .. table.concat(tried, ", "))
 end)
 end
 local FlyConn = nil
@@ -5935,7 +5964,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.5.0",
+SubTitle = "v7.5.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6109,7 +6138,17 @@ Tabs.Move:AddButton({ Title = "拉回探测(6 秒)", Callback = function() F.Srv
 Fluent:Notify({ Title = "拉回探测", Content = (n == 0) and "0 次拉回 —— 当前参数被服务器接受"
 or (tostring(n) .. " 次拉回 (约 " .. string.format("%.1f", per) .. " 次/秒) —— 用「自适应测速」压低"), Duration = 10 })
 end) end })
-Tabs.Move:AddButton({ Title = "★ 自适应测速(自动找到不被拉回的档位)", Callback = function() F.SrvAutoTune(6) end })
+Tabs.Move:AddButton({ Title = "位移探针(自动前进 2 秒, 量通过率)", Callback = function()
+task.spawn(function()
+local step = tonumber(C.SpeedCFrameStep) or F.SafeEnvelope().maxStep
+local r = F.SrvProbe(step, 2)
+local txt = r and string.format("单帧 %.2f · 意图 %.0f studs · 实走 %.0f ⇒ 通过率 %.0f%%",
+r.step, r.intended, r.actual, r.ratio * 100) or "无角色"
+F.Out("[Srv] 位移探针: " .. txt)
+if Fluent and Fluent.Notify then Fluent:Notify({ Title = "位移探针", Content = txt, Duration = 10 }) end
+end)
+end })
+Tabs.Move:AddButton({ Title = "★ 自适应测速(探针自动找安全档位)", Callback = function() F.SrvAutoTune(6) end })
 Tabs.Move:AddButton({ Title = "安全包线速查(由公开阈值反推)", Callback = function()
 local e = F.SafeEnvelope()
 local txt = string.format("物理帧率%.0f · 速度<%d · 每帧<%.2f · 瞬移<%.0f/0.1s · 滞空<%.1fs", e.fps, e.maxSpeed, e.maxStep, e.maxTP, e.maxAir)
@@ -6607,9 +6646,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.5.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.5.1 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.5.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.5.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
