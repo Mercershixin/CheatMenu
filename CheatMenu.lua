@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 21:47 sha 07493f43 bytes 255069'):format('2026-09-29 21:47','07493f43',255069))
+print(('[CheatMenu] build 2026-09-30 00:17 sha c60d387b bytes 255458'):format('2026-09-30 00:17','c60d387b',255458))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.10.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -576,7 +576,7 @@ if isHum and (k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight") then
 local _, hum = GC()
 if hum and t == hum then
 if k == "WalkSpeed" then
-if T.Speed then v = (C._baseWalk or 16) * (C.SpeedMul or 2) end
+if T.Speed then v = (C._baseWalk or 16) * 2 end
 elseif k == "JumpPower" then
 if T.InfiniteJump or T.Speed then v = 50 end
 elseif k == "JumpHeight" then
@@ -3826,7 +3826,7 @@ local _, hum, root = GC()
 if hum then
 if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
 C._baseWalk = baseWalk
-local target = baseWalk * (C.SpeedMul or 2)
+local target = tonumber(C.SpeedTarget) or 60
 local safe = (T.SafeClamp ~= false)
 local WALK_CAP = safe and math.min(200, 90) or 200
 local walk = math.min(target, WALK_CAP)
@@ -3859,7 +3859,6 @@ if not T.SpeedCFrame then F._speedCLeft = 0 F._srv.expectMove = 0 return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 dt = math.min(dt, 0.1)
-local mult = math.max(1, tonumber(C.SpeedCFrameMul) or 2)
 local md = hum.MoveDirection
 if md.Magnitude < 0.01 then F._speedCLeft = 0 return end
 if T.SpeedCFrameGroundOnly ~= false and hum.FloorMaterial == Enum.Material.Air then
@@ -3870,7 +3869,7 @@ local maxPerFrame = math.clamp(tonumber(C.SpeedCFrameStep) or 4, 0.5, 16)
 maxPerFrame = math.max(0.5, F.Jitter(maxPerFrame))
 if T.SafeClamp ~= false then maxPerFrame = math.min(maxPerFrame, F.SafeEnvelope().maxStep) end
 F._srv.dir = md.Unit
-local want = 16 * mult * dt + (F._speedCLeft or 0)
+local want = (tonumber(C.SpeedTarget) or 60) * dt + (F._speedCLeft or 0)
 local move = math.min(want, maxPerFrame)
 F._speedCLeft = want - move
 if move <= 0 then return end
@@ -4284,7 +4283,7 @@ if not ch then return end
 if SelfGlowHl then SelfGlowHl:Destroy() end
 SelfGlowHl = Instance.new("Highlight")
 SelfGlowHl.FillColor = Color3.fromRGB(255, 200, 80)
-SelfGlowHl.FillTransparency = 0.3
+SelfGlowHl.FillTransparency = 1
 SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
 SelfGlowHl.Parent = ch
 end
@@ -4334,7 +4333,7 @@ if not tool then return end
 if ToolGlowHl then ToolGlowHl:Destroy() end
 ToolGlowHl = Instance.new("Highlight")
 ToolGlowHl.FillColor = Color3.fromRGB(150, 200, 255)
-ToolGlowHl.FillTransparency = 0.4
+ToolGlowHl.FillTransparency = 1
 ToolGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
 ToolGlowHl.Parent = tool
 end
@@ -6024,7 +6023,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.10.0",
+SubTitle = "v8.0.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6198,24 +6197,40 @@ Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动 %(只向下 · 0=关, 
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
 Tabs.Move:AddButton({ Title = "★ 自适应压速(探针自动找不被拉回的档位)", Callback = function() F.SrvAutoTune(6) end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
-"关闭", "普通加速", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
-}, Default = "关闭", Callback = function(v)
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速(一个开关)", Default = false, Callback = function(v)
+T.Speed = v
+if v then
+if T.SpeedCFrame then F.SpeedCFrameEnable() else SpeedEnable() end
+else
+SpeedDisable() F.SpeedCFrameDisable()
+end
+end })
+Tabs.Move:AddSlider("SpeedTarget", { Title = "速度(studs/s · 人类默认16 · 100 是公开阈值)", Min = 16, Max = 300, Default = 60, Rounding = 0, Callback = function(v)
+C.SpeedTarget = v
+if not T.Speed then return end
+local cap = (T.SafeClamp ~= false) and 90 or 200
+if v > cap then
+F.Out(string.format("[加速] 目标 %d studs/s · 但被位移防护压在 %d —— 想更快请把「位移防护」设为「关闭」", v, cap))
+end
+end })
+Tabs.Move:AddDropdown("SpeedMode", { Title = "方式", Values = {
+"自动(行走速度+位移补偿)", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
+}, Default = "自动(行走速度+位移补偿)", Callback = function(v)
 C.SpeedMode = v
-T.Speed = (v == "普通加速")
 T.SpeedBypass = (v == "全绕过(属性锁+伪装回读)")
 T.SpeedCFrame = (v == "CFrame位移(最隐蔽)")
 T.DesyncSpeed = (v == "Desync(服务端看虚假位置)")
-SpeedDisable() AC.UninstallIndexMask() T.SpeedMask = false
-F.SpeedCFrameDisable() pcall(F.DesyncSpeedDisable)
-if T.Speed then SpeedEnable()
-elseif T.SpeedBypass then F.SpeedBypassEnable()
+SpeedDisable() F.SpeedCFrameDisable() pcall(F.DesyncSpeedDisable)
+AC.UninstallIndexMask() T.SpeedMask = false
+if T.SpeedBypass then F.SpeedBypassEnable() end
+if T.DesyncSpeed then F.DesyncSpeedEnable() end
+if T.Speed then
+if T.SpeedBypass then F.SpeedBypassEnable()
 elseif T.SpeedCFrame then F.SpeedCFrameEnable()
-elseif T.DesyncSpeed then F.DesyncSpeedEnable() end
+else SpeedEnable() end
+end
 end })
-Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
-Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "单帧位移上限(越小越隐蔽)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
-Tabs.Move:AddSlider("DesyncOffset", { Title = "Desync 下移偏移", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.DesyncOffset = v end })
+Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "CFrame模式: 单帧位移上限(受位移防护钳制)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end end })
 Tabs.Move:AddToggle("AirWalk", { Title = "踏空", Default = false, Callback = function(v) T.AirWalk = v if v then F.AirWalkEnable() else F.AirWalkDisable() end end })
@@ -6662,9 +6677,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.10.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.0.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.10.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.0.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
