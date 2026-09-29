@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 11:31 sha f166cf19 bytes 259464'):format('2026-09-29 11:31','f166cf19',259464))
+print(('[CheatMenu] build 2026-09-29 16:26 sha bc5e3a11 bytes 259480'):format('2026-09-29 16:26','bc5e3a11',259480))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.6.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3410,9 +3410,9 @@ end
 return mode, srv
 end
 function F.Jitter(base)
-local j = tonumber(C.MoveJitter) or 20
+local j = tonumber(C.MoveJitter) or 0
 if j <= 0 then return base end
-return base * (1 - j / 100 + math.random() * (2 * j / 100))
+return base * (1 - math.random() * j / 100)
 end
 function F.FlyHeightCap(root, baseY)
 local maxH = tonumber(C.FlyMaxHeight) or 400
@@ -3723,7 +3723,7 @@ F._srv.expectMove = sp
 F._srv.dir = dir.Magnitude > 0 and dir.Unit or nil
 F.FlyHeightCap(r, F._flyBaseY)
 F.FakeLand(h, r)
-if T.FlyVelSpoof ~= false then
+if T.VelSpoofOn == true then
 local cap = math.min(math.min(C.FlySpeed or 50, 1000), 60)
 local want = moved and (dir.Unit * cap) or Vector3.zero
 r.AssemblyLinearVelocity = r.AssemblyLinearVelocity:Lerp(want, 0.5)
@@ -3798,6 +3798,7 @@ if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
 local spd = F.Jitter(C.FlySpeed or 50)
+if T.SafeClamp ~= false then spd = math.min(spd, F.SafeEnvelope().maxSpeed) end
 local targetVel = dir.Unit * spd * (dir.Magnitude > 0 and 1 or 0)
 if F._flyModern then
 F._flyAp.Position = F._flyAp.Position:Lerp(targetVel * 0.05 + r.Position, 0.35)
@@ -3866,8 +3867,8 @@ F._speedCLeft = 0
 return
 end
 local maxPerFrame = math.clamp(tonumber(C.SpeedCFrameStep) or 4, 0.5, 16)
-if T.SafeClamp ~= false then maxPerFrame = math.min(maxPerFrame, F.SafeEnvelope().maxStep) end
 maxPerFrame = math.max(0.5, F.Jitter(maxPerFrame))
+if T.SafeClamp ~= false then maxPerFrame = math.min(maxPerFrame, F.SafeEnvelope().maxStep) end
 F._srv.dir = md.Unit
 local want = 16 * mult * dt + (F._speedCLeft or 0)
 local move = math.min(want, maxPerFrame)
@@ -6023,7 +6024,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.6.0",
+SubTitle = "v7.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6173,14 +6174,29 @@ if T.FlyPhys then F.FlyPhysDisable() F.FlyPhysEnable() end
 end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
 Tabs.Move:AddSlider("FlyMaxHeight", { Title = "飞行高度上限(0=不限)", Min = 0, Max = 2000, Default = 400, Rounding = 0, Callback = function(v) C.FlyMaxHeight = v end })
-Tabs.Move:AddToggle("FlyVelSpoof", { Title = "飞行速度伪装(复制的是人力量级)", Default = true, Callback = function(v) T.FlyVelSpoof = v end })
-Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动幅度(%, 0=关)", Min = 0, Max = 40, Default = 20, Rounding = 0, Callback = function(v) C.MoveJitter = v end })
-Tabs.Move:AddToggle("FakeLand", { Title = "位移·飞行假落地(避开滞空>2s 判定)", Default = true, Callback = function(v) T.FakeLand = v end })
-Tabs.Move:AddToggle("SrvHoldOwn", { Title = "位移·持续保持网络所有权(防游戏每秒抢回)", Default = false, Callback = function(v)
-T.SrvHoldOwn = v
-if v then F.SrvHoldEnable() else F.SrvHoldDisable() end
+Tabs.Move:AddDropdown("FlyDisguise", { Title = "位移防护(4合1)", Values = {
+"关闭", "标准(安全钳制+假落地)", "抗检测(+垂直钳制+保持所有权)", "全部(+速度属性伪装)",
+}, Default = "标准(安全钳制+假落地)", Callback = function(v)
+C.FlyDisguise = v
+local std = (v ~= "关闭")
+local hard = (v == "抗检测(+垂直钳制+保持所有权)" or v == "全部(+速度属性伪装)")
+local all = (v == "全部(+速度属性伪装)")
+T.SafeClamp = std
+T.FakeLand = std
+T.FlyStealth = hard
+T.SrvHoldOwn = hard
+T.VelSpoofOn = all
+if std then
+local e = F.SafeEnvelope()
+local step = tonumber(C.SpeedCFrameStep) or 4
+if step > e.maxStep then C.SpeedCFrameStep = e.maxStep end
+local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
+if op and op.Value ~= C.SpeedCFrameStep then pcall(function() op:Set(C.SpeedCFrameStep) end) end
+end
+if hard then F.SrvHoldEnable() F.FlyStealthEnable()
+else F.SrvHoldDisable() F.FlyStealthDisable() end
 end })
-Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
+Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动 %(只向下 · 0=关, 推荐 0)", Min = 0, Max = 40, Default = 0, Rounding = 0, Callback = function(v) C.MoveJitter = v end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
 "关闭", "普通加速", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
 }, Default = "关闭", Callback = function(v)
@@ -6199,16 +6215,6 @@ end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "单帧位移上限(越小越隐蔽)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
-Tabs.Move:AddToggle("SafeClamp", { Title = "位移·自动压进安全包线(≤90 studs/s · 默认开)", Default = true, Callback = function(v)
-T.SafeClamp = v
-if v then
-local e = F.SafeEnvelope()
-local step = tonumber(C.SpeedCFrameStep) or 4
-if step > e.maxStep then C.SpeedCFrameStep = e.maxStep end
-local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
-if op and op.Value ~= C.SpeedCFrameStep then pcall(function() op:Set(C.SpeedCFrameStep) end) end
-end
-end })
 Tabs.Move:AddToggle("SpeedCFrameGroundOnly", { Title = "只在地面提速(空中不提)", Default = true, Callback = function(v) T.SpeedCFrameGroundOnly = v end })
 Tabs.Move:AddSlider("DesyncOffset", { Title = "Desync 下移偏移", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.DesyncOffset = v end })
 Tabs.Move:AddSlider("DesyncSide", { Title = "Desync 侧向偏移", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v) C.DesyncSide = v end })
@@ -6683,9 +6689,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.6.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.7.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.6.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.7.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -6820,6 +6826,11 @@ for i = 2, 5 do
 local k = "F" .. i
 local act = C["Bind" .. k]
 if type(act) == "string" then F.BindKey(k, act) end
+end
+if C.FlyDisguise == nil then
+C.FlyDisguise = "标准(安全钳制+假落地)"
+T.SafeClamp, T.FakeLand = true, true
+T.SrvHoldOwn, T.FlyStealth, T.VelSpoofOn = false, false, false
 end
 local n = F.CfgSyncUI()
 if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
