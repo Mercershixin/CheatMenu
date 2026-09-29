@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 00:29 sha be1720be bytes 249424'):format('2026-09-30 00:29','be1720be',249424))
+print(('[CheatMenu] build 2026-09-30 01:15 sha 6f5a1976 bytes 237276'):format('2026-09-30 01:15','6f5a1976',237276))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.1.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2311,7 +2311,7 @@ table.sort(n)
 if #n == 0 then n[1] = "(无人)" end
 return n
 end
-F.PLAYER_DROPDOWNS = { "TPTarget", "FlingTarget", "PriorityTarget", "BlacklistTarget" }
+F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "BlacklistTarget" }
 function F.RefreshPlayerDropdowns()
 local names = F.PlayerNames()
 pcall(function()
@@ -5890,7 +5890,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.1.0",
+SubTitle = "v8.2.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5914,24 +5914,14 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄 / 锁敌")
-Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式(6合1)", Values = {
-"关闭", "自瞄(镜头锁定)", "静默自瞄(硬锁)",
-"静默自瞄·无痕(观战看不出)", "静默自瞄·鼠标(镜头不动)",
-"统一静默自瞄(多方法·推荐)",
-}, Default = "关闭", Callback = function(v)
+Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式", Values = { "关闭", "统一静默自瞄(多方法·推荐)" },
+Default = "关闭", Callback = function(v)
 C.AimMode = v
-T.Aim = (v == "自瞄(镜头锁定)")
-T.SilentAim = (v == "静默自瞄(硬锁)")
-T.SilentAimGhost = (v == "静默自瞄·无痕(观战看不出)")
-T.SilentAimMouse = (v == "静默自瞄·鼠标(镜头不动)")
-T.SilentAimUnified = (v == "统一静默自瞄(多方法·推荐)")
+T.Aim, T.SilentAim, T.SilentAimGhost, T.SilentAimMouse = false, false, false, false
+T.SilentAimUnified = (v ~= "关闭")
 AimDisable() SilentAimDisable() SilentAimGhostDisable()
 pcall(F.SilentAimMouseDisable) pcall(F.SilentAimUnifiedDisable)
-if T.Aim then AimEnable()
-elseif T.SilentAim then SilentAimEnable()
-elseif T.SilentAimGhost then SilentAimGhostEnable()
-elseif T.SilentAimMouse then F.SilentAimMouseEnable()
-elseif T.SilentAimUnified then F.SilentAimUnifiedEnable() end
+if T.SilentAimUnified then F.SilentAimUnifiedEnable() end
 end })
 Tabs.Combat:AddToggle("TriggerBot", { Title = "开火才锁", Default = false, Callback = function(v) T.TriggerBot = v end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
@@ -5953,72 +5943,46 @@ Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
 Tabs.Combat:AddButton({ Title = "清除优先级/黑名单", Callback = function() C.PriorityTargets = {} C.Blacklist = {} end })
 Tabs.Combat:AddSection("生存 / 防御")
-Tabs.Combat:AddDropdown("GodMode", { Title = "生命保护(4合1)", Values = {
-"关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血)",
-"锁血(指定值)", "防死亡+回血",
-}, Default = "关闭", Callback = function(v)
+Tabs.Combat:AddDropdown("GodMode", { Title = "生命保护", Values = { "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血)" },
+Default = "关闭", Callback = function(v)
 C.GodMode = v
 T.God = (v == "无敌(MaxHealth=∞)")
 T.StealthGod = (v == "隐蔽无敌(锁满血)")
-T.LockHealth = (v == "锁血(指定值)")
-T.NoDeath = (v == "防死亡+回血")
-T.Regen = (v == "防死亡+回血")
+T.LockHealth, T.NoDeath, T.Regen = false, false, false
 GodDisable() StealthGodDisable() LockHealthDisable() NoDeathDisable() RegenDisable()
-if T.God then GodEnable()
-elseif T.StealthGod then StealthGodEnable()
-elseif T.LockHealth then LockHealthEnable()
-elseif T.NoDeath then NoDeathEnable() RegenEnable() end
+if T.God then GodEnable() elseif T.StealthGod then StealthGodEnable() end
 end })
-Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
-Tabs.Combat:AddToggle("Invisible", { Title = "隐身(仅本地视角)", Default = false, Callback = function(v) T.Invisible = v if v then InvisibleEnable() else InvisibleDisable() end end })
-Tabs.Combat:AddToggle("Hitbox", { Title = "碰撞箱(透明)", Default = false, Callback = function(v) T.Hitbox = v if v then HitboxEnable() else HitboxDisable() end end })
-Tabs.Combat:AddDropdown("AntiRagdollMode", { Title = "防击倒(2合1)", Values = { "关闭", "反布娃娃", "防被撞飞", "全部开启" }, Default = "关闭", Callback = function(v)
-C.AntiRagdollMode = v
-T.AntiRagdoll = (v == "反布娃娃" or v == "全部开启")
-T.AntiKnockdown = (v == "防被撞飞" or v == "全部开启")
+Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
+C.AntiRagdollMode = v and "全部开启" or "关闭"
+T.AntiRagdoll, T.AntiKnockdown = v, v
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
-if T.AntiRagdoll then F.AntiRagdollEnable() end
-if T.AntiKnockdown then F.AntiKnockdownEnable() end
-end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
-Tabs.Combat:AddSection("对选中玩家 · 仅本地视角")
-Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(甩飞/冻结/拉取)", Values = F.PlayerNames(), Default = nil })
-Tabs.Combat:AddButton({ Title = "甩飞选中玩家", Callback = function() F.FlingTarget() end })
-Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结选中玩家(本地)", Default = false, Callback = function(v) T.FreezePlayer = v if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end end })
-Tabs.Combat:AddToggle("HidePlayer", { Title = "本地隐藏选中玩家", Default = false, Callback = function(v) T.HidePlayer = v if v then F.HidePlayerEnable() else F.HidePlayerDisable() end end })
-Tabs.Combat:AddToggle("BringPlayer", { Title = "拉选中玩家过来(本地)", Default = false, Callback = function(v) T.BringPlayer = v if v then F.BringPlayerEnable() else F.BringPlayerDisable() end end })
+if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
+end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then F.KillAuraEnable() else F.KillAuraDisable() end end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒, 上限25避开30/s检测)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Visual:AddSection("ESP 透视")
 Tabs.Visual:AddToggle("ESP", { Title = "ESP 总开关", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
-Tabs.Visual:AddDropdown("ESPStyle", { Title = "ESP 附加(11合1)", Values = {
+Tabs.Visual:AddDropdown("ESPStyle", { Title = "ESP 附加(7合1)", Values = {
 "完整(框+名称+距离+血条)", "简洁(仅方框)", "带追踪线", "彩虹全开",
-"骨骼线", "方向箭头", "Chams 材质透视", "子弹追踪",
-"陷阱透视", "Xray 透视", "自发光",
+"骨骼线", "Chams 材质透视", "陷阱透视",
 }, Default = "完整(框+名称+距离+血条)", Callback = function(v)
 C.ESPStyle = v
 T.ESPBox, T.ESPName, T.ESPDist, T.ESPHealth, T.ESPTracer, T.ESPRainbow = false, false, false, false, false, false
-T.ESPSkeleton = false T.ESPArrow = false
-T.Chams = false T.BulletTracer = false T.TrapsESP = false T.Xray = false T.SelfGlow = false
-pcall(F.SkeletonDisable) pcall(F.ArrowDisable) pcall(F.ChamsDisable)
-pcall(BulletTracerDisable) pcall(F.TrapsESPDisable)
-pcall(XrayDisable) pcall(SelfGlowDisable)
+T.ESPSkeleton = false
+T.Chams, T.TrapsESP = false, false
+pcall(F.SkeletonDisable) pcall(F.ChamsDisable) pcall(F.TrapsESPDisable)
 if v == "完整(框+名称+距离+血条)" then
 T.ESPBox, T.ESPName, T.ESPDist, T.ESPHealth = true, true, true, true
 elseif v == "简洁(仅方框)" then T.ESPBox = true
 elseif v == "带追踪线" then T.ESPBox, T.ESPName, T.ESPDist, T.ESPHealth, T.ESPTracer = true, true, true, true, true
 elseif v == "彩虹全开" then T.ESPBox, T.ESPName, T.ESPDist, T.ESPHealth, T.ESPTracer, T.ESPRainbow = true, true, true, true, true, true
 elseif v == "骨骼线" then T.ESPSkeleton = true F.SkeletonEnable()
-elseif v == "方向箭头" then T.ESPArrow = true F.ArrowEnable()
 elseif v == "Chams 材质透视" then T.Chams = true F.ChamsEnable()
-elseif v == "子弹追踪" then T.BulletTracer = true BulletTracerEnable()
 elseif v == "陷阱透视" then T.TrapsESP = true F.TrapsESPEnable()
-elseif v == "Xray 透视" then T.Xray = true XrayEnable()
-elseif v == "自发光" then T.SelfGlow = true SelfGlowEnable() end
-end })
-Tabs.Visual:AddDropdown("ESPBoxStyle", { Title = "ESP 方框样式", Values = { "边框", "角框", "两者" }, Default = "边框", Callback = function(v) C.ESPBoxStyle = v end })
+end
+end })Tabs.Visual:AddDropdown("ESPBoxStyle", { Title = "ESP 方框样式", Values = { "边框", "角框", "两者" }, Default = "边框", Callback = function(v) C.ESPBoxStyle = v end })
 Tabs.Visual:AddToggle("ESPTeamColor", { Title = "敌我识别(队伍变色)", Default = false, Callback = function(v) T.ESPTeamColor = v end })
 end
 do
@@ -6074,7 +6038,7 @@ elseif T.SpeedCFrame then F.SpeedCFrameEnable()
 else SpeedEnable() end
 end
 end })
-Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "CFrame模式: 单帧位移上限(受位移防护钳制)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
+Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "CFrame模式: 单帧位移上限", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end end })
 Tabs.Move:AddToggle("AirWalk", { Title = "踏空", Default = false, Callback = function(v) T.AirWalk = v if v then F.AirWalkEnable() else F.AirWalkDisable() end end })
@@ -6116,7 +6080,6 @@ Tabs.TP:AddSection("位置管理")
 Tabs.TP:AddDropdown("WPSlot", { Title = "位置槽位(1-5)", Values = F.WaypointLabels(), Default = "1: (空)", Callback = function(v) C.WPSlot = v end })
 Tabs.TP:AddButton({ Title = "保存当前位置", Callback = function() F.SaveWaypoint(C.WPSlot) end })
 Tabs.TP:AddButton({ Title = "传送到该位置", Callback = function() F.TpWaypoint(C.WPSlot) end })
-Tabs.TP:AddButton({ Title = "刷新位置列表", Callback = function() F.RefreshWaypointUI() end })
 Tabs.TP:AddToggle("Flashback", { Title = "记录死亡点", Default = false, Callback = function(v) T.Flashback = v if v then F.FlashbackEnable() else F.FlashbackDisable() end end })
 Tabs.TP:AddButton({ Title = "传回死亡点", Callback = function() F.FlashbackGo() end })
 Tabs.TP:AddToggle("TPSmooth", { Title = "平滑传送", Default = false, Callback = function(v) T.TPSmooth = v end })
@@ -6152,19 +6115,6 @@ if n and n > 0 then C.SellMinCPS = n end
 end })
 Tabs.AFK:AddButton({ Title = "一键收起脑红", Callback = function() withdrawAllBrainrots() end })
 Tabs.AFK:AddButton({ Title = "一键收钱", Callback = function() T.Collect = true collectAllCash() end })
-Tabs.AFK:AddSection("刷物品 / 工具")
-Tabs.AFK:AddButton({ Title = "丢出所有工具", Callback = function() F.DropAllTools() end })
-Tabs.AFK:AddDropdown("ToolPreset", { Title = "经典工具", Values = (function() local n = {} for k in pairs(TOOL_PRESETS) do n[#n+1] = k end table.sort(n) return n end)(), Default = "Linked Sword", Callback = function(v) C.ToolPreset = v end })
-Tabs.AFK:AddButton({ Title = "生成物品(经典工具/asset ID)", Callback = function()
-if C.ToolAssetId and C.ToolAssetId ~= "" then
-F.SpawnToolById(C.ToolAssetId, C.SpawnCount or 1)
-elseif C.ToolPreset then
-F.SpawnToolById(TOOL_PRESETS[C.ToolPreset], C.SpawnCount or 1)
-end
-end })
-Tabs.AFK:AddSection("物品吸附")
-Tabs.AFK:AddToggle("ItemMagnet", { Title = "物品吸附", Default = false, Callback = function(v) T.ItemMagnet = v if v then F.ItemMagnetEnable() else F.ItemMagnetDisable() end end })
-Tabs.AFK:AddSlider("MagnetRadius", { Title = "吸附半径", Min = 10, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.MagnetRadius = v end })
 end
 do
 Tabs.Trans:AddSection("本地翻译服务")
@@ -6177,10 +6127,6 @@ end
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v) C.TransLang = v end })
-Tabs.Trans:AddSlider("TransMax", { Title = "并发上限(要与 bat 的 -np 对齐)", Min = 1, Max = 16, Default = 8, Rounding = 0,
-Callback = function(v) Trans.Max = v C.TransMax = v end })
-Tabs.Trans:AddSlider("TransInterval", { Title = "最小请求间隔(秒, 防堆积)", Min = 0, Max = 2, Default = 0.15, Rounding = 2,
-Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.ChatTranslate = v
@@ -6191,40 +6137,6 @@ T.BubbleTranslate = v
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.Trans:AddSection("诊断")
-Tabs.Trans:AddButton({ Title = "服务体检(不经过模型)", Callback = function()
-local ok, info = Trans.Health()
-F.Out("[翻译] 体检: " .. (ok and ("正常 " .. info) or ("失败: " .. tostring(info))))
-Fluent:Notify({
-Title = "翻译服务",
-Content = ok and ("本地服务正常 · " .. tostring(info)) or ("连不上 " .. Trans.HOST .. " —— " .. tostring(info) .. " · 先双击「翻译模型开关.bat」"),
-Duration = 10,
-})
-end })
-Tabs.Trans:AddInput("TransTestIn", { Title = "测试文本", Default = "Sell All", Callback = function(v) C.TransTest = v end })
-Tabs.Trans:AddButton({ Title = "翻译这段(同步, 看真实返回)", Callback = function()
-task.spawn(function()
-local txt = C.TransTest or "Sell All"
-local t0 = os.clock()
-local r = Trans.Translate(txt, true)
-local ms = math.floor((os.clock() - t0) * 1000)
-F.Out(string.format("[翻译] %q -> %q (%dms)", txt, tostring(r), ms))
-Fluent:Notify({ Title = "翻译测试", Content = tostring(r) .. "  (" .. ms .. "ms)", Duration = 8 })
-end)
-end })
-Tabs.Trans:AddButton({ Title = "清空翻译缓存(含本地文件)", Callback = function()
-Trans.Cache = {}
-Trans.Save()
-Fluent:Notify({ Title = "翻译", Content = "缓存已清空", Duration = 5 })
-end })
-Tabs.Trans:AddButton({ Title = "把译文发到公屏(测 SendAsync)", Callback = function()
-local t = Trans.Translate(C.TransTest or "hello", true)
-if t then
-local ok = F.SendChat(t)
-Fluent:Notify({ Title = "翻译", Content = ok and ("已发送: " .. t) or "发送失败(本服聊天通道不可用)", Duration = 6 })
-else
-Fluent:Notify({ Title = "翻译", Content = "没拿到译文(先开总开关并确认服务在跑)", Duration = 6 })
-end
-end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACMaster", { Title = "反作弊主开关(全绕过+防护)", Default = false, Callback = function(v)
 if v then
@@ -6289,58 +6201,11 @@ pcall(F.ScanGameModules)
 Fluent:Notify({ Title = "扫描完成", Content = "见控制台 F9", Duration = 6 })
 end)
 end })
-Tabs.AC:AddButton({ Title = "扫描并自动拦截(隐藏 remote)", Callback = function()
-task.spawn(function()
-local n = AC.ScanAndBlock()
-Fluent:Notify({ Title = "扫描完成", Content = "已拦截 remote 共 " .. tostring(n) .. " 个", Duration = 6 })
-end)
-end })
 Tabs.AC:AddButton({ Title = "清理反作弊连接(getconnections)", Callback = function()
 task.spawn(function()
 local d, s = AC.DisableACConnections(true)
 Fluent:Notify({ Title = "反作弊", Content = "扫描 " .. tostring(s) .. " 条, 已禁用 " .. tostring(d) .. " 条", Duration = 6 })
 end)
-end })
-Tabs.AC:AddButton({ Title = "能力探测(哪些扫描能用 / 为什么没结果)", Callback = function()
-task.spawn(function()
-local _, okN, total = F.ProbeCapabilities(true)
-pcall(F.LogFlush, "能力探测")
-Fluent:Notify({
-Title = "能力探测",
-Content = "执行器可用 " .. tostring(okN) .. "/" .. tostring(total) .. " 项 —— 明细见控制台 F9",
-Duration = 8,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "属性扫描(游戏状态 / 反作弊标记)", Callback = function()
-task.spawn(function()
-local hits, scanned = F.ScanAttributes(C.AttrKeyword or "")
-pcall(F.LogFlush, "属性扫描")
-Fluent:Notify({
-Title = "属性扫描",
-Content = "扫过 " .. tostring(scanned) .. " 个实例, 命中 " .. tostring(#hits) .. " 条属性 —— 明细见控制台 F9",
-Duration = 8,
-})
-end)
-end })
-Tabs.AC:AddInput("AttrKeyword", { Title = "属性名关键词(留空=全列)", Default = "", Placeholder = "如 Owner, Cash, IsHunter, Health", Callback = function(v) C.AttrKeyword = v end })
-Tabs.AC:AddButton({ Title = "强反作弊识别(Adonis 指纹 + 阈值对齐自查)", Callback = function()
-task.spawn(function()
-local ac = AC.ThresholdReport()
-F.LogFlush("反作弊识别")
-Fluent:Notify({
-Title = "强反作弊识别",
-Content = (ac and ("检测到 " .. ac .. ", 已进入静默消毒输出") or "未检测到已知客户端指纹(服务端实现看不见)") ..
-" —— 阈值对齐明细见 F9",
-Duration = 12,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "元方法槽位自检(排查「开关亮着却不工作」)", Callback = function()
-local txt = F.MetaReport()
-F.Out("[CheatMenu] " .. txt)
-F.Out("[CheatMenu] 提示: 若某个开关是开的但槽位里没有它, 就是这个开关的 hook 已经被别人挤掉了")
-Fluent:Notify({ Title = "槽位自检", Content = txt, Duration = 10 })
 end })
 Tabs.AC:AddSection("全量采集与导出")
 Tabs.AC:AddButton({ Title = "开始采集 remote 调用(玩 5-10 分钟)", Callback = function()
@@ -6364,72 +6229,6 @@ Title = "全量导出",
 Content = "已生成 " .. tostring(#txt) .. " 字符; 已尝试复制到剪贴板, 直接粘贴即可。含服务端判定输入面(上行 remote 参数)",
 Duration = 10,
 })
-end)
-end })
-Tabs.AC:AddButton({ Title = "保存扫描快照(更新前先存一次)", Callback = function()
-task.spawn(function()
-local s = F.SnapshotSave()
-Fluent:Notify({
-Title = "快照",
-Content = "remote " .. tostring(#s.remotes) .. " · 反作弊碎片 " .. tostring(#s.acfns) ..
-" · 属性 " .. tostring(#s.attrs) .. " 种 · 脚本指纹 " .. tostring(#s.scripthashes),
-Duration = 8,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "与快照对比(游戏更新后用)", Callback = function()
-task.spawn(function()
-local d = F.SnapshotDiff()
-if not d then
-Fluent:Notify({ Title = "对比", Content = "还没有旧快照 —— 更新前先点一次「保存扫描快照」", Duration = 8 })
-return
-end
-Fluent:Notify({
-Title = "更新对比",
-Content = "新 remote " .. tostring(#d.remoteNew) .. " · 变了 " .. tostring(#d.remoteChanged) ..
-" · 反作弊碎片新增 " .. tostring(#d.acNew) .. " · 属性新增 " .. tostring(#d.attrNew) ..
-" · 脚本被改 " .. tostring(#d.hashChanged) .. " —— 明细见 F9",
-Duration = 12,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "导出日志到本地文件(按游戏名分文件)", Callback = function()
-task.spawn(function()
-local name, n = F.LogFlush("手动")
-F.LogWhere()
-Fluent:Notify({
-Title = "日志",
-Content = name and ("已追加 " .. tostring(n) .. " 字符 -> " .. name) or "本次没有待写内容(先跑一次扫描)",
-Duration = 10,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "查看日志文件路径", Callback = function()
-task.spawn(function()
-F.LogWhere()
-Fluent:Notify({ Title = "日志路径", Content = "路径已打印到 F9 控制台", Duration = 8 })
-end)
-end })
-Tabs.AC:AddButton({ Title = "清空日志缓冲(不删文件)", Callback = function()
-F._logBuf = {}
-Fluent:Notify({ Title = "日志", Content = "内存缓冲已清空(磁盘文件保留)", Duration = 5 })
-end })
-Tabs.AC:AddButton({ Title = "反作弊面测绘(能看见什么/看不见什么)", Callback = function()
-task.spawn(function()
-local snap = F.ACSurfaceReport()
-pcall(F.LogFlush, "反作弊面测绘")
-Fluent:Notify({
-Title = "反作弊面",
-Content = "可见: remote " .. tostring(#snap.remotes) .. " · 客户端碎片 " .. tostring(#snap.acfns) ..
-" · 属性 " .. tostring(#snap.attrs) .. " 种。服务端判定逻辑不可见(原理限制, 详见 F9)",
-Duration = 12,
-})
-end)
-end })
-Tabs.AC:AddButton({ Title = "删除 AnimationHandler(绕过部分反作弊)", Callback = function()
-task.spawn(function()
-local n = AC.RemoveAnimationHandler()
-Fluent:Notify({ Title = "反作弊", Content = "已删除 " .. n .. " 个 AnimationHandler", Duration = 4 })
 end)
 end })
 Tabs.AC:AddSection("防护(高级)")
@@ -6464,26 +6263,6 @@ Tabs.AC:AddToggle("CloneHook", { Title = "hook 用独立闭包副本(少一条�
 T.CloneHook = v
 Fluent:Notify({ Title = "hook 加固", Content = v and "已开启: 之后安装的 hook 都会先 clonefunction 复制" or "已关闭", Duration = 6 })
 end })
-Tabs.AC:AddButton({ Title = "按名中和反作弊函数(filtergc 定位)", Callback = function()
-task.spawn(function()
-local extra = {}
-local s = C.NeutralizeExtra
-if type(s) == "string" and s ~= "" then
-for part in s:gmatch("[^,，%s]+") do extra[#extra + 1] = part end
-end
-local hit, found = AC.NeutralizeByName(extra)
-Fluent:Notify({ Title = "按名中和", Content = "命中 " .. tostring(found) .. " 个具名函数, 已中和 " .. tostring(hit) .. " 个", Duration = 6 })
-end)
-end })
-Tabs.AC:AddInput("NeutralizeExtra", { Title = "额外中和的函数名(逗号分隔)", Default = "", Placeholder = "如 GetPlayerBanned,Detected", Callback = function(v) C.NeutralizeExtra = v end })
-Tabs.AC:AddButton({ Title = "元表剥离(让身份判定失效)", Callback = function()
-task.spawn(function()
-local key = tostring(C.StripKey or "applyImpulse")
-local n = AC.StripMetatable(key)
-Fluent:Notify({ Title = "元表剥离", Content = "含键 " .. key .. " 的表: " .. tostring(n) .. " 个已剥离", Duration = 6 })
-end)
-end })
-Tabs.AC:AddInput("StripKey", { Title = "剥离用的表键名", Default = "applyImpulse", Callback = function(v) C.StripKey = v end })
 end
 do
 Tabs.Setting:AddSection("设置")
@@ -6504,11 +6283,9 @@ Tabs.Setting:AddDropdown("BindF3", { Title = "F3 键绑定", Values = { "无", "
 Tabs.Setting:AddDropdown("BindF4", { Title = "F4 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F4", v) C.BindF4 = v end })
 Tabs.Setting:AddDropdown("BindF5", { Title = "F5 键绑定", Values = { "无", "飞行", "自动攻击", "穿墙", "ESP 透视", "隐身" }, Default = "无", Callback = function(v) F.BindKey("F5", v) C.BindF5 = v end })
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddButton({ Title = "换服(实为重进当前服, Roblox 无公开服务器列表 API)", Callback = function() ServerHop() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() Rejoin() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
-Tabs.Setting:AddButton({ Title = "连接诊断", Callback = function() F.DiagConnections() end })
 T.KickProtect = true
 T.AntiAFK = true
 T.KickGuard = true
@@ -6521,9 +6298,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.1.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.2.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.1.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.2.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -6660,7 +6437,7 @@ local act = C["Bind" .. k]
 if type(act) == "string" then F.BindKey(k, act) end
 end
 if C.FlyDisguise == nil then
-C.FlyDisguise = "标准(安全钳制+假落地)"
+C.FlyDisguise = "关闭"
 T.FakeLand = true
 T.SrvHoldOwn = false
 end
