@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 07:08 sha 5c027ca7 bytes 248552'):format('2026-09-29 07:08','5c027ca7',248552))
+print(('[CheatMenu] build 2026-09-29 10:48 sha 28bb0b4d bytes 257070'):format('2026-09-29 10:48','28bb0b4d',257070))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.4.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3424,6 +3424,178 @@ return true
 end
 return false
 end
+F._srv = {
+own = nil, ownAt = 0, holdConn = nil, takeOK = false,
+snap = 0, snapMax = 0, bad = 0, expectMove = 0, dir = nil,
+lastPos = nil, landAt = 0,
+}
+function F.SrvFPS()
+local f = 60
+pcall(function() f = workspace:GetRealPhysicsFPS() end)
+return math.clamp(tonumber(f) or 60, 30, 240)
+end
+function F.SafeEnvelope()
+local fps = F.SrvFPS()
+local e = {
+fps = fps,
+maxSpeed = 90,
+maxStep  = 90 / fps,
+maxTP    = 50 * 0.1 * fps,
+maxAir   = 1.4,
+}
+F._safeEnv = e
+return e
+end
+function F.SrvOwnInfo()
+local _, hum, root = GC()
+local o = { hasRoot = root ~= nil, owner = nil, ownerName = "(无角色)", serverOwned = nil }
+if not root then return o end
+pcall(function() o.owner = root:GetNetworkOwner() end)
+o.ownerName = o.owner and o.owner.Name or "nil(服务端持有)"
+o.serverOwned = (o.owner == nil)
+o.anchored = root.Anchored
+o.humState = "(未知)"
+pcall(function() o.humState = tostring(hum:GetState()) end)
+F._srv.own = o
+return o
+end
+function F.SrvOwnTake(verbose)
+local ch, _, root = GC()
+if not (ch and root) then return false end
+local parts = { root }
+pcall(function()
+for _, p in ipairs(ch:GetDescendants()) do
+if p:IsA("BasePart") then parts[#parts + 1] = p end
+end
+end)
+for _, p in ipairs(parts) do pcall(function() p:SetNetworkOwner(LP) end) end
+F._srv.ownAt = os.clock()
+local got = false
+pcall(function() local _, _, r2 = GC() if r2 then got = (r2:GetNetworkOwner() == LP) end end)
+F._srv.takeOK = got
+if verbose then
+F.Out("[Srv] 夺取网络所有权: 部件 " .. tostring(#parts) .. " 个, 回读 = " ..
+(got and "本地(成功)" or "仍非本地 / 读不到(该游戏可能持续抢回)"))
+end
+return got
+end
+function F.SrvHoldEnable()
+if F._srv.holdConn then return end
+F._srv.holdConn = RS.Heartbeat:Connect(function()
+if not T.SrvHoldOwn then return end
+local now = os.clock()
+if now - (F._srv.ownAt or 0) < 0.4 then return end
+F._srv.ownAt = now
+local _, _, root = GC()
+if root then pcall(function() root:SetNetworkOwner(LP) end) end
+end)
+end
+function F.SrvHoldDisable()
+if F._srv.holdConn then F._srv.holdConn:Disconnect() F._srv.holdConn = nil end
+end
+function F.FakeLand(hum, root)
+if T.FakeLand == false or not (hum and root) then return end
+local now = os.clock()
+if now - (F._srv.landAt or 0) < (tonumber(C.SafeLandSec) or 1.4) then return end
+F._srv.landAt = now
+pcall(function()
+if hum.FloorMaterial == Enum.Material.Air then
+hum:ChangeState(Enum.HumanoidStateType.Landed)
+end
+end)
+end
+function F.SrvSnapWatch(sec, onDone)
+sec = tonumber(sec) or 5
+F._srv.snap, F._srv.snapMax, F._srv.bad = 0, 0, 0
+F._srv.lastPos = nil
+local t0 = os.clock()
+local conn
+conn = RS.Heartbeat:Connect(function()
+local _, _, root = GC()
+if not root then return end
+local now = os.clock()
+local p = root.Position
+local want = tonumber(F._srv.expectMove) or 0
+if F._srv.lastPos then
+local d = p - F._srv.lastPos
+local moved = d.Magnitude
+F._srv.snapMax = math.max(F._srv.snapMax, moved)
+if want > 0.2 and moved > want * 2.5 then
+F._srv.snap = F._srv.snap + 1
+elseif want > 0.2 and F._srv.dir and d:Dot(F._srv.dir) < -0.5 and moved > 1.5 then
+F._srv.snap = F._srv.snap + 1
+end
+end
+F._srv.lastPos = p
+if now - t0 >= sec then
+conn:Disconnect()
+local per = F._srv.snap / sec
+F.Out(string.format("[Srv] 拉回探测 %.0fs: 反向/超量位移 %d 次 (单次最大 %.1f studs), 约 %.1f 次/秒",
+sec, F._srv.snap, F._srv.snapMax, per))
+if onDone then pcall(onDone, F._srv.snap, per) end
+end
+end)
+end
+function F.SrvReport()
+task.spawn(function()
+local e = F.SafeEnvelope()
+local o = F.SrvOwnInfo()
+local step = tonumber(C.SpeedCFrameStep) or 4
+F.Out("──────── 位移权威诊断 ────────")
+F.Out("① AuthorityMode   : " .. tostring(F._authorityMode or "(无此字段)"))
+F.Out("② 物理帧率         : " .. string.format("%.0f", e.fps))
+F.Out("③ 网络所有权(HRP)  : " .. tostring(o.ownerName))
+F.Out("④ 角色 Anchored    : " .. tostring(o.anchored) .. "   状态: " .. tostring(o.humState))
+F.Out("⑤ 安全包线         : 速度<" .. e.maxSpeed .. " · 每帧<" .. string.format("%.2f", e.maxStep) ..
+" · 瞬移<" .. string.format("%.0f", e.maxTP) .. "/0.1s · 滞空<" .. e.maxAir .. "s")
+F.Out("⑥ 当前出厂参数     : 加速度上限 200 studs/s · 单帧 " .. string.format("%.2f", step) ..
+" (≈" .. math.floor(step * e.fps) .. " studs/s)")
+F.Out("⑦ 结论             : " .. (o.serverOwned
+and "服务端持有所有权 ⇒ 客户端位移会被覆盖, 属**机制性不可行**; 先点「夺取网络所有权」再谈参数"
+or "所有权在本地 ⇒ 位移可行; 仍被拉回则是服务端的速度/瞬移校验, 用「自适应测速」压进包线"))
+F.Out("──────────────────────────────")
+end)
+end
+function F.SrvAutoTune(sec)
+task.spawn(function()
+sec = tonumber(sec) or 6
+local e = F.SafeEnvelope()
+F.Out(string.format("[Srv] 自适应测速开始: 物理帧率 %.0f · 安全包线 速度<%d · 每帧<%.2f · 瞬移<%.0f/0.1s",
+e.fps, e.maxSpeed, e.maxStep, e.maxTP))
+local o = F.SrvOwnInfo()
+F.Out("[Srv] 网络所有权: HRP = " .. tostring(o.ownerName) ..
+(o.serverOwned and "  ⇒ 服务端持有, 客户端位移必被覆盖" or "  ⇒ 本地持有, 可行"))
+if o.serverOwned and not F.SrvOwnTake(true) then
+F.Out("[Srv] ⛔ 抢不回所有权 ⇒ 该游戏的位移由服务端持有, **飞行/加速在此游戏不可行**(不是参数问题)。")
+F.Out("[Srv]    可先打开「持续保持网络所有权」再测一次; 仍失败就只能用游戏自身的机制移动。")
+end
+local cand, tried = {}, {}
+local v = math.max(tonumber(C.SpeedCFrameStep) or e.maxStep, e.maxStep)
+for _ = 1, 6 do
+cand[#cand + 1] = v
+v = math.max(0.5, v * 0.7)
+end
+local best = nil
+for _, step in ipairs(cand) do
+C.SpeedCFrameStep = step
+local n, done = -1, false
+F.SrvSnapWatch(sec, function(cnt) n = cnt done = true end)
+local t = os.clock()
+while not done and os.clock() - t < sec + 3 do task.wait(0.1) end
+tried[#tried + 1] = string.format("%.2f→%d", step, n)
+if n == 0 then best = step break end
+end
+if best then
+C.SpeedCFrameStep = best
+F.Out(string.format("[Srv] ✅ 自适应结果: 单帧 %.2f studs (≈%d studs/s) 在 %ds 内 0 次拉回, 已写入配置",
+best, math.floor(best * e.fps), sec))
+else
+C.SpeedCFrameStep = e.maxStep
+F.Out(string.format("[Srv] ⚠ 所有档位都被拉回, 已回落到安全包线 %.2f studs/帧 —— 该服务器的位移判定比公开阈值更严。", e.maxStep))
+end
+F.Out("[Srv] 明细(档位→拉回次数): " .. table.concat(tried, ", "))
+end)
+end
 local FlyConn = nil
 local function FlyDisable()
 if FlyConn then FlyConn:Disconnect() FlyConn = nil end
@@ -3451,13 +3623,18 @@ if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
 local moved = false
+local sp = 0
 if dir.Magnitude > 0 then
-local sp = math.min(C.FlySpeed or 50, 1000) * math.min(dt, 0.1)
+sp = math.min(C.FlySpeed or 50, 1000) * math.min(dt, 0.1)
 sp = F.Jitter(sp)
+if T.SafeClamp ~= false then sp = math.min(sp, F.SafeEnvelope().maxStep) end
 r.CFrame = r.CFrame + (dir.Unit * sp)
 moved = true
 end
+F._srv.expectMove = sp
+F._srv.dir = dir.Magnitude > 0 and dir.Unit or nil
 F.FlyHeightCap(r, F._flyBaseY)
+F.FakeLand(h, r)
 if T.FlyVelSpoof ~= false then
 local cap = math.min(math.min(C.FlySpeed or 50, 1000), 60)
 local want = moved and (dir.Unit * cap) or Vector3.zero
@@ -3561,7 +3738,8 @@ if hum then
 if not baseWalk then baseWalk = hum.WalkSpeed or 16 end
 C._baseWalk = baseWalk
 local target = baseWalk * (C.SpeedMul or 2)
-local WALK_CAP = 200
+local safe = (T.SafeClamp ~= false)
+local WALK_CAP = safe and math.min(200, 90) or 200
 local walk = math.min(target, WALK_CAP)
 local cur = hum.WalkSpeed
 if math.abs(cur - walk) > 2 then
@@ -3569,9 +3747,13 @@ pcall(function() hum.WalkSpeed = cur + (cur < walk and 2 or -2) end)
 else
 pcall(function() hum.WalkSpeed = walk end)
 end
-if doOffset and root and target > WALK_CAP and hum.MoveDirection.Magnitude > 0.1 then
+if doOffset and root and (not safe) and target > WALK_CAP and hum.MoveDirection.Magnitude > 0.1 then
 local extra = (target - WALK_CAP) * math.min(dt or 1/60, 0.1)
 pcall(function() root.CFrame = root.CFrame + hum.MoveDirection * extra end)
+end
+if root and hum.MoveDirection.Magnitude > 0.1 then
+F._srv.expectMove = walk * math.min(dt or 1/60, 0.1)
+F._srv.dir = hum.MoveDirection.Unit
 end
 end
 end
@@ -3584,7 +3766,7 @@ if F._speedCConn then return end
 F._speedCLeft = 0
 pcall(F.AuthorityGuard, true)
 F._speedCConn = RS.RenderStepped:Connect(function(dt)
-if not T.SpeedCFrame then F._speedCLeft = 0 return end
+if not T.SpeedCFrame then F._speedCLeft = 0 F._srv.expectMove = 0 return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 dt = math.min(dt, 0.1)
@@ -3596,11 +3778,14 @@ F._speedCLeft = 0
 return
 end
 local maxPerFrame = math.clamp(tonumber(C.SpeedCFrameStep) or 4, 0.5, 16)
+if T.SafeClamp ~= false then maxPerFrame = math.min(maxPerFrame, F.SafeEnvelope().maxStep) end
 maxPerFrame = math.max(0.5, F.Jitter(maxPerFrame))
+F._srv.dir = md.Unit
 local want = 16 * mult * dt + (F._speedCLeft or 0)
 local move = math.min(want, maxPerFrame)
 F._speedCLeft = want - move
 if move <= 0 then return end
+F._srv.expectMove = move
 local subs = math.max(1, math.ceil(move / 2))
 local per = move / subs
 local cf = root.CFrame
@@ -4779,6 +4964,7 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
+pcall(F.SrvHoldDisable)
 for _, fn in ipairs({ FlyDisable, SpeedDisable, ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, FlyCarDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
@@ -5691,7 +5877,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.UnspoofGCMetadata,
 F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
-F.NoClipDisable, ESPDisable, AutoInteractDisable,
+F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() KG.rjConn = nil end end)
@@ -5749,7 +5935,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.4.0",
+SubTitle = "v7.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5762,13 +5948,14 @@ local function buildMenu()
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
-World   = Window:AddTab({ Title = "视觉", Icon = "globe" }),
-TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
-AC      = Window:AddTab({ Title = "反作弊", Icon = "shield" }),
-Setting = Window:AddTab({ Title = "设置", Icon = "settings" }),
+System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
 }
+Tabs.World   = Tabs.Combat
+Tabs.TP      = Tabs.Move
+Tabs.AC      = Tabs.System
+Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("战斗")
 Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式(6合1)", Values = {
@@ -5900,13 +6087,34 @@ Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, 
 Tabs.Move:AddSlider("FlyMaxHeight", { Title = "飞行高度上限(0=不限)", Min = 0, Max = 2000, Default = 400, Rounding = 0, Callback = function(v) C.FlyMaxHeight = v end })
 Tabs.Move:AddToggle("FlyVelSpoof", { Title = "飞行速度伪装(复制的是人力量级)", Default = true, Callback = function(v) T.FlyVelSpoof = v end })
 Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动幅度(%, 0=关)", Min = 0, Max = 40, Default = 20, Rounding = 0, Callback = function(v) C.MoveJitter = v end })
-Tabs.Move:AddButton({ Title = "服务端权威检查(AuthorityMode)", Callback = function()
-local mode, srv = F.AuthorityGuard(false)
-local txt = (mode == nil) and "本游戏没有 AuthorityMode 字段, 位移走客户端权威(可放心用)"
-or (srv and ("AuthorityMode=" .. tostring(mode) .. " → 位移由服务端裁决, 飞行/加速会被引擎拒绝或回弹")
-or ("AuthorityMode=" .. tostring(mode) .. " → 客户端权威, 位移类功能可用"))
-if Fluent and Fluent.Notify then Fluent:Notify({ Title = "服务端权威", Content = txt, Duration = 8 }) end
-F.Out("[CheatMenu] " .. txt)
+Tabs.Move:AddSection("位移诊断 / 反拉回")
+Tabs.Move:AddButton({ Title = "★ 一页诊断(为什么被拉回)", Callback = function() F.SrvReport() end })
+Tabs.Move:AddButton({ Title = "夺取网络所有权(客户端位移的前提)", Callback = function() F.SrvOwnTake(true) end })
+Tabs.Move:AddToggle("SrvHoldOwn", { Title = "持续保持网络所有权(防游戏每秒抢回)", Default = false, Callback = function(v)
+T.SrvHoldOwn = v
+if v then F.SrvHoldEnable() else F.SrvHoldDisable() end
+end })
+Tabs.Move:AddToggle("SafeClamp", { Title = "自动压进安全包线(≤90 studs/s · 默认开)", Default = true, Callback = function(v)
+T.SafeClamp = v
+if v then
+local e = F.SafeEnvelope()
+local step = tonumber(C.SpeedCFrameStep) or 4
+if step > e.maxStep then C.SpeedCFrameStep = e.maxStep end
+local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
+if op and op.Value ~= C.SpeedCFrameStep then pcall(function() op:Set(C.SpeedCFrameStep) end) end
+end
+end })
+Tabs.Move:AddToggle("FakeLand", { Title = "飞行假落地(避开滞空>2s 判定)", Default = true, Callback = function(v) T.FakeLand = v end })
+Tabs.Move:AddButton({ Title = "拉回探测(6 秒)", Callback = function() F.SrvSnapWatch(6, function(n, per)
+Fluent:Notify({ Title = "拉回探测", Content = (n == 0) and "0 次拉回 —— 当前参数被服务器接受"
+or (tostring(n) .. " 次拉回 (约 " .. string.format("%.1f", per) .. " 次/秒) —— 用「自适应测速」压低"), Duration = 10 })
+end) end })
+Tabs.Move:AddButton({ Title = "★ 自适应测速(自动找到不被拉回的档位)", Callback = function() F.SrvAutoTune(6) end })
+Tabs.Move:AddButton({ Title = "安全包线速查(由公开阈值反推)", Callback = function()
+local e = F.SafeEnvelope()
+local txt = string.format("物理帧率%.0f · 速度<%d · 每帧<%.2f · 瞬移<%.0f/0.1s · 滞空<%.1fs", e.fps, e.maxSpeed, e.maxStep, e.maxTP, e.maxAir)
+F.Out("[Srv] 安全包线: " .. txt)
+if Fluent and Fluent.Notify then Fluent:Notify({ Title = "安全包线", Content = txt, Duration = 10 }) end
 end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
@@ -6399,9 +6607,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.4.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.5.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.4.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.5.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
