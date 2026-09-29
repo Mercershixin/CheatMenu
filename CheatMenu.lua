@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 16:26 sha bc5e3a11 bytes 259480'):format('2026-09-29 16:26','bc5e3a11',259480))
+print(('[CheatMenu] build 2026-09-29 21:32 sha 3be6ced5 bytes 259543'):format('2026-09-29 21:32','3be6ced5',259543))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.7.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -6024,7 +6024,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.7.0",
+SubTitle = "v7.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6036,12 +6036,13 @@ pcall(function() Fluent:ToggleTransparency(true) end)
 local function buildMenu()
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
+Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
 }
-Tabs.World   = Tabs.Combat
+Tabs.World   = Tabs.Visual
 Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
@@ -6127,9 +6128,9 @@ Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒, �
 Tabs.Combat:AddToggle("AimPriorityNearest", { Title = "只打最近的目标", Default = false, Callback = function(v) T.AimPriorityNearest = v end })
 Tabs.Combat:AddToggle("AntiAim", { Title = "Anti-Aim 反瞄准(旋转)", Default = false, Callback = function(v) T.AntiAim = v if v then F.AntiAimEnable() else F.AntiAimDisable() end end })
 Tabs.Combat:AddSlider("AntiAimSpeed", { Title = "Anti-Aim 旋转速度", Min = 5, Max = 180, Default = 30, Rounding = 0, Callback = function(v) C.AntiAimSpeed = v end })
-Tabs.Combat:AddSection("ESP 透视")
-Tabs.Combat:AddToggle("ESP", { Title = "ESP 总开关", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
-Tabs.Combat:AddDropdown("ESPStyle", { Title = "ESP 附加(11合1)", Values = {
+Tabs.Visual:AddSection("ESP 透视")
+Tabs.Visual:AddToggle("ESP", { Title = "ESP 总开关", Default = false, Callback = function(v) T.ESP = v if v then ESPEnable() else ESPDisable() end end })
+Tabs.Visual:AddDropdown("ESPStyle", { Title = "ESP 附加(11合1)", Values = {
 "完整(框+名称+距离+血条)", "简洁(仅方框)", "带追踪线", "彩虹全开",
 "骨骼线", "方向箭头", "Chams 材质透视", "子弹追踪",
 "陷阱透视", "Xray 透视", "自发光",
@@ -6154,8 +6155,8 @@ elseif v == "陷阱透视" then T.TrapsESP = true F.TrapsESPEnable()
 elseif v == "Xray 透视" then T.Xray = true XrayEnable()
 elseif v == "自发光" then T.SelfGlow = true SelfGlowEnable() end
 end })
-Tabs.Combat:AddDropdown("ESPBoxStyle", { Title = "ESP 方框样式", Values = { "边框", "角框", "两者" }, Default = "边框", Callback = function(v) C.ESPBoxStyle = v end })
-Tabs.Combat:AddToggle("ESPTeamColor", { Title = "敌我识别(队伍变色)", Default = false, Callback = function(v) T.ESPTeamColor = v end })
+Tabs.Visual:AddDropdown("ESPBoxStyle", { Title = "ESP 方框样式", Values = { "边框", "角框", "两者" }, Default = "边框", Callback = function(v) C.ESPBoxStyle = v end })
+Tabs.Visual:AddToggle("ESPTeamColor", { Title = "敌我识别(队伍变色)", Default = false, Callback = function(v) T.ESPTeamColor = v end })
 end
 do
 Tabs.Move:AddSection("移动")
@@ -6689,9 +6690,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.7.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.8.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.7.0")
+F.Out("[CheatMenu] ✅ 加载完成 v7.8.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
