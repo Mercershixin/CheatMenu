@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-29 10:50 sha 222950d7 bytes 258764'):format('2026-09-29 10:50','222950d7',258764))
+print(('[CheatMenu] build 2026-09-29 11:31 sha f166cf19 bytes 259464'):format('2026-09-29 11:31','f166cf19',259464))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v7.5.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v7.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3563,6 +3563,65 @@ local ratio = (intended > 0) and (actual / intended) or 0
 return { step = step, sec = sec, frames = n, intended = intended,
 actual = actual, ratio = ratio, fps = n / math.max(sec, 0.001) }
 end
+function F.SrvOneClick()
+task.spawn(function()
+local e = F.SafeEnvelope()
+local o = F.SrvOwnInfo()
+local L = {}
+L[#L + 1] = "物理帧率 " .. string.format("%.0f", e.fps) .. " · 安全包线: 速度<" .. e.maxSpeed ..
+" · 每帧<" .. string.format("%.2f", e.maxStep) .. " · 瞬移<" .. string.format("%.0f", e.maxTP) .. "/0.1s"
+L[#L + 1] = "① 网络所有权(HRP) = " .. tostring(o.ownerName)
+local fixed = false
+if o.serverOwned then
+if F.SrvOwnTake(true) then
+L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓ (仍被拉回就打开「持续保持所有权」)"
+fixed = true
+else
+L[#L + 1] = "② ⛔ 抢不回所有权 ⇒ **该游戏位移类功能不可行**(服务端持有, 不是参数问题)"
+end
+else
+L[#L + 1] = "② 所有权本来就在本地 ✓"
+end
+local step = tonumber(C.SpeedCFrameStep) or e.maxStep
+local r = F.SrvProbe(step, 2)
+if not r then
+L[#L + 1] = "③ 探针: 没有角色, 无法测"
+else
+L[#L + 1] = string.format("③ 探针(单帧 %.2f): 意图 %.0f / 实走 %.0f ⇒ 通过率 %.0f%%",
+r.step, r.intended, r.actual, r.ratio * 100)
+if r.ratio < 0.9 then
+L[#L + 1] = "④ 通过率不足 ⇒ 自动逐档下调…"
+local s = step * 0.7
+for _ = 1, 4 do
+s = math.max(0.5, s)
+if s >= step then break end
+local r2 = F.SrvProbe(s, 2)
+if r2 and r2.ratio >= 0.9 then
+C.SpeedCFrameStep = s
+local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
+if op and op.Value ~= s then pcall(function() op:Set(s) end) end
+L[#L + 1] = string.format("⑤ ✅ 已把单帧位移下调到 %.2f (≈%d studs/s), 通过率 %.0f%%, 已写入配置",
+s, math.floor(s * e.fps), r2.ratio * 100)
+fixed = true
+break
+end
+s = s * 0.7
+end
+if not fixed then
+L[#L + 1] = "⑤ ⚠ 压到 0.5 仍不达标 ⇒ 该服务器位移判定比公开阈值更严"
+end
+else
+L[#L + 1] = "④ 当前档位被服务端接受, 无需调整"
+end
+end
+F.Out("──── 反拉回诊断 ────")
+for _, s in ipairs(L) do F.Out("  " .. s) end
+F.Out("────────────────────")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "反拉回诊断", Content = table.concat(L, "\n"), Duration = 15 })
+end
+end)
+end
 function F.SrvReport()
 task.spawn(function()
 local e = F.SafeEnvelope()
@@ -5964,7 +6023,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v7.5.1",
+SubTitle = "v7.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6116,44 +6175,10 @@ Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, 
 Tabs.Move:AddSlider("FlyMaxHeight", { Title = "飞行高度上限(0=不限)", Min = 0, Max = 2000, Default = 400, Rounding = 0, Callback = function(v) C.FlyMaxHeight = v end })
 Tabs.Move:AddToggle("FlyVelSpoof", { Title = "飞行速度伪装(复制的是人力量级)", Default = true, Callback = function(v) T.FlyVelSpoof = v end })
 Tabs.Move:AddSlider("MoveJitter", { Title = "位移抖动幅度(%, 0=关)", Min = 0, Max = 40, Default = 20, Rounding = 0, Callback = function(v) C.MoveJitter = v end })
-Tabs.Move:AddSection("位移诊断 / 反拉回")
-Tabs.Move:AddButton({ Title = "★ 一页诊断(为什么被拉回)", Callback = function() F.SrvReport() end })
-Tabs.Move:AddButton({ Title = "夺取网络所有权(客户端位移的前提)", Callback = function() F.SrvOwnTake(true) end })
-Tabs.Move:AddToggle("SrvHoldOwn", { Title = "持续保持网络所有权(防游戏每秒抢回)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("FakeLand", { Title = "位移·飞行假落地(避开滞空>2s 判定)", Default = true, Callback = function(v) T.FakeLand = v end })
+Tabs.Move:AddToggle("SrvHoldOwn", { Title = "位移·持续保持网络所有权(防游戏每秒抢回)", Default = false, Callback = function(v)
 T.SrvHoldOwn = v
 if v then F.SrvHoldEnable() else F.SrvHoldDisable() end
-end })
-Tabs.Move:AddToggle("SafeClamp", { Title = "自动压进安全包线(≤90 studs/s · 默认开)", Default = true, Callback = function(v)
-T.SafeClamp = v
-if v then
-local e = F.SafeEnvelope()
-local step = tonumber(C.SpeedCFrameStep) or 4
-if step > e.maxStep then C.SpeedCFrameStep = e.maxStep end
-local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
-if op and op.Value ~= C.SpeedCFrameStep then pcall(function() op:Set(C.SpeedCFrameStep) end) end
-end
-end })
-Tabs.Move:AddToggle("FakeLand", { Title = "飞行假落地(避开滞空>2s 判定)", Default = true, Callback = function(v) T.FakeLand = v end })
-Tabs.Move:AddButton({ Title = "拉回探测(6 秒)", Callback = function() F.SrvSnapWatch(6, function(n, per)
-Fluent:Notify({ Title = "拉回探测", Content = (n == 0) and "0 次拉回 —— 当前参数被服务器接受"
-or (tostring(n) .. " 次拉回 (约 " .. string.format("%.1f", per) .. " 次/秒) —— 用「自适应测速」压低"), Duration = 10 })
-end) end })
-Tabs.Move:AddButton({ Title = "位移探针(自动前进 2 秒, 量通过率)", Callback = function()
-task.spawn(function()
-local step = tonumber(C.SpeedCFrameStep) or F.SafeEnvelope().maxStep
-local r = F.SrvProbe(step, 2)
-local txt = r and string.format("单帧 %.2f · 意图 %.0f studs · 实走 %.0f ⇒ 通过率 %.0f%%",
-r.step, r.intended, r.actual, r.ratio * 100) or "无角色"
-F.Out("[Srv] 位移探针: " .. txt)
-if Fluent and Fluent.Notify then Fluent:Notify({ Title = "位移探针", Content = txt, Duration = 10 }) end
-end)
-end })
-Tabs.Move:AddButton({ Title = "★ 自适应测速(探针自动找安全档位)", Callback = function() F.SrvAutoTune(6) end })
-Tabs.Move:AddButton({ Title = "安全包线速查(由公开阈值反推)", Callback = function()
-local e = F.SafeEnvelope()
-local txt = string.format("物理帧率%.0f · 速度<%d · 每帧<%.2f · 瞬移<%.0f/0.1s · 滞空<%.1fs", e.fps, e.maxSpeed, e.maxStep, e.maxTP, e.maxAir)
-F.Out("[Srv] 安全包线: " .. txt)
-if Fluent and Fluent.Notify then Fluent:Notify({ Title = "安全包线", Content = txt, Duration = 10 }) end
 end })
 Tabs.Move:AddToggle("FlyStealth", { Title = "飞行抗检测(限速+假落地)", Default = false, Callback = function(v) T.FlyStealth = v if v then F.FlyStealthEnable() else F.FlyStealthDisable() end end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "加速模式(5合1)", Values = {
@@ -6174,6 +6199,16 @@ end })
 Tabs.Move:AddSlider("SpeedMul", { Title = "加速倍数(×)", Min = 1, Max = 50, Default = 2, Rounding = 0, Callback = function(v) C.SpeedMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameMul", { Title = "位移加速倍数", Min = 1, Max = 20, Default = 2, Rounding = 0, Callback = function(v) C.SpeedCFrameMul = v end })
 Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "单帧位移上限(越小越隐蔽)", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
+Tabs.Move:AddToggle("SafeClamp", { Title = "位移·自动压进安全包线(≤90 studs/s · 默认开)", Default = true, Callback = function(v)
+T.SafeClamp = v
+if v then
+local e = F.SafeEnvelope()
+local step = tonumber(C.SpeedCFrameStep) or 4
+if step > e.maxStep then C.SpeedCFrameStep = e.maxStep end
+local op = Fluent and Fluent.Options and Fluent.Options.SpeedCFrameStep
+if op and op.Value ~= C.SpeedCFrameStep then pcall(function() op:Set(C.SpeedCFrameStep) end) end
+end
+end })
 Tabs.Move:AddToggle("SpeedCFrameGroundOnly", { Title = "只在地面提速(空中不提)", Default = true, Callback = function(v) T.SpeedCFrameGroundOnly = v end })
 Tabs.Move:AddSlider("DesyncOffset", { Title = "Desync 下移偏移", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.DesyncOffset = v end })
 Tabs.Move:AddSlider("DesyncSide", { Title = "Desync 侧向偏移", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v) C.DesyncSide = v end })
@@ -6187,6 +6222,8 @@ Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = f
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度", Min = 1, Max = 30, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 Tabs.Move:AddToggle("FlyCar", { Title = "飞车", Default = false, Callback = function(v) T.FlyCar = v if v then FlyCarEnable() else FlyCarDisable() end end })
 Tabs.Move:AddSlider("FlyCarSpeed", { Title = "飞车速度", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.FlyCarSpeed = v end })
+Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
+Tabs.Move:AddButton({ Title = "★ 自适应压速(探针自动找不被拉回的档位)", Callback = function() F.SrvAutoTune(6) end })
 Tabs.Move:AddToggle("Swim", { Title = "空中游泳", Default = false, Callback = function(v) T.Swim = v if v then F.SwimEnable() else F.SwimDisable() end end })
 Tabs.Move:AddToggle("AntiSit", { Title = "防坐下", Default = false, Callback = function(v) T.AntiSit = v if v then F.AntiSitEnable() else F.AntiSitDisable() end end })
 Tabs.Move:AddToggle("AntiAnchor", { Title = "防锚定", Default = false, Callback = function(v) T.AntiAnchor = v if v then F.AntiAnchorEnable() else F.AntiAnchorDisable() end end })
@@ -6646,9 +6683,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.5.1 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v7.6.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v7.5.1")
+F.Out("[CheatMenu] ✅ 加载完成 v7.6.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
