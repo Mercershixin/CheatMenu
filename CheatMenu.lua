@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 20:03 sha 2bd51aa5 bytes 222112'):format('2026-09-30 20:03','2bd51aa5',222112))
+print(('[CheatMenu] build 2026-09-30 20:24 sha 4b08c55f bytes 215886'):format('2026-09-30 20:24','4b08c55f',215886))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.2.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -858,11 +858,8 @@ end
 F.GC_SPOOF_KEYS = { "info", "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
 F._scavenging = false
 F._debugHookOn = false
-F._stealthOn = false
 F._stealthRestore = {}
 F._stealthHooked = setmetatable({}, { __mode = "k" })
-F._stealthLayers = {}
-F.StealthAggressive = true
 function F.getGameEnv()
 if type(getrenv) ~= "function" then return nil end
 local ok, env = pcall(getrenv)
@@ -918,205 +915,6 @@ end
 end
 F._scavenging = keep
 return n
-end
-function F.StealthDebugLayer()
-if F._debugHookOn then return 0, true end
-local installed = 0
-for i = 1, #F.GC_SPOOF_KEYS do
-local key = F.GC_SPOOF_KEYS[i]
-if type(debug[key]) == "function" then
-local got = F.stealthHook(debug[key], function(box)
-return function(f, t, ...)
-if not F._scavenging and not checkcaller() and type(f) == "function" then
-local luaFn = (not islclosure) or islclosure(f)
-local aggressive = (key == "info") and F.StealthAggressive and luaFn
-if F.isProtectedFn(f) or aggressive then
-if t == "s" then return "[C]" end
-if t == "l" then return 0 end
-if t == "f" then return f end
-if key == "getconstants" or key == "getprotos" then return {} end
-if type(t) == "string" and #t > 1 then
-local packed = table.pack(box.orig(f, t, ...))
-local first = packed[1]
-if type(first) == "table" then
-if first.source ~= nil then first.source = "[C]" end
-if first.linedefined ~= nil then first.linedefined = 0 end
-if first.currentline ~= nil then first.currentline = 0 end
-if first.what ~= nil then first.what = "C" end
-return first
-end
-for i = 1, packed.n do
-local v = packed[i]
-if type(v) == "string" and (v:sub(1, 1) == "@" or v:sub(1, 1) == "=") then
-packed[i] = "[C]"
-end
-end
-return table.unpack(packed, 1, packed.n)
-end
-if key == "info" then return box.orig(f, t, ...) end
-return nil
-end
-end
-return box.orig(f, t, ...)
-end
-end)
-if got then installed = installed + 1 end
-end
-end
-F._debugHookOn = installed > 0
-return installed, F._debugHookOn
-end
-function F.StealthGameDebugLayer()
-local env = F.getGameEnv()
-local dbg = env and env.debug
-if type(dbg) ~= "table" or type(dbg.info) ~= "function" then return false, false end
-if dbg.info == debug.info or dbg.info == debug.getinfo then return false, true end
-local got = F.stealthHook(dbg.info, function(box)
-return function(f, t, ...)
-if not F._scavenging and not checkcaller() and type(f) == "function" then
-local luaFn = (not islclosure) or islclosure(f)
-if F.isProtectedFn(f) or (F.StealthAggressive and luaFn) then
-if t == "s" then return "[C]" end
-if t == "l" then return 0 end
-if t == "f" then return f end
-if type(t) == "string" and #t > 1 then
-local packed = table.pack(box.orig(f, t, ...))
-local first = packed[1]
-if type(first) == "table" then
-if first.source ~= nil then first.source = "[C]" end
-if first.linedefined ~= nil then first.linedefined = 0 end
-if first.currentline ~= nil then first.currentline = 0 end
-if first.what ~= nil then first.what = "C" end
-return first
-end
-for i = 1, packed.n do
-local v = packed[i]
-if type(v) == "string" and (v:sub(1, 1) == "@" or v:sub(1, 1) == "=") then
-packed[i] = "[C]"
-end
-end
-return table.unpack(packed, 1, packed.n)
-end
-end
-end
-return box.orig(f, t, ...)
-end
-end)
-return got ~= nil, false
-end
-function F.StealthGameGetfenvLayer()
-local env = F.getGameEnv()
-if type(env) ~= "table" or type(env.getfenv) ~= "function" then return false, false end
-if env.getfenv == getfenv then return false, true end
-local got = F.stealthHook(env.getfenv, function(box)
-return function(l, ...)
-if not F._scavenging and not checkcaller() and type(l) == "number" and l >= 1 and l <= 10 then
-return box.orig(10)
-end
-return box.orig(l, ...)
-end
-end)
-return got ~= nil, false
-end
-function F.StealthIdentityLayer()
-local installed = 0
-local names = { "getthreadidentity", "getidentity" }
-local holders = {}
-local env = F.getGameEnv()
-if env then holders[#holders + 1] = env end
-if type(getgenv) == "function" then
-local ok, g = pcall(getgenv)
-if ok and type(g) == "table" and g ~= env then holders[#holders + 1] = g end
-end
-holders[#holders + 1] = _G
-for i = 1, #names do
-local nm = names[i]
-for j = 1, #holders do
-local h = holders[j]
-if type(h) == "table" and type(h[nm]) == "function" then
-local got = F.stealthHook(h[nm], function(box)
-return function(...)
-if not F._scavenging and not checkcaller() then return 2 end
-return box.orig(...)
-end
-end)
-if got then installed = installed + 1 end
-end
-end
-end
-return installed > 0
-end
-function F.StealthTracebackLayer()
-local targets = { debug.traceback }
-local env = F.getGameEnv()
-if env and env.debug and type(env.debug.traceback) == "function"
-and env.debug.traceback ~= debug.traceback then
-targets[#targets + 1] = env.debug.traceback
-end
-local installed = 0
-for i = 1, #targets do
-local got = F.stealthHook(targets[i], function(box)
-return function(...)
-local r = box.orig(...)
-if not F._scavenging and type(r) == "string" then
-local mine = AC._mySrc
-local out = {}
-for line in (r .. "\n"):gmatch("([^\n]*)\n") do
-local hit = false
-if mine and mine ~= "" and line:find(mine, 1, true) then hit = true end
-if line:find("CheatMenu", 1, true) then hit = true end
-if not hit then out[#out + 1] = line end
-end
-return table.concat(out, "\n")
-end
-return r
-end
-end)
-if got then installed = installed + 1 end
-end
-return installed > 0
-end
-function F.StealthEnable()
-if F._stealthOn and next(F._stealthLayers or {}) ~= nil then
-return true, 0
-end
-local marked = F.markOwnClosures()
-local nA, okA = F.StealthDebugLayer()
-local okB, sameB = F.StealthGameDebugLayer()
-local okC, sameC = F.StealthGameGetfenvLayer()
-local okD = F.StealthIdentityLayer()
-local okE = F.StealthTracebackLayer()
-local cnt = (okA and 1 or 0) + (okB and 1 or 0) + (okC and 1 or 0) + (okD and 1 or 0) + (okE and 1 or 0)
-F._stealthOn = cnt > 0
-F._stealthLayers = {
-debug = okA and 1 or 0, gameDebug = okB and 1 or 0, gameGetfenv = okC and 1 or 0,
-identity = okD and 1 or 0, traceback = okE and 1 or 0,
-}
-F.Out(string.format("[CheatMenu] 隐身 %d/5 层 (debug=%s 游戏debug=%s 游戏getfenv=%s 身份=%s 回溯=%s) · 登记闭包 %d 个",
-cnt, tostring(okA), tostring(okB), tostring(okC), tostring(okD), tostring(okE), marked))
-if sameB then F.Out("[CheatMenu]   (注: getrenv().debug.info 与全局是同一对象, 已由第 1 层覆盖)") end
-if sameC then F.Out("[CheatMenu]   (注: getrenv().getfenv 与全局是同一对象, 无需重复盖)") end
-return F._stealthOn, marked
-end
-function F.StealthDisable()
-if hookfunction and F._stealthRestore then
-for i = #F._stealthRestore, 1, -1 do
-local rec = F._stealthRestore[i]
-pcall(function() hookfunction(rec.obj, rec.orig) end)
-end
-end
-F._stealthRestore = {}
-F._stealthHooked = setmetatable({}, { __mode = "k" })
-F._debugHookOn = false
-F._stealthOn = false
-F.Out("[CheatMenu] 隐身影身层已卸载")
-end
-function F.SpoofGCMetadata()
-local ok, marked = F.StealthEnable()
-return ok, marked
-end
-function F.UnspoofGCMetadata()
-F.StealthDisable()
 end
 function AC.FindFn(name, wantAll)
 if type(name) ~= "string" or name == "" then return nil end
@@ -1967,7 +1765,6 @@ F._unifiedRunning = true
 local keepScav = F._scavenging
 F._scavenging = true
 local blocked, hooked, cleared, spoofed = 0, 0, 0, 0
-pcall(F.SpoofGCMetadata)
 local keysAC = { "anticheat", "anti-cheat", "detected", "exploit", "cheat", "ban", "iac", "reportabuse", "flag" }
 local keysLog = { "threat", "violation", "flag", "warn", "detect", "suspect", "ban", "kick", "log", "strike", "offense", "infraction" }
 local keysTel = { "telemetry", "report", "upload", "ping", "heartbeat" }
@@ -2592,7 +2389,13 @@ local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 if hrp and hum and hum.Health > 0 then
 local skip = false
-if T.AimTeamCheck and pl.Team and LP.Team and pl.Team == LP.Team then skip = true end
+if T.AimTeamCheck then
+pcall(function()
+if pl.Team ~= nil and LP.Team ~= nil and pl.Team == LP.Team then skip = true end
+if not skip and pl.TeamColor ~= nil and LP.TeamColor ~= nil
+and pl.TeamColor == LP.TeamColor then skip = true end
+end)
+end
 if not skip then
 local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
 if onScreen then
@@ -2641,9 +2444,10 @@ if not done then pcall(function() if mouse1click then mouse1click() end end) end
 end
 function F.AimSet(on)
 T.AimOn = on and true or false
-if F._aimConn then F._aimConn:Disconnect() F._aimConn = nil end
+if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
 if not T.AimOn then return end
-F._aimConn = RS.RenderStepped:Connect(function()
+F._aimConn = true
+RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
 if T.AimFireOnly and not T.AutoFire and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 local _, hum = GC()
@@ -2655,6 +2459,10 @@ local want = CFrame.lookAt(cam.CFrame.Position, tgt.Position)
 cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
 F.AutoFire(tgt)
 end)
+end
+function F.AimUnbind()
+pcall(function() RS:UnbindFromRenderStep("CM_Aim") end)
+F._aimConn = nil
 end
 local SingleAimConn = nil
 local FaceLockConn = nil
@@ -5743,8 +5551,7 @@ F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
-F.UnspoofGCMetadata,
-F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
+F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
 F.SpeedSet, F.FlySet,
@@ -5787,7 +5594,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.2.0",
+SubTitle = "v9.3.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6013,7 +5820,6 @@ pcall(AC.WatchNewScriptsDisable)
 AC.WatchNewRemotesDisable()
 AC.UninstallSetmetatableHook()
 pcall(F.GuiProtectionDisable)
-pcall(F.StealthDisable)
 end
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
@@ -6070,9 +5876,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.2.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.3.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.2.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.3.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
