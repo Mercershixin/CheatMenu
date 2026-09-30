@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:36 sha 5020f737 bytes 219951'):format('2026-09-30 19:36','5020f737',219951))
+print(('[CheatMenu] build 2026-09-30 19:42 sha 1d606845 bytes 220810'):format('2026-09-30 19:42','1d606845',220810))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.8.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3617,14 +3617,35 @@ local bw = tonumber(hum.WalkSpeed) or 16
 if bw > 0 and bw <= 32 then F._baseWalk = bw end
 end
 F.SpeedApply()
-F._spdConn = RS.Heartbeat:Connect(function()
+F._spdConn = RS.RenderStepped:Connect(function()
 if not T.SpeedOn then F.SpeedSet(false) return end
+local _, h, r = GC()
+if not (h and r) then return end
+local sp = tonumber(C.SpeedValue) or 60
+local cam = workspace.CurrentCamera
+local dir = Vector3.zero
+if cam then
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+end
+if dir.Magnitude < 0.01 then dir = h.MoveDirection end
+local vert = 0
+if UIS:IsKeyDown(Enum.KeyCode.Space) then vert = vert + 1 end
+if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then vert = vert - 1 end
+if vert ~= 0 or h.FloorMaterial == Enum.Material.Air then
+local v = Vector3.new(dir.X, dir.Y + vert, dir.Z)
+if v.Magnitude > 0.01 then
+v = v.Unit * sp
+pcall(function() r.AssemblyLinearVelocity = v end)
+end
+end
 local now = os.clock()
-if now - (F._spdAt or 0) < 0.2 then return end
+if now - (F._spdAt or 0) > 0.2 then
 F._spdAt = now
-local _, h = GC()
-if not h then return end
-if math.abs((h.WalkSpeed or 0) - (tonumber(C.SpeedValue) or 60)) > 0.5 then F.SpeedApply() end
+if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
+end
 end)
 else
 F.SpeedApply()
@@ -5759,7 +5780,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.8.0",
+SubTitle = "v8.9.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5835,7 +5856,7 @@ Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升 · Ctrl 降)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(直接设行走速度)", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速(全向: 地面 + 空中 + 空格升/Ctrl降)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then F.NoClipEnable() else F.NoClipDisable() end end })
@@ -6002,9 +6023,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.8.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.9.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.8.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.9.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
