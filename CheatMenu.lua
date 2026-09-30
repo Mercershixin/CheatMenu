@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:05 sha 2c96fe42 bytes 230016'):format('2026-09-30 19:05','2c96fe42',230016))
+print(('[CheatMenu] build 2026-09-30 19:12 sha 7b88b469 bytes 230080'):format('2026-09-30 19:12','7b88b469',230080))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.4.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3630,14 +3630,14 @@ if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0)
 local moved = false
 local sp = 0
 if dir.Magnitude > 0 then
-sp = math.min(C.FlySpeed or 50, 1000) * math.min(dt, 0.1)
+sp = (C.FlySpeed or 50) * math.min(dt, 0.1)
 r.CFrame = r.CFrame + (dir.Unit * sp)
 moved = true
 end
 F._srv.expectMove = sp
 F._srv.dir = dir.Magnitude > 0 and dir.Unit or nil
 F.FakeLand(h, r)
-r.AssemblyLinearVelocity = moved and (dir.Unit * math.min(C.FlySpeed or 50, 1000)) or Vector3.zero
+r.AssemblyLinearVelocity = moved and (dir.Unit * (C.FlySpeed or 50)) or Vector3.zero
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
@@ -3733,7 +3733,7 @@ if hum then
 if not baseWalk then baseWalk = math.clamp(hum.WalkSpeed or 16, 8, 100) end
 C._baseWalk = baseWalk
 local target = tonumber(C.SpeedTarget) or 60
-local walk = math.min(target, 300)
+local walk = target
 local cur = hum.WalkSpeed
 if math.abs(cur - walk) > 2 then
 pcall(function() hum.WalkSpeed = cur + (cur < walk and 2 or -2) end)
@@ -4734,13 +4734,13 @@ end)
 local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z)
 local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
 cam.CameraType = Enum.CameraType.Scriptable
-if not F.MenuOpen() then pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end) end
+if (not F.MenuOpen()) and (not UIS.TouchEnabled) then pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end) end
 F._freecamConn = RS.RenderStepped:Connect(function(dt)
 if not T.Freecam then F.FreecamDisable() return end
 local c = workspace.CurrentCamera
 if not c then return end
 if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
-if F.MenuOpen() then
+if F.MenuOpen() or UIS.TouchEnabled then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
 elseif UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end)
@@ -5982,7 +5982,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.4.1",
+SubTitle = "v8.5.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6064,8 +6064,17 @@ FlyDisable() F.FlyPhysDisable()
 if T.Fly then FlyEnable()
 elseif T.FlyPhys then F.FlyPhysEnable() end
 end })
-Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddSlider("SpeedTarget", { Title = "速度(studs/s)", Min = 16, Max = 300, Default = 60, Rounding = 0, Callback = function(v)
+Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddSection("加速")
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速(一个开关)", Default = false, Callback = function(v)
+T.Speed = v
+if v then
+if T.SpeedCFrame then F.SpeedCFrameEnable() else SpeedEnable() end
+else
+SpeedDisable() F.SpeedCFrameDisable()
+end
+end })
+Tabs.Move:AddSlider("SpeedTarget", { Title = "速度(格/秒 · 16≈1倍速 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v)
 C.SpeedTarget = v
 end })
 Tabs.Move:AddDropdown("SpeedMode", { Title = "方式", Values = {
@@ -6083,15 +6092,6 @@ if T.Speed then
 if T.SpeedBypass then F.SpeedBypassEnable()
 elseif T.SpeedCFrame then F.SpeedCFrameEnable()
 else SpeedEnable() end
-end
-end })
-Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(一个开关)", Default = false, Callback = function(v)
-T.Speed = v
-if v then
-if T.SpeedCFrame then F.SpeedCFrameEnable() else SpeedEnable() end
-else
-SpeedDisable() F.SpeedCFrameDisable()
 end
 end })
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
@@ -6260,9 +6260,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.4.1 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.5.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.4.1")
+F.Out("[CheatMenu] ✅ 加载完成 v8.5.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
