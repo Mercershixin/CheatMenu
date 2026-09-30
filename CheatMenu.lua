@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:28 sha c5ac697e bytes 218768'):format('2026-09-30 19:28','c5ac697e',218768))
+print(('[CheatMenu] build 2026-09-30 19:36 sha 5020f737 bytes 219951'):format('2026-09-30 19:36','5020f737',219951))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.7.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1705,6 +1705,10 @@ return function(self, ...)
 if F._capOn and not checkcaller() and typeof(self) == "Instance" then
 local m = getnamecallmethod()
 if m == "FireServer" or m == "InvokeServer" then
+F._capN = (F._capN or 0) + 1
+if F._capN % 10 == 0 then
+F.Out("[采集] 已记录 " .. F._capN .. " 条上行 remote, 最近: " .. tostring(self.Name) .. ":" .. tostring(m))
+end
 if #F._capLog < F.CAP_MAX then
 local args = { ... }
 local parts = {}
@@ -2198,7 +2202,7 @@ pcall(function() VirtualUser:ClickButton2(Vector2.new(0, 0)) end)
 end
 end)
 F._afkConn2 = RS.Heartbeat:Connect(function()
-if not T.AntiAFK then return end
+if not T.AntiAFK then F.AntiAFKDisable() return end
 if (os.clock() - (F._afkAt or 0)) < 5 then return end
 F._afkAt = os.clock()
 pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
@@ -2627,7 +2631,7 @@ local function SingleAimDisable() if SingleAimConn then SingleAimConn:Disconnect
 local function SingleAimEnable()
 if SingleAimConn then return end
 SingleAimConn = RS.RenderStepped:Connect(function()
-if not T.SingleAim then return end
+if not T.SingleAim then SingleAimDisable() return end
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 local target = name and Players:FindFirstChild(name)
 if not (target and target.Character) then return end
@@ -2640,7 +2644,7 @@ local function FaceLockDisable() if FaceLockConn then FaceLockConn:Disconnect() 
 local function FaceLockEnable()
 if FaceLockConn then return end
 FaceLockConn = RS.RenderStepped:Connect(function()
-if not T.FaceLock then return end
+if not T.FaceLock then FaceLockDisable() return end
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 local target = name and Players:FindFirstChild(name)
 local _, _, r = GC()
@@ -2725,7 +2729,7 @@ elseif d:IsA("ParticleEmitter") or d:IsA("Trail") then d.Enabled = false end
 end)
 end)
 InvConn = RS.RenderStepped:Connect(function()
-if not T.Invisible then return end
+if not T.Invisible then InvisibleDisable() return end
 local c = LP.Character
 if not c then return end
 InvApply(c, true)
@@ -3234,7 +3238,7 @@ F.lastAttack = 0
 function F.KillAuraEnable()
 if F.KillAuraConn then return end
 F.KillAuraConn = RS.Heartbeat:Connect(function()
-if not T.KillAura then return end
+if not T.KillAura then F.KillAuraDisable() return end
 local _, _, root = GC()
 if not root then return end
 local range = C.KillAuraRange or 20
@@ -3322,7 +3326,7 @@ end
 function F.AntiKnockdownEnable()
 if F._antiKnockConn then return end
 F._antiKnockConn = RS.Heartbeat:Connect(function()
-if not T.AntiKnockdown then return end
+if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 if root.AssemblyLinearVelocity.Magnitude > 200 then
@@ -3337,7 +3341,7 @@ F._antiAimConn = nil
 function F.AntiAimEnable()
 if F._antiAimConn then return end
 F._antiAimConn = RS.RenderStepped:Connect(function()
-if not T.AntiAim then return end
+if not T.AntiAim then F.AntiAimDisable() return end
 local _, _, root = GC()
 if root then root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(C.AntiAimSpeed or 30), 0) end
 end)
@@ -3465,7 +3469,7 @@ end
 function F.SrvHoldEnable()
 if F._srv.holdConn then return end
 F._srv.holdConn = RS.Heartbeat:Connect(function()
-if not T.SrvHoldOwn then return end
+if not T.SrvHoldOwn then F.SrvHoldDisable() return end
 local now = os.clock()
 if now - (F._srv.ownAt or 0) < 0.4 then return end
 F._srv.ownAt = now
@@ -3614,7 +3618,7 @@ if bw > 0 and bw <= 32 then F._baseWalk = bw end
 end
 F.SpeedApply()
 F._spdConn = RS.Heartbeat:Connect(function()
-if not T.SpeedOn then return end
+if not T.SpeedOn then F.SpeedSet(false) return end
 local now = os.clock()
 if now - (F._spdAt or 0) < 0.2 then return end
 F._spdAt = now
@@ -3754,7 +3758,7 @@ if F.HideConn then return end
 local _, _, root = GC()
 if root then F.HideBaseY = root.Position.Y end
 F.HideConn = RS.RenderStepped:Connect(function()
-if not T.Hide then return end
+if not T.Hide then F.HideDisable() return end
 local _, _, r = GC()
 if not r then return end
 local depth = math.min(math.max(C.HideDepth or 5, 1), 30)
@@ -3872,7 +3876,7 @@ function F.AntiVoidEnable()
 if F._voidConn then return end
 F._safeCFs = {}
 F._voidConn = RS.Heartbeat:Connect(function()
-if not T.AntiVoid then return end
+if not T.AntiVoid then F.AntiVoidDisable() return end
 local _, _, root = GC()
 if not root then return end
 local threshold = tonumber(C.VoidY) or -50
@@ -3924,7 +3928,7 @@ function F.ClickerDisable() if F.ClickerConn then F.ClickerConn:Disconnect() F.C
 function F.ClickerEnable()
 if F.ClickerConn then return end
 F.ClickerConn = RS.Stepped:Connect(function()
-if not T.Clicker then return end
+if not T.Clicker then F.ClickerDisable() return end
 if type(mouse1click) == "function" then mouse1click()
 elseif type(mouse1press) == "function" then mouse1press() task.wait(0.01) mouse1release() end
 end)
@@ -4015,7 +4019,7 @@ local function AutoInteractDisable() if AutoInteractConn then AutoInteractConn:D
 local function AutoInteractEnable()
 if AutoInteractConn then return end
 AutoInteractConn = RS.Stepped:Connect(function()
-if not T.AutoInteract then return end
+if not T.AutoInteract then AutoInteractDisable() return end
 if os.clock() - (F._thr2335 or 0) < 1 then return end
 F._thr2335 = os.clock()
 local _, _, r = GC()
@@ -4164,7 +4168,7 @@ local function LockHealthDisable() if LockHealthConn then LockHealthConn:Disconn
 local function LockHealthEnable()
 if LockHealthConn then return end
 LockHealthConn = RS.Heartbeat:Connect(function()
-if not T.LockHealth then return end
+if not T.LockHealth then LockHealthDisable() return end
 if os.clock() - (F._thr4402 or 0) < 0.05 then return end
 F._thr4402 = os.clock()
 local _, hum = GC()
@@ -4179,7 +4183,7 @@ local function RegenDisable() if RegenConn then RegenConn:Disconnect() RegenConn
 local function RegenEnable()
 if RegenConn then return end
 RegenConn = RS.Heartbeat:Connect(function()
-if not T.Regen then return end
+if not T.Regen then RegenDisable() return end
 if os.clock() - (F._thr4420 or 0) < 0.2 then return end
 F._thr4420 = os.clock()
 local _, hum = GC()
@@ -4195,7 +4199,7 @@ if StealthGodConn then return end
 local _, hum0 = GC()
 if hum0 then pcall(function() if hum0.MaxHealth > 1e6 then hum0.MaxHealth = 100 end end) end
 StealthGodConn = RS.Heartbeat:Connect(function()
-if not T.StealthGod then return end
+if not T.StealthGod then StealthGodDisable() return end
 if os.clock() - (F._thr4439 or 0) < 0.05 then return end
 F._thr4439 = os.clock()
 local _, hum = GC()
@@ -4207,7 +4211,7 @@ local function NoDeathDisable() if NoDeathConn then NoDeathConn:Disconnect() NoD
 local function NoDeathEnable()
 if NoDeathConn then return end
 NoDeathConn = RS.Heartbeat:Connect(function()
-if not T.NoDeath then return end
+if not T.NoDeath then NoDeathDisable() return end
 if os.clock() - (F._thr4456 or 0) < 0.1 then return end
 F._thr4456 = os.clock()
 local _, hum = GC()
@@ -4218,7 +4222,7 @@ F._antiSitConn = nil
 function F.AntiSitEnable()
 if F._antiSitConn then return end
 F._antiSitConn = RS.Heartbeat:Connect(function()
-if not T.AntiSit then return end
+if not T.AntiSit then F.AntiSitDisable() return end
 if os.clock() - (F._antiSitAt or 0) < 0.12 then return end
 F._antiSitAt = os.clock()
 local _, hum = GC()
@@ -4234,7 +4238,7 @@ F._antiAnchorConn = nil
 function F.AntiAnchorEnable()
 if F._antiAnchorConn then return end
 F._antiAnchorConn = RS.Heartbeat:Connect(function()
-if not T.AntiAnchor then return end
+if not T.AntiAnchor then F.AntiAnchorDisable() return end
 if os.clock() - (F._antiAnchorAt or 0) < 0.15 then return end
 F._antiAnchorAt = os.clock()
 local _, _, root = GC()
@@ -4481,7 +4485,7 @@ end)
 end
 if not F._hlLoop then
 F._hlLoop = RS.Heartbeat:Connect(function()
-if not T.BodyHL then return end
+if not T.BodyHL then F.BodyHLDisable() return end
 local now = os.clock()
 if now - (F._hlAt or 0) < 2 then return end
 F._hlAt = now
@@ -4505,6 +4509,25 @@ if op and op.Value ~= want then op:Set(want) end
 local so = Fluent.Options.SpeedOn
 if so and type(T.Speed) == "boolean" and so.Value ~= T.Speed then so:Set(T.Speed) end
 end)
+end
+function F.HotReload()
+pcall(function()
+if not (readfile and isfile and isfile(SaveFile)) then
+F.Out("[热加载] 没有找到存档, 无事可做")
+return
+end
+local d = HS:JSONDecode(readfile(SaveFile))
+if type(d) == "table" and type(d.T) == "table" then
+for k, v in pairs(d.T) do
+if type(v) == "boolean" then T[k] = v end
+end
+end
+end)
+local n = F.CfgSyncUI()
+F.Out("[热加载] 已按存档恢复 " .. tostring(n) .. " 个控件, 功能已重新应用")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "热加载", Content = "已恢复 " .. tostring(n) .. " 个开关", Duration = 6 })
+end
 end
 F._freecamConn = nil
 function F.FreecamEnable()
@@ -4568,7 +4591,7 @@ F._freezeConn = nil
 function F.FreezePlayerEnable()
 if F._freezeConn then return end
 F._freezeConn = RS.Heartbeat:Connect(function()
-if not T.FreezePlayer then return end
+if not T.FreezePlayer then F.FreezePlayerDisable() return end
 local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
 local pl = name and Players:FindFirstChild(name)
 local ch = pl and pl.Character
@@ -4634,7 +4657,7 @@ F._bringConn = nil
 function F.BringPlayerEnable()
 if F._bringConn then return end
 F._bringConn = RS.Heartbeat:Connect(function()
-if not T.BringPlayer then return end
+if not T.BringPlayer then F.BringPlayerDisable() return end
 local _, _, root = GC()
 if not root then return end
 local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
@@ -4715,7 +4738,7 @@ F._swimConn = nil
 function F.SwimEnable()
 if F._swimConn then return end
 F._swimConn = RS.Heartbeat:Connect(function()
-if not T.Swim then return end
+if not T.Swim then F.SwimDisable() return end
 local _, hum = GC()
 if hum then
 pcall(function()
@@ -4737,7 +4760,7 @@ if F._lockCamConn then return end
 local cam = workspace.CurrentCamera
 F._lockCamCF = cam and cam.CFrame or CFrame.new()
 F._lockCamConn = RS.RenderStepped:Connect(function()
-if not T.LockCam then return end
+if not T.LockCam then F.LockCamDisable() return end
 local c = workspace.CurrentCamera
 if c then pcall(function() c.CFrame = F._lockCamCF end) end
 end)
@@ -4966,7 +4989,7 @@ if okKind and isItem then F._magnetListAt = 0 end
 end)
 end
 F._magnetConn = RS.Heartbeat:Connect(function()
-if not T.ItemMagnet then return end
+if not T.ItemMagnet then F.ItemMagnetDisable() return end
 local now = os.clock()
 if now - (F._magnetAt or 0) < 0.1 then return end
 F._magnetAt = now
@@ -5736,7 +5759,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.7.0",
+SubTitle = "v8.8.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5807,7 +5830,7 @@ end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default =
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then F.KillAuraEnable() else F.KillAuraDisable() end end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
-Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒, 上限25避开30/s检测)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
+Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升 · Ctrl 降)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
@@ -5891,7 +5914,7 @@ if v then
 T.ACBypass = true T.NamecallHook = true T.RemoteBlock = true
 T.AntiFling = true T.UniversalAC = true T.PropertyLock = true
 T.SpeedMask = true T.ACIndexHook = true
-T.StealthMode = true T.GuiProtect = true
+T.GuiProtect = true
 AC.InstallNamecallHook() AC.InstallPropertyLock() AC.InstallIndexMask()
 pcall(AC.InstallSetmetatableHook)
 pcall(AC.WatchNewScriptsEnable)
@@ -5900,7 +5923,6 @@ T.CharPersist = true
 task.spawn(function()
 local acName = AC.DetectStrongAC(true)
 if acName then AC.SetQuiet(true) end
-local stealth = select(1, F.StealthEnable())
 local blocked = F.UnifiedACPass()
 local killed = AC.DisableACConnections(true)
 local neutral = AC.NeutralizeByName(nil)
@@ -5910,7 +5932,7 @@ pcall(F.GuiProtectionEnable)
 pcall(F.AuthorityGuard, true)
 Fluent:Notify({
 Title = "反作弊",
-Content = "已开启全部绕过 · 隐身 " .. (stealth and "开" or "关") ..
+Content = "已开启全部绕过 · 不带隐身" ..
 " · 拦 remote " .. tostring(blocked) .. " · 断连接 " .. tostring(killed) ..
 " · 中和函数 " .. tostring(neutral),
 Duration = 8,
@@ -5965,8 +5987,8 @@ end)
 end })
 Tabs.Setting:AddSection("系统")
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
-Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() Rejoin() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(恢复上次开的功能)", Callback = function() F.HotReload() end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -5980,9 +6002,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.7.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.8.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.7.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.8.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
