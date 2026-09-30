@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 01:05 sha 7545ace3 bytes 240358'):format('2026-10-01 01:05','7545ace3',240358))
+print(('[CheatMenu] build 2026-10-01 01:14 sha 21b6176a bytes 240669'):format('2026-10-01 01:14','21b6176a',240669))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.4.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.4.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3328,6 +3328,13 @@ F._skeletonLines[#F._skeletonLines + 1] = { line = line, pl = pl, a = pair[1], b
 end
 end
 end
+if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
+F._skelQConn = Players.PlayerAdded:Connect(function()
+if not T.ESPSkeleton then return end
+task.wait(0.8)
+F.SkeletonDisable()
+if T.ESPSkeleton then F.SkeletonEnable() end
+end)
 F._skeletonConn = RS.RenderStepped:Connect(function()
 if not T.ESPSkeleton then F.SkeletonDisable() return end
 local cam = workspace.CurrentCamera
@@ -3369,8 +3376,17 @@ F._arrowBbs = {}
 F._arrowConn = nil
 function F.ArrowEnable()
 if #F._arrowBbs > 0 then return end
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and pl.Character then
+local function dropArrow(pl)
+for i = #F._arrowBbs, 1, -1 do
+if F._arrowBbs[i].pl == pl then
+pcall(function() F._arrowBbs[i].bb:Destroy() end)
+table.remove(F._arrowBbs, i)
+end
+end
+end
+local function makeArrow(pl)
+if pl == LP or not pl.Character then return end
+for _, e in ipairs(F._arrowBbs) do if e.pl == pl then return end end
 local bb = Instance.new("BillboardGui")
 bb.Name = "FacingMark"
 bb.Size = UDim2.fromOffset(40, 40)
@@ -3387,30 +3403,27 @@ lbl.TextStrokeTransparency = 0.5
 lbl.Parent = bb
 F._arrowBbs[#F._arrowBbs + 1] = { bb = bb, lbl = lbl, pl = pl }
 end
+F._arrowPlConns = F._arrowPlConns or {}
+local function bindPl(pl)
+if pl == LP or F._arrowPlConns[pl] then return end
+F._arrowPlConns[pl] = pl.CharacterAdded:Connect(function()
+task.wait(0.8)
+if not T.ESPArrow then return end
+dropArrow(pl)
+makeArrow(pl)
+end)
+end
+for _, pl in ipairs(Players:GetPlayers()) do
+makeArrow(pl)
+bindPl(pl)
 end
 if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) end
 F._arrowQConn = Players.PlayerAdded:Connect(function(pl)
 if not T.ESPArrow then return end
 task.wait(0.8)
 if not T.ESPArrow then return end
-local existing = false
-for _, e in ipairs(F._arrowBbs) do if e.pl == pl then existing = true break end end
-if existing or pl == LP or not pl.Character then return end
-local bb = Instance.new("BillboardGui")
-bb.Name = "FacingMark"
-bb.Size = UDim2.fromOffset(40, 40)
-bb.StudsOffset = Vector3.new(0, 3.5, 0)
-bb.AlwaysOnTop = true
-bb.Parent = pl.Character
-local lbl = Instance.new("TextLabel")
-lbl.Size = UDim2.fromScale(1, 1)
-lbl.BackgroundTransparency = 1
-lbl.Text = "◆"
-lbl.TextSize = 36
-lbl.TextColor3 = Color3.fromRGB(255, 255, 80)
-lbl.TextStrokeTransparency = 0.5
-lbl.Parent = bb
-F._arrowBbs[#F._arrowBbs + 1] = { bb = bb, lbl = lbl, pl = pl }
+makeArrow(pl)
+bindPl(pl)
 end)
 F._arrowConn = RS.RenderStepped:Connect(function()
 if not T.ESPArrow then F.ArrowDisable() return end
@@ -3440,6 +3453,8 @@ end)
 end
 function F.ArrowDisable()
 if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) F._arrowQConn = nil end
+for pl, c in pairs(F._arrowPlConns or {}) do pcall(function() c:Disconnect() end) end
+F._arrowPlConns = {}
 if F._arrowConn then F._arrowConn:Disconnect() F._arrowConn = nil end
 for _, entry in ipairs(F._arrowBbs) do
 local bb = entry.bb or entry
@@ -4849,11 +4864,14 @@ end
 function F.SyncMoveUI()
 pcall(function()
 if not (Fluent and Fluent.Options) then return end
-local want = T.Fly and "飞行(CFrame)" or (T.FlyPhys and "物理飞行(更平滑)" or "关闭")
-local op = Fluent.Options.FlyMode
-if op and op.Value ~= want then op:Set(want) end
-local so = Fluent.Options.SpeedOn
-if so and type(T.Speed) == "boolean" and so.Value ~= T.Speed then so:Set(T.Speed) end
+local fop = Fluent.Options.FlyOn
+if fop and type(T.FlyOn) == "boolean" and fop.Value ~= T.FlyOn then
+pcall(function() fop:Set(T.FlyOn) end)
+end
+local sop = Fluent.Options.SpeedOn
+if sop and type(T.SpeedOn) == "boolean" and sop.Value ~= T.SpeedOn then
+pcall(function() sop:Set(T.SpeedOn) end)
+end
 end)
 end
 function F.HotReload()
@@ -6163,7 +6181,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.4.0",
+SubTitle = "v10.4.1",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6493,7 +6511,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6502,7 +6520,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.4.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.4.1")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
