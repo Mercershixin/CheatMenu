@@ -1,5 +1,14 @@
-print(('[CheatMenu] build 2026-10-01 01:40 sha bde16728 bytes 231437'):format('2026-10-01 01:40','bde16728',231437))
+print(('[CheatMenu] build 2026-10-01 01:50 sha c1421cc3 bytes 233871'):format('2026-10-01 01:50','c1421cc3',233871))
 local F = {}
+F.VERSION = "v10.5.0"
+F.LIMITS = { SCAN_GC_CAP = 30000, SCAN_YIELD_EVERY = 300 }
+F.REMOTE_URLS = {
+"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+}
 F.SANITIZE = {
 {"cloneref", "cref"},
 {"secure_call", "secure-call"},
@@ -41,7 +50,11 @@ function F.Sanitize(s)
 s = tostring(s)
 for i = 1, #F.SANITIZE do
 local from = F.SANITIZE[i][1]
-if s:find(from, 1, true) then s = s:gsub(from, F.SANITIZE[i][2]) end
+if s:find(from, 1, true) then
+local pat = from:gsub("(%W)", "%%%1")
+local to = F.SANITIZE[i][2]
+s = s:gsub(pat, function() return to end)
+end
 end
 return s
 end
@@ -50,7 +63,11 @@ F.LOG_BUF_MAX = F.LOG_BUF_MAX or 300
 function F.Out(...)
 local n = select("#", ...)
 local parts = {}
-for i = 1, n do parts[i] = F.Sanitize(select(i, ...)) end
+for i = 1, n do
+local s = F.Sanitize(select(i, ...))
+if #s > 300 then s = s:sub(1, 300) .. "…(" .. #s .. "字)" end
+parts[i] = s
+end
 local line = table.concat(parts, " ")
 print(line)
 F._logBuf[#F._logBuf + 1] = line
@@ -58,7 +75,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.4.3 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -207,7 +224,7 @@ return
 end
 local AC = {}
 AC.BlockedRemotes = {}
-AC.BlockedCount = 0
+AC.HookedCount = 0
 AC._idxMaskOn = false
 AC._idxMaskOld = nil
 AC._stblOld = nil
@@ -267,6 +284,7 @@ pcall(function()
 if type(getnilinstances) ~= "function" then return end
 local arr = getnilinstances()
 for i = 1, #arr do
+if i > 30000 then break end
 if i % 300 == 0 then task.wait() end
 local inst = arr[i]
 if typeof(inst) == "Instance" then
@@ -418,7 +436,7 @@ end)
 if ok and type(res) == "function" then
 orig = res
 AC.BlockedRemotes[remote] = res
-AC.BlockedCount = AC.BlockedCount + 1
+AC.HookedCount = AC.HookedCount + 1
 AC.markHooked(fn)
 end
 end
@@ -429,7 +447,7 @@ pcall(function() hookfunction(remote.FireServer, orig) end)
 end
 end
 AC.BlockedRemotes = {}
-AC.BlockedCount = 0
+AC.HookedCount = 0
 end
 AC._weakTables = setmetatable({}, { __mode = "k" })
 AC._weakSeen = 0
@@ -725,7 +743,8 @@ for i = 1, #hardSigs do AC.disableSignalConns(hardSigs[i], force ~= false, out) 
 AC._forceConnSignals = false
 for i = 1, #softSigs do AC.disableSignalConns(softSigs[i], false, out) end
 if not force then
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 if typeof(obj) == "RBXScriptSignal" then AC.disableSignalConns(obj, false, out) end
 end
 end
@@ -795,7 +814,7 @@ end
 function AC.TrapDisable.scan()
 pcall(AC.TrapDisable.Compact)
 local n, nScan = 0, 0
-for _, v in ipairs(workspace:GetDescendants()) do
+for _, v in ipairs(F.walk(workspace)) do
 nScan = nScan + 1
 if nScan % 400 == 0 then task.wait() end
 if nScan > 20000 then break end
@@ -823,6 +842,32 @@ for p, orig in pairs(AC.TrapDisable.data) do
 if p and p.Parent then pcall(function() p.CanTouch = orig end) end
 end
 AC.TrapDisable.data = {}
+end
+function F.gcTick(i)
+if i > 30000 then return false end
+if i % 300 == 0 then task.wait() end
+return true
+end
+function F.walk(root, cap, budget)
+if root == nil then return {} end
+local out, queue, qi, n = {}, { root }, 1, 0
+cap = tonumber(cap) or 40000
+local every = tonumber(budget) or 300
+while qi <= #queue and n < cap do
+local node = queue[qi]
+qi = qi + 1
+local ok, kids = pcall(function() return node:GetChildren() end)
+if ok and type(kids) == "table" then
+for i = 1, #kids do
+n = n + 1
+out[#out + 1] = kids[i]
+queue[#queue + 1] = kids[i]
+if n % every == 0 then pcall(task.wait) end
+if n >= cap then break end
+end
+end
+end
+return out
 end
 function F.GuardedGetGC(pass, force)
 local now = os.clock()
@@ -879,7 +924,8 @@ if not (mine and mine ~= "") then return 0 end
 local keep = F._scavenging
 F._scavenging = true
 local n, seen = 0, 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 seen = seen + 1
 if seen > 30000 then break end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
@@ -1002,7 +1048,7 @@ local root = list[i]
 if root then
 pcall(function()
 local bag = { root }
-for _, d in ipairs(root:GetDescendants()) do
+for _, d in ipairs(F.walk(root)) do
 bag[#bag + 1] = d
 end
 for j = 1, #bag do
@@ -1140,7 +1186,7 @@ if seen[key] then seen[key].src = seen[key].src .. "," .. src return end
 seen[key] = { n = nm, c = cls, src = src, s = AC.isSuspicious(nm) and 1 or 0,
 down = (obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent")) and 1 or 0 }
 end
-for _, d in ipairs(RStorage:GetDescendants()) do add(d, "RS") end
+for _, d in ipairs(F.walk(RStorage)) do add(d, "RS") end
 if type(getnilinstances) == "function" then
 for _, inst in ipairs(getnilinstances()) do add(inst, "nil") end
 end
@@ -1150,7 +1196,8 @@ end)
 pcall(function()
 if type(getgc) ~= "function" then return end
 local seen, n = {}, 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 n = n + 1
 if n > 6000 then break end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
@@ -1185,7 +1232,7 @@ local r = roots[i]
 if r then
 local bag = { r }
 local nAttr = 0
-for _, d in ipairs(r:GetDescendants()) do bag[#bag + 1] = d end
+for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nAttr = nAttr + 1
 if nAttr % 400 == 0 then task.wait() end
@@ -1438,7 +1485,7 @@ local r = roots[i]
 if r then
 local bag = { r }
 local nA = 0
-for _, d in ipairs(r:GetDescendants()) do bag[#bag + 1] = d end
+for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nA = nA + 1
 if nA % 400 == 0 then task.wait() end
@@ -1512,7 +1559,7 @@ return text
 end
 F.LOG_MAX = 1500000
 F.LOG_BUF_MAX = 300
-F._logBuf = {}
+F._logBuf = F._logBuf or {}
 function F.LogBaseName()
 if F._logBaseName then return F._logBaseName end
 local gname = "Unknown"
@@ -1565,6 +1612,16 @@ F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 �
 F._logFlushing = false
 return nil
 end
+pcall(function()
+local allFull = true
+for idx = 1, 20 do
+local nm = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
+local okf, sz = false, 0
+pcall(function() if isfile and isfile(nm) then okf = true sz = #readfile(nm) end end)
+if (not okf) or (sz + #body <= F.LOG_MAX) then allFull = false break end
+end
+if allFull and delfile then delfile(base .. ".txt") end
+end)
 for idx = 1, 20 do
 local name = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
 local existed, size = false, 0
@@ -1620,12 +1677,13 @@ for _, inst in ipairs(getnilinstances()) do
 if typeof(inst) == "Instance" then AC.hookOneRemote(inst) end
 end
 end
-for _, d in ipairs(RStorage:GetDescendants()) do
+for _, d in ipairs(F.walk(RStorage)) do
 if AC.isRemoteLike(d) then AC.hookOneRemote(d) end
 end
 if type(getgc) ~= "function" then return end
 local seen = 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 seen = seen + 1
 if seen > 8000 then break end
 if seen % 250 == 0 then task.wait() end
@@ -1691,7 +1749,7 @@ end
 end
 end
 end
-blocked = AC.BlockedCount
+blocked = AC.HookedCount
 end)
 F._unifiedRunning = false
 F._scavenging = keepScav
@@ -1714,11 +1772,11 @@ order[#order + 1] = key
 end
 found[key].srcs[src] = true
 end
-pcall(function() for _, d in ipairs(RStorage:GetDescendants()) do addRemote(d, "RS") end end)
+pcall(function() for _, d in ipairs(F.walk(RStorage)) do addRemote(d, "RS") end end)
 pcall(function()
 local cloned = AC.svc("ReplicatedStorage")
 if cloned and cloned ~= RStorage then
-for _, d in ipairs(cloned:GetDescendants()) do addRemote(d, "RS-clone") end
+for _, d in ipairs(F.walk(cloned)) do addRemote(d, "RS-clone") end
 end
 end)
 if type(getnilinstances) == "function" then
@@ -1727,7 +1785,8 @@ end
 if type(getgc) == "function" then
 pcall(function()
 local seen = 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 seen = seen + 1
 if seen > 8000 then break end
 if seen % 200 == 0 then task.wait() end
@@ -1781,7 +1840,8 @@ end
 end
 if type(getgc) ~= "function" then return end
 local seen = 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 seen = seen + 1
 if seen > 8000 then break end
 if seen % 500 == 0 then task.wait() end
@@ -1878,8 +1938,9 @@ pcall(function() roots[#roots + 1] = { game:GetService("CoreGui"), "CoreGui" } e
 local CAP = 40000
 for i = 1, #roots do
 local r, nm = roots[i][1], roots[i][2]
-if r and n < CAP then
-local ok, kids = pcall(function() return r:GetDescendants() end)
+if n >= CAP then break end
+if r then
+local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 local cnt = 0
 for j = 1, #kids do
@@ -1983,7 +2044,7 @@ pcall(function() roots[#roots + 1] = { LP:FindFirstChild("PlayerGui"), "PlayerGu
 for i = 1, #roots do
 local r, nm = roots[i][1], roots[i][2]
 if r then
-local ok, kids = pcall(function() return r:GetDescendants() end)
+local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 for j = 1, #kids do
 if j % 400 == 0 then task.wait() end
@@ -2053,7 +2114,8 @@ local keep = F._scavenging
 F._scavenging = true
 F.Out("[阈值] ===== 从可疑函数里提取数字阈值 =====")
 local seen, found, scanned = {}, 0, 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 scanned = scanned + 1
 if scanned > 12000 then break end
 if scanned % 300 == 0 then task.wait() end
@@ -2138,15 +2200,17 @@ local used = "getgc 回退"
 if type(filtergc) == "function" then
 local ok, got = pcall(filtergc, "function", { Constants = list, IgnoreExecutor = true }, true)
 if ok and type(got) == "table" then
-used = "filtergc"
+local n0 = n
 for i = 1, #got do
 if type(got[i]) == "function" then report(got[i]) end
 end
+if n > n0 then used = "filtergc" end
 end
 end
 if n == 0 and type(dbgGetGC) == "function" then
 local seen, scanned = 0, 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 scanned = scanned + 1
 if scanned > 12000 then break end
 if scanned % 300 == 0 then task.wait() end
@@ -2187,7 +2251,8 @@ end
 function F.AutoKeywords()
 local cnt, order = {}, {}
 local scanned = 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 scanned = scanned + 1
 if scanned > 12000 then break end
 if scanned % 300 == 0 then task.wait() end
@@ -2267,7 +2332,8 @@ end
 end
 if #hits == 0 then
 local scanned = 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 scanned = scanned + 1
 if scanned > 12000 then break end
 if scanned % 300 == 0 then task.wait() end
@@ -2379,7 +2445,8 @@ local keep = F._scavenging
 F._scavenging = true
 F.Out(string.format("[形状] ===== 形状搜索: upvalue=%s 常量=%s =====", tostring(nups), tostring(nconsts)))
 local n, scanned = 0, 0
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
+if not F.gcTick(_gi) then break end
 scanned = scanned + 1
 if scanned > 12000 then break end
 if scanned % 300 == 0 then task.wait() end
@@ -2495,8 +2562,8 @@ end
 end)
 pcall(F.UnifiedACPass)
 F._scavenging = keepScav
-F.Out("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.BlockedCount .. " 个")
-return AC.BlockedCount
+F.Out("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.HookedCount .. " 个")
+return AC.HookedCount
 end
 F._afkConn = nil
 F._afkConn2 = nil
@@ -3269,7 +3336,7 @@ end
 F._trapHls = {}
 function F.TrapsESPEnable()
 if F._trapConn then return end
-for _, v in ipairs(workspace:GetDescendants()) do
+for _, v in ipairs(F.walk(workspace)) do
 local isPart = v:IsA("BasePart")
 local n = isPart and v.Name:lower() or ""
 if isPart and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
@@ -3375,7 +3442,7 @@ BulletHls[#BulletHls + 1] = hl
 end
 end
 BulletConn = workspace.DescendantAdded:Connect(tag)
-for _, part in ipairs(workspace:GetDescendants()) do tag(part) end
+for _, part in ipairs(F.walk(workspace)) do tag(part) end
 end
 F.KillAuraConn = nil
 F.lastAttack = 0
@@ -3815,7 +3882,7 @@ bg.Parent = root
 F._flyBv, F._flyBg = bv, bg
 end)
 end
-F._flyConn = RS.RenderStepped:Connect(function()
+F._flyConn = RS.RenderStepped:Connect(function(dt)
 if not T.FlyOn then F.FlyDestroy() return end
 local _, h, r = GC()
 if not (h and r) then return end
@@ -3831,7 +3898,8 @@ if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
 local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
 if F._flyAp then
-F._flyAp.Position = r.Position + vel * 0.05
+local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
+F._flyAp.Position = r.Position + vel * step
 F._flyAo.CFrame = c.CFrame
 if vel.Magnitude < 0.01 then pcall(function() r.AssemblyLinearVelocity = Vector3.zero end) end
 elseif F._flyBv then
@@ -4090,7 +4158,7 @@ end
 local function XrayEnable()
 local ch = LP.Character
 local made = 0
-for _, obj in ipairs(workspace:GetDescendants()) do
+for _, obj in ipairs(F.walk(workspace)) do
 if made >= 200 then break end
 if made > 0 and made % 200 == 0 then task.wait() end
 if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
@@ -4119,7 +4187,7 @@ end
 local mutedVolumes = nil
 local function MuteEnable()
 mutedVolumes = {}
-for _, s in ipairs(workspace:GetDescendants()) do
+for _, s in ipairs(F.walk(workspace)) do
 if s:IsA("Sound") then
 mutedVolumes[s] = s.Volume
 pcall(function() s.Volume = 0 end)
@@ -4156,7 +4224,7 @@ Terrain.WaterTransparency = 1
 end)
 end
 L.GlobalShadows = false L.FogEnd = 9e9 L.FogStart = 9e9 L.Brightness = 1
-for _, v in ipairs(workspace:GetDescendants()) do
+for _, v in ipairs(F.walk(workspace)) do
 if v:IsA("BasePart") then pcall(function() v.CastShadow = false end) end
 end
 end
@@ -4568,10 +4636,9 @@ F._fovRing = nil
 end
 F._menuOpen = false
 function F.MenuOpen()
-if F._menuOpen then return true end
 local ok, v = pcall(function() return Fluent and Fluent.GUI and Fluent.GUI.Enabled end)
-if ok and v == false then return false end
-return F._menuOpen
+if ok and v ~= nil then return v and true or false end
+return F._menuOpen and true or false
 end
 pcall(function()
 UIS.InputBegan:Connect(function(input, processed)
@@ -4659,13 +4726,7 @@ end
 task.spawn(function()
 pcall(function() F.UnloadAll() end)
 task.wait(0.6)
-local urls = {
-"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
-}
+local urls = F.REMOTE_URLS
 local body = nil
 for i = 1, #urls do
 local u = urls[i] .. "?cb=" .. tostring(os.time())
@@ -5201,7 +5262,11 @@ return function(self, ...)
 local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
 if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
 if not checkcaller() then
-F.Out(string.format("[流量] %s:%s", tostring(self.Name), method))
+F._spyN = (F._spyN or 0) + 1
+if F._spyN % 50 == 1 then
+F.Out(string.format("[流量] 已捕获 %d 条上行, 最近: %s:%s",
+F._spyN, tostring(self.Name), method))
+end
 end
 end
 return box.orig(self, ...)
@@ -5212,7 +5277,7 @@ F._spyHooked = true
 F._spyLayer = got
 F._remoteDownConns = {}
 pcall(function()
-for _, d in ipairs(RStorage:GetDescendants()) do
+for _, d in ipairs(F.walk(RStorage)) do
 if AC.isRemoteLike(d) then
 local conn = d.OnClientEvent:Connect(function(...)
 if T.RemoteSpy then F.Out(string.format("[下行] %s", d.Name)) end
@@ -5382,14 +5447,14 @@ local roots = { PG, CoreGui }
 if gethui then table.insert(roots, gethui()) end
 for _, root in ipairs(roots) do
 if root then
-local ok, list = pcall(function() return root:GetDescendants() end)
+local ok, list = pcall(function() return F.walk(root) end)
 if ok and type(list) == "table" then
 for _, obj in ipairs(list) do
 if obj:IsA("GuiButton") and obj.Visible then
 local hit = false
 if obj:IsA("TextButton") and multiplierFromText(obj.Text) then hit = true end
 if not hit then
-for _, child in ipairs(obj:GetDescendants()) do
+for _, child in ipairs(F.walk(obj)) do
 if (child:IsA("TextLabel") or child:IsA("TextButton")) and multiplierFromText(child.Text) then
 hit = true break
 end
@@ -5576,6 +5641,16 @@ end
 end)
 end
 function Trans.Save()
+local now = os.clock()
+Trans._dirty = true
+local last = Trans._savedAt or 0
+if now - last < 5 and not (Trans._dirtyOld and now - Trans._dirtyOld > 25) then
+Trans._dirtyOld = Trans._dirtyOld or now
+return
+end
+Trans._dirty = false
+Trans._dirtyOld = nil
+Trans._savedAt = now
 pcall(function()
 if type(writefile) ~= "function" then return end
 writefile(Trans.FILE, HS:JSONEncode(Trans.Cache))
@@ -5693,7 +5768,7 @@ local roots = { pg, CoreGui }
 if gethui then table.insert(roots, gethui()) end
 for _, root in ipairs(roots) do
 if root then
-for _, obj in ipairs(root:GetDescendants()) do Trans.GuiEl(obj) end
+for _, obj in ipairs(F.walk(root)) do Trans.GuiEl(obj) end
 end
 end
 for _, obj in ipairs(workspace:GetChildren()) do
@@ -5740,8 +5815,14 @@ function F.SendChat(text)
 if not text or text == "" then return false end
 local tcs = game:GetService("TextChatService")
 if tcs and tcs.TextChannels then
-local channel = tcs.TextChannels:FindFirstChild("RBXGeneral")
-if channel and channel.SendAsync then pcall(function() channel:SendAsync(text) end) return true end
+local chans = tcs:FindFirstChild("TextChannels")
+if chans then
+for _, channel in ipairs(chans:GetChildren()) do
+if channel:IsA("TextChannel") and channel.SendAsync then
+if pcall(function() channel:SendAsync(text) end) then return true end
+end
+end
+end
 end
 local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
 if chatEvents then
@@ -5843,6 +5924,18 @@ F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
 F.SpeedSet, F.FlySet,
+function()
+F._neutFns = {}
+F._magnetList = nil
+F._lastDiff = nil
+F._dumpText = nil
+F._snapMem = nil
+F._capLog = {}
+F._autoTh = nil
+F._spyN = nil
+F._cfgSyncing = false
+if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
+end,
 MuteDisable, FOVDisable, ZoomDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
@@ -5883,7 +5976,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.4.3",
+SubTitle = "v10.5.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6219,7 +6312,8 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.3 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+task.spawn(function() pcall(F.LogBaseName) end)
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6228,7 +6322,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.4.3")
+F.Out("[CheatMenu] ✅ 加载完成 v10.5.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
@@ -6249,7 +6343,7 @@ if not _polishCache[i].Parent then need = true break end
 end
 end
 if need then
-local ok, desc = pcall(function() return Fluent.GUI:GetDescendants() end)
+local ok, desc = pcall(function() return F.walk(Fluent.GUI) end)
 if not ok or not desc then return end
 _polishCache = {}
 for i = 1, #desc do
