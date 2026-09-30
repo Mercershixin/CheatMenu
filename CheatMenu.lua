@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:53 sha f68ef2a0 bytes 218722'):format('2026-09-30 19:53','f68ef2a0',218722))
+print(('[CheatMenu] build 2026-09-30 19:58 sha 64aba421 bytes 219668'):format('2026-09-30 19:58','64aba421',219668))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.0.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2617,13 +2617,35 @@ end
 end
 return best
 end
+F._fireAt = 0
+function F.AutoFire(tgt)
+if not (T.AutoFire and tgt) then return end
+local now = os.clock()
+if now - (F._fireAt or 0) < (tonumber(C.AutoFireGap) or 0.1) then return end
+F._fireAt = now
+local done = false
+pcall(function()
+local ch = LP.Character
+local tool = ch and ch:FindFirstChildOfClass("Tool")
+if tool then tool:Activate() done = true end
+end)
+if not done then
+pcall(function()
+local vu = game:GetService("VirtualUser")
+vu:CaptureController()
+vu:ClickButton1(Vector2.new(0, 0))
+done = true
+end)
+end
+if not done then pcall(function() if mouse1click then mouse1click() end end) end
+end
 function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then F._aimConn:Disconnect() F._aimConn = nil end
 if not T.AimOn then return end
 F._aimConn = RS.RenderStepped:Connect(function()
 if not T.AimOn then F.AimSet(false) return end
-if T.AimFireOnly and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
+if T.AimFireOnly and not T.AutoFire and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 local _, hum = GC()
 if not hum then return end
 local cam = workspace.CurrentCamera
@@ -2631,6 +2653,7 @@ local tgt = F.AimPick()
 if not (cam and tgt) then return end
 local want = CFrame.lookAt(cam.CFrame.Position, tgt.Position)
 cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
+F.AutoFire(tgt)
 end)
 end
 local SingleAimConn = nil
@@ -5751,7 +5774,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.0.0",
+SubTitle = "v9.1.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5779,6 +5802,8 @@ Tabs.Combat:AddToggle("AimOn", { Title = "自瞄(每帧把镜头转向视野内�
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围(屏幕像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
 Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v end })
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火)", Default = false, Callback = function(v) T.AutoFire = v end })
+Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
 Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v) T.FovCircle = v if v then F.FovCircleEnable() else F.FovCircleDisable() end end })
@@ -5979,9 +6004,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.0.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.1.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.0.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.1.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
