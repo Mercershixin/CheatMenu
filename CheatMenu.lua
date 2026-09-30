@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 21:38 sha 0ba671e9 bytes 218331'):format('2026-09-30 21:38','0ba671e9',218331))
+print(('[CheatMenu] build 2026-09-30 21:45 sha 0fd28e4c bytes 219447'):format('2026-09-30 21:45','0fd28e4c',219447))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.8.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -259,7 +259,10 @@ local keepScav = F._scavenging
 F._scavenging = true
 pcall(function()
 if type(getnilinstances) ~= "function" then return end
-for _, inst in ipairs(getnilinstances()) do
+local arr = getnilinstances()
+for i = 1, #arr do
+if i % 300 == 0 then task.wait() end
+local inst = arr[i]
 if typeof(inst) == "Instance" then
 local n = inst.Name
 if #n >= 6 and n:gsub("%s", "") == "ModuleScript" and n:find(string.char(10), 1, true) then
@@ -4273,7 +4276,11 @@ UIS.InputBegan:Connect(function(input, processed)
 if processed then return end
 if input.KeyCode ~= Enum.KeyCode.G then return end
 F._menuOpen = not F._menuOpen
-if F._menuOpen then pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end) end
+if F._menuOpen then
+pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
+else
+pcall(F.CloseDropdowns)
+end
 end)
 end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
@@ -4395,9 +4402,11 @@ if not T.Freecam then F.FreecamDisable() return end
 local c = workspace.CurrentCamera
 if not c then return end
 if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
-if F.MenuOpen() or UIS.TouchEnabled then
+local locked = (UIS.MouseBehavior == Enum.MouseBehavior.LockCenter)
+if not locked then F._mouseFreeAt = os.clock() end
+if F.MenuOpen() or UIS.TouchEnabled or (os.clock() - (F._mouseFreeAt or 0) < 0.8) then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-elseif UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+elseif not locked then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end)
 end
 local delta = UIS:GetMouseDelta()
@@ -5635,7 +5644,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.8.0",
+SubTitle = "v9.9.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5667,23 +5676,24 @@ btn.Parent = sg
 local c = Instance.new("UICorner")
 c.CornerRadius = UDim.new(0, 12)
 c.Parent = btn
-local drag, sx, sy, bx, by = false, 0, 0, 0, 0
+local dragInput, sx, sy, bx, by = nil, 0, 0, 0, 0
 btn.InputBegan:Connect(function(i)
 if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
-drag = true
+dragInput = i
 sx, sy = i.Position.X, i.Position.Y
 bx, by = btn.Position.X.Offset, btn.Position.Y.Offset
 end
 end)
 btn.InputChanged:Connect(function(i)
-if drag and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+if dragInput and i == dragInput then
 btn.Position = UDim2.new(0, bx + (i.Position.X - sx), 0, by + (i.Position.Y - sy))
 end
 end)
 btn.InputEnded:Connect(function(i)
-if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+if i == dragInput then dragInput = nil end
 end)
 btn.MouseButton1Click:Connect(function()
+local wasOpen = F.MenuOpen()
 local ok = pcall(function()
 local w = getgenv and getgenv().CM_Window
 if w and type(w.Toggle) == "function" then w:Toggle() return true end
@@ -5692,6 +5702,7 @@ if Fluent and Fluent.GUI then Fluent.GUI.Enabled = not Fluent.GUI.Enabled return
 return false
 end)
 if not ok then F.Out("[移动端] 菜单开关失败(该 Fluent 版本接口不同) —— 可长按拖走这个按钮") end
+if wasOpen then pcall(F.CloseDropdowns) end
 end)
 F._touchToggle = sg
 F.Out("[移动端] 已加常驻「菜单」按钮(可拖动)")
@@ -5912,7 +5923,7 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.8.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.9.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5925,14 +5936,47 @@ end
 local n = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.8.0")
+pcall(function()
+local ex = "?"
+pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
+F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writefile=%s · gethui=%s · 触屏=%s",
+ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
+type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
+end)
+F.Out("[CheatMenu] ✅ 加载完成 v9.9.0")
 end
+function F.CloseDropdowns()
+if not (Fluent and Fluent.Options) then return end
+for _, opt in pairs(Fluent.Options) do
+if type(opt) == "table" then
+pcall(function() if opt.Open then opt:Close() end end)
+end
+end
+end
+local _polishCache, _polishAt = nil, 0
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
+local now = os.clock()
+local need = (_polishCache == nil) or (now - _polishAt > 10)
+if not need then
+for i = 1, #_polishCache do
+if not _polishCache[i].Parent then need = true break end
+end
+end
+if need then
 local ok, desc = pcall(function() return Fluent.GUI:GetDescendants() end)
 if not ok or not desc then return end
-for _, obj in ipairs(desc) do
+_polishCache = {}
+for i = 1, #desc do
+local obj = desc[i]
 if obj:IsA("ImageLabel") and tostring(obj.Image or ""):find("12266946128", 1, true) then
+_polishCache[#_polishCache + 1] = obj
+end
+end
+_polishAt = now
+end
+for _, obj in ipairs(_polishCache) do
+if obj.Parent then
 local isOn = obj.Position.X.Offset >= 15
 if isOn then
 obj.ImageColor3 = Color3.fromRGB(255, 255, 255)
