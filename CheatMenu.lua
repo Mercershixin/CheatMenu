@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 01:15 sha 6f5a1976 bytes 237276'):format('2026-09-30 01:15','6f5a1976',237276))
+print(('[CheatMenu] build 2026-09-30 18:45 sha dcc7c080 bytes 235608'):format('2026-09-30 18:45','dcc7c080',235608))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.2.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2799,6 +2799,9 @@ o.tracer.Parent = ESPGui
 ESPObjs[pl] = o
 end
 local function espUpdate()
+local _now = os.clock()
+if _now - (F._espAt or 0) < 0.033 then return end
+F._espAt = _now
 if T.ESPRainbow then ESPHue = (ESPHue + 0.008) % 1 end
 local cam = workspace.CurrentCamera
 if not cam then return end
@@ -3556,7 +3559,7 @@ end
 else
 L[#L + 1] = "② 所有权本来就在本地 ✓"
 end
-local step = tonumber(C.SpeedCFrameStep) or e.maxStep
+local step = tonumber(C.SpeedCFrameStep) or 4
 local r = F.SrvProbe(step, 2)
 if not r then
 L[#L + 1] = "③ 探针: 没有角色, 无法测"
@@ -3656,7 +3659,7 @@ F.FlyPhysDisable()
 pcall(F.AuthorityGuard, true)
 hum.PlatformStand = true
 F._flyBaseY = root.Position.Y
-local modern = (T.FlyPhysModern == true)
+local modern = (T.FlyPhysModern ~= false)
 F._flyModern = modern
 if modern then
 F._flyAtt = Instance.new("Attachment")
@@ -3762,7 +3765,7 @@ if not (hum and root) then return end
 dt = math.min(dt, 0.1)
 local md = hum.MoveDirection
 if md.Magnitude < 0.01 then F._speedCLeft = 0 return end
-local maxPerFrame = math.clamp(tonumber(C.SpeedCFrameStep) or 4, 0.5, 16)
+local maxPerFrame = math.max(0.5, (tonumber(C.SpeedTarget) or 60) / F.SrvFPS())
 F._srv.dir = md.Unit
 local want = (tonumber(C.SpeedTarget) or 60) * dt + (F._speedCLeft or 0)
 local move = math.min(want, maxPerFrame)
@@ -5890,7 +5893,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.2.0",
+SubTitle = "v8.3.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5996,28 +5999,7 @@ FlyDisable() F.FlyPhysDisable()
 if T.Fly then FlyEnable()
 elseif T.FlyPhys then F.FlyPhysEnable() end
 end })
-Tabs.Move:AddToggle("FlyPhysModern", { Title = "物理飞行·现代约束(Align 代替 BodyMover)", Default = false, Callback = function(v)
-T.FlyPhysModern = v
-if T.FlyPhys then F.FlyPhysDisable() F.FlyPhysEnable() end
-end })
 Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度", Min = 10, Max = 1000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
-Tabs.Move:AddDropdown("FlyDisguise", { Title = "位移伪装", Values = {
-"关闭", "假落地(避开滞空>2s 判定)", "假落地 + 持续保持网络所有权",
-}, Default = "关闭", Callback = function(v)
-C.FlyDisguise = v
-T.FakeLand = (v ~= "关闭")
-T.SrvHoldOwn = (v == "假落地 + 持续保持网络所有权")
-if T.SrvHoldOwn then F.SrvHoldEnable() else F.SrvHoldDisable() end
-end })Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
-Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(一个开关)", Default = false, Callback = function(v)
-T.Speed = v
-if v then
-if T.SpeedCFrame then F.SpeedCFrameEnable() else SpeedEnable() end
-else
-SpeedDisable() F.SpeedCFrameDisable()
-end
-end })
 Tabs.Move:AddSlider("SpeedTarget", { Title = "速度(studs/s · 人类默认16 · 100 是公开阈值)", Min = 16, Max = 300, Default = 60, Rounding = 0, Callback = function(v)
 C.SpeedTarget = v
 end })
@@ -6038,7 +6020,6 @@ elseif T.SpeedCFrame then F.SpeedCFrameEnable()
 else SpeedEnable() end
 end
 end })
-Tabs.Move:AddSlider("SpeedCFrameStep", { Title = "CFrame模式: 单帧位移上限", Min = 1, Max = 16, Default = 4, Rounding = 0, Callback = function(v) C.SpeedCFrameStep = v end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v) T.InfiniteJump = v if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end end })
 Tabs.Move:AddToggle("AirWalk", { Title = "踏空", Default = false, Callback = function(v) T.AirWalk = v if v then F.AirWalkEnable() else F.AirWalkDisable() end end })
@@ -6180,12 +6161,13 @@ pcall(F.GuiProtectionDisable)
 pcall(F.StealthDisable)
 end
 end })
-Tabs.AC:AddButton({ Title = "统一扫描(一次 getgc 全做完)", Callback = function()
+Tabs.AC:AddButton({ Title = "一键扫描(连接 + remote + 模块 + 能力)", Callback = function()
 task.spawn(function()
 local _, capOk, capTotal = F.ProbeCapabilities(false)
 local n = F.UnifiedACPass()
 pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
+pcall(function() AC.DisableACConnections(true) end)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
@@ -6194,31 +6176,14 @@ Duration = 8,
 })
 end)
 end })
-Tabs.AC:AddButton({ Title = "抓包+模块扫描", Callback = function()
-task.spawn(function()
-pcall(F.ScanRemotes)
-pcall(F.ScanGameModules)
-Fluent:Notify({ Title = "扫描完成", Content = "见控制台 F9", Duration = 6 })
-end)
-end })
-Tabs.AC:AddButton({ Title = "清理反作弊连接(getconnections)", Callback = function()
-task.spawn(function()
-local d, s = AC.DisableACConnections(true)
-Fluent:Notify({ Title = "反作弊", Content = "扫描 " .. tostring(s) .. " 条, 已禁用 " .. tostring(d) .. " 条", Duration = 6 })
-end)
-end })
-Tabs.AC:AddSection("全量采集与导出")
-Tabs.AC:AddButton({ Title = "开始采集 remote 调用(玩 5-10 分钟)", Callback = function()
+Tabs.AC:AddSection("采集与导出")
+Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
+if v then
 local ok = F.CaptureEnable()
-Fluent:Notify({
-Title = "采集",
-Content = ok and "已开始记录上行 remote 参数 —— 正常玩一会儿, 再点「一键全量导出」" or "开启失败(执行器不支持 hookmetamethod)",
-Duration = 8,
-})
-end })
-Tabs.AC:AddButton({ Title = "停止采集", Callback = function()
-local n = F.CaptureDisable()
-Fluent:Notify({ Title = "采集", Content = "已停止, 共记录 " .. tostring(n) .. " 条", Duration = 5 })
+Fluent:Notify({ Title = "采集", Content = ok and "已开始记录上行 remote 参数 —— 玩一会儿后点「一键全量导出」" or "开启失败(执行器不支持 hookmetamethod)", Duration = 8 })
+else
+Fluent:Notify({ Title = "采集", Content = "已停止, 共记录 " .. tostring(F.CaptureDisable()) .. " 条", Duration = 5 })
+end
 end })
 Tabs.AC:AddButton({ Title = "一键全量导出(内容复制到剪贴板)", Callback = function()
 task.spawn(function()
@@ -6298,9 +6263,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.2.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.3.0 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.2.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.3.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
