@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 01:14 sha 21b6176a bytes 240669'):format('2026-10-01 01:14','21b6176a',240669))
+print(('[CheatMenu] build 2026-10-01 01:33 sha bd478b10 bytes 240737'):format('2026-10-01 01:33','bd478b10',240737))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.4.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.4.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2151,6 +2151,7 @@ elseif obj:IsA("BindableEvent") or obj:IsA("BindableFunction") then sig = obj.Ev
 local ok, conns = pcall(getconnections, sig)
 local cnt = (ok and type(conns) == "table") and #conns or -1
 local tag = AC.isSuspicious(obj.Name) and "可疑" or "普通"
+if AC.isSuspicious(obj.Name) then F._lastSusRemote = sig or obj end
 F.Out(string.format("[监听扫描] %s [%s] %s · %s · 连接 %s", tag, cls, tostring(obj.Name), where,
 cnt < 0 and "读不到(无 getconnections)" or tostring(cnt)))
 if cnt > 0 then connInfo(sig, "   └ " .. tostring(obj.Name), conns) end
@@ -6181,7 +6182,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.4.1",
+SubTitle = "v10.4.2",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6511,7 +6512,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6520,7 +6521,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.4.1")
+F.Out("[CheatMenu] ✅ 加载完成 v10.4.2")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
