@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 23:43 sha de7c3277 bytes 220410'):format('2026-09-30 23:43','de7c3277',220410))
+print(('[CheatMenu] build 2026-09-30 23:57 sha 5d71c542 bytes 220406'):format('2026-09-30 23:57','5d71c542',220406))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -14,7 +14,7 @@ F.SANITIZE = {
 {"getconstants", "const-list"}, {"getconstant", "const-get"}, {"setconstant", "const-set"},
 {"getupvalues", "upval-list"}, {"getupvalue", "upval-get"}, {"setupvalue", "upval-set"},
 {"getprotos", "proto-list"}, {"getproto", "proto-get"}, {"setproto", "proto-set"},
-{"setclipboard", "clip-set"}, {"write_clipboard", "clip-write"},
+{"setclipboard", "clip-set"}, {"write_clipboard", "clip-write"}, {"toclipboard", "clip-copy"},
 {"fireproximityprompt", "fire-prompt"}, {"firetouchinterest", "fire-touch"},
 {"firesignal", "fire-signal"}, {"sethiddenproperty", "hidden-set"},
 {"gethiddenproperty", "hidden-get"}, {"setscriptable", "scriptable-set"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.10.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.10.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -250,7 +250,7 @@ AC.KNOWN_LIMITS = {
 { src = "Sentinel", key = "DetectionThreshold",  val = 5,   unit = "次(累计才处置)",     ours = "尽量不产生任何一次" },
 { src = "Adonis",   key = "Speed(GetRealPhysicsFPS)", val = 0, unit = "物理帧率超阈值即 kill", ours = "不动 WalkSpeed 上限, 优先 CFrame" },
 { src = "Adonis",   key = "HumanoidState==StrafingNoPhysics", val = 0, unit = "立即 kill(NoClipping)", ours = "穿墙时禁用该状态" },
-{ src = "Adonis",   key = "日志黑名单(执行器函数名)", val = 0, unit = "命中即 kill",      ours = "F.Sanitize 全量消毒" },
+{ src = "Adonis",   key = "LogBlacklist", val = 0, unit = "命中即 kill",      ours = "F.Sanitize 全量消毒(含日志词黑名单)" },
 { src = "Sentinel", key = "按实例名扫 {exploit,inject,cheat,...}", val = 0, unit = "建实例即标记", ours = "实例名已去特征化" },
 }
 function AC.ThresholdReport()
@@ -3391,7 +3391,6 @@ local o = F.SrvOwnInfo()
 local L = {}
 L[#L + 1] = string.format("物理帧率 %.0f · 本脚本不做任何限速(上限就是你在滑块上写的数)", F.SrvFPS())
 L[#L + 1] = "① 网络所有权(HRP) = " .. tostring(o.ownerName)
-local fixed = false
 if o.serverOwned then
 if F.SrvOwnTake(true) then
 L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓ (仍被拉回就打开「持续保持所有权」)"
@@ -5669,7 +5668,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.10.0",
+SubTitle = "v9.10.1",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5939,10 +5938,8 @@ Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll
 T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
-F.AutoSaveEnable()
-F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5962,7 +5959,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.10.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.10.1")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
@@ -6090,7 +6087,7 @@ if ty == "Toggle" then
 want = T[name]
 else
 want = C[name]
-if want == nil then want = F[name] end
+if want == nil and type(T[name]) ~= "boolean" then want = nil end
 if want == nil then want = T[name] end
 end
 if want ~= nil and type(want) == type(cur) and want ~= cur then
