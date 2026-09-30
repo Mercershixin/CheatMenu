@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 21:23 sha 74d8df42 bytes 219554'):format('2026-09-30 21:23','74d8df42',219554))
+print(('[CheatMenu] build 2026-09-30 21:38 sha 0ba671e9 bytes 218331'):format('2026-09-30 21:38','0ba671e9',218331))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.7.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2276,6 +2276,10 @@ end
 KG.hooked = false
 KG.orig = nil
 end
+function F.KickRejoinDisable()
+if KG.rjConn then pcall(function() KG.rjConn:Disconnect() end) KG.rjConn = nil end
+T.KickRejoin = false
+end
 function F.KickRejoinEnable()
 if KG.rjConn then return true end
 KG.rjConn = Players.PlayerRemoving:Connect(function(p)
@@ -3220,6 +3224,9 @@ end
 end
 F.HitboxBackup = {}
 F._hbProg = nil
+if F._hbAddedConn then pcall(function() F._hbAddedConn:Disconnect() end) F._hbAddedConn = nil end
+for pl, c in pairs(F._hbPlConns or {}) do pcall(function() c:Disconnect() end) end
+F._hbPlConns = {}
 end
 F._authorityServer = nil
 F._authorityMode = nil
@@ -3809,10 +3816,22 @@ SelfGlowHl.FillTransparency = 1
 SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
 SelfGlowHl.Parent = ch
 end
+local mutedVolumes = nil
 local function MuteEnable()
+mutedVolumes = {}
 for _, s in ipairs(workspace:GetDescendants()) do
-if s:IsA("Sound") then s.Volume = 0 end
+if s:IsA("Sound") then
+mutedVolumes[s] = s.Volume
+pcall(function() s.Volume = 0 end)
 end
+end
+end
+local function MuteDisable()
+if not mutedVolumes then return end
+for s, v in pairs(mutedVolumes) do
+pcall(function() if typeof(s) == "Instance" and s.Parent then s.Volume = v end end)
+end
+mutedVolumes = nil
 end
 local savedLag = nil
 local function AntilagDisable()
@@ -3892,71 +3911,6 @@ end
 end
 end)
 end
-local function InstantPromptEnable()
-local function maxOut(p)
-if not (p and p:IsA("ProximityPrompt")) then return end
-p.HoldDuration = 0
-pcall(function() p.MaxActivationDistance = math.huge end)
-pcall(function() p.RequiresLineOfSight = false end)
-pcall(function() p.Cooldown = 0 end)
-end
-for _, p in ipairs(workspace:GetDescendants()) do maxOut(p) end
-if not InstantPromptConn then
-InstantPromptConn = workspace.DescendantAdded:Connect(function(d) maxOut(d) end)
-end
-end
-local function BadgeBypassEnable()
-if not hookfunction then return end
-pcall(function()
-local bs = game:GetService("BadgeService")
-hookfunction(bs.UserHasBadgeAsync, function() return true end)
-hookfunction(bs.UserOwnsBadgeAsync, function() return true end)
-end)
-pcall(function()
-local gs = game:GetService("GroupService")
-hookfunction(gs.IsInGroup, function() return true end)
-end)
-end
-local function MetaBypassEnable()
-if not (getgc and islclosure) then return end
-local function wipeMeta(v) if type(v) == "userdata" then pcall(function() setmetatable(v, nil) end) end end
-local function findAndWipe(kw)
-for _, v in ipairs(F.GuardedGetGC(true, true)) do
-if type(v) == "function" and islclosure(v) then
-local ok, info = pcall(debug.getinfo, v, "n")
-if ok and info and info.name and info.name:lower():find(kw, 1, true) then
-for i = 1, 20 do
-local n, uv = debug.getupvalue(v, i)
-if not n then break end
-wipeMeta(uv)
-if type(uv) == "table" then for _, sub in pairs(uv) do wipeMeta(sub) end end
-end
-end
-end
-end
-end
-for _, kw in ipairs({ "anti", "detect", "ban", "cheat", "flag" }) do findAndWipe(kw) end
-end
-local function ChatBypassEnable()
-if not hookfunction then return end
-local tcs = game:GetService("TextChatService")
-if not (tcs and tcs.TextChannels) then return end
-for _, channel in ipairs(tcs.TextChannels:GetChildren()) do
-if channel:IsA("TextChannel") and channel.SendAsync then
-local sendFn = channel.SendAsync
-local origSend
-pcall(function()
-origSend = hookfunction(sendFn, function(self, text, ...)
-if T.ChatBypass and type(text) == "string" then
-text = text:gsub("(.)", "%1\226\128\139")
-end
-if origSend then return origSend(self, text, ...) end
-end)
-end)
-if type(origSend) == "function" then AC.markHooked(sendFn) end
-end
-end
-end
 local HitboxList = {}
 local function addHitbox(pl)
 if pl == LP or not T.Hitbox then return end
@@ -4000,14 +3954,18 @@ end
 HitboxList = {}
 end
 local function FOVEnable() workspace.CurrentCamera.FieldOfView = C.FOV or 100 end
-local function FOVDisable() workspace.CurrentCamera.FieldOfView = 70 end
+local function FOVDisable()
+local c = workspace.CurrentCamera
+if c then c.FieldOfView = (F._orig and F._orig.fov) or 70 end
+end
 local function ZoomEnable()
 LP.CameraMaxZoomDistance = C.Zoom or 400
 LP.CameraMinZoomDistance = 0.5
 end
 local function ZoomDisable()
-LP.CameraMaxZoomDistance = 128
-LP.CameraMinZoomDistance = 0.5
+local o = F._orig or {}
+LP.CameraMaxZoomDistance = o.maxZoom or 128
+LP.CameraMinZoomDistance = o.minZoom or 0.5
 end
 local LockHealthConn = nil
 local function LockHealthDisable() if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end end
@@ -4707,7 +4665,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 pcall(F.SrvHoldDisable)
-for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, MuteDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
@@ -4773,6 +4731,8 @@ if not F._orig.jumpHeight and hum.JumpHeight then F._orig.jumpHeight = hum.JumpH
 local mh = tonumber(hum.MaxHealth)
 if not F._orig.maxHealth and mh and mh == mh and mh < 1e6 then F._orig.maxHealth = mh end
 end
+if not F._orig.maxZoom then F._orig.maxZoom = LP.CameraMaxZoomDistance end
+if not F._orig.minZoom then F._orig.minZoom = LP.CameraMinZoomDistance end
 local cam = workspace.CurrentCamera
 if cam and not F._orig.fov then F._orig.fov = cam.FieldOfView end
 if not F._baseWalk and F._orig.walk then F._baseWalk = F._orig.walk end
@@ -5635,6 +5595,7 @@ F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
 F.SpeedSet, F.FlySet,
+MuteDisable, FOVDisable, ZoomDisable,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() KG.rjConn = nil end end)
@@ -5674,7 +5635,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.7.0",
+SubTitle = "v9.8.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5828,7 +5789,7 @@ if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 end })
 Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then FOVEnable() end end })
 Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then ZoomEnable() end end })
-Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then MuteEnable() end end })
+Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then MuteEnable() else MuteDisable() end end })
 Tabs.World:AddToggle("Antilag", { Title = "降画质", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
@@ -5847,7 +5808,7 @@ Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
 if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable()
-else F.KickGuardDisable() F.AntiAFKDisable() end
+else F.KickGuardDisable() F.AntiAFKDisable() pcall(F.KickRejoinDisable) end
 end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then F.AutoTrainEnable() end end })
 Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then F.AutoBonusEnable() end end })
@@ -5951,7 +5912,7 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.7.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.8.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5964,7 +5925,7 @@ end
 local n = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.7.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.8.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
