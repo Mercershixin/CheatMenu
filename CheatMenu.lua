@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:19 sha ea532c60 bytes 228517'):format('2026-09-30 19:19','ea532c60',228517))
+print(('[CheatMenu] build 2026-09-30 19:28 sha c5ac697e bytes 218768'):format('2026-09-30 19:28','c5ac697e',218768))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.6.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3476,17 +3476,6 @@ end
 function F.SrvHoldDisable()
 if F._srv.holdConn then F._srv.holdConn:Disconnect() F._srv.holdConn = nil end
 end
-function F.FakeLand(hum, root)
-if T.FakeLand == false or not (hum and root) then return end
-local now = os.clock()
-if now - (F._srv.landAt or 0) < (tonumber(C.SafeLandSec) or 1.4) then return end
-F._srv.landAt = now
-pcall(function()
-if hum.FloorMaterial == Enum.Material.Air then
-hum:ChangeState(Enum.HumanoidStateType.Landed)
-end
-end)
-end
 function F.SrvSnapWatch(sec, onDone)
 sec = tonumber(sec) or 5
 F._srv.snap, F._srv.snapMax, F._srv.bad = 0, 0, 0
@@ -3605,241 +3594,109 @@ pr.intended, pr.actual, pr.ratio * 100) or "无角色") .. "   (需 >=90% 才算
 F.Out("──────────────────────────────")
 end)
 end
-local FlyConn = nil
-local function FlyDisable()
-if FlyConn then FlyConn:Disconnect() FlyConn = nil end
+F._baseWalk = 16
+F._spdConn, F._flyConn = nil, nil
+F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
+function F.SpeedApply()
 local _, hum = GC()
-if hum then hum.PlatformStand = false end
-F._flyBaseY = nil
+if not hum then return end
+local v = T.SpeedOn and (tonumber(C.SpeedValue) or 60) or F._baseWalk
+pcall(function() hum.WalkSpeed = v end)
 end
-local function FlyEnable()
-local _, hum, root = GC()
-if not (hum and root) then return end
-FlyDisable()
-pcall(F.AuthorityGuard, true)
-hum.PlatformStand = true
-F._flyBaseY = root.Position.Y
-FlyConn = RS.RenderStepped:Connect(function(dt)
-if not T.Fly then FlyDisable() return end
-local _, h, r = GC()
-if not (h and r) then return end
-local cam = workspace.CurrentCamera
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-local moved = false
-local sp = 0
-if dir.Magnitude > 0 then
-sp = (C.FlySpeed or 50) * math.min(dt, 0.1)
-r.CFrame = r.CFrame + (dir.Unit * sp)
-moved = true
+function F.SpeedSet(on)
+T.SpeedOn = on and true or false
+if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
+if T.SpeedOn then
+local _, hum = GC()
+if hum then
+local bw = tonumber(hum.WalkSpeed) or 16
+if bw > 0 and bw <= 32 then F._baseWalk = bw end
 end
-F._srv.expectMove = sp
-F._srv.dir = dir.Magnitude > 0 and dir.Unit or nil
-F.FakeLand(h, r)
-r.AssemblyLinearVelocity = moved and (dir.Unit * (C.FlySpeed or 50)) or Vector3.zero
-r.AssemblyAngularVelocity = Vector3.zero
+F.SpeedApply()
+F._spdConn = RS.Heartbeat:Connect(function()
+if not T.SpeedOn then return end
+local now = os.clock()
+if now - (F._spdAt or 0) < 0.2 then return end
+F._spdAt = now
+local _, h = GC()
+if not h then return end
+if math.abs((h.WalkSpeed or 0) - (tonumber(C.SpeedValue) or 60)) > 0.5 then F.SpeedApply() end
 end)
+else
+F.SpeedApply()
 end
-local FlyBv, FlyBg, FlyBvConn = nil, nil, nil
-function F.FlyPhysDisable()
-if FlyBvConn then FlyBvConn:Disconnect() FlyBvConn = nil end
-if FlyBv then pcall(function() FlyBv:Destroy() end) FlyBv = nil end
-if FlyBg then pcall(function() FlyBg:Destroy() end) FlyBg = nil end
-if F._flyAp then pcall(function() F._flyAp:Destroy() end) F._flyAp = nil end
-if F._flyAo then pcall(function() F._flyAo:Destroy() end) F._flyAo = nil end
-if F._flyAtt then pcall(function() F._flyAtt:Destroy() end) F._flyAtt = nil end
+end
+function F.FlyDestroy()
+if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
+for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt" }) do
+if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
+end
 local _, hum = GC()
 if hum then pcall(function() hum.PlatformStand = false end) end
 end
-function F.FlyPhysEnable()
+function F.FlySet(on)
+T.FlyOn = on and true or false
+F.FlyDestroy()
+if not T.FlyOn then return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-F.FlyPhysDisable()
-pcall(F.AuthorityGuard, true)
-hum.PlatformStand = true
-F._flyBaseY = root.Position.Y
-local modern = (T.FlyPhysModern ~= false)
-F._flyModern = modern
-if modern then
-F._flyAtt = Instance.new("Attachment")
-F._flyAtt.Name = "RootTilt"
-F._flyAtt.Parent = root
-F._flyAp = Instance.new("AlignPosition")
-F._flyAp.Attachment0 = F._flyAtt
-F._flyAp.Mode = Enum.PositionAlignmentMode.OneAttachment
-F._flyAp.MaxForce = 1e9
-F._flyAp.Responsiveness = 40
-F._flyAp.Position = root.Position
-F._flyAp.Parent = root
-F._flyAo = Instance.new("AlignOrientation")
-F._flyAo.Attachment0 = F._flyAtt
-F._flyAo.Mode = Enum.OrientationAlignmentMode.OneAttachment
-F._flyAo.MaxTorque = 1e9
-F._flyAo.Responsiveness = 40
-F._flyAo.CFrame = root.CFrame
-F._flyAo.Parent = root
-else
-FlyBv = Instance.new("BodyVelocity")
-FlyBv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-FlyBv.Velocity = Vector3.zero
-FlyBv.Parent = root
-FlyBg = Instance.new("BodyGyro")
-FlyBg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-FlyBg.P = 1e4
-FlyBg.Parent = root
+pcall(function() hum.PlatformStand = true end)
+local okAlign = pcall(function()
+local att = Instance.new("Attachment")
+att.Name = "RootTilt"
+att.Parent = root
+local ap = Instance.new("AlignPosition")
+ap.Attachment0 = att
+ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+ap.MaxForce = 1e9
+ap.Responsiveness = 40
+ap.Position = root.Position
+ap.Parent = root
+local ao = Instance.new("AlignOrientation")
+ao.Attachment0 = att
+ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+ao.MaxTorque = 1e9
+ao.Responsiveness = 40
+ao.CFrame = root.CFrame
+ao.Parent = root
+F._flyAtt, F._flyAp, F._flyAo = att, ap, ao
+end)
+if not okAlign then
+pcall(function()
+local bv = Instance.new("BodyVelocity")
+bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+bv.Velocity = Vector3.zero
+bv.Parent = root
+local bg = Instance.new("BodyGyro")
+bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+bg.P = 1e4
+bg.Parent = root
+F._flyBv, F._flyBg = bv, bg
+end)
 end
-if FlyBvConn then FlyBvConn:Disconnect() end
-FlyBvConn = RS.RenderStepped:Connect(function()
-if not T.FlyPhys then F.FlyPhysDisable() return end
-local _, _, r = GC()
-if not r then return end
-if F._flyModern then
-if not F._flyAp then return end
-elseif not FlyBv then return end
-local cam = workspace.CurrentCamera
+F._flyConn = RS.RenderStepped:Connect(function()
+if not T.FlyOn then F.FlyDestroy() return end
+local _, h, r = GC()
+if not (h and r) then return end
+if not h.PlatformStand then pcall(function() h.PlatformStand = true end) end
+local c = workspace.CurrentCamera
+if not c then return end
 local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + c.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - c.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - c.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + c.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-local spd = C.FlySpeed or 50
-local targetVel = dir.Unit * spd * (dir.Magnitude > 0 and 1 or 0)
-if F._flyModern then
-F._flyAp.Position = F._flyAp.Position:Lerp(targetVel * 0.05 + r.Position, 0.35)
-F._flyAo.CFrame = cam.CFrame
-else
-FlyBv.Velocity = FlyBv.Velocity:Lerp(targetVel, 0.35)
-FlyBg.CFrame = cam.CFrame
+local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
+if F._flyAp then
+F._flyAp.Position = r.Position + vel * 0.05
+F._flyAo.CFrame = c.CFrame
+elseif F._flyBv then
+F._flyBv.Velocity = vel
+F._flyBg.CFrame = c.CFrame
 end
 end)
-end
-local SpeedConn, SpeedConn2, baseWalk
-local function SpeedDisable()
-if SpeedConn then SpeedConn:Disconnect() SpeedConn = nil end
-if SpeedConn2 then SpeedConn2:Disconnect() SpeedConn2 = nil end
-local _, hum = GC()
-if hum and baseWalk then hum.WalkSpeed = baseWalk end
-baseWalk = nil
-end
-local function SpeedEnable()
-if SpeedConn then return end
-local function apply(dt, doOffset)
-if not T.Speed then return end
-local _, hum, root = GC()
-if hum then
-if not baseWalk then baseWalk = math.clamp(hum.WalkSpeed or 16, 8, 100) end
-C._baseWalk = baseWalk
-local target = tonumber(C.SpeedTarget) or 60
-local walk = target
-local cur = hum.WalkSpeed
-if math.abs(cur - walk) > 2 then
-pcall(function() hum.WalkSpeed = cur + (cur < walk and 2 or -2) end)
-else
-pcall(function() hum.WalkSpeed = walk end)
-end
-if doOffset and root and target > walk and hum.MoveDirection.Magnitude > 0.1 then
-local extra = (target - walk) * math.min(dt or 1/60, 0.1)
-pcall(function() root.CFrame = root.CFrame + hum.MoveDirection * extra end)
-end
-if root and hum.MoveDirection.Magnitude > 0.1 then
-F._srv.expectMove = walk * math.min(dt or 1/60, 0.1)
-F._srv.dir = hum.MoveDirection.Unit
-end
-end
-end
-apply(nil, false)
-SpeedConn = RS.Stepped:Connect(function(t, dt) apply(dt, true) end)
-SpeedConn2 = RS.RenderStepped:Connect(function(dt) apply(dt, false) end)
-end
-function F.SpeedCFrameEnable()
-if F._speedCConn then return end
-F._speedCLeft = 0
-pcall(F.AuthorityGuard, true)
-F._speedCConn = RS.RenderStepped:Connect(function(dt)
-if not T.SpeedCFrame then F._speedCLeft = 0 F._srv.expectMove = 0 return end
-local _, hum, root = GC()
-if not (hum and root) then return end
-dt = math.min(dt, 0.1)
-local md = hum.MoveDirection
-if md.Magnitude < 0.01 then F._speedCLeft = 0 return end
-local maxPerFrame = math.max(0.5, (tonumber(C.SpeedTarget) or 60) / F.SrvFPS())
-F._srv.dir = md.Unit
-local want = (tonumber(C.SpeedTarget) or 60) * dt + (F._speedCLeft or 0)
-local move = math.min(want, maxPerFrame)
-F._speedCLeft = want - move
-if move <= 0 then return end
-F._srv.expectMove = move
-local subs = math.max(1, math.ceil(move / 2))
-local per = move / subs
-local cf = root.CFrame
-for _ = 1, subs do cf = cf + md.Unit * per end
-root.CFrame = cf
-end)
-end
-function F.SpeedCFrameDisable()
-if F._speedCConn then F._speedCConn:Disconnect() F._speedCConn = nil end
-F._speedCLeft = 0
-end
-function F.DesyncSpeedEnable()
-if AC._desyncOn then return end
-AC._desyncOn = true
-pcall(F.AuthorityGuard, true)
-AC._desyncLoc = CFrame.new()
-AC._desyncOffset = Vector3.new(
-tonumber(C.DesyncSide) or 0,
--(tonumber(C.DesyncOffset) or 5),
-0)
-AC._desyncConn = RS.Heartbeat:Connect(function()
-if not AC._desyncOn or not T.DesyncSpeed then return end
-AC._desyncOffset = Vector3.new(
-tonumber(C.DesyncSide) or 0,
--(tonumber(C.DesyncOffset) or 5),
-0)
-local ch = LP.Character
-local root = ch and ch:FindFirstChild("HumanoidRootPart")
-if not root then return end
-AC._desyncLoc = root.CFrame
-local fakePos = AC._desyncLoc.Position + AC._desyncOffset
-root.CFrame = CFrame.new(fakePos, fakePos + AC._desyncLoc.LookVector)
-pcall(function()
-RS:UnbindFromRenderStep("CMDesyncRevert")
-end)
-pcall(function()
-RS:BindToRenderStep("CMDesyncRevert", Enum.RenderPriority.Camera.Value + 1, function()
-RS:UnbindFromRenderStep("CMDesyncRevert")
-if root.Parent then pcall(function() root.CFrame = AC._desyncLoc end) end
-end)
-end)
-end)
-local got = F.MetaInstall("game.__index", game, "Desync", function(box)
-return function(self, key)
-if AC._desyncOn and T.DesyncSpeed and not checkcaller() and key == "CFrame" then
-local ch = LP.Character
-local root = ch and ch:FindFirstChild("HumanoidRootPart")
-if root and self == root then return AC._desyncLoc end
-end
-return box.orig(self, key)
-end
-end)
-AC._desyncHook = got ~= nil
-AC._desyncLayer = got
-end
-function F.DesyncSpeedDisable()
-AC._desyncOn = false
-if AC._desyncConn then pcall(function() AC._desyncConn:Disconnect() end) AC._desyncConn = nil end
-pcall(function() RS:UnbindFromRenderStep("CMDesyncRevert") end)
-if AC._desyncHook then
-F.MetaUninstall("game.__index", "Desync")
-end
-AC._desyncHook = nil
-AC._desyncLayer = nil
 end
 F.JumpConn = nil
 function F.InfiniteJumpDisable() if F.JumpConn then F.JumpConn:Disconnect() F.JumpConn = nil end end
@@ -3852,33 +3709,7 @@ if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 end
 F.SpinConn = nil
-function F.SpinDisable() if F.SpinConn then F.SpinConn:Disconnect() F.SpinConn = nil end end
-function F.SpinEnable()
-if F.SpinConn then return end
-F.SpinConn = RS.RenderStepped:Connect(function()
-if not T.Spin then return end
-local _, _, r = GC()
-if r then r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(C.SpinSpeed or 10), 0) end
-end)
-end
 F.AirWalkConn = nil
-function F.AirWalkDisable() if F.AirWalkConn then F.AirWalkConn:Disconnect() F.AirWalkConn = nil end end
-function F.AirWalkEnable()
-if F.AirWalkConn then return end
-F.AirWalkConn = RS.RenderStepped:Connect(function(dt)
-if not T.AirWalk then return end
-local _, hum, r = GC()
-if not (hum and r) then return end
-if hum.FloorMaterial ~= Enum.Material.Air then return end
-local cam = workspace.CurrentCamera
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-if dir.Magnitude > 0 then r.CFrame = r.CFrame + dir.Unit * (C.AirWalkSpeed or 30) * math.min(dt, 0.1) end
-end)
-end
 F.NoClipConn = nil
 F.NoClipParts = {}
 function F.NoClipDisable()
@@ -4096,39 +3927,6 @@ F.ClickerConn = RS.Stepped:Connect(function()
 if not T.Clicker then return end
 if type(mouse1click) == "function" then mouse1click()
 elseif type(mouse1press) == "function" then mouse1press() task.wait(0.01) mouse1release() end
-end)
-end
-local FlyCarConn = nil
-local function FlyCarDisable() if FlyCarConn then FlyCarConn:Disconnect() FlyCarConn = nil end end
-local function FlyCarEnable()
-if FlyCarConn then return end
-FlyCarConn = RS.RenderStepped:Connect(function(dt)
-if not T.FlyCar then return end
-local _, _, root = GC()
-if not root then return end
-local seat = root.Parent
-if not (seat and (seat:IsA("VehicleSeat") or seat:IsA("Seat"))) then
-if os.clock() - (F._flyCarSeekAt or 0) > 0.5 then
-F._flyCarSeekAt = os.clock()
-seat = nil
-for _, s in ipairs(workspace:GetDescendants()) do
-if (s:IsA("VehicleSeat") or s:IsA("Seat")) and s.Occupant == LP.Character then seat = s break end
-end
-F._flyCarSeat = seat
-else seat = F._flyCarSeat end
-else F._flyCarSeat = seat end
-if not seat then return end
-local car = seat.Parent
-local body = car and (car:IsA("Model") and car.PrimaryPart or (car:IsA("BasePart") and car))
-if not body then return end
-local cam = workspace.CurrentCamera
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-if dir.Magnitude > 0 then body.CFrame = body.CFrame + dir.Unit * (C.FlyCarSpeed or 50) * math.min(dt, 0.1) end
 end)
 end
 local XrayHls = {}
@@ -4449,11 +4247,8 @@ end
 function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
-if T.Speed then pcall(SpeedEnable) end
-if T.SpeedBypass then pcall(F.SpeedBypassEnable) end
-if T.SpeedCFrame then pcall(F.SpeedCFrameEnable) end
-if T.Fly then pcall(FlyEnable) end
-if T.FlyPhys then pcall(F.FlyPhysEnable) end
+if T.FlyOn then pcall(function() F.FlySet(true) end) end
+if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 if T.NoClip then pcall(F.NoClipEnable) end
 if T.God then pcall(GodEnable) end
 if T.StealthGod then pcall(StealthGodEnable) end
@@ -4468,19 +4263,6 @@ if T.ESP then pcall(ESPEnable) end
 end
 function F.CharPersistEnable() T.CharPersist = true end
 function F.CharPersistDisable() T.CharPersist = false end
-function F.SpeedBypassEnable()
-AC.InstallPropertyLock()
-AC.InstallIndexMask()
-T.SpeedMask = true
-T.Speed = true
-SpeedEnable()
-end
-function F.SpeedBypassDisable()
-T.Speed = false
-T.SpeedMask = false
-SpeedDisable()
-pcall(AC.UninstallIndexMask)
-end
 function F.ProtectGui()
 local targets = {}
 pcall(function() if Fluent and Fluent.GUI then table.insert(targets, Fluent.GUI) end end)
@@ -4983,8 +4765,8 @@ if processed then return end
 local action = F._binds and F._binds[input.KeyCode.Name]
 if not action then return end
 if action == "飞行" then
-T.Fly = not T.Fly
-if T.Fly then FlyEnable() else FlyDisable() end
+local nv = not (T.FlyOn == true)
+F.FlySet(nv)
 F.SyncMoveUI()
 elseif action == "自动攻击" then
 T.KillAura = not T.KillAura
@@ -5014,8 +4796,8 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 pcall(F.SrvHoldDisable)
-for _, fn in ipairs({ FlyDisable, SpeedDisable, ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, FlyCarDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.FlyPhysDisable, F.SpeedCFrameDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.DesyncSpeedDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.SpinDisable, F.AirWalkDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -5911,14 +5693,14 @@ local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.SpeedCFrameDisable, F.FreecamDisable, F.FreezePlayerDisable,
+F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable,
 F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable,
 F.FlashbackDisable, F.RemoteSpyDisable, F.SilentAimMouseDisable,
 F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.AntiAimDisable,
-F.DesyncSpeedDisable, F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
+F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
 F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
@@ -5927,6 +5709,7 @@ F.UnspoofGCMetadata,
 F.StealthDisable, F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
+F.SpeedSet, F.FlySet,
 }
 for _, fn in ipairs(disables) do pcall(fn) end
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() KG.rjConn = nil end end)
@@ -5953,7 +5736,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.6.0",
+SubTitle = "v8.7.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6026,46 +5809,11 @@ Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Def
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒, 上限25避开30/s检测)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
-Tabs.Move:AddParagraph({ Title = "飞行按键: WASD 移动, 空格上升, 左Ctrl 下降", Content = "" })
-Tabs.Move:AddDropdown("FlyMode", { Title = "飞行模式", Values = { "关闭", "飞行(CFrame)", "物理飞行(更平滑)" }, Default = "关闭", Callback = function(v)
-C.FlyMode = v
-T.Fly = (v == "飞行(CFrame)")
-T.FlyPhys = (v == "物理飞行(更平滑)")
-FlyDisable() F.FlyPhysDisable()
-if T.Fly then FlyEnable()
-elseif T.FlyPhys then F.FlyPhysEnable() end
-end })
-Tabs.Move:AddSlider("FlySpeed", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 50, Rounding = 0, Callback = function(v) C.FlySpeed = v end })
+Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升 · Ctrl 降)", Default = false, Callback = function(v) F.FlySet(v) end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(一个开关)", Default = false, Callback = function(v)
-T.Speed = v
-if v then
-if T.SpeedCFrame then F.SpeedCFrameEnable() else SpeedEnable() end
-else
-SpeedDisable() F.SpeedCFrameDisable()
-end
-end })
-Tabs.Move:AddSlider("SpeedTarget", { Title = "速度(格/秒 · 16≈1倍速 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v)
-C.SpeedTarget = v
-end })
-Tabs.Move:AddDropdown("SpeedMode", { Title = "方式", Values = {
-"自动(行走速度+位移补偿)", "全绕过(属性锁+伪装回读)", "CFrame位移(最隐蔽)", "Desync(服务端看虚假位置)",
-}, Default = "自动(行走速度+位移补偿)", Callback = function(v)
-C.SpeedMode = v
-T.SpeedBypass = (v == "全绕过(属性锁+伪装回读)")
-T.SpeedCFrame = (v == "CFrame位移(最隐蔽)")
-T.DesyncSpeed = (v == "Desync(服务端看虚假位置)")
-SpeedDisable() F.SpeedCFrameDisable() pcall(F.DesyncSpeedDisable)
-AC.UninstallIndexMask() T.SpeedMask = false
-if T.SpeedBypass then F.SpeedBypassEnable() end
-if T.DesyncSpeed then F.DesyncSpeedEnable() end
-if T.Speed then
-if T.SpeedBypass then F.SpeedBypassEnable()
-elseif T.SpeedCFrame then F.SpeedCFrameEnable()
-else SpeedEnable() end
-end
-end })
-Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速(直接设行走速度)", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then F.NoClipEnable() else F.NoClipDisable() end end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then F.HideEnable() else F.HideDisable() end end })
@@ -6216,6 +5964,7 @@ Duration = 10,
 end)
 end })
 Tabs.Setting:AddSection("系统")
+Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "重新加入", Callback = function() Rejoin() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
@@ -6231,9 +5980,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.6.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.7.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.6.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.7.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
@@ -6371,7 +6120,6 @@ if type(act) == "string" then F.BindKey(k, act) end
 end
 if C.FlyDisguise == nil then
 C.FlyDisguise = "关闭"
-T.FakeLand = true
 T.SrvHoldOwn = false
 end
 local n = F.CfgSyncUI()
