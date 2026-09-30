@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:12 sha 7b88b469 bytes 230080'):format('2026-09-30 19:12','7b88b469',230080))
+print(('[CheatMenu] build 2026-09-30 19:19 sha ea532c60 bytes 228517'):format('2026-09-30 19:19','ea532c60',228517))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.5.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -160,7 +160,11 @@ pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local d = HS:JSONDecode(readfile(SaveFile))
 if type(d) == "table" then
-if type(d.T) == "table" then for k, v in pairs(d.T) do T[k] = v end end
+if type(d.T) == "table" then
+for k, v in pairs(d.T) do
+if type(v) ~= "boolean" then T[k] = v end
+end
+end
 if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
 end
 end)
@@ -5940,39 +5944,6 @@ pcall(F.Conn.ClearAll)
 F.Out("[CheatMenu] 已干净卸载")
 end
 local function RestoreFeatures()
-if T.KickProtect or T.AntiAFK then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable() end
-if T.AutoBonus then F.AutoBonusEnable() end
-if T.AutoGym then F.AutoGymEnable() end
-if T.AutoTrain then F.AutoTrainEnable() end
-if T.NamecallHook then AC.InstallNamecallHook() end
-if T.RemoteBlock then AC.InstallNamecallHook() end
-if T.AntiFling then F.AntiFlingEnable() end
-if T.UniversalAC then AC.InstallPropertyLock() end
-if T.PropertyLock then AC.InstallPropertyLock() end
-if T.ACIndexHook or T.SpeedMask then AC.InstallIndexMask() end
-if T.ACBypass then pcall(AC.InstallSetmetatableHook) pcall(F.SpoofGCMetadata) end
-if T.StealthMode then pcall(F.StealthEnable) end
-if T.GuiProtect then pcall(F.GuiProtectionEnable) end
-if T.AntiTP then AC.InstallAntiTP() end
-if T.AntiPause then AC.AntiPauseEnable() end
-if T.NoClip then F.NoClipEnable() end
-if T.Antilag then AntilagEnable() end
-if T.Speed then pcall(SpeedEnable) end
-if T.SpeedBypass then F.SpeedBypassEnable() end
-if T.SpeedCFrame then F.SpeedCFrameEnable() end
-if T.DesyncSpeed then F.DesyncSpeedEnable() end
-if T.Fly then pcall(FlyEnable) end
-if T.FlyPhys then pcall(F.FlyPhysEnable) end
-if T.God then pcall(GodEnable) end
-if T.StealthGod then pcall(StealthGodEnable) end
-if T.Translate then pcall(F.TranslateEnable) end
-if T.ChatTranslate then pcall(F.ChatTranslateEnable) end
-if T.BubbleTranslate then pcall(F.BubbleTranslateEnable) end
-if T.ESP then pcall(ESPEnable) end
-if T.Invisible then pcall(InvisibleEnable) end
-if T.AntiSit then pcall(F.AntiSitEnable) end
-if T.AntiAnchor then pcall(F.AntiAnchorEnable) end
-if T.AntiAim then pcall(F.AntiAimEnable) end
 if T.CharPersist ~= false then T.CharPersist = true end
 if T.AutoSave ~= false then F.AutoSaveEnable() end
 pcall(F.PanicKeyEnable)
@@ -5982,7 +5953,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.5.0",
+SubTitle = "v8.6.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6260,9 +6231,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.5.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.6.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.5.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.6.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
