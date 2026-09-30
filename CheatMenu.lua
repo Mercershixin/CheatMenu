@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 23:57 sha 5d71c542 bytes 220406'):format('2026-09-30 23:57','5d71c542',220406))
+print(('[CheatMenu] build 2026-10-01 00:06 sha 04b7c60d bytes 220329'):format('2026-10-01 00:06','04b7c60d',220329))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.10.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.10.2 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3394,7 +3394,6 @@ L[#L + 1] = "① 网络所有权(HRP) = " .. tostring(o.ownerName)
 if o.serverOwned then
 if F.SrvOwnTake(true) then
 L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓ (仍被拉回就打开「持续保持所有权」)"
-fixed = true
 else
 L[#L + 1] = "② ⛔ 抢不回所有权 ⇒ **该游戏位移类功能不可行**(服务端持有, 不是参数问题)"
 end
@@ -5668,7 +5667,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.10.1",
+SubTitle = "v9.10.2",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5939,19 +5938,8 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-pcall(function()
-local keep = getgenv and getgenv().CM_RELOAD_KEEP
-if type(keep) ~= "table" then return end
-getgenv().CM_RELOAD_KEEP = nil
-local c = 0
-for k, v in pairs(keep) do
-if v == true then T[k] = true c = c + 1 end
-end
-local n = F.CfgSyncUI()
-F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
-end)
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
@@ -5959,7 +5947,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.10.1")
+F.Out("[CheatMenu] ✅ 加载完成 v9.10.2")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
@@ -6087,7 +6075,6 @@ if ty == "Toggle" then
 want = T[name]
 else
 want = C[name]
-if want == nil and type(T[name]) ~= "boolean" then want = nil end
 if want == nil then want = T[name] end
 end
 if want ~= nil and type(want) == type(cur) and want ~= cur then
@@ -6128,5 +6115,16 @@ end
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
 if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
+pcall(function()
+local keep = getgenv and getgenv().CM_RELOAD_KEEP
+if type(keep) ~= "table" then return end
+getgenv().CM_RELOAD_KEEP = nil
+local c = 0
+for k, v in pairs(keep) do
+if v == true then T[k] = true c = c + 1 end
+end
+local n2 = F.CfgSyncUI()
+F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n2) .. " 个控件)")
+end)
 end)
 end)
