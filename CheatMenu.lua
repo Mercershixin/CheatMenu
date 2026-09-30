@@ -1,6 +1,5 @@
-print(('[CheatMenu] build 2026-10-01 02:48 sha ddbae4ba bytes 234567'):format('2026-10-01 02:48','ddbae4ba',234567))
+print(('[CheatMenu] build 2026-10-01 02:55 sha f299d62b bytes 234500'):format('2026-10-01 02:55','f299d62b',234500))
 local F = {}
-F.VERSION = "v10.5.3"
 F.LIMITS = {
 SCAN_GC_CAP = 30000, SCAN_ANALYZE_CAP = 12000, SCAN_YIELD_EVERY = 300,
 SCAN_SCRIPT_CAP = 40000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 240,
@@ -79,7 +78,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.5.3 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.5.4 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -872,6 +871,7 @@ if n >= cap then break end
 end
 end
 end
+if n >= cap then pcall(function() F.Out("[遍历] 达到上限 " .. tostring(cap) .. " 个, 结果可能不完整") end) end
 return out
 end
 function F.GuardedGetGC(pass, force)
@@ -1618,14 +1618,10 @@ F._logFlushing = false
 return nil
 end
 pcall(function()
-local allFull = true
-for idx = 1, 20 do
-local nm = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
-local okf, sz = false, 0
-pcall(function() if isfile and isfile(nm) then okf = true sz = #readfile(nm) end end)
-if (not okf) or (sz + #body <= F.LOG_MAX) then allFull = false break end
-end
-if allFull and delfile then delfile(base .. ".txt") end
+local last = base .. "_20.txt"
+local sz = nil
+pcall(function() if isfile and isfile(last) then sz = #readfile(last) end end)
+if sz and sz + #body > F.LOG_MAX and delfile then delfile(base .. ".txt") end
 end)
 for idx = 1, 20 do
 local name = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
@@ -1758,7 +1754,7 @@ blocked = AC.HookedCount
 end)
 F._unifiedRunning = false
 F._scavenging = keepScav
-F.Out(string.format("[CheatMenu] 统一扫描 · 拦 remote=%d 中和=%d 清日志=%d 伪造遥测=%d", blocked, hooked, cleared, spoofed))
+F.Out(string.format("[CheatMenu] 统一扫描 · Hook层数=%d 中和=%d 清日志=%d 伪造遥测=%d", blocked, hooked, cleared, spoofed))
 return blocked
 end
 function F.ScanRemotes()
@@ -4641,9 +4637,10 @@ F._fovRing = nil
 end
 F._menuOpen = false
 function F.MenuOpen()
+if F._menuOpen then return true end
 local ok, v = pcall(function() return Fluent and Fluent.GUI and Fluent.GUI.Enabled end)
-if ok and v ~= nil then return v and true or false end
-return F._menuOpen and true or false
+if ok and v == true then return true end
+return false
 end
 pcall(function()
 UIS.InputBegan:Connect(function(input, processed)
@@ -5981,7 +5978,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.5.3",
+SubTitle = "v10.5.4",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6224,7 +6221,7 @@ pcall(F.AutoProbe)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
-Content = "拦 remote " .. tostring(n) .. " 个 · 执行器能力 " .. tostring(capOk) .. "/" .. tostring(capTotal) .. " —— 明细见控制台 F9",
+Content = "Hook 层数 " .. tostring(n) .. " · 执行器能力 " .. tostring(capOk) .. "/" .. tostring(capTotal) .. " —— 明细见控制台 F9",
 Duration = 8,
 })
 end)
@@ -6318,7 +6315,7 @@ T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.3 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.4 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6327,7 +6324,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.5.3")
+F.Out("[CheatMenu] ✅ 加载完成 v10.5.4")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
