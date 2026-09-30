@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 01:50 sha c1421cc3 bytes 233871'):format('2026-10-01 01:50','c1421cc3',233871))
+print(('[CheatMenu] build 2026-10-01 01:51 sha 2c910673 bytes 233871'):format('2026-10-01 01:51','2c910673',233871))
 local F = {}
-F.VERSION = "v10.5.0"
+F.VERSION = "v10.5.1"
 F.LIMITS = { SCAN_GC_CAP = 30000, SCAN_YIELD_EVERY = 300 }
 F.REMOTE_URLS = {
 "https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
@@ -75,7 +75,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.5.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.5.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -5976,7 +5976,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.5.0",
+SubTitle = "v10.5.1",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6313,7 +6313,7 @@ T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6322,7 +6322,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.5.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.5.1")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
