@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 00:06 sha 04b7c60d bytes 220329'):format('2026-10-01 00:06','04b7c60d',220329))
+print(('[CheatMenu] build 2026-10-01 00:15 sha ce043569 bytes 229478'):format('2026-10-01 00:15','ce043569',229478))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.10.2 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1223,6 +1223,7 @@ F.CAP_LIST = {
 { "filtergc", "按名一步定位函数(反作弊中和强烈依赖)" },
 { "getconnections", "断反作弊监听 / 改写游戏自己的回调" },
 { "getnilinstances", "扫隐藏实例(反作弊藏 remote 的常用手法)" },
+{ "getinstances", "扫**完全不在 DataModel 里**的游离实例(比 nil 更隐蔽)" },
 { "getloadedmodules", "列出已加载模块" },
 { "hookfunction", "hook 具名函数 / 中和反作弊检测函数" },
 { "hookmetamethod", "拦 __namecall / __index / __newindex" },
@@ -2050,9 +2051,10 @@ local roots = {
 { RStorage, "ReplicatedStorage" },
 }
 pcall(function() roots[#roots + 1] = { game:GetService("CoreGui"), "CoreGui" } end)
+local CAP = 40000
 for i = 1, #roots do
 local r, nm = roots[i][1], roots[i][2]
-if r then
+if r and n < CAP then
 local ok, kids = pcall(function() return r:GetDescendants() end)
 if ok and kids then
 local cnt = 0
@@ -2061,10 +2063,12 @@ cnt = cnt + 1
 if cnt % 300 == 0 then task.wait() end
 note(kids[j], nm, nm)
 n = n + 1
+if n >= CAP then break end
 end
 end
 end
 end
+if n >= CAP then F.Out("[脚本扫描] ⚠ 达到 " .. tostring(CAP) .. " 个实例上限，提前结束（结果仍按可疑度排序）") end
 table.sort(list, function(a, b)
 if a.sus ~= b.sus then return a.sus end
 return #a.names > #b.names
@@ -2098,10 +2102,15 @@ end
 function F.ScanConnections()
 local keep = F._scavenging
 F._scavenging = true
-local function connInfo(sig, label)
+local function connInfo(sig, label, pre)
+if not label then return end
+local conns = pre
+if type(conns) ~= "table" then
 if type(getconnections) ~= "function" or not sig then return end
-local ok, conns = pcall(getconnections, sig)
-if not ok or type(conns) ~= "table" then return end
+local ok, got = pcall(getconnections, sig)
+if not ok or type(got) ~= "table" then return end
+conns = got
+end
 if #conns == 0 then return end
 local srcs = {}
 for i = 1, #conns do
@@ -2137,7 +2146,7 @@ local cnt = (ok and type(conns) == "table") and #conns or -1
 local tag = AC.isSuspicious(obj.Name) and "可疑" or "普通"
 F.Out(string.format("[监听扫描] %s [%s] %s · %s · 连接 %s", tag, cls, tostring(obj.Name), where,
 cnt < 0 and "读不到(无 getconnections)" or tostring(cnt)))
-if cnt > 0 then connInfo(sig, "   └ " .. tostring(obj.Name)) end
+if cnt > 0 then connInfo(sig, "   └ " .. tostring(obj.Name), conns) end
 end
 local roots = {
 { RStorage, "ReplicatedStorage" },
@@ -2179,6 +2188,206 @@ local sigs = {
 for i = 1, #sigs do connInfo(sigs[i][1], sigs[i][2]) end
 pcall(function() connInfo(workspace.DescendantAdded, "Workspace.DescendantAdded") end)
 F._scavenging = keep
+end
+F.THRESH_HINTS = {
+{ keys = { "speed", "velocity", "walkspeed", "stud" }, label = "速度阈值(studs/s)" },
+{ keys = { "teleport", "tp", "distance", "delta", "move" }, label = "位移/瞬移阈值(studs)" },
+{ keys = { "fly", "air", "jump", "hang", "float" },     label = "滞空/飞行阈值(s)" },
+{ keys = { "rate", "per", "window", "interval", "tick" }, label = "采样窗口/频率(s)" },
+{ keys = { "count", "strike", "hit", "times", "limit" },  label = "累计次数上限" },
+{ keys = { "kick", "ban", "punish", "flag" },            label = "处置阈值" },
+}
+function F.FnFingerprint(f)
+local out = { nums = {}, strs = {}, nups = 0, nconsts = 0 }
+if type(f) ~= "function" then return out end
+if islclosure and not islclosure(f) then return out end
+pcall(function()
+local ok, c = pcall(debug.getconstants, f)
+if ok and type(c) == "table" then
+out.nconsts = #c
+for i = 1, #c do
+local v = c[i]
+if type(v) == "number" then
+if #out.nums < 24 then out.nums[#out.nums + 1] = v end
+elseif type(v) == "string" then
+if #v >= 3 and #out.strs < 24 then out.strs[#out.strs + 1] = v end
+end
+end
+end
+local ok2, u = pcall(debug.getupvalues, f)
+if ok2 and type(u) == "table" then out.nups = #u end
+end)
+return out
+end
+function F.ScanThresholds()
+if type(getgc) ~= "function" or type(debug.getconstants) ~= "function" then
+F.Out("[阈值] ⚠ 本执行器缺 getgc / debug.getconstants —— 无法提取阈值(不是没扫到)")
+return
+end
+local keep = F._scavenging
+F._scavenging = true
+F.Out("[阈值] ===== 从可疑函数里提取数字阈值 =====")
+local seen, found, scanned = 0, 0, 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local oki, info = pcall(debug.getinfo, obj, "nS")
+local nm = (oki and info and info.name) or ""
+local srcv = (oki and info and info.source) or ""
+local low = (nm .. " " .. srcv):lower()
+local relevant = false
+for _, h in ipairs(F.THRESH_HINTS) do
+for _, k in ipairs(h.keys) do
+if low:find(k, 1, true) then relevant = true break end
+end
+if relevant then break end
+end
+if relevant and not seen[nm .. srcv] then
+seen[nm .. srcv] = true
+local fp = F.FnFingerprint(obj)
+if #fp.nums > 0 or #fp.strs > 0 then
+found = found + 1
+if found <= 60 then
+F.Out(string.format("[阈值] %s @ %s · 形状(upvalue %d / 常量 %d)",
+(nm ~= "" and nm or "(匿名)"), srcv, fp.nups, fp.nconsts))
+local nums = {}
+for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
+if #nums > 0 then F.Out("[阈值]   数字: " .. table.concat(nums, ", ")) end
+local joined = table.concat(fp.strs, " "):lower() .. " " .. low
+for _, h in ipairs(F.THRESH_HINTS) do
+local hit = false
+for _, k in ipairs(h.keys) do
+if joined:find(k, 1, true) then hit = true break end
+end
+if hit then
+local picked = {}
+for i = 1, #fp.nums do
+if #picked < 6 then picked[#picked + 1] = tostring(fp.nums[i]) end
+end
+F.Out("[阈值]   → 疑似" .. h.label .. ": " .. table.concat(picked, ", "))
+end
+end
+if #fp.strs > 0 then
+F.Out("[阈值]   字符串常量: " .. table.concat(fp.strs, " | "):sub(1, 180))
+end
+end
+end
+end
+end
+end
+F.Out(string.format("[阈值] 共分析 %d 个函数, 命中 %d 个带数字的可疑函数", scanned, found))
+F.Out("[阈值] 用法: 把上面的数字当**上限参考**, 把「加速/飞行速度」压到它下面(如 100 ⇒ 90)")
+F._scavenging = keep
+return found
+end
+function F.FindByShape(nups, nconsts)
+if type(getgc) ~= "function" then
+F.Out("[形状] ⚠ 本执行器缺 getgc —— 无法按形状搜索")
+return
+end
+local keep = F._scavenging
+F._scavenging = true
+F.Out(string.format("[形状] ===== 形状搜索: upvalue=%s 常量=%s =====", tostring(nups), tostring(nconsts)))
+local n, scanned = 0, 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local fp = F.FnFingerprint(obj)
+if fp.nups == nups and fp.nconsts == nconsts then
+n = n + 1
+if n <= 40 then
+local oki, info = pcall(debug.getinfo, obj, "nS")
+F.Out(string.format("[形状]   #%d %s @ %s", n,
+(oki and info and info.name ~= "" and info.name) or "(匿名)",
+(oki and info and info.source) or "?"))
+local nums = {}
+for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
+if #nums > 0 then F.Out("[形状]      数字: " .. table.concat(nums, ", ")) end
+end
+end
+end
+end
+F.Out(string.format("[形状] 命中 %d 个（已扫 %d 个函数）", n, scanned))
+F._scavenging = keep
+return n
+end
+function F.TraceHolders(target)
+if target == nil then F.Out("[反查] 用法: 需要一个 remote/表对象"); return end
+if type(getgc) ~= "function" then F.Out("[反查] ⚠ 缺 getgc"); return end
+local keep = F._scavenging
+F._scavenging = true
+F.Out("[反查] ===== 谁在 upvalue 里持有它 =====")
+local n, scanned = 0, 0
+for _, f in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(f) == "function" and (not islclosure or islclosure(f)) then
+for i = 1, 24 do
+local ok, un, v = pcall(debug.getupvalue, f, i)
+if not ok or un == nil then break end
+if v == target then
+n = n + 1
+if n <= 30 then
+local oki, info = pcall(debug.getinfo, f, "nS")
+F.Out(string.format("[反查]   upvalue #%d 名=%s · 函数 %s @ %s", i, tostring(un),
+(oki and info and info.name ~= "" and info.name) or "(匿名)",
+(oki and info and info.source) or "?"))
+end
+break
+end
+end
+end
+end
+F.Out(string.format("[反查] 共 %d 个闭包持有它（已扫 %d 个函数）", n, scanned))
+F._scavenging = keep
+return n
+end
+function F.ScanFamilies()
+if type(getgc) ~= "function" then F.Out("[家族] ⚠ 缺 getgc"); return end
+local keep = F._scavenging
+F._scavenging = true
+local fam = {}
+local scanned = 0
+for _, f in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(f) == "function" and (not islclosure or islclosure(f)) then
+local oki, info = pcall(debug.getinfo, f, "nS")
+if oki and info then
+local nm = info.name or ""
+local sv = info.source or "?"
+local low = (nm .. " " .. sv):lower()
+local sus = false
+for i = 1, #F.SCAN_KW do
+if low:find(F.SCAN_KW[i], 1, true) then sus = true break end
+end
+if sus then
+local prefix = nm:match("^([%a_]+)") or "(匿名)"
+local key = sv .. "|" .. prefix
+fam[key] = fam[key] or { n = 0, src = sv, prefix = prefix }
+fam[key].n = fam[key].n + 1
+end
+end
+end
+end
+F.Out("[家族] ===== 可疑函数家族（同一 source + 同名前缀）=====")
+local list = {}
+for _, v in pairs(fam) do list[#list + 1] = v end
+table.sort(list, function(a, b) return a.n > b.n end)
+for i = 1, #list do
+if i > 30 then break end
+F.Out(string.format("[家族]   %-28s ×%-4d @ %s", tostring(list[i].prefix), list[i].n, tostring(list[i].src)))
+end
+F.Out(string.format("[家族] 共 %d 个家族（已扫 %d 个函数）—— 一次中和整个家族, 命中率比单个高",
+#list, scanned))
+F._scavenging = keep
+return #list
 end
 function AC.ScanAndBlock()
 local keepScav = F._scavenging
@@ -2982,8 +3191,9 @@ F._trapHls = {}
 function F.TrapsESPEnable()
 if #F._trapHls > 0 then return end
 for _, v in ipairs(workspace:GetDescendants()) do
-local n = v.Name:lower()
-if v:IsA("BasePart") and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
+local isPart = v:IsA("BasePart")
+local n = isPart and v.Name:lower() or ""
+if isPart and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
 local hl = Instance.new("Highlight")
 hl.FillColor = Color3.fromRGB(255, 60, 60)
 hl.FillTransparency = 0.3
@@ -3814,8 +4024,12 @@ XrayHls = {}
 end
 local function XrayEnable()
 local ch = LP.Character
+local made = 0
 for _, obj in ipairs(workspace:GetDescendants()) do
+if made >= 200 then break end
+if made > 0 and made % 200 == 0 then task.wait() end
 if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
+made = made + 1
 local hl = Instance.new("Highlight")
 hl.FillTransparency = 1
 hl.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -5667,7 +5881,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.10.2",
+SubTitle = "v10.0.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5908,6 +6122,37 @@ Duration = 8,
 })
 end)
 end })
+Tabs.AC:AddSection("扫描补强(阈值 / 形状 / 反查 / 家族)")
+Tabs.AC:AddButton({ Title = "★ 提取数字阈值(速度/位移/滞空 的观感上限)", Callback = function()
+task.spawn(function() pcall(F.ScanThresholds) pcall(F.LogFlush, "阈值扫描") end)
+end })
+Tabs.AC:AddButton({ Title = "按形状找函数(upvalue数, 常量数)", Callback = function()
+local box = Fluent and Fluent.Options and Fluent.Options.ShapeBox
+local txt = box and tostring(box.Value or "") or ""
+local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
+task.spawn(function()
+if a and b then
+pcall(function() F.FindByShape(tonumber(a), tonumber(b)) end)
+else
+F.Out("[形状] 请在上面的输入框按 `upvalue数,常量数` 格式填写, 例如 `19,15`")
+end
+pcall(F.LogFlush, "形状搜索")
+end)
+end })
+Tabs.AC:AddInput("ShapeBox", { Title = "形状(如 19,15)", Default = "", Placeholder = "upvalue数,常量数", Callback = function() end })
+Tabs.AC:AddButton({ Title = "反查持有者(用最近一次扫描到的可疑 remote)", Callback = function()
+task.spawn(function()
+pcall(function()
+local t = F._lastSusRemote
+if t == nil then F.Out("[反查] 还没有可疑 remote —— 先点一次「一键扫描」") return end
+F.TraceHolders(t)
+end)
+pcall(F.LogFlush, "反查")
+end)
+end })
+Tabs.AC:AddButton({ Title = "家族聚类(同一 source 的可疑函数群)", Callback = function()
+task.spawn(function() pcall(F.ScanFamilies) pcall(F.LogFlush, "家族聚类") end)
+end })
 Tabs.AC:AddSection("采集与导出")
 Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
 if v then
@@ -5938,7 +6183,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.0.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -5947,7 +6192,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.10.2")
+F.Out("[CheatMenu] ✅ 加载完成 v10.0.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
