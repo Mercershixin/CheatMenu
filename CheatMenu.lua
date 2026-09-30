@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 21:03 sha b230f4de bytes 217857'):format('2026-09-30 21:03','b230f4de',217857))
+print(('[CheatMenu] build 2026-09-30 21:10 sha ee93b571 bytes 219076'):format('2026-09-30 21:10','ee93b571',219076))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.5.2 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2389,11 +2389,10 @@ local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 if hrp and hum and hum.Health > 0 then
 local skip = false
-if T.AimTeamCheck then
+if T.AimTeamCheck and LP.Team ~= nil then
 pcall(function()
-if pl.Team ~= nil and LP.Team ~= nil and pl.Team == LP.Team then skip = true end
-if not skip and pl.TeamColor ~= nil and LP.TeamColor ~= nil
-and pl.TeamColor == LP.TeamColor then skip = true end
+if pl.Team ~= nil and pl.Team == LP.Team then skip = true end
+if not skip and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then skip = true end
 end)
 end
 if not skip then
@@ -2427,20 +2426,26 @@ local now = os.clock()
 if now - (F._fireAt or 0) < (tonumber(C.AutoFireGap) or 0.1) then return end
 F._fireAt = now
 local done = false
+if type(mouse1click) == "function" then
+pcall(function() mouse1click() done = true end)
+end
+if not done then
+pcall(function()
+local vu = game:GetService("VirtualUser")
+local cam = workspace.CurrentCamera
+local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+vu:CaptureController()
+vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
+done = true
+end)
+end
+if not done then
 pcall(function()
 local ch = LP.Character
 local tool = ch and ch:FindFirstChildOfClass("Tool")
 if tool then tool:Activate() done = true end
 end)
-if not done then
-pcall(function()
-local vu = game:GetService("VirtualUser")
-vu:CaptureController()
-vu:ClickButton1(Vector2.new(0, 0))
-done = true
-end)
 end
-if not done then pcall(function() if mouse1click then mouse1click() end end) end
 end
 function F.AimSet(on)
 T.AimOn = on and true or false
@@ -4237,38 +4242,57 @@ end
 F._fovGui, F._fovConn = nil, nil
 function F.FovCircleEnable()
 if F._fovGui then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then F.Out("[准星] 找不到可挂载的 GUI 容器"); return end
+local ok = pcall(function()
 local sg = Instance.new("ScreenGui")
-sg.Name = "ReticleRing"
+sg.Name = "CM_FovRing"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
-sg.Parent = CoreGui
+sg.DisplayOrder = 999
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+sg.Parent = host
 local circle = Instance.new("Frame")
+circle.Name = "Ring"
 circle.AnchorPoint = Vector2.new(0.5, 0.5)
 circle.Position = UDim2.fromScale(0.5, 0.5)
 circle.BackgroundTransparency = 1
 circle.BorderSizePixel = 0
-circle.Size = UDim2.fromOffset(400, 400)
+circle.Size = UDim2.fromOffset((tonumber(C.AimFOV) or 200) * 2, (tonumber(C.AimFOV) or 200) * 2)
 circle.Parent = sg
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(1, 0)
 corner.Parent = circle
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(0, 255, 120)
-stroke.Thickness = 1
-stroke.Transparency = 0.35
+stroke.Thickness = 2
+stroke.Transparency = 0.1
 stroke.Parent = circle
 F._fovGui = sg
+F._fovRing = circle
+end)
+if not ok or not F._fovGui then
+F.Out("[准星] 创建失败(执行器不允许挂 GUI)")
+F._fovGui = nil
+return
+end
 local lastFov = -1
 F._fovConn = RS.RenderStepped:Connect(function()
-local fov = C.AimFOV or 200
+if not T.FovCircle then F.FovCircleDisable() return end
+local fov = tonumber(C.AimFOV) or 200
 if fov == lastFov then return end
 lastFov = fov
-circle.Size = UDim2.fromOffset(fov * 2, fov * 2)
+pcall(function() F._fovRing.Size = UDim2.fromOffset(fov * 2, fov * 2) end)
 end)
+F.Out("[准星] FOV 圈已开(直径 " .. tostring((tonumber(C.AimFOV) or 200) * 2) .. " px)")
 end
 function F.FovCircleDisable()
 if F._fovConn then F._fovConn:Disconnect() F._fovConn = nil end
-if F._fovGui then F._fovGui:Destroy() F._fovGui = nil end
+if F._fovGui then pcall(function() F._fovGui:Destroy() end) F._fovGui = nil end
+F._fovRing = nil
 end
 F._menuOpen = false
 function F.MenuOpen()
@@ -5641,7 +5665,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.5.2",
+SubTitle = "v9.6.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5724,7 +5748,14 @@ Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1,
 Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火)", Default = false, Callback = function(v) T.AutoFire = v end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
+Tabs.Combat:AddDropdown("AimTarget", { Title = "目标选择", Values = {
+"所有人(无阵营时自动)",
+"仅敌对阵营(有阵营时)",
+}, Default = "所有人(无阵营时自动)", Callback = function(v)
+C.AimTarget = v
+T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
+F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
+end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v) T.FovCircle = v if v then F.FovCircleEnable() else F.FovCircleDisable() end end })
 Tabs.Combat:AddSection("目标管理")
@@ -5907,7 +5938,7 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.5.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.6.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5920,7 +5951,7 @@ end
 local n = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.5.2")
+F.Out("[CheatMenu] ✅ 加载完成 v9.6.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
