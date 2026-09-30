@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 20:24 sha 4b08c55f bytes 215886'):format('2026-09-30 20:24','4b08c55f',215886))
+print(('[CheatMenu] build 2026-09-30 20:30 sha 18c68798 bytes 215385'):format('2026-09-30 20:30','18c68798',215385))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.3.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3427,12 +3427,20 @@ local sp = tonumber(C.SpeedValue) or 60
 local cam = workspace.CurrentCamera
 local dir = Vector3.zero
 if cam then
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+local look, right = cam.CFrame.LookVector, cam.CFrame.RightVector
+local hl = Vector3.new(look.X, 0, look.Z)
+local hr = Vector3.new(right.X, 0, right.Z)
+if hl.Magnitude > 0.001 then hl = hl.Unit end
+if hr.Magnitude > 0.001 then hr = hr.Unit end
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + hl end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - hl end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - hr end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + hr end
 end
-if dir.Magnitude < 0.01 then dir = h.MoveDirection end
+if dir.Magnitude < 0.01 then
+local md = h.MoveDirection
+dir = Vector3.new(md.X, 0, md.Z)
+end
 local vert = 0
 if UIS:IsKeyDown(Enum.KeyCode.Space) then vert = vert + 1 end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then vert = vert - 1 end
@@ -5594,7 +5602,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.3.0",
+SubTitle = "v9.4.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5782,44 +5790,27 @@ T.BubbleTranslate = v
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACMaster", { Title = "反作弊主开关(全绕过+防护)", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("ACMaster", { Title = "防护(不改写游戏: 反甩 + 护界面 + 权限守卫)", Default = false, Callback = function(v)
 if v then
-T.ACBypass = true T.NamecallHook = true T.RemoteBlock = true
-T.AntiFling = true T.UniversalAC = true T.PropertyLock = true
-T.SpeedMask = true T.ACIndexHook = true
-T.GuiProtect = true
-AC.InstallNamecallHook() AC.InstallPropertyLock() AC.InstallIndexMask()
-pcall(AC.InstallSetmetatableHook)
-pcall(AC.WatchNewScriptsEnable)
+T.AntiFling = true T.GuiProtect = true T.CharPersist = true
 F.AntiFlingEnable()
-T.CharPersist = true
 task.spawn(function()
 local acName = AC.DetectStrongAC(true)
 if acName then AC.SetQuiet(true) end
-local blocked = F.UnifiedACPass()
-local killed = AC.DisableACConnections(true)
-local neutral = AC.NeutralizeByName(nil)
-AC.WatchNewRemotesEnable()
 F.ProtectGui()
 pcall(F.GuiProtectionEnable)
 pcall(F.AuthorityGuard, true)
 Fluent:Notify({
-Title = "反作弊",
-Content = "已开启全部绕过 · 不带隐身" ..
-" · 拦 remote " .. tostring(blocked) .. " · 断连接 " .. tostring(killed) ..
-" · 中和函数 " .. tostring(neutral),
+Title = "防护",
+Content = "已开启(不改写游戏, 不影响交互): 反甩 + 界面保护 + 权限守卫 · 环境 " .. tostring(acName or "未识别"),
 Duration = 8,
 })
 end)
 else
-T.ACBypass = false T.NamecallHook = false T.RemoteBlock = false
-T.AntiFling = false T.UniversalAC = false T.PropertyLock = false
-T.SpeedMask = false T.ACIndexHook = false T.GuiProtect = false T.StealthMode = false
-F.AntiFlingDisable() AC.UnblockRemotes()
-pcall(AC.WatchNewScriptsDisable)
-AC.WatchNewRemotesDisable()
-AC.UninstallSetmetatableHook()
+T.AntiFling = false T.GuiProtect = false
+pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
+Fluent:Notify({ Title = "防护", Content = "已关闭", Duration = 3 })
 end
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
@@ -5830,7 +5821,6 @@ pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
 pcall(F.ScanScripts)
 pcall(F.ScanConnections)
-pcall(function() AC.DisableACConnections(true) end)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
@@ -5876,9 +5866,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.3.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.4.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.3.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.4.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
