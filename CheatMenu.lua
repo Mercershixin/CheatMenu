@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:00 sha 0d4b5179 bytes 229615'):format('2026-09-30 19:00','0d4b5179',229615))
+print(('[CheatMenu] build 2026-09-30 19:05 sha 2c96fe42 bytes 230016'):format('2026-09-30 19:05','2c96fe42',230016))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.4.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.4.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4710,6 +4710,16 @@ if F._hlLoop then F._hlLoop:Disconnect() F._hlLoop = nil end
 for _, hl in pairs(F._hlObjs) do pcall(function() hl:Destroy() end) end
 F._hlObjs = {}
 end
+function F.SyncMoveUI()
+pcall(function()
+if not (Fluent and Fluent.Options) then return end
+local want = T.Fly and "飞行(CFrame)" or (T.FlyPhys and "物理飞行(更平滑)" or "关闭")
+local op = Fluent.Options.FlyMode
+if op and op.Value ~= want then op:Set(want) end
+local so = Fluent.Options.SpeedOn
+if so and type(T.Speed) == "boolean" and so.Value ~= T.Speed then so:Set(T.Speed) end
+end)
+end
 F._freecamConn = nil
 function F.FreecamEnable()
 if F._freecamConn then return end
@@ -5972,7 +5982,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.4.0",
+SubTitle = "v8.4.1",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -6250,9 +6260,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.4.0 · 全功能整合完成", Duration = 5 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.4.1 · 全功能整合完成", Duration = 5 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.4.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.4.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
