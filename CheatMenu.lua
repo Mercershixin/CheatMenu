@@ -1,7 +1,11 @@
-print(('[CheatMenu] build 2026-10-01 01:54 sha d0da453b bytes 233913'):format('2026-10-01 01:54','d0da453b',233913))
+print(('[CheatMenu] build 2026-10-01 02:48 sha ddbae4ba bytes 234567'):format('2026-10-01 02:48','ddbae4ba',234567))
 local F = {}
-F.VERSION = "v10.5.2"
-F.LIMITS = { SCAN_GC_CAP = 30000, SCAN_YIELD_EVERY = 300 }
+F.VERSION = "v10.5.3"
+F.LIMITS = {
+SCAN_GC_CAP = 30000, SCAN_ANALYZE_CAP = 12000, SCAN_YIELD_EVERY = 300,
+SCAN_SCRIPT_CAP = 40000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 240,
+PROBE_STEP = 4, PROBE_SEC = 2,
+}
 F.REMOTE_URLS = {
 "https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 "https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
@@ -75,7 +79,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.5.2 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.5.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -285,7 +289,7 @@ if type(getnilinstances) ~= "function" then return end
 local arr = getnilinstances()
 for i = 1, #arr do
 if i > 30000 then break end
-if i % 300 == 0 then task.wait() end
+if i % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 local inst = arr[i]
 if typeof(inst) == "Instance" then
 local n = inst.Name
@@ -816,7 +820,7 @@ pcall(AC.TrapDisable.Compact)
 local n, nScan = 0, 0
 for _, v in ipairs(F.walk(workspace)) do
 nScan = nScan + 1
-if nScan % 400 == 0 then task.wait() end
+if nScan % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nScan > 20000 then break end
 if v:IsA("BasePart") and AC.TrapDisable.isName(v.Name) then AC.TrapDisable.part(v) n = n + 1 end
 end
@@ -1236,7 +1240,7 @@ local nAttr = 0
 for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nAttr = nAttr + 1
-if nAttr % 400 == 0 then task.wait() end
+if nAttr % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nAttr > 12000 then break end
 local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
 if okA and type(attrs) == "table" then
@@ -1381,7 +1385,7 @@ end
 F._capOn = false
 F._capLog = {}
 F._capOld = nil
-F.CAP_MAX = 240
+F.CAP_MAX = F.LIMITS.CAPTURE_MAX
 function F.CaptureEnable()
 if F._capOn then return true end
 if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
@@ -1489,7 +1493,7 @@ local nA = 0
 for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nA = nA + 1
-if nA % 400 == 0 then task.wait() end
+if nA % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nA > 12000 then break end
 local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
 if okA and type(attrs) == "table" then
@@ -1936,7 +1940,7 @@ local roots = {
 { RStorage, "ReplicatedStorage" },
 }
 pcall(function() roots[#roots + 1] = { game:GetService("CoreGui"), "CoreGui" } end)
-local CAP = 40000
+local CAP = F.LIMITS.SCAN_SCRIPT_CAP
 for i = 1, #roots do
 local r, nm = roots[i][1], roots[i][2]
 if n >= CAP then break end
@@ -1946,7 +1950,7 @@ if ok and kids then
 local cnt = 0
 for j = 1, #kids do
 cnt = cnt + 1
-if cnt % 300 == 0 then task.wait() end
+if cnt % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 note(kids[j], nm, nm)
 n = n + 1
 if n >= CAP then break end
@@ -2048,7 +2052,7 @@ if r then
 local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 for j = 1, #kids do
-if j % 400 == 0 then task.wait() end
+if j % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 scanRemote(kids[j], nm)
 end
 end
@@ -2118,8 +2122,8 @@ local seen, found, scanned = {}, 0, 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local oki, info = pcall(debug.getinfo, obj, "nS")
 local nm = (oki and info and info.name) or ""
@@ -2213,8 +2217,8 @@ local seen, scanned = 0, 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
@@ -2255,8 +2259,8 @@ local scanned = 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
@@ -2336,8 +2340,8 @@ local scanned = 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
@@ -2449,8 +2453,8 @@ local n, scanned = 0, 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local fp = F.FnFingerprint(obj)
 if fp.nups == nups and fp.nconsts == nconsts then
@@ -2480,8 +2484,8 @@ F.Out("[反查] ===== 谁在 upvalue 里持有它 =====")
 local n, scanned = 0, 0
 for _, f in ipairs(F.GuardedGetGC(true, true)) do
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(f) == "function" and (not islclosure or islclosure(f)) then
 for i = 1, 24 do
 local ok, un, v = pcall(debug.getupvalue, f, i)
@@ -2511,8 +2515,8 @@ local fam = {}
 local scanned = 0
 for _, f in ipairs(F.GuardedGetGC(true, true)) do
 scanned = scanned + 1
-if scanned > 12000 then break end
-if scanned % 300 == 0 then task.wait() end
+if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
+if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if type(f) == "function" and (not islclosure or islclosure(f)) then
 local oki, info = pcall(debug.getinfo, f, "nS")
 if oki and info then
@@ -3728,7 +3732,7 @@ end
 else
 L[#L + 1] = "② 所有权本来就在本地 ✓"
 end
-local step = 4
+local step = F.LIMITS.PROBE_STEP
 local r = F.SrvProbe(step, 2)
 if not r then
 L[#L + 1] = "③ 探针: 没有角色, 无法测"
@@ -3752,7 +3756,7 @@ end
 function F.SrvReport()
 task.spawn(function()
 local o = F.SrvOwnInfo()
-local step = 4
+local step = F.LIMITS.PROBE_STEP
 F.Out("──────── 位移权威诊断 ────────")
 F.Out("① AuthorityMode   : " .. tostring(F._authorityMode or "(无此字段)"))
 F.Out("② 物理帧率         : " .. string.format("%.0f", F.SrvFPS()))
@@ -3764,7 +3768,7 @@ F.Out("⑥ 当前参数         : 目标速度 " .. tostring(C.SpeedValue or 60)
 F.Out("⑦ 结论             : " .. (o.serverOwned
 and "服务端持有所有权 ⇒ 客户端位移会被覆盖, 属**机制性不可行**; 先点「夺取网络所有权」再谈参数"
 or "所有权在本地 ⇒ 位移可行; 仍被拉回说明服务端在校验速度/瞬移(要不要降速由你决定)"))
-local pr = F.SrvProbe(4, 2)
+local pr = F.SrvProbe(F.LIMITS.PROBE_STEP, F.LIMITS.PROBE_SEC)
 F.Out("⑧ 位移探针(2s)     : " .. (pr and string.format("意图 %.0f studs / 实走 %.0f ⇒ 通过率 %.0f%%",
 pr.intended, pr.actual, pr.ratio * 100) or "无角色") .. "   (需 >=90% 才算没被拉回)")
 F.Out("──────────────────────────────")
@@ -5977,7 +5981,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.5.2",
+SubTitle = "v10.5.3",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6314,7 +6318,7 @@ T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.5.3 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6323,7 +6327,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.5.2")
+F.Out("[CheatMenu] ✅ 加载完成 v10.5.3")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
