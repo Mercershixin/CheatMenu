@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 00:15 sha ce043569 bytes 229478'):format('2026-10-01 00:15','ce043569',229478))
+print(('[CheatMenu] build 2026-10-01 00:28 sha 5800fa05 bytes 233236'):format('2026-10-01 00:28','5800fa05',233236))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.0.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.1.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -83,6 +83,10 @@ local getgc         = getgc or getGC
 local islclosure    = islclosure
 local checkcaller   = checkcaller or function() return false end
 local getnamecallmethod = getnamecallmethod
+local dbgGetConstants = (debug and (debug.getconstants or debug.getconsts)) or getconstants or getconsts
+local dbgGetUpvalues  = (debug and (debug.getupvalues or debug.getupvals)) or getupvalues or getupvals
+local dbgGetInfo      = (debug and (debug.getinfo or debug.info)) or getinfo
+local dbgGetGC        = getgc or get_gc_objects or getGC
 local T = {}
 local C = {}
 local _gcCh, _gcHum, _gcRoot
@@ -1224,6 +1228,8 @@ F.CAP_LIST = {
 { "getconnections", "断反作弊监听 / 改写游戏自己的回调" },
 { "getnilinstances", "扫隐藏实例(反作弊藏 remote 的常用手法)" },
 { "getinstances", "扫**完全不在 DataModel 里**的游离实例(比 nil 更隐蔽)" },
+{ "decompile", "反编译脚本源码(读可疑脚本用)" },
+{ "getreg", "读注册表(找被隐藏的模块)" },
 { "getloadedmodules", "列出已加载模块" },
 { "hookfunction", "hook 具名函数 / 中和反作弊检测函数" },
 { "hookmetamethod", "拦 __namecall / __index / __newindex" },
@@ -2202,7 +2208,7 @@ local out = { nums = {}, strs = {}, nups = 0, nconsts = 0 }
 if type(f) ~= "function" then return out end
 if islclosure and not islclosure(f) then return out end
 pcall(function()
-local ok, c = pcall(debug.getconstants, f)
+local ok, c = pcall(dbgGetConstants, f)
 if ok and type(c) == "table" then
 out.nconsts = #c
 for i = 1, #c do
@@ -2214,7 +2220,7 @@ if #v >= 3 and #out.strs < 24 then out.strs[#out.strs + 1] = v end
 end
 end
 end
-local ok2, u = pcall(debug.getupvalues, f)
+local ok2, u = pcall(dbgGetUpvalues, f)
 if ok2 and type(u) == "table" then out.nups = #u end
 end)
 return out
@@ -2281,6 +2287,83 @@ F.Out(string.format("[阈值] 共分析 %d 个函数, 命中 %d 个带数字的�
 F.Out("[阈值] 用法: 把上面的数字当**上限参考**, 把「加速/飞行速度」压到它下面(如 100 ⇒ 90)")
 F._scavenging = keep
 return found
+end
+function F.ScanByConstants(list, mode)
+if type(list) ~= "table" or #list == 0 then
+F.Out("[按常量] 用法: 需要一组字符串（逗号分隔），例如 ` - On Xbox, - On mobile`")
+return 0
+end
+local keep = F._scavenging
+F._scavenging = true
+F.Out("[按常量] ===== 按常量字符串找函数 · 关键词 " .. table.concat(list, " | ") .. " =====")
+local hits, n = {}, 0
+local function report(f)
+n = n + 1
+if n > 40 then return end
+local oki, info = nil, nil
+if type(dbgGetInfo) == "function" then oki, info = pcall(dbgGetInfo, f, "nS") end
+local nm = (oki and info and info.name) or "(匿名)"
+local sv = (oki and info and info.source) or "?"
+F.Out(string.format("[按常量]   %s @ %s", nm, sv))
+local fp = F.FnFingerprint(f)
+if #fp.nums > 0 then
+local nums = {}
+for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
+F.Out("[按常量]      数字: " .. table.concat(nums, ", ")
+.. "  形状(upvalue " .. fp.nups .. " / 常量 " .. fp.nconsts .. ")")
+end
+if #fp.strs > 0 then F.Out("[按常量]      字符串: " .. table.concat(fp.strs, " | "):sub(1, 160)) end
+hits[#hits + 1] = f
+end
+local used = "getgc 回退"
+if type(filtergc) == "function" then
+local ok, got = pcall(filtergc, "function", { Constants = list, IgnoreExecutor = true }, true)
+if ok and type(got) == "table" then
+used = "filtergc"
+for i = 1, #got do
+if type(got[i]) == "function" then report(got[i]) end
+end
+end
+end
+if n == 0 and type(dbgGetGC) == "function" then
+local seen, scanned = 0, 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local okc, consts = pcall(dbgGetConstants, obj)
+if okc and type(consts) == "table" then
+local joined = {}
+for i = 1, #consts do
+if type(consts[i]) == "string" then joined[#joined + 1] = consts[i] end
+end
+local blob = table.concat(joined, "\n")
+local all = (mode ~= "any")
+local hit = all
+for i = 1, #list do
+local foundOne = blob:find(list[i], 1, true) ~= nil
+if all then
+if not foundOne then hit = false break end
+else
+if foundOne then hit = true break end
+end
+end
+if hit then
+seen = seen + 1
+if seen > 40 then break end
+report(obj)
+end
+end
+end
+end
+end
+F.Out(string.format("[按常量] 命中 %d 个（通道: %s）", n, used))
+if n > 0 then
+F.Out("[按常量] 把上面每个函数「数字」当**上限参考**：加速/飞行速度压到它下面即可")
+end
+F._scavenging = keep
+return n
 end
 function F.FindByShape(nups, nconsts)
 if type(getgc) ~= "function" then
@@ -5881,7 +5964,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.0.0",
+SubTitle = "v10.1.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6153,6 +6236,27 @@ end })
 Tabs.AC:AddButton({ Title = "家族聚类(同一 source 的可疑函数群)", Callback = function()
 task.spawn(function() pcall(F.ScanFamilies) pcall(F.LogFlush, "家族聚类") end)
 end })
+Tabs.AC:AddInput("ConstBox", { Title = "按常量找: 关键词(逗号分隔)", Default = "",
+Placeholder = "如:  - On Xbox, - On mobile", Callback = function() end })
+Tabs.AC:AddButton({ Title = "★ 按常量字符串找函数(不靠名字, 学自 Adonis 绕过)", Callback = function()
+task.spawn(function()
+pcall(function()
+local box = Fluent and Fluent.Options and Fluent.Options.ConstBox
+local txt = box and tostring(box.Value or "") or ""
+local list = {}
+for w in txt:gmatch("[^,，]+") do
+local t = w:gsub("^%s+", ""):gsub("%s+$", "")
+if #t > 0 then list[#list + 1] = t end
+end
+if #list == 0 then
+F.Out("[按常量] 请先在上面的输入框按 `关键词1, 关键词2` 填（默认全都要命中）")
+else
+F.ScanByConstants(list, "all")
+end
+end)
+pcall(F.LogFlush, "按常量找函数")
+end)
+end })
 Tabs.AC:AddSection("采集与导出")
 Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
 if v then
@@ -6183,7 +6287,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.0.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.1.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6192,7 +6296,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.0.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.1.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
