@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:42 sha 1d606845 bytes 220810'):format('2026-09-30 19:42','1d606845',220810))
+print(('[CheatMenu] build 2026-09-30 19:46 sha d5753e56 bytes 228017'):format('2026-09-30 19:46','d5753e56',228017))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.9.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v8.10.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2168,6 +2168,199 @@ end)
 F.Out("[模块扫描] 共 " .. modCount .. " 个 ModuleScript, 疑似反作弊函数 " .. acFunc .. " 个")
 F._scavenging = keepScav
 return modCount, acFunc
+end
+F.srcKey = function(fn)
+local ok, info = pcall(debug.getinfo, fn, "s")
+if ok and info and info.source and info.source ~= "" then return info.source end
+return "(未知来源)"
+end
+F.SCAN_KW = { "anticheat", "anti-cheat", "detected", "exploit", "cheat", "reportabuse", "flag",
+"violation", "threat", "suspect", "punish", "strike", "offense", "infraction",
+"no-clip", "noclip", "speedhack", "teleport" }
+function F.ScanScripts()
+local keep = F._scavenging
+F._scavenging = true
+local byKey, list = {}, {}
+local seenInst = {}
+local function note(inst, tag, where)
+if typeof(inst) ~= "Instance" or seenInst[inst] then return end
+if not (inst:IsA("ModuleScript") or inst:IsA("LocalScript") or inst:IsA("Script")) then return end
+seenInst[inst] = true
+local src, hash = "", "?"
+pcall(function() src = tostring(inst.Source or "") end)
+if type(getscripthash) == "function" then pcall(function() hash = tostring(getscripthash(inst)):sub(1, 12) end) end
+local key = (#src > 20) and src:sub(1, 300) or tostring(inst:GetFullName())
+local rec = byKey[key]
+if not rec then
+rec = { src = src, hash = hash, tag = tag, where = where, names = {}, hits = {}, sus = false }
+byKey[key] = rec
+list[#list + 1] = rec
+end
+rec.names[#rec.names + 1] = tostring(inst:GetFullName())
+local low = src:lower()
+for i = 1, #F.SCAN_KW do
+if low:find(F.SCAN_KW[i], 1, true) then
+rec.sus = true
+if #rec.hits < 4 then rec.hits[#rec.hits + 1] = F.SCAN_KW[i] end
+end
+end
+end
+F.Out("[脚本扫描] ===== 客户端可见的脚本 / 模块（按源码去重）=====")
+local n = 0
+if type(getloadedmodules) == "function" then
+local ok, mods = pcall(getloadedmodules)
+if ok and type(mods) == "table" then
+for i = 1, #mods do n = n + 1 note(mods[i], "已加载模块", "getloadedmodules") end
+end
+end
+if type(getnilinstances) == "function" then
+local ok, arr = pcall(getnilinstances)
+if ok and type(arr) == "table" then
+for i = 1, #arr do n = n + 1 note(arr[i], "隐藏(Parent=nil)", "getnilinstances") end
+end
+end
+if type(getinstances) == "function" then
+local ok, arr = pcall(getinstances)
+if ok and type(arr) == "table" then
+for i = 1, #arr do n = n + 1 note(arr[i], "游离实例", "getinstances") end
+end
+end
+local roots = {
+{ LP:FindFirstChild("PlayerScripts"), "PlayerScripts" },
+{ LP:FindFirstChild("PlayerGui"), "PlayerGui" },
+{ game:GetService("ReplicatedFirst"), "ReplicatedFirst" },
+{ RStorage, "ReplicatedStorage" },
+}
+pcall(function() roots[#roots + 1] = { game:GetService("CoreGui"), "CoreGui" } end)
+for i = 1, #roots do
+local r, nm = roots[i][1], roots[i][2]
+if r then
+local ok, kids = pcall(function() return r:GetDescendants() end)
+if ok and kids then
+local cnt = 0
+for j = 1, #kids do
+cnt = cnt + 1
+if cnt % 300 == 0 then task.wait() end
+note(kids[j], nm, nm)
+n = n + 1
+end
+end
+end
+end
+table.sort(list, function(a, b)
+if a.sus ~= b.sus then return a.sus end
+return #a.names > #b.names
+end)
+local susN = 0
+for i = 1, #list do
+local r = list[i]
+if r.sus then susN = susN + 1 end
+if r.sus or i <= 40 then
+local first = r.src:match("^[^\n]*") or ""
+F.Out(string.format("[脚本扫描] %s %s · 实例 %d 个 · hash %s · 出处 %s",
+r.sus and "⚠可疑" or "  普通", r.tag, #r.names, r.hash, r.where))
+F.Out("[脚本扫描]     名字: " .. table.concat(r.names, ", "):sub(1, 160))
+if first ~= "" then F.Out("[脚本扫描]     首行: " .. first:sub(1, 140)) end
+if r.sus then F.Out("[脚本扫描]     命中词: " .. table.concat(r.hits, ", ")) end
+end
+end
+F.Out(string.format("[脚本扫描] 共 %d 个脚本实例 → 去重后 %d 份源码, 可疑 %d 份", n, #list, susN))
+pcall(function()
+local cg = game:GetService("CoreGui")
+local kids = cg:GetChildren()
+F.Out("[脚本扫描] ===== CoreGui 顶层 (" .. #kids .. ") =====")
+for i = 1, #kids do
+local k = kids[i]
+F.Out("[脚本扫描]   " .. tostring(k.ClassName) .. " · " .. tostring(k.Name))
+end
+end)
+F._scavenging = keep
+return #list, susN
+end
+function F.ScanConnections()
+local keep = F._scavenging
+F._scavenging = true
+local function connInfo(sig, label)
+if type(getconnections) ~= "function" or not sig then return end
+local ok, conns = pcall(getconnections, sig)
+if not ok or type(conns) ~= "table" then return end
+if #conns == 0 then return end
+local srcs = {}
+for i = 1, #conns do
+local f = nil
+pcall(function() f = conns[i].Function end)
+if f then
+local s = F.srcKey(f)
+srcs[s] = (srcs[s] or 0) + 1
+else
+srcs["(读不到处理函数)"] = (srcs["(读不到处理函数)"] or 0) + 1
+end
+end
+local parts = {}
+for k, v in pairs(srcs) do parts[#parts + 1] = k .. " ×" .. v end
+F.Out(string.format("[监听扫描] %-28s 连接 %d 条 · 来源: %s", label, #conns, table.concat(parts, " | "):sub(1, 220)))
+end
+F.Out("[监听扫描] ===== 远程 / 事件实例（含连接数）=====")
+local seen = {}
+local function scanRemote(obj, where)
+if typeof(obj) ~= "Instance" then return end
+local cls = AC.isRemoteLike(obj)
+if not cls and (obj:IsA("BindableEvent") or obj:IsA("BindableFunction")) then cls = obj.ClassName end
+if not cls then return end
+local k = tostring(obj)
+if seen[k] then return end
+seen[k] = true
+local sig = obj
+if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then sig = obj.OnClientEvent
+elseif obj:IsA("RemoteFunction") then sig = obj.OnClientInvoke
+elseif obj:IsA("BindableEvent") or obj:IsA("BindableFunction") then sig = obj.Event end
+local ok, conns = pcall(getconnections, sig)
+local cnt = (ok and type(conns) == "table") and #conns or -1
+local tag = AC.isSuspicious(obj.Name) and "可疑" or "普通"
+F.Out(string.format("[监听扫描] %s [%s] %s · %s · 连接 %s", tag, cls, tostring(obj.Name), where,
+cnt < 0 and "读不到(无 getconnections)" or tostring(cnt)))
+if cnt > 0 then connInfo(sig, "   └ " .. tostring(obj.Name)) end
+end
+local roots = {
+{ RStorage, "ReplicatedStorage" },
+{ game:GetService("ReplicatedFirst"), "ReplicatedFirst" },
+{ workspace, "Workspace" },
+}
+pcall(function() roots[#roots + 1] = { game:GetService("CoreGui"), "CoreGui" } end)
+pcall(function() roots[#roots + 1] = { LP:FindFirstChild("PlayerGui"), "PlayerGui" } end)
+for i = 1, #roots do
+local r, nm = roots[i][1], roots[i][2]
+if r then
+local ok, kids = pcall(function() return r:GetDescendants() end)
+if ok and kids then
+for j = 1, #kids do
+if j % 400 == 0 then task.wait() end
+scanRemote(kids[j], nm)
+end
+end
+end
+end
+if type(getnilinstances) == "function" then
+local ok, arr = pcall(getnilinstances)
+if ok and type(arr) == "table" then
+for i = 1, #arr do scanRemote(arr[i], "Parent=nil") end
+end
+end
+F.Out("[监听扫描] ===== 全局信号上挂了谁（反作弊的监听在这里现形）=====")
+local sigs = {
+{ Players.PlayerAdded, "Players.PlayerAdded" },
+{ Players.PlayerRemoving, "Players.PlayerRemoving" },
+{ UIS.InputBegan, "UIS.InputBegan" },
+{ UIS.InputChanged, "UIS.InputChanged" },
+{ RS.Heartbeat, "RunService.Heartbeat" },
+{ RS.RenderStepped, "RunService.RenderStepped" },
+{ RS.Stepped, "RunService.Stepped" },
+{ LP.Idled, "LocalPlayer.Idled" },
+{ LP.CharacterAdded, "LocalPlayer.CharacterAdded" },
+}
+for i = 1, #sigs do connInfo(sigs[i][1], sigs[i][2]) end
+pcall(function() connInfo(workspace.DescendantAdded, "Workspace.DescendantAdded") end)
+F._scavenging = keep
 end
 function AC.ScanAndBlock()
 local keepScav = F._scavenging
@@ -5780,7 +5973,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.9.0",
+SubTitle = "v8.10.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5971,12 +6164,14 @@ pcall(F.GuiProtectionDisable)
 pcall(F.StealthDisable)
 end
 end })
-Tabs.AC:AddButton({ Title = "一键扫描(连接 + remote + 模块 + 能力)", Callback = function()
+Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
 task.spawn(function()
 local _, capOk, capTotal = F.ProbeCapabilities(false)
 local n = F.UnifiedACPass()
 pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
+pcall(F.ScanScripts)
+pcall(F.ScanConnections)
 pcall(function() AC.DisableACConnections(true) end)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
@@ -6023,9 +6218,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.9.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.10.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.9.0")
+F.Out("[CheatMenu] ✅ 加载完成 v8.10.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
