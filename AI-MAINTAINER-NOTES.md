@@ -977,3 +977,27 @@
 - `⚠ 这段**必须放在 F.CfgSyncUI 定义之后**执行。放在 buildMenu 里的话 ——`
 - `那时 F.CfgSyncUI 还是 nil，调用会被 pcall 静默吞掉 ⇒ 功能完全不生效。`
 - `放在"按存档同步"之后再执行，于是"你当时开着的"会覆盖掉存档里的旧状态（这才是热加载想要的语义）。`
+
+
+---
+
+## 五、已删除的"未接线死代码"（2026-10-01）
+
+判据：**除定义外无任何调用**（逐个 grep 核实）。删前它们既没有 UI 入口、也没被启动路径调用。
+保留它们只会让以后的维护者以为"有这么个能力"，所以**删除**并把说明留在本文件。
+
+| 函数 | 原本的用途 | 为什么删 |
+|---|---|---|
+| `F.SafeRaycast` | 带 pcall 的射线 | `F.AimPick` 直接用 `workspace:Raycast`，不走它 |
+| `predictPos` | 目标点预测 | 自瞄重写后未使用 |
+| `F.SrvSnapWatch` | 位移快照监视 | UI 用 `F.SrvProbe` |
+| `AC.ThresholdReport` | 阈值报告 | 无 UI 入口（阈值功能改由 `F.ScanThresholds` 承担） |
+| `AC.ScaleSignalHandler` / `AC.ScaleKnockback` | 击退缩放 | 无 UI 入口；且属"改写游戏"手段，按红线本就不该启用 |
+| `AC.NeutralizeByName` / `AC.FnDesc` | **按名中和**游戏函数 + 函数描述 | ⛔ 这是"改写游戏"的危险手段（泛词会改坏游戏），无 UI 入口 ⇒ **删除更安全** |
+| `AC.StripMetatable` / `AC.PokeUpvalue` | 去元表 / 改 upvalue | 属"改写游戏"手段，无 UI 入口 |
+| `AC.RemoveAnimationHandler` | 拆动画处理器 | 无 UI 入口 |
+| `F.MetaReport` / `F.DiagConnections` | 元表报告 / 连接诊断 | 无 UI 入口 |
+| `F.ScanGameItems` / `F.SpawnToolById` / `F.SpawnGameItem` | 刷物品 | 无 UI 入口 |
+
+★ 保留但**仍未接线**（有引用、暂不动）：`F.BindKey`（CfgSyncUI 会调）、`F.DropAllTools`、`F.WaypointLabels` 等。
+★ 若将来要恢复某个能力：**从本文件看它的原始用途，再重新实现并接上 UI**，不要从历史版本里整段复制回来。
