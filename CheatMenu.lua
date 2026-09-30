@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:58 sha 64aba421 bytes 219668'):format('2026-09-30 19:58','64aba421',219668))
+print(('[CheatMenu] build 2026-09-30 20:03 sha 2bd51aa5 bytes 222112'):format('2026-09-30 20:03','2bd51aa5',222112))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.1.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.2.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -5772,16 +5772,82 @@ T.PanicKey = true
 F.LivePlayersEnable()
 end
 LoadConfig()
+local _touch = (UIS.TouchEnabled == true)
+local _vw, _vh = 500, 540
+pcall(function()
+local cam = workspace.CurrentCamera
+if cam and cam.ViewportSize.X > 0 then
+_vw, _vh = cam.ViewportSize.X, cam.ViewportSize.Y
+end
+end)
+local _w, _h = 500, 540
+if _touch then
+_w = math.clamp(math.floor(_vw * 0.96), 240, 520)
+_h = math.clamp(math.floor(_vh * 0.86), 240, 600)
+end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.1.0",
-TabWidth = 100,
-Size = UDim2.fromOffset(500, 540),
+SubTitle = "v9.2.0",
+TabWidth = _touch and 66 or 100,
+Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
 Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
+pcall(function()
+if not _touch then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then return end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMTouchToggle"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+sg.Parent = host
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.fromOffset(58, 58)
+btn.Position = UDim2.new(0, 10, 0.36, 0)
+btn.BackgroundColor3 = Color3.fromRGB(34, 34, 40)
+btn.BackgroundTransparency = 0.2
+btn.Text = "菜单"
+btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+btn.TextSize = 17
+btn.Parent = sg
+local c = Instance.new("UICorner")
+c.CornerRadius = UDim.new(0, 12)
+c.Parent = btn
+local drag, sx, sy, bx, by = false, 0, 0, 0, 0
+btn.InputBegan:Connect(function(i)
+if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+drag = true
+sx, sy = i.Position.X, i.Position.Y
+bx, by = btn.Position.X.Offset, btn.Position.Y.Offset
+end
+end)
+btn.InputChanged:Connect(function(i)
+if drag and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+btn.Position = UDim2.new(0, bx + (i.Position.X - sx), 0, by + (i.Position.Y - sy))
+end
+end)
+btn.InputEnded:Connect(function(i)
+if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+end)
+btn.MouseButton1Click:Connect(function()
+local ok = pcall(function()
+local w = getgenv and getgenv().CM_Window
+if w and type(w.Toggle) == "function" then w:Toggle() return true end
+if w and w.Enabled ~= nil then w.Enabled = not w.Enabled return true end
+if Fluent and Fluent.GUI then Fluent.GUI.Enabled = not Fluent.GUI.Enabled return true end
+return false
+end)
+if not ok then F.Out("[移动端] 菜单开关失败(该 Fluent 版本接口不同) —— 可长按拖走这个按钮") end
+end)
+F._touchToggle = sg
+F.Out("[移动端] 已加常驻「菜单」按钮(可拖动)")
+end)
 pcall(function() Fluent:ToggleTransparency(true) end)
 local function buildMenu()
 local Tabs = {
@@ -6004,9 +6070,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.1.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.2.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.1.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.2.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
