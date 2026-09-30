@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 21:45 sha 0fd28e4c bytes 219447'):format('2026-09-30 21:45','0fd28e4c',219447))
+print(('[CheatMenu] build 2026-09-30 23:43 sha de7c3277 bytes 220410'):format('2026-09-30 23:43','de7c3277',220410))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.9.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.10.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -67,8 +67,15 @@ local CS       = game:GetService("CollectionService")
 local RStorage = game:GetService("ReplicatedStorage")
 local WS       = game:GetService("Workspace")
 local LP = Players.LocalPlayer
-local PG = LP:FindFirstChild("PlayerGui")
-local CoreGui = gethui and gethui() or game:GetService("CoreGui")
+F._touchDown = false
+pcall(function()
+UIS.TouchStarted:Connect(function() F._touchDown = true end)
+UIS.TouchEnded:Connect(function() F._touchDown = false end)
+end)
+local PG = LP and LP:FindFirstChild("PlayerGui")
+local CoreGui = nil
+pcall(function() if gethui then CoreGui = gethui() end end)
+if not CoreGui then pcall(function() CoreGui = game:GetService("CoreGui") end) end
 local hookfunction  = hookfunction or hookfunc or replaceclosure
 local newcclosure   = newcclosure
 local hookmetamethod = hookmetamethod
@@ -187,7 +194,13 @@ if ok3 and loaded then Fluent = loaded F.Out("[CheatMenu] Fluent 加载成功") 
 end
 end
 end
-if not Fluent then error("[CheatMenu] Fluent UI 加载失败") end
+if not Fluent then
+pcall(function()
+F.Out("[CheatMenu] ✗ Fluent UI 加载失败 —— 多半是网络取不到镜像(GitHub/ghfast/jsDelivr)。")
+F.Out("[CheatMenu]   处理: 换能联网的执行器重试; 或先把 CheatMenu.lua 下载到本地用文件加载。")
+end)
+return
+end
 local AC = {}
 AC.BlockedRemotes = {}
 AC.BlockedCount = 0
@@ -1650,7 +1663,12 @@ pcall(function() writefile("CheatMenu_Capture.txt", text) wrote = true end)
 local copied = false
 pcall(function()
 local sc = AC.cap("setclipboard")
-if type(sc) == "function" then sc(text) copied = true end
+if type(sc) == "function" then sc(text) copied = true return end
+if syn and syn.clipboard and type(syn.clipboard.set) == "function" then
+syn.clipboard.set(text) copied = true return
+end
+if type(toclipboard) == "function" then toclipboard(text) copied = true return end
+if type(write_clipboard) == "function" then write_clipboard(text) copied = true end
 end)
 F.Out("══════ 全量导出 ══════")
 F.Out("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
@@ -2470,7 +2488,9 @@ if not T.AimOn then return end
 F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
-if T.AimFireOnly and not T.AutoFire and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
+local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+if not firing and UIS.TouchEnabled and F._touchDown then firing = true end
+if T.AimFireOnly and not T.AutoFire and not firing then return end
 local _, hum = GC()
 if not hum then return end
 local cam = workspace.CurrentCamera
@@ -4080,7 +4100,7 @@ local targets = {}
 pcall(function() if Fluent and Fluent.GUI then table.insert(targets, Fluent.GUI) end end)
 pcall(function()
 for _, g in ipairs(CoreGui:GetChildren()) do
-if F.isOwnGuiName(g.Name) then table.insert(targets, g) end
+if F.isOwnGuiName(g.Name, g) then table.insert(targets, g) end
 end
 end)
 for _, sg in ipairs(targets) do
@@ -4094,10 +4114,11 @@ F.OWN_GUI_NAMES = {
 PlayerTags = true, BoneLines = true, FacingMark = true, HitZone = true,
 StatOverlay = true, CrosshairDot = true, ReticleRing = true, MenuButton = true,
 }
-function F.isOwnGuiName(name)
+function F.isOwnGuiName(name, inst)
 if type(name) ~= "string" then return false end
 if F.OWN_GUI_NAMES[name] then return true end
-return name:find("Fluent") ~= nil
+if inst ~= nil and Fluent and Fluent.GUI and inst == Fluent.GUI then return true end
+return false
 end
 function F.GuiName(inst)
 local n = ""
@@ -4115,7 +4136,7 @@ local parent = parents[i]
 local ok = pcall(function()
 local c = parent.DescendantRemoving:Connect(function(obj)
 local n = F.GuiName(obj)
-if not F.isOwnGuiName(n) then return end
+if not F.isOwnGuiName(n, obj) then return end
 if F._guiProtQueue then return end
 F._guiProtQueue = true
 task.delay(0.5, function()
@@ -4567,6 +4588,10 @@ local _, _, r = GC()
 if r then F._lastDeathCF = r.CFrame end
 end)
 F._diedConns[#F._diedConns + 1] = conn
+if #F._diedConns > 12 then
+local old = table.remove(F._diedConns, 1)
+pcall(function() old:Disconnect() end)
+end
 end
 end
 hook(LP.Character)
@@ -5644,7 +5669,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.9.0",
+SubTitle = "v9.10.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5694,6 +5719,7 @@ if i == dragInput then dragInput = nil end
 end)
 btn.MouseButton1Click:Connect(function()
 local wasOpen = F.MenuOpen()
+F._menuOpen = not wasOpen
 local ok = pcall(function()
 local w = getgenv and getgenv().CM_Window
 if w and type(w.Toggle) == "function" then w:Toggle() return true end
@@ -5910,20 +5936,13 @@ Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfi
 Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
-T.KickProtect = true
-T.AntiAFK = true
-T.KickGuard = true
-T.KickRejoin = true
 T.CharPersist = true
 T.AutoSave = true
-F.AntiAFKEnable()
-F.KickGuardEnable()
-F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.9.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.10.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5943,7 +5962,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.9.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.10.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
