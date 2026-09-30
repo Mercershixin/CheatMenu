@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 01:33 sha bd478b10 bytes 240737'):format('2026-10-01 01:33','bd478b10',240737))
+print(('[CheatMenu] build 2026-10-01 01:40 sha bde16728 bytes 231437'):format('2026-10-01 01:40','bde16728',231437))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.4.2 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.4.3 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -257,17 +257,6 @@ AC.KNOWN_LIMITS = {
 { src = "Adonis",   key = "LogBlacklist", val = 0, unit = "命中即 kill",      ours = "F.Sanitize 全量消毒(含日志词黑名单)" },
 { src = "Sentinel", key = "按实例名扫 {exploit,inject,cheat,...}", val = 0, unit = "建实例即标记", ours = "实例名已去特征化" },
 }
-function AC.ThresholdReport()
-F.Out("════ 强反作弊阈值对齐自查 ════")
-local ac = AC.DetectStrongAC(false)
-F.Out("  本服指纹: " .. (ac and ("检测到 " .. ac) or "未检测到已知强反作弊(不等于没有, 服务端实现客户端看不见)"))
-for i = 1, #AC.KNOWN_LIMITS do
-local L = AC.KNOWN_LIMITS[i]
-F.Out(string.format("  [%s] %s = %s %s  ->  我方: %s", L.src, L.key, tostring(L.val), L.unit, L.ours))
-end
-F.Out("  提示: 服务端判定的阈值只能从公开实现反推; 上述数字全部取自公开源码, 不是猜的。")
-return ac
-end
 AC._strongAC = nil
 function AC.DetectStrongAC(verbose)
 if AC._strongAC ~= nil then return AC._strongAC end
@@ -369,16 +358,6 @@ end
 function F.MetaActive(slot, id)
 local b = F.MetaLayers[slot]
 return (b and b[id] and b[id].alive) and true or false
-end
-function F.MetaReport()
-local out = {}
-for slot, bucket in pairs(F.MetaLayers) do
-local ids = {}
-for id in pairs(bucket) do ids[#ids + 1] = id end
-if #ids > 0 then out[#out + 1] = slot .. " -> " .. table.concat(ids, ",") end
-end
-if #out == 0 then return "元方法槽位: 空" end
-return "元方法槽位: " .. table.concat(out, " | ")
 end
 function AC.InstallNamecallHook()
 if AC._nc then return true end
@@ -484,28 +463,6 @@ if AC._stblOld and hookfunction then
 pcall(function() hookfunction(setmetatable, AC._stblOld) end)
 end
 AC._stblOld = nil
-end
-function AC.RemoveAnimationHandler()
-local removed, seen = 0, 0
-local roots = F.filterList(LP.Character, LP:FindFirstChild("PlayerScripts"),
-LP:FindFirstChild("PlayerGui"), RStorage, workspace)
-for _, root in ipairs(roots) do
-local ok = pcall(function()
-for _, d in ipairs(root:GetDescendants()) do
-seen = seen + 1
-if seen % 300 == 0 then task.wait() end
-if seen > 30000 then break end
-if d.Name == "AnimationHandler" and (d:IsA("LocalScript") or d:IsA("ModuleScript")) then
-pcall(function() d:Destroy() end)
-removed = removed + 1
-end
-end
-end)
-if not ok then end
-if seen > 30000 then break end
-end
-if removed > 0 then F.Out("[CheatMenu] 已删除 " .. removed .. " 个 AnimationHandler") end
-return removed
 end
 AC.KILL_SUB = {
 "anticheat", "anti-cheat", "anti_cheat", "antiexploit", "anti-exploit", "antihack", "anti-hack",
@@ -962,111 +919,12 @@ if #out == 0 then return nil, nil end
 if wantAll then return out[1], out end
 return out[1], out
 end
-function AC.FnDesc(f)
-if type(f) ~= "function" then return "(不是函数)" end
-local keep = F._scavenging
-F._scavenging = true
-local oki, info = pcall(debug.getinfo, f, "nS")
-F._scavenging = keep
-if not oki or not info then return "(元数据不可读)" end
-return string.format("%s @ %s:%s", tostring(info.name or "?"), tostring(info.source or "?"), tostring(info.linedefined or "?"))
-end
 AC.NEUTRALIZE_NAMES = {
 "GetPlayerBanned", "IsPlayerBanned", "BanPlayer", "PunishPlayer", "ReportPlayer",
 "SuspendPlayer", "FlagPlayer", "AntiCheatDetected", "ACDetected", "OnDetected",
 "Detected", "detected", "FlagPlayerForCheating",
 }
-function AC.NeutralizeByName(extra)
-local hit, found = 0, 0
-local function kill(nm)
-local _, list = AC.FindFn(nm, true)
-if type(list) ~= "table" then return 0, 0 end
-local k, seenN = 0, 0
-for i = 1, #list do
-local fn = list[i]
-if type(fn) == "function" then
-seenN = seenN + 1
-if not AC._hookedFns[fn] then
-local got = F.stealthHook(fn, function(box)
-return function() return nil end
-end)
-if got then AC.markHooked(fn) k = k + 1 end
-end
-end
-end
-if k > 0 then
-F.Out(string.format("[CheatMenu] 按名中和: %s x%d (首个: %s)", nm, k, AC.FnDesc(list[1])))
-end
-return k, seenN
-end
-for i = 1, #AC.NEUTRALIZE_NAMES do
-local k, s = kill(AC.NEUTRALIZE_NAMES[i])
-hit = hit + k found = found + s
-end
-if type(extra) == "table" then
-for i = 1, #extra do
-if type(extra[i]) == "string" and extra[i] ~= "" then
-local k, s = kill(extra[i])
-hit = hit + k found = found + s
-end
-end
-end
-F.Out(string.format("[CheatMenu] 按名中和完成: 命中 %d 个具名函数, 已中和 %d 个", found, hit))
-return hit, found
-end
-function AC.ScaleSignalHandler(sig, factor)
-if not sig or type(getconnections) ~= "function" or type(factor) ~= "number" then return 0 end
-local ok, conns = pcall(getconnections, sig)
-if not (ok and type(conns) == "table") then return 0 end
-local n = 0
-for i = 1, #conns do
-local c = conns[i]
-local fn = nil
-pcall(function() fn = c.Function end)
-if type(fn) == "function" and not AC.isOwnConn(fn) and not AC._hookedFns[fn] then
-local got = F.stealthHook(fn, function(box)
-return function(...)
-local args = { ... }
-local touched = false
-for j = 1, #args do
-if typeof(args[j]) == "Vector3" then
-args[j] = args[j] * factor
-touched = true
-end
-end
-if not touched then return box.orig(...) end
-return box.orig(table.unpack(args))
-end
-end)
-if got then AC.markHooked(fn) n = n + 1 end
-end
-end
-return n
-end
 AC.KNOCK_KEYS = { "knockback", "knock", "velocity", "impulse", "push", "launch", "ragdoll" }
-function AC.ScaleKnockback(factor)
-local total, sigs = 0, 0
-local keepScav = F._scavenging
-F._scavenging = true
-pcall(function()
-local rs = AC.svc("ReplicatedStorage") or RStorage
-for _, d in ipairs(rs:GetDescendants()) do
-if AC.isRemoteLike(d) then
-local n = d.Name:lower()
-for i = 1, #AC.KNOCK_KEYS do
-if n:find(AC.KNOCK_KEYS[i], 1, true) then
-sigs = sigs + 1
-total = total + AC.ScaleSignalHandler(d.OnClientEvent, factor)
-break
-end
-end
-end
-end
-end)
-F._scavenging = keepScav
-F.Out(string.format("[CheatMenu] 击退/速度缩放 x%s: 命中 %d 个信号, 改写 %d 个回调", tostring(factor), sigs, total))
-return total
-end
 AC.cap = function(name)
 if type(name) ~= "string" or name == "" then return nil end
 local tries = {
@@ -1180,47 +1038,6 @@ F.Out(string.format("  · %s  [%s = %s]", h.path, h.key, h.value))
 shown = shown + 1
 end
 return hits, scanned, seen
-end
-function AC.StripMetatable(keyName)
-if type(keyName) ~= "string" or keyName == "" then return 0 end
-local n = 0
-local keepScav = F._scavenging
-F._scavenging = true
-for _, obj in ipairs(F.GuardedGetGC(true, true)) do
-local isMine = false
-if type(obj) == "table" then
-local okm, mine = pcall(function()
-for _, v in pairs(obj) do
-if type(v) == "function" and AC._ownFns[v] then return true end
-end
-return false
-end)
-isMine = (okm and mine) or false
-end
-if type(obj) == "table" and not isMine then
-local ok, v = pcall(rawget, obj, keyName)
-if ok and v ~= nil then
-local ok2 = pcall(function()
-local mt = getmetatable(obj)
-if mt then setmetatable(obj, {}) end
-end)
-if ok2 then n = n + 1 end
-end
-end
-end
-F._scavenging = keepScav
-F.Out(string.format("[CheatMenu] 元表剥离: 含键 %q 的表 %d 个", keyName, n))
-return n
-end
-function AC.PokeUpvalue(fnName, idx, value)
-local f = AC.FindFn(fnName)
-if type(f) ~= "function" or type(idx) ~= "number" then return false end
-local ok = pcall(function()
-local okset = (type(setupvalue) == "function")
-if okset then setupvalue(f, idx, value) else debug.setupvalue(f, idx, value) end
-end)
-F.Out(string.format("[CheatMenu] 原地改 upvalue: %s[%s] = %s -> %s", tostring(fnName), tostring(idx), tostring(value), ok and "成功" or "失败"))
-return ok
 end
 F.CAP_LIST = {
 { "getgc", "扫描 GC 对象 —— 整个扫描模块的地基" },
@@ -2728,7 +2545,12 @@ for _, p in ipairs(char:GetDescendants()) do disable(p) end
 table.insert(F._flingConns, char.DescendantAdded:Connect(disable))
 end
 hookChar(LP.Character)
-table.insert(F._flingConns, LP.CharacterAdded:Connect(hookChar))
+table.insert(F._flingConns, LP.CharacterAdded:Connect(function(char)
+for part in pairs(F._flingBackup) do
+if typeof(part) ~= "Instance" or not part.Parent then F._flingBackup[part] = nil end
+end
+hookChar(char)
+end))
 end
 function F.AntiFlingDisable()
 T.AntiFling = false
@@ -2838,25 +2660,6 @@ if F._livePlAdded then F._livePlAdded:Disconnect() F._livePlAdded = nil end
 if F._livePlRemoved then F._livePlRemoved:Disconnect() F._livePlRemoved = nil end
 end
 F._aimCache, F._aimCacheAt = nil, 0
-local function predictPos(part)
-if not T.AimPrediction then return part.Position end
-local vel = part.AssemblyLinearVelocity
-local dist = (workspace.CurrentCamera.CFrame.Position - part.Position).Magnitude
-local travel = dist / math.max(1, C.AimBulletSpeed or 500)
-return part.Position + vel * travel
-end
-function F.SafeRaycast(origin, direction, params)
-if not (origin and direction) then return nil end
-local ok, result = pcall(function() return workspace:Raycast(origin, direction, params) end)
-if ok then return result end
-local ok2, result2 = pcall(function()
-local p = RaycastParams.new()
-p.FilterType = Enum.RaycastFilterType.Exclude
-p.FilterDescendantsInstances = F.filterList(LP.Character)
-return workspace:Raycast(origin, direction, p)
-end)
-return ok2 and result2 or nil
-end
 F.AimConn = nil
 F._aimConn = nil
 function F.AimPick()
@@ -3814,38 +3617,6 @@ end)
 end
 function F.SrvHoldDisable()
 if F._srv.holdConn then F._srv.holdConn:Disconnect() F._srv.holdConn = nil end
-end
-function F.SrvSnapWatch(sec, onDone)
-sec = tonumber(sec) or 5
-F._srv.snap, F._srv.snapMax, F._srv.bad = 0, 0, 0
-F._srv.lastPos = nil
-local t0 = os.clock()
-local conn
-conn = RS.Heartbeat:Connect(function()
-local _, _, root = GC()
-if not root then return end
-local now = os.clock()
-local p = root.Position
-local want = tonumber(F._srv.expectMove) or 0
-if F._srv.lastPos then
-local d = p - F._srv.lastPos
-local moved = d.Magnitude
-F._srv.snapMax = math.max(F._srv.snapMax, moved)
-if want > 0.2 and moved > want * 2.5 then
-F._srv.snap = F._srv.snap + 1
-elseif want > 0.2 and F._srv.dir and d:Dot(F._srv.dir) < -0.5 and moved > 1.5 then
-F._srv.snap = F._srv.snap + 1
-end
-end
-F._srv.lastPos = p
-if now - t0 >= sec then
-conn:Disconnect()
-local per = F._srv.snap / sec
-F.Out(string.format("[Srv] 拉回探测 %.0fs: 反向/超量位移 %d 次 (单次最大 %.1f studs), 约 %.1f 次/秒",
-sec, F._srv.snap, F._srv.snapMax, per))
-if onDone then pcall(onDone, F._srv.snap, per) end
-end
-end)
 end
 function F.SrvProbe(step, sec)
 local _, _, root = GC()
@@ -5258,7 +5029,12 @@ for name, opt in pairs(Fluent.Options) do
 if not F.PANIC_KEEP[name] and opt and opt.Value == true then
 local ty = nil
 pcall(function() ty = opt.Type end)
-if ty == "Toggle" and type(opt.Set) == "function" then pcall(function() opt:Set(false) end) end
+if type(ty) ~= "string" then
+if type(opt.Value) == "boolean" then ty = "Toggle" end
+end
+if (ty == "Toggle" or ty == "toggle") and type(opt.Set) == "function" then
+pcall(function() opt:Set(false) end)
+end
 end
 end
 end)
@@ -5321,72 +5097,6 @@ local TOOL_PRESETS = {
 ["Grappling Hook"] = 30393548, ["Rocket Launcher"] = 32356064, ["Hyperlaser"] = 130113146,
 ["Magic Carpet"] = 225921000, ["Golden Boombox"] = 14275812,
 }
-function F.SpawnToolById(assetId, count)
-if not assetId then return false end
-local id = tostring(assetId):match("%d+")
-if not id then return false end
-count = math.max(1, math.min(50, tonumber(count) or 1))
-local bp = LP:FindFirstChild("Backpack") or LP
-local n = 0
-for _ = 1, count do
-local objs
-local ok = pcall(function() objs = game:GetObjects("rbxassetid://" .. id) end)
-if not ok or not objs then
-ok = pcall(function()
-local inst = game:GetService("InsertService"):LoadAsset(tonumber(id))
-objs = inst and inst:GetChildren() or nil
-end)
-end
-if ok and objs then
-for _, o in ipairs(objs) do
-if o:IsA("Tool") or o:IsA("HopperBin") then pcall(function() o.Parent = bp end) n = n + 1
-elseif o:IsA("Model") or o:IsA("BasePart") then pcall(function() o.Parent = workspace end) n = n + 1 end
-end
-end
-end
-return n > 0
-end
-function F.ScanGameItems()
-local names, protos, seen = {}, {}, {}
-for _, root in ipairs({ workspace, RStorage }) do
-pcall(function()
-local seenN = 0
-for _, d in ipairs(root:GetDescendants()) do
-seenN = seenN + 1
-if seenN % 400 == 0 then task.wait() end
-if seenN > 20000 then break end
-if (d:IsA("Tool") or d:IsA("Model")) and d:FindFirstChildWhichIsA("BasePart", true) then
-local nm = tostring(d.Name)
-if nm ~= "" and not seen[nm] then
-seen[nm] = true
-names[#names + 1] = nm
-protos[nm] = d
-end
-end
-end
-end)
-end
-F._gameItemProtos = protos
-table.sort(names)
-return names
-end
-function F.SpawnGameItem(name, count)
-local protos = F._gameItemProtos or {}
-local proto = protos[name]
-if not proto then return 0 end
-count = math.max(1, math.min(50, tonumber(count) or 1))
-local bp = LP:FindFirstChild("Backpack") or LP
-local n = 0
-for _ = 1, count do
-local ok, clone = pcall(function() return proto:Clone() end)
-if ok and clone then
-if clone:IsA("Tool") then pcall(function() clone.Parent = bp end)
-else pcall(function() clone.Parent = workspace end) end
-n = n + 1
-end
-end
-return n
-end
 F._magnetConn = nil
 F.MAGNET_TAGS = { "Brainrot", "Item", "Collectible", "Loot", "Pickup", "Cash", "Money" }
 function F.ItemMagnetEnable()
@@ -5559,15 +5269,6 @@ F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
 F.Conn.list = {}
-end
-function F.DiagConnections()
-F.Out("[CheatMenu] === 连接诊断 ===")
-if type(getconnections) == "function" then
-for name, ev in pairs({ ["RenderStepped"] = RS.RenderStepped, ["Heartbeat"] = RS.Heartbeat, ["Stepped"] = RS.Stepped }) do
-local ok, conns = pcall(getconnections, ev)
-F.Out(string.format("  %s: %d", name, (ok and type(conns) == "table") and #conns or 0))
-end
-end
 end
 local GYM_WEIGHT_NAMES = {
 ["Wooden Stick"]=true,["Bone Barbell"]=true,["Stone Block"]=true,["Copper Plate"]=true,
@@ -6182,7 +5883,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.4.2",
+SubTitle = "v10.4.3",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6292,6 +5993,7 @@ Default = "关闭", Callback = function(v)
 C.GodMode = v
 T.God = (v == "无敌(MaxHealth=∞)")
 T.StealthGod = (v == "隐蔽无敌(锁满血)")
+if F._cfgSyncing then return end
 T.LockHealth, T.NoDeath, T.Regen = false, false, false
 GodDisable() StealthGodDisable() LockHealthDisable() NoDeathDisable() RegenDisable()
 if T.God then GodEnable() elseif T.StealthGod then StealthGodEnable() end
@@ -6299,6 +6001,7 @@ end })
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
 T.AntiRagdoll, T.AntiKnockdown = v, v
+if F._cfgSyncing then return end
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
 if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
 end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
@@ -6321,6 +6024,7 @@ do
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(替代 ESP, 只描边不糊本体)", Default = false, Callback = function(v)
 T.BodyHL = v
+if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 end })
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = true, Callback = function(v)
@@ -6330,11 +6034,13 @@ end })
 Tabs.World:AddSection("画面增强")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮+夜视+去雾)", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
+if F._cfgSyncing then return end
 if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable()
 else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() end
 end })
 Tabs.World:AddToggle("ViewBoost", { Title = "视角增强(FOV+无限缩放)", Default = false, Callback = function(v)
 T.FOV = v T.Zoom = v
+if F._cfgSyncing then return end
 if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 end })
 Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then FOVEnable() end end })
@@ -6357,6 +6063,7 @@ end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
+if F._cfgSyncing then return end
 if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable()
 else F.KickGuardDisable() F.AntiAFKDisable() pcall(F.KickRejoinDisable) end
 end })
@@ -6512,7 +6219,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.2 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.3 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6521,7 +6228,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.4.2")
+F.Out("[CheatMenu] ✅ 加载完成 v10.4.3")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
@@ -6629,6 +6336,7 @@ function F.CfgSyncUI()
 local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return 0 end
 local n = 0
+F._cfgSyncing = true
 for name, opt in pairs(op) do
 if type(name) == "string" and type(opt) == "table" and type(opt.Set) == "function" then
 local dyn = false
@@ -6673,6 +6381,7 @@ end
 end
 end
 end
+F._cfgSyncing = false
 return n
 end
 task.spawn(function()
