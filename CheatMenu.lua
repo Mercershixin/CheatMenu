@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 20:30 sha 18c68798 bytes 215385'):format('2026-09-30 20:30','18c68798',215385))
+print(('[CheatMenu] build 2026-09-30 20:36 sha 3643e14d bytes 216252'):format('2026-09-30 20:36','3643e14d',216252))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.4.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.4.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3416,7 +3416,8 @@ if T.SpeedOn then
 local _, hum = GC()
 if hum then
 local bw = tonumber(hum.WalkSpeed) or 16
-if bw > 0 and bw <= 32 then F._baseWalk = bw end
+if F._orig and F._orig.walk then F._baseWalk = F._orig.walk
+elseif bw > 0 and bw <= 32 then F._baseWalk = bw end
 end
 F.SpeedApply()
 F._spdConn = RS.RenderStepped:Connect(function()
@@ -4082,6 +4083,7 @@ end
 function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
+F.RecordOriginals()
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 if T.NoClip then pcall(F.NoClipEnable) end
@@ -4656,20 +4658,20 @@ for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.Unbloc
 pcall(function()
 local _, hum = GC()
 if hum then
-hum.WalkSpeed = C._baseWalk or 16
-hum.JumpPower = 50
-pcall(function() hum.UseJumpPower = true end)
-pcall(function() hum.JumpHeight = 7.5 end)
+local o = F._orig or {}
+hum.WalkSpeed = o.walk or C._baseWalk or 16
+if o.jumpPower then hum.JumpPower = o.jumpPower end
+if o.jumpHeight then pcall(function() hum.JumpHeight = o.jumpHeight end) end
 local mh = hum.MaxHealth
 if type(mh) ~= "number" or mh > 1000 or mh ~= mh then
-hum.MaxHealth = 100
+hum.MaxHealth = o.maxHealth or 100
 end
 hum.Health = math.min(hum.Health, hum.MaxHealth)
 hum.PlatformStand = false
 pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
 end
 local cam = workspace.CurrentCamera
-if cam then cam.FieldOfView = 70 end
+if cam then cam.FieldOfView = (F._orig and F._orig.fov) or 70 end
 end)
 pcall(function()
 local ch = LP.Character
@@ -4704,6 +4706,21 @@ if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态 (F1)", Duration = 3 })
 end
 F.Out("[CheatMenu] Panic: 全部功能已关闭, 属性/外观/连接已恢复")
+end
+function F.RecordOriginals()
+local _, hum = GC()
+F._orig = F._orig or {}
+if hum then
+local w = tonumber(hum.WalkSpeed)
+if not F._orig.walk and w and w > 0 then F._orig.walk = w end
+if not F._orig.jumpPower and hum.JumpPower then F._orig.jumpPower = hum.JumpPower end
+if not F._orig.jumpHeight and hum.JumpHeight then F._orig.jumpHeight = hum.JumpHeight end
+local mh = tonumber(hum.MaxHealth)
+if not F._orig.maxHealth and mh and mh == mh and mh < 1e6 then F._orig.maxHealth = mh end
+end
+local cam = workspace.CurrentCamera
+if cam and not F._orig.fov then F._orig.fov = cam.FieldOfView end
+if not F._baseWalk and F._orig.walk then F._baseWalk = F._orig.walk end
 end
 function F.PanicKeyEnable()
 if F._panicConn then return end
@@ -5602,7 +5619,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.4.0",
+SubTitle = "v9.4.1",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5866,9 +5883,10 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.4.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+F.RecordOriginals()
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.4.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.4.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.4.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
