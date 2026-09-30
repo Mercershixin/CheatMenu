@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 21:10 sha ee93b571 bytes 219076'):format('2026-09-30 21:10','ee93b571',219076))
+print(('[CheatMenu] build 2026-09-30 21:23 sha 74d8df42 bytes 219554'):format('2026-09-30 21:23','74d8df42',219554))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.6.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2396,10 +2396,19 @@ if not skip and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then skip =
 end)
 end
 if not skip then
+local score = nil
+if T.Aim360 then
+local d3 = (cam.CFrame.Position - hrp.Position).Magnitude
+if d3 <= fov then score = d3 end
+else
 local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
 if onScreen then
 local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
-if d <= fov then
+if d <= fov then score = d end
+end
+end
+if score then
+do
 if T.AimWallCheck then
 ex[#ex + 1] = ch
 rp.FilterDescendantsInstances = ex
@@ -2408,7 +2417,7 @@ ex[#ex] = nil
 if hit and hit.Instance then skip = true end
 end
 if not skip then
-local score = d - (inTbl(C.PriorityTargets, pl.Name) and 1e6 or 0)
+score = score - (inTbl(C.PriorityTargets, pl.Name) and 1e6 or 0)
 if not bestScore or score < bestScore then best, bestScore = hrp, score end
 end
 end
@@ -5665,7 +5674,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.6.0",
+SubTitle = "v9.7.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5748,6 +5757,10 @@ Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1,
 Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火)", Default = false, Callback = function(v) T.AutoFire = v end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
+Tabs.Combat:AddToggle("Aim360", { Title = "360°锁敌(背后也能锁 · 范围改按格算)", Default = false, Callback = function(v)
+T.Aim360 = v
+F.Out("[自瞄] 360° = " .. (v and "开(不看朝向, 按世界距离; 「自瞄范围」此模式下单位=格)" or "关(只锁屏幕内 FOV 圈里)"))
+end })
 Tabs.Combat:AddDropdown("AimTarget", { Title = "目标选择", Values = {
 "所有人(无阵营时自动)",
 "仅敌对阵营(有阵营时)",
@@ -5938,7 +5951,7 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.6.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.7.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5951,7 +5964,7 @@ end
 local n = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.6.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.7.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
