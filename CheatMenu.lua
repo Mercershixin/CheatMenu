@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 20:36 sha 3643e14d bytes 216252'):format('2026-09-30 20:36','3643e14d',216252))
+print(('[CheatMenu] build 2026-09-30 20:43 sha b9abcfdf bytes 217750'):format('2026-09-30 20:43','b9abcfdf',217750))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.4.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.5.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -4344,23 +4344,45 @@ if so and type(T.Speed) == "boolean" and so.Value ~= T.Speed then so:Set(T.Speed
 end)
 end
 function F.HotReload()
-pcall(function()
-if not (readfile and isfile and isfile(SaveFile)) then
-F.Out("[热加载] 没有找到存档, 无事可做")
+local keep, n = {}, 0
+for k, v in pairs(T) do
+if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
+end
+pcall(function() if getgenv then getgenv().CM_RELOAD_KEEP = keep end end)
+F.Out("[热加载] 已记下 " .. tostring(n) .. " 个开着的功能, 开始取最新版…")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "热加载", Content = "正在下载最新版并重启…", Duration = 6 })
+end
+task.spawn(function()
+pcall(function() F.UnloadAll() end)
+task.wait(0.6)
+local urls = {
+"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+}
+local body = nil
+for i = 1, #urls do
+local u = urls[i] .. "?cb=" .. tostring(os.time())
+local ok, r = pcall(function() return game:HttpGet(u) end)
+if ok and type(r) == "string" and #r > 20000 then body = r break end
+end
+if not body then
+F.Out("[热加载] ⚠ 所有源都取不到 —— 旧实例已卸载, 请重新执行一次 loader")
 return
 end
-local d = HS:JSONDecode(readfile(SaveFile))
-if type(d) == "table" and type(d.T) == "table" then
-for k, v in pairs(d.T) do
-if type(v) == "boolean" then T[k] = v end
+local fnc = loadstring or load
+local chunk, err = fnc(body, "@CheatMenu_hot")
+if not chunk then
+F.Out("[热加载] ⚠ 新版本编译失败: " .. tostring(err))
+return
 end
-end
+pcall(function() if writefile then writefile("CheatMenu_main.lua", body) end end)
+F.Out("[热加载] 已取到 " .. tostring(#body) .. " 字节, 正在执行新实例…")
+pcall(chunk)
 end)
-local n = F.CfgSyncUI()
-F.Out("[热加载] 已按存档恢复 " .. tostring(n) .. " 个控件, 功能已重新应用")
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "热加载", Content = "已恢复 " .. tostring(n) .. " 个开关", Duration = 6 })
-end
 end
 F._freecamConn = nil
 function F.FreecamEnable()
@@ -5619,7 +5641,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.4.1",
+SubTitle = "v9.5.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5869,7 +5891,8 @@ end })
 Tabs.Setting:AddSection("系统")
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
-Tabs.Setting:AddButton({ Title = "★ 热加载(恢复上次开的功能)", Callback = function() F.HotReload() end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
+F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.KickProtect = true
 T.AntiAFK = true
@@ -5884,9 +5907,20 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.4.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.5.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v9.4.1")
+pcall(function()
+local keep = getgenv and getgenv().CM_RELOAD_KEEP
+if type(keep) ~= "table" then return end
+getgenv().CM_RELOAD_KEEP = nil
+local c = 0
+for k, v in pairs(keep) do
+if v == true then T[k] = true c = c + 1 end
+end
+local n = F.CfgSyncUI()
+F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
+end)
+F.Out("[CheatMenu] ✅ 加载完成 v9.5.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
