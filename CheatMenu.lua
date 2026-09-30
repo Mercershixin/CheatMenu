@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 00:50 sha 59c67e30 bytes 239986'):format('2026-10-01 00:50','59c67e30',239986))
+print(('[CheatMenu] build 2026-10-01 01:05 sha 7545ace3 bytes 240358'):format('2026-10-01 01:05','7545ace3',240358))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.3.1 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.4.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -1521,6 +1521,7 @@ function F.CaptureEnable()
 if F._capOn then return true end
 if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
 F._capLog = {}
+F._capN = 0
 local got = F.MetaInstall("__namecall", game, "Capture", function(box)
 return function(self, ...)
 if F._capOn and not checkcaller() and typeof(self) == "Instance" then
@@ -2226,14 +2227,14 @@ end)
 return out
 end
 function F.ScanThresholds()
-if type(getgc) ~= "function" or type(debug.getconstants) ~= "function" then
+if type(getgc) ~= "function" or type(dbgGetConstants) ~= "function" then
 F.Out("[阈值] ⚠ 本执行器缺 getgc / debug.getconstants —— 无法提取阈值(不是没扫到)")
 return
 end
 local keep = F._scavenging
 F._scavenging = true
 F.Out("[阈值] ===== 从可疑函数里提取数字阈值 =====")
-local seen, found, scanned = 0, 0, 0
+local seen, found, scanned = {}, 0, 0
 for _, obj in ipairs(F.GuardedGetGC(true, true)) do
 scanned = scanned + 1
 if scanned > 12000 then break end
@@ -2856,16 +2857,6 @@ end)
 return ok2 and result2 or nil
 end
 F.AimConn = nil
-F.SilentAimConn = nil
-local SilentAimGhostHook = nil
-F._saMouseOn = false
-F._saMouseOld = nil
-F.SilentAimChance = 100
-F.SilentAimTeamCheck = true
-F.SilentAimWallCheck = true
-F.SilentAimHitPart = "HumanoidRootPart"
-F._saUnifiedHooked = false
-F._saUnifiedOld = nil
 F._aimConn = nil
 function F.AimPick()
 local cam = workspace.CurrentCamera
@@ -3458,7 +3449,7 @@ F._arrowBbs = {}
 end
 F._trapHls = {}
 function F.TrapsESPEnable()
-if #F._trapHls > 0 then return end
+if F._trapConn then return end
 for _, v in ipairs(workspace:GetDescendants()) do
 local isPart = v:IsA("BasePart")
 local n = isPart and v.Name:lower() or ""
@@ -3496,7 +3487,8 @@ F._chamsLoop = nil
 F._chamsBackup = nil
 F._chamsAddedConn = nil
 function F.ChamsEnable()
-if F._chamsLoop then return end
+F._chamsGen = (F._chamsGen or 0) + 1
+local myGen = F._chamsGen
 F._chamsBackup = F._chamsBackup or {}
 local function apply(pl)
 local ch = pl.Character
@@ -3525,8 +3517,8 @@ F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(
 end
 end
 F._chamsLoop = task.spawn(function()
-while T.Chams do task.wait(1) applyAll() end
-F._chamsLoop = nil
+while T.Chams and myGen == F._chamsGen do task.wait(1) applyAll() end
+if myGen == F._chamsGen then F._chamsLoop = nil end
 end)
 end
 function F.ChamsDisable()
@@ -3674,10 +3666,11 @@ F._antiAimConn = nil
 F.HitboxBackup = {}
 F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
 function F.HitboxExpandEnable()
-if F._hbProg then return end
+F._hbGen = (F._hbGen or 0) + 1
+local myGen = F._hbGen
 F._hbProg = task.spawn(function()
 for step = 1, 4 do
-if not T.HitboxExpand then break end
+if not T.HitboxExpand or myGen ~= F._hbGen then break end
 local k = step / 4
 local target = tonumber(C.HitboxSize) or 10
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -3710,7 +3703,7 @@ end
 end
 task.wait(0.15)
 end
-F._hbProg = nil
+if myGen == F._hbGen then F._hbProg = nil end
 end)
 end
 function F.HitboxExpandDisable()
@@ -3725,6 +3718,7 @@ end)
 end
 end
 F.HitboxBackup = {}
+F._hbGen = (F._hbGen or 0) + 1
 F._hbProg = nil
 if F._hbAddedConn then pcall(function() F._hbAddedConn:Disconnect() end) F._hbAddedConn = nil end
 for pl, c in pairs(F._hbPlConns or {}) do pcall(function() c:Disconnect() end) end
@@ -3879,7 +3873,7 @@ end
 else
 L[#L + 1] = "② 所有权本来就在本地 ✓"
 end
-local step = tonumber(C.SpeedCFrameStep) or 4
+local step = 4
 local r = F.SrvProbe(step, 2)
 if not r then
 L[#L + 1] = "③ 探针: 没有角色, 无法测"
@@ -3903,19 +3897,19 @@ end
 function F.SrvReport()
 task.spawn(function()
 local o = F.SrvOwnInfo()
-local step = tonumber(C.SpeedCFrameStep) or 4
+local step = 4
 F.Out("──────── 位移权威诊断 ────────")
 F.Out("① AuthorityMode   : " .. tostring(F._authorityMode or "(无此字段)"))
 F.Out("② 物理帧率         : " .. string.format("%.0f", F.SrvFPS()))
 F.Out("③ 网络所有权(HRP)  : " .. tostring(o.ownerName))
 F.Out("④ 角色 Anchored    : " .. tostring(o.anchored) .. "   状态: " .. tostring(o.humState))
 F.Out("⑤ 限速             : **无** —— 本脚本已删除全部限速/限效果逻辑")
-F.Out("⑥ 当前参数         : 目标速度 " .. tostring(C.SpeedTarget or 60) ..
+F.Out("⑥ 当前参数         : 目标速度 " .. tostring(C.SpeedValue or 60) ..
 " studs/s · 单帧位移 " .. string.format("%.2f", step))
 F.Out("⑦ 结论             : " .. (o.serverOwned
 and "服务端持有所有权 ⇒ 客户端位移会被覆盖, 属**机制性不可行**; 先点「夺取网络所有权」再谈参数"
 or "所有权在本地 ⇒ 位移可行; 仍被拉回说明服务端在校验速度/瞬移(要不要降速由你决定)"))
-local pr = F.SrvProbe(tonumber(C.SpeedCFrameStep) or 4, 2)
+local pr = F.SrvProbe(4, 2)
 F.Out("⑧ 位移探针(2s)     : " .. (pr and string.format("意图 %.0f studs / 实走 %.0f ⇒ 通过率 %.0f%%",
 pr.intended, pr.actual, pr.ratio * 100) or "无角色") .. "   (需 >=90% 才算没被拉回)")
 F.Out("──────────────────────────────")
@@ -4018,6 +4012,10 @@ ao.Parent = root
 F._flyAtt, F._flyAp, F._flyAo = att, ap, ao
 end)
 if not okAlign then
+for _, k in ipairs({ "_flyAtt", "_flyAp", "_flyAo" }) do
+local obj = F[k]
+if obj then pcall(function() obj:Destroy() end) F[k] = nil end
+end
 pcall(function()
 local bv = Instance.new("BodyVelocity")
 bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
@@ -4073,7 +4071,11 @@ function F.NoClipDisable()
 pcall(function()
 local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hum then hum:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, true) end
+if hum then
+local orig = F.NoClipStateOrig
+if orig == nil then orig = true end
+hum:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, orig)
+end
 end)
 if F.NoClipConn then F.NoClipConn:Disconnect() F.NoClipConn = nil end
 for part in pairs(F.NoClipParts) do
@@ -4083,6 +4085,13 @@ F.NoClipParts = {}
 end
 function F.NoClipEnable()
 if F.NoClipConn then return end
+pcall(function()
+local ch = LP.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum and F.NoClipStateOrig == nil then
+F.NoClipStateOrig = hum:GetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics)
+end
+end)
 local function noclip()
 local ch = LP.Character
 if not ch then return end
@@ -4103,7 +4112,7 @@ function F.HideDisable()
 if F.HideConn then F.HideConn:Disconnect() F.HideConn = nil end
 pcall(function()
 local _, _, r = GC()
-if r and F.HideBaseY then r.CFrame = CFrame.new(r.Position.X, F.HideBaseY + 2, r.Position.Z) end
+if r and F.HideBaseY then r.CFrame = CFrame.new(r.Position.X, F.HideBaseY, r.Position.Z) end
 end)
 end
 function F.HideEnable()
@@ -4560,6 +4569,10 @@ function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
 F.RecordOriginals()
+pcall(function()
+local _, _, hb = GC()
+if hb then F.HideBaseY = hb.Position.Y end
+end)
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 if T.NoClip then pcall(F.NoClipEnable) end
@@ -5244,7 +5257,7 @@ if not F._orig.walk and w and w > 0 then F._orig.walk = w end
 if not F._orig.jumpPower and hum.JumpPower then F._orig.jumpPower = hum.JumpPower end
 if not F._orig.jumpHeight and hum.JumpHeight then F._orig.jumpHeight = hum.JumpHeight end
 local mh = tonumber(hum.MaxHealth)
-if not F._orig.maxHealth and mh and mh == mh and mh < 1e6 then F._orig.maxHealth = mh end
+if not F._orig.maxHealth and mh and mh == mh and mh ~= math.huge then F._orig.maxHealth = mh end
 end
 if not F._orig.maxZoom then F._orig.maxZoom = LP.CameraMaxZoomDistance end
 if not F._orig.minZoom then F._orig.minZoom = LP.CameraMinZoomDistance end
@@ -6150,7 +6163,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.3.1",
+SubTitle = "v10.4.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6480,7 +6493,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.3.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.4.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6489,7 +6502,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.3.1")
+F.Out("[CheatMenu] ✅ 加载完成 v10.4.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
