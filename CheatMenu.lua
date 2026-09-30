@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 19:46 sha d5753e56 bytes 228017'):format('2026-09-30 19:46','d5753e56',228017))
+print(('[CheatMenu] build 2026-09-30 19:53 sha f68ef2a0 bytes 218722'):format('2026-09-30 19:53','f68ef2a0',218722))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v8.10.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.0.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2555,297 +2555,86 @@ return workspace:Raycast(origin, direction, p)
 end)
 return ok2 and result2 or nil
 end
-function F.getAimTarget()
-local now = os.clock()
-if F._aimCache and (now - F._aimCacheAt) < 0.03 and F._aimCache.Parent then return F._aimCache end
-local cam = workspace.CurrentCamera
-local fovRadius = C.AimFOV or 200
-local best, bestDist = nil, math.huge
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hrp and hrp.Parent and hum and hum.Health > 0 then
-if C.Blacklist[pl.Name] then continue end
-local skip = false
-if T.AimTeamCheck and pl.Team == LP.Team then skip = true end
-if not skip and T.AimWallCheck then
-local origin = cam.CFrame.Position
-local dir = hrp.Position - origin
-local params = RaycastParams.new()
-params.FilterDescendantsInstances = F.filterList(LP.Character, pl.Character)
-params.FilterType = Enum.RaycastFilterType.Exclude
-if F.SafeRaycast(origin, dir, params) then skip = true end
-end
-if not skip then
-local screenPos, onScreen = cam:WorldToScreenPoint(hrp.Position)
-if onScreen then
-local dist = (Vector2.new(screenPos.X, screenPos.Y) - cam.ViewportSize / 2).Magnitude
-if dist < bestDist and dist < fovRadius then
-bestDist = dist
-best = hrp
-end
-end
-end
-end
-end
-end
-F._aimCache, F._aimCacheAt = best, now
-return best
-end
 F.AimConn = nil
-local function AimDisable() if F.AimConn then F.AimConn:Disconnect() F.AimConn = nil end end
-local function AimEnable()
-AimDisable()
-F.AimConn = RS.RenderStepped:Connect(function()
-if not T.Aim then return end
-if T.TriggerBot and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-local target = F.getAimTarget()
-if not target then return end
-local cam = workspace.CurrentCamera
-local smooth = math.max(1, C.AimSmooth or 5)
-cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, predictPos(target)), 1 / smooth)
-end)
-end
 F.SilentAimConn = nil
-local function SilentAimDisable() if F.SilentAimConn then F.SilentAimConn:Disconnect() F.SilentAimConn = nil end end
-local function SilentAimEnable()
-if F.SilentAimConn then return end
-F.SilentAimConn = RS.RenderStepped:Connect(function()
-if not T.SilentAim then return end
-if T.TriggerBot and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-local target = F.getAimTarget()
-if not target then return end
-workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, predictPos(target))
-end)
-end
 local SilentAimGhostHook = nil
-local function SilentAimGhostDisable()
-if SilentAimGhostHook and hookmetamethod then
-F.MetaUninstall("__namecall", "SAGhost")
-end
-SilentAimGhostHook = nil
-end
-local function SilentAimGhostEnable()
-if SilentAimGhostHook then return end
-if not (hookmetamethod and newcclosure and getnamecallmethod) then return end
-local function fakeRayResult(targetPart, origin)
-local tp = targetPart.Position
-local d = tp - origin
-local dist = d.Magnitude
-local normal = (dist > 0.001) and -d.Unit or Vector3.new(0, 1, 0)
-return {
-Instance = targetPart,
-Position = tp,
-Normal = normal,
-Distance = dist,
-Material = targetPart.Material or Enum.Material.Plastic,
-}
-end
-local got = F.MetaInstall("__namecall", game, "SAGhost", function(box)
-return function(self, ...)
-local method = getnamecallmethod()
-if T.SilentAimGhost and not checkcaller() then
-if method == "Raycast" and rawequal(self, workspace) then
-local args = { ... }
-local origin, direction = args[1], args[2]
-if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-local target = F.getAimTarget()
-if target then
-local hit = box.orig(self, table.unpack(args))
-if not hit or hit.Instance ~= target then
-return fakeRayResult(target, origin)
-end
-return hit
-end
-end
-return box.orig(self, ...)
-elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList"
-or method == "FindPartOnRayWithWhitelist" then
-local args = { ... }
-local ray = args[1]
-if typeof(ray) == "Ray" then
-local target = F.getAimTarget()
-if target then
-local hitPart, hitPos = box.orig(self, table.unpack(args))
-if not hitPart or hitPart ~= target then
-local goal = predictPos(target)
-local n = ray.Origin - goal
-local mg = n.Magnitude
-return target, goal, ((mg > 0.001) and n.Unit or Vector3.new(0, 1, 0)),
-target.Material or Enum.Material.Plastic
-end
-return hitPart, hitPos
-end
-end
-end
-end
-return box.orig(self, ...)
-end
-end)
-if got then SilentAimGhostHook = got end
-end
 F._saMouseOn = false
 F._saMouseOld = nil
-function F.SilentAimMouseEnable()
-if F._saMouseOn then return end
-if not (hookmetamethod and newcclosure) then return end
-local mouse = LP:GetMouse()
-if not mouse then return end
-local ok, res = pcall(function()
-return hookmetamethod(mouse, "__index", newcclosure(function(self, k)
-if T.SilentAimMouse and not checkcaller() then
-if k == "Hit" or k == "Target" or k == "UnitRay" then
-local target = F.getAimTarget()
-if target then
-local pos = predictPos(target) or target.Position
-if k == "Hit" then return CFrame.new(pos) end
-if k == "Target" then return target end
-if k == "UnitRay" then
-local cam = workspace.CurrentCamera
-local origin = cam and cam.CFrame.Position or pos
-return Ray.new(origin, (pos - origin).Unit)
-end
-end
-end
-end
-return F._saMouseOld(self, k)
-end))
-end)
-if ok and type(res) == "function" then
-F._saMouseOld = res
-F._saMouseOn = true
-end
-end
-function F.SilentAimMouseDisable()
-if F._saMouseOn and hookmetamethod and F._saMouseOld then
-pcall(function()
-local mouse = LP:GetMouse()
-hookmetamethod(mouse, "__index", F._saMouseOld)
-end)
-end
-F._saMouseOn = false
-F._saMouseOld = nil
-end
 F.SilentAimChance = 100
 F.SilentAimTeamCheck = true
 F.SilentAimWallCheck = true
 F.SilentAimHitPart = "HumanoidRootPart"
 F._saUnifiedHooked = false
 F._saUnifiedOld = nil
-local function getClosestForUnified()
-local now = os.clock()
-if F._sauCache and (now - (F._sauCacheAt or 0)) < 0.03 and F._sauCache.Parent then return F._sauCache end
-local best, bestDist
+F._aimConn = nil
+function F.AimPick()
 local cam = workspace.CurrentCamera
+if not cam then return nil end
+local vp = cam.ViewportSize
+local cx, cy = vp.X / 2, vp.Y / 2
+local fov = tonumber(C.AimFOV) or 200
+local function inTbl(t, nm)
+if type(t) ~= "table" then return false end
+for k, v in pairs(t) do
+if v == nm or k == nm then return true end
+end
+return false
+end
+local rp = RaycastParams.new()
+rp.FilterType = Enum.RaycastFilterType.Exclude
+local ex = {}
+if LP.Character then ex[#ex + 1] = LP.Character end
+local best, bestScore = nil, nil
 for _, pl in ipairs(Players:GetPlayers()) do
-if pl == LP then continue end
-if F.SilentAimTeamCheck and pl.Team == LP.Team then continue end
+if pl ~= LP and not inTbl(C.Blacklist, pl.Name) then
 local ch = pl.Character
-if not ch then continue end
-local hum = ch:FindFirstChildOfClass("Humanoid")
-if not hum or hum.Health <= 0 then continue end
-local part = ch:FindFirstChild(F.SilentAimHitPart)
-if not part then continue end
-if F.SilentAimWallCheck then
-local ok, parts = pcall(function()
-return cam:GetPartsObscuringTarget({part.Position}, {LP.Character, ch})
-end)
-if ok and parts and #parts > 0 then continue end
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if hrp and hum and hum.Health > 0 then
+local skip = false
+if T.AimTeamCheck and pl.Team and LP.Team and pl.Team == LP.Team then skip = true end
+if not skip then
+local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
+if onScreen then
+local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+if d <= fov then
+if T.AimWallCheck then
+ex[#ex + 1] = ch
+rp.FilterDescendantsInstances = ex
+local hit = workspace:Raycast(cam.CFrame.Position, (hrp.Position - cam.CFrame.Position), rp)
+ex[#ex] = nil
+if hit and hit.Instance then skip = true end
 end
-local screenPos, onScreen = cam:WorldToViewportPoint(part.Position)
-if not onScreen then continue end
-local dist = (Vector2.new(screenPos.X, screenPos.Y) - cam.ViewportSize / 2).Magnitude
-if dist <= (C.AimFOV or 200) and (not bestDist or dist < bestDist) then
-best = part bestDist = dist
+if not skip then
+local score = d - (inTbl(C.PriorityTargets, pl.Name) and 1e6 or 0)
+if not bestScore or score < bestScore then best, bestScore = hrp, score end
 end
 end
-F._sauCache, F._sauCacheAt = best, now
+end
+end
+end
+end
+end
 return best
 end
-function F.SilentAimUnifiedEnable()
-if F._saUnifiedHooked then return end
-if not (hookmetamethod and newcclosure) then return end
-local got = F.MetaInstall("__namecall", game, "SAUnified", function(box)
-return function(self, ...)
-local method = getnamecallmethod()
-if math.random(0, 100) > (F.SilentAimChance or 100) then return box.orig(self, ...) end
-local target = getClosestForUnified()
-if not target then return box.orig(self, ...) end
-local args = { ... }
-if method == "Raycast" and self == workspace then
-local origin, direction = args[1], args[2]
-if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-return box.orig(self, table.unpack(args))
-end
-local goal = predictPos(target)
-args[2] = (goal - origin).Unit * direction.Magnitude
-local real = box.orig(self, table.unpack(args))
-local d = goal - origin
-return {
-Instance = target,
-Position = goal,
-Normal = (d.Magnitude > 0.001) and -d.Unit or Vector3.new(0, 1, 0),
-Distance = d.Magnitude,
-Material = (real and real.Material) or target.Material or Enum.Material.Plastic,
-}
-elseif method == "FindPartOnRay" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRayWithIgnoreList" then
-local ray = args[1]
-local origin = (typeof(ray) == "Ray") and ray.Origin or nil
-if not origin then return box.orig(self, table.unpack(args)) end
-local goal = predictPos(target)
-args[1] = Ray.new(origin, (goal - origin).Unit * 1000)
-local hitPart, hitPos = box.orig(self, table.unpack(args))
-if not hitPart or hitPart ~= target then
-local n = origin - goal
-return target, goal, ((n.Magnitude > 0.001) and n.Unit or Vector3.new(0, 1, 0)),
-target.Material or Enum.Material.Plastic
-end
-return hitPart, hitPos
-end
-return box.orig(self, ...)
-end
+function F.AimSet(on)
+T.AimOn = on and true or false
+if F._aimConn then F._aimConn:Disconnect() F._aimConn = nil end
+if not T.AimOn then return end
+F._aimConn = RS.RenderStepped:Connect(function()
+if not T.AimOn then F.AimSet(false) return end
+if T.AimFireOnly and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
+local _, hum = GC()
+if not hum then return end
+local cam = workspace.CurrentCamera
+local tgt = F.AimPick()
+if not (cam and tgt) then return end
+local want = CFrame.lookAt(cam.CFrame.Position, tgt.Position)
+cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
 end)
-if not got then return end
-F._saUnifiedHooked = true
-F._saUnifiedLayer = got
-F.Out("[CheatMenu] 统一静默自瞄已开启")
-end
-function F.SilentAimUnifiedDisable()
-if F._saUnifiedHooked then
-F.MetaUninstall("__namecall", "SAUnified")
-end
-F._saUnifiedHooked = false
-F._saUnifiedOld = nil
 end
 local SingleAimConn = nil
-local function SingleAimDisable() if SingleAimConn then SingleAimConn:Disconnect() SingleAimConn = nil end end
-local function SingleAimEnable()
-if SingleAimConn then return end
-SingleAimConn = RS.RenderStepped:Connect(function()
-if not T.SingleAim then SingleAimDisable() return end
-local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
-local target = name and Players:FindFirstChild(name)
-if not (target and target.Character) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-if hrp then workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, hrp.Position) end
-end)
-end
 local FaceLockConn = nil
-local function FaceLockDisable() if FaceLockConn then FaceLockConn:Disconnect() FaceLockConn = nil end end
-local function FaceLockEnable()
-if FaceLockConn then return end
-FaceLockConn = RS.RenderStepped:Connect(function()
-if not T.FaceLock then FaceLockDisable() return end
-local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
-local target = name and Players:FindFirstChild(name)
-local _, _, r = GC()
-if not (target and target.Character and r) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-if hrp then r.CFrame = CFrame.lookAt(r.Position, Vector3.new(hrp.Position.X, r.Position.Y, hrp.Position.Z)) end
-end)
-end
 function F.FlingTarget()
 local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
 local target = name and Players:FindFirstChild(name)
@@ -3531,17 +3320,6 @@ function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
 F._antiAimConn = nil
-function F.AntiAimEnable()
-if F._antiAimConn then return end
-F._antiAimConn = RS.RenderStepped:Connect(function()
-if not T.AntiAim then F.AntiAimDisable() return end
-local _, _, root = GC()
-if root then root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(C.AntiAimSpeed or 30), 0) end
-end)
-end
-function F.AntiAimDisable()
-if F._antiAimConn then F._antiAimConn:Disconnect() F._antiAimConn = nil end
-end
 F.HitboxBackup = {}
 F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
 function F.HitboxExpandEnable()
@@ -5033,8 +4811,8 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 pcall(F.SrvHoldDisable)
-for _, fn in ipairs({ ESPDisable, AimDisable, SilentAimDisable, SilentAimGhostDisable, InvisibleDisable, GodDisable, SingleAimDisable, FaceLockDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.SilentAimMouseDisable, F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.AntiAimDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -5934,9 +5712,9 @@ F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable,
 F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable,
-F.FlashbackDisable, F.RemoteSpyDisable, F.SilentAimMouseDisable,
-F.SilentAimUnifiedDisable, F.AntiSitDisable, F.AntiAnchorDisable,
-F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.AntiAimDisable,
+F.FlashbackDisable, F.RemoteSpyDisable,
+F.AntiSitDisable, F.AntiAnchorDisable,
+F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
 F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -5973,7 +5751,7 @@ end
 LoadConfig()
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v8.10.0",
+SubTitle = "v9.0.0",
 TabWidth = 100,
 Size = UDim2.fromOffset(500, 540),
 Acrylic = false,
@@ -5996,31 +5774,14 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
-Tabs.Combat:AddSection("自瞄 / 锁敌")
-Tabs.Combat:AddDropdown("AimMode", { Title = "自瞄模式", Values = { "关闭", "统一静默自瞄(多方法·推荐)" },
-Default = "关闭", Callback = function(v)
-C.AimMode = v
-T.Aim, T.SilentAim, T.SilentAimGhost, T.SilentAimMouse = false, false, false, false
-T.SilentAimUnified = (v ~= "关闭")
-AimDisable() SilentAimDisable() SilentAimGhostDisable()
-pcall(F.SilentAimMouseDisable) pcall(F.SilentAimUnifiedDisable)
-if T.SilentAimUnified then F.SilentAimUnifiedEnable() end
-end })
-Tabs.Combat:AddToggle("TriggerBot", { Title = "开火才锁", Default = false, Callback = function(v) T.TriggerBot = v end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围", Min = 50, Max = 500, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddSection("自瞄")
+Tabs.Combat:AddToggle("AimOn", { Title = "自瞄(每帧把镜头转向视野内最近的目标)", Default = false, Callback = function(v) F.AimSet(v) end })
+Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围(屏幕像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
+Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v end })
+Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v end })
+Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v) T.FovCircle = v if v then F.FovCircleEnable() else F.FovCircleDisable() end end })
-Tabs.Combat:AddToggle("AimTeamCheck", { Title = "忽略队友", Default = true, Callback = function(v) T.AimTeamCheck = v F.SilentAimTeamCheck = v end })
-Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v F.SilentAimWallCheck = v end })
-Tabs.Combat:AddDropdown("AimExtra", { Title = "自瞄附加(2合1)", Values = { "无", "指定玩家(用传送目标)", "面锁(面向目标)" }, Default = "无", Callback = function(v)
-C.AimExtra = v
-T.SingleAim = (v == "指定玩家(用传送目标)")
-T.FaceLock = (v == "面锁(面向目标)")
-SingleAimDisable() FaceLockDisable()
-if T.SingleAim then SingleAimEnable()
-elseif T.FaceLock then FaceLockEnable() end
-end })
-Tabs.Combat:AddToggle("AimPriorityNearest", { Title = "只打最近的目标", Default = false, Callback = function(v) T.AimPriorityNearest = v end })
-Tabs.Combat:AddToggle("AntiAim", { Title = "Anti-Aim 反瞄准(旋转)", Default = false, Callback = function(v) T.AntiAim = v if v then F.AntiAimEnable() else F.AntiAimDisable() end end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
@@ -6218,9 +5979,9 @@ F.KickRejoinEnable()
 F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v8.10.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.0.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
-F.Out("[CheatMenu] ✅ 加载完成 v8.10.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.0.0")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
