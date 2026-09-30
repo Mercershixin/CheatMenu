@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-09-30 20:43 sha b9abcfdf bytes 217750'):format('2026-09-30 20:43','b9abcfdf',217750))
+print(('[CheatMenu] build 2026-09-30 20:52 sha fa1a2332 bytes 217610'):format('2026-09-30 20:52','fa1a2332',217610))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v9.5.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v9.5.1 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3442,15 +3442,10 @@ if dir.Magnitude < 0.01 then
 local md = h.MoveDirection
 dir = Vector3.new(md.X, 0, md.Z)
 end
-local vert = 0
-if UIS:IsKeyDown(Enum.KeyCode.Space) then vert = vert + 1 end
-if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then vert = vert - 1 end
-if vert ~= 0 or h.FloorMaterial == Enum.Material.Air then
-local v = Vector3.new(dir.X, dir.Y + vert, dir.Z)
-if v.Magnitude > 0.01 then
-v = v.Unit * sp
-pcall(function() r.AssemblyLinearVelocity = v end)
-end
+if h.FloorMaterial == Enum.Material.Air and dir.Magnitude > 0.01 then
+local v = dir.Unit * sp
+local cur = r.AssemblyLinearVelocity
+pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
 end
 local now = os.clock()
 if now - (F._spdAt or 0) > 0.2 then
@@ -5641,7 +5636,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v9.5.0",
+SubTitle = "v9.5.1",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -5755,7 +5750,7 @@ Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升 · Ctrl 降)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(全向: 地面 + 空中 + 空格升/Ctrl降)", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向: 地面 + 空中 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then F.NoClipEnable() else F.NoClipDisable() end end })
@@ -5907,7 +5902,7 @@ F.CharPersistEnable()
 F.AutoSaveEnable()
 F.LivePlayersEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.5.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v9.5.1 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
@@ -5920,7 +5915,7 @@ end
 local n = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n) .. " 个控件)")
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v9.5.0")
+F.Out("[CheatMenu] ✅ 加载完成 v9.5.1")
 end
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
