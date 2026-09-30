@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 00:30 sha cf9c05a8 bytes 233236'):format('2026-10-01 00:30','cf9c05a8',233236))
+print(('[CheatMenu] build 2026-10-01 00:41 sha 121900d5 bytes 239986'):format('2026-10-01 00:41','121900d5',239986))
 local F = {}
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -58,7 +58,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.2.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.3.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -2364,6 +2364,192 @@ F.Out("[按常量] 把上面每个函数「数字」当**上限参考**：加速
 end
 F._scavenging = keep
 return n
+end
+function F.AutoKeywords()
+local cnt, order = {}, {}
+local scanned = 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local okc, consts = pcall(dbgGetConstants, obj)
+if okc and type(consts) == "table" then
+local oki, info = pcall(dbgGetInfo, obj, "nS")
+local nm = (oki and info and info.name) or ""
+local sv = (oki and info and info.source) or ""
+local low = (nm .. " " .. sv):lower()
+local sus = false
+for i = 1, #F.SCAN_KW do
+if low:find(F.SCAN_KW[i], 1, true) then sus = true break end
+end
+if sus then
+for i = 1, #consts do
+local v = consts[i]
+if type(v) == "string" and #v >= 4 and #v <= 60
+and not v:find("\n", 1, true) and not v:find("\t", 1, true)
+and v:find("%a") ~= nil and not v:find("rbxasset", 1, true)
+and not v:find("://", 1, true) then
+if not cnt[v] then order[#order + 1] = v end
+cnt[v] = (cnt[v] or 0) + 1
+end
+end
+end
+end
+end
+end
+table.sort(order, function(a, b) return (cnt[a] or 0) > (cnt[b] or 0) end)
+local out = {}
+for i = 1, #order do
+if #out >= 10 then break end
+out[#out + 1] = { s = order[i], n = cnt[order[i]] }
+end
+return out
+end
+function F.AutoProbe()
+if type(dbgGetGC) ~= "function" or type(dbgGetConstants) ~= "function" then
+F.Out("[自动分析] ⚠ 本执行器缺 getgc / debug.getconstants —— 无法自动分析(不是没扫到)")
+return
+end
+local keep = F._scavenging
+F._scavenging = true
+F.Out("[自动分析] ══════ 全自动分析开始（你不用输入任何东西）══════")
+local kws = F.AutoKeywords()
+if #kws == 0 then
+F.Out("[自动分析] 没找到可用的关键词 —— 可能本服反作弊在服务端(客户端看不到)，这是正常结论")
+F._scavenging = keep
+return
+end
+local names = {}
+for i = 1, #kws do names[i] = kws[i].s end
+F.Out("[自动分析] ① 自动挑出关键词 " .. tostring(#kws) .. " 条：")
+for i = 1, #kws do
+if i > 6 then break end
+F.Out(string.format("[自动分析]     「%s」 ×%d", tostring(kws[i].s):sub(1, 40), kws[i].n))
+end
+local want = {}
+for i = 1, #names do if i <= 8 then want[#want + 1] = names[i] end end
+local hits = {}
+local function consider(f)
+if #hits >= 30 then return end
+local fp = F.FnFingerprint(f)
+if #fp.nums > 0 or #fp.strs > 0 then hits[#hits + 1] = { f = f, fp = fp } end
+end
+if type(filtergc) == "function" then
+for i = 1, #want do
+local ok, got = pcall(filtergc, "function", { Constants = { want[i] }, IgnoreExecutor = true }, true)
+if ok and type(got) == "table" then
+for j = 1, #got do
+if type(got[j]) == "function" then consider(got[j]) end
+end
+end
+if #hits >= 30 then break end
+end
+end
+if #hits == 0 then
+local scanned = 0
+for _, obj in ipairs(F.GuardedGetGC(true, true)) do
+scanned = scanned + 1
+if scanned > 12000 then break end
+if scanned % 300 == 0 then task.wait() end
+if type(obj) == "function" and (not islclosure or islclosure(obj)) then
+local okc, consts = pcall(dbgGetConstants, obj)
+if okc and type(consts) == "table" then
+local blob = {}
+for k = 1, #consts do
+if type(consts[k]) == "string" then blob[#blob + 1] = consts[k] end
+end
+local s = table.concat(blob, "\n")
+for i = 1, #want do
+if s:find(want[i], 1, true) then consider(obj) break end
+end
+end
+end
+end
+end
+F.Out("[自动分析] ② 命中函数 " .. tostring(#hits) .. " 个")
+local tagged = {}
+for i = 1, #hits do
+local fp = hits[i].fp
+local joined = table.concat(fp.strs, " "):lower()
+local oki, info = pcall(dbgGetInfo, hits[i].f, "nS")
+local nm = (oki and info and info.name) or "(匿名)"
+local sv = (oki and info and info.source) or "?"
+joined = joined .. " " .. nm:lower() .. " " .. sv:lower()
+if i <= 12 then
+local nums = {}
+for k = 1, #fp.nums do if k <= 10 then nums[#nums + 1] = tostring(fp.nums[k]) end end
+F.Out(string.format("[自动分析]     %s @ %s", nm, sv))
+if #nums > 0 then F.Out("[自动分析]       数字: " .. table.concat(nums, ", ")) end
+end
+for j = 1, #F.THRESH_HINTS do
+local h = F.THRESH_HINTS[j]
+local hit = false
+for k = 1, #h.keys do
+if joined:find(h.keys[k], 1, true) then hit = true break end
+end
+if hit then
+for k = 1, #fp.nums do
+local v = fp.nums[k]
+if type(v) == "number" and v > 1 and v < 1e6 then
+tagged[#tagged + 1] = { label = h.label, v = v, src = sv }
+end
+end
+end
+end
+end
+local best = nil
+for i = 1, #tagged do
+if tagged[i].label:find("速度", 1, true) then
+if best == nil or tagged[i].v < best then best = tagged[i].v end
+end
+end
+F._autoTh = tagged
+F._autoSpeedCap = best
+F.Out("[自动分析] ③ 共提取到 " .. tostring(#tagged) .. " 个疑似阈值数字")
+if best then
+local safe = math.floor(best * 0.9)
+F.Out(string.format("[自动分析] ④ ★ 结论：疑似速度上限 = %d studs/s ⇒ 建议把速度压到 %d 以内",
+best, safe))
+F.Out("[自动分析]    想按建议改，点「按结果把速度压到安全值」即可（这一步要你自己点）")
+else
+F.Out("[自动分析] ④ 没提取到明确的「速度阈值」—— 可能判定在服务端，或函数被混淆得更彻底")
+end
+F.Out("[自动分析] ══════ 分析结束 ══════")
+F._scavenging = keep
+return #tagged
+end
+function F.ApplySafeCaps()
+local best = F._autoSpeedCap
+if type(best) ~= "number" then
+F.Out("[安全值] 还没跑过「一键自动分析」—— 先点那个按钮")
+return
+end
+local safe = math.max(16, math.floor(best * 0.9))
+local changed = {}
+if type(C.SpeedValue) == "number" and C.SpeedValue > safe then
+C.SpeedValue = safe
+changed[#changed + 1] = "加速 " .. tostring(safe)
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.SpeedValue
+if o and o.Set then o:Set(safe) end
+end)
+end
+if type(C.FlyValue) == "number" and C.FlyValue > safe then
+C.FlyValue = safe
+changed[#changed + 1] = "飞行 " .. tostring(safe)
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.FlyValue
+if o and o.Set then o:Set(safe) end
+end)
+end
+if #changed == 0 then
+F.Out(string.format("[安全值] 你的速度已经在安全线(%d)以内，无需改动", safe))
+else
+F.Out(string.format("[安全值] 已把 %s 压到 %d（= 疑似阈值 %d × 0.9）",
+table.concat(changed, " / "), safe, best))
+F.Out("[安全值] 这是**你点的**修改；想恢复自己拖滑块即可")
+end
 end
 function F.FindByShape(nups, nconsts)
 if type(getgc) ~= "function" then
@@ -5964,7 +6150,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.2.0",
+SubTitle = "v10.3.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6197,6 +6383,7 @@ pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
 pcall(F.ScanScripts)
 pcall(F.ScanConnections)
+pcall(F.AutoProbe)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
@@ -6236,8 +6423,14 @@ end })
 Tabs.AC:AddButton({ Title = "家族聚类(同一 source 的可疑函数群)", Callback = function()
 task.spawn(function() pcall(F.ScanFamilies) pcall(F.LogFlush, "家族聚类") end)
 end })
-Tabs.AC:AddInput("ConstBox", { Title = "按常量找: 关键词(逗号分隔)", Default = "",
-Placeholder = "如:  - On Xbox, - On mobile", Callback = function() end })
+Tabs.AC:AddButton({ Title = "★ 一键自动分析(不用你输入, 自动挑词→找函数→报阈值)", Callback = function()
+task.spawn(function() pcall(F.AutoProbe) pcall(F.LogFlush, "自动分析") end)
+end })
+Tabs.AC:AddButton({ Title = "按分析结果把速度压到安全值(会告诉你改了什么)", Callback = function()
+task.spawn(function() pcall(F.ApplySafeCaps) pcall(F.LogFlush, "安全值") end)
+end })
+Tabs.AC:AddInput("ConstBox", { Title = "（可选）手动指定关键词, 逗号分隔", Default = "",
+Placeholder = "留空即可, 上面的自动分析不用填", Callback = function() end })
 Tabs.AC:AddButton({ Title = "★ 按常量字符串找函数(不靠名字, 学自 Adonis 绕过)", Callback = function()
 task.spawn(function()
 pcall(function()
@@ -6287,7 +6480,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.2.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
+Fluent:Notify({ Title = "CheatMenu", Content = "已加载 v10.3.0 · 所有功能默认关闭(需要哪个自己开)", Duration = 8 })
 RestoreFeatures()
 pcall(function()
 local ex = "?"
@@ -6296,7 +6489,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.2.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.3.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
