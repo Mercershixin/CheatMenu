@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 18:26 sha 90c67932 bytes 232447'):format('2026-10-01 18:26','90c67932',232447))
+print(('[CheatMenu] build 2026-10-01 18:35 sha 8cc9056d bytes 236818'):format('2026-10-01 18:35','8cc9056d',236818))
 local F = {}
-F.VERSION = "v11.0.2"
+F.VERSION = "v11.0.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3140,20 +3140,33 @@ F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
+F.CARRY_KEYS = { "egg", "brainrot", "cash", "carry", "crate", "loot", "pet", "item", "drop", "box", "bag" }
 function F.CarryingNow()
 local now = os.clock()
-if F._carryAt and now - F._carryAt < 0.25 then return F._carryHit end
+if F._carryAt and now - F._carryAt < 0.25 then return F._carryHit, F._carryWhat end
 F._carryAt = now
-F._carryHit = false
+F._carryHit, F._carryWhat = false, nil
 pcall(function()
 local ch = GC()
 if not ch then return end
-if ch:FindFirstChildOfClass("Tool") then F._carryHit = true return end
 for _, d in ipairs(ch:GetChildren()) do
-if d:IsA("Model") and d ~= ch then F._carryHit = true return end
+if d:IsA("Model") and d ~= ch then
+F._carryHit, F._carryWhat = true, "挂在身上的 " .. tostring(d.Name)
+return
+end
+end
+local t = ch:FindFirstChildOfClass("Tool")
+if t then
+local n = tostring(t.Name):lower()
+for _, kw in ipairs(F.CARRY_KEYS) do
+if n:find(kw, 1, true) then
+F._carryHit, F._carryWhat = true, "手里的 " .. tostring(t.Name)
+return
+end
+end
 end
 end)
-return F._carryHit
+return F._carryHit, F._carryWhat
 end
 function F.SpeedTarget()
 local want = tonumber(C.SpeedValue) or 60
@@ -3175,6 +3188,29 @@ local cap = tonumber(C.SpeedAttrCap) or 0
 if cap > 0 and sp > cap then return cap end
 return sp
 end
+function F.SpeedExtraApply(v)
+if type(v) ~= "string" then return end
+local ramp, cap, carry, cs = false, 0, false, 30
+if v:find("强隐身", 1, true) then
+ramp, cap = true, 16
+elseif v:find("隐身", 1, true) then
+ramp, cap = true, 100
+end
+if v:find("搬运保护30", 1, true) then
+carry, cs = true, 30
+elseif v:find("搬运保护60", 1, true) then
+carry, cs = true, 60
+end
+T.SpeedRamp = ramp
+C.SpeedAttrCap = cap
+T.CarryGuard = carry
+if carry then C.CarrySpeed = cs end
+if T.SpeedOn then pcall(F.SpeedApply) end
+F.Out(string.format("[加速附加] %s ⇒ 缓升=%s · 属性上限=%s · 搬运保护=%s",
+v, ramp and "开" or "关", cap > 0 and tostring(cap) or "不限",
+carry and ("开(搬运速度 " .. tostring(cs) .. ")") or "关"))
+pcall(function() Fluent:Notify({ Title = "加速附加项", Content = v, Duration = 4 }) end)
+end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
@@ -3191,7 +3227,7 @@ local _, hum = GC()
 if not hum then return false end
 if math.abs((tonumber(hum.WalkSpeed) or back) - back) < 0.01 then return true end
 pcall(function() hum.WalkSpeed = back end)
-F.Out("[加速] 已还原你开加速之前的 WalkSpeed = " .. tostring(back))
+F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f", back))
 return true
 end
 function F.SpeedSet(on)
@@ -3254,10 +3290,12 @@ F._spdAt = now
 local attr = F.SpeedAttrValue(sp)
 if math.abs((h.WalkSpeed or 0) - attr) > 0.5 then pcall(function() h.WalkSpeed = attr end) end
 if T.CarryGuard then
-local c = F.CarryingNow()
+local c, what = F.CarryingNow()
 if c and not F._carryOn then
+local cap = tonumber(C.CarrySpeed) or 30
 F._carryOn, F._carryT, F._carryPeak = true, now, 0
-F.Out("[搬运] 检测到手里有东西 ⇒ 加速已自动压到 " .. tostring(math.floor(sp)) .. " 格/秒(搬运保护)")
+F.Out("[搬运] 检测到" .. tostring(what or "搬运物") .. " ⇒ 加速已压到 " ..
+tostring(math.floor(cap)) .. " 格/秒(搬运保护)")
 elseif (not c) and F._carryOn then
 F._carryOn = nil
 F.Out(string.format("[搬运] 已放下/入栏 · 本次搬运 %.1f 秒 · 期间峰值速度 %.0f 格/秒",
@@ -3673,6 +3711,94 @@ F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
 end
 return n > 0
 end
+F._posGuardConn = nil
+function F.PosGuardDisable()
+if F._posGuardConn then F._posGuardConn:Disconnect() F._posGuardConn = nil end
+F._pgPos, F._pgBad = nil, 0
+end
+function F.PosGuardEnable()
+if F._posGuardConn then return end
+F._pgPos, F._pgBad, F._pgHits = nil, 0, 0
+F._posGuardConn = RS.Heartbeat:Connect(function(dt)
+if not T.PosGuard then F.PosGuardDisable() return end
+local _, _, root = GC()
+if not root then F._pgPos = nil return end
+local step = math.clamp(tonumber(dt) or 0.016, 0, 0.1)
+local v = root.AssemblyLinearVelocity
+if F._pgPos then
+local expect = F._pgPos + v * step
+local err = (root.Position - expect).Magnitude
+local th = math.max(tonumber(C.PosGuardJump) or 20, v.Magnitude * step * 1.6)
+if err > th then
+F._pgBad = F._pgBad + 1
+if F._pgBad <= 25 then
+pcall(function() root.CFrame = CFrame.new(F._pgPos) * (root.CFrame - root.CFrame.Position) end)
+pcall(function() root:SetNetworkOwner(LP) end)
+F._pgHits = (F._pgHits or 0) + 1
+local now = os.clock()
+if now - (F._pgLogAt or 0) > 2 then
+F._pgLogAt = now
+F.Out(string.format("[防护] 被外力挪了 %.0f 格 ⇒ 已拉回(累计 %d 次) · 来源多是击退/守卫抓取/服务端纠正",
+err, F._pgHits))
+end
+return
+end
+else
+F._pgBad = 0
+end
+end
+F._pgPos = root.Position
+end)
+end
+F.OUT_BLOCK_KEYS = { "dropcarriedegg", "dropegg", "dropbrainrot", "dropcash", "dropitem", "requestdrop", "carrydrop" }
+function F.OutBlockScan()
+local set, names = {}, {}
+pcall(function()
+for _, d in ipairs(F.walk(RStorage, 4000)) do
+local cn = tostring(d.ClassName)
+if cn:find("RemoteEvent", 1, true) or cn:find("RemoteFunction", 1, true) then
+local nm = tostring(d.Name):lower()
+for _, kw in ipairs(F.OUT_BLOCK_KEYS) do
+if nm:find(kw, 1, true) then
+set[d] = true
+names[#names + 1] = d.Name
+break
+end
+end
+end
+end
+end)
+F._outBlockSet = set
+if #names > 0 then
+local show = {}
+for i = 1, math.min(#names, 8) do show[i] = names[i] end
+F.Out("[防护] 出站拦截会吞掉这些请求: " .. table.concat(show, " · ") .. (#names > 8 and " …" or ""))
+else
+F.Out("[防护] 没在 ReplicatedStorage 里找到「放下/丢弃」类 remote —— 这个游戏可能不是这种机制")
+end
+return #names
+end
+function F.OutBlockEnable()
+if F._outBlockLayer then return end
+F.OutBlockScan()
+local got = F.MetaInstall("__namecall", game, "OutBlock", function(box)
+return function(self, ...)
+if getnamecallmethod() == "FireServer" and F._outBlockSet and F._outBlockSet[self] then
+return nil
+end
+return box.orig(self, ...)
+end
+end)
+F._outBlockLayer = got
+F.Out("[防护] 出站拦截: " .. (got and "已装上 —— 你自己的「放下/丢弃」请求会被吞掉(入栏/存放若也走同一个 remote 就会失效, 那说明要关掉它)"
+or "安装失败(该执行器不支持 hookmetamethod)"))
+end
+function F.OutBlockDisable()
+if not F._outBlockLayer then return end
+pcall(function() F.MetaUninstall("__namecall", "OutBlock") end)
+F._outBlockLayer = nil
+F.Out("[防护] 出站拦截: 已卸下")
+end
 local mutedVolumes = nil
 local function MuteEnable()
 mutedVolumes = {}
@@ -3790,6 +3916,7 @@ function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
 F.RecordOriginals()
+F._pgPos = nil
 pcall(function()
 local _, _, hb = GC()
 if hb then F.HideBaseY = hb.Position.Y end
@@ -5472,6 +5599,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
+F.PosGuardDisable, F.OutBlockDisable,
 F.SpeedRestore, F.FlySet,
 function()
 AC._neutFns = {}
@@ -5735,6 +5863,17 @@ T.HitboxExpand = v
 if F._cfgSyncing then return end
 if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
 end })
+Tabs.Combat:AddSection("防护(这类游戏通用)")
+Tabs.Combat:AddToggle("PosGuard", { Title = "位置守护(被击退 / 被打飞 / 被守卫搬走 ⇒ 立刻拉回原位)", Default = false, Callback = function(v)
+T.PosGuard = v
+if F._cfgSyncing then return end
+if v then F.PosGuardEnable() else F.PosGuardDisable() end
+end })
+Tabs.Combat:AddToggle("OutBlock", { Title = "出站拦截(吞掉自己的「放下/丢弃」请求 · 入栏若失效就关掉它)", Default = false, Callback = function(v)
+T.OutBlock = v
+if F._cfgSyncing then return end
+if v then F.OutBlockEnable() else F.OutBlockDisable() end
+end })
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
 T.KillAura = v
@@ -5749,10 +5888,15 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("SpeedRamp", { Title = "速度缓升(0.35 秒升到目标 · 去掉「一帧跳变」这个最扎眼的特征)", Default = true, Callback = function(v) T.SpeedRamp = v end })
-Tabs.Move:AddSlider("SpeedAttrCap", { Title = "写入 WalkSpeed 的上限(0=不限 · 调低=属性层更干净, 代价：地面速度也跟着降)", Min = 0, Max = 5000, Default = 0, Rounding = 0, Callback = function(v) C.SpeedAttrCap = v end })
-Tabs.Move:AddToggle("CarryGuard", { Title = "搬运保护(手里有东西 ⇒ 自动限速 + 禁止传送, 防「拿到手又消失」)", Default = false, Callback = function(v) T.CarryGuard = v end })
-Tabs.Move:AddSlider("CarrySpeed", { Title = "搬运时的速度(格/秒 · 越接近正常越不容易被判无效)", Min = 16, Max = 5000, Default = 30, Rounding = 0, Callback = function(v) C.CarrySpeed = v end })
+Tabs.Move:AddDropdown("SpeedExtra", { Title = "附加项(选完自动复位 · 每项都会告诉你设了什么)", Values = {
+"不加料(纯加速)",
+"隐身(缓升 + 属性上限100)",
+"强隐身(缓升 + 属性上限16)",
+"搬运保护30(拿东西时自动降速)",
+"搬运保护60",
+"隐身 + 搬运保护30",
+"全部关掉",
+}, Default = "不加料(纯加速)", Callback = function(v) F.SpeedExtraApply(v) end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
@@ -5991,44 +6135,36 @@ Duration = 8,
 })
 end)
 end })
-Tabs.AC:AddSection("扫描补强(阈值 / 形状 / 反查 / 家族)")
-Tabs.AC:AddButton({ Title = "★ 一键分析(阈值 + 找函数 + 家族, 不用你输入)", Callback = function()
-task.spawn(function()
-pcall(F.ScanThresholds)
-pcall(F.AutoProbe)
-pcall(F.ScanFamilies)
-pcall(F.LogFlush, "一键分析")
-Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族聚类已完成, 明细见控制台 F9", Duration = 8 })
-end)
-end })
-Tabs.AC:AddButton({ Title = "反查持有者(用最近一次可疑 remote)", Callback = function()
-task.spawn(function()
-pcall(function()
-local t = F._lastSusRemote
-if t == nil then F.Out("[反查] 还没有可疑 remote —— 先点一次「一键扫描」") return end
-F.TraceHolders(t)
-end)
-pcall(F.LogFlush, "反查")
-end)
-end })
-Tabs.AC:AddButton({ Title = "把速度压到安全值(会告诉你改了什么)", Callback = function()
-task.spawn(function()
-pcall(F.ApplySafeCaps)
-pcall(F.LogFlush, "安全值")
-Fluent:Notify({ Title = "安全值", Content = "已按分析结果调整速度上限, 改了什么都写在控制台 F9", Duration = 8 })
-end)
-end })
-Tabs.AC:AddInput("AdvArg", { Title = "高级参数(可留空): 形状写 19,15 · 关键词写 词1,词2", Default = "",
-Placeholder = "留空 = 走全自动", Callback = function() end })
-Tabs.AC:AddDropdown("AdvScan", { Title = "高级扫描(选完自动复位)", Values = {
-"关闭", "按形状找函数", "按常量字符串找函数", "家族聚类",
+Tabs.AC:AddSection("扫描补强(一个下拉全搞定 · 选完自动复位)")
+Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行", Values = {
+"关闭", "★ 一键分析(阈值 + 找函数 + 家族)", "反查持有者(用最近一次可疑 remote)",
+"把速度压到安全值(会告诉你改了什么)", "按形状找函数(高级参数填 19,15)",
+"按常量字符串找函数(高级参数填 词1,词2)", "家族聚类",
 }, Default = "关闭", Callback = function(v)
 if v == "关闭" then return end
 local box = Fluent and Fluent.Options and Fluent.Options.AdvArg
 local txt = box and tostring(box.Value or "") or ""
 task.spawn(function()
 pcall(function()
-if v == "按形状找函数" then
+if v:find("一键分析", 1, true) then
+F.ScanThresholds()
+F.AutoProbe()
+F.ScanFamilies()
+pcall(F.LogFlush, "一键分析")
+Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族聚类已完成, 明细见控制台 F9", Duration = 8 })
+elseif v:find("反查持有者", 1, true) then
+local t = F._lastSusRemote
+if t == nil then
+F.Out("[反查] 还没有可疑 remote —— 先执行一次「一键扫描」")
+else
+F.TraceHolders(t)
+end
+pcall(F.LogFlush, "反查")
+elseif v:find("压到安全值", 1, true) then
+F.ApplySafeCaps()
+pcall(F.LogFlush, "安全值")
+Fluent:Notify({ Title = "安全值", Content = "已按分析结果调整速度上限, 改了什么都写在控制台 F9", Duration = 8 })
+elseif v:find("按形状", 1, true) then
 local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
 if a and b then
 F.FindByShape(tonumber(a), tonumber(b))
@@ -6036,7 +6172,7 @@ else
 F.Out("[形状] 高级参数为空或格式不对 ⇒ 改走全自动分析(不用输入)")
 F.AutoProbe()
 end
-elseif v == "按常量字符串找函数" then
+elseif v:find("按常量字符串", 1, true) then
 local list = {}
 for w in txt:gmatch("[^,，]+") do
 local t = w:gsub("^%s+", ""):gsub("%s+$", "")
@@ -6048,17 +6184,19 @@ else
 F.Out("[按常量] 高级参数为空 ⇒ 改走全自动分析(自动挑词)")
 F.AutoProbe()
 end
-elseif v == "家族聚类" then
+elseif v:find("家族聚类", 1, true) then
 F.ScanFamilies()
 end
 end)
-pcall(F.LogFlush, "高级扫描")
+pcall(F.LogFlush, "扫描补强")
 task.defer(function()
 local op = Fluent and Fluent.Options and Fluent.Options.AdvScan
 if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
 end)
 end)
 end })
+Tabs.AC:AddInput("AdvArg", { Title = "高级参数(可留空 = 走全自动): 形状写 19,15 · 关键词写 词1,词2", Default = "",
+Placeholder = "留空 = 走全自动", Callback = function() end })
 Tabs.AC:AddSection("采集与导出")
 Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
