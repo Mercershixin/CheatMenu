@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 15:19 sha 9a7513b7 bytes 273279'):format('2026-10-01 15:19','9a7513b7',273279))
+print(('[CheatMenu] build 2026-10-01 15:28 sha b87e4838 bytes 263035'):format('2026-10-01 15:28','b87e4838',263035))
 local F = {}
-F.VERSION = "v10.10.4"
+F.VERSION = "v10.10.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -275,12 +275,8 @@ local AC = {}
 AC.BlockedRemotes = {}
 AC.HookedCount = 0
 AC._idxMaskOn = false
-AC._idxMaskOld = nil
 AC._stblOld = nil
 AC._scriptWatchConn = nil
-AC._desyncOn = false
-AC._desyncLoc = CFrame.new()
-AC._desyncHook = nil
 AC.BLOCK_KEYS = {
 "iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit",
 "detected", "detection", "cheatdetector", "cheat-detector", "antihack", "anti-hack",
@@ -926,7 +922,6 @@ return (ok and type(r) == "table") and r or {}
 end
 F.GC_SPOOF_KEYS = { "info", "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
 F._scavenging = false
-F._debugHookOn = false
 F._stealthHooked = setmetatable({}, { __mode = "k" })
 function F.getGameEnv()
 if type(getrenv) ~= "function" then return nil end
@@ -1010,12 +1005,6 @@ if #out == 0 then return nil, nil end
 if wantAll then return out[1], out end
 return out[1], out
 end
-AC.NEUTRALIZE_NAMES = {
-"GetPlayerBanned", "IsPlayerBanned", "BanPlayer", "PunishPlayer", "ReportPlayer",
-"SuspendPlayer", "FlagPlayer", "AntiCheatDetected", "ACDetected", "OnDetected",
-"Detected", "detected", "FlagPlayerForCheating",
-}
-AC.KNOCK_KEYS = { "knockback", "knock", "velocity", "impulse", "push", "launch", "ragdoll" }
 AC.cap = function(name)
 if type(name) ~= "string" or name == "" then return nil end
 local tries = {
@@ -1081,55 +1070,6 @@ end
 return nil
 end
 F.SCAN_ATTR_ROOTS = { workspace, LP, RStorage }
-function F.ScanAttributes(keyword, roots, limit)
-local kw = type(keyword) == "string" and keyword:lower() or ""
-local maxN = tonumber(limit) or 4000
-local hits, seen, scanned = {}, 0, 0
-local list = roots or F.SCAN_ATTR_ROOTS
-local keepScav = F._scavenging
-F._scavenging = true
-for i = 1, #list do
-local root = list[i]
-if root then
-pcall(function()
-local bag = { root }
-for _, d in ipairs(F.walk(root)) do
-bag[#bag + 1] = d
-end
-for j = 1, #bag do
-scanned = scanned + 1
-if scanned > maxN then break end
-if scanned % 500 == 0 then task.wait() end
-local obj = bag[j]
-local okA, attrs = pcall(function() return obj:GetAttributes() end)
-if okA and type(attrs) == "table" then
-for k, v in pairs(attrs) do
-seen = seen + 1
-if kw == "" or tostring(k):lower():find(kw, 1, true) then
-local sv = tostring(v)
-if #sv > 40 then sv = sv:sub(1, 40) .. "…" end
-local okN, full = pcall(function() return obj:GetFullName() end)
-local path = (okN and type(full) == "string") and full or tostring(obj)
-hits[#hits + 1] = { path = path, key = tostring(k), value = sv }
-end
-end
-end
-end
-end)
-end
-end
-F._scavenging = keepScav
-F.Out(string.format("[属性扫描] 扫过 %d 个实例, 共 %d 条属性, 命中 %d 条%s",
-scanned, seen, #hits, kw ~= "" and (" (关键词 " .. kw .. ")") or ""))
-local shown = 0
-for i = 1, #hits do
-if shown >= 80 then F.Out("  … 其余省略, 共 " .. #hits .. " 条") break end
-local h = hits[i]
-F.Out(string.format("  · %s  [%s = %s]", h.path, h.key, h.value))
-shown = shown + 1
-end
-return hits, scanned, seen
-end
 F.CAP_LIST = {
 { "getgc", "扫描 GC 对象 —— 整个扫描模块的地基" },
 { "filtergc", "按名一步定位函数(反作弊中和强烈依赖)" },
@@ -1448,35 +1388,8 @@ F.Out("  ⚠ 服务端侧变化**看不见**: " .. F.AC_INVISIBLE[1])
 F._lastDiff = d
 return d
 end
-function F.ACSurfaceReport()
-local snap = F.SnapshotCollect()
-local sus, down = 0, 0
-for i = 1, #snap.remotes do
-if snap.remotes[i].s == 1 then sus = sus + 1 end
-if snap.remotes[i].down == 1 then down = down + 1 end
-end
-F.Out("══════════ 反作弊面测绘 ══════════")
-F.Out(string.format("【能看到 · 客户端可见面】"))
-F.Out(string.format("  1) Remote 面: 共 %d 个(可下行 %d), 其中名字可疑 %d 个", #snap.remotes, down, sus))
-for i = 1, math.min(#snap.remotes, 30) do
-local r = snap.remotes[i]
-F.Out(string.format("     %s [%s]%s 来源 %s", r.n, r.c, r.s == 1 and " ⚠可疑" or "", r.src))
-end
-F.Out(string.format("  2) 客户端侧反作弊碎片: %d 个函数(名字/source/常量命中关键词)", #snap.acfns))
-for i = 1, math.min(#snap.acfns, 30) do F.Out("     " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
-F.Out(string.format("  3) 服务端写下来的属性名: %d 种(服务端权威数据的可见副本)", #snap.attrs))
-F.Out(string.format("  4) 客户端脚本指纹: %d 个(执行器%s getscripthash)",
-#snap.scripthashes, #snap.scripthashes > 0 and "支持" or "不支持"))
-F.Out(string.format("  5) 位移权威: AuthorityMode = %s", tostring(snap.authority or "(无此字段)")))
-F.Out("【看不见 · 原理上不可见(与本脚本无关)】")
-for i = 1, #F.AC_INVISIBLE do F.Out("  ✗ " .. F.AC_INVISIBLE[i]) end
-F.Out("⇒ 结论: 扫描给的是「客户端可见面 + 更新差异」, **不是**服务器判定逻辑。")
-F.Out("  想看服务端怎么判, 唯一办法是它自己泄漏出来: 客户端上报脚本 + 它发的 remote 参数 + 服务端回写的值。")
-return snap
-end
 F._capOn = false
 F._capLog = {}
-F._capOld = nil
 F.CAP_MAX = F.LIMITS.CAPTURE_MAX
 function F.CaptureEnable()
 if F._capOn then return true end
@@ -2645,27 +2558,6 @@ F.Out(string.format("[家族] 共 %d 个家族（已扫 %d 个函数）—— �
 F._scavenging = keep
 return #list
 end
-function AC.ScanAndBlock()
-local keepScav = F._scavenging
-F._scavenging = true
-local n = 0
-pcall(function()
-if type(getnilinstances) == "function" then
-for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end
-if typeof(inst) == "Instance" then
-if AC.isRemoteLike(inst) then
-AC.hookOneRemote(inst)
-n = n + 1
-end
-end
-end
-end
-end)
-pcall(F.UnifiedACPass)
-F._scavenging = keepScav
-F.Out("[CheatMenu] 扫描并拦截: 隐藏远程 " .. n .. " 个, 已拦截 remote 共 " .. AC.HookedCount .. " 个")
-return AC.HookedCount
-end
 F._afkConn = nil
 F._afkConn2 = nil
 function F.AntiAFKEnable()
@@ -2827,8 +2719,6 @@ function F.LivePlayersDisable()
 if F._livePlAdded then F._livePlAdded:Disconnect() F._livePlAdded = nil end
 if F._livePlRemoved then F._livePlRemoved:Disconnect() F._livePlRemoved = nil end
 end
-F._aimCache, F._aimCacheAt = nil, 0
-F.AimConn = nil
 F._aimConn = nil
 function F.AimPick()
 local cam = workspace.CurrentCamera
@@ -2949,19 +2839,6 @@ end
 function F.AimUnbind()
 pcall(function() RS:UnbindFromRenderStep("CM_Aim") end)
 F._aimConn = nil
-end
-function F.FlingTarget()
-local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
-local target = name and Players:FindFirstChild(name)
-if not (target and target.Character) then return end
-local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-local _, _, r = GC()
-if not (hrp and r) then return end
-for _ = 1, 12 do
-r.CFrame = hrp.CFrame * CFrame.new(0, 0, -1)
-r.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
-task.wait()
-end
 end
 local GodConn = nil
 local function GodDisable() if GodConn then GodConn:Disconnect() GodConn = nil end end
@@ -3915,27 +3792,6 @@ Fluent:Notify({ Title = "反拉回诊断", Content = table.concat(L, "\n"), Dura
 end
 end)
 end
-function F.SrvReport()
-task.spawn(function()
-local o = F.SrvOwnInfo()
-local step = F.LIMITS.PROBE_STEP
-F.Out("──────── 位移权威诊断 ────────")
-F.Out("① AuthorityMode   : " .. tostring(F._authorityMode or "(无此字段)"))
-F.Out("② 物理帧率         : " .. string.format("%.0f", F.SrvFPS()))
-F.Out("③ 网络所有权(HRP)  : " .. tostring(o.ownerName))
-F.Out("④ 角色 Anchored    : " .. tostring(o.anchored) .. "   状态: " .. tostring(o.humState))
-F.Out("⑤ 限速             : **无** —— 本脚本已删除全部限速/限效果逻辑")
-F.Out("⑥ 当前参数         : 目标速度 " .. tostring(C.SpeedValue or 60) ..
-" studs/s · 单帧位移 " .. string.format("%.2f", step))
-F.Out("⑦ 结论             : " .. (o.serverOwned
-and "服务端持有所有权 ⇒ 客户端位移会被覆盖, 属**机制性不可行**; 先点「夺取网络所有权」再谈参数"
-or "所有权在本地 ⇒ 位移可行; 仍被拉回说明服务端在校验速度/瞬移(要不要降速由你决定)"))
-local pr = F.SrvProbe(F.LIMITS.PROBE_STEP, F.LIMITS.PROBE_SEC)
-F.Out("⑧ 位移探针(2s)     : " .. (pr and string.format("意图 %.0f studs / 实走 %.0f ⇒ 通过率 %.0f%%",
-pr.intended, pr.actual, pr.ratio * 100) or "无角色") .. "   (需 >=90% 才算没被拉回)")
-F.Out("──────────────────────────────")
-end)
-end
 F._baseWalk = 16
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
@@ -4116,8 +3972,6 @@ local _, hum = GC()
 if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 end
-F.SpinConn = nil
-F.AirWalkConn = nil
 F.NoClipConn = nil
 F.NoClipParts = {}
 function F.NoClipDisable()
@@ -5135,75 +4989,6 @@ end
 function F.BringPlayerDisable()
 if F._bringConn then F._bringConn:Disconnect() F._bringConn = nil end
 end
-function F.WaypointLabels()
-F._waypoints = F._waypoints or {}
-local out = {}
-for i = 1, 5 do
-local cf = F._waypoints[tostring(i)]
-if cf then out[i] = string.format("%d: %.0f,%.0f,%.0f", i, cf.Position.X, cf.Position.Y, cf.Position.Z)
-else out[i] = i .. ": (空)" end
-end
-return out
-end
-local function wpSlot(v) return tostring(v or "1"):match("^(%d+)") or "1" end
-function F.RefreshWaypointUI()
-pcall(function()
-local op = Fluent and Fluent.Options and Fluent.Options.WPSlot
-if op and op.SetValues then op:SetValues(F.WaypointLabels()) end
-end)
-end
-function F.SaveWaypoint(slot)
-local _, _, root = GC()
-if not root then return end
-F._waypoints = F._waypoints or {}
-F._waypoints[wpSlot(slot)] = root.CFrame
-F.RefreshWaypointUI()
-end
-function F.TpWaypoint(slot)
-F._waypoints = F._waypoints or {}
-local cf = F._waypoints[wpSlot(slot)]
-if not cf then return end
-smoothTP(cf)
-end
-F._flashConn = nil
-F._lastDeathCF = nil
-function F.FlashbackEnable()
-if F._flashConn then return end
-F._diedConns = {}
-local function hook(h)
-local hum = h and h:FindFirstChildOfClass("Humanoid")
-if hum then
-local conn = hum.Died:Connect(function()
-local _, _, r = GC()
-if r then F._lastDeathCF = r.CFrame end
-end)
-F._diedConns[#F._diedConns + 1] = conn
-if #F._diedConns > 12 then
-local old = table.remove(F._diedConns, 1)
-pcall(function() old:Disconnect() end)
-end
-end
-end
-hook(LP.Character)
-F._flashConn = LP.CharacterAdded:Connect(function(h) task.wait(0.3) hook(h) end)
-end
-function F.FlashbackDisable()
-if F._flashConn then F._flashConn:Disconnect() F._flashConn = nil end
-if F._diedConns then
-for _, c in ipairs(F._diedConns) do pcall(function() c:Disconnect() end) end
-F._diedConns = nil
-end
-end
-function F.FlashbackGo()
-if F._lastDeathCF then smoothTP(F._lastDeathCF) end
-end
-function F.Thrust(dist)
-local _, _, root = GC()
-if not root then return end
-local cam = workspace.CurrentCamera
-local dir = cam and cam.CFrame.LookVector or root.CFrame.LookVector
-smoothTP(root.CFrame + dir * (tonumber(dist) or 50))
-end
 F._swimConn = nil
 function F.SwimEnable()
 if F._swimConn then return end
@@ -5237,16 +5022,6 @@ end)
 end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
-end
-function F.RemoveAccessories()
-for _, pl in ipairs(Players:GetPlayers()) do
-local ch = pl.Character
-if ch then
-for _, o in ipairs(ch:GetChildren()) do
-if o:IsA("Accessory") or o:IsA("Hat") then pcall(function() o:Destroy() end) end
-end
-end
-end
 end
 F._binds = {}
 F._keybindConn = nil
@@ -5396,13 +5171,6 @@ end
 end
 return n
 end
-local TOOL_PRESETS = {
-["Linked Sword"] = 125013769, ["Darkheart"] = 16895215, ["Illumina"] = 16641274,
-["Venomshank"] = 131896478, ["Ice Dagger"] = 124138310, ["Windforce"] = 77443704,
-["Gravity Coil"] = 16688968, ["Speed Coil"] = 99119158, ["Fusion Coil"] = 28457223,
-["Grappling Hook"] = 30393548, ["Rocket Launcher"] = 32356064, ["Hyperlaser"] = 130113146,
-["Magic Carpet"] = 225921000, ["Golden Boombox"] = 14275812,
-}
 F._magnetConn = nil
 F.MAGNET_TAGS = { "Brainrot", "Item", "Collectible", "Loot", "Pickup", "Cash", "Money" }
 function F.ItemMagnetEnable()
@@ -5493,7 +5261,6 @@ if F._magnetAddedConn then pcall(function() F._magnetAddedConn:Disconnect() end)
 F._magnetList, F._magnetListAt = nil, 0
 end
 F._spyHooked = nil
-F._spyOld = nil
 F._remoteDownConns = nil
 function F.RemoteSpyEnable()
 if F._spyHooked then return end
@@ -5545,24 +5312,6 @@ for _, c in ipairs(F._remoteDownConns) do pcall(function() c:Disconnect() end) e
 F._remoteDownConns = nil
 end
 F._spyHooked = nil
-F._spyOld = nil
-end
-function F.CallRemote(remoteName, argsStr)
-if not remoteName or remoteName == "" then return end
-local rem = findRemote(remoteName, "RemoteEvent") or findRemote(remoteName, "RemoteFunction")
-if not rem then return end
-local args = {}
-if argsStr and argsStr ~= "" then
-for a in tostring(argsStr):gmatch("[^,]+") do
-local t = a:match("^%s*(.-)%s*$")
-if t ~= "" then args[#args + 1] = tonumber(t) or t end
-end
-end
-pcall(function()
-local cls = AC.isRemoteLike(rem)
-if cls == "RemoteFunction" then rem:InvokeServer(table.unpack(args))
-elseif cls then rem:FireServer(table.unpack(args)) end
-end)
 end
 F._saveThread = nil
 function F.AutoSaveEnable()
@@ -6531,26 +6280,6 @@ Trans.Loop = nil
 end)
 return true
 end
-function F.SendChat(text)
-if not text or text == "" then return false end
-local tcs = game:GetService("TextChatService")
-if tcs and tcs.TextChannels then
-local chans = tcs:FindFirstChild("TextChannels")
-if chans then
-for _, channel in ipairs(chans:GetChildren()) do
-if channel:IsA("TextChannel") and channel.SendAsync then
-if pcall(function() channel:SendAsync(text) end) then return true end
-end
-end
-end
-end
-local chatEvents = RStorage:FindFirstChild("DefaultChatSystemChatEvents")
-if chatEvents then
-local say = chatEvents:FindFirstChild("SayMessageRequest")
-if say then pcall(function() say:FireServer(text, "All") end) return true end
-end
-return false
-end
 function F.ChatTranslateEnable()
 if F._chatTransHooked then return end
 local tcs = game:GetService("TextChatService")
@@ -6635,7 +6364,6 @@ end
 end)
 F._bubbleTransHooked = false
 end
-function F.TranslateText(s) return Trans.Translate(s, true) end
 function F.TranslateDisable() Trans.Disable() end
 function F.TranslateEnable() return Trans.Enable() end
 local function UnloadAll()
@@ -6646,7 +6374,7 @@ F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable,
 F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable,
-F.FlashbackDisable, F.RemoteSpyDisable,
+F.RemoteSpyDisable,
 F.AntiSitDisable, F.AntiAnchorDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
