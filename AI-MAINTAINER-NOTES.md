@@ -2748,3 +2748,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 防挂机现在只有三件事: 掐检测连接(可恢复) + 每15秒写心跳属性 + 监听 Idled 只记录; F.AntiAFKSim / AFKMotion 开关 / 输入监听 全部删净(残留 0)
 
+
+
+## 11.0.50：第 1 批挖掘(4293 条近1月脚本)落地 getgc 中和器
+
+- 抄 novahub/Bypassed.lua: getgc(true) 扫 GC 表, 按精确方法名中和 kick/randomDelayKick→挂起, Kill/Detected/lagback/punish/flag→空函数, **getIsBodyMoverCreatedByGame→true**(破'检测你插了物理约束'那类反作弊); 开防踢时扫一次, 关闭/卸载全部还原(记录原函数)
+
