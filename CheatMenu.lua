@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:48 sha abeb5234 bytes 250630'):format('2026-10-01 19:48','abeb5234',250630))
+print(('[CheatMenu] build 2026-10-01 19:58 sha 949d1af2 bytes 239367'):format('2026-10-01 19:58','949d1af2',239367))
 local F = {}
-F.VERSION = "v11.0.14"
+F.VERSION = "v11.0.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1917,7 +1917,6 @@ elseif obj:IsA("BindableEvent") or obj:IsA("BindableFunction") then sig = obj.Ev
 local ok, conns = pcall(getconnections, sig)
 local cnt = (ok and type(conns) == "table") and #conns or -1
 local tag = AC.isSuspicious(obj.Name) and "可疑" or "普通"
-if AC.isSuspicious(obj.Name) then F._lastSusRemote = sig or obj end
 F.Out(string.format("[监听扫描] %s [%s] %s · %s · 连接 %s", tag, cls, tostring(obj.Name), where,
 cnt < 0 and "读不到(无 getconnections)" or tostring(cnt)))
 if cnt > 0 then connInfo(sig, "   └ " .. tostring(obj.Name), conns) end
@@ -1962,14 +1961,6 @@ for i = 1, #sigs do connInfo(sigs[i][1], sigs[i][2]) end
 pcall(function() connInfo(workspace.DescendantAdded, "Workspace.DescendantAdded") end)
 F._scavenging = keep
 end
-F.THRESH_HINTS = {
-{ keys = { "speed", "velocity", "walkspeed", "stud" }, label = "速度阈值(studs/s)" },
-{ keys = { "teleport", "tp", "distance", "delta", "move" }, label = "位移/瞬移阈值(studs)" },
-{ keys = { "fly", "air", "jump", "hang", "float" },     label = "滞空/飞行阈值(s)" },
-{ keys = { "rate", "per", "window", "interval", "tick" }, label = "采样窗口/频率(s)" },
-{ keys = { "count", "strike", "hit", "times", "limit" },  label = "累计次数上限" },
-{ keys = { "kick", "ban", "punish", "flag" },            label = "处置阈值" },
-}
 function F.FnFingerprint(f)
 local out = { nums = {}, strs = {}, nups = 0, nconsts = 0 }
 if type(f) ~= "function" then return out end
@@ -1991,70 +1982,6 @@ local ok2, u = pcall(dbgGetUpvalues, f)
 if ok2 and type(u) == "table" then out.nups = #u end
 end)
 return out
-end
-function F.ScanThresholds()
-if type(getgc) ~= "function" or type(dbgGetConstants) ~= "function" then
-F.Out("[阈值] ⚠ 本执行器缺 getgc / debug.getconstants —— 无法提取阈值(不是没扫到)")
-return
-end
-local keep = F._scavenging
-F._scavenging = true
-F.Out("[阈值] ===== 从可疑函数里提取数字阈值 =====")
-local seen, found, scanned = {}, 0, 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local oki, info = pcall(debug.getinfo, obj, "nS")
-local nm = (oki and info and info.name) or ""
-local srcv = (oki and info and info.source) or ""
-local low = (nm .. " " .. srcv):lower()
-local relevant = false
-for _, h in ipairs(F.THRESH_HINTS) do
-for _, k in ipairs(h.keys) do
-if low:find(k, 1, true) then relevant = true break end
-end
-if relevant then break end
-end
-if relevant and not F.IsOursSrc(low) and not seen[nm .. srcv] then
-seen[nm .. srcv] = true
-local fp = F.FnFingerprint(obj)
-if #fp.nums > 0 or #fp.strs > 0 then
-found = found + 1
-if found <= 60 then
-F.Out(string.format("[阈值] %s @ %s · 形状(upvalue %d / 常量 %d)",
-(nm ~= "" and nm or "(匿名)"), srcv, fp.nups, fp.nconsts))
-local nums = {}
-for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
-if #nums > 0 then F.Out("[阈值]   数字: " .. table.concat(nums, ", ")) end
-local joined = table.concat(fp.strs, " "):lower() .. " " .. low
-for _, h in ipairs(F.THRESH_HINTS) do
-local hit = false
-for _, k in ipairs(h.keys) do
-if joined:find(k, 1, true) then hit = true break end
-end
-if hit then
-local picked = {}
-for i = 1, #fp.nums do
-if #picked < 6 then picked[#picked + 1] = tostring(fp.nums[i]) end
-end
-F.Out("[阈值]   → 疑似" .. h.label .. ": " .. table.concat(picked, ", "))
-end
-end
-if #fp.strs > 0 then
-F.Out("[阈值]   字符串常量: " .. table.concat(fp.strs, " | "):sub(1, 180))
-end
-end
-end
-end
-end
-end
-F.Out(string.format("[阈值] 共分析 %d 个函数, 命中 %d 个带数字的可疑函数", scanned, found))
-F.Out("[阈值] 用法: 把上面的数字当**上限参考**, 把「加速/飞行速度」压到它下面(如 100 ⇒ 90)")
-F._scavenging = keep
-return found
 end
 function F.ScanByConstants(list, mode)
 if type(list) ~= "table" or #list == 0 then
@@ -2144,197 +2071,6 @@ if type(f) ~= "function" then return false end
 local ok, s = pcall(dbgGetInfo, f, "s")
 return ok and F.IsOursSrc(tostring(s or ""):lower())
 end
-function F.AutoKeywords()
-local cnt, order = {}, {}
-local scanned = 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local okc, consts = pcall(dbgGetConstants, obj)
-if okc and type(consts) == "table" then
-local oki, info = pcall(dbgGetInfo, obj, "nS")
-local nm = (oki and info and info.name) or ""
-local sv = (oki and info and info.source) or ""
-local low = (nm .. " " .. sv):lower()
-local sus = false
-for i = 1, #F.SCAN_KW do
-if low:find(F.SCAN_KW[i], 1, true) then sus = true break end
-end
-if sus and not F.IsOursSrc(low) then
-for i = 1, #consts do
-local v = consts[i]
-if type(v) == "string" and #v >= 4 and #v <= 60
-and not v:find("\n", 1, true) and not v:find("\t", 1, true)
-and v:find("%a") ~= nil and not v:find("rbxasset", 1, true)
-and not v:find("://", 1, true) then
-if not cnt[v] then order[#order + 1] = v end
-cnt[v] = (cnt[v] or 0) + 1
-end
-end
-end
-end
-end
-end
-table.sort(order, function(a, b) return (cnt[a] or 0) > (cnt[b] or 0) end)
-local out = {}
-for i = 1, #order do
-if #out >= 10 then break end
-out[#out + 1] = { s = order[i], n = cnt[order[i]] }
-end
-return out
-end
-function F.AutoProbe()
-if type(dbgGetGC) ~= "function" or type(dbgGetConstants) ~= "function" then
-F.Out("[自动分析] ⚠ 本执行器缺 getgc / debug.getconstants —— 无法自动分析(不是没扫到)")
-return
-end
-local keep = F._scavenging
-F._scavenging = true
-F.Out("[自动分析] ══════ 全自动分析开始（你不用输入任何东西）══════")
-local kws = F.AutoKeywords()
-if #kws == 0 then
-F.Out("[自动分析] 按「数字常量」没找到关键词 —— 这只说明没有数值型阈值可读, 不等于客户端干净")
-pcall(F.ScanClientChecks, true)
-F._scavenging = keep
-return
-end
-local names = {}
-for i = 1, #kws do names[i] = kws[i].s end
-F.Out("[自动分析] ① 自动挑出关键词 " .. tostring(#kws) .. " 条：")
-for i = 1, #kws do
-if i > 6 then break end
-F.Out(string.format("[自动分析]     「%s」 ×%d", tostring(kws[i].s):sub(1, 40), kws[i].n))
-end
-local want = {}
-for i = 1, #names do if i <= 8 then want[#want + 1] = names[i] end end
-local hits = {}
-local function consider(f)
-if #hits >= 30 then return end
-if F.IsOurs(f) then return end
-local fp = F.FnFingerprint(f)
-if #fp.nums > 0 or #fp.strs > 0 then hits[#hits + 1] = { f = f, fp = fp } end
-end
-if type(filtergc) == "function" then
-for i = 1, #want do
-local ok, got = pcall(filtergc, "function", { Constants = { want[i] }, IgnoreExecutor = true }, true)
-if ok and type(got) == "table" then
-for j = 1, #got do
-if type(got[j]) == "function" then consider(got[j]) end
-end
-end
-if #hits >= 30 then break end
-end
-end
-if #hits == 0 then
-local scanned = 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local okc, consts = pcall(dbgGetConstants, obj)
-if okc and type(consts) == "table" then
-local blob = {}
-for k = 1, #consts do
-if type(consts[k]) == "string" then blob[#blob + 1] = consts[k] end
-end
-local s = table.concat(blob, "\n")
-for i = 1, #want do
-if s:find(want[i], 1, true) then consider(obj) break end
-end
-end
-end
-end
-end
-F.Out("[自动分析] ② 命中函数 " .. tostring(#hits) .. " 个")
-local tagged = {}
-for i = 1, #hits do
-local fp = hits[i].fp
-local joined = table.concat(fp.strs, " "):lower()
-local oki, info = pcall(dbgGetInfo, hits[i].f, "nS")
-local nm = (oki and info and info.name) or "(匿名)"
-local sv = (oki and info and info.source) or "?"
-joined = joined .. " " .. nm:lower() .. " " .. sv:lower()
-if i <= 12 then
-local nums = {}
-for k = 1, #fp.nums do if k <= 10 then nums[#nums + 1] = tostring(fp.nums[k]) end end
-F.Out(string.format("[自动分析]     %s @ %s", nm, sv))
-if #nums > 0 then F.Out("[自动分析]       数字: " .. table.concat(nums, ", ")) end
-end
-for j = 1, #F.THRESH_HINTS do
-local h = F.THRESH_HINTS[j]
-local hit = false
-for k = 1, #h.keys do
-if joined:find(h.keys[k], 1, true) then hit = true break end
-end
-if hit then
-for k = 1, #fp.nums do
-local v = fp.nums[k]
-if type(v) == "number" and v > 1 and v < 1e6 then
-tagged[#tagged + 1] = { label = h.label, v = v, src = sv }
-end
-end
-end
-end
-end
-local best = nil
-for i = 1, #tagged do
-if tagged[i].label:find("速度", 1, true) then
-if best == nil or tagged[i].v < best then best = tagged[i].v end
-end
-end
-F._autoTh = tagged
-F._autoSpeedCap = best
-F.Out("[自动分析] ③ 共提取到 " .. tostring(#tagged) .. " 个疑似阈值数字")
-if best then
-local safe = math.floor(best * 0.9)
-F.Out(string.format("[自动分析] ④ ★ 结论：疑似速度上限 = %d studs/s ⇒ 建议把速度压到 %d 以内",
-best, safe))
-F.Out("[自动分析]    想按建议改，点「按结果把速度压到安全值」即可（这一步要你自己点）")
-else
-F.Out("[自动分析] ④ 没提取到明确的「速度阈值」—— 可能判定在服务端，或函数被混淆得更彻底")
-end
-pcall(F.ScanClientChecks, true)
-F.Out("[自动分析] ══════ 分析结束 ══════")
-F._scavenging = keep
-return #tagged
-end
-function F.ApplySafeCaps()
-local best = F._autoSpeedCap
-if type(best) ~= "number" then
-F.Out("[安全值] 还没跑过「一键自动分析」—— 先点那个按钮")
-return
-end
-local safe = math.max(16, math.floor(best * 0.9))
-local changed = {}
-if type(C.SpeedValue) == "number" and C.SpeedValue > safe then
-C.SpeedValue = safe
-changed[#changed + 1] = "加速 " .. tostring(safe)
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.SpeedValue
-if o and o.Set then o:Set(safe) end
-end)
-end
-if type(C.FlyValue) == "number" and C.FlyValue > safe then
-C.FlyValue = safe
-changed[#changed + 1] = "飞行 " .. tostring(safe)
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.FlyValue
-if o and o.Set then o:Set(safe) end
-end)
-end
-if #changed == 0 then
-F.Out(string.format("[安全值] 你的速度已经在安全线(%d)以内，无需改动", safe))
-else
-F.Out(string.format("[安全值] 已把 %s 压到 %d（= 疑似阈值 %d × 0.9）",
-table.concat(changed, " / "), safe, best))
-F.Out("[安全值] 这是**你点的**修改；想恢复自己拖滑块即可")
-end
-end
 function F.FindByShape(nups, nconsts)
 if type(getgc) ~= "function" then
 F.Out("[形状] ⚠ 本执行器缺 getgc —— 无法按形状搜索")
@@ -2368,80 +2104,6 @@ end
 F.Out(string.format("[形状] 命中 %d 个（已扫 %d 个函数）", n, scanned))
 F._scavenging = keep
 return n
-end
-function F.TraceHolders(target)
-if target == nil then F.Out("[反查] 用法: 需要一个 remote/表对象"); return end
-if type(getgc) ~= "function" then F.Out("[反查] ⚠ 缺 getgc"); return end
-local keep = F._scavenging
-F._scavenging = true
-F.Out("[反查] ===== 谁在 upvalue 里持有它 =====")
-local n, scanned = 0, 0
-for _, f in ipairs(F.GuardedGetGC(true, true)) do
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(f) == "function" and (not islclosure or islclosure(f)) then
-for i = 1, 24 do
-local ok, un, v = pcall(debug.getupvalue, f, i)
-if not ok or un == nil then break end
-if v == target then
-n = n + 1
-if n <= 30 then
-local oki, info = pcall(debug.getinfo, f, "nS")
-F.Out(string.format("[反查]   upvalue #%d 名=%s · 函数 %s @ %s", i, tostring(un),
-(oki and info and info.name ~= "" and info.name) or "(匿名)",
-(oki and info and info.source) or "?"))
-end
-break
-end
-end
-end
-end
-F.Out(string.format("[反查] 共 %d 个闭包持有它（已扫 %d 个函数）", n, scanned))
-F._scavenging = keep
-return n
-end
-function F.ScanFamilies()
-if type(getgc) ~= "function" then F.Out("[家族] ⚠ 缺 getgc"); return end
-local keep = F._scavenging
-F._scavenging = true
-local fam = {}
-local scanned = 0
-for _, f in ipairs(F.GuardedGetGC(true, true)) do
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(f) == "function" and (not islclosure or islclosure(f)) then
-local oki, info = pcall(debug.getinfo, f, "nS")
-if oki and info then
-local nm = info.name or ""
-local sv = info.source or "?"
-local low = (nm .. " " .. sv):lower()
-local sus = false
-for i = 1, #F.SCAN_KW do
-if low:find(F.SCAN_KW[i], 1, true) then sus = true break end
-end
-if sus then
-local prefix = nm:match("^([%a_]+)") or "(匿名)"
-local key = sv .. "|" .. prefix
-fam[key] = fam[key] or { n = 0, src = sv, prefix = prefix }
-fam[key].n = fam[key].n + 1
-end
-end
-end
-end
-F.Out("[家族] ===== 可疑函数家族（同一 source + 同名前缀）=====")
-local list = {}
-for _, v in pairs(fam) do list[#list + 1] = v end
-table.sort(list, function(a, b) return a.n > b.n end)
-for i = 1, #list do
-if i > 30 then break end
-F.Out(string.format("[家族]   %-28s ×%-4d @ %s", tostring(list[i].prefix), list[i].n, tostring(list[i].src)))
-end
-F.Out(string.format("[家族] 共 %d 个家族（已扫 %d 个函数）—— 一次中和整个家族, 命中率比单个高",
-#list, scanned))
-F._scavenging = keep
-return #list
 end
 F._afkConn = nil
 F._afkConn2 = nil
@@ -3010,8 +2672,34 @@ end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
+function F.PeekScript(inst)
+local code = nil
+pcall(function() if type(decompile) == "function" then code = decompile(inst) end end)
+if type(code) ~= "string" or #code < 16 then
+pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(inst) end end)
+end
+if type(code) ~= "string" or #code < 8 then return 0, "读不到(执行器不支持 decompile/getscriptbytecode)" end
+local isSrc = false
+pcall(function() if type(decompile) == "function" then isSrc = true end end)
+local low = code:lower()
+local hits = 0
+for _, k in ipairs(F.ANTITP_KEYS) do
+local pos = 1
+while hits < 3 do
+local i = low:find(k, pos, true)
+if not i then break end
+hits = hits + 1
+local seg = code:sub(math.max(1, i - 60), math.min(#code, i + 60))
+seg = tostring(seg):gsub("[%z-W-­]", "?")
+F.Out("      ↳ …" .. seg .. "…")
+pos = i + #k
+end
+if hits >= 3 then break end
+end
+return hits, isSrc and "源码" or "字节码"
+end
 function F.ScanClientChecks(verbose)
-local scripts, conns = {}, {}
+local scripts, conns, foundScripts = {}, {}, {}
 pcall(function()
 local roots = { LP:FindFirstChild("PlayerScripts"), LP:FindFirstChild("PlayerGui"), LP.Character }
 for _, r in ipairs(roots) do
@@ -3020,7 +2708,11 @@ for _, d in ipairs(r:GetDescendants()) do
 if d:IsA("LocalScript") or d:IsA("Script") or d:IsA("ModuleScript") then
 local nm = tostring(d.Name):lower()
 for _, k in ipairs(F.ANTITP_KEYS) do
-if nm:find(k, 1, true) then scripts[#scripts + 1] = d:GetFullName() break end
+if nm:find(k, 1, true) then
+scripts[#scripts + 1] = d:GetFullName()
+foundScripts[#foundScripts + 1] = d
+break
+end
 end
 end
 end
@@ -3049,6 +2741,24 @@ if verbose then
 F.Out(string.format("[客户端检测] 按名字扫到脚本 %d 个 · Heartbeat 上可疑连接 %d 条(共 %d 条连接)",
 #scripts, #conns, (function() local n = 0 pcall(function() n = #getconnections(RS.Heartbeat) end) return n end)()))
 for i = 1, math.min(#scripts, 6) do F.Out("   · 脚本: " .. scripts[i]) end
+if #foundScripts > 0 then
+F.Out("   —— 试着读它的代码(只读, 不执行) ——")
+for i = 1, math.min(#foundScripts, 3) do
+F.Out("   ▸ " .. tostring(foundScripts[i].Name))
+local n, how = F.PeekScript(foundScripts[i])
+if n == 0 then
+F.Out("      (读不到内容: " .. tostring(how) .. ")")
+else
+F.Out("      (命中 " .. tostring(n) .. " 处 · 来源: " .. tostring(how) .. ")")
+end
+end
+end
+pcall(function()
+local pk = RStorage:FindFirstChild("Packages")
+local nw = pk and pk:FindFirstChild("Networking")
+local known = nw and nw:FindFirstChild("RE/RigSync/Refresh")
+F.Out("   同族已知路径 RE/RigSync/Refresh: " .. (known and "存在(公开作品就是断这一条)" or "不存在(这个游戏结构不同)"))
+end)
 for i = 1, math.min(#conns, 6) do F.Out("   · 连接: " .. conns[i]) end
 if #scripts == 0 and #conns == 0 then
 F.Out("   (这个游戏客户端侧没有按这些名字出现的检测 ⇒ 它不是「客户端检测」型; 但换个游戏请重扫)")
@@ -6520,7 +6230,6 @@ pcall(F.ScanRemotes)
 pcall(F.ScanGameModules)
 pcall(F.ScanScripts)
 pcall(F.ScanConnections)
-pcall(F.AutoProbe)
 pcall(F.LogFlush, "统一扫描")
 Fluent:Notify({
 Title = "扫描完成",
@@ -6530,42 +6239,21 @@ Duration = 8,
 end)
 end })
 Tabs.AC:AddSection("扫描补强(一个下拉全搞定 · 选完自动复位)")
-Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行", Values = {
-"关闭", "★ 一键分析(阈值 + 找函数 + 家族)", "反查持有者(用最近一次可疑 remote)",
-"把速度压到安全值(会告诉你改了什么)", "按形状找函数(高级参数填 19,15)",
-"按常量字符串找函数(高级参数填 词1,词2)", "家族聚类",
+Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行(选完自动复位)", Values = {
+"关闭", "按形状找函数(高级参数填 19,15)",
+"按常量字符串找函数(高级参数填 词1,词2)", "客户端检测扫描(脚本名 + 连接来源)",
 }, Default = "关闭", Callback = function(v)
 if v == "关闭" then return end
 local box = Fluent and Fluent.Options and Fluent.Options.AdvArg
 local txt = box and tostring(box.Value or "") or ""
 task.spawn(function()
 pcall(function()
-if v:find("一键分析", 1, true) then
-F.ScanThresholds()
-F.AutoProbe()
-F.ScanFamilies()
-pcall(F.ScanClientChecks, true)
-pcall(F.LogFlush, "一键分析")
-Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族 + 客户端检测已扫完, 明细见控制台 F9", Duration = 8 })
-elseif v:find("反查持有者", 1, true) then
-local t = F._lastSusRemote
-if t == nil then
-F.Out("[反查] 还没有可疑 remote —— 先执行一次「一键扫描」")
-else
-F.TraceHolders(t)
-end
-pcall(F.LogFlush, "反查")
-elseif v:find("压到安全值", 1, true) then
-F.ApplySafeCaps()
-pcall(F.LogFlush, "安全值")
-Fluent:Notify({ Title = "安全值", Content = "已按分析结果调整速度上限, 改了什么都写在控制台 F9", Duration = 8 })
-elseif v:find("按形状", 1, true) then
+if v:find("按形状", 1, true) then
 local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
 if a and b then
 F.FindByShape(tonumber(a), tonumber(b))
 else
-F.Out("[形状] 高级参数为空或格式不对 ⇒ 改走全自动分析(不用输入)")
-F.AutoProbe()
+F.Out("[形状] 高级参数为空或格式不对 —— 形状就是 (upvalue 个数, 常量个数), 例如 19,15")
 end
 elseif v:find("按常量字符串", 1, true) then
 local list = {}
@@ -6576,11 +6264,10 @@ end
 if #list > 0 then
 F.ScanByConstants(list, "all")
 else
-F.Out("[按常量] 高级参数为空 ⇒ 改走全自动分析(自动挑词)")
-F.AutoProbe()
+F.Out("[按常量] 高级参数为空 —— 填你从脚本/日志里看到的原文, 例如 anti-cheat,speed")
 end
-elseif v:find("家族聚类", 1, true) then
-F.ScanFamilies()
+elseif v:find("客户端检测", 1, true) then
+pcall(F.ScanClientChecks, true)
 end
 end)
 pcall(F.LogFlush, "扫描补强")
