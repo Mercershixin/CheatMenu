@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:24 sha 4173eff4 bytes 267120'):format('2026-10-01 23:24','4173eff4',267120))
+print(('[CheatMenu] build 2026-10-01 23:35 sha 07302aa7 bytes 269560'):format('2026-10-01 23:35','07302aa7',269560))
 local F = {}
-F.VERSION = "v11.0.36"
+F.VERSION = "v11.0.37"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2252,9 +2252,74 @@ end
 F._flingBackup = nil
 end
 end
-local KG = { hooked = false, target = nil, rjConn = nil }
+local KG = { hooked = false, target = nil, rjConn = nil, blocked = 0 }
+function F.KickGuardPathsEnable()
+if KG.mtHooked then return end
+local ok = pcall(function()
+if type(getrawmetatable) ~= "function" then return end
+local mt = getrawmetatable(game)
+if type(mt) ~= "table" then return end
+pcall(function() if setreadonly then setreadonly(mt, false) end end)
+local oldNC, oldIX, oldNIX = mt.__namecall, mt.__index, mt.__newindex
+if type(oldNC) ~= "function" then return end
+local function wrap(fn)
+if type(newcclosure) == "function" then return newcclosure(fn) end
+return fn
+end
+mt.__namecall = wrap(function(self, ...)
+local m = nil
+pcall(function() m = getnamecallmethod() end)
+if m == "Kick" and self == LP then
+KG.blocked = (KG.blocked or 0) + 1
+return nil
+end
+return oldNC(self, ...)
+end)
+if type(oldIX) == "function" then
+mt.__index = wrap(function(self, key)
+if self == LP and key == "Kick" then
+KG.blocked = (KG.blocked or 0) + 1
+return function() end
+end
+return oldIX(self, key)
+end)
+end
+if type(oldNIX) == "function" then
+mt.__newindex = wrap(function(self, key, v)
+if self == LP and key == "Kick" then
+KG.blocked = (KG.blocked or 0) + 1
+return nil
+end
+return oldNIX(self, key, v)
+end)
+end
+KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = mt, oldNC, oldIX, oldNIX
+KG.mtHooked = true
+end)
+if not ok or not KG.mtHooked then KG.mtHooked = nil return end
+KG.logConn = RS.Heartbeat:Connect(function()
+local n = KG.blocked or 0
+if n ~= (KG.lastReport or 0) then
+KG.lastReport = n
+F.Out("[CheatMenu] 拦截 Kick 调用 ×" .. tostring(n) .. " (三条路径: :Kick() / .Kick 取值 / .Kick 赋值)")
+end
+end)
+end
+function F.KickGuardPathsDisable()
+if KG.logConn then pcall(function() KG.logConn:Disconnect() end) KG.logConn = nil end
+if KG.mtHooked and KG.mt then
+pcall(function()
+if KG.oldNC then KG.mt.__namecall = KG.oldNC end
+if KG.oldIX then KG.mt.__index = KG.oldIX end
+if KG.oldNIX then KG.mt.__newindex = KG.oldNIX end
+end)
+end
+KG.mtHooked, KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = nil, nil, nil, nil, nil
+KG.lastReport = nil
+end
 function F.KickGuardEnable()
 if KG.hooked then return true end
+pcall(F.KickGuardPathsEnable)
 local kf = LP.Kick
 if type(kf) ~= "function" or not hookfunction then return false end
 local orig
@@ -2276,6 +2341,7 @@ KG.hooked = true
 return true
 end
 function F.KickGuardDisable()
+pcall(F.KickGuardPathsDisable)
 if KG.hooked and hookfunction and KG.target and KG.orig then
 pcall(function() hookfunction(KG.target, KG.orig) end)
 end
@@ -3708,7 +3774,7 @@ local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
 F.SpeedApply()
-F._spdConn = RS.RenderStepped:Connect(function(deltaTime)
+F._spdConn = RS.Stepped:Connect(function(_, deltaTime)
 if not T.SpeedOn then F.SpeedSet(false) return end
 local _, h, r = GC()
 if not (h and r) then return end
@@ -3797,6 +3863,14 @@ if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt", "_flyBvAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
+if F._flyCollOff then
+for bp, orig in pairs(F._flyCollOff) do
+if typeof(bp) == "Instance" and bp.Parent then
+pcall(function() bp.CanCollide = orig end)
+end
+end
+F._flyCollOff = nil
+end
 local _, hum = GC()
 if hum then pcall(function() hum.PlatformStand = false end) end
 if F._flyJumpReqConn then
@@ -3869,11 +3943,22 @@ bg.Parent = root
 F._flyBv, F._flyBg = bv, bg
 end)
 end
-F._flyConn = RS.RenderStepped:Connect(function(dt)
+F._flyConn = RS.Stepped:Connect(function(_, dt)
 if not T.FlyOn then F.FlyDestroy() return end
 local _, h, r = GC()
 if not (h and r) then return end
 if not h.PlatformStand then pcall(function() h.PlatformStand = true end) end
+if not F._flyCollOff then
+F._flyCollOff = {}
+pcall(function()
+for _, bp in ipairs(h:GetDescendants()) do
+if bp:IsA("BasePart") then
+F._flyCollOff[bp] = bp.CanCollide
+bp.CanCollide = false
+end
+end
+end)
+end
 local c = workspace.CurrentCamera
 if not c then return end
 local dir = Vector3.zero
@@ -6354,7 +6439,7 @@ F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.BringPlayerDisable, F.LockCamDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
-F.AntiAFKDisable,
+F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
