@@ -1627,3 +1627,39 @@ UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** 
    `local InvConn, InvAddedConn, InvBackup, InvDisplayBackup` 这行 —— 它正是本轮的残留之一。
 4. ★★ **不可达代码要顺着"恒真早退"往下看**：恒真的 `return` 之后还有一屏代码（`smoothTP` 的插值路径），
    只按清单删 `if` 会把它留下来。
+
+### 17.6 ★★★ 用户报障："加载之后我原本的高速被压成低速" —— 查实是脚本自己改的（10.10.9）
+
+**用户原话**：「为什么加载注入器 我的原本高速的 被限制低速了 **不要改我的速度**」。
+
+**根因（四处叠加，全部可复现）**：
+
+| # | 位置 | 问题 |
+|---|---|---|
+| 1 | `F._baseWalk = 16` | **硬编码默认值**，违反红线第 4 条（恢复必须用"加载时记录的原值"） |
+| 2 | `RecordOriginals()` 末尾 `if not F._baseWalk and F._orig.walk then ...` | 因为上一行已经把 `_baseWalk` 设成 16，这句**永远不执行** ⇒ 记录到的真原值**从来进不去基准** |
+| 3 | `SpeedSet` 的 `else F.SpeedApply()` | 关功能时**无条件**执行 `hum.WalkSpeed = F._baseWalk` ⇒ 写回 16 |
+| 4 | `UnloadAll` 清理表里的 `F.SpeedSet` | **不带参数调用** ⇒ 等价于 `SpeedSet(nil)` ⇒ 走上面那条 else ⇒ **热加载/卸载/点"卸载脚本"都把你的 WalkSpeed 写成 16** |
+
+另有一处**隐性上限**：`elseif bw > 0 and bw <= 32 then F._baseWalk = bw end` ——
+**用户原本速度只要 >32，脚本就拒绝把它记为基准**，直接退回 16（正是用户"我本来很快"的场景）。
+
+**修法（只做减法：脚本不再主动碰你的速度）**：
+
+1. **删掉硬编码** `F._baseWalk = 16` ⇒ 改为 `nil`，并把 `RecordOriginals()` 那句变成**真正生效**（原值第一次记录就进基准）。
+2. **新增 `F.SpeedRestore()`**：只还原 **"你打开加速那一瞬间的值"**（`F._preSpeed`，开加速时抓取）；
+   **没有记录就一个字节都不写**（`return false`）。
+3. `F.SpeedApply()` **加开关判断**：`if not T.SpeedOn then return end` ⇒ **功能关着时永不写 WalkSpeed**。
+4. `SpeedSet(false)` ⇒ 改调 `F.SpeedRestore()`（不再无条件回写基准）。
+5. `UnloadAll` 清理表：`F.SpeedSet` ⇒ **`F.SpeedRestore`**（只还原、不自作主张）。
+6. `Panic`（F1）里那句 `hum.WalkSpeed = o.walk or F._baseWalk or 16` ⇒ 改为**只在 `_preSpeed` 存在时**还原，
+   **否则完全不动** —— 用户没让脚本改过速度，Panic 也没资格"替他改回去"。
+7. 还原成功时打一行 `[加速] 已还原你开加速之前的 WalkSpeed = X`，让用户**看得见**。
+
+★ **刻意没做的一件事**：没有给「加速 / 飞行」两个开关加 `_cfgSyncing` 静默守卫。
+原因是那会让"热加载保留已开功能"失效（守卫只写 T 值、不调 Enable ⇒ 界面亮着但功能没开）。
+本轮改成**语义安全**（关着就不写、没记录就不写），既守住了红线，也保住了热加载。
+
+★ 复核口径：`grep 'WalkSpeed ='` 全文只剩 6 处写入点，其中
+①加速循环内 ②自由相机(存/还原自身值) 都属"用户开了才走"；
+`SpeedApply` / `SpeedRestore` / `Panic` 三处均已加"必须先有记录"的前置条件。
