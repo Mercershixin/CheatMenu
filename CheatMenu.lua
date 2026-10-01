@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 21:28 sha 8ef7bbff bytes 255442'):format('2026-10-01 21:28','8ef7bbff',255442))
+print(('[CheatMenu] build 2026-10-01 21:42 sha d6d3168d bytes 256190'):format('2026-10-01 21:42','d6d3168d',256190))
 local F = {}
-F.VERSION = "v11.0.24"
+F.VERSION = "v11.0.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3995,8 +3995,9 @@ F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
 end
 return n > 0
 end
-F.TP_MOUSE_REACH = 900
-F.TP_MOUSE_AIR = 150
+F.TP_MOUSE_REACH = 1e6
+F.TP_MOUSE_AIR = 4000
+F.TP_MOUSE_FAR = 500
 function F.MouseWorldPos()
 local cam = workspace.CurrentCamera
 if not cam then return nil, "nocam" end
@@ -4029,14 +4030,20 @@ pcall(function() params.FilterDescendantsInstances = { root.Parent } end)
 end
 local hit = nil
 pcall(function() hit = workspace:Raycast(ray.Origin, ray.Direction * F.TP_MOUSE_REACH, params) end)
-if hit and hit.Position then return hit.Position, "hit" end
-return ray.Origin + ray.Direction * F.TP_MOUSE_AIR, "air"
+if hit and hit.Position then
+return hit.Position, "hit", (hit.Position - ray.Origin).Magnitude
+end
+return ray.Origin + ray.Direction * F.TP_MOUSE_AIR, "air", F.TP_MOUSE_AIR
 end
 function F.TPMouse()
-local pos, kind = F.MouseWorldPos()
+local pos, kind, dist = F.MouseWorldPos()
 if not pos then
 F.Out("[T键传送] 拿不到鼠标指向的位置(" .. tostring(kind) .. ") 本次没动")
 return false
+end
+if kind == "air" then
+F.Out("[T键传送] 射线一路没打到任何实体(指着天空, 或这游戏开了流式加载、远处还没生成) => 沿视线方向送 "
+.. tostring(F.TP_MOUSE_AIR) .. " 格")
 end
 local _, hum, root = GC()
 if not root then
@@ -4052,9 +4059,15 @@ pcall(function()
 local _, _, r2 = GC()
 if r2 then ok = (r2.Position - dest).Magnitude < 8 end
 end)
-F.Out(string.format("[T键传送] %s -> (%.0f, %.0f, %.0f) 到位: %s",
-(kind == "air") and "鼠标指着天空/太远, 送到正前方" or "鼠标指向点",
-dest.X, dest.Y, dest.Z, ok and "是" or "否"))
+local far = (tonumber(dist) or 0) >= F.TP_MOUSE_FAR
+F.Out(string.format("[T键传送] %s · %.0f 格 -> (%.0f, %.0f, %.0f) 到位: %s",
+(kind == "air") and ("鼠标方向上没有实体, 沿视线送 " .. tostring(F.TP_MOUSE_AIR) .. " 格") or "鼠标指向点",
+tonumber(dist) or 0, dest.X, dest.Y, dest.Z, ok and "是" or "否"))
+if far then
+F.Out("[T键传送] 提示: 这次距离 " .. string.format("%.0f", tonumber(dist) or 0)
+.. " 格, 属于「跨半张地图」级别 ⇒ 服务端大概率判为传送而把你拉回(游戏规则, 不是脚本没生效);"
+.. " 想稳一点就把鼠标指近些的地面/建筑, 或先开「加速防拉回」档")
+end
 if not ok then
 local _, srv = F.AuthorityGuard(false)
 F.Out(srv and "[T键传送] 这个游戏 AuthorityMode=Server(位移由服务端裁决), 传不到是游戏规则, 不是脚本没生效"
