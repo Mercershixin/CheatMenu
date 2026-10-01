@@ -2736,3 +2736,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 驱动连接优先用 RS.PreSimulation(物理前, 不存在就退 Stepped)；防挂机模拟里加 SendMouseMoveEvent/mousemoverel(更像真人输入)；门禁白名单补 mousemoverel
 
+
+
+## 11.0.48：挂机改回不动人物 + 伪装 hook 痕迹 + 拦服务端把我拉回
+
+- 防挂机默认只掐检测连接(按 conn.script.Name 匹配 anticheat/detect/anti/guard, Disable 可恢复)+写心跳属性; 动人物的动作收进新的「防挂机·模拟输入」(默认关); 抄 hookDebug 把 debug.getinfo 里自己 hook 的来源抹成 =nil; 反拉回新增拦服务端回写 CFrame/Position(只拦比我当前偏离更远 12 格的写入)
+
