@@ -2720,3 +2720,13 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 | 新② | 模拟操作三路：`VirtualInputManager:SendKeyEvent`(cloneref) / `VirtualUser:ClickButton2` / `hum.Jump` |
 | 新③ | 监听输入时间，**超过 60 秒无操作**才模拟一次 |
 
+## 五十六、2026-10-02（11.0.46）：需求核对 + 补最后两块"拦服务端回写"
+
+- ★ 核对时发现 **11.0.45 其实没推上远端**（远端 version.txt 停在 11.0.44）⇒ 本次重推，远端以 11.0.46 为准。
+- 补齐"逐个功能拦服务端处理"里剩下两块（都只挡**逆向值**，与我们自己的写入零冲突）：
+  - `Transparency`：隐身开着时，服务端把透明度写回 0（=变可见）⇒ 挡下；
+  - `HoldDuration`(>0) / `RequiresLineOfSight`(true)：瞬间交互开着时，服务端把瞬发改回长按 ⇒ 挡下。
+  日志 `[屏蔽] 已挡下服务端把我改回去 ×N`。
+- 至此"拦服务端"四类齐全：①Kick 三路径 ②我角色的 Anchored/Health/PlatformStand（反拉回）③Transparency/HoldDuration（隐身/瞬交）
+  ④搬运焊点被拆 ⇒ 重焊。位移类（CFrame/速度）仍交给"续跑 + 钉位"，不硬拦（避免自己打自己）。
+
