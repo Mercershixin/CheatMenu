@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:32 sha 47144b0f bytes 260760'):format('2026-10-01 22:32','47144b0f',260760))
+print(('[CheatMenu] build 2026-10-01 22:41 sha 48593f33 bytes 261388'):format('2026-10-01 22:41','48593f33',261388))
 local F = {}
-F.VERSION = "v11.0.30"
+F.VERSION = "v11.0.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2816,18 +2816,20 @@ end
 end
 return #scripts, #conns
 end
-function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong)
+function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong, bypass)
 T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
 T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
 T.HitStrong = strong and true or false
+T.BypassDetect = bypass and true or false
+if bypass then pcall(F.BypassEnable) else pcall(F.BypassDisable) end
 pcall(steady and F.SteadyEnable or F.SteadyDisable)
 if hit then pcall(function() F.HitGuardEnable(strong) end) else pcall(F.HitGuardDisable) end
 pcall(trap and F.TrapGuardEnable or F.TrapGuardDisable)
 pcall(atp and F.SpeedAntiTPEnable or F.SpeedAntiTPDisable)
-F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 锁满血=%s · 陷阱=%s · 防拉回=%s",
+F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 锁满血=%s · 陷阱=%s · 防拉回=%s · 绕过拉回=%s",
 steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接)" or "(状态法)",
 lock and "开" or "关",
-trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关"))
+trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关", bypass and "开" or "关"))
 end
 function F.GuardApply(v)
 if type(v) ~= "string" then return end
@@ -2837,6 +2839,10 @@ return
 end
 if v:find("稳身 + 受击", 1, true) then
 F.GuardSet(true, true, false, false, false, false)
+return
+end
+if v:find("绕过拉回", 1, true) then
+F.GuardSet(true, true, true, true, true, true, true, true)
 return
 end
 if v:find("全部(再加", 1, true) then
@@ -3460,16 +3466,18 @@ if not F._atpState then
 F._bypassAtp = true
 pcall(F.SpeedAntiTPEnable)
 end
-pcall(F.SrvOwnTake, false)
+local got = false
+pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
 F.bypassConn = RS.Heartbeat:Connect(function()
 if not T.BypassDetect then F.BypassDisable() return end
 local now = os.clock()
-if now - (F._bypassOwnAt or 0) > 0.5 then
+if now - (F._bypassOwnAt or 0) > 0.15 then
 F._bypassOwnAt = now
-pcall(F.SrvOwnTake, false)
+F._bypassOwnOK = pcall(F.SrvOwnTake, false)
 end
 end)
+F.Out("[绕过] 网络所有权回读: " .. (got and "本地(拿到)" or "仍非本地 ⇒ 这游戏持续抢回, 靠「被拉回就续跑」硬顶"))
 F.Out("[绕过] 已开启: 抢角色所有权(每0.5s) + 加速位移补足 + 客户端检测清理"
 .. (F._bypassAtp and "(连带开了防拉回档)" or ""))
 end
@@ -3547,23 +3555,35 @@ local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
 if T.BypassDetect then
 local want = sp * dt
-local p0 = F._spdLastPos
-if p0 then
-local moved = (Vector3.new(r.Position.X, 0, r.Position.Z) - Vector3.new(p0.X, 0, p0.Z)).Magnitude
-local need = want - moved
-if need > 0.5 and moved < want * 0.7 then
-pcall(function() r.CFrame = r.CFrame + u * need end)
-F._spdFill = (F._spdFill or 0) + 1
+local intent = F._intent
+if intent then
+local cur2 = r.Position
+local dxz = Vector3.new(cur2.X - intent.X, 0, cur2.Z - intent.Z)
+local dev = dxz.Magnitude
+local thr = math.max(6, want * 2)
+local rolled = (dev > thr) or (dev > want * 0.5 and dxz.Unit:Dot(u) < -0.3)
+if rolled then
+local dest = Vector3.new(intent.X, cur2.Y, intent.Z)
+pcall(function() r.CFrame = CFrame.new(dest) * (r.CFrame - r.CFrame.Position) end)
+F._tpBack = (F._tpBack or 0) + 1
+local t0 = os.clock()
+if t0 - (F._tpBackAt or 0) > 3 then
+F._tpBackAt = t0
+F.Out(string.format("[反拉回] 位置被回滚 %d 次 ⇒ 每次都已立即续跑回原定位置(不倒退)", F._tpBack))
+end
+intent = dest
 end
 end
-F._spdLastPos = r.Position
+F._intent = (intent or r.Position) + u * want
 else
-F._spdLastPos = nil
+F._intent = nil
+F._tpBack = 0
 end
 F.SpeedProbe(r, "加速", sp, dt)
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
 end
+if dir.Magnitude <= 0.01 then F._intent = nil end
 if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
 local now = os.clock()
 if now - (F._animAt or 0) > 0.3 then
@@ -6467,11 +6487,6 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("BypassDetect", { Title = "绕过检测(加速/飞行) · 抢所有权 + 位移补足", Description = "扫描结论: 本类服客户端 0 检测, 主要限制是服务端位移裁决 ⇒ 这开关每 0.5s 抢回角色所有权, 并在实测速度不够时直接补位移", Default = false, Callback = function(v)
-T.BypassDetect = v
-if F._cfgSyncing then return end
-if v then F.BypassEnable() else F.BypassDisable() end
-end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
@@ -6479,6 +6494,7 @@ Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 ·
 "稳身 + 受击保护(被攻击也不会被击飞)",
 "推荐: 上面全部 + 陷阱拦截 + 加速防拉回",
 "全部(再加 锁满血 + 陷阱弹开 + 猛档断连接[可能卡搬运状态])",
+"★ 最强: 上面全部 + 绕过拉回(抢所有权 · 被拉回就续跑)",
 }, Default = "关(全部关闭)", Callback = function(v)
 if F._cfgSyncing then
 T.SteadyOn = not v:find("关(全部关闭)", 1, true)
@@ -6487,6 +6503,7 @@ T.TrapWarn = v:find("陷阱", 1, true) ~= nil
 T.SpeedAntiTP = v:find("防拉回", 1, true) ~= nil
 T.HitLock = v:find("锁满血", 1, true) ~= nil
 T.TrapDodge = v:find("弹开", 1, true) ~= nil
+T.BypassDetect = v:find("绕过拉回", 1, true) ~= nil
 return
 end
 F.GuardApply(v)
