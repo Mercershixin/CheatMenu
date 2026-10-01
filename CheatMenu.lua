@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:02 sha 8c63b2e4 bytes 241966'):format('2026-10-01 20:02','8c63b2e4',241966))
+print(('[CheatMenu] build 2026-10-01 20:06 sha accac087 bytes 242884'):format('2026-10-01 20:06','accac087',242884))
 local F = {}
-F.VERSION = "v11.0.17"
+F.VERSION = "v11.0.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4329,6 +4329,13 @@ pcall(function() sop:Set(T.SpeedOn) end)
 end
 end)
 end
+function F.SrcName(u)
+local s = tostring(u)
+local host = s:match("^https?://([^/]+)") or s
+if s:find("raw.githubusercontent", 1, true) then host = host .. "(原生raw)" end
+if s:find("jsdelivr", 1, true) then host = host .. "(缓存久)" end
+return host
+end
 function F.VerNum(v)
 local a, b, c = tostring(v):match("^(%d+)%.(%d+)%.(%d+)$")
 if not a then return 0 end
@@ -4352,12 +4359,15 @@ return false
 end
 F.Out("[热加载] 正在问各源的最新版本号…(当前 v" .. myv .. ")")
 local best, bestv = nil, nil
+local seen = {}
 for i = 1, #urls do
 local rv = F.GetRemoteVersion(urls[i])
+seen[#seen + 1] = F.SrcName(urls[i]) .. "=" .. tostring(rv or "取不到")
 if rv and (not bestv or F.VerNum(rv) > F.VerNum(bestv)) then
 best, bestv = urls[i], rv
 end
 end
+F.Out("[热加载] 各源版本: " .. table.concat(seen, " · "))
 if not bestv then
 F.Out("[热加载] ⚠ 所有源都读不到版本号(网络/CDN 抖动) —— 本次不重载, 现有实例照常用, 过会儿再点")
 pcall(function() Fluent:Notify({ Title = "热加载", Content = "读不到远端版本, 已放弃重载(现有实例照常用)", Duration = 6 }) end)
@@ -4394,11 +4404,18 @@ end
 end
 end
 if not body then
-if fallback then
+if fallback and force then
 body = fallback
-F.Out("[热加载] 没有源给到 " .. bestv .. ", 用能拿到的最高版 v" .. tostring(gotv) .. " 顶上")
+F.Out("[热加载] (强制模式)没有源给到 " .. bestv .. ", 用能拿到的最高版 v" .. tostring(gotv) .. " 顶上")
+elseif fallback then
+F.Out("[热加载] ⚠ 各源里最新只给到 v" .. tostring(gotv) .. ", 还没到 " .. bestv
+.. " —— CDN 还在缓存旧版, 已放弃重载(现有实例没动)")
+F.Out("[热加载]    过几分钟再点一次即可; 真想先用 v" .. tostring(gotv) .. " 就点「强制重载」")
+pcall(function() Fluent:Notify({ Title = "热加载", Content = "源只给到 v" .. tostring(gotv)
+.. "(最新是 " .. bestv .. "), 已放弃; 过几分钟再点", Duration = 8 }) end)
+return
 else
-F.Out("[热加载] ⚠ 所有源都没给出比当前更新的版本(CDN 还在缓存旧版) —— 已放弃, 现有实例没动")
+F.Out("[热加载] ⚠ 所有源都没给出比当前更新的版本 —— 已放弃, 现有实例没动")
 pcall(function() Fluent:Notify({ Title = "热加载", Content = "源还在缓存旧版, 已放弃(现有实例照常用)", Duration = 8 }) end)
 return
 end
