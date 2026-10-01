@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 18:35 sha 8cc9056d bytes 236818'):format('2026-10-01 18:35','8cc9056d',236818))
+print(('[CheatMenu] build 2026-10-01 18:45 sha 1593b7c3 bytes 238420'):format('2026-10-01 18:45','1593b7c3',238420))
 local F = {}
-F.VERSION = "v11.0.3"
+F.VERSION = "v11.0.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2460,31 +2460,48 @@ F._flingConns = {}
 function F.AntiFlingEnable()
 if T.AntiFling and #F._flingConns > 0 then return end
 T.AntiFling = true
-F._flingBackup = F._flingBackup or {}
-local function disable(part)
-if part:IsA("BasePart") then
-if F._flingBackup[part] == nil then
-F._flingBackup[part] = {
-CanCollide = part.CanCollide, CanTouch = part.CanTouch, CanQuery = part.CanQuery,
-}
+local function fix()
+local _, _, root = GC()
+if not root then return end
+local lim = math.max(8000, (tonumber(C.SpeedValue) or 0) * 2.5, (tonumber(C.FlyValue) or 0) * 2.5)
+local v = root.AssemblyLinearVelocity
+local av = root.AssemblyAngularVelocity
+if v.Magnitude > lim then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 50), 0) end)
+F._flingAt2 = os.clock()
+F._flingHits = (F._flingHits or 0) + 1
+if os.clock() - (F._flingLogAt or 0) > 2 then
+F._flingLogAt = os.clock()
+F.Out(string.format("[反甩] 异常速度 %.0f 格/秒 ⇒ 已清零(累计 %d 次) · 只清速度, 不动任何碰撞属性",
+v.Magnitude, F._flingHits))
 end
-part.CanCollide = false
-part.CanTouch = false
-part.CanQuery = false
+end
+if av.Magnitude > 200 then
+pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
-local function hookChar(char)
-if not char then return end
-for _, p in ipairs(char:GetDescendants()) do disable(p) end
-table.insert(F._flingConns, char.DescendantAdded:Connect(disable))
+fix()
+table.insert(F._flingConns, RS.Heartbeat:Connect(fix))
+table.insert(F._flingConns, LP.CharacterAdded:Connect(function() task.wait(0.3) fix() end))
 end
-hookChar(LP.Character)
-table.insert(F._flingConns, LP.CharacterAdded:Connect(function(char)
-for part in pairs(F._flingBackup) do
-if typeof(part) ~= "Instance" or not part.Parent then F._flingBackup[part] = nil end
+function F.FixCharCollision()
+local ch = GC()
+if not ch then return 0 end
+local n = 0
+pcall(function()
+for _, p in ipairs(ch:GetDescendants()) do
+if p:IsA("BasePart") and not p:FindFirstAncestorWhichIsA("Accoutrement") then
+if p.CanCollide == false or p.CanTouch == false or p.CanQuery == false then
+p.CanCollide, p.CanTouch, p.CanQuery = true, true, true
+n = n + 1
 end
-hookChar(char)
-end))
+end
+end
+end)
+if n > 0 then
+F.Out("[修复] 已把 " .. tostring(n) .. " 个角色部件的 碰撞/触碰/可查询 恢复默认(true) —— 踩不上跑步机/道具没反应就靠这个")
+end
+return n
 end
 function F.AntiFlingDisable()
 T.AntiFling = false
@@ -3659,6 +3676,20 @@ F.Out(string.format("[点位] 已保存「%s」 → (%.0f, %.0f, %.0f)", nm, p.X
 pcall(function() Fluent:Notify({ Title = "点位", Content = "已保存「" .. nm .. "」", Duration = 4 }) end)
 return true
 end
+function F.WpLastName()
+local l = F.WaypointList()
+local it = l[#l]
+if type(it) == "table" and it.name ~= nil then return tostring(it.name) end
+return nil
+end
+function F.WpClear()
+local n = #F.WaypointList()
+C.Waypoints = {}
+F.WaypointRefreshUI()
+pcall(SaveConfig)
+F.Out("[点位] 已清空 " .. tostring(n) .. " 个点位")
+return n
+end
 function F.WaypointGoto(name)
 local it = F.WaypointFind(name)
 if T.CarryGuard and F.CarryingNow() then
@@ -3916,6 +3947,7 @@ function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
 F.RecordOriginals()
+pcall(F.FixCharCollision)
 F._pgPos = nil
 pcall(function()
 local _, _, hb = GC()
@@ -5991,20 +6023,18 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
 end })
-Tabs.TP:AddSection("收藏点位(存当前位置 · 自己选去哪里)")
+Tabs.TP:AddSection("收藏点位(点一下就存 · 点一下就传)")
 Tabs.TP:AddInput("WaypointName", { Title = "点位名(可留空 ⇒ 自动命名 点位1/2/3)", Default = "" })
-Tabs.TP:AddButton({ Title = "★ 保存当前位置为点位", Callback = function()
+Tabs.TP:AddButton({ Title = "★ 保存当前位置(一下就好)", Callback = function()
 if F.WaypointSave(F.WaypointNameOpt()) then F.WaypointNameClear() end
 end })
-Tabs.TP:AddDropdown("WaypointSlot", { Title = "已保存的点位(在这里选中它)", Values = F.WaypointNames(), Default = nil, Callback = function(v)
+Tabs.TP:AddButton({ Title = "← 一键传回刚保存的位置", Callback = function() F.WaypointGoto(F.WpLastName()) end })
+Tabs.TP:AddDropdown("WaypointSlot", { Title = "其他点位(选中即传送 · 不用再点按钮)", Values = F.WaypointNames(), Default = nil, Callback = function(v)
 local it = F.WaypointFind(v)
-if it then
-F.Out(string.format("[点位] 选中「%s」 → (%.0f, %.0f, %.0f)",
-tostring(it.name), tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0))
-end
+if it then F.WaypointGoto(v) end
 end })
-Tabs.TP:AddButton({ Title = "→ 传送到选中的点位", Callback = function() F.WaypointGoto(F.WaypointPicked()) end })
-Tabs.TP:AddButton({ Title = "删除选中的点位", Callback = function() F.WaypointDel(F.WaypointPicked()) end })
+Tabs.TP:AddButton({ Title = "删除最近保存的点位", Callback = function() F.WaypointDel(F.WpLastName()) end })
+Tabs.TP:AddButton({ Title = "清空所有点位", Callback = function() F.WpClear() end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
@@ -6091,7 +6121,7 @@ if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACMaster", { Title = "防护(不改写游戏: 反甩 + 护界面 + 权限守卫)", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("ACMaster", { Title = "防护(反甩[只清异常速度] + 护界面 + 权限守卫 · 不动你的碰撞/交互)", Default = false, Callback = function(v)
 if F._cfgSyncing then
 T.AntiFling = v T.GuiProtect = v T.CharPersist = true
 return
@@ -6105,9 +6135,11 @@ if acName then AC.SetQuiet(true) end
 F.ProtectGui()
 pcall(F.GuiProtectionEnable)
 pcall(F.AuthorityGuard, true)
+pcall(F.FixCharCollision)
 Fluent:Notify({
 Title = "防护",
-Content = "已开启(不改写游戏, 不影响交互): 反甩 + 界面保护 + 权限守卫 · 环境 " .. tostring(acName or "未识别"),
+Content = "已开启: 反甩(只清异常速度) + 界面保护 + 权限守卫 · 环境 " .. tostring(acName or "未识别")
+.. " · 已确保不动你的碰撞/触碰(跑步机与道具照常可用)",
 Duration = 8,
 })
 end)
@@ -6231,6 +6263,7 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
+pcall(F.FixCharCollision)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
 local _plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
@@ -6267,8 +6300,12 @@ end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
 for _, opt in pairs(Fluent.Options) do
-if type(opt) == "table" then
-pcall(function() if opt.Open then opt:Close() end end)
+if type(opt) == "table" and opt.Open then
+pcall(function() opt:Close() end)
+if opt.Open then
+pcall(function() if opt.DropdownFrame then opt.DropdownFrame.Visible = false end end)
+pcall(function() if opt.DropdownList then opt.DropdownList.Visible = false end end)
+end
 end
 end
 end
@@ -6366,6 +6403,15 @@ addToggleButton(Window)
 startTogglePolish()
 end
 buildMenu()
+task.spawn(function()
+local wasOpen = F.MenuOpen()
+while true do
+task.wait(0.25)
+local now = F.MenuOpen()
+if wasOpen and not now then pcall(F.CloseDropdowns) end
+wasOpen = now
+end
+end)
 function F.CfgSyncUI()
 local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return 0 end
