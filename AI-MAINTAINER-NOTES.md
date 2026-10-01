@@ -2639,3 +2639,34 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ②"我角色的部件集合"在**钩子外**由 Heartbeat 每 0.5s 重建缓存（钩子里不做 `IsDescendantOf`，那会走 namecall）。
   没拦 `CFrame` 写入：那会和我们自己的顶回/钉位互相打架，位移交给"续跑 + 钉位"更安全。
 
+## 五十二、2026-10-01（11.0.40）：**267 踢的真因** + 隐身"到底能不能真"
+
+### 52.1 一注入就被 267 踢 —— 真因与修法
+
+- 真因（结构证据）：`Tabs.AFK:AddToggle("KickProtect", ..., Default = true, ...)`。
+  **Fluent 建开关时会用 `Default` 触发一次 Callback**（§41.5 已查证），那一刻 `_cfgSyncing` 还是 nil
+  ⇒ **加载瞬间就执行** `F.AntiAFKEnable() + F.KickGuardEnable() + F.KickRejoinEnable()`
+  ⇒ 而 11.0.37 给 `KickGuardEnable` 加了 `KickGuardPathsEnable`，它会
+  `setreadonly(getrawmetatable(game), false)` 并替换 **`__namecall/__index/__newindex`**
+  ⇒ **注入瞬间改写全局元表** = 反作弊最快的抓法 ⇒ 267。
+- 修法（三条）：
+  1. **三个 `Default = true` 全部改 `false`**（`KickProtect` / `AimWallCheck` / `TeamColorHL`）——
+     这是本项目铁律 #1「加载后绝不自动开启任何功能」被破的地方。
+  2. **`buildMenu()` 全程静默**：`F._cfgSyncing = true` → `pcall(buildMenu)` → `= false`，
+     构建期任何 Callback 都不再产生副作用（覆盖未来新加的 Default=true 开关）。
+  3. `KickProtect`/`TeamColorHL` 加 `changed` 守卫；`KickGuardEnable` 打日志**明说风险**：
+     "正在装 Kick 三路径拦截(会改写全局元表)，个别反作弊会因这层 hook 直接踢你；平时建议关着，挂机前再开"。
+
+### 52.2 隐身到底能不能真
+
+全时段搜出来的"隐身"实现分三种，结论如下：
+
+| 手法 | 对别人可见? | 评价 |
+|---|---|---|
+| `LocalTransparencyModifier = 1` | **仍然可见** | 只对自己隐藏，纯假隐身（最常被冒名） |
+| `Transparency = 1`（全部位+Decal） | **不可见**（客户端持有自己角色所有权，属性会复制） | 真隐身，但**服务端一查/一写回就露** |
+| **克隆假身 + 真身送走**（`CoderNeverDieDisroc/invis`、`tamarixr/tamhub`；源自 V3rmillion 老贴） | 别人看到的是"你在天上/地底的真身" | 公开脚本最"经典"的隐身；**其自述写明 "games with a decent anti-cheat will fck this up"** |
+
+- 我们 11.0.38 的「隐身」= 第 2 种（真隐身），关掉会还原，重生自动重施。
+- ★ 诚实结论：**没有"一定能骗过所有人的隐身"** —— 服务端要么检测透明度、要么每帧写回；第 3 种也不是真消失（真身还在，只是被挪走）。
+
