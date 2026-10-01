@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 14:10 sha cbef9e64 bytes 267024'):format('2026-10-01 14:10','cbef9e64',267024))
+print(('[CheatMenu] build 2026-10-01 14:30 sha 8748382a bytes 270026'):format('2026-10-01 14:30','8748382a',270026))
 local F = {}
-F.VERSION = "v10.10.0"
+F.VERSION = "v10.10.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -638,7 +638,6 @@ pcall(function()
 isForce = t:IsA("BodyVelocity") or t:IsA("BodyGyro") or t:IsA("BodyForce")
 or t:IsA("BodyThrust") or t:IsA("BodyAngularVelocity")
 end)
-if isForce and v ~= nil then AC._forceInst = (AC._forceInst or 0) + 1 end
 end
 end
 end
@@ -3422,6 +3421,14 @@ if not T.ESPArrow then return end
 makeArrow(pl)
 bindPl(pl)
 end)
+if F._arrowRConn then pcall(function() F._arrowRConn:Disconnect() end) end
+F._arrowRConn = Players.PlayerRemoving:Connect(function(pl)
+dropArrow(pl)
+if F._arrowPlConns[pl] then
+pcall(function() F._arrowPlConns[pl]:Disconnect() end)
+F._arrowPlConns[pl] = nil
+end
+end)
 F._arrowConn = RS.RenderStepped:Connect(function()
 if not T.ESPArrow then F.ArrowDisable() return end
 local cam = workspace.CurrentCamera
@@ -3450,6 +3457,7 @@ end)
 end
 function F.ArrowDisable()
 if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) F._arrowQConn = nil end
+if F._arrowRConn then pcall(function() F._arrowRConn:Disconnect() end) F._arrowRConn = nil end
 for pl, c in pairs(F._arrowPlConns or {}) do pcall(function() c:Disconnect() end) end
 F._arrowPlConns = {}
 if F._arrowConn then F._arrowConn:Disconnect() F._arrowConn = nil end
@@ -3679,16 +3687,9 @@ end
 F._antiAimConn = nil
 F.HitboxBackup = {}
 F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
-function F.HitboxExpandEnable()
-F._hbGen = (F._hbGen or 0) + 1
-local myGen = F._hbGen
-F._hbProg = task.spawn(function()
-for step = 1, 4 do
-if not T.HitboxExpand or myGen ~= F._hbGen then break end
-local k = step / 4
+function F.HitboxApplyOne(pl, k)
+if not pl or pl == LP or not pl.Character then return end
 local target = tonumber(C.HitboxSize) or 10
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and pl.Character then
 for pi = 1, #F.HB_PARTS do
 local part = pl.Character:FindFirstChild(F.HB_PARTS[pi])
 if part then
@@ -3714,11 +3715,37 @@ end)
 end
 end
 end
+function F.HitboxExpandEnable()
+F._hbGen = (F._hbGen or 0) + 1
+local myGen = F._hbGen
+F._hbProg = task.spawn(function()
+for step = 1, 4 do
+if not T.HitboxExpand or myGen ~= F._hbGen then break end
+local k = step / 4
+for _, pl in ipairs(Players:GetPlayers()) do
+F.HitboxApplyOne(pl, k)
 end
 task.wait(0.15)
 end
 if myGen == F._hbGen then F._hbProg = nil end
 end)
+F._hbExPlConns = F._hbExPlConns or {}
+local function bindHb(pl)
+if pl == LP or F._hbExPlConns[pl] then return end
+F._hbExPlConns[pl] = pl.CharacterAdded:Connect(function()
+task.wait(0.4)
+if not T.HitboxExpand then return end
+F.HitboxApplyOne(pl, 1)
+end)
+end
+if not F._hbExAddedConn then
+F._hbExAddedConn = Players.PlayerAdded:Connect(function(pl)
+bindHb(pl)
+task.wait(0.4)
+if T.HitboxExpand then F.HitboxApplyOne(pl, 1) end
+end)
+end
+for _, pl in ipairs(Players:GetPlayers()) do bindHb(pl) end
 end
 function F.HitboxExpandDisable()
 for part, bak in pairs(F.HitboxBackup) do
@@ -3734,9 +3761,9 @@ end
 F.HitboxBackup = {}
 F._hbGen = (F._hbGen or 0) + 1
 F._hbProg = nil
-if F._hbAddedConn then pcall(function() F._hbAddedConn:Disconnect() end) F._hbAddedConn = nil end
-for pl, c in pairs(F._hbPlConns or {}) do pcall(function() c:Disconnect() end) end
-F._hbPlConns = {}
+if F._hbExAddedConn then pcall(function() F._hbExAddedConn:Disconnect() end) F._hbExAddedConn = nil end
+for pl, c in pairs(F._hbExPlConns or {}) do pcall(function() c:Disconnect() end) end
+F._hbExPlConns = {}
 end
 F._authorityServer = nil
 F._authorityMode = nil
@@ -6611,6 +6638,63 @@ end)
 pcall(F.Conn.ClearAll)
 F.Out("[CheatMenu] 已干净卸载")
 end
+function F.RestoreSavedFeatures()
+if not T then return end
+F.Out("[恢复] 按存档恢复你上次主动开启的功能(没开过的不会自动开)")
+local n = 0
+local function go(v, fn, ...)
+if not v then return end
+if pcall(fn, ...) then n = n + 1 end
+end
+go(T.FlyOn, F.FlySet, true)
+go(T.SpeedOn, F.SpeedSet, true)
+go(T.NoClip, F.NoClipEnable)
+go(T.Hide, F.HideEnable)
+go(T.God, GodEnable)
+go(T.StealthGod, StealthGodEnable)
+go(T.LockHealth, LockHealthEnable)
+go(T.Regen, RegenEnable)
+go(T.NoDeath, NoDeathEnable)
+go(T.Invisible, InvisibleEnable)
+go(T.AntiRagdoll, F.AntiRagdollEnable)
+go(T.AntiKnockdown, F.AntiKnockdownEnable)
+go(T.InfiniteJump, F.InfiniteJumpEnable)
+go(T.AntiSit, F.AntiSitEnable)
+go(T.AntiAnchor, F.AntiAnchorEnable)
+go(T.Translate, F.TranslateEnable)
+go(T.ChatTranslate, F.ChatTranslateEnable)
+go(T.BubbleTranslate, F.BubbleTranslateEnable)
+go(T.ESP, ESPEnable)
+go(T.ESPSkeleton, F.SkeletonEnable)
+go(T.ESPArrow, F.ArrowEnable)
+go(T.HitboxExpand, F.HitboxExpandEnable)
+go(T.KillAura, F.KillAuraEnable)
+go(T.BodyHL, F.BodyHLEnable)
+go(T.TrapsESP, F.TrapsESPEnable)
+go(T.Chams, F.ChamsEnable)
+go(T.AimOn, F.AimSet, true)
+go(T.FovCircle, F.FovCircleEnable)
+go(T.Hud, F.HudEnable)
+go(T.Crosshair, F.CrosshairEnable)
+go(T.LockCam, F.LockCamEnable)
+go(T.Freecam and not UIS.TouchEnabled, F.FreecamEnable)
+go(T.AntiVoid, F.AntiVoidEnable)
+go(T.ClickTP, F.ClickTPEnable)
+go(T.Swim, F.SwimEnable)
+go(T.ItemMagnet, F.ItemMagnetEnable)
+go(T.BringPlayer, F.BringPlayerEnable)
+go(T.FreezePlayer, F.FreezePlayerEnable)
+go(T.SrvHoldOwn, F.SrvHoldEnable)
+go(T.KickProtect or T.KickGuard, F.KickGuardEnable)
+go(T.KickProtect or T.AntiAFK, F.AntiAFKEnable)
+go(T.KickProtect or T.KickRejoin, F.KickRejoinEnable)
+go(T.AutoTrain, F.AutoTrainEnable)
+go(T.AutoBonus, F.AutoBonusEnable)
+go(T.AutoGym, F.AutoGymEnable)
+go(T.AutoSell, F.SellLowCPS)
+F.Out("[恢复] 已恢复 " .. n .. " 项")
+pcall(F.LogFlush, "恢复存档功能")
+end
 local function RestoreFeatures()
 if T.CharPersist ~= false then T.CharPersist = true end
 if T.AutoSave ~= false then F.AutoSaveEnable() end
@@ -6846,6 +6930,7 @@ if v then AntilagEnable() else AntilagDisable() end
 end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
 if v and UIS.TouchEnabled then
 T.Freecam = false
 pcall(function()
@@ -7105,6 +7190,7 @@ Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
 Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
+Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自动开, 点这个才开)", Callback = function() F.RestoreSavedFeatures() end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
