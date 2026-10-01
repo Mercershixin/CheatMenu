@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 13:42 sha 8ddd6215 bytes 250935'):format('2026-10-01 13:42','8ddd6215',250935))
+print(('[CheatMenu] build 2026-10-01 13:49 sha 9f238681 bytes 256777'):format('2026-10-01 13:49','9f238681',256777))
 local F = {}
 F._flyJumpConn = nil
 F._flyJumpAt = 0
@@ -82,7 +82,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.7.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.8.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -208,24 +208,64 @@ local Fluent = nil
 local FLUENT_SOURCES = {
 "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://ghfast.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://ghpxy.hwinzniej.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
 "https://ghproxy.net/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
+"https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
 "https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
+"https://fastly.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
+"https://gcore.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
 }
-for _, url in ipairs(FLUENT_SOURCES) do
-local ok, body = pcall(function() return game:HttpGet(url) end)
-if ok and type(body) == "string" and #body > 5000 then
-local ok2, chunk = pcall(loadstring, body)
-if ok2 and chunk then
-local ok3, loaded = pcall(chunk)
-if ok3 and loaded then Fluent = loaded F.Out("[CheatMenu] Fluent 加载成功") break end
+local FLUENT_LOCAL = { "CheatMenu_Fluent.lua", "Fluent.lua", "fluent.lua" }
+local function fluentLooksLua(body)
+if type(body) ~= "string" or #body < 5000 then return false end
+local head = string.lower(string.sub(body, 1, 400))
+if string.find(head, "<!doctype", 1, true) or string.find(head, "<html", 1, true) then return false end
+if string.find(body, "return", 1, true) == nil then return false end
+return true
 end
+local function fluentTry(body, how)
+local ok2, chunk = pcall(loadstring or load, body)
+if not ok2 or not chunk then return false end
+local ok3, loaded = pcall(chunk)
+if ok3 and loaded then
+Fluent = loaded
+F.Out("[CheatMenu] Fluent 加载成功 ← " .. tostring(how))
+return true
+end
+return false
+end
+if type(readfile) == "function" and type(isfile) == "function" then
+for _, fn in ipairs(FLUENT_LOCAL) do
+local okE, exists = pcall(isfile, fn)
+local okR, body = false, nil
+if okE and exists then okR, body = pcall(readfile, fn) end
+if okR and fluentLooksLua(body) and fluentTry(body, "本地文件 " .. fn) then break end
 end
 end
 if not Fluent then
+for _, url in ipairs(FLUENT_SOURCES) do
+local ok, body = pcall(function() return game:HttpGet(url) end)
+if ok and fluentLooksLua(body) and fluentTry(body, string.sub(url, 1, 48)) then break end
+end
+end
+if not Fluent then
+local why = (type(loadstring) ~= "function" and type(load) ~= "function")
+and "本执行器既没有 loadstring 也没有 load" or "镜像/网络全部取不到"
+local msg = "CheatMenu 未启动: Fluent UI 取不到(" .. why .. ")"
+pcall(function() warn(msg) end)
 pcall(function()
-F.Out("[CheatMenu] ✗ Fluent UI 加载失败 —— 多半是网络取不到镜像(GitHub/ghfast/jsDelivr)。")
-F.Out("[CheatMenu]   处理: 换能联网的执行器重试; 或先把 CheatMenu.lua 下载到本地用文件加载。")
+game:GetService("StarterGui"):SetCore("SendNotification", {
+Title = "CheatMenu 未启动",
+Text = msg .. "。可换网络重试, 或把 Fluent 的 main.lua 存成 CheatMenu_Fluent.lua 放到执行器目录(会优先本地加载)。",
+Duration = 25,
+})
+end)
+pcall(function()
+F.Out("[CheatMenu] ✗ " .. msg)
+F.Out("[CheatMenu]   ① 换能联网的执行器/网络重试")
+F.Out("[CheatMenu]   ② 或把 Fluent 的 main.lua 存成 CheatMenu_Fluent.lua 放进执行器目录(脚本会优先读本地)")
+F.Out("[CheatMenu]   ③ 若控制台显示 loadstring 为 nil, 换一个带 loadstring/load 的执行器")
 end)
 return
 end
@@ -1177,6 +1217,59 @@ F.AC_INVISIBLE = {
 "Roblox 自带反作弊 Hyperion(原生二进制, 非 Lua)",
 "服务端玩家的真实位置/速度(只得到复制后的结果)",
 }
+function F.EnvSelfCheck()
+task.spawn(function()
+local caps = {
+{ n = "loadstring", f = function() return type(loadstring) == "function" end, need = "热加载 / 按文本加载" },
+{ n = "load", f = function() return type(load) == "function" end, need = "loadstring 的兜底(二选一即可)" },
+{ n = "readfile/writefile", f = function() return type(readfile) == "function" and type(writefile) == "function" end, need = "配置存档 / 翻译缓存 / 日志落盘" },
+{ n = "gethui", f = function() return type(gethui) == "function" end, need = "界面挂到隐蔽容器(缺了退 CoreGui, 不影响显示)" },
+{ n = "hookmetamethod", f = function() return type(hookmetamethod) == "function" end, need = "反作弊拦截 / remote 采集 / 属性读回伪装" },
+{ n = "newcclosure", f = function() return type(newcclosure) == "function" end, need = "同上(钩子要包成 C 闭包)" },
+{ n = "getrawmetatable", f = function() return type(getrawmetatable) == "function" end, need = "同上" },
+{ n = "getgc", f = function() return type(getgc) == "function" end, need = "GC 扫描 / 自动分析" },
+{ n = "getconnections", f = function() return type(getconnections) == "function" end, need = "连接清理 / 监听扫描" },
+{ n = "getnamecallmethod", f = function() return type(getnamecallmethod) == "function" end, need = "namecall 钩子判方法" },
+{ n = "debug.getinfo", f = function() return debug ~= nil and type(debug.getinfo) == "function" end, need = "来源比对 / 自身识别" },
+{ n = "debug.getconstants", f = function() return debug ~= nil and type(debug.getconstants) == "function" end, need = "按常量找函数 / 阈值提取" },
+{ n = "filtergc", f = function() return type(filtergc) == "function" end, need = "按名/按常量定位(可选, 缺了自动走全扫)" },
+}
+local okN, miss = 0, {}
+for _, c in ipairs(caps) do
+local ok = false
+pcall(function() ok = (c.f() == true) end)
+if ok then okN = okN + 1 else miss[#miss + 1] = c end
+end
+local plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
+local vp = "?"
+pcall(function()
+local c = workspace.CurrentCamera
+if c then vp = c.ViewportSize.X .. "x" .. c.ViewportSize.Y end
+end)
+local host, gui = "?", "未创建"
+pcall(function() host = tostring(gethui and gethui() or game:GetService("CoreGui")) end)
+pcall(function() if Fluent and Fluent.GUI and Fluent.GUI.Parent then gui = "已创建" end end)
+F.Out(string.format("[自检] 执行器能力 %d/%d · 平台=%s · 视口=%s · 菜单=%s · 宿主=%s",
+okN, #caps, plat, vp, gui, host))
+for _, c in ipairs(miss) do
+F.Out("[自检]   ✗ 缺 " .. c.n .. " ⇒ 受影响: " .. c.need)
+end
+local names = {}
+for i = 1, #miss do names[i] = miss[i].n end
+local verdict = (#miss == 0)
+and "环境完好 —— 若仍看不到界面, 按 G 呼出 / 点屏幕上那个小按钮"
+or ("缺 " .. #miss .. " 项: " .. table.concat(names, ", ") .. " —— 只有依赖它们的子功能无效, 其余照常")
+F.Out("[自检] 结论: " .. verdict)
+if Fluent and Fluent.Notify then
+Fluent:Notify({
+Title = "环境自检",
+Content = string.format("能力 %d/%d · %s · 菜单:%s", okN, #caps, plat, gui) .. "\n" .. verdict,
+Duration = 16,
+})
+end
+pcall(F.LogFlush, "环境自检")
+end)
+end
 function F.SnapshotCollect()
 local snap = { t = os.time(), remotes = {}, acfns = {}, hidden = {}, attrs = {}, scripthashes = {},
 caps = {}, authority = nil }
@@ -6325,14 +6418,11 @@ if cam and cam.ViewportSize.X > 0 then
 _vw, _vh = cam.ViewportSize.X, cam.ViewportSize.Y
 end
 end)
-local _w, _h = 500, 540
-if _touch then
-_w = math.clamp(math.floor(_vw * 0.96), 240, 520)
-_h = math.clamp(math.floor(_vh * 0.86), 240, 600)
-end
+local _w = math.clamp(math.floor(_vw * 0.96), 240, _touch and 520 or 500)
+local _h = math.clamp(math.floor(_vh * 0.88), 240, _touch and 600 or 540)
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.7.0",
+SubTitle = "v10.8.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6693,6 +6783,7 @@ end })
 Tabs.Setting:AddSection("系统")
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
+Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
@@ -6703,16 +6794,25 @@ F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
 local _plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
-local _ls = (type(loadstring) == "function") and "有" or "无"
+local _ls = (type(loadstring) == "function" or type(load) == "function") and "有" or "无"
 local _wf = (type(writefile) == "function") and "有" or "无"
+local _hi = (type(hookmetamethod) == "function" and type(newcclosure) == "function"
+and type(getrawmetatable) == "function") and "有" or "无"
+local _gc = (type(getgc) == "function") and "有" or "无"
+local _tip = " · 功能默认关(要哪个自己点)"
+if _hi == "无" or _gc == "无" then
+_tip = " · ⚠ 本执行器缺 " .. (_hi == "无" and "hook三件套" or "")
+.. (_hi == "无" and _gc == "无" and " 与 " or "")
+.. (_gc == "无" and "getgc" or "") .. " ⇒ 依赖它们的少数功能会无效(其余照常)"
+end
 Fluent:Notify({
 Title = "CheatMenu 已加载",
-Content = "已加载 v10.7.0 · " .. _plat .. " · 读脚本:" .. _ls .. " · 存档:" .. _wf
-.. " · 功能默认关(要哪个自己点)",
-Duration = 10,
+Content = "已加载 v10.8.0 · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
+.. " · 存档:" .. _wf .. _tip,
+Duration = 14,
 })
-F.Out("[环境] " .. _plat .. " · loadstring:" .. _ls .. " · writefile:" .. _wf
-.. " —— 这两项为“无”只影响存档/热加载, 不影响扫描与功能")
+F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " · loadstring:" .. _ls
+.. " · writefile:" .. _wf .. " —— 标“无”的项只影响依赖它的子功能, 不会让整个脚本失效")
 end)
 RestoreFeatures()
 pcall(function()
@@ -6722,7 +6822,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.7.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.8.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
