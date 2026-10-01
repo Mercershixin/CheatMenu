@@ -1350,3 +1350,40 @@ banner `build 2026-09-25 sha 8161b6e6`）。目标：学它的 CPS 卖出与收�
 2. ★★ **清单的"改法"可能自相矛盾**（B5：早退位置 vs 计数递增），遇到就先停下核对，不要机械执行。
 3. ★★ **高风险项（换核心设计）宁可停下**：用"同设计内的等价修法"达成它的**验收标准**，
    比"照着一个没写全的新设计去改 hook 管理器"安全得多。
+
+---
+
+## 十三、2026-10-01（下半场之八）：清理清单 10 条 —— 第五次逐条核实
+
+### 13.1 核实结论：**真 8 条 · 描述不成立 2 条**
+
+| # | 清单要求 | 核实 | 处置 |
+|---|---|---|---|
+| FIX-1 | 热加载版本正则写死 `v10.` | ✅ **真**（升到 v11 时全员热加载会被拒） | 采纳 → `v%d+%.` |
+| FIX-2 | `F.RestoreSavedFeatures` 不同步 UI | ✅ **真**；且已确认 `F.CfgSyncUI` 内部**确实**设 `F._cfgSyncing = true`（回调副作用被掐） | 采纳 |
+| FIX-3 | `CaptureEnable` 跑满 240 条后**仍建临时表** | ❌ **与源码不符**：`local args = { ... }` **本来就在** `if #F._capLog < F.CAP_MAX then` **里面**（第 1540-1541 行）。未被 guard 的只有 `getnamecallmethod()`、`_capN` 自增、每 10 条一次打点 | **跳过**（改了只会白丢进度日志） |
+| FIX-4 | `AC.markHooked(fn)` 标错对象 | ❌ **与源码不符**：`fn = remote.FireServer` **就是被 `hookfunction` 原地改行为的那个对象**；且清单所说的"后续查重逻辑"——`AC.isOwn`——**全文不存在**（真正的读取点是 `F.isProtectedFn`，比的也是同一个对象） | **跳过**（删了反而降低隐身覆盖） |
+| FIX-5 | Panic 漏关 5 个功能 | ✅ **真**（5 个名字都不在 Panic 的任何一个 `ipairs({...})` 里） | 采纳（加进第二个列表，各 1 次） |
+| FIX-6 | `MetaLayers` 用 slot 当 key、不看 target | ✅ **真**（现状安全：4 个调用点都是 `game`；但未来换 target 会污染 bucket） | 采纳（加 `F.MetaTargets` 守卫） |
+| FIX-7 | `_metaSeq` 已是死代码 | ✅ **真**（定义 + 自增 + rec 字段，**0 读取**） | 采纳（三处全删） |
+| FIX-8 | `F.ScanScripts` 里 `local cnt = 0` 未使用 | ✅ **真**（在第 2102 行、函数体内，其后没有任何使用） | 采纳（删该行） |
+| FIX-9 | `GuiProtectionEnable` 的 parents 不去重 | ⚠ **部分真**：`gethui()` 那行**本来就带** `h ~= CoreGui` 去重；**只剩** `PlayerGui == gethui()` 这种罕见情况 | 采纳（统一去重） |
+| FIX-10 | `SrvProbe` 默认 `1.5` 与 `PROBE_STEP = 4` 不一致 | ✅ **真**（3 个调用点都显式传常量，故不影响现状） | 采纳（对齐常量） |
+
+### 13.2 FIX-6 的实现细节（唯一动 hook 管理器的项）
+
+- `F.MetaTargets[slot]` 记第一个用该 slot 的 target；**同 slot 换 target 直接 `return nil`**（拒绝 hook）。
+- **清理时机**：不必清理。同一个会话里 slot→target 恒定；热加载会换新的 `F` 表 ⇒ 自动复位；
+  即便 `UninstallNamecallHook` 之后 `MetaTargets["__namecall"]` 仍是 `game`，正好是下次要装的那个 target。
+- **未动** `MetaLayers` 结构 / `MetaUninstall` / `MetaActive` ✓（最小侵入）。
+- ⚠ 仍需实机确认：连续 3 次 `MetaInstall("__namecall", game, "Test1/2/3", ...)` → 依次 Uninstall →
+  `getrawmetatable(game).__namecall` 应回到**游戏原始函数**（这条依赖上一轮的"接链"修法）。
+
+### 13.3 本轮**不改**但登记（供后续决策）
+
+1. **孤儿 UI**：`T.ClickTP` / `T.Swim` / `T.DupeAttempt` **无 UI toggle 入口**，只能手工设 `T.X = true` 触发（历史遗留；本轮不新增 UI）。
+2. **仍缺 `PlayerRemoving`**：`F._hbExPlConns`（Hitbox 扩展）、`F._hidePlConns`（HidePlayer）。泄漏量级 = 房间人数，影响很小。
+3. **A1 自检的局限**：HotReload 的内容自检**挡不住有备而来的投毒**（塞个含关键词的字符串常量即可绕过）。
+   真防御需 **hash 签名**，超出本轮范围。
+4. **有意为之**：`AC.NeutralizeTable` 对同一表只中和一次；`F.stealthHook` 对同一函数只 hook 一次；
+   `Xray`/`Mute` 等不监听新增物件 —— 均为设计选择，非 bug。
