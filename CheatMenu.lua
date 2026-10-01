@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:08 sha 95e8dccb bytes 259892'):format('2026-10-01 22:08','95e8dccb',259892))
+print(('[CheatMenu] build 2026-10-01 22:23 sha 0cc408ad bytes 258965'):format('2026-10-01 22:23','0cc408ad',258965))
 local F = {}
-F.VERSION = "v11.0.28"
+F.VERSION = "v11.0.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3418,24 +3418,6 @@ F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
-F.BODY_R = 2.2
-function F.SweepAhead(r, u, dist)
-if not r or not u or dist <= 0.01 then return dist or 0 end
-local params = RaycastParams.new()
-if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
-pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
-end
-local skip = {}
-local ch = LP.Character
-if ch then skip[#skip + 1] = ch end
-if Players then skip[#skip + 1] = Players end
-pcall(function() params.FilterDescendantsInstances = skip end)
-local origin = r.Position + Vector3.new(0, 1, 0)
-local hit = nil
-pcall(function() hit = workspace:Raycast(origin, u * (dist + F.BODY_R), params) end)
-if hit and hit.Position then return math.max(0, hit.Distance - F.BODY_R) end
-return dist
-end
 F._probe, F._probeAt = {}, 0
 function F.SpeedProbe(r, tag, sp, dt, full3d)
 if not r or not sp then return end
@@ -3531,21 +3513,7 @@ if u.Magnitude > 0.001 then u = u.Unit else u = Vector3.zero end
 local dt = tonumber(deltaTime) or (1 / 60)
 if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
-local want = sp * dt
-local scale = 1
-F.STEP_CHECK_MIN = 5
-if T.SpeedAntiClip ~= false and want > F.STEP_CHECK_MIN then
-local allow = F.SweepAhead(r, u, want)
-if allow < want - 0.05 then
-scale = math.clamp(allow / want, 0, 1)
-local now2 = os.clock()
-if now2 - (F._wallAt or 0) > 10 then
-F._wallAt = now2
-F.Out(string.format("[加速] 前面是障碍 ⇒ 本帧走 %.0f%% (防穿墙, 可在这页关掉)", scale * 100))
-end
-end
-end
-local v = u * (sp * scale)
+local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
 F.SpeedProbe(r, "加速", sp, dt)
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
@@ -4952,8 +4920,7 @@ end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
 end
-F._panicConn = nil
-F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true, PanicKey = true }
+F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -5021,7 +4988,7 @@ end
 end
 end)
 if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态 (F1)", Duration = 3 })
+Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
 end
 F.Out("[CheatMenu] Panic: 全部功能已关闭, 属性/外观/连接已恢复")
 end
@@ -5042,16 +5009,27 @@ local cam = workspace.CurrentCamera
 if cam and not F._orig.fov then F._orig.fov = cam.FieldOfView end
 if not F._baseWalk and F._orig.walk then F._baseWalk = F._orig.walk end
 end
-function F.PanicKeyEnable()
-if F._panicConn then return end
-F._panicConn = UIS.InputBegan:Connect(function(input, processed)
-if processed then return end
-if input.KeyCode ~= Enum.KeyCode.F1 then return end
-F.PanicKeyDisableAll()
-end)
+function F.RejoinNow()
+local jid = tostring(game.JobId or "")
+if jid == "" then
+F.Out("[重进] 拿不到当前服务器 ID(JobId 为空: 多半在 Studio / 非公共服) 本次没执行")
+return false
 end
-function F.PanicKeyDisable()
-if F._panicConn then F._panicConn:Disconnect() F._panicConn = nil end
+local ts = game:GetService("TeleportService")
+F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")")
+local ok = pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, jid, LP) end)
+if ok then
+pcall(function() Fluent:Notify({ Title = "重新进入", Content = "正在回到当前服务器…", Duration = 3 }) end)
+return true
+end
+F.Out("[重进] 回本服失败(执行器可能禁了) 改为重进游戏(会换服务器)")
+local ok2 = pcall(function() ts:Teleport(game.PlaceId, LP) end)
+if ok2 then
+pcall(function() Fluent:Notify({ Title = "重新进入", Content = "已改为重进游戏(可能换服)", Duration = 3 }) end)
+else
+F.Out("[重进] 两种方式都被挡 请手动从 Roblox 菜单重进")
+end
+return ok2
 end
 F._saveThread = nil
 function F.AutoSaveEnable()
@@ -6108,7 +6086,6 @@ local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
 F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
-F.PanicKeyDisable,
 F.BringPlayerDisable, F.LockCamDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.AntiAFKDisable,
@@ -6243,8 +6220,6 @@ end
 local function RestoreFeatures()
 if T.CharPersist ~= false then T.CharPersist = true end
 if T.AutoSave ~= false then F.AutoSaveEnable() end
-pcall(F.PanicKeyEnable)
-T.PanicKey = true
 F.LivePlayersEnable()
 end
 LoadConfig()
@@ -6447,12 +6422,6 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("SpeedAntiClip", { Title = "加速防穿墙(高速撞墙时不穿过去)", Description = "只在速度很高(这一帧要走 5 格以上)时才生效; 日常走动完全不受影响。嫌它拦你就关掉", Default = true, Callback = function(v)
-local changed = (T.SpeedAntiClip ~= nil) and (T.SpeedAntiClip ~= v)
-T.SpeedAntiClip = v
-if F._cfgSyncing or not changed then return end
-F.Out(v and "[加速] 防穿墙 = 开(高速撞墙会停在墙前)" or "[加速] 防穿墙 = 关(高速会直接穿过去, 按你的选择)")
-end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
@@ -6799,6 +6768,8 @@ Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时
 Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自动开, 点这个才开)", Callback = function() F.RestoreSavedFeatures() end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "强制重载(即使已是最新也重下一遍)", Callback = function() F.HotReload(true) end })
+Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
+Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
 F.UnloadAll = UnloadAll
 pcall(function()
 local g = getgenv and getgenv()
