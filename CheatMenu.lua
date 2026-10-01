@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 14:53 sha 075b3cf3 bytes 272765'):format('2026-10-01 14:53','075b3cf3',272765))
+print(('[CheatMenu] build 2026-10-01 15:08 sha 61345f1f bytes 273216'):format('2026-10-01 15:08','61345f1f',273216))
 local F = {}
-F.VERSION = "v10.10.2"
+F.VERSION = "v10.10.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -377,10 +377,15 @@ local a = AC.DetectStrongAC(false)
 return a ~= false and a ~= nil
 end
 F.MetaLayers = {}
-F._metaSeq = 0
+F.MetaTargets = {}
 function F.MetaInstall(slot, target, id, wrapperFactory)
 if not (hookmetamethod and newcclosure and getrawmetatable) then return nil end
 if type(slot) ~= "string" or type(id) ~= "string" or target == nil then return nil end
+if F.MetaTargets[slot] == nil then
+F.MetaTargets[slot] = target
+elseif F.MetaTargets[slot] ~= target then
+return nil
+end
 local bucket = F.MetaLayers[slot]
 if not bucket then bucket = {} F.MetaLayers[slot] = bucket end
 if bucket[id] then F.MetaUninstall(slot, id) end
@@ -389,8 +394,7 @@ if type(mt) ~= "table" or type(mt[slot]) ~= "function" then return nil end
 local box = { alive = true, orig = nil, id = id, slot = slot }
 local raw = wrapperFactory(box)
 if type(raw) ~= "function" then return nil end
-F._metaSeq = F._metaSeq + 1
-local rec = { id = id, slot = slot, target = target, box = box, raw = raw, seq = F._metaSeq, alive = true }
+local rec = { id = id, slot = slot, target = target, box = box, raw = raw, alive = true }
 local wrapped
 local okW = pcall(function()
 wrapped = newcclosure(function(self, ...)
@@ -2044,7 +2048,6 @@ if n >= CAP then break end
 if r then
 local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
-local cnt = 0
 for j = 1, #kids do
 note(kids[j], nm, nm)
 n = n + 1
@@ -3852,7 +3855,7 @@ end
 function F.SrvProbe(step, sec)
 local _, _, root = GC()
 if not root then return nil end
-step = tonumber(step) or 1.5
+step = tonumber(step) or (F.LIMITS and F.LIMITS.PROBE_STEP) or 4
 sec = tonumber(sec) or 2
 local cam = workspace.CurrentCamera
 local dir = cam and cam.CFrame.LookVector or Vector3.new(1, 0, 0)
@@ -4681,8 +4684,13 @@ local parents = {}
 pcall(function() if CoreGui then parents[#parents + 1] = CoreGui end end)
 pcall(function() if gethui then local h = gethui() if h and h ~= CoreGui then parents[#parents + 1] = h end end end)
 pcall(function() local pg2 = LP:FindFirstChild("PlayerGui") if pg2 then parents[#parents + 1] = pg2 end end)
+local uniq, seen = {}, {}
 for i = 1, #parents do
-local parent = parents[i]
+local p = parents[i]
+if p and not seen[p] then seen[p] = true uniq[#uniq + 1] = p end
+end
+for i = 1, #uniq do
+local parent = uniq[i]
 local ok = pcall(function()
 local c = parent.DescendantRemoving:Connect(function(obj)
 local n = F.GuiName(obj)
@@ -4967,7 +4975,7 @@ else
 local head = string.lower(body:sub(1, 512))
 if head:find("<!doctype", 1, true) or head:find("<html", 1, true) then
 bad = "拿到的是网页不是脚本"
-elseif not body:find('F%.VERSION%s*=%s*"v10%.') then
+elseif not body:find('F%.VERSION%s*=%s*"v%d+%.') then
 bad = "版本行格式不对"
 end
 end
@@ -5283,7 +5291,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 pcall(F.SrvHoldDisable)
 for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, MuteDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.DupeAttemptDisable, F.LockCamDisable, F.BringPlayerDisable, F.SwimDisable, F.ClickTPDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6743,7 +6751,8 @@ go(T.AutoTrain, F.AutoTrainEnable)
 go(T.AutoBonus, F.AutoBonusEnable)
 go(T.AutoGym, F.AutoGymEnable)
 go(T.AutoSell, F.SellLowCPS)
-F.Out("[恢复] 已恢复 " .. n .. " 项")
+local synced = F.CfgSyncUI()
+F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (", 已同步 " .. synced .. " 个控件显示") or ""))
 pcall(F.LogFlush, "恢复存档功能")
 end
 local function RestoreFeatures()
