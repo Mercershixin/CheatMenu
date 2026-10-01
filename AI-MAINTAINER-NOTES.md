@@ -1544,3 +1544,86 @@ UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** 
    ⇒ 现在扫描器同时看 **读/写** 与 **是否同名控件**，并对"无写入"单独成组。
 2. ★★ **"孤儿"与"死代码"不是一回事**：死代码 = 没人调用；孤儿 = **有代码但用户碰不到**。
    孤儿要删必须先确认"这功能是不是已被有意取代"（ESP→BodyHL 就是一次有意取代）。
+
+## 十七、2026-10-01（下半场之十二）：孤儿全删 + 幽灵残留清零（10.10.7 → 10.10.8）
+
+### 17.0 用户裁定的答案
+
+§16.2 那三个选项，用户选的是 **A 全删**，原话：**「全删，只要是我没要的功能都删了」**。
+⇒ 于是分两轮执行：**10.10.7 删"功能"（有代码没入口的大块）**，**10.10.8 删"幽灵"（删完后剩下的碎片）**。
+
+### 17.1 10.10.7：孤儿功能全删（`_del_orphan2.py`，889 行 / 38,494 B）
+
+| 家族 | 删掉的东西 |
+|---|---|
+| 视觉（ESP 全套） | `espInit` / `espUpdate` / `ESPEnable` / `ESPDisable` · `F.SkeletonEnable/Disable` + `SKELETON` 表 · `F.ArrowEnable/Disable` · `F.TrapsESPEnable/Disable` · `F.ChamsEnable/Disable` · `BulletTracerEnable/Disable` · `XrayEnable/Disable` · `SelfGlowEnable/Disable` |
+| 其他 | `InvisibleEnable/Disable` · `F.AntiVoidEnable/Disable` · `F.ClickerEnable/Disable` · `AutoInteractEnable/Disable` · `addHitbox`/`HitboxEnable/Disable` · `F.AntiSitEnable/Disable` · `F.AntiAnchorEnable/Disable` · `F.ItemMagnetEnable/Disable` · `F.RemoteSpyEnable/Disable` |
+| 连带辅助 | `F.filterList` · `F.GetDistanceColor` · `F.DropAllTools` |
+| 引用点 | Restore 列表 10 条 `go(...)` · OnCharacter 5 条 · GUI 保护恢复 3 条 · Panic 剔名 5 组 · UnloadAll 剔名 7 组 |
+
+★ **判据没有变**：这些功能 **无同名 UI 控件 ⇒ 永远开不了**；视觉家族有"有意取代"的旁证（BodyHL / TeamColorHL）。
+
+### 17.2 10.10.8（本轮）：幽灵残留清零（55 个符号 / 248 行 + 3 处死分支 = 286 行 / 12,051 B）
+
+★★ **"功能删了"不等于"干净了"** —— 删掉功能块之后，**碎片会留在原地**：被删函数的调用点、
+只写不读的字段、被断链的局部变量、连带变死的辅助函数。本轮用**传递闭包**把它们一次扫清。
+
+**A. 传递闭包扫出的 55 个零引用符号**（`deadfix.py`，反复迭代到不动点）：
+
+| 类别 | 符号 |
+|---|---|
+| 只写不读的字段 | `F._chatTransHookFn` `F._bubbleTransHookFn` `F._lastDiff` `F._snapMem` `F._spyHooked` `F._remoteDownConns` `F._magnetConn` `F._magnetList` `F._spyN` `F._antiAimConn` `F._antiSitConn` `F._antiAnchorConn` `F._chamsLoop` `F._chamsBackup` `F._chamsAddedConn` `F._skeletonLines` `F._skeletonDrawings` `F._skeletonConn` `F._trapHls` `F._voidConn` `F._safeCFs` `F.ClickerConn`（含 UnloadAll 里 `F.X = nil` 的清残行） |
+| 常量/表 | `F.VOID_BUF` `F.MAGNET_TAGS` `F.GC_SPOOF_KEYS` `F.SCAN_ATTR_ROOTS` |
+| 悬空调用点 | `espCreate` 被整块删掉后，里面的 **`espInit()` 调用**正是门禁 [8] 报的那个"白名单外未定义全局" —— 删块即消失 |
+| 连带变死的辅助 | `InvApply` `espRemove` `espCreate` `Rejoin`（只因 `ServerHop` 别名而活）`ToolGlowEnable/Disable` `F.SnapshotFile/Load` `F.SnapshotSave/Diff` `F.capSummary` `F.LogWhere` `F.getGameEnv` `F.isProtectedFn` `F.AimUnbind` |
+| 被断链的局部 | `InvConn/InvAddedConn/InvBackup/InvDisplayBackup` `ESPGui/ESPObjs/ESPConn/ESPHue/ESPAddedConn/ESPRemovedConn` `BulletHls/BulletConn` `XrayHls/SelfGlowHl/ToolGlowHl` `AutoInteractConn/InstantPromptConn/HitboxList` `ServerHop` |
+
+**B. 3 处"标志永不可写 ⇒ 分支恒真/恒假"的死分支**（`T.TPSmooth` / `T.CloneHook` / `T.AimPriorityNearest`，
+全文 0 个写入点 ⇒ 恒为 `nil`）。**三种恒真/恒假的等价改法**：
+
+- `T.CloneHook`：`if T.CloneHook and type(clonefunction)…end` 恒假 ⇒ **整块删**。
+- `T.AimPriorityNearest`：`if T.X then A else B end` 恒走 else ⇒ **留 B、去 if**。
+- `T.TPSmooth`：`if not (T.X and …) then <干活> return end` 恒真 ⇒ **留壳内内容、去掉 if 与 return**；
+  ★ 这一处还多出一个坑：**去掉早退之后，后面那段"平滑插值"就永远到不了了** ⇒ 一并删掉
+  （`smoothTP` 从 24 行缩到 6 行，`useSmooth` 形参与 `C.TPSmoothSeg` 一起消失）。**只按清单删 `if` 会留下一段不可达代码。**
+
+### 17.3 门禁与自检（10.10.8）
+
+- 编译 0 错误 · 顶层真局部 **117 → 92**（减少数 **25**，与"删掉的顶层 local 清单"逐项对上 ✓）
+- 源根先用后声明 **0** · F/AC/Trans 未定义 **0** · 原生 `print` **1** · 括号平衡 OK · UTF-8 合法
+- `end` 配平 **2286 == 1248 if + 248 do + 790 function** ✓（等式仍成立 ⇒ 块边界没切错）
+- `luau-analyze` 白名单外未定义全局 **1 → 0**（`espInit` 消失）
+- 残留复扫 **0 个**（`residualscan.py` / `deadfix.py` 复跑都是空集）
+- 源码 274,584 → **262,533 B**（6115 行）· 发行产物待重建
+
+### 17.4 ★★★ 待用户拍板：反作弊"改写游戏"层（22 个 `AC.*` 符号 / 约 414 行，**本轮未删**）
+
+把扫描器扩到 `AC.*` 命名空间后，又扫出一整层**从未被安装**的代码：
+
+| 类别（正好对应红线里被排除的四类手段） | 符号 |
+|---|---|
+| hook 元表 | `AC.InstallSetmetatableHook` `AC.InstallIndexMask` `AC.InstallIndexHook` |
+| 拦 remote | `AC.InstallNamecallHook` + `AC.BLOCK_KEYS` |
+| 按名中和 | `AC.killHit` `AC.killScript` `AC.KILL_SUB` `AC.KILL_TOK` `AC.NeutralizeTable` `AC.FindFn` |
+| 断连接 | `AC.DisableACConnections` `AC.disableSignalConns` |
+| 只读监控（从未开启） | `AC.WatchNewScriptsEnable` `AC.WatchNewRemotesEnable` `AC.AntiPauseEnable` `AC.InstallPropertyLock` `AC.InstallAntiTP` |
+| 只写不读的状态 | `AC._ownFns` `AC._idxMaskLayer` `AC._ncLayer` `AC._forceConnSignals` `AC._connDisabled` `AC._HIDE_FAKE` `AC.isOwnConn` `AC.isOwnChar` `AC.markOwn` `AC.KNOWN_LIMITS` `F.markOwnClosures` `F.MetaActive` |
+
+**硬事实**：`AC.Install*` **全文 0 个调用点**；只有 `AC.Uninstall*` / `*Disable` 被 Panic / UnloadAll 列表引用
+⇒ **这一层"只能卸、装不上"** —— 与红线第 3 条（*改游戏的手段一律不进主开关*）完全吻合，是**有意不接线**的结果。
+
+**为什么本轮不删**：这不是"删碎片"，是**删一整套能力**（跨版本备份里唯一一份）⇒ 属于**设计决定**，
+按项目规矩（"涉及换核心设计 ⇒ 停下报告"）**先问用户**。选项：**① 全删（同 10.10.5 的做法：正文删、内容归档到本文档）；
+② 保留待将来做"独立高危开关"；③ 只删"只读监控 / 状态位"那半层。**
+
+### 17.5 ★ 本轮的三个教训
+
+1. ★★★ **删功能之后必须再扫一遍"残留"，而且是传递闭包，不是单轮**：
+   删掉 `A` 会让只被 `A` 调用的 `B`、只被 `A` 写的字段 `F.x` 一起变死 —— **单轮扫描查不到**。
+2. ★★★ **扫描器的"引用计数"要按符号的访问形式来数**：第一版把 `(?<![\w.])NAME\b` 当通用规则，
+   于是 `F.AutoFire` 这种"带命名空间的调用"**全被漏数**，一次报出 18 个假残留。
+   正确做法：命名空间符号只数 `NS.NAME`，局部符号才数裸名。
+3. ★★ **`local A, B = ...` 与 `local A, B`（无初值）是两种语法**，只匹配带 `=` 的那种会漏掉
+   `local InvConn, InvAddedConn, InvBackup, InvDisplayBackup` 这行 —— 它正是本轮的残留之一。
+4. ★★ **不可达代码要顺着"恒真早退"往下看**：恒真的 `return` 之后还有一屏代码（`smoothTP` 的插值路径），
+   只按清单删 `if` 会把它留下来。
