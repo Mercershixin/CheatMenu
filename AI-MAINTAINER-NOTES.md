@@ -1104,3 +1104,44 @@ banner `build 2026-09-25 sha 8161b6e6`）。目标：学它的 CPS 卖出与收�
 `SC` 调度器 · `BUS` 信号总线 · `NET` remote 图谱（`Scan/Atlas/Track/Rebind/Health`）· `HK` hook 登记表 ——
 都是**架构级**重构，收益与风险不成比例（我们的**元方法分层栈 + `getconnections` 扫描**已覆盖 hook 与连接管理）。
 若将来要做，按 `single-entry-kernel-swap-refactor` 的路子单独开一轮，**不要边加功能边换内核**。
+
+---
+
+## 八、2026-10-01（下半场之三）：手机端"没效果"的真修复
+
+用户贴来一份**外部 AI 写的排查报告**（6 条可能原因）。按纪律**逐条对着真源码核实，只修真的**。
+
+### 8.1 逐条核实结论（**6 条里 2 条真、2 条已修过、2 条引错代码**）
+
+| 报告的说法 | 核实结果 |
+|---|---|
+| ① Fluent 下载失败 ⇒ 脚本开头 `return`，UI 完全不建 | **成立**（真问题：手机用户只能看 F9，看不到就等于"脚本没用"） |
+| ② 执行器没有 `loadstring` ⇒ `pcall(loadstring, body)` 失败 ⇒ 同样 `return` | ★★★ **成立且是真 bug** —— 第 227 行确实写的是裸 `loadstring`（第 5013 行的 HotReload 早有 `loadstring or load`，唯独 Fluent 这条路径漏了） |
+| ③ `game:HttpGet` 被改写 ⇒ `#body > 5000` 不成立 | **部分成立**：长度判断在，但**没有内容校验**（镜像返回 HTML 错误页且够长时，会白跑一次 loadstring） |
+| ④ `gethui()` 指向不可见容器 ⇒ 加载成功但看不见 | **判断有误**：主流执行器的 `gethui()` 返回的容器**是正常渲染的**；且本项目 `gethui` 缺失时**已退到 `CoreGui`**（第 104 行 pcall + 第 6975 行兜底）。报告建议"注释掉 gethui 强制用 CoreGui"**不采纳**（多数执行器里 CoreGui 直接写会失败/被检测） |
+| ⑤ 缺 `hookmetamethod` 等 ⇒ 开关点了没反应（`F.MetaInstall` 静默 `return nil`） | **成立**（`F.MetaInstall` 确实静默返回 nil），但"完全没提示"**不成立** —— 已有 `F.ProbeCapabilities` 与加载环境自检。**缺的是"手机上看得到"的那一环** |
+| ⑥ 触屏判定 `_touch` 出错 ⇒ 窗口按 500×540 建、跑到屏幕外 | **引错代码 + 判断有误**：报告引的 `local _touch = (UIS.TouchEnabled == true)` 是本项目**有**的这一行，但"窗口写死 500×540"**不成立** —— 触屏时早已按视口折算。真正的洞是**只在 `_touch` 为真时才折算**（平板上 `TouchEnabled` 误报为假就会真的超屏） |
+
+### 8.2 本轮改了什么
+
+1. ★★★ **`pcall(loadstring or load, body)`** —— 缺 `loadstring` 的手机执行器不再整个挂掉。
+2. ★★★ **Fluent 取不到时手机也看得见**：
+   - **本地文件优先**：`CheatMenu_Fluent.lua` / `Fluent.lua` / `fluent.lua`（`readfile`+`isfile`）先试，**直接绕开国内网络**；
+   - **镜像从 5 个补到 9 个**（加 `gh-proxy.com` / `ghpxy.hwinzniej.top` / `fastly.` / `gcore.`）；
+   - **拒 HTML 错误页**（`<!doctype` / `<html` / 无 `return` 一律跳过）；
+   - 失败时 **`warn` + `StarterGui:SetCore("SendNotification")`**（不再只写 F9），并在文案里直接说清三种自救办法。
+3. ★ **加载弹窗补"钩子能力"**（原先只有 读脚本/存档）⇒ 缺 `hook三件套`/`getgc` 时**在弹窗里就写出来**，并说明"只有依赖它们的子功能无效，其余照常"。
+4. ★ **新增 `F.EnvSelfCheck()` + 「系统」页按钮「★ 环境自检(手机/平板没效果先点这个)」**：
+   13 项能力逐条判 + **每项缺了会影响什么** + 平台/视口/菜单是否创建/界面宿主 + 一句结论（同时 F9 与弹窗）。
+5. ★ **窗口尺寸改为视口驱动**：`_w/_h` 不再只在 `_touch` 为真时折算
+   （`clamp(vw*0.96, 240, _touch and 520 or 500)`）—— 桌面行为完全不变，手机上即使触屏被误判也不会超出屏幕。
+
+### 8.3 ★ 现役规则（本轮固化）
+
+1. **"整脚本 `return`"的失败路径必须让用户看得见** —— 手机用户看不到 F9，等于静默失败。
+   凡是有 `return` 提前退出的分支，都要配**可见通知**（`SendNotification` / `warn`）。
+2. **凡是取远端依赖（UI 库/资源），都要有"本地文件优先"兜底**，并**校验内容不是 HTML 错误页**。
+3. **同一类兜底要全局一致**：`loadstring or load` 在 HotReload 里有、Fluent 路径漏了 ⇒
+   **改一处时 grep 同类其他处**（本轮就是靠这个抓到第 227 行）。
+4. **报告类输入一律逐条核实再动手**：本轮 6 条里只有 2 条真、2 条早已修过、2 条引错代码。
+   ⛔ 不核实就照做，会把已经对的东西改坏（例如那个"注释掉 gethui"的建议）。
