@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:23 sha 0cc408ad bytes 258965'):format('2026-10-01 22:23','0cc408ad',258965))
+print(('[CheatMenu] build 2026-10-01 22:32 sha 47144b0f bytes 260760'):format('2026-10-01 22:32','47144b0f',260760))
 local F = {}
-F.VERSION = "v11.0.29"
+F.VERSION = "v11.0.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3453,6 +3453,36 @@ end
 F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/秒 (%.0f%%)%s",
 tostring(tag), set, actual, ratio * 100, verdict))
 end
+F.bypassConn = nil
+function F.BypassEnable()
+if F.bypassConn then return end
+if not F._atpState then
+F._bypassAtp = true
+pcall(F.SpeedAntiTPEnable)
+end
+pcall(F.SrvOwnTake, false)
+F._bypassOwnAt = os.clock()
+F.bypassConn = RS.Heartbeat:Connect(function()
+if not T.BypassDetect then F.BypassDisable() return end
+local now = os.clock()
+if now - (F._bypassOwnAt or 0) > 0.5 then
+F._bypassOwnAt = now
+pcall(F.SrvOwnTake, false)
+end
+end)
+F.Out("[绕过] 已开启: 抢角色所有权(每0.5s) + 加速位移补足 + 客户端检测清理"
+.. (F._bypassAtp and "(连带开了防拉回档)" or ""))
+end
+function F.BypassDisable()
+if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
+F._bypassOwnAt = nil
+F._spdLastPos = nil
+if F._bypassAtp then
+F._bypassAtp = nil
+pcall(F.SpeedAntiTPDisable)
+end
+F.Out("[绕过] 已关闭(所有权交回引擎管理, 速度不再用位移补足)")
+end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
@@ -3515,6 +3545,21 @@ if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
 local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
+if T.BypassDetect then
+local want = sp * dt
+local p0 = F._spdLastPos
+if p0 then
+local moved = (Vector3.new(r.Position.X, 0, r.Position.Z) - Vector3.new(p0.X, 0, p0.Z)).Magnitude
+local need = want - moved
+if need > 0.5 and moved < want * 0.7 then
+pcall(function() r.CFrame = r.CFrame + u * need end)
+F._spdFill = (F._spdFill or 0) + 1
+end
+end
+F._spdLastPos = r.Position
+else
+F._spdLastPos = nil
+end
 F.SpeedProbe(r, "加速", sp, dt)
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
@@ -4931,7 +4976,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6095,7 +6140,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable,
+F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
@@ -6422,6 +6467,11 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddToggle("BypassDetect", { Title = "绕过检测(加速/飞行) · 抢所有权 + 位移补足", Description = "扫描结论: 本类服客户端 0 检测, 主要限制是服务端位移裁决 ⇒ 这开关每 0.5s 抢回角色所有权, 并在实测速度不够时直接补位移", Default = false, Callback = function(v)
+T.BypassDetect = v
+if F._cfgSyncing then return end
+if v then F.BypassEnable() else F.BypassDisable() end
+end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
