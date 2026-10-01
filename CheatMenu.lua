@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:25 sha c3abbcd9 bytes 244831'):format('2026-10-01 20:25','c3abbcd9',244831))
+print(('[CheatMenu] build 2026-10-01 20:34 sha f6120570 bytes 244704'):format('2026-10-01 20:34','f6120570',244704))
 local F = {}
-F.VERSION = "v11.0.20"
+F.VERSION = "v11.0.21"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3428,18 +3428,12 @@ dir = Vector3.new(md.X, 0, md.Z)
 end
 local cur = r.AssemblyLinearVelocity
 if dir.Magnitude > 0.01 then
-if h.FloorMaterial == Enum.Material.Air then
 local v = dir.Unit * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
-end
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
 end
-local now = os.clock()
-if now - (F._spdAt or 0) > 0.2 then
-F._spdAt = now
 if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
-end
 end)
 end
 function F.FlyDestroy()
