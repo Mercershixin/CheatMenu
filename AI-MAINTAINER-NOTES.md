@@ -2670,3 +2670,20 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - 我们 11.0.38 的「隐身」= 第 2 种（真隐身），关掉会还原，重生自动重施。
 - ★ 诚实结论：**没有"一定能骗过所有人的隐身"** —— 服务端要么检测透明度、要么每帧写回；第 3 种也不是真消失（真身还在，只是被挪走）。
 
+## 五十三、2026-10-02（11.0.41/11.0.42）：「全合一」拆回独立开关 + 伪装 hook + 偷蛋扫描
+
+- **拆开**（用户要求）：删掉 `★ 全合一`，能力拆成 5 个独立开关（移动页）——
+  `反拉回`(抢所有权+钉位+续跑+挡服务端写入) / `搬运守卫`(焊点重焊+离手拉回) / `防护`(稳身/受击/陷阱/弹开/防拉回) /
+  `伪装`(hook 属性读取) / `隐身`(已有)；`瞬间交互` 回到传送页。**开是分开的，关是全关**（`F.AllInOneDisableAll` 只给卸载/Panic 用）。
+  顺带删掉拆开后变死的 `F.AllInOneEnable/Disable`（1976 字节）与 `T.AllInOne` 引用。
+- **伪装（hook 欺骗）**：依据近 1 个月明文脚本 `Not-Kyle/Universal-Scripts.lua → Sprint V3.1/Source.lua`
+  与 `XITHHUB/Main → Bypassed.lua`：核心是 **`hookmetamethod(game,"__index")` + `checkcaller()`** ——
+  **只对"游戏侧"调用伪装**（返回记录的原值 `WalkSpeed`/`JumpPower`），**执行器自己的代码 `checkcaller()==true` 直接放行**
+  ⇒ 我们自己的还原/自检读到真值，游戏的"速度检查"被骗。日志 `[伪装] 已对游戏侧伪装速度读数 ×N`。
+  ⇒ 同时把 metatable hook 改成**按需安装**（`F.MetaHookEnsure`）：`KG.kick` 控制 Kick 三路径，`T.Spoof` 控制伪装，
+  两者都不要才在卸载时还原（`F.MetaHookUninstall`）。
+- **偷蛋（新一节）**：①扫描地图上的蛋并**按最重/最贵排序** ②下拉自选（最重在最前）③传送到选中 ④设安全点 ⑤**远程拿**
+  （传过去 → 对最近的 ProximityPrompt 做 `HoldDuration=0 + InputHoldBegin/End` → 传回安全点）。
+  排序依据（诚实标注）：优先读模型 **属性**(value/worth/price/cost/weight/mass)，其次**包围盒体积**，再加**名字稀有度词**。
+  ★ 边界：这些是**估计值**；而且"远程拿"能不能成，取决于**服务端的距离校验**（服务端不认，客户端再快也拿不到）。
+
