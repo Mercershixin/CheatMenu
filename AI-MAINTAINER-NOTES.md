@@ -1387,3 +1387,70 @@ banner `build 2026-09-25 sha 8161b6e6`）。目标：学它的 CPS 卖出与收�
    真防御需 **hash 签名**，超出本轮范围。
 4. **有意为之**：`AC.NeutralizeTable` 对同一表只中和一次；`F.stealthHook` 对同一函数只 hook 一次；
    `Xray`/`Mute` 等不监听新增物件 —— 均为设计选择，非 bug。
+
+---
+
+## 十四、2026-10-01（下半场之九）：删纯死代码（10.10.4 → 10.10.5）
+
+方法：先写取证脚本 `.workbuddy/build/deadscan.py`（39 个候选，逐符号列出**每一处命中**并标注"定义/引用"），
+再人工排掉误判，最后用**块关键词配平**的整体删除器（`.workbuddy/build/_del_dead.py`）删块。
+
+### 14.1 结果：26 块 / 271 行 → 顶层真局部 137 → **135**
+
+删的（全部经取证：除定义外零引用，或仅被同批死代码引用）：
+
+| 类别 | 符号 |
+|---|---|
+| 常量表 | `TOOL_PRESETS` · `AC.NEUTRALIZE_NAMES` · `AC.KNOCK_KEYS` |
+| 函数 | `F.ACSurfaceReport` · `F.ScanAttributes` · `AC.ScanAndBlock` · `F.Thrust` · `F.RemoveAccessories` · `F.CallRemote` · `F.SendChat` · `F.SrvReport` · `F.TranslateText` · `F.FlingTarget`(函数) |
+| Waypoint 整块 | `F.WaypointLabels` · `wpSlot` · `F.RefreshWaypointUI` · `F.SaveWaypoint` · `F.TpWaypoint` · `F._waypoints` |
+| Flashback 整块 | `F.FlashbackEnable/Go` · `F._flashConn` · `F._lastDeathCF` · `F._diedConns`（+ `UnloadAll` 里的 `F.FlashbackDisable` 条目） |
+| 死字段 | `AC._idxMaskOld` · `AC._desyncOn/_desyncLoc/_desyncHook` · `F._debugHookOn` · `F._capOld` · `F._spyOld`(×2) · `F.SpinConn` · `F.AirWalkConn` · `F._aimCache/_aimCacheAt` · `F.AimConn` |
+
+**Waypoint 链为什么整块是死的**：`F.WaypointLabels` 只被 `F.RefreshWaypointUI` 调，后者只被 `F.SaveWaypoint` 调，
+而 `SaveWaypoint`/`TpWaypoint` **无人调用**；且 `F.RefreshWaypointUI` 里读的 `Fluent.Options.WPSlot`
+**那个下拉早已不存在** ⇒ 传递性全死。
+
+### 14.2 ★ 删掉但**内容留有价值**的两张表（原样存档，将来要用别重抄）
+
+`TOOL_PRESETS`（经典工具 AssetId，游戏知识）：
+
+```
+Linked Sword=125013769 · Darkheart=16895215 · Illumina=16641274 · Venomshank=131896478
+Ice Dagger=124138310 · Windforce=77443704 · Gravity Coil=16688968 · Speed Coil=99119158
+Fusion Coil=28457223 · Grappling Hook=30393548 · Rocket Launcher=32356064
+Hyperlaser=130113146 · Magic Carpet=225921000 · Golden Boombox=14275812
+```
+
+`AC.NEUTRALIZE_NAMES`（当年"按名中和"用的强反作弊函数名；`AC.NeutralizeByName` 已在 §五 删除）：
+
+```
+GetPlayerBanned · IsPlayerBanned · BanPlayer · PunishPlayer · ReportPlayer · SuspendPlayer
+FlagPlayer · AntiCheatDetected · ACDetected · OnDetected · Detected · detected · FlagPlayerForCheating
+```
+
+### 14.3 保留清单（取证发现**仍有真实引用**，一律不删）
+
+| 符号 | 引用位置 |
+|---|---|
+| `"FlingTarget"`（下拉名，非函数） | `F.PLAYER_DROPDOWNS`（L2889）+ `Tabs.Combat:AddDropdown`（L7080） |
+| `AC._connDisabled` | L761 定义 + **L825 自增**（真实执行路径 ⇒ 保守保留） |
+| `F.TranslateEnable/Disable` | `F.TranslateText` 删了，但这两个仍在 UnloadAll / Panic / toggle / RestoreSavedFeatures 里 |
+| `AC._desyncOn` 之外的同名族 | 已确认只剩初始化、无其它引用 |
+
+### 14.4 本轮自检（全部通过）
+
+门禁 8 项：编译 0 错误 · 顶层真局部 **135** · 先用后声明 0 · 只用未定义 0 · 原生 `print` 1 ·
+`end` 配平 **2814 == 1512+327+975**（上版 2905，本轮 -91，等式仍成立 ⇒ 块边界正确）·
+UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** ✓。
+原 7 项自检全过（6/30/6/5/6/1/2）。删除项逐一复验为 **0**。
+
+### 14.5 ★ 工具与教训
+
+1. `deadscan.py`（取证）与 `_del_dead.py`（块删除）都可复用；**删前必须看到"每一处命中"**，
+   而不是只看计数。
+2. ★★ **单行函数的块范围会多算一行**：块配平函数若写成"平衡归零 **且** i>start 才返回"，
+   单行 `function f() ... end` 会被判成跨 2 行 ⇒ **`i > start` 这个条件不能有**。
+3. ★★ **重复锚点必须逐条列**：`F._spyOld = nil` 原文出现 **2 次**，我的清单只列了 1 次 ⇒
+   `find_line` 只删了第一处，**第二处残留被复验抓到**。⇒ **删除后必须逐个符号复验计数为 0**。
+4. ★ **复验也要防子串误判**：`AimConn` 的剩余命中其实是 `F._antiAimConn`（另一个符号）。
