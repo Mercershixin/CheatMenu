@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 15:53 sha 45bd6756 bytes 261868'):format('2026-10-01 15:53','45bd6756',261868))
+print(('[CheatMenu] build 2026-10-01 16:19 sha e0afa0bc bytes 259092'):format('2026-10-01 16:19','e0afa0bc',259092))
 local F = {}
-F.VERSION = "v10.10.6"
+F.VERSION = "v10.10.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3714,20 +3714,6 @@ F.Out("[Srv] 夺取网络所有权: 部件 " .. tostring(#parts) .. " 个, 回�
 end
 return got
 end
-function F.SrvHoldEnable()
-if F._srv.holdConn then return end
-F._srv.holdConn = RS.Heartbeat:Connect(function()
-if not T.SrvHoldOwn then F.SrvHoldDisable() return end
-local now = os.clock()
-if now - (F._srv.ownAt or 0) < 0.4 then return end
-F._srv.ownAt = now
-local _, _, root = GC()
-if root then pcall(function() root:SetNetworkOwner(LP) end) end
-end)
-end
-function F.SrvHoldDisable()
-if F._srv.holdConn then F._srv.holdConn:Disconnect() F._srv.holdConn = nil end
-end
 function F.SrvProbe(step, sec)
 local _, _, root = GC()
 if not root then return nil end
@@ -3763,7 +3749,7 @@ L[#L + 1] = string.format("物理帧率 %.0f · 本脚本不做任何限速(上�
 L[#L + 1] = "① 网络所有权(HRP) = " .. tostring(o.ownerName)
 if o.serverOwned then
 if F.SrvOwnTake(true) then
-L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓ (仍被拉回就打开「持续保持所有权」)"
+L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓"
 else
 L[#L + 1] = "② ⛔ 抢不回所有权 ⇒ **该游戏位移类功能不可行**(服务端持有, 不是参数问题)"
 end
@@ -4118,27 +4104,6 @@ local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
 smoothTP(troot.CFrame + Vector3.new(0, 3, 0))
 end
-F._clickTPConn = nil
-function F.ClickTPEnable()
-if F._clickTPConn then return end
-F._clickTPConn = UIS.InputBegan:Connect(function(input, gpe)
-if gpe or not T.ClickTP then return end
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-local cam = workspace.CurrentCamera
-local _, _, root = GC()
-if not (cam and root) then return end
-local ray = cam:ViewportPointToRay(input.Position.X, input.Position.Y)
-local params = RaycastParams.new()
-params.FilterDescendantsInstances = F.filterList(LP.Character)
-params.FilterType = Enum.RaycastFilterType.Exclude
-local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
-if hit then smoothTP(CFrame.new(hit.Position + Vector3.new(0, 3, 0))) end
-end
-end)
-end
-function F.ClickTPDisable()
-if F._clickTPConn then F._clickTPConn:Disconnect() F._clickTPConn = nil end
-end
 F._voidConn = nil
 F._safeCFs = {}
 F.VOID_BUF = 10
@@ -4168,30 +4133,6 @@ end
 function F.AntiVoidDisable()
 if F._voidConn then F._voidConn:Disconnect() F._voidConn = nil end
 F._safeCFs = {}
-end
-F._dupeThread = nil
-function F.DupeAttemptEnable()
-if F._dupeThread then return end
-F._dupeThread = task.spawn(function()
-while T.DupeAttempt do
-local ch, hum, root = GC()
-if ch and hum and root then
-local pos = root.CFrame
-F.DropAllTools()
-task.wait(0.25)
-pcall(function() ch.Head:Destroy() end)
-task.wait(6)
-local _, _, r = GC()
-if r then pcall(function() r.CFrame = pos end) end
-end
-task.wait(0.3)
-end
-F._dupeThread = nil
-end)
-end
-function F.DupeAttemptDisable()
-T.DupeAttempt = false
-F._dupeThread = nil
 end
 F.ClickerConn = nil
 function F.ClickerDisable() if F.ClickerConn then F.ClickerConn:Disconnect() F.ClickerConn = nil end end
@@ -4989,26 +4930,6 @@ end
 function F.BringPlayerDisable()
 if F._bringConn then F._bringConn:Disconnect() F._bringConn = nil end
 end
-F._swimConn = nil
-function F.SwimEnable()
-if F._swimConn then return end
-F._swimConn = RS.Heartbeat:Connect(function()
-if not T.Swim then F.SwimDisable() return end
-local _, hum = GC()
-if hum then
-pcall(function()
-if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
-hum:ChangeState(Enum.HumanoidStateType.Swimming)
-end
-end)
-end
-end)
-end
-function F.SwimDisable()
-if F._swimConn then F._swimConn:Disconnect() F._swimConn = nil end
-local _, hum = GC()
-if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end) end
-end
 F._lockCamConn = nil
 function F.LockCamEnable()
 if F._lockCamConn then return end
@@ -5032,9 +4953,8 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
-pcall(F.SrvHoldDisable)
 for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, MuteDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.DupeAttemptDisable, F.LockCamDisable, F.BringPlayerDisable, F.SwimDisable, F.ClickTPDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -5818,11 +5738,9 @@ local ok, err = pcall(function()
 maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
 local n = 0
 for i = 1, maxSlot do
-if T.Collect == false then break end
 if Fire("B_Collect", i) then n = n + 1 end
 task.wait(0.06)
 end
-T.Collect = false
 F.Out(string.format("[收钱] 完成 · 触发 %d 个槽位", n))
 pcall(F.LogFlush, "收钱")
 end)
@@ -6341,19 +6259,19 @@ local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
 F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
-F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable,
-F.BringPlayerDisable, F.LockCamDisable, F.SwimDisable,
+F.PanicKeyDisable, F.ItemMagnetDisable, F.ChamsDisable,
+F.BringPlayerDisable, F.LockCamDisable,
 F.RemoteSpyDisable,
 F.AntiSitDisable, F.AntiAnchorDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
-F.ClickTPDisable, F.AntiVoidDisable, F.AntiAFKDisable,
+F.AntiVoidDisable, F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
-F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
+F.NoClipDisable, ESPDisable, AutoInteractDisable,
 F.SpeedSet, F.FlySet,
 function()
 AC._neutFns = {}
@@ -6436,12 +6354,9 @@ go(T.Crosshair, F.CrosshairEnable)
 go(T.LockCam, F.LockCamEnable)
 go(T.Freecam and not UIS.TouchEnabled, F.FreecamEnable)
 go(T.AntiVoid, F.AntiVoidEnable)
-go(T.ClickTP, F.ClickTPEnable)
-go(T.Swim, F.SwimEnable)
 go(T.ItemMagnet, F.ItemMagnetEnable)
 go(T.BringPlayer, F.BringPlayerEnable)
 go(T.FreezePlayer, F.FreezePlayerEnable)
-go(T.SrvHoldOwn, F.SrvHoldEnable)
 go(T.KickProtect or T.KickGuard, F.KickGuardEnable)
 go(T.KickProtect or T.AntiAFK, F.AntiAFKEnable)
 go(T.KickProtect or T.KickRejoin, F.KickRejoinEnable)
@@ -7165,7 +7080,6 @@ task.spawn(function()
 pcall(function()
 if C.FlyDisguise == nil then
 C.FlyDisguise = "关闭"
-T.SrvHoldOwn = false
 end
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
