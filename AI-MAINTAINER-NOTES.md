@@ -2742,3 +2742,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 防挂机默认只掐检测连接(按 conn.script.Name 匹配 anticheat/detect/anti/guard, Disable 可恢复)+写心跳属性; 动人物的动作收进新的「防挂机·模拟输入」(默认关); 抄 hookDebug 把 debug.getinfo 里自己 hook 的来源抹成 =nil; 反拉回新增拦服务端回写 CFrame/Position(只拦比我当前偏离更远 12 格的写入)
 
+
+
+## 11.0.49：挂机彻底不动人物：删掉按键/鼠标/跳的全部模拟
+
+- 防挂机现在只有三件事: 掐检测连接(可恢复) + 每15秒写心跳属性 + 监听 Idled 只记录; F.AntiAFKSim / AFKMotion 开关 / 输入监听 全部删净(残留 0)
+
