@@ -1663,3 +1663,51 @@ UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** 
 ★ 复核口径：`grep 'WalkSpeed ='` 全文只剩 6 处写入点，其中
 ①加速循环内 ②自由相机(存/还原自身值) 都属"用户开了才走"；
 `SpeedApply` / `SpeedRestore` / `Panic` 三处均已加"必须先有记录"的前置条件。
+
+## 十八、2026-10-01（下半场之十三）：新增「收藏点位」传送 + 核查"速度/飞行 5000 上限是不是真的"（11.0.0）
+
+### 18.1 用户问：「飞行和加速的 5000 上限是真有效吗」
+
+**答：脚本这一侧没有任何夹取，写多少就是多少。** 证据（静态核查，可复跑）：
+
+- `grep math.clamp|math.min|math.max` 全文命中 23 处，**没有一处作用于 `C.SpeedValue` / `C.FlyValue`**
+  （唯一相关的是 `F.SrvFPS()` 把物理帧率夹在 30~240，与速度无关）。
+- 两条写入路径都是直写：
+  `F.SpeedApply()` → `hum.WalkSpeed = tonumber(C.SpeedValue) or 60`；
+  飞行 → `dir.Unit * (tonumber(C.FlyValue) or 60)`。
+- 滑块定义 `Min = 16/10, Max = 5000, Rounding = 0` ⇒ **5000 是"量程"，不是隐藏上限**。
+- 唯一会主动改这两个值的函数是 **`F.ApplySafeCaps()`**（把值压到"疑似阈值 × 0.9"）——
+  它**只有用户点「按结果把速度压到安全值」按钮才会跑**，加载/后台都不会自己跑。
+
+★ **诚实告知的部分（不是脚本限制，是环境限制）**：真开 5000 能不能动，取决于
+① `workspace.AuthorityMode`（= `Server` 时位移由服务端裁决会被拉回）；② 该游戏自带的速度校验
+（如 Adonis 的 `GetRealPhysicsFPS` 阈值判定）。这两条只能实测，脚本不该假装"保证有效"。
+
+### 18.2 新增功能：收藏点位（存当前位置 → 自己选 → 传送过去）
+
+**需求原话**：「加个传送的功能，保存当前位置，然后可以传送到保存的位置，我需要能自己选择的那种。」
+
+**数据**：存在 **`C.Waypoints`**（数组，每项 `{name, x, y, z, yaw}`）——
+走 `C` 就等于**自动复用现成的落盘链路**：`SaveConfig()` 写 `{T, C}`、`LoadConfig()` 读回来，
+且 AutoSave 线程也会带上 ⇒ **不用另开一个存档文件**。上下限 `F.WAYPOINT_MAX = 40`。
+
+**UI（`Tabs.TP` 新加一节「收藏点位」）**：`AddInput("WaypointName")` → `AddButton(保存当前位置)`
+→ `AddDropdown("WaypointSlot")` → `AddButton(传送到选中的点位)` → `AddButton(删除选中的点位)`。
+★ 名字**留空就自动命名 `点位N`**（不会跟用户要输入），想区别就自己填。
+
+**实现要点**：
+- 存的是**位置 + 朝向 yaw**（`yaw = atan2(-LookVector.X, -LookVector.Z)`，回填用 `CFrame.Angles(0, yaw, 0)`，可往返）。
+- 传送走既有的 **`smoothTP()`**（`PivotTo` + `breakVelocity`），并在传送前
+  **先查 `F.AuthorityGuard(false)`、再 `F.SrvOwnTake(false)` 夺一次网络所有权**（本项目既有的"反拉回"手段）。
+- **到位检查**：传送后回读 `root.Position` 与目标的距离（< 6 格算到），把结果**明说**；
+  没到位时按 `AuthorityMode` 给不同的解释（游戏规则 / 被拉回），**不假装成功**。
+- 改完点位后立刻 `F.WaypointRefreshUI()`（`opt:SetValues`）+ `SaveConfig()`，并**打日志报坐标**。
+
+★ **一个故意的"不做"**：**没有**把 `WaypointSlot` 加进 `F.PLAYER_DROPDOWNS`。
+那个名单的用途是"让 `CfgSyncUI` 跳过动态下拉"，但 `F.RefreshPlayerDropdowns()` **也复用同一名单**，
+每隔有人进出服就拿**玩家名**去 `SetValues` ⇒ 加进去会让**点位列表被玩家名冲掉**。
+本功能不需要进那个名单：`CfgSyncUI` 取 `want = C.WaypointSlot or T.WaypointSlot` = `nil`，自然跳过。
+（`C.WaypointSlot` 全文**没有任何写入点**，这条不变量由下面的自检守着。）
+
+**自检（新增，已跑过）**：两个控件 id 存在 · 11 个 `F.Waypoint*` 符号**每个都 ≥2 次出现**（定义 + 至少一处使用，
+⇒ 不会又造出"没入口的孤儿"）· 下拉 id **不在** `PLAYER_DROPDOWNS` · `C.Waypoints` 有写入点。
