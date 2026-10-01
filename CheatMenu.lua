@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 00:54 sha 07b38b0d bytes 284373'):format('2026-10-02 00:54','07b38b0d',284373))
+print(('[CheatMenu] build 2026-10-02 01:05 sha 2aeb8947 bytes 287681'):format('2026-10-02 01:05','2aeb8947',287681))
 local F = {}
-F.VERSION = "v11.0.44"
+F.VERSION = "v11.0.46"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2388,6 +2388,18 @@ if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
+if T.Invisible and key == "Transparency" and v == 0 then
+KG.blocked4 = (KG.blocked4 or 0) + 1
+return nil
+end
+if T.InstantInteract and key == "HoldDuration" and type(v) == "number" and v > 0 then
+KG.blocked4 = (KG.blocked4 or 0) + 1
+return nil
+end
+if T.InstantInteract and key == "RequiresLineOfSight" and v == true then
+KG.blocked4 = (KG.blocked4 or 0) + 1
+return nil
+end
 if KG.blockSet[self] and T.SpeedGuard then
 if key == "Anchored" and v == true then
 KG.blocked3 = (KG.blocked3 or 0) + 1
@@ -2457,6 +2469,11 @@ else
 KG.spoofHum, KG.spoofWalk, KG.spoofJump = nil, nil, nil
 end
 end
+end
+local n4 = KG.blocked4 or 0
+if n4 ~= (KG.lastBlock4 or 0) then
+KG.lastBlock4 = n4
+F.Out("[屏蔽] 已挡下服务端把我改回去 ×" .. tostring(n4) .. " (把隐身改回可见 / 把瞬发交互改回长按)")
 end
 local n3 = KG.spoofHits or 0
 if n3 ~= (KG.lastSpoof or 0) then
@@ -3812,6 +3829,50 @@ F.EGG_KEY = { "egg", "brainrot", "pet", "animal", "creature", "mythic", "secret"
 "god", "divine", "legendary", "dragon", "unicorn", "crate", "chest" }
 F.EGG_TIER = { common = 1, uncommon = 1, rare = 2, epic = 3, legendary = 4, mythic = 5, secret = 5, god = 6, divine = 6 }
 F._eggs, F._eggPick = {}, 0
+F._eggIdx = nil
+F.EggAssetIndex = function()
+if F._eggIdx ~= nil then return F._eggIdx end
+local idx = nil
+local function tryMod(m)
+local ok, t = pcall(require, m)
+if not ok or type(t) ~= "table" then return nil end
+local dir = t.Directory or (type(t.Assets) == "table" and t.Assets.Directory) or nil
+if type(dir) ~= "table" then return nil end
+local out, n = {}, 0
+for k, v in pairs(dir) do
+if type(v) == "table" then
+local rar = v.Rarity
+out[tostring(k):gsub("^%s+", ""):gsub("%s+$", "")] = {
+tier = (type(rar) == "table" and tonumber(rar.RarityNumber)) or 0,
+drop = tonumber(v.DropWeight) or 1e9,
+display = (type(v.Egg) == "table" and v.Egg.DisplayName) or tostring(k),
+}
+n = n + 1
+end
+end
+return (n > 0) and out or nil
+end
+pcall(function()
+local RStorage = game:GetService("ReplicatedStorage")
+local roots = { RStorage, RStorage:FindFirstChild("Shared"), RStorage:FindFirstChild("Source"),
+RStorage:FindFirstChild("Assets"), RStorage:FindFirstChild("Configs") }
+for _, root in ipairs(roots) do
+if root then
+for _, m in ipairs(root:GetDescendants()) do
+if m:IsA("ModuleScript") and (m.Name == "Assets" or m.Name == "EggData"
+or m.Name == "Directory" or m.Name == "Configs") then
+idx = tryMod(m)
+if idx then break end
+end
+end
+end
+if idx then break end
+end
+end)
+F._eggIdx = idx or false
+if idx then F.Out("[偷蛋] 已读到游戏自己的资产表(按稀有度等级排序, 比体积猜测准)") end
+return F._eggIdx or nil
+end
 function F.EggScanMap()
 local ch = LP.Character
 local root = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -3849,8 +3910,26 @@ for w, t in pairs(F.EGG_TIER) do
 if low:find(w, 1, true) and t > tier then tier = t end
 end
 local dist = rp and (prim.Position - rp).Magnitude or 0
+local idx = F._eggIdx
+local gTier, gDrop, gName = nil, nil, nil
+if type(idx) == "table" then
+local hit2 = idx[o.Name] or idx[low]
+if not hit2 then
+for k, v in pairs(idx) do
+local kl = tostring(k):lower()
+if kl ~= "" and (low == kl or low:find(kl, 1, true)) then hit2 = v break end
+end
+end
+if hit2 then gTier, gDrop, gName = hit2.tier, hit2.drop, hit2.display end
+end
+local score
+if gTier then
+score = gTier * 1e7 - (gDrop or 1e9)
+else
+score = (val or 0) * 1000 + vol + tier * 5000
+end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
-tier = tier, dist = dist, score = (val or 0) * 1000 + vol + tier * 5000 }
+tier = gTier or tier, dist = dist, drop = gDrop, score = score }
 end
 end
 end
@@ -3861,13 +3940,21 @@ end
 function F.EggLabels()
 local out = {}
 for i, e in ipairs(F._eggs) do
-local tag = e.val and ("值 " .. tostring(math.floor(e.val))) or ("体积 " .. string.format("%.0f", e.vol))
+local tag
+if e.drop then
+tag = "稀有度 " .. tostring(e.tier) .. " · 掉落权重 " .. tostring(math.floor(e.drop))
+elseif e.val then
+tag = "值 " .. tostring(math.floor(e.val))
+else
+tag = "体积 " .. string.format("%.0f", e.vol)
+end
 out[i] = string.format("#%d %s (%s · %.0f格)", i, e.name, tag, e.dist)
 end
 if #out == 0 then out[1] = "(还没扫到)" end
 return out
 end
 function F.EggScanAndFill()
+pcall(F.EggAssetIndex)
 local n = F.EggScanMap()
 local labels = F.EggLabels()
 local okRef = pcall(function()
@@ -3931,6 +4018,27 @@ end
 function F.EggLock()
 local ch = LP.Character
 if not ch then F._egg, F._eggPart = nil, nil return end
+local toolEgg = nil
+pcall(function()
+for _, c in ipairs(ch:GetChildren()) do
+if c:IsA("Tool") then
+local it = nil
+pcall(function() it = c:GetAttribute("ItemType") end)
+local nm = tostring(c.Name):lower()
+if (type(it) == "string" and (it:lower():find("egg") or it:lower():find("asset")))
+or nm:find("egg") or nm:find("brainrot") then
+toolEgg = c
+end
+end
+end
+end)
+if toolEgg then
+local part = toolEgg:FindFirstChildWhichIsA("BasePart")
+F._egg, F._eggPart, F._eggHand, F._eggBack = toolEgg, (part or toolEgg), F._eggHand, 0
+F.Out("[蛋守卫] 锁定: 手里的工具 " .. tostring(toolEgg.Name)
+.. " (Tool + ItemType 识别, 同族脚本同款做法)")
+return
+end
 local carried = F.CarryFind()
 if #carried > 0 then
 local rec = carried[1]
