@@ -2612,3 +2612,16 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   约束在**每个物理步**都施力，比每帧写一次 CFrame 更能扛服务端抢回；只在「全合一 + 加速」同时开时生效。
 - ★ 门禁抓漏一次：跨作用域引用 `StealthGodEnable`（局部函数）⇒ `undef-global` ⇒ 11.0.35 作废，改挂 `F.` 后重发 11.0.36。
 
+## 五十、2026-10-01（11.0.37）：半年窗口扫描 + 抄下三条
+
+- 扫描 `pushed:>2026-04-01` 覆盖 14 类主题 ⇒ 26 个仓库，仍是"★ 低、质量稀"；有料的三份：
+  `mrneoner1337/Neo-Hub-Loader → neoloader.lua`(243KB)、`jungwei04-create/noelezhub.lua`、
+  `Mjajas/ANTII → antikick.lua`、`Clide888/Fly-bypasser`(只验证了 PlatformStand 是飞行基础)。
+- **抄①：驱动放 `RunService.Stepped`（物理步之前）** —— 两个合集都这么写；原先我们用 `RenderStepped`（渲染前），
+  改到 Stepped 后写速度/位置更贴物理，服务端校正窗口更小。（Stepped 签名是 `(time, deltaTime)`，别弄错参数位）
+- **抄②：飞行中把身体部件 `CanCollide=false`**（neoloader 每帧做），退出飞行**还原记录的原值**。
+  ★ 只对飞行做、**不对加速做**：加速是贴地跑，关碰撞会直接掉下去。
+- **抄③：Kick 三条路径都要堵**（antikick.lua 的骨架）：`:Kick()`(namecall) / `.Kick` 取值(index) / `.Kick` 赋值(newindex)
+  都用 `newcclosure` 包一层后替换。⛔ 重入红线：**钩子里只做纯判断 + 计数，绝不调用 `F.Out`**
+  （`F.Out` 里的 `string.gsub` 会走 namecall ⇒ 重入爆栈）；日志改由 Heartbeat 在钩子外每 2 秒报一次。
+
