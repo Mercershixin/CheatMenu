@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 18:05 sha ce4e24c6 bytes 223652'):format('2026-10-01 18:05','ce4e24c6',223652))
+print(('[CheatMenu] build 2026-10-01 18:15 sha b66606b6 bytes 226992'):format('2026-10-01 18:15','b66606b6',226992))
 local F = {}
-F.VERSION = "v11.0.0"
+F.VERSION = "v11.0.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3023,12 +3023,48 @@ F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
+function F.CarryingNow()
+local now = os.clock()
+if F._carryAt and now - F._carryAt < 0.25 then return F._carryHit end
+F._carryAt = now
+F._carryHit = false
+pcall(function()
+local ch = GC()
+if not ch then return end
+if ch:FindFirstChildOfClass("Tool") then F._carryHit = true return end
+for _, d in ipairs(ch:GetChildren()) do
+if d:IsA("Model") and d ~= ch then F._carryHit = true return end
+end
+end)
+return F._carryHit
+end
+function F.SpeedTarget()
+local want = tonumber(C.SpeedValue) or 60
+if T.CarryGuard and F.CarryingNow() then
+local cs = tonumber(C.CarrySpeed) or 30
+if cs > 0 and cs < want then want = cs end
+end
+return want
+end
+function F.SpeedRampTo(want, dt)
+if T.SpeedRamp == false then F._spdRamp = want return want end
+local cur = tonumber(F._spdRamp) or 0
+cur = cur + (want - cur) * math.min(1, (tonumber(dt) or 0.016) / 0.35)
+F._spdRamp = cur
+return cur
+end
+function F.SpeedAttrValue(sp)
+local cap = tonumber(C.SpeedAttrCap) or 0
+if cap > 0 and sp > cap then return cap end
+return sp
+end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
 if not hum then return end
-local v = tonumber(C.SpeedValue) or 60
-pcall(function() hum.WalkSpeed = v end)
+local v = F.SpeedTarget()
+F._spdRamp = v
+pcall(function() hum.WalkSpeed = F.SpeedAttrValue(v) end)
 end
 function F.SpeedRestore()
 local back = tonumber(F._preSpeed) or tonumber(F._orig and F._orig.walk)
@@ -3046,20 +3082,29 @@ local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
 T.SpeedOn = want
 if not want then
+F._spdRamp = nil
+F._carryOn = nil
 F.SpeedRestore()
 return
 end
-local _, hum = GC()
+local _, hum, root = GC()
 if hum then
 local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
+F._spdRamp = 0
+if root then
+pcall(function()
+local v0 = root.AssemblyLinearVelocity
+F._spdRamp = math.sqrt(v0.X * v0.X + v0.Z * v0.Z)
+end)
+end
 F.SpeedApply()
-F._spdConn = RS.RenderStepped:Connect(function()
+F._spdConn = RS.RenderStepped:Connect(function(dt)
 if not T.SpeedOn then F.SpeedSet(false) return end
 local _, h, r = GC()
 if not (h and r) then return end
-local sp = tonumber(C.SpeedValue) or 60
+local sp = F.SpeedRampTo(F.SpeedTarget(), dt)
 local cam = workspace.CurrentCamera
 local dir = Vector3.zero
 if cam then
@@ -3089,12 +3134,29 @@ end
 local now = os.clock()
 if now - (F._spdAt or 0) > 0.2 then
 F._spdAt = now
-if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
+local attr = F.SpeedAttrValue(sp)
+if math.abs((h.WalkSpeed or 0) - attr) > 0.5 then pcall(function() h.WalkSpeed = attr end) end
+if T.CarryGuard then
+local c = F.CarryingNow()
+if c and not F._carryOn then
+F._carryOn, F._carryT, F._carryPeak = true, now, 0
+F.Out("[搬运] 检测到手里有东西 ⇒ 加速已自动压到 " .. tostring(math.floor(sp)) .. " 格/秒(搬运保护)")
+elseif (not c) and F._carryOn then
+F._carryOn = nil
+F.Out(string.format("[搬运] 已放下/入栏 · 本次搬运 %.1f 秒 · 期间峰值速度 %.0f 格/秒",
+now - (F._carryT or now), F._carryPeak or 0))
+end
+if c then
+local hv = math.sqrt((r.AssemblyLinearVelocity.X ^ 2) + (r.AssemblyLinearVelocity.Z ^ 2))
+if hv > (F._carryPeak or 0) then F._carryPeak = hv end
+end
+end
 end
 end)
 end
 function F.FlyDestroy()
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
+F._flyRamp = nil
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
@@ -3113,6 +3175,7 @@ function F.FlySet(on)
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
+F._flyRamp = 0
 if T.InfiniteJump and F.JumpConn then
 pcall(F.InfiniteJumpDisable)
 F._flyDisabledInfJump = true
@@ -3190,7 +3253,13 @@ end
 if UIS.TouchEnabled and (os.clock() - (F._flyJumpAt or 0) < 0.15) then
 dir = dir + Vector3.new(0, 1, 0)
 end
-local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
+local fv = tonumber(C.FlyValue) or 60
+if T.SpeedRamp ~= false then
+local fcur = tonumber(F._flyRamp) or 0
+fv = fcur + (fv - fcur) * math.min(1, (tonumber(dt) or 0.016) / 0.35)
+end
+F._flyRamp = fv
+local vel = dir.Magnitude > 0 and (dir.Unit * fv) or Vector3.zero
 if F._flyAp then
 local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
 F._flyAp.Position = r.Position + vel * step
@@ -3332,6 +3401,10 @@ pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
 end
 local function TeleportToPlayer(target)
+if T.CarryGuard and F.CarryingNow() then
+F.Out("[传送] ⛔ 取消：手里拿着东西时传送会让这次搬运被判无效(东西会消失) —— 先放下/入栏")
+return
+end
 local _, _, root = GC()
 if not root or not target then return end
 local tchar = target.Character
@@ -3433,6 +3506,10 @@ return true
 end
 function F.WaypointGoto(name)
 local it = F.WaypointFind(name)
+if T.CarryGuard and F.CarryingNow() then
+F.Out("[点位] ⛔ 取消传送：你手上还拿着东西 —— 「瞬移后交付」这种搬运会被判无效(东西会消失)。先放下/入栏再传。")
+return false
+end
 if not it then
 F.Out("[点位] 没选中点位 —— 先在下面保存一个, 再在下拉里选它")
 return false
@@ -5553,6 +5630,10 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddToggle("SpeedRamp", { Title = "速度缓升(0.35 秒升到目标 · 去掉「一帧跳变」这个最扎眼的特征)", Default = true, Callback = function(v) T.SpeedRamp = v end })
+Tabs.Move:AddSlider("SpeedAttrCap", { Title = "写入 WalkSpeed 的上限(0=不限 · 调低=属性层更干净, 代价：地面速度也跟着降)", Min = 0, Max = 5000, Default = 0, Rounding = 0, Callback = function(v) C.SpeedAttrCap = v end })
+Tabs.Move:AddToggle("CarryGuard", { Title = "搬运保护(手里有东西 ⇒ 自动限速 + 禁止传送, 防「拿到手又消失」)", Default = false, Callback = function(v) T.CarryGuard = v end })
+Tabs.Move:AddSlider("CarrySpeed", { Title = "搬运时的速度(格/秒 · 越接近正常越不容易被判无效)", Min = 16, Max = 5000, Default = 30, Rounding = 0, Callback = function(v) C.CarrySpeed = v end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
