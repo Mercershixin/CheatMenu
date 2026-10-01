@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 18:45 sha 1593b7c3 bytes 238420'):format('2026-10-01 18:45','1593b7c3',238420))
+print(('[CheatMenu] build 2026-10-01 19:00 sha 1f171eaf bytes 234876'):format('2026-10-01 19:00','1f171eaf',234876))
 local F = {}
-F.VERSION = "v11.0.4"
+F.VERSION = "v11.0.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2940,13 +2940,65 @@ F._antiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-if root.AssemblyLinearVelocity.Magnitude > 200 then
-root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+local lim = math.max(200,
+(T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 1.5,
+(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 1.5)
+if root.AssemblyLinearVelocity.Magnitude > lim then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0) end)
+pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end)
 end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
+end
+F._steadyConn = nil
+local STEADY_STATES = { "Ragdoll", "FallingDown", "PlatformStanding" }
+function F.SteadyStates(on)
+local _, hum = GC()
+if not hum then return end
+for _, k in ipairs(STEADY_STATES) do
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], on and true or false) end)
+end
+end
+function F.SteadyDisable()
+if F._steadyConn then F._steadyConn:Disconnect() F._steadyConn = nil end
+pcall(function() F.SteadyStates(true) end)
+end
+function F.SteadyEnable()
+if F._steadyConn then return end
+F._steadyHits = 0
+pcall(function() F.SteadyStates(false) end)
+F._steadyConn = RS.Heartbeat:Connect(function()
+if not T.SteadyOn then F.SteadyDisable() return end
+local _, hum, root = GC()
+if not (hum and root) then return end
+if not hum.PlatformStand then pcall(function() F.SteadyStates(false) end) end
+local st = nil
+pcall(function() st = hum:GetState() end)
+if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+F._steadyHits = (F._steadyHits or 0) + 1
+end
+local v = root.AssemblyLinearVelocity
+local lim = math.max(200, (T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 1.5,
+(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 1.5)
+if v.Magnitude > lim then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 50), 0) end)
+pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
+F._steadyHits = (F._steadyHits or 0) + 1
+if os.clock() - (F._steadyLogAt or 0) > 3 then
+F._steadyLogAt = os.clock()
+F.Out(string.format("[稳身] 挡下异常速度 %.0f 格/秒(上限 %.0f) · 累计 %d 次",
+v.Magnitude, lim, F._steadyHits or 0))
+end
+end
+local okSt = (st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall
+or st == Enum.HumanoidStateType.Climbing or hum.PlatformStand)
+if v.Y > 90 and not okSt then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(v.X, 40, v.Z) end)
+end
+end)
 end
 F.HitboxBackup = {}
 F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
@@ -3157,84 +3209,11 @@ F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
-F.CARRY_KEYS = { "egg", "brainrot", "cash", "carry", "crate", "loot", "pet", "item", "drop", "box", "bag" }
-function F.CarryingNow()
-local now = os.clock()
-if F._carryAt and now - F._carryAt < 0.25 then return F._carryHit, F._carryWhat end
-F._carryAt = now
-F._carryHit, F._carryWhat = false, nil
-pcall(function()
-local ch = GC()
-if not ch then return end
-for _, d in ipairs(ch:GetChildren()) do
-if d:IsA("Model") and d ~= ch then
-F._carryHit, F._carryWhat = true, "挂在身上的 " .. tostring(d.Name)
-return
-end
-end
-local t = ch:FindFirstChildOfClass("Tool")
-if t then
-local n = tostring(t.Name):lower()
-for _, kw in ipairs(F.CARRY_KEYS) do
-if n:find(kw, 1, true) then
-F._carryHit, F._carryWhat = true, "手里的 " .. tostring(t.Name)
-return
-end
-end
-end
-end)
-return F._carryHit, F._carryWhat
-end
-function F.SpeedTarget()
-local want = tonumber(C.SpeedValue) or 60
-if T.CarryGuard and F.CarryingNow() then
-local cs = tonumber(C.CarrySpeed) or 30
-if cs > 0 and cs < want then want = cs end
-end
-return want
-end
-function F.SpeedRampTo(want, dt)
-if T.SpeedRamp == false then F._spdRamp = want return want end
-local cur = tonumber(F._spdRamp) or 0
-cur = cur + (want - cur) * math.min(1, (tonumber(dt) or 0.016) / 0.35)
-F._spdRamp = cur
-return cur
-end
-function F.SpeedAttrValue(sp)
-local cap = tonumber(C.SpeedAttrCap) or 0
-if cap > 0 and sp > cap then return cap end
-return sp
-end
-function F.SpeedExtraApply(v)
-if type(v) ~= "string" then return end
-local ramp, cap, carry, cs = false, 0, false, 30
-if v:find("强隐身", 1, true) then
-ramp, cap = true, 16
-elseif v:find("隐身", 1, true) then
-ramp, cap = true, 100
-end
-if v:find("搬运保护30", 1, true) then
-carry, cs = true, 30
-elseif v:find("搬运保护60", 1, true) then
-carry, cs = true, 60
-end
-T.SpeedRamp = ramp
-C.SpeedAttrCap = cap
-T.CarryGuard = carry
-if carry then C.CarrySpeed = cs end
-if T.SpeedOn then pcall(F.SpeedApply) end
-F.Out(string.format("[加速附加] %s ⇒ 缓升=%s · 属性上限=%s · 搬运保护=%s",
-v, ramp and "开" or "关", cap > 0 and tostring(cap) or "不限",
-carry and ("开(搬运速度 " .. tostring(cs) .. ")") or "关"))
-pcall(function() Fluent:Notify({ Title = "加速附加项", Content = v, Duration = 4 }) end)
-end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
 if not hum then return end
-local v = F.SpeedTarget()
-F._spdRamp = v
-pcall(function() hum.WalkSpeed = F.SpeedAttrValue(v) end)
+pcall(function() hum.WalkSpeed = tonumber(C.SpeedValue) or 60 end)
 end
 function F.SpeedRestore()
 local back = tonumber(F._preSpeed) or tonumber(F._orig and F._orig.walk)
@@ -3252,29 +3231,20 @@ local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
 T.SpeedOn = want
 if not want then
-F._spdRamp = nil
-F._carryOn = nil
 F.SpeedRestore()
 return
 end
-local _, hum, root = GC()
+local _, hum = GC()
 if hum then
 local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
-F._spdRamp = 0
-if root then
-pcall(function()
-local v0 = root.AssemblyLinearVelocity
-F._spdRamp = math.sqrt(v0.X * v0.X + v0.Z * v0.Z)
-end)
-end
 F.SpeedApply()
-F._spdConn = RS.RenderStepped:Connect(function(dt)
+F._spdConn = RS.RenderStepped:Connect(function()
 if not T.SpeedOn then F.SpeedSet(false) return end
 local _, h, r = GC()
 if not (h and r) then return end
-local sp = F.SpeedRampTo(F.SpeedTarget(), dt)
+local sp = tonumber(C.SpeedValue) or 60
 local cam = workspace.CurrentCamera
 local dir = Vector3.zero
 if cam then
@@ -3304,31 +3274,12 @@ end
 local now = os.clock()
 if now - (F._spdAt or 0) > 0.2 then
 F._spdAt = now
-local attr = F.SpeedAttrValue(sp)
-if math.abs((h.WalkSpeed or 0) - attr) > 0.5 then pcall(function() h.WalkSpeed = attr end) end
-if T.CarryGuard then
-local c, what = F.CarryingNow()
-if c and not F._carryOn then
-local cap = tonumber(C.CarrySpeed) or 30
-F._carryOn, F._carryT, F._carryPeak = true, now, 0
-F.Out("[搬运] 检测到" .. tostring(what or "搬运物") .. " ⇒ 加速已压到 " ..
-tostring(math.floor(cap)) .. " 格/秒(搬运保护)")
-elseif (not c) and F._carryOn then
-F._carryOn = nil
-F.Out(string.format("[搬运] 已放下/入栏 · 本次搬运 %.1f 秒 · 期间峰值速度 %.0f 格/秒",
-now - (F._carryT or now), F._carryPeak or 0))
-end
-if c then
-local hv = math.sqrt((r.AssemblyLinearVelocity.X ^ 2) + (r.AssemblyLinearVelocity.Z ^ 2))
-if hv > (F._carryPeak or 0) then F._carryPeak = hv end
-end
-end
+if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
 end
 end)
 end
 function F.FlyDestroy()
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
-F._flyRamp = nil
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
@@ -3347,7 +3298,6 @@ function F.FlySet(on)
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
-F._flyRamp = 0
 if T.InfiniteJump and F.JumpConn then
 pcall(F.InfiniteJumpDisable)
 F._flyDisabledInfJump = true
@@ -3425,13 +3375,7 @@ end
 if UIS.TouchEnabled and (os.clock() - (F._flyJumpAt or 0) < 0.15) then
 dir = dir + Vector3.new(0, 1, 0)
 end
-local fv = tonumber(C.FlyValue) or 60
-if T.SpeedRamp ~= false then
-local fcur = tonumber(F._flyRamp) or 0
-fv = fcur + (fv - fcur) * math.min(1, (tonumber(dt) or 0.016) / 0.35)
-end
-F._flyRamp = fv
-local vel = dir.Magnitude > 0 and (dir.Unit * fv) or Vector3.zero
+local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
 if F._flyAp then
 local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
 F._flyAp.Position = r.Position + vel * step
@@ -3573,10 +3517,6 @@ pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
 end
 local function TeleportToPlayer(target)
-if T.CarryGuard and F.CarryingNow() then
-F.Out("[传送] ⛔ 取消：手里拿着东西时传送会让这次搬运被判无效(东西会消失) —— 先放下/入栏")
-return
-end
 local _, _, root = GC()
 if not root or not target then return end
 local tchar = target.Character
@@ -3590,14 +3530,6 @@ function F.WaypointList()
 if type(C.Waypoints) ~= "table" then C.Waypoints = {} end
 return C.Waypoints
 end
-function F.WaypointNames()
-local out = {}
-for _, it in ipairs(F.WaypointList()) do
-if type(it) == "table" and it.name ~= nil then out[#out + 1] = tostring(it.name) end
-end
-if #out == 0 then out[1] = "(还没有点位)" end
-return out
-end
 function F.WaypointFind(name)
 if type(name) ~= "string" then return nil end
 for _, it in ipairs(F.WaypointList()) do
@@ -3605,37 +3537,33 @@ if type(it) == "table" and tostring(it.name) == name then return it end
 end
 return nil
 end
+F.WP_SLOTS = 5
 function F.WaypointRefreshUI()
 pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.WaypointSlot
-if o and o.SetValues then o:SetValues(F.WaypointNames()) end
+local lbl = { "①", "②", "③", "④", "⑤" }
+local lst = F.WaypointList()
+for i = 1, F.WP_SLOTS do
+local b = F._wpb and F._wpb[i]
+local it = lst[i]
+local txt
+if type(it) == "table" then
+txt = string.format("%s %s · (%.0f, %.0f) · 点=传送", lbl[i], tostring(it.name),
+tonumber(it.x) or 0, tonumber(it.z) or 0)
+else
+txt = string.format("%s 空位 · 点=存当前位置", lbl[i])
+end
+if b and b.SetTitle then pcall(function() b:SetTitle(txt) end) end
+end
 end)
 end
-function F.WaypointPicked()
-local v = nil
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.WaypointSlot
-v = o and o.Value
-end)
-if type(v) ~= "string" or v:sub(1, 1) == "(" then return nil end
-return v
+function F.WpClick(i)
+local it = F.WaypointList()[i]
+if type(it) == "table" then
+F.WaypointGoto(tostring(it.name))
+else
+F.WaypointSave(nil)
+F.WaypointRefreshUI()
 end
-function F.WaypointNameOpt()
-local v = nil
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.WaypointName
-v = o and o.Value
-end)
-if type(v) ~= "string" then return nil end
-v = tostring(v):gsub("^%s+", ""):gsub("%s+$", "")
-if v == "" then return nil end
-return v
-end
-function F.WaypointNameClear()
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.WaypointName
-if o and o.Set then o:Set("") end
-end)
 end
 function F.WaypointSave(name)
 local _, _, root = GC()
@@ -3692,10 +3620,6 @@ return n
 end
 function F.WaypointGoto(name)
 local it = F.WaypointFind(name)
-if T.CarryGuard and F.CarryingNow() then
-F.Out("[点位] ⛔ 取消传送：你手上还拿着东西 —— 「瞬移后交付」这种搬运会被判无效(东西会消失)。先放下/入栏再传。")
-return false
-end
 if not it then
 F.Out("[点位] 没选中点位 —— 先在下面保存一个, 再在下拉里选它")
 return false
@@ -3742,94 +3666,6 @@ F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
 end
 return n > 0
 end
-F._posGuardConn = nil
-function F.PosGuardDisable()
-if F._posGuardConn then F._posGuardConn:Disconnect() F._posGuardConn = nil end
-F._pgPos, F._pgBad = nil, 0
-end
-function F.PosGuardEnable()
-if F._posGuardConn then return end
-F._pgPos, F._pgBad, F._pgHits = nil, 0, 0
-F._posGuardConn = RS.Heartbeat:Connect(function(dt)
-if not T.PosGuard then F.PosGuardDisable() return end
-local _, _, root = GC()
-if not root then F._pgPos = nil return end
-local step = math.clamp(tonumber(dt) or 0.016, 0, 0.1)
-local v = root.AssemblyLinearVelocity
-if F._pgPos then
-local expect = F._pgPos + v * step
-local err = (root.Position - expect).Magnitude
-local th = math.max(tonumber(C.PosGuardJump) or 20, v.Magnitude * step * 1.6)
-if err > th then
-F._pgBad = F._pgBad + 1
-if F._pgBad <= 25 then
-pcall(function() root.CFrame = CFrame.new(F._pgPos) * (root.CFrame - root.CFrame.Position) end)
-pcall(function() root:SetNetworkOwner(LP) end)
-F._pgHits = (F._pgHits or 0) + 1
-local now = os.clock()
-if now - (F._pgLogAt or 0) > 2 then
-F._pgLogAt = now
-F.Out(string.format("[防护] 被外力挪了 %.0f 格 ⇒ 已拉回(累计 %d 次) · 来源多是击退/守卫抓取/服务端纠正",
-err, F._pgHits))
-end
-return
-end
-else
-F._pgBad = 0
-end
-end
-F._pgPos = root.Position
-end)
-end
-F.OUT_BLOCK_KEYS = { "dropcarriedegg", "dropegg", "dropbrainrot", "dropcash", "dropitem", "requestdrop", "carrydrop" }
-function F.OutBlockScan()
-local set, names = {}, {}
-pcall(function()
-for _, d in ipairs(F.walk(RStorage, 4000)) do
-local cn = tostring(d.ClassName)
-if cn:find("RemoteEvent", 1, true) or cn:find("RemoteFunction", 1, true) then
-local nm = tostring(d.Name):lower()
-for _, kw in ipairs(F.OUT_BLOCK_KEYS) do
-if nm:find(kw, 1, true) then
-set[d] = true
-names[#names + 1] = d.Name
-break
-end
-end
-end
-end
-end)
-F._outBlockSet = set
-if #names > 0 then
-local show = {}
-for i = 1, math.min(#names, 8) do show[i] = names[i] end
-F.Out("[防护] 出站拦截会吞掉这些请求: " .. table.concat(show, " · ") .. (#names > 8 and " …" or ""))
-else
-F.Out("[防护] 没在 ReplicatedStorage 里找到「放下/丢弃」类 remote —— 这个游戏可能不是这种机制")
-end
-return #names
-end
-function F.OutBlockEnable()
-if F._outBlockLayer then return end
-F.OutBlockScan()
-local got = F.MetaInstall("__namecall", game, "OutBlock", function(box)
-return function(self, ...)
-if getnamecallmethod() == "FireServer" and F._outBlockSet and F._outBlockSet[self] then
-return nil
-end
-return box.orig(self, ...)
-end
-end)
-F._outBlockLayer = got
-F.Out("[防护] 出站拦截: " .. (got and "已装上 —— 你自己的「放下/丢弃」请求会被吞掉(入栏/存放若也走同一个 remote 就会失效, 那说明要关掉它)"
-or "安装失败(该执行器不支持 hookmetamethod)"))
-end
-function F.OutBlockDisable()
-if not F._outBlockLayer then return end
-pcall(function() F.MetaUninstall("__namecall", "OutBlock") end)
-F._outBlockLayer = nil
-F.Out("[防护] 出站拦截: 已卸下")
-end
 local mutedVolumes = nil
 local function MuteEnable()
 mutedVolumes = {}
@@ -3848,18 +3684,31 @@ end
 mutedVolumes = nil
 end
 local savedLag = nil
+local LAG_FX = { "BlurEffect", "SunRaysEffect", "ColorCorrectionEffect", "BloomEffect", "DepthOfFieldEffect", "Atmosphere" }
 local function AntilagDisable()
 local L = game:GetService("Lighting")
 if not savedLag then return end
+pcall(function()
 L.GlobalShadows = savedLag.GlobalShadows L.FogEnd = savedLag.FogEnd L.FogStart = savedLag.FogStart
 L.Brightness = savedLag.Brightness L.ClockTime = savedLag.ClockTime L.Ambient = savedLag.Ambient
+end)
+pcall(function() settings().Rendering.QualityLevel = savedLag.quality end)
+for _, e in ipairs(savedLag.fx) do pcall(function() if e and e.Parent then e.Enabled = true end end) end
+for _, rec in ipairs(savedLag.pe) do
+if rec.obj and rec.obj.Parent then pcall(function() rec.obj.Lifetime = rec.life end) end
+end
+if F._lagAddConn then F._lagAddConn:Disconnect() F._lagAddConn = nil end
+F._lagAnimOn = false
 savedLag = nil
 end
 local function AntilagEnable()
 local L = game:GetService("Lighting")
 if not savedLag then
-savedLag = { GlobalShadows = L.GlobalShadows, FogEnd = L.FogEnd, FogStart = L.FogStart, Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient }
+savedLag = { GlobalShadows = L.GlobalShadows, FogEnd = L.FogEnd, FogStart = L.FogStart,
+Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient, fx = {}, pe = {} }
+pcall(function() savedLag.quality = settings().Rendering.QualityLevel end)
 end
+pcall(function() settings().Rendering.QualityLevel = 1 end)
 local Terrain = workspace:FindFirstChildWhichIsA("Terrain")
 if Terrain then
 pcall(function()
@@ -3870,9 +3719,74 @@ Terrain.WaterTransparency = 1
 end)
 end
 L.GlobalShadows = false L.FogEnd = 9e9 L.FogStart = 9e9 L.Brightness = 1
+local nfx, npe = 0, 0
+for _, d in ipairs(F.walk(workspace)) do
+local cn = tostring(d.ClassName)
+if cn == "ParticleEmitter" or cn == "Trail" then
+local life = nil
+pcall(function() life = d.Lifetime end)
+if life ~= nil and tostring(life) ~= "0 0" then
+savedLag.pe[#savedLag.pe + 1] = { obj = d, life = life }
+pcall(function() d.Lifetime = NumberRange.new(0) end)
+npe = npe + 1
+end
+elseif cn == "Smoke" or cn == "Fire" or cn == "Sparkles" then
+pcall(function() d.Enabled = false end)
+end
+end
+for _, d in ipairs(F.walk(L)) do
+local cn = tostring(d.ClassName)
+for _, k in ipairs(LAG_FX) do
+if cn == k then
+if d.Enabled then savedLag.fx[#savedLag.fx + 1] = d end
+pcall(function() d.Enabled = false end)
+nfx = nfx + 1
+break
+end
+end
+end
 for _, v in ipairs(F.walk(workspace)) do
 if v:IsA("BasePart") then pcall(function() v.CastShadow = false end) end
 end
+if not F._lagAddConn then
+F._lagAddConn = workspace.DescendantAdded:Connect(function(child)
+if not T.Antilag then return end
+pcall(function()
+if child:IsA("ParticleEmitter") or child:IsA("Trail") then
+child.Lifetime = NumberRange.new(0)
+elseif child:IsA("Smoke") or child:IsA("Fire") or child:IsA("Sparkles") then
+child.Enabled = false
+end
+end)
+end)
+end
+if not F._lagAnimOn then
+F._lagAnimOn = true
+task.spawn(function()
+while F._lagAnimOn and T.Antilag do
+task.wait(5)
+local n = 0
+pcall(function()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+local an = pl.Character:FindFirstChildOfClass("Animator")
+if an then
+pcall(function()
+for _, t in ipairs(an:GetPlayingAnimationTracks()) do
+pcall(function() t:Stop(0) end)
+n = n + 1
+end
+end)
+end
+end
+end
+end)
+if n > 0 then F._lagAnimN = (F._lagAnimN or 0) + n end
+end
+end)
+end
+F.Out(string.format("[降画质] 渲染质量档=%d · 关光效 %d 个(Bloom/阳光/景深/氛围) · 灭粒子特效 %d 个 · 关阴影 · 之后新出的特效也自动灭",
+1, nfx, npe))
 end
 local function FOVEnable() workspace.CurrentCamera.FieldOfView = C.FOV or 100 end
 local function FOVDisable()
@@ -3948,7 +3862,6 @@ if T.CharPersist == false then return end
 task.wait(0.2)
 F.RecordOriginals()
 pcall(F.FixCharCollision)
-F._pgPos = nil
 pcall(function()
 local _, _, hb = GC()
 if hb then F.HideBaseY = hb.Position.Y end
@@ -5631,7 +5544,6 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.PosGuardDisable, F.OutBlockDisable,
 F.SpeedRestore, F.FlySet,
 function()
 AC._neutFns = {}
@@ -5895,17 +5807,6 @@ T.HitboxExpand = v
 if F._cfgSyncing then return end
 if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
 end })
-Tabs.Combat:AddSection("防护(这类游戏通用)")
-Tabs.Combat:AddToggle("PosGuard", { Title = "位置守护(被击退 / 被打飞 / 被守卫搬走 ⇒ 立刻拉回原位)", Default = false, Callback = function(v)
-T.PosGuard = v
-if F._cfgSyncing then return end
-if v then F.PosGuardEnable() else F.PosGuardDisable() end
-end })
-Tabs.Combat:AddToggle("OutBlock", { Title = "出站拦截(吞掉自己的「放下/丢弃」请求 · 入栏若失效就关掉它)", Default = false, Callback = function(v)
-T.OutBlock = v
-if F._cfgSyncing then return end
-if v then F.OutBlockEnable() else F.OutBlockDisable() end
-end })
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
 T.KillAura = v
@@ -5920,15 +5821,12 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddDropdown("SpeedExtra", { Title = "附加项(选完自动复位 · 每项都会告诉你设了什么)", Values = {
-"不加料(纯加速)",
-"隐身(缓升 + 属性上限100)",
-"强隐身(缓升 + 属性上限16)",
-"搬运保护30(拿东西时自动降速)",
-"搬运保护60",
-"隐身 + 搬运保护30",
-"全部关掉",
-}, Default = "不加料(纯加速)", Callback = function(v) F.SpeedExtraApply(v) end })
+Tabs.Move:AddSection("防击倒 / 加速稳身")
+Tabs.Move:AddToggle("SteadyOn", { Title = "★ 稳身(加速时不倒 / 不被打飞 / 不会自己飞起来)", Default = false, Callback = function(v)
+T.SteadyOn = v
+if F._cfgSyncing then return end
+if v then F.SteadyEnable() else F.SteadyDisable() end
+end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
@@ -5970,10 +5868,12 @@ C.FOV = v
 if F._cfgSyncing then return end
 if T.FOV then FOVEnable() end
 end })
-Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v)
+Tabs.World:AddSlider("Zoom", { Title = "缩放距离(POV · 拖了立刻生效)", Min = 128, Max = 3000, Default = 400, Rounding = 0, Callback = function(v)
 C.Zoom = v
-if F._cfgSyncing then return end
-if T.Zoom then ZoomEnable() end
+pcall(function()
+LP.CameraMaxZoomDistance = v
+LP.CameraMinZoomDistance = 0.5
+end)
 end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
 T.Mute = v
@@ -6023,18 +5923,19 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
 end })
-Tabs.TP:AddSection("收藏点位(点一下就存 · 点一下就传)")
-Tabs.TP:AddInput("WaypointName", { Title = "点位名(可留空 ⇒ 自动命名 点位1/2/3)", Default = "" })
-Tabs.TP:AddButton({ Title = "★ 保存当前位置(一下就好)", Callback = function()
-if F.WaypointSave(F.WaypointNameOpt()) then F.WaypointNameClear() end
+Tabs.TP:AddSection("收藏点位(每个点位就是一个按钮: 点空位=存当前位置, 点有点位的=传过去)")
+F._wpb = {}
+for i = 1, F.WP_SLOTS do
+F._wpb[i] = Tabs.TP:AddButton({ Title = "点位" .. tostring(i) .. " · 空位(点=存当前位置)", Callback = function()
+F.WpClick(i)
 end })
-Tabs.TP:AddButton({ Title = "← 一键传回刚保存的位置", Callback = function() F.WaypointGoto(F.WpLastName()) end })
-Tabs.TP:AddDropdown("WaypointSlot", { Title = "其他点位(选中即传送 · 不用再点按钮)", Values = F.WaypointNames(), Default = nil, Callback = function(v)
-local it = F.WaypointFind(v)
-if it then F.WaypointGoto(v) end
+end
+Tabs.TP:AddButton({ Title = "删除最近保存的点位", Callback = function()
+F.WaypointDel(F.WpLastName())
+F.WaypointRefreshUI()
 end })
-Tabs.TP:AddButton({ Title = "删除最近保存的点位", Callback = function() F.WaypointDel(F.WpLastName()) end })
 Tabs.TP:AddButton({ Title = "清空所有点位", Callback = function() F.WpClear() end })
+F.WaypointRefreshUI()
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
