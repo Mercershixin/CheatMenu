@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:42 sha 0f9adcd3 bytes 249577'):format('2026-10-01 19:42','0f9adcd3',249577))
+print(('[CheatMenu] build 2026-10-01 19:48 sha abeb5234 bytes 250630'):format('2026-10-01 19:48','abeb5234',250630))
 local F = {}
-F.VERSION = "v11.0.13"
+F.VERSION = "v11.0.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2018,7 +2018,7 @@ if low:find(k, 1, true) then relevant = true break end
 end
 if relevant then break end
 end
-if relevant and not seen[nm .. srcv] then
+if relevant and not F.IsOursSrc(low) and not seen[nm .. srcv] then
 seen[nm .. srcv] = true
 local fp = F.FnFingerprint(obj)
 if #fp.nums > 0 or #fp.strs > 0 then
@@ -2135,6 +2135,15 @@ end
 F._scavenging = keep
 return n
 end
+function F.IsOursSrc(low)
+if type(low) ~= "string" then return false end
+return (low:find("cheatmenu", 1, true) ~= nil) or (low:find("fluent", 1, true) ~= nil)
+end
+function F.IsOurs(f)
+if type(f) ~= "function" then return false end
+local ok, s = pcall(dbgGetInfo, f, "s")
+return ok and F.IsOursSrc(tostring(s or ""):lower())
+end
 function F.AutoKeywords()
 local cnt, order = {}, {}
 local scanned = 0
@@ -2154,7 +2163,7 @@ local sus = false
 for i = 1, #F.SCAN_KW do
 if low:find(F.SCAN_KW[i], 1, true) then sus = true break end
 end
-if sus then
+if sus and not F.IsOursSrc(low) then
 for i = 1, #consts do
 local v = consts[i]
 if type(v) == "string" and #v >= 4 and #v <= 60
@@ -2204,6 +2213,7 @@ for i = 1, #names do if i <= 8 then want[#want + 1] = names[i] end end
 local hits = {}
 local function consider(f)
 if #hits >= 30 then return end
+if F.IsOurs(f) then return end
 local fp = F.FnFingerprint(f)
 if #fp.nums > 0 or #fp.strs > 0 then hits[#hits + 1] = { f = f, fp = fp } end
 end
@@ -2288,6 +2298,7 @@ F.Out("[自动分析]    想按建议改，点「按结果把速度压到安全�
 else
 F.Out("[自动分析] ④ 没提取到明确的「速度阈值」—— 可能判定在服务端，或函数被混淆得更彻底")
 end
+pcall(F.ScanClientChecks, true)
 F.Out("[自动分析] ══════ 分析结束 ══════")
 F._scavenging = keep
 return #tagged
@@ -2491,13 +2502,22 @@ fix()
 table.insert(F._flingConns, RS.Heartbeat:Connect(fix))
 table.insert(F._flingConns, LP.CharacterAdded:Connect(function() task.wait(0.3) fix() end))
 end
+F.BODY_PARTS = {
+["HumanoidRootPart"] = true, ["Head"] = true, ["Torso"] = true,
+["UpperTorso"] = true, ["LowerTorso"] = true,
+["Left Arm"] = true, ["Right Arm"] = true, ["Left Leg"] = true, ["Right Leg"] = true,
+["LeftUpperArm"] = true, ["LeftLowerArm"] = true, ["LeftHand"] = true,
+["RightUpperArm"] = true, ["RightLowerArm"] = true, ["RightHand"] = true,
+["LeftUpperLeg"] = true, ["LeftLowerLeg"] = true, ["LeftFoot"] = true,
+["RightUpperLeg"] = true, ["RightLowerLeg"] = true, ["RightFoot"] = true,
+}
 function F.FixCharCollision()
 local ch = GC()
-if not ch then return 0 end
+if not ch then F.Out("[修复] 现在没有角色, 稍后再点"); return 0 end
 local n = 0
 pcall(function()
 for _, p in ipairs(ch:GetDescendants()) do
-if p:IsA("BasePart") and not p:FindFirstAncestorWhichIsA("Accoutrement") then
+if p:IsA("BasePart") and F.BODY_PARTS[p.Name] == true then
 if p.CanCollide == false or p.CanTouch == false or p.CanQuery == false then
 p.CanCollide, p.CanTouch, p.CanQuery = true, true, true
 n = n + 1
@@ -2505,9 +2525,7 @@ end
 end
 end
 end)
-if n > 0 then
-F.Out("[修复] 已把 " .. tostring(n) .. " 个角色部件的 碰撞/触碰/可查询 恢复默认(true) —— 踩不上跑步机/道具没反应就靠这个")
-end
+F.Out("[修复] 已把 " .. tostring(n) .. " 个身体部位的 碰撞/触碰/可查询 恢复默认(true) —— 只动标准身体部件, 不碰挂件/工具/游戏加的部件")
 return n
 end
 function F.AntiFlingDisable()
@@ -3226,7 +3244,7 @@ local known = nw and nw:FindFirstChild("RE/RigSync/Refresh")
 if known then found[#found + 1] = known end
 end)
 pcall(function()
-for _, d in ipairs(F.walk(RStorage, 4000)) do
+for _, d in ipairs(F.walk(RStorage, 12000)) do
 local cn = tostring(d.ClassName)
 if cn == "RemoteEvent" or cn == "UnreliableRemoteEvent" then
 local nm = tostring(d.Name):lower()
@@ -4292,7 +4310,6 @@ function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
 F.RecordOriginals()
-pcall(F.FixCharCollision)
 pcall(function()
 local _, _, hb = GC()
 if hb then F.HideBaseY = hb.Position.Y end
@@ -6481,7 +6498,6 @@ if acName then AC.SetQuiet(true) end
 F.ProtectGui()
 pcall(F.GuiProtectionEnable)
 pcall(F.AuthorityGuard, true)
-pcall(F.FixCharCollision)
 Fluent:Notify({
 Title = "防护",
 Content = "已开启: 反甩(只清异常速度) + 界面保护 + 权限守卫 · 环境 " .. tostring(acName or "未识别")
@@ -6601,6 +6617,7 @@ Tabs.Setting:AddSection("系统")
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速; 探针会用异常位移)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
+Tabs.Setting:AddButton({ Title = "修复角色碰撞(踩不上跑步机 / 道具没反应 时点)", Callback = function() F.FixCharCollision() end })
 Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
 Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自动开, 点这个才开)", Callback = function() F.RestoreSavedFeatures() end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
@@ -6610,7 +6627,6 @@ T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
 F.RecordOriginals()
-pcall(F.FixCharCollision)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
 local _plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
