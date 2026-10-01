@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 00:41 sha 8a3fcc72 bytes 283778'):format('2026-10-02 00:41','8a3fcc72',283778))
+print(('[CheatMenu] build 2026-10-02 00:54 sha 07b38b0d bytes 284373'):format('2026-10-02 00:54','07b38b0d',284373))
 local F = {}
-F.VERSION = "v11.0.43"
+F.VERSION = "v11.0.44"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2227,11 +2227,29 @@ if not T.AntiAFK then F.AntiAFKDisable() return end
 local now = os.clock()
 if now - (F._afkAt or 0) < 5 then return end
 F._afkAt = now
+if now - (F._afkHbAt or 0) > 15 then
+F._afkHbAt = now
+pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
+end
+local _, hum, root = GC()
+if hum and root then
+if hum.MoveDirection.Magnitude > 0.05 then
+F._afkStillSince = nil
+else
+F._afkStillSince = F._afkStillSince or now
+if (now - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
+F._afkStillSince = now
+pcall(function() hum.Jump = true end)
+F.Out("[防挂机] 原地静止 90 秒 ⇒ 跳一下(原版逻辑)")
+end
+end
+end
 if now - (F._lastInputAt or now) < 60 then return end
 F.AntiAFKSim("超过 60 秒没有任何操作")
 end)
 F.Out("[防挂机] 已开: 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
-.. " + 游戏判你挂机时立刻模拟一次操作(按键/鼠标/跳) —— 不写你的任何属性")
+.. " + 游戏判挂机就立刻模拟一次操作(按键/鼠标/跳)"
+.. " + 每 15 秒写一次心跳属性 + 原地静止 90 秒自动跳(你原来那两条逻辑都在)")
 end
 function F.AntiAFKDisable()
 T.AntiAFK = false
