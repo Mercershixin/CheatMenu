@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 21:55 sha 5a8ea98f bytes 258049'):format('2026-10-01 21:55','5a8ea98f',258049))
+print(('[CheatMenu] build 2026-10-01 22:08 sha 95e8dccb bytes 259892'):format('2026-10-01 22:08','95e8dccb',259892))
 local F = {}
-F.VERSION = "v11.0.26"
+F.VERSION = "v11.0.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4964,6 +4964,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6117,7 +6118,10 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedRestore, F.FlySet, F.InstantInteractDisable,
+F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable,
+F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
+F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
@@ -6136,7 +6140,15 @@ if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchTo
 end,
 MuteDisable, FOVDisable, ZoomDisable,
 }
-for _, fn in ipairs(disables) do pcall(fn) end
+local okN, badN = 0, 0
+for i = 1, #disables do
+local fn = disables[i]
+if type(fn) == "function" then
+if pcall(fn) then okN = okN + 1 else badN = badN + 1 end
+end
+end
+F.Out("[卸载] 已执行 " .. tostring(okN) .. " 项关闭操作"
+.. (badN > 0 and (" · ⚠ 有 " .. tostring(badN) .. " 项报错(功能可能残留, 把日志发给维护者)") or " · 全部无报错"))
 pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() KG.rjConn = nil end end)
 pcall(function()
 if AC._stblOld and hookfunction then hookfunction(setmetatable, AC._stblOld) end
@@ -6148,6 +6160,7 @@ getgenv().CM_Window:Destroy()
 getgenv().CM_Window = nil
 end
 end)
+pcall(function() if Fluent and Fluent.GUI then Fluent.GUI:Destroy() end end)
 pcall(function()
 if getgenv and getgenv().CM_ToggleSG then
 pcall(function() getgenv().CM_ToggleSG:Destroy() end)
@@ -6161,6 +6174,26 @@ pcall(F.Conn.ClearAll)
 F.MetaLayers = {}
 F.MetaTargets = {}
 F.Out("[CheatMenu] 已干净卸载")
+pcall(function() F.LogFlush("卸载") end)
+task.delay(0.8, function()
+local alive = {}
+if F._aimConn then alive[#alive + 1] = "自瞄" end
+if F._spdConn then alive[#alive + 1] = "加速" end
+if F._flyConn then alive[#alive + 1] = "飞行" end
+if F.KillAuraConn then alive[#alive + 1] = "自动攻击" end
+if F.II_CONN or F.II_SHOWN then alive[#alive + 1] = "瞬间交互钩子" end
+if F._touchToggle and F._touchToggle.Parent then alive[#alive + 1] = "菜单悬浮按钮" end
+if #alive == 0 then
+F.Out("[卸载] 复核通过: 界面已清, 没有任何残留循环(自瞄/加速/飞行/自动攻击/交互钩子 全停)")
+else
+F.Out("[卸载] ⚠ 复核发现还在跑的: " .. table.concat(alive, " / ")
+.. " ⇒ 再点一次「卸载脚本」; 仍在的话请「重进一次游戏」并把这两行日志发给维护者")
+for _, fn in ipairs({ F.AimSet, F.KillAuraDisable, F.SpeedRestore, F.FlySet, F.InstantInteractDisable }) do
+if type(fn) == "function" then pcall(fn) end
+end
+end
+pcall(function() F.LogFlush("卸载复核") end)
+end)
 end
 function F.RestoreSavedFeatures()
 if not T then return end
@@ -6414,14 +6447,6 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-for _, preset in ipairs({ 100, 500, 1000 }) do
-Tabs.Move:AddButton({ Title = "一键设速度 = " .. tostring(preset), Callback = function()
-C.SpeedValue = preset
-pcall(function() if Fluent.Options.SpeedValue then Fluent.Options.SpeedValue:Set(preset) end end)
-if T.SpeedOn then F.SpeedApply() end
-F.Out("[加速] 速度已设为 " .. tostring(preset) .. " 格/秒")
-end })
-end
 Tabs.Move:AddToggle("SpeedAntiClip", { Title = "加速防穿墙(高速撞墙时不穿过去)", Description = "只在速度很高(这一帧要走 5 格以上)时才生效; 日常走动完全不受影响。嫌它拦你就关掉", Default = true, Callback = function(v)
 local changed = (T.SpeedAntiClip ~= nil) and (T.SpeedAntiClip ~= v)
 T.SpeedAntiClip = v
@@ -6786,7 +6811,13 @@ handles = {},
 }
 g[F.INSTANCE_KEY] = F._inst
 end)
-Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
+Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function()
+pcall(function() Fluent:Notify({ Title = "卸载", Content = "正在卸载…界面会消失; 日志里会有 [卸载] 复核结果", Duration = 2 }) end)
+task.defer(function()
+pcall(UnloadAll)
+pcall(function() F.LogFlush("卸载") end)
+end)
+end })
 T.CharPersist = true
 T.AutoSave = true
 F.CharPersistEnable()
