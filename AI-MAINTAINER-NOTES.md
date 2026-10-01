@@ -1904,3 +1904,52 @@ if root.AssemblyLinearVelocity.Magnitude > lim then 清水平速度 + 清零角�
 - 新增 **`← 一键传回刚保存的位置`**（`F.WpLastName()`）：保存完再点一下就回去 —— **两次点击、零列表**。
 - `WaypointSlot` 下拉保留但语义变为 **「选中即传送」**（不用再点第二个按钮）。
 - 「删除选中的」拆成 **`删除最近保存的点位`** + **`清空所有点位`**（`F.WpClear()`）。
+
+## 二十三、2026-10-01（下半场之十八）：删附加项/防护 + 点位按钮化 + 缩放·防击倒·稳身·降画质（11.0.5）
+
+### 23.1 用户裁定：**删**（原话"速度的附加项 让你删了 你耳朵聋吗"）
+
+★ **教训（流程）**：代码删了但**没发版**，用户那边看到的还是旧菜单 ⇒ 他会认为"你没删"。
+**"删掉"这类要求的完成定义 = 已发版 + 已推送**，本地改完不算。
+
+**本轮删除清单（0 残留，逐项 grep 复验）**：
+- 加速附加项全链：`SpeedExtra` 下拉 / `F.SpeedExtraApply` / `F.SpeedRampTo` / `F.SpeedAttrValue` /
+  `F.SpeedTarget` / `F.CarryingNow` / `F.CARRY_KEYS` / `T.SpeedRamp` / `C.SpeedAttrCap` / `T.CarryGuard` /
+  `C.CarrySpeed` / 加速循环里的搬运块 / 两处传送搬运拦截 / **飞行里那条 `T.SpeedRamp` 斜坡**（作者被删后它成了死分支）。
+  ⇒ 加速只剩 **总开关 + 速度滑块** 两个控件；`F.SpeedRestore`/`_preSpeed`（防改用户速度）**保留**。
+- 防护全链：`F.PosGuardEnable/Disable` / `F.OutBlockEnable/Disable/Scan` / `F.OUT_BLOCK_KEYS` /
+  战斗页那两个开关 / UnloadAll 两项 / `F._pgPos` 锚点。（用户："防护删除吧 没成功"）
+- 点位输入框 + 下拉 + `WaypointPicked/NameOpt/NameClear/Names` 一并删。
+
+### 23.2 用户要求：「点一下就传 = 直接做成按钮，不要列表、不要我自己写」
+
+⇒ 收藏点位改成 **5 个按钮的池**（`F._wpb[1..5]`）：
+**点空位 = 把当前位置存进去；点已有点位 = 传过去**（`F.WpClick(i)`），标题动态显示
+`① 点位1 · (x,z) · 点=传送` / `① 空位 · 点=存当前位置`（`F.WaypointRefreshUI()` 里用 `btn:SetTitle`）。
+★ `SetTitle` 是本项目**第一次依赖 Fluent 的按钮方法** —— 已从发布包的压缩源码里**确认它存在**
+（`z.SetTitle = A.SetTitle`、`function q.SetTitle(r,s) q.TitleLabel.Text=s end`），且调用处一律 `pcall` 包裹：
+拿不到就退回静态标题（按钮功能不受影响）。
+
+### 23.3 三个"没成功"的定因与修法
+
+| 现象 | 真根因 | 修法 |
+|---|---|---|
+| **POV 缩放距离拖了没反应** | 回调里 `if T.Zoom then ZoomEnable() end`，而 `T.Zoom` **根本不存在**（没有同名开关）⇒ 只有开「视角增强」时才顺带生效 | 滑块回调**直接写** `CameraMaxZoomDistance`（+`MinZoom=0.5`），量程 1000→**3000** |
+| **防击倒还限制我速度** | `if root.AssemblyLinearVelocity.Magnitude > 200 then 清零` —— **200 是绝对值**，用户加速设到 1094 就被当"击倒"清掉 | 阈值改成**随用户自己设的速度放大**：`max(200, 加速值×1.5, 飞行值×1.5)` |
+| **加速太快容易起飞/倒地** | 高速度下人类状态机进入 `Ragdoll`/`FallingDown`，且被坡面/台阶弹起来 | 新增 **「★ 稳身」**（移动页）：禁 `Ragdoll/FallingDown/PlatformStanding` + 倒下就 `GettingUp` + 超阈值清速度/角速度 + **未在跳跃/下落/攀爬时把上冲速度压到 40** |
+
+### 23.4 降画质重写 —— 按**公开作品**的做法（用户要求"看别人怎么禁的"）
+
+★ 参考：**YARHM**（`Joystickplays/psychic-octo-invention`，2026-08-31，其 "FPS Boost"）。
+另外用 GitHub API 搜了近 30 天的同类仓库（`steal a brainrot` 等），多为 ★0 的"keyless hub"引流页，
+**没有可直接借鉴的实现**；真正有料的是 YARHM 这种大脚本。
+
+`降画质` 现在做这些（都带还原）：
+1. ★ **`settings().Rendering.QualityLevel = 1`** —— 一刀压渲染档，**最有效**（我们以前没做）。
+2. ★ **关后处理光效**：`BlurEffect / SunRaysEffect / ColorCorrectionEffect / BloomEffect / DepthOfFieldEffect / Atmosphere` → `Enabled = false`（以前没做）。
+3. ★ **灭粒子/轨迹**：`ParticleEmitter/Trail` → `Lifetime = NumberRange.new(0)`（注意：是 Lifetime 归零，不是 Enabled）。
+4. **新出现的特效也灭**：`workspace.DescendantAdded` 里对上述类型即时处理（YARHM 同款；但我们**不做** YARHM 那种
+   销毁 `ForceField` —— 力场是**玩法**不是特效，销毁会让刚出生没保护）。
+5. **动画**：每 5s 停掉**别人身上**正在播的 `AnimationTrack`（省 CPU；自己不动）。
+6. 地形水面 + 全局阴影 + Fog + 全场景 `CastShadow=false`（原有）。
+★ 还原：QualityLevel 回存的原档、光效 `Enabled=true`、粒子 `Lifetime` 回存值（表格存对象+原值，**不往实例上写自定义属性** —— Roblox 实例不接受任意字段）。
