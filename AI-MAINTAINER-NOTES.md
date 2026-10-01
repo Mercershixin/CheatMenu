@@ -2019,3 +2019,42 @@ if hum and root and root.AssemblyLinearVelocity.Magnitude < 1 then hum.Jump = tr
 - 可选档位加"锁满血"（`hum.Health = hum.MaxHealth`）。
 - ⛔ **刻意不禁 `Dead` 状态**（公开作品禁了）：禁 Dead 容易卡在"半死"状态出不来，风险不划算 —— 已在代码里注明。
 - 开启时把**命中的远程名逐条打进日志**（透明，出问题好定位）。
+
+## 二十六、2026-10-01（下半场之二十一）：同类游戏全清单 + 「加速防拉回」（11.0.10）
+
+### 26.1 用户："我玩的不止这一个" ⇒ 把这个类型挖全
+
+**用 GitHub 代码搜索/仓库搜索实测**（都取近 30 天内有更新的）：
+
+| 游戏 | 证据（仓库/文件） | 关键点 |
+|---|---|---|
+| **Steal a Brainrot** | 用户日志 + `YARHM` + 多份社区脚本 | 守卫/偷蛋/跑步机/`RigSync`；本服判定在**服务端**（我们扫到 0 个客户端阈值） |
+| **Steal An Egg**（`games/107778070777162`） | `monthonsova/Steal-An-Egg`（含 13KB 的 `SpeedBypass.lua`）· `schoolediting06-glitch/steal-an-egg-script` ★14 · `copyboy/awesome-steal-an-egg`（资料清单） | ★ **同一套 `ReplicatedStorage.Packages.Networking["RE/RigSync/Refresh"]`**；★ **有客户端「防加速」脚本 `ObbyAntiTPClient`** |
+| **Break and Steal an Egg** | `xRoxyHubx/Break-and-Steal-an-Egg`(10-01) | 同族换皮 |
+| **Steal a Fish** | `ilyannilyann954-cell/steal-a-fish`(09-28) | 同族 |
+| **Steal a Fossil** | `davimax989-sketch/StealAFossil-Complete`(09-13) | 同族 |
+| **Steal a Wild** | `chenwenhan33-coder/Steal-a-wild`(09-27) | 同族 |
+
+**家族共性（这就是"通用"的依据）**：
+1. 同一套 `Packages.Networking` + `RE/RigSync/Refresh` 结构 ⇒ **我们的"关键词法"天生跨游戏**（`F.HIT_KEYS` / `F.TRAP_KEYS` 就是这么写的）。
+2. **检测是分层的**：有的在服务端（Brainrot 那局），有的在**客户端**（`ObbyAntiTPClient`）⇒ **客户端那部分可以中和**。
+3. 玩法一致：偷 → 搬 → 存；守卫 / 陷阱 / 被击退 三件套。
+
+### 26.2 ★★★ 修正一条旧结论：**"防加速/拉回"有一部分在客户端，是可以中和的**
+
+`monthonsova/Steal-An-Egg → EggESP/automation/SpeedBypass.lua` 的自述注释就是答案：
+> *"Destroying the LocalScript is not enough — its Heartbeat connection keeps running."*（光把 LocalScript 销毁没用，它的 Heartbeat 连接还在跑）
+
+它的三步做法（**本轮照抄**）：
+1. **找并按名清理**：`ObbyAntiTPClient` 这类 LocalScript → `Disabled = true` + `Destroy()`；
+2. ★ **断它的连接**：`getconnections(RS.Heartbeat)` → 按 `connection.Function` 的 **`debug.info(fn,"n"/"s")`** 判断是不是它 → `connection:Disable()`；
+3. ★ **中和它的函数**：`getgc(true)` 里挑 `debug.info(fn,"n")` ∈ `{check, lagback, punish, kill}` **且** 来源命中 `ObbyAntiTP` 的 → `hookfunction(fn, function() return nil end)`；
+4. 再挂 `PlayerScripts.DescendantAdded`，**游戏重新注入时再清一次**。
+
+### 26.3 本轮实现：`F.SpeedAntiTP*`（移动页「加速防拉回」，**独立开关、默认关**）
+
+- 关键词 `F.ANTITP_KEYS`（obbyantitp/antitp/antiteleport/antilagback/lagback/speedcheck/speedguard/anticheat/antiexploit/antifly/antimove/observe）
+  + 函数名表 `F.ANTITP_FNS`（check/lagback/punish/kill/report/flag）。
+- ★ **全可还原**：连接用 `Disable/Enable`、函数用 `hookfunction` 回填原函数 ⇒ 守"关闭必须还原"的规矩。
+- ⚠ 诚实边界：① 这是"改游戏"的手段 ⇒ 按用户红线**做成独立开关**、**不进主开关**；
+  ② 已被 `Destroy` 掉的检测脚本**要重进游戏才彻底恢复**；③ 服务端判定仍然拦不了。
