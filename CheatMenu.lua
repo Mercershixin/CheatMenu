@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:06 sha 3aaf7396 bytes 237171'):format('2026-10-01 19:06','3aaf7396',237171))
+print(('[CheatMenu] build 2026-10-01 19:12 sha 29764e48 bytes 237412'):format('2026-10-01 19:12','29764e48',237412))
 local F = {}
-F.VERSION = "v11.0.6"
+F.VERSION = "v11.0.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2449,7 +2449,13 @@ if (os.clock() - (F._afkAt or 0)) < 5 then return end
 F._afkAt = os.clock()
 pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
 local _, hum, root = GC()
-if hum and root and root.AssemblyLinearVelocity.Magnitude < 1 then hum.Jump = true end
+if not (hum and root) then return end
+if hum.MoveDirection.Magnitude > 0.05 then F._afkStillSince = nil return end
+F._afkStillSince = F._afkStillSince or os.clock()
+if (os.clock() - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
+F._afkStillSince = os.clock()
+pcall(function() hum.Jump = true end)
+end
 end)
 end
 function F.AntiAFKDisable()
