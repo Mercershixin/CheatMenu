@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 17:34 sha 775fb9f0 bytes 217820'):format('2026-10-01 17:34','775fb9f0',217820))
+print(('[CheatMenu] build 2026-10-01 17:58 sha 6128b8a6 bytes 218304'):format('2026-10-01 17:58','6128b8a6',218304))
 local F = {}
-F.VERSION = "v10.10.8"
+F.VERSION = "v10.10.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3019,24 +3019,40 @@ Fluent:Notify({ Title = "反拉回诊断", Content = table.concat(L, "\n"), Dura
 end
 end)
 end
-F._baseWalk = 16
+F._baseWalk = nil
+F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
 function F.SpeedApply()
+if not T.SpeedOn then return end
 local _, hum = GC()
 if not hum then return end
-local v = T.SpeedOn and (tonumber(C.SpeedValue) or 60) or F._baseWalk
+local v = tonumber(C.SpeedValue) or 60
 pcall(function() hum.WalkSpeed = v end)
 end
+function F.SpeedRestore()
+local back = tonumber(F._preSpeed) or tonumber(F._orig and F._orig.walk)
+F._preSpeed = nil
+if not back or back <= 0 then return false end
+local _, hum = GC()
+if not hum then return false end
+if math.abs((tonumber(hum.WalkSpeed) or back) - back) < 0.01 then return true end
+pcall(function() hum.WalkSpeed = back end)
+F.Out("[加速] 已还原你开加速之前的 WalkSpeed = " .. tostring(back))
+return true
+end
 function F.SpeedSet(on)
-T.SpeedOn = on and true or false
+local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
-if T.SpeedOn then
+T.SpeedOn = want
+if not want then
+F.SpeedRestore()
+return
+end
 local _, hum = GC()
 if hum then
-local bw = tonumber(hum.WalkSpeed) or 16
-if F._orig and F._orig.walk then F._baseWalk = F._orig.walk
-elseif bw > 0 and bw <= 32 then F._baseWalk = bw end
+local cur = tonumber(hum.WalkSpeed)
+if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
 F.SpeedApply()
 F._spdConn = RS.RenderStepped:Connect(function()
@@ -3076,9 +3092,6 @@ F._spdAt = now
 if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
 end
 end)
-else
-F.SpeedApply()
-end
 end
 function F.FlyDestroy()
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
@@ -3978,7 +3991,9 @@ pcall(function()
 local _, hum = GC()
 if hum then
 local o = F._orig or {}
-hum.WalkSpeed = o.walk or F._baseWalk or 16
+local bw = tonumber(F._preSpeed)
+F._preSpeed = nil
+if bw and bw > 0 then hum.WalkSpeed = bw end
 if o.jumpPower then hum.JumpPower = o.jumpPower end
 if o.jumpHeight then pcall(function() hum.JumpHeight = o.jumpHeight end) end
 local mh = hum.MaxHealth
@@ -5124,7 +5139,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedSet, F.FlySet,
+F.SpeedRestore, F.FlySet,
 function()
 AC._neutFns = {}
 F._dumpText = nil
