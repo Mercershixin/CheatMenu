@@ -2319,3 +2319,77 @@ end
 
 ★ 又一条与红线一致的范式：**开关的"存档值"和"是否武装"必须分开** —— `T.X` 可以按存档回填（UI 显示上次的样子），
 但真正生效只由"用户亲手点"那次 Callback 打开；热加载的 `CM_RELOAD_KEEP` 也因此不会把功能偷偷打开。
+
+## 三十九、2026-10-01（下半场之三十四）：瞬间交互 + 单实例守卫 + 防穿墙 + "5000 是不是真 5000"（11.0.24）
+
+用户四问：①偷蛋/类似的「瞬间交互」能不能做（只看一个功能一个按钮）②防多次加载导致多份 lua 并存
+③加速拉高会穿墙，修 ④加速/飞行的 5000 是不是真 5000，不是就修。
+
+### 39.1 公开项目调研（"都学下"的结论）
+
+GitHub 代码搜索 `fireproximityprompt` / `PromptShown` / `HoldDuration`，最完整的一份是
+`ltseverydayyou/uuuuuuu → functionFixer.lua`（它是**把 `fireproximityprompt` 整个重写**的实现）。学到的要点：
+
+1. **正确做法是"快照 → 改 → 用完还原"**：进 `hold` 前把 `Enabled / HoldDuration / RequiresLineOfSight /
+   MaxActivationDistance / Exclusivity` 全存下来，`finish()` 里逐个还原（和我们"还原到开之前原值"的铁律一致）。
+2. 生效时的四个改写：`HoldDuration = 0`、`RequiresLineOfSight = false`、
+   `MaxActivationDistance = 1e9`、`Exclusivity = AlwaysShow`、`Enabled = true`。
+3. **触发手段不是点按钮，是** `pp:InputHoldBegin()` → `RenderStepped:Wait()` → `pp:InputHoldEnd()`
+   （中间按 hold 时长等），**并且**远距离/看不见的 prompt 客户端根本不展示 ⇒ 它做了 **proxy**：
+   在自己相机前放一个"假 prompt"，把真 prompt 的 `Triggered/TriggerEnded` 接到假的上，
+   等 `PromptShown` 确认假 prompt 已展示后再 InputHold，靠假 prompt 把触发转发出去。
+4. 细节：`inFlight` 防重入；多个 prompt 用 `stagger`(默认 0.02s) 错开，避免同一帧炸一堆 remote。
+
+**我们的实现（简化版，够用且安全）**：只做 1~2 两条 —— 全量扫 `workspace` 的 `ProximityPrompt`，
+快照后把 `HoldDuration=0`、`RequiresLineOfSight=false`；挂 `workspace.DescendantAdded`（新实例自动生效）
+＋ `ProximityPromptService.PromptShown`（保险）；关闭时**逐个还原快照**。
+★ 诚实边界（写进日志/文档，不吹）：**距离限制是服务端在做**（服务端那份 prompt 的
+`MaxActivationDistance` 我们改不到），所以"隔着半张地图偷"不保证；"隔墙 + 不用长按"是本实现能给的。
+★ 没做 proxy 的理由：proxy 要伪造 prompt 并转发 `Triggered`，属于"替玩家发交互包"，风险（被判定脚本行为）明显更高，
+用户只要"一个功能一个按钮"，不值得上。
+
+### 39.2 防重复加载（多个 lua 并存）
+
+- 机制：`getgenv().CM_Instance = { version, unload, gui, handles }`。
+  **加载时先 `F.KillPreviousInstance()`**（在 `F.Out` 之后、Fluent 之前）：取出旧句柄 → 调它的 `unload()`
+  （就是 `UnloadAll`）→ 销毁旧 GUI 与 `CM_Window / CM_ToggleSG / CM_TogglePolish` 残留 → 日志说明。
+- `UnloadAll` 会把 `CM_Instance` **注销掉**（且只在"还是我这一份"时注销），所以热加载路径
+  （先 UnloadAll 再 `pcall(chunk)`）不会自己打自己。
+- 旧版实例没有句柄（本条是第一个带守卫的版本）时：`KillPrevious` 什么也找不到，
+  这时只能靠"重进游戏"清干净 —— 日志会**明说**这一点，不含糊。
+
+### 39.3 加速"拉高就穿墙"的原因与修法
+
+- 原因：速度驱动下，**物理步是 240Hz**，5000 格/秒 ⇒ 每个物理步 20.8 格；而墙常常只有 1 格厚
+  ⇒ **一个物理步直接从墙里穿过去**（离散碰撞，无 CCD）。
+- 修法（11.0.24）：每帧先算"这一帧要走的距离" `want = speed * dt`，用 **射线**量前方可用距离 `allow`
+  （`F.SweepAhead`：从 root 中心水平射线，过滤自己角色，可用距离 = 命中距离 − 角色半径 2.2），
+  `allow < want` 时**按比例把本帧速度压到"刚好停在障碍前"**（scale = allow/want）。
+  ⇒ 开阔地**速度不变**（不是隐性限速），贴墙/对着墙时停住，不再穿过去。
+- ⛔ 没做的事（怕副作用）：没改成"位置分步推进"（那要每帧 PivotTo 分步 + 射线，会和服务端复制/角色控制器打架，
+  且 5000 格/秒 ÷ 0.1s = 500 格 ≫ 哨兵里的 `MaxTeleportDistance=45/0.1s`，等于自找拉回）。
+  若用户仍反馈"薄墙偶尔穿"，再上分步位移，并同时拉高"防拉回"档。
+
+### 39.4 "5000 是真 5000 吗"——查证与修复
+
+- **先证伪了宣传**：滑块 `Max = 5000` 而标题写着"上不封顶" ⇒ 假的。11.0.24 把上限提到 **20000**，
+  标题改成"最高 20000"（诚实）。
+- **飞行**的真实问题：原来用 `AlignPosition` 去"追"目标点，`Responsiveness = 40` ⇒ 有**追踪滞后**，
+  设 5000 实际会低一截。修法：给 `AlignPosition` 加 **`RigidityEnabled = true`**
+  （刚性模式：不做弹簧追赶，直接按目标定位）⇒ 每帧位移严格等于 `vel * dt`，设定值就是真速度。
+- **加速**的真实问题：速度驱动本身是"真"的（每帧把 `AssemblyLinearVelocity` 重设为设定值），
+  但**撞墙/贴障碍/地形摩擦**会让实测掉下来，用户感受就是"不到 5000"。
+- **给硬证据**：新增 **速度自检探针** `F.SpeedProbe`（加速=水平 2D 位移；飞行=3D 位移），
+  每 0.6s 采样一次、最多 6s 报一条：
+  `[速度自检·加速] 设定 5000 格/秒 → 实测 4987 格/秒 (100%) · 达标(设定值就是真实速度)`，
+  中间态写"多半是撞墙/贴障碍"，偏低写"引擎物理或服务端在压速度, 不是脚本虚标"。
+  ⇒ 以后"是不是真 5000"**不用猜，看日志**。
+- ★ 风险提示（也写进日志语境）：> 1000 格/秒时，位移/速度都会撞上服务端的"传送/异常速度"判定
+  （哨兵 `MaxTeleportDistance = 50 studs/0.1s`）⇒ 被拉回是规则问题，不是脚本没生效。
+
+### 39.5 用户遇到"加速没到 5000 / 被拉回"时，按这个顺序看
+
+1. 日志找 `[速度自检·加速]` / `[速度自检·飞行]`：**实测百分比**就是答案（达标=设定值真实）。
+2. 若实测中间态：换开阔地重测（贴墙/斜坡/跑步机会压低实测）。
+3. 若实测偏低：那是引擎/服务端在压 ⇒ 打开「加速防拉回」档，或把值降到 1000 以内。
+4. 若日志出现 `[加速] 前方 x 格就是障碍` 且次数很多：你在对着墙跑，属正常防穿墙行为。
