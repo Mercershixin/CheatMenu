@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 14:30 sha 8748382a bytes 270026'):format('2026-10-01 14:30','8748382a',270026))
+print(('[CheatMenu] build 2026-10-01 14:53 sha 075b3cf3 bytes 272765'):format('2026-10-01 14:53','075b3cf3',272765))
 local F = {}
-F.VERSION = "v10.10.1"
+F.VERSION = "v10.10.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -420,6 +420,11 @@ if type(mt) == "table" and mt[slot] == rec.wrapper then
 local ok = pcall(function() hookmetamethod(rec.target, slot, rec.box.orig) end)
 return ok
 end
+for _, other in pairs(bucket) do
+if other.alive and other.box and other.box.orig == rec.wrapper then
+other.box.orig = rec.box.orig
+end
+end
 return true
 end
 function F.MetaActive(slot, id)
@@ -431,10 +436,6 @@ if AC._nc then return true end
 local got = F.MetaInstall("__namecall", game, "AC", function(box)
 return function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
-if method == "Kick" and rawequal(self, LP) and T.NamecallHook then
-F.Out("[CheatMenu] 拦下 Kick: " .. tostring(select(1, ...)))
-return nil
-end
 if (method == "FireServer" or method == "InvokeServer") and T.RemoteBlock and not checkcaller() then
 local name = tostring(self and self.Name or ""):lower()
 for _, kw in ipairs(AC.BLOCK_KEYS) do
@@ -631,13 +632,6 @@ elseif k == "JumpHeight" then
 if T.InfiniteJump then v = 7.5 end
 end
 end
-end
-if k == "Parent" and (T.ACBypass or T.PropertyLock) then
-local isForce = false
-pcall(function()
-isForce = t:IsA("BodyVelocity") or t:IsA("BodyGyro") or t:IsA("BodyForce")
-or t:IsA("BodyThrust") or t:IsA("BodyAngularVelocity")
-end)
 end
 end
 end
@@ -929,7 +923,6 @@ end
 F.GC_SPOOF_KEYS = { "info", "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
 F._scavenging = false
 F._debugHookOn = false
-F._stealthRestore = {}
 F._stealthHooked = setmetatable({}, { __mode = "k" })
 function F.getGameEnv()
 if type(getrenv) ~= "function" then return nil end
@@ -961,7 +954,6 @@ local ok, res = pcall(function() return hookfunction(obj, newcclosure(wrapper)) 
 if ok and type(res) == "function" then
 box.orig = res
 F._stealthHooked[obj] = true
-F._stealthRestore[#F._stealthRestore + 1] = { obj = obj, orig = res }
 return res
 end
 return nil
@@ -2810,7 +2802,7 @@ table.sort(n)
 if #n == 0 then n[1] = "(无人)" end
 return n
 end
-F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "BlacklistTarget" }
+F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "BlacklistTarget", "FlingTarget" }
 function F.RefreshPlayerDropdowns()
 local names = F.PlayerNames()
 pcall(function()
@@ -3241,6 +3233,14 @@ F.SkeletonDisable()
 if T.ESPSkeleton then F.SkeletonEnable() end
 end)
 end
+if not F._skelRConn then
+F._skelRConn = Players.PlayerRemoving:Connect(function(pl)
+if F._skelPlConns and F._skelPlConns[pl] then
+pcall(function() F._skelPlConns[pl]:Disconnect() end)
+F._skelPlConns[pl] = nil
+end
+end)
+end
 local Dw = AC.cap("Drawing")
 if type(Dw) == "table" and type(Dw.new) == "function" then
 local okAll = pcall(function()
@@ -3367,6 +3367,7 @@ F._skeletonLines = {}
 if F._skeletonGui then F._skeletonGui:Destroy() F._skeletonGui = nil end
 for pl, c in pairs(F._skelPlConns or {}) do pcall(function() c:Disconnect() end) end
 F._skelPlConns = {}
+if F._skelRConn then pcall(function() F._skelRConn:Disconnect() end) F._skelRConn = nil end
 end
 F._arrowBbs = {}
 F._arrowConn = nil
@@ -3538,6 +3539,13 @@ if not F._chamsPlConns[pl] then
 F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
 end
 end
+if F._chamsRConn then F._chamsRConn:Disconnect() end
+F._chamsRConn = Players.PlayerRemoving:Connect(function(pl)
+if F._chamsPlConns and F._chamsPlConns[pl] then
+pcall(function() F._chamsPlConns[pl]:Disconnect() end)
+F._chamsPlConns[pl] = nil
+end
+end)
 F._chamsLoop = task.spawn(function()
 while T.Chams and myGen == F._chamsGen do task.wait(1) applyAll() end
 if myGen == F._chamsGen then F._chamsLoop = nil end
@@ -3549,6 +3557,7 @@ if F._chamsPlConns then
 for pl, c in pairs(F._chamsPlConns) do pcall(function() c:Disconnect() end) end
 F._chamsPlConns = {}
 end
+if F._chamsRConn then pcall(function() F._chamsRConn:Disconnect() end) F._chamsRConn = nil end
 if F._chamsBackup then
 for part, bak in pairs(F._chamsBackup) do
 pcall(function() part.Material = bak.Material part.Color = bak.Color end)
@@ -3882,6 +3891,7 @@ end
 else
 L[#L + 1] = "② 所有权本来就在本地 ✓"
 end
+F.Out("[诊断] ⚠ 探针会向服务端发送约 120 次强位移 —— AuthorityMode=Server 时可能被记录/踢")
 local step = F.LIMITS.PROBE_STEP
 local r = F.SrvProbe(step, 2)
 if not r then
@@ -4879,6 +4889,14 @@ end
 function F.BodyHLEnable()
 for _, pl in ipairs(Players:GetPlayers()) do F.BodyHLAdd(pl) end
 F.BodyHLRefresh()
+if not F._hlRConn then
+F._hlRConn = Players.PlayerRemoving:Connect(function(pl)
+if F._hlObjs[pl] then
+pcall(function() F._hlObjs[pl]:Destroy() end)
+F._hlObjs[pl] = nil
+end
+end)
+end
 if not F._hlAdded then
 F._hlAdded = Players.PlayerAdded:Connect(function(pl)
 pl.CharacterAdded:Connect(function() task.wait(0.4) F.BodyHLAdd(pl) F.BodyHLRefresh() end)
@@ -4900,6 +4918,7 @@ if F._hlAdded then F._hlAdded:Disconnect() F._hlAdded = nil end
 if F._hlLoop then F._hlLoop:Disconnect() F._hlLoop = nil end
 for _, hl in pairs(F._hlObjs) do pcall(function() hl:Destroy() end) end
 F._hlObjs = {}
+if F._hlRConn then F._hlRConn:Disconnect() F._hlRConn = nil end
 end
 function F.SyncMoveUI()
 pcall(function()
@@ -4938,6 +4957,24 @@ if not body then
 F.Out("[热加载] ⚠ 所有源都取不到 —— 旧实例已卸载, 请重新执行一次 loader")
 return
 end
+local bad = nil
+if #body < 100000 then
+bad = "长度不足"
+elseif not (body:find("F.VERSION", 1, true) and body:find("F.REMOTE_URLS", 1, true)
+and body:find("F.UnifiedACPass", 1, true) and body:find("CheatMenu", 1, true)) then
+bad = "缺少关键标识"
+else
+local head = string.lower(body:sub(1, 512))
+if head:find("<!doctype", 1, true) or head:find("<html", 1, true) then
+bad = "拿到的是网页不是脚本"
+elseif not body:find('F%.VERSION%s*=%s*"v10%.') then
+bad = "版本行格式不对"
+end
+end
+if bad then
+F.Out("[热加载] ⚠ 远程内容未通过自检(" .. bad .. "), 已中止 —— 没有执行任何远程代码")
+return
+end
 local fnc = loadstring or load
 local chunk, err = fnc(body, "@CheatMenu_hot")
 if not chunk then
@@ -4945,7 +4982,7 @@ F.Out("[热加载] ⚠ 新版本编译失败: " .. tostring(err))
 return
 end
 pcall(function() if writefile then writefile("CheatMenu_main.lua", body) end end)
-F.Out("[热加载] 已取到 " .. tostring(#body) .. " 字节, 正在执行新实例…")
+F.Out("[热加载] 已取到 " .. tostring(#body) .. " 字节, 来源已通过内容自检, 正在执行新实例…")
 pcall(chunk)
 end)
 end
@@ -5236,7 +5273,7 @@ function F.KeybindDisable()
 if F._keybindConn then F._keybindConn:Disconnect() F._keybindConn = nil end
 end
 F._panicConn = nil
-F.PANIC_KEEP = { StealthMode = true, CharPersist = true, AutoSave = true, GuiProtect = true, PanicKey = true }
+F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true, PanicKey = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -5660,7 +5697,7 @@ if obj:IsA("GuiButton") and obj.Visible then
 local hit = false
 if obj:IsA("TextButton") and multiplierFromText(obj.Text) then hit = true end
 if not hit then
-for _, child in ipairs(F.walk(obj)) do
+for _, child in ipairs(F.walk(obj, 50)) do
 if (child:IsA("TextLabel") or child:IsA("TextButton")) and multiplierFromText(child.Text) then
 hit = true break
 end
@@ -6511,9 +6548,11 @@ function F.ChatTranslateEnable()
 if F._chatTransHooked then return end
 local tcs = game:GetService("TextChatService")
 if not tcs then F.Out("[翻译] 本游戏没有 TextChatService, 聊天翻译不可用") return end
-F._oldOnIncoming = tcs.OnIncomingMessage
+local prevIn = tcs.OnIncomingMessage
+if not (type(prevIn) == "function" and prevIn._cmOwner == "CM") then F._oldOnIncoming = prevIn end
+local hookedIn
 local ok = pcall(function()
-tcs.OnIncomingMessage = function(message)
+hookedIn = function(message)
 local props = nil
 if F._oldOnIncoming then
 local ok2, p = pcall(F._oldOnIncoming, message)
@@ -6531,6 +6570,9 @@ end
 end
 return props
 end
+hookedIn._cmOwner = "CM"
+F._chatTransHookFn = hookedIn
+tcs.OnIncomingMessage = hookedIn
 end)
 if ok then F._chatTransHooked = true F.Out("[翻译] 公屏聊天翻译已开启") end
 end
@@ -6538,7 +6580,9 @@ function F.ChatTranslateDisable()
 if not F._chatTransHooked then return end
 pcall(function()
 local tcs = game:GetService("TextChatService")
-if tcs then tcs.OnIncomingMessage = F._oldOnIncoming end
+if tcs and tcs.OnIncomingMessage and tcs.OnIncomingMessage._cmOwner == "CM" then
+tcs.OnIncomingMessage = F._oldOnIncoming
+end
 end)
 F._chatTransHooked = false
 end
@@ -6546,9 +6590,11 @@ function F.BubbleTranslateEnable()
 if F._bubbleTransHooked then return end
 local tcs = game:GetService("TextChatService")
 if not tcs then return end
-F._oldOnBubble = tcs.OnBubbleAdded
+local prevBb = tcs.OnBubbleAdded
+if not (type(prevBb) == "function" and prevBb._cmOwner == "CM") then F._oldOnBubble = prevBb end
+local hookedBb
 local ok = pcall(function()
-tcs.OnBubbleAdded = function(message, adornee)
+hookedBb = function(message, adornee)
 local props = nil
 if F._oldOnBubble then
 local ok2, p = pcall(F._oldOnBubble, message, adornee)
@@ -6566,6 +6612,9 @@ end
 end
 return props
 end
+hookedBb._cmOwner = "CM"
+F._bubbleTransHookFn = hookedBb
+tcs.OnBubbleAdded = hookedBb
 end)
 if ok then F._bubbleTransHooked = true F.Out("[翻译] 气泡翻译已开启") end
 end
@@ -6573,7 +6622,9 @@ function F.BubbleTranslateDisable()
 if not F._bubbleTransHooked then return end
 pcall(function()
 local tcs = game:GetService("TextChatService")
-if tcs then tcs.OnBubbleAdded = F._oldOnBubble end
+if tcs and tcs.OnBubbleAdded and tcs.OnBubbleAdded._cmOwner == "CM" then
+tcs.OnBubbleAdded = F._oldOnBubble
+end
 end)
 F._bubbleTransHooked = false
 end
@@ -6601,7 +6652,7 @@ F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateD
 F.NoClipDisable, ESPDisable, AutoInteractDisable, F.SrvHoldDisable,
 F.SpeedSet, F.FlySet,
 function()
-F._neutFns = {}
+AC._neutFns = {}
 F._magnetList = nil
 F._lastDiff = nil
 F._dumpText = nil
@@ -6835,6 +6886,22 @@ end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
+Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(冻结/隐藏/拉过来共用)", Values = F.PlayerNames(), Default = nil })
+Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结目标(不能移动)", Default = false, Callback = function(v)
+T.FreezePlayer = v
+if F._cfgSyncing then return end
+if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end
+end })
+Tabs.Combat:AddToggle("HidePlayer", { Title = "隐藏目标(只本地)", Default = false, Callback = function(v)
+T.HidePlayer = v
+if F._cfgSyncing then return end
+if v then F.HidePlayerEnable() else F.HidePlayerDisable() end
+end })
+Tabs.Combat:AddToggle("BringPlayer", { Title = "把目标拉过来", Default = false, Callback = function(v)
+T.BringPlayer = v
+if F._cfgSyncing then return end
+if v then F.BringPlayerEnable() else F.BringPlayerDisable() end
+end })
 Tabs.Combat:AddButton({ Title = "清除优先级/黑名单", Callback = function() C.PriorityTargets = {} C.Blacklist = {} end })
 Tabs.Combat:AddSection("生存 / 防御")
 Tabs.Combat:AddDropdown("GodMode", { Title = "生命保护", Values = { "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血)" },
@@ -7186,7 +7253,7 @@ Duration = 10,
 end)
 end })
 Tabs.Setting:AddSection("系统")
-Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
+Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速; 探针会用异常位移)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
 Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
