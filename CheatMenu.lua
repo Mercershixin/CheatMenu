@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 21:10 sha a2a68437 bytes 248798'):format('2026-10-01 21:10','a2a68437',248798))
+print(('[CheatMenu] build 2026-10-01 21:28 sha 8ef7bbff bytes 255442'):format('2026-10-01 21:28','8ef7bbff',255442))
 local F = {}
-F.VERSION = "v11.0.23"
+F.VERSION = "v11.0.24"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -85,6 +85,34 @@ pcall(F.LogFlush, "自动")
 end
 end
 F.Out("[CheatMenu] ===== 加载开始 · " .. F.VERSION .. " =====")
+F.INSTANCE_KEY = "CM_Instance"
+function F.KillPreviousInstance()
+local g = getgenv and getgenv()
+if type(g) ~= "table" then return end
+local prev = g[F.INSTANCE_KEY]
+if type(prev) ~= "table" then return end
+g[F.INSTANCE_KEY] = nil
+local ver = tostring(prev.version or "?")
+local okUn = false
+if type(prev.unload) == "function" then okUn = pcall(prev.unload) end
+if type(prev.gui) == "table" then pcall(function() prev.gui:Destroy() end) end
+if type(prev.handles) == "table" then
+for _, h in ipairs(prev.handles) do
+if typeof(h) == "Instance" and h.Parent then pcall(function() h:Destroy() end) end
+end
+end
+for _, k in ipairs({ "CM_Window", "CM_ToggleSG", "CM_TogglePolish" }) do
+local v = g[k]
+if typeof(v) == "Instance" then pcall(function() v:Destroy() end) end
+g[k] = nil
+end
+F.Out("[重复加载] 检测到上一份脚本实例(v" .. ver .. ") ⇒ 已"
+.. (okUn and "干净卸载它" or "尽力清理(旧版没有卸载接口)") .. "，本次只保留一份")
+if not okUn then
+F.Out("[重复加载] 旧实例的循环可能还挂在引擎上 ⇒ 想彻底干净就「重进一次游戏」")
+end
+end
+pcall(F.KillPreviousInstance)
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3373,6 +3401,48 @@ F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
+F.BODY_R = 2.2
+function F.SweepAhead(r, u, dist)
+if not r or not u or dist <= 0.01 then return dist or 0 end
+local params = RaycastParams.new()
+if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
+pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
+end
+local ch = LP.Character
+if ch then pcall(function() params.FilterDescendantsInstances = { ch } end) end
+local hit = nil
+pcall(function() hit = workspace:Raycast(r.Position, u * (dist + F.BODY_R), params) end)
+if hit and hit.Position then return math.max(0, hit.Distance - F.BODY_R) end
+return dist
+end
+F._probe, F._probeAt = {}, 0
+function F.SpeedProbe(r, tag, sp, dt, full3d)
+if not r or not sp then return end
+local now = os.clock()
+local flat = full3d and r.Position or Vector3.new(r.Position.X, 0, r.Position.Z)
+local p = F._probe[tag]
+if not p then F._probe[tag] = { t = now, pos = flat, sp = sp } return end
+local span = now - p.t
+if span < 0.6 then return end
+local set = tonumber(p.sp) or sp
+local actual = (flat - p.pos).Magnitude / span
+local stale = span > 1.5
+F._probe[tag] = { t = now, pos = flat, sp = sp }
+if stale then return end
+if now - (F._probeAt or 0) < 6 then return end
+F._probeAt = now
+local ratio = (set > 1) and (actual / set) or 1
+local verdict
+if ratio >= 0.85 then
+verdict = " · 达标(设定值就是真实速度)"
+elseif ratio >= 0.5 then
+verdict = " · 中间(多半是撞墙/贴障碍/地形摩擦, 到开阔地再看一次)"
+else
+verdict = " · 偏低(引擎物理或服务端在压速度, 不是脚本虚标)"
+end
+F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/秒 (%.0f%%)%s",
+tostring(tag), set, actual, ratio * 100, verdict))
+end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
@@ -3404,7 +3474,7 @@ local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
 F.SpeedApply()
-F._spdConn = RS.RenderStepped:Connect(function()
+F._spdConn = RS.RenderStepped:Connect(function(deltaTime)
 if not T.SpeedOn then F.SpeedSet(false) return end
 local _, h, r = GC()
 if not (h and r) then return end
@@ -3428,8 +3498,27 @@ dir = Vector3.new(md.X, 0, md.Z)
 end
 local cur = r.AssemblyLinearVelocity
 if dir.Magnitude > 0.01 then
-local v = dir.Unit * sp
+local u = Vector3.new(dir.X, 0, dir.Z)
+if u.Magnitude > 0.001 then u = u.Unit else u = Vector3.zero end
+local dt = tonumber(deltaTime) or (1 / 60)
+if dt < 0.001 then dt = 1 / 60 end
+if dt > 0.1 then dt = 0.1 end
+local want = sp * dt
+local scale = 1
+local allow = F.SweepAhead(r, u, want)
+if want > 0.001 and allow < want then
+scale = math.clamp(allow / want, 0, 1)
+F._spdWall = (F._spdWall or 0) + 1
+local now2 = os.clock()
+if now2 - (F._wallAt or 0) > 1.5 then
+F._wallAt = now2
+F.Out(string.format("[加速] 前方 %.1f 格就是障碍 ⇒ 本帧只给 %.0f%% (防穿墙; 开阔地仍是设定速度 %.0f)",
+allow, scale * 100, sp))
+end
+end
+local v = u * (sp * scale)
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
+F.SpeedProbe(r, "加速", sp, dt)
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
 end
@@ -3490,6 +3579,7 @@ ap.Mode = Enum.PositionAlignmentMode.OneAttachment
 ap.MaxForce = 1e9
 ap.Responsiveness = 40
 ap.Position = root.Position
+pcall(function() ap.RigidityEnabled = true end)
 ap.Parent = root
 local ao = Instance.new("AlignOrientation")
 ao.Attachment0 = att
@@ -3546,12 +3636,14 @@ end
 if UIS.TouchEnabled and (os.clock() - (F._flyJumpAt or 0) < 0.15) then
 dir = dir + Vector3.new(0, 1, 0)
 end
-local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
+local fsp = tonumber(C.FlyValue) or 60
+local vel = dir.Magnitude > 0 and (dir.Unit * fsp) or Vector3.zero
 if F._flyAp then
 local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
 F._flyAp.Position = r.Position + vel * step
 F._flyAo.CFrame = c.CFrame
 if vel.Magnitude < 0.01 then pcall(function() r.AssemblyLinearVelocity = Vector3.zero end) end
+if vel.Magnitude > 0.01 then F.SpeedProbe(r, "飞行", fsp, step, true) end
 elseif F._flyBv then
 F._flyBv.Velocity = vel
 F._flyBg.CFrame = c.CFrame
@@ -3969,6 +4061,61 @@ F.Out(srv and "[T键传送] 这个游戏 AuthorityMode=Server(位移由服务端
 or "[T键传送] 没到位: 多半被拉回 / 角色被冻住, 再按一次 T")
 end
 return ok
+end
+F.II_SAVED, F.II_CONN, F.II_SHOWN, F.II_COUNT = nil, nil, nil, 0
+function F.InstantInteractApply(pp)
+if not F.II_SAVED then return end
+if typeof(pp) ~= "Instance" or not pp:IsA("ProximityPrompt") then return end
+if F.II_SAVED[pp] then return end
+local snap = { E = pp.Enabled, H = pp.HoldDuration, R = pp.RequiresLineOfSight }
+F.II_SAVED[pp] = snap
+pcall(function() pp.HoldDuration = 0 end)
+pcall(function() pp.RequiresLineOfSight = false end)
+F.II_COUNT = F.II_COUNT + 1
+end
+function F.InstantInteractScan()
+local n, seen = 0, {}
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("ProximityPrompt") then seen[#seen + 1] = d n = n + 1 end
+end
+end)
+for _, d in ipairs(seen) do pcall(F.InstantInteractApply, d) end
+return n
+end
+function F.InstantInteractEnable()
+if F.II_SAVED then return end
+F.II_SAVED, F.II_COUNT = {}, 0
+local n = F.InstantInteractScan()
+pcall(function()
+F.II_CONN = workspace.DescendantAdded:Connect(function(d)
+if T.InstantInteract then pcall(F.InstantInteractApply, d) end
+end)
+end)
+pcall(function()
+F.II_SHOWN = game:GetService("ProximityPromptService").PromptShown:Connect(function(pp)
+if T.InstantInteract then pcall(F.InstantInteractApply, pp) end
+end)
+end)
+F.Out("[瞬间交互] 已开启(长按→点一下就成 · 不要求看得见) — 本次处理 " .. tostring(n)
+.. " 个交互点, 新出现的也自动生效; 关闭时逐个还原原值")
+end
+function F.InstantInteractDisable()
+if F.II_CONN then pcall(function() F.II_CONN:Disconnect() end) F.II_CONN = nil end
+if F.II_SHOWN then pcall(function() F.II_SHOWN:Disconnect() end) F.II_SHOWN = nil end
+local n = 0
+if type(F.II_SAVED) == "table" then
+for pp, snap in pairs(F.II_SAVED) do
+if typeof(pp) == "Instance" and pp.Parent then
+pcall(function() pp.HoldDuration = snap.H end)
+pcall(function() pp.RequiresLineOfSight = snap.R end)
+pcall(function() pp.Enabled = snap.E end)
+n = n + 1
+end
+end
+end
+F.II_SAVED, F.II_COUNT = nil, 0
+F.Out("[瞬间交互] 已关闭 — 已还原 " .. tostring(n) .. " 个交互点的原值")
 end
 local mutedVolumes = nil
 local function MuteEnable()
@@ -4775,7 +4922,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -5928,7 +6075,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedRestore, F.FlySet,
+F.SpeedRestore, F.FlySet, F.InstantInteractDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
@@ -5937,6 +6084,12 @@ F._capLog = {}
 F._autoTh = nil
 F._cfgSyncing = false
 F._tpMouseOn = false
+pcall(function()
+local g = getgenv and getgenv()
+if type(g) == "table" and F._inst and g[F.INSTANCE_KEY] == F._inst then
+g[F.INSTANCE_KEY] = nil
+end
+end)
 if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
 end,
 MuteDisable, FOVDisable, ZoomDisable,
@@ -6215,10 +6368,10 @@ Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, 
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 20000)", Min = 10, Max = 20000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 20000)", Min = 16, Max = 20000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
@@ -6358,6 +6511,12 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
+Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
+Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "偷蛋、开箱、机关这类「要按住一会儿」的交互, 开着一律变「点一下就完成」, 且不再要求看得见目标", Default = false, Callback = function(v)
+T.InstantInteract = v
+if F._cfgSyncing then return end
+if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
+end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
@@ -6560,6 +6719,17 @@ Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自�
 Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "强制重载(即使已是最新也重下一遍)", Callback = function() F.HotReload(true) end })
 F.UnloadAll = UnloadAll
+pcall(function()
+local g = getgenv and getgenv()
+if type(g) ~= "table" then return end
+F._inst = {
+version = F.VERSION,
+unload = function() pcall(UnloadAll) end,
+gui = (Fluent and Fluent.GUI) or nil,
+handles = {},
+}
+g[F.INSTANCE_KEY] = F._inst
+end)
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.CharPersist = true
 T.AutoSave = true
