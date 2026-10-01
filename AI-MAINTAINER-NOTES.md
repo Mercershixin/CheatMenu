@@ -2550,3 +2550,18 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - **按钮合并**：删掉独立的「绕过检测」开关，能力并入「防护档位」下拉新档
   `★ 最强: 上面全部 + 绕过拉回(抢所有权 · 被拉回就续跑)`（`GuardSet(...,bypass)` 第八个参数统一切换）。
 
+## 四十六、2026-10-01（11.0.32）：公开实现学习 + 「全合一」一个按钮
+
+- **公开实现学到两条**（`kiyo2007/VapeV4ForRoblox → games/universal.lua` 的 `AntiLagBack`）：
+  ①`sethiddenproperty(hrp,"NetworkIsSleeping",true)` 让角色别进"网络休眠"（休眠=模拟权被收回服务端，本地改动容易被覆盖）；
+  ②**持续微动**（静止时给极小速度，避免被判定"静止→服务端接管"）。
+  另 `sethiddenproperty(hrp,"NetworkOwnershipRule",Enum.NetworkOwnership.Manual)` 配合 `SetNetworkOwner(LP)` 抢所有权。
+  同族 `monthonsova/Steal-An-Egg → EggESP/automation/SpeedBypass.lua` 头部自述印证我们的反拉回思路：
+  "Destroying the LocalScript is not enough — its Heartbeat connection keeps running"，`NEUTER_NAMES={check,lagback,punish,kill}`、`ANTI_TP_MARKERS={"ObbyAntiTP"}` = 我们「防拉回档」同款。
+- **蛋不掉（同族公开脚本里没人做）**：客户端能做的是"位置回写"——自动锁定角色手边最近的**非玩家** `Model/BasePart`
+  （<9 格，开开关时锁一次并报出名字），之后每帧若它离手 >8 格就把 CFrame 拉回手上并计数
+  （日志 `[蛋守卫] 它离手 xx 格 ⇒ 已拉回手上 N 次`）。★ 诚实边界：**持有/掉落最终由服务端裁决**，
+  客户端只能保证"视觉一直在手上"，服务端认不认是另一回事；蛋被服务端收走/销毁时守卫会明说"已不在场内"。
+- **合并成一个按钮**：新增移动页 `★ 全合一: 不被拉回 + 蛋不掉手`（抢所有权 0.15s + 反拉回续跑 + 不休眠微动 + 蛋守卫），
+  并删掉防护下拉里重复的"★ 最强: …+绕过拉回"档。
+
