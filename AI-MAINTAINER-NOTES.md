@@ -2525,3 +2525,13 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 ★ 一条通用规矩（新增到主题记忆）：
 **凡"关闭/清理"入口，都要用"定义 vs 调用"差异分析定期对齐；凡是清理流程，都要有落盘日志。**
+
+## 四十三、2026-10-01（11.0.29）：删防穿墙 + 删 F1 + 加重进服务器
+
+- 删「加速防穿墙」全部：UI 开关 + 加速循环检测 + `F.SweepAhead`/`F.BODY_R`（唯一调用者已删，残留引用 0）。
+- 删 F 系快捷键：`F.PanicKeyEnable/Disable`（F1 绑 UIS.InputBegan）、`PANIC_KEEP.PanicKey`、`T.PanicKey`、卸载列表项、文案 "(F1)"。
+  「一键全关」本体保留，改由系统页按钮触发（移动端长按悬浮按钮同样可用）。
+- 系统页新增：`重新进入服务器(回同一个服务器)`（`TeleportToPlaceInstance(PlaceId, JobId, LP)`，失败退 `Teleport`）+ `一键全关`。
+  ⇒ `F.PanicKeyEnable` 的源码位直接换成了 `F.RejoinNow`。
+- ★ 工具坑：`deadfix.py` **默认干跑**（要 `--write` 才写盘）——别以为它改了文件。
+
