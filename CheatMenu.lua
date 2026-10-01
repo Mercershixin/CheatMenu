@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 01:46 sha 7ca56895 bytes 288018'):format('2026-10-02 01:46','7ca56895',288018))
+print(('[CheatMenu] build 2026-10-02 02:02 sha f0988e7e bytes 289803'):format('2026-10-02 02:02','f0988e7e',289803))
 local F = {}
-F.VERSION = "v11.0.49"
+F.VERSION = "v11.0.50"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2289,6 +2289,65 @@ function F.MetaHookEnsure()
 if KG.mtHooked then return end
 pcall(F.KickGuardPathsEnable)
 end
+F._gcSweepSaved = {}
+F.AntiCheatGCSweep = function()
+local n, seen = 0, 0
+pcall(function()
+if type(getgc) ~= "function" then return end
+for _, v in pairs(getgc(true)) do
+seen = seen + 1
+if seen > 60000 then break end
+if typeof(v) == "table" then
+local function neuter(key, repl)
+local f = nil
+pcall(function() f = rawget(v, key) end)
+if type(f) == "function" then
+if not F._gcSweepSaved[v] then F._gcSweepSaved[v] = {} end
+if F._gcSweepSaved[v][key] == nil then F._gcSweepSaved[v][key] = f end
+pcall(function() v[key] = repl end)
+n = n + 1
+end
+end
+neuter("kick", function() return task.wait(9e9) end)
+neuter("randomDelayKick", function() return task.wait(9e9) end)
+neuter("Kill", function() return end)
+neuter("Detected", function() return false end)
+neuter("lagback", function() return end)
+neuter("punish", function() return end)
+neuter("flag", function() return end)
+local bmv = nil
+pcall(function() bmv = rawget(v, "getIsBodyMoverCreatedByGame") end)
+if type(bmv) == "function" then
+if not F._gcSweepSaved[v] then F._gcSweepSaved[v] = {} end
+if F._gcSweepSaved[v]["getIsBodyMoverCreatedByGame"] == nil then
+F._gcSweepSaved[v]["getIsBodyMoverCreatedByGame"] = bmv
+end
+pcall(function() v.getIsBodyMoverCreatedByGame = function() return true end end)
+n = n + 1
+end
+end
+end
+end)
+F._gcSwept = n
+if n > 0 then
+F.Out("[防踢] getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
+.. " (含「这个物理约束是游戏自己加的」这类判定)")
+end
+return n
+end
+F.AntiCheatGCRestore = function()
+local n = 0
+for t, kv in pairs(F._gcSweepSaved or {}) do
+if type(t) == "table" then
+for k, f in pairs(kv) do
+pcall(function() t[k] = f end)
+n = n + 1
+end
+end
+end
+F._gcSweepSaved = {}
+return n
+end
 function F.KickGuardPathsEnable()
 if KG.mtHooked then return end
 KG.kick = true
@@ -2502,6 +2561,7 @@ KG.lastReport = nil
 end
 function F.KickGuardEnable()
 if KG.hooked then return true end
+pcall(F.AntiCheatGCSweep)
 F.Out("[防踢] 正在装「Kick 三路径拦截」(会改写全局元表) —— 个别反作弊会因这层 hook 直接踢你; 平时建议关着, 挂机前再开")
 pcall(F.KickGuardPathsEnable)
 local kf = LP.Kick
@@ -2525,6 +2585,7 @@ KG.hooked = true
 return true
 end
 function F.KickGuardDisable()
+pcall(F.AntiCheatGCRestore)
 pcall(F.KickGuardPathsDisable)
 if KG.hooked and hookfunction and KG.target and KG.orig then
 pcall(function() hookfunction(KG.target, KG.orig) end)
@@ -5759,7 +5820,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
