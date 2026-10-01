@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:33 sha 585408dd bytes 248775'):format('2026-10-01 19:33','585408dd',248775))
+print(('[CheatMenu] build 2026-10-01 19:37 sha 9dfaa613 bytes 249152'):format('2026-10-01 19:37','9dfaa613',249152))
 local F = {}
-F.VERSION = "v11.0.11"
+F.VERSION = "v11.0.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3037,6 +3037,37 @@ F.Out("   (这个游戏客户端侧没有按这些名字出现的检测 ⇒ 它�
 end
 end
 return #scripts, #conns
+end
+function F.GuardSet(steady, hit, lock, trap, dodge, atp)
+T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
+T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
+pcall(steady and F.SteadyEnable or F.SteadyDisable)
+pcall(hit and F.HitGuardEnable or F.HitGuardDisable)
+pcall(trap and F.TrapGuardEnable or F.TrapGuardDisable)
+pcall(atp and F.SpeedAntiTPEnable or F.SpeedAntiTPDisable)
+F.Out(string.format("[防护] 稳身=%s · 受击保护=%s · 锁满血=%s · 陷阱=%s · 防拉回=%s",
+steady and "开" or "关", hit and "开" or "关", lock and "开" or "关",
+trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关"))
+end
+function F.GuardApply(v)
+if type(v) ~= "string" then return end
+if v:find("关(全部关闭)", 1, true) then
+F.GuardSet(false, false, false, false, false, false)
+return
+end
+if v:find("稳身 + 受击", 1, true) then
+F.GuardSet(true, true, false, false, false, false)
+return
+end
+if v:find("全部(再加", 1, true) then
+F.GuardSet(true, true, true, true, true, true)
+return
+end
+if v:find("推荐", 1, true) then
+F.GuardSet(true, true, false, true, false, true)
+return
+end
+F.GuardSet(true, false, false, false, false, false)
 end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
 F._floorLast = {}
@@ -6214,39 +6245,24 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddSection("受击保护(被打不飞 · 参考公开作品做法)")
-Tabs.Move:AddDropdown("HitGuard", { Title = "被攻击时", Values = {
-"关",
-"防被打飞(断掉游戏自己的击退/受击处理)",
-"防被打飞 + 锁满血",
-}, Default = "关", Callback = function(v)
-T.HitGuard = (v ~= "关")
-T.HitLock = (v == "防被打飞 + 锁满血")
-if F._cfgSyncing then return end
-if T.HitGuard then F.HitGuardEnable() else F.HitGuardDisable() end
-end })
-Tabs.Move:AddSection("陷阱拦截(通用: 夹子/陷阱/香蕉皮 类物件)")
-Tabs.Move:AddDropdown("TrapMode", { Title = "附近的陷阱怎么处理", Values = {
-"关", "拦截(踩上去也不触发)", "拦截 + 自动弹开一步",
-}, Default = "关", Callback = function(v)
-T.TrapWarn = (v ~= "关")
-T.TrapDodge = (v == "拦截 + 自动弹开一步")
-if F._cfgSyncing then return end
-if T.TrapWarn then F.TrapGuardEnable() else F.TrapGuardDisable() end
-end })
-Tabs.Move:AddSection("加速防拉回(中和游戏自己的「防加速」检测 · 独立开关)")
-Tabs.Move:AddDropdown("SpeedAntiTP", { Title = "游戏把你拉回/降速时", Values = {
-"关", "清理它(断检测连接 + 中和检测函数)",
-}, Default = "关", Callback = function(v)
-T.SpeedAntiTP = (v ~= "关")
-if F._cfgSyncing then return end
-if T.SpeedAntiTP then F.SpeedAntiTPEnable() else F.SpeedAntiTPDisable() end
-end })
-Tabs.Move:AddSection("防击倒 / 加速稳身")
-Tabs.Move:AddToggle("SteadyOn", { Title = "★ 稳身(加速时不倒 / 不被打飞 / 不会自己飞起来)", Default = false, Callback = function(v)
-T.SteadyOn = v
-if F._cfgSyncing then return end
-if v then F.SteadyEnable() else F.SteadyDisable() end
+Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
+Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
+"关(全部关闭)",
+"稳身(加速时不倒 / 不被打飞 / 不自己飞起来)",
+"稳身 + 受击保护(被攻击也不会被击飞)",
+"推荐: 上面全部 + 陷阱拦截 + 加速防拉回",
+"全部(再加 锁满血 + 陷阱自动弹开一步)",
+}, Default = "关(全部关闭)", Callback = function(v)
+if F._cfgSyncing then
+T.SteadyOn = not v:find("关(全部关闭)", 1, true)
+T.HitGuard = v:find("受击", 1, true) ~= nil
+T.TrapWarn = v:find("陷阱", 1, true) ~= nil
+T.SpeedAntiTP = v:find("防拉回", 1, true) ~= nil
+T.HitLock = v:find("锁满血", 1, true) ~= nil
+T.TrapDodge = v:find("弹开", 1, true) ~= nil
+return
+end
+F.GuardApply(v)
 end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
