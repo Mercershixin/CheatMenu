@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:41 sha 48593f33 bytes 261388'):format('2026-10-01 22:41','48593f33',261388))
+print(('[CheatMenu] build 2026-10-01 22:49 sha deb005f4 bytes 264971'):format('2026-10-01 22:49','deb005f4',264971))
 local F = {}
-F.VERSION = "v11.0.31"
+F.VERSION = "v11.0.32"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3459,6 +3459,96 @@ end
 F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/秒 (%.0f%%)%s",
 tostring(tag), set, actual, ratio * 100, verdict))
 end
+F._aioConn, F._egg, F._eggPart, F._eggHand = nil, nil, nil, nil
+function F.EggLock()
+local ch = LP.Character
+if not ch then F._egg, F._eggPart = nil, nil return end
+local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
+or ch:FindFirstChild("Torso") or ch:FindFirstChild("UpperTorso")
+or ch:FindFirstChild("HumanoidRootPart")
+F._eggHand = hand
+local hp = hand and hand.Position
+if not hp then F._egg, F._eggPart = nil, nil return end
+local best, bot, bd = nil, nil, 9
+for _, o in ipairs(workspace:GetChildren()) do
+if o ~= ch and (o:IsA("Model") or o:IsA("BasePart")) and not Players:GetPlayerFromCharacter(o) then
+local q = o:IsA("Model") and (o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")) or o
+if q and q.Parent then
+local d = (q.Position - hp).Magnitude
+if d < bd then bd, best, bot = d, o, q end
+end
+end
+end
+F._egg, F._eggPart, F._eggBack = best, bot, 0
+F.Out("[蛋守卫] 锁定的手上物体: " .. (best and (best.Name .. " (" .. string.format("%.1f", bd) .. " 格)")
+or "没找到(站到蛋旁边再开一次这个开关)"))
+end
+function F.EggGuardTick()
+local ch = LP.Character
+if not ch then return end
+local hand = F._eggHand
+if not (hand and hand.Parent) then
+hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
+or ch:FindFirstChild("Torso") or ch:FindFirstChild("HumanoidRootPart")
+F._eggHand = hand
+end
+local obj, q = F._egg, F._eggPart
+if not (obj and obj.Parent and q and q.Parent and hand) then
+if not F._eggGone then
+F._eggGone = true
+F.Out("[蛋守卫] 手上那个物体已经不在场内(被服务端收走/销毁) ⇒ 守卫暂停")
+end
+return
+end
+local d = (q.Position - hand.Position).Magnitude
+if d > 8 then
+local dest = hand.Position + Vector3.new(0, 1.2, 0)
+pcall(function() q.CFrame = q.CFrame - q.CFrame.Position + dest end)
+F._eggBack = (F._eggBack or 0) + 1
+if os.clock() - (F._eggLogAt or 0) > 3 then
+F._eggLogAt = os.clock()
+F.Out(string.format("[蛋守卫] 它离手 %.0f 格 ⇒ 已拉回手上 %d 次(客户端保持在手; 服务端认不认是另一回事)",
+d, F._eggBack))
+end
+end
+end
+function F.AllInOneEnable()
+if F._aioConn then return end
+T.BypassDetect = true
+pcall(F.BypassEnable)
+F.EggLock()
+F._aioConn = RS.Heartbeat:Connect(function()
+if not T.AllInOne then F.AllInOneDisable() return end
+local _, hum, root = GC()
+if not (hum and root) then return end
+pcall(function()
+if type(sethiddenproperty) == "function" then
+sethiddenproperty(root, "NetworkIsSleeping", true)
+end
+end)
+pcall(function()
+if type(sethiddenproperty) == "function" then
+sethiddenproperty(root, "NetworkOwnershipRule", Enum.NetworkOwnership.Manual)
+end
+end)
+if T.SpeedOn or T.FlyOn then
+local v = root.AssemblyLinearVelocity
+if v.Magnitude < 0.05 then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(0.02, 0, 0) end)
+end
+end
+F.EggGuardTick()
+end)
+F.Out("[全合一] 已开: 抢所有权(0.15s) + 反拉回续跑 + 不休眠微动 + 蛋守卫")
+end
+function F.AllInOneDisable()
+if F._aioConn then pcall(function() F._aioConn:Disconnect() end) F._aioConn = nil end
+F._egg, F._eggPart, F._eggHand = nil, nil, nil
+F._eggGone, F._eggBack = nil, 0
+T.BypassDetect = false
+pcall(F.BypassDisable)
+F.Out("[全合一] 已关")
+end
 F.bypassConn = nil
 function F.BypassEnable()
 if F.bypassConn then return end
@@ -4996,7 +5086,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6160,7 +6250,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable,
+F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
@@ -6487,6 +6577,11 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddToggle("AllInOne", { Title = "★ 全合一: 不被拉回 + 蛋不掉手", Description = "一个开关搞定: 抢角色所有权(0.15s) + 被服务端回滚就立刻续跑 + 角色不休眠微动 + 手上的蛋离手就拉回来(开之前先站到蛋旁边)", Default = false, Callback = function(v)
+T.AllInOne = v
+if F._cfgSyncing then return end
+if v then F.AllInOneEnable() else F.AllInOneDisable() end
+end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
@@ -6494,7 +6589,6 @@ Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 ·
 "稳身 + 受击保护(被攻击也不会被击飞)",
 "推荐: 上面全部 + 陷阱拦截 + 加速防拉回",
 "全部(再加 锁满血 + 陷阱弹开 + 猛档断连接[可能卡搬运状态])",
-"★ 最强: 上面全部 + 绕过拉回(抢所有权 · 被拉回就续跑)",
 }, Default = "关(全部关闭)", Callback = function(v)
 if F._cfgSyncing then
 T.SteadyOn = not v:find("关(全部关闭)", 1, true)
