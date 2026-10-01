@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 01:29 sha c7300cc7 bytes 290623'):format('2026-10-02 01:29','c7300cc7',290623))
+print(('[CheatMenu] build 2026-10-02 01:46 sha 7ca56895 bytes 288018'):format('2026-10-02 01:46','7ca56895',288018))
 local F = {}
-F.VERSION = "v11.0.48"
+F.VERSION = "v11.0.49"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2152,48 +2152,6 @@ return n
 end
 F._afkConn = nil
 F._afkConn2 = nil
-F.AntiAFKSim = function(why)
-local n = 0
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-if type(cloneref) == "function" then pcall(function() vim = cloneref(vim) end) end
-vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-task.wait(0.06)
-vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-n = n + 1
-end)
-pcall(function()
-if VirtualUser then
-VirtualUser:CaptureController()
-VirtualUser:ClickButton2(Vector2.new(0, 0))
-VirtualUser:ReleaseController()
-n = n + 1
-end
-end)
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-if type(cloneref) == "function" then pcall(function() vim = cloneref(vim) end) end
-vim:SendMouseMoveEvent(Vector2.new(math.random(-4, 4), math.random(-4, 4)), true, game)
-n = n + 1
-end)
-pcall(function()
-if type(mousemoverel) == "function" then
-mousemoverel(math.random(-3, 3), math.random(-3, 3))
-n = n + 1
-end
-end)
-pcall(function()
-local _, hum = GC()
-if hum then hum.Jump = true end
-end)
-F._afkFixes = (F._afkFixes or 0) + 1
-if os.clock() - (F._afkLogAt or 0) > 6 then
-F._afkLogAt = os.clock()
-F.Out("[防挂机] " .. tostring(why) .. " ⇒ 已模拟操作 " .. tostring(F._afkFixes) .. " 次"
-.. ((F._afkKilled or 0) > 0 and (" · 已掐掉 " .. tostring(F._afkKilled) .. " 条挂机检测连接") or ""))
-end
-return n
-end
 F._afkDisabledConns = {}
 F.AntiAFKKillIdleConns = function()
 local n = 0
@@ -2223,19 +2181,9 @@ T.AntiAFK = true
 F._afkKilled = 0
 F._afkFixes = 0
 local killed = F.AntiAFKKillIdleConns()
-F._lastInputAt = os.clock()
-F._afkInputConns = {}
-pcall(function()
-F._afkInputConns[1] = UIS.InputBegan:Connect(function()
-F._lastInputAt = os.clock()
-end)
-F._afkInputConns[2] = UIS.InputChanged:Connect(function()
-F._lastInputAt = os.clock()
-end)
-end)
 F._afkConn = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
-F.AntiAFKSim("游戏判定你挂机了(Idled)")
+F._afkIdleHits = (F._afkIdleHits or 0) + 1
 end)
 F._afkConn2 = RS.Heartbeat:Connect(function()
 if not T.AntiAFK then F.AntiAFKDisable() return end
@@ -2246,25 +2194,14 @@ if now - (F._afkHbAt or 0) > 15 then
 F._afkHbAt = now
 pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
 end
-local _, hum, root = GC()
-if hum and root then
-if hum.MoveDirection.Magnitude > 0.05 then
-F._afkStillSince = nil
-else
-F._afkStillSince = F._afkStillSince or now
-if T.AFKMotion and (now - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
-F._afkStillSince = now
-pcall(function() hum.Jump = true end)
-F.Out("[防挂机] 原地静止 90 秒 ⇒ 跳一下(你原来那条; 在「防挂机·模拟输入」里)")
+local hits = F._afkIdleHits or 0
+if hits ~= (F._afkIdleLogged or 0) then
+F._afkIdleLogged = hits
+F.Out("[防挂机] 游戏判你挂机过 " .. tostring(hits) .. " 次 ⇒ 已按时间监听处理(不动你的人物)")
 end
-end
-end
-if not T.AFKMotion then return end
-if now - (F._lastInputAt or now) < 60 then return end
-F.AntiAFKSim("超过 60 秒没有任何操作")
 end)
-F.Out("[防挂机] 已开(不动人物): 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
-.. " + 每 15 秒写一次心跳属性; 要原来那种「按键/跳一下」就另开「防挂机·模拟输入」")
+F.Out("[防挂机] 已开(完全不动你的人物): 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
+.. " + 每 15 秒写一次心跳属性 + 监听 Idled 只记录")
 end
 function F.AntiAFKDisable()
 T.AntiAFK = false
@@ -2274,10 +2211,6 @@ F._afkDisabledConns = {}
 end
 if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
 if F._afkConn2 then pcall(function() F._afkConn2:Disconnect() end) F._afkConn2 = nil end
-if F._afkInputConns then
-for _, c in ipairs(F._afkInputConns) do pcall(function() c:Disconnect() end) end
-F._afkInputConns = nil
-end
 end
 F._flingConns = {}
 function F.AntiFlingEnable()
@@ -7489,12 +7422,6 @@ local changed = (T.AntiAFK ~= nil) and (T.AntiAFK ~= v)
 T.AntiAFK = v
 if F._cfgSyncing or not changed then return end
 if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
-end })
-Tabs.AFK:AddToggle("AFKMotion", { Title = "防挂机·模拟输入(会动一下人物)", Description = "按需开: 游戏判你挂机时按下 W / 移一下鼠标 / 跳一下。默认关 —— 因为挂机时你可能不想角色乱动", Default = false, Callback = function(v)
-local changed = (T.AFKMotion ~= nil) and (T.AFKMotion ~= v)
-T.AFKMotion = v
-if F._cfgSyncing or not changed then return end
-F.Out(v and "[防挂机] 模拟输入 = 开(会动人物)" or "[防挂机] 模拟输入 = 关(只监听, 不动人物)")
 end })
 Tabs.AFK:AddToggle("KickProtect", { Title = "防踢(拦截 Kick + 被踢后抢重进 · 会装元表钩子)", Description = "这层会改写全局元表, 个别反作弊会因为钩子直接踢你 —— 平时关着, 真挂机前再开", Default = false, Callback = function(v)
 local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
