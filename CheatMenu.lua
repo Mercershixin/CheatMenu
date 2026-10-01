@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:56 sha 81309295 bytes 263393'):format('2026-10-01 22:56','81309295',263393))
+print(('[CheatMenu] build 2026-10-01 23:09 sha 2525a82f bytes 265729'):format('2026-10-01 23:09','2525a82f',265729))
 local F = {}
-F.VERSION = "v11.0.33"
+F.VERSION = "v11.0.34"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3436,6 +3436,62 @@ F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/
 tostring(tag), set, actual, ratio * 100, verdict))
 end
 F._aioConn, F._egg, F._eggPart, F._eggHand = nil, nil, nil, nil
+function F.CarryFind()
+local ch = LP.Character
+if not ch then return {} end
+local out = {}
+for _, host in ipairs(ch:GetDescendants()) do
+if host:IsA("BasePart") then
+for _, w in ipairs(host:GetChildren()) do
+local okW = (w:IsA("WeldConstraint") or w:IsA("Weld") or w:IsA("Motor6D"))
+if okW then
+local other = nil
+pcall(function()
+if w.Part0 == host then other = w.Part1 elseif w.Part1 == host then other = w.Part0 end
+end)
+if other and other.Parent and not other:IsDescendantOf(ch) then
+out[#out + 1] = { host = host, other = other, name = w.Name, cls = w.ClassName }
+end
+end
+end
+end
+end
+return out
+end
+function F.CarryGuardTick()
+local ch = LP.Character
+if not ch or type(F._carry) ~= "table" then return end
+for _, rec in ipairs(F._carry) do
+local host, other = rec.host, rec.other
+if host and host.Parent and other and other.Parent then
+local alive = false
+for _, w in ipairs(host:GetChildren()) do
+if w.Name == rec.name and (w:IsA("WeldConstraint") or w:IsA("Weld") or w:IsA("Motor6D")) then alive = true break end
+end
+if not alive then
+local nw = nil
+pcall(function()
+nw = Instance.new(rec.cls)
+if rec.cls == "WeldConstraint" then
+nw.Part0, nw.Part1 = host, other
+else
+nw.Part0, nw.Part1 = host, other
+nw.C0, nw.C1 = CFrame.new(), CFrame.new()
+end
+nw.Name = rec.name
+nw.Parent = host
+end)
+if nw then
+F._carryBack = (F._carryBack or 0) + 1
+if os.clock() - (F._carryLogAt or 0) > 3 then
+F._carryLogAt = os.clock()
+F.Out("[搬守卫] 固定它的焊点被拆掉了 ⇒ 已按原样重新焊回 " .. tostring(F._carryBack) .. " 次(名字: " .. tostring(rec.name) .. ")")
+end
+end
+end
+end
+end
+end
 function F.EggLock()
 local ch = LP.Character
 if not ch then F._egg, F._eggPart = nil, nil return end
@@ -3496,6 +3552,9 @@ pcall(function() F.GuardSet(true, true, false, true, true, true) end)
 T.InstantInteract = true
 pcall(F.InstantInteractEnable)
 F.EggLock()
+F._carry = F.CarryFind()
+F.Out("[搬守卫] 已盯上 " .. tostring(#F._carry) .. " 个「焊在你身上的东西」"
+.. (#F._carry > 0 and "(焊点名: " .. tostring(F._carry[1].name) .. ")" or "(手上没东西; 拿到后再关开一次)"))
 F._aioConn = RS.Heartbeat:Connect(function()
 if not T.AllInOne then F.AllInOneDisable() return end
 local _, hum, root = GC()
@@ -3517,6 +3576,7 @@ pcall(function() root.AssemblyLinearVelocity = Vector3.new(0.02, 0, 0) end)
 end
 end
 F.EggGuardTick()
+F.CarryGuardTick()
 end)
 F.Out("[全合一] 已开: 抢所有权(0.15s) + 反拉回续跑 + 不休眠微动 + 蛋守卫"
 .. " + 防护(稳身/受击/陷阱/弹开/防拉回) + 瞬间交互")
@@ -3525,6 +3585,7 @@ function F.AllInOneDisable()
 if F._aioConn then pcall(function() F._aioConn:Disconnect() end) F._aioConn = nil end
 F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack = nil, 0
+F._carry, F._carryBack = nil, 0
 T.BypassDetect = false
 pcall(F.BypassDisable)
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
@@ -3657,7 +3718,13 @@ elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
 end
 if dir.Magnitude <= 0.01 then F._intent = nil end
-if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
+if T.BypassDetect then
+if math.abs((h.WalkSpeed or 0) - (F._preSpeed or h.WalkSpeed or 16)) > 0.5 then
+pcall(function() h.WalkSpeed = F._preSpeed or h.WalkSpeed end)
+end
+elseif math.abs((h.WalkSpeed or 0) - sp) > 0.5 then
+pcall(function() h.WalkSpeed = sp end)
+end
 local now = os.clock()
 if now - (F._animAt or 0) > 0.3 then
 F._animAt = now
@@ -3675,7 +3742,7 @@ end)
 end
 function F.FlyDestroy()
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
-for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt" }) do
+for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt", "_flyBvAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
 local _, hum = GC()
@@ -3731,13 +3798,21 @@ local obj = F[k]
 if obj then pcall(function() obj:Destroy() end) F[k] = nil end
 end
 pcall(function()
-local bv = Instance.new("BodyVelocity")
-bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-bv.Velocity = Vector3.zero
+local att2 = Instance.new("Attachment")
+att2.Name = "CMFlyAtt"
+att2.Parent = root
+local bv = Instance.new("LinearVelocity")
+bv.Attachment0 = att2
+bv.MaxForce = 1e9
+bv.VectorVelocity = Vector3.zero
 bv.Parent = root
-local bg = Instance.new("BodyGyro")
-bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-bg.P = 1e4
+F._flyBvAtt = att2
+local bg = Instance.new("AlignOrientation")
+bg.Mode = Enum.OrientationAlignmentMode.OneAttachment
+bg.Attachment0 = att2
+bg.MaxTorque = 1e9
+bg.Responsiveness = 60
+bg.RigidityEnabled = true
 bg.Parent = root
 F._flyBv, F._flyBg = bv, bg
 end)
@@ -3780,8 +3855,8 @@ F._flyAo.CFrame = c.CFrame
 if vel.Magnitude < 0.01 then pcall(function() r.AssemblyLinearVelocity = Vector3.zero end) end
 if vel.Magnitude > 0.01 then F.SpeedProbe(r, "飞行", fsp, step, true) end
 elseif F._flyBv then
-F._flyBv.Velocity = vel
-F._flyBg.CFrame = c.CFrame
+pcall(function() F._flyBv.VectorVelocity = vel end)
+pcall(function() F._flyBg.CFrame = c.CFrame end)
 end
 end)
 end
