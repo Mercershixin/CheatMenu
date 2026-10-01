@@ -2573,3 +2573,28 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
     (稳身/受击/**锁满血=关**/陷阱/弹开/防拉回) + `F.InstantInteractEnable` + 不休眠微动 + 蛋守卫；关闭时全部回收。
   - ★ 刻意不并「锁满血/猛档断连接」：锁满血会写血量、猛档可能卡搬运状态（偷蛋时最怕），所以不默认开。
 
+## 四十八、2026-10-01（11.0.34）：公开手法全类扫描（限近 1 个月）+ 落地两条
+
+**扫描结论（诚实）**：按 `pushed:>2026-09-01` 扫 16 类主题、48 个仓库 —— **近 1 个月的新仓库 90% 是空壳/SEO 引流**
+（只有 README、★0、标题像"Best Free Script 2026"），唯一有实料的近期脚本是 `DjankiOpsec/TuxScript`。
+真正的方法论都在更早的成熟仓库里（VapeV4、Steal-An-Egg/EggESP、functionFixer）。**"1 个月"这个条件会筛掉质量，只留噪声。**
+
+**最有价值的发现（服务端两个文件，直接摊开机制）**：
+- `TLL-Games-Srl/TLL-Roblox-AntiCheat → Anti.lua`（检测点清单）：
+  `WalkSpeed >25 或 <15` ⇒ kick；`JumpPower` 超限 ⇒ kick；`HRP.ChildAdded` 出现
+  **`BodyVelocity`/`BodyGyro`/`BodyPosition`** ⇒ kick；`Backpack` 出现 `HopperBin` ⇒ kick；
+  每 1 秒位置差 **≥140 studs** ⇒ 判传送 kick。
+- `allene-03/hatched → ServerScriptService/Modules/Pet/Carry.lua`（搬运机制）：
+  拿起来 = 服务端给你角色的 `UpperTorso` 挂一个 **`WeldConstraint`（名字固定，如 `_CarryConstraint`）**，
+  `Part0=躯干, Part1=物体的 RootPart`；**掉落 = 把这个 weld `Destroy()`** 并 `FireAllClients("Drop")`。
+
+**据此落地两条（11.0.34）**：
+1. **搬守卫（对症"蛋掉手"）**：开全合一时扫描角色身上所有"另一端焊在角色之外"的
+   `WeldConstraint/Weld/Motor6D`，记住 `host/other/名字/类型`；每帧检查**焊点还在不在**，
+   一旦被拆掉就**按原样重新焊回**（日志 `[搬守卫] 我手上东西的焊点被拆掉 ⇒ 已重焊 N 次`）。
+   ⇒ 从"位置拉回"升级为"把掉落本身撤销"。
+2. **反检测两处**：①全合一模式（`T.BypassDetect`）下**不再把 `WalkSpeed` 写成加速值**，
+   而是把它按回 `F._preSpeed`（开加速前记录的原值）⇒ 躲开 "WalkSpeed 超限即踢" 那类校验；
+   ②飞行回退路径把 **`BodyVelocity`/`BodyGyro` 换成 `LinearVelocity`/`AlignOrientation`**
+   （前两者是被反作弊点名检测的实例名；换成新约束后发行版里 `BodyVelocity` 出现 **0** 次）。
+
