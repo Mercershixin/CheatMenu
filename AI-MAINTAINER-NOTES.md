@@ -1238,10 +1238,12 @@ banner `build 2026-09-25 sha 8161b6e6`）。目标：学它的 CPS 卖出与收�
 ### 10.3 "未接线"函数登记（等价于清单 13，但不写进源码）
 
 以下函数**定义了但没有 UI 入口**（保留供手动/热加载调用，**不要当成 bug 删**）：
-`F.SrvReport` · `F.SaveWaypoint` · `F.TpWaypoint` · `F.FlashbackEnable` · `F.Thrust` · `F.SwimEnable` ·
-`F.RemoveAccessories` · `F.BindKey` · `F.DiagConnections` · `F.FlingTarget` · `F.FreezePlayerEnable` ·
-`F.HidePlayerEnable` · `F.BringPlayerEnable` · `F.ScanAttributes` · `F.SnapshotSave/Load/Diff`
-（`F.MetaReport` 已在 §五 记录为**已删除**，不再是"未接线"）。
+`F.SrvReport`（**已删**，见 §十四）· `F.SaveWaypoint` / `F.TpWaypoint` / `F.FlashbackEnable`（**已删**，见 §十四）·
+`F.Thrust` / `F.SwimEnable` / `F.RemoveAccessories` / `F.DiagConnections` / `F.FlingTarget`（**均已删**）·
+`F.FreezePlayerEnable` / `F.HidePlayerEnable` / `F.BringPlayerEnable`（**10.10.3 已补 UI toggle**）·
+`F.ScanAttributes` / `F.SnapshotSave/Load/Diff`。
+⛔ 本清单**只减不增**：函数被删或接上 UI 就从这里划掉；**新增"未接线"项要写进来**。
+（`F.MetaReport` 已在 §五 记录为**已删除**。）
 
 ### 10.4 `buildMenu` 的 `do` 块边界（等价于清单 10 的注释）
 
@@ -1454,3 +1456,43 @@ UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** 
 3. ★★ **重复锚点必须逐条列**：`F._spyOld = nil` 原文出现 **2 次**，我的清单只列了 1 次 ⇒
    `find_line` 只删了第一处，**第二处残留被复验抓到**。⇒ **删除后必须逐个符号复验计数为 0**。
 4. ★ **复验也要防子串误判**：`AimConn` 的剩余命中其实是 `F._antiAimConn`（另一个符号）。
+
+---
+
+## 十五、2026-10-01（下半场之十）：删 Keybind 半成品（10.10.5 → 10.10.6）
+
+### 15.1 核实结论：**6 处全真**（半成品确认）
+
+| # | 目标 | 取证 |
+|---|---|---|
+| 1 | `F._binds = {}` | 定义 1 + `BindKey` 里写 1 + `KeybindEnable` 里读 1 = 3 处 ✓ |
+| 2 | `F._keybindConn = nil` | 定义 1 + Enable 2 + Disable 2（同一行两次）✓ |
+| 3 | `F.BindKey` | 定义 1 + 末尾 `task.spawn` 里调用 1 ⇒ 无其它调用 ✓ |
+| 4 | `F.KeybindEnable` | **仅定义、0 调用** ⇒ 按键监听从未建立（半成品核心）✓ |
+| 5 | `F.KeybindDisable` | 定义 1 + `UnloadAll` 的 disables 列表 1 ✓ |
+| 6 | 末尾 `for i = 2, 5` 循环 | 存在，且其下 `C.FlyDisguise` 初始化块需保留 ✓ |
+
+★ 旁证：全文 **`T.Keybind` 0 处、`BindF2` 0 处**（那三个绑定下拉早已不存在）⇒ 整套 keybind 确实是死的。
+
+### 15.2 删除（3 处，共 37 行 / 约 1.25 KB）
+
+- **Keybind 整块**（连续 31 行）：`_binds` · `_keybindConn` · `BindKey` · `KeybindEnable`（含 飞行/自动攻击/穿墙/ESP 透视/隐身 五分支）· `KeybindDisable`
+- **`UnloadAll` 列表**去掉 `F.KeybindDisable,` 一项
+- **末尾 `task.spawn` 里的 `for i = 2, 5` 循环**（5 行）；**其下的 `if C.FlyDisguise == nil then ... end` 保留** ✓
+
+### 15.3 门禁（等式重算后仍成立）
+
+编译 0 错误 · 顶层真局部 **135**（不变 ⇒ 删的都是 `F.*` 字段/函数，不吃顶层名额）·
+`end` 配平 **2799 == 1502 + 326 + 971**（上版 2814 == 1512+327+975；Δ = -10 if / -1 do / -4 function / -15 end）·
+括号平衡 · 行注释 **0** · 未知全局白名单外 0 · 产物体检 OK · 原 7 项自检全过。
+
+### 15.4 ★ 一次自查更正（值得记）
+
+我手数 Keybind 块时只数到 **5 个 `if`**，而实测 Δ 是 **-10**，一度怀疑误删。
+⇒ 于是用 `difflib` 对删除前后做 diff：**只删了清单里的三处 + 4 个空行**（我顺手把 4 连空行收敛成 3），无任何误删。
+真相是**我漏数了分支体内的 4 个内联 `if T.X then ... else ... end`**（加上 KeybindDisable 那个 `if`、for 循环里那个 `if`，正好 10 个）。
+⇒ **教训：手数关键词不可靠时，直接 diff 删除前后比"再数一遍"更快更硬。**
+
+### 15.5 §10.3「未接线」注册表更新
+
+`F.BindKey` **已从注册表移除**（本轮删除）；`F.KeybindEnable` / `F.KeybindDisable` 从未进过注册表。
