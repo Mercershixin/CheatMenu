@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 00:13 sha 7c9525a2 bytes 281443'):format('2026-10-02 00:13','7c9525a2',281443))
+print(('[CheatMenu] build 2026-10-02 00:41 sha 8a3fcc72 bytes 283778'):format('2026-10-02 00:41','8a3fcc72',283778))
 local F = {}
-F.VERSION = "v11.0.42"
+F.VERSION = "v11.0.43"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2152,34 +2152,95 @@ return n
 end
 F._afkConn = nil
 F._afkConn2 = nil
+F.AntiAFKSim = function(why)
+local n = 0
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+if type(cloneref) == "function" then pcall(function() vim = cloneref(vim) end) end
+vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+task.wait(0.06)
+vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+n = n + 1
+end)
+pcall(function()
+if VirtualUser then
+VirtualUser:CaptureController()
+VirtualUser:ClickButton2(Vector2.new(0, 0))
+VirtualUser:ReleaseController()
+n = n + 1
+end
+end)
+pcall(function()
+local _, hum = GC()
+if hum then hum.Jump = true end
+end)
+F._afkFixes = (F._afkFixes or 0) + 1
+if os.clock() - (F._afkLogAt or 0) > 6 then
+F._afkLogAt = os.clock()
+F.Out("[防挂机] " .. tostring(why) .. " ⇒ 已模拟操作 " .. tostring(F._afkFixes) .. " 次"
+.. ((F._afkKilled or 0) > 0 and (" · 已掐掉 " .. tostring(F._afkKilled) .. " 条挂机检测连接") or ""))
+end
+return n
+end
+F.AntiAFKKillIdleConns = function()
+local n = 0
+pcall(function()
+if type(getconnections) ~= "function" then return end
+for _, c in ipairs(getconnections(LP.Idled) or {}) do
+local nm = ""
+pcall(function()
+local sc = c.script
+if sc then nm = tostring(sc.Name):lower() end
+end)
+if nm:find("afk") or nm:find("idle") or nm:find("timeout")
+or nm:find("anti") or nm:find("kick") or nm:find("boot") then
+pcall(function() c:Disable() end)
+n = n + 1
+end
+end
+end)
+F._afkKilled = (F._afkKilled or 0) + n
+return n
+end
 function F.AntiAFKEnable()
 if F._afkConn then return end
+T.AntiAFK = true
+F._afkKilled = 0
+F._afkFixes = 0
+local killed = F.AntiAFKKillIdleConns()
+F._lastInputAt = os.clock()
+F._afkInputConns = {}
+pcall(function()
+F._afkInputConns[1] = UIS.InputBegan:Connect(function()
+F._lastInputAt = os.clock()
+end)
+F._afkInputConns[2] = UIS.InputChanged:Connect(function()
+F._lastInputAt = os.clock()
+end)
+end)
 F._afkConn = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
-if VirtualUser then
-pcall(function() VirtualUser:CaptureController() end)
-pcall(function() VirtualUser:ClickButton2(Vector2.new(0, 0)) end)
-pcall(function() VirtualUser:ReleaseController() end)
-end
+F.AntiAFKSim("游戏判定你挂机了(Idled)")
 end)
 F._afkConn2 = RS.Heartbeat:Connect(function()
 if not T.AntiAFK then F.AntiAFKDisable() return end
-if (os.clock() - (F._afkAt or 0)) < 5 then return end
-F._afkAt = os.clock()
-pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
-local _, hum, root = GC()
-if not (hum and root) then return end
-if hum.MoveDirection.Magnitude > 0.05 then F._afkStillSince = nil return end
-F._afkStillSince = F._afkStillSince or os.clock()
-if (os.clock() - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
-F._afkStillSince = os.clock()
-pcall(function() hum.Jump = true end)
-end
+local now = os.clock()
+if now - (F._afkAt or 0) < 5 then return end
+F._afkAt = now
+if now - (F._lastInputAt or now) < 60 then return end
+F.AntiAFKSim("超过 60 秒没有任何操作")
 end)
+F.Out("[防挂机] 已开: 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
+.. " + 游戏判你挂机时立刻模拟一次操作(按键/鼠标/跳) —— 不写你的任何属性")
 end
 function F.AntiAFKDisable()
-if F._afkConn then F._afkConn:Disconnect() F._afkConn = nil end
-if F._afkConn2 then F._afkConn2:Disconnect() F._afkConn2 = nil end
+T.AntiAFK = false
+if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
+if F._afkConn2 then pcall(function() F._afkConn2:Disconnect() end) F._afkConn2 = nil end
+if F._afkInputConns then
+for _, c in ipairs(F._afkInputConns) do pcall(function() c:Disconnect() end) end
+F._afkInputConns = nil
+end
 end
 F._flingConns = {}
 function F.AntiFlingEnable()
@@ -3950,19 +4011,18 @@ end
 F.bypassConn = nil
 function F.BypassEnable()
 if F.bypassConn then return end
-if not F._atpState then
-F._bypassAtp = true
-pcall(F.SpeedAntiTPEnable)
-end
+F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测函数」那种猛招的话, 防护里单独开「防拉回档」(那层动作最招反作弊)")
 local got = false
 pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
 F.bypassConn = RS.Heartbeat:Connect(function()
 if not T.BypassDetect then F.BypassDisable() return end
 local now = os.clock()
-if now - (F._bypassOwnAt or 0) > 0.15 then
+if now - (F._bypassOwnAt or 0) > 0.5 then
 F._bypassOwnAt = now
+if T.SpeedOn or T.FlyOn then
 F._bypassOwnOK = pcall(F.SrvOwnTake, false)
+end
 end
 end)
 F.Out("[绕过] 网络所有权回读: " .. (got and "本地(拿到)" or "仍非本地 ⇒ 这游戏持续抢回, 靠「被拉回就续跑」硬顶"))
@@ -7220,12 +7280,18 @@ end })
 Tabs.TP:AddButton({ Title = "⑤ 远程拿: 传过去 → 触发交互 → 回安全点", Callback = function() F.EggRemoteSteal() end })
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = false, Callback = function(v)
-local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
-T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
+Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不被游戏判挂机 · 不装钩子)", Description = "掐掉挂机检测连接 + 游戏判你挂机时立刻模拟一次操作(按键/鼠标/跳); 不写你任何属性", Default = false, Callback = function(v)
+local changed = (T.AntiAFK ~= nil) and (T.AntiAFK ~= v)
+T.AntiAFK = v
 if F._cfgSyncing or not changed then return end
-if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable()
-else F.KickGuardDisable() F.AntiAFKDisable() pcall(F.KickRejoinDisable) end
+if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
+end })
+Tabs.AFK:AddToggle("KickProtect", { Title = "防踢(拦截 Kick + 被踢后抢重进 · 会装元表钩子)", Description = "这层会改写全局元表, 个别反作弊会因为钩子直接踢你 —— 平时关着, 真挂机前再开", Default = false, Callback = function(v)
+local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
+T.KickProtect = v T.KickGuard = v T.KickRejoin = v
+if F._cfgSyncing or not changed then return end
+if v then F.KickGuardEnable() F.KickRejoinEnable()
+else F.KickGuardDisable() pcall(F.KickRejoinDisable) end
 end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
