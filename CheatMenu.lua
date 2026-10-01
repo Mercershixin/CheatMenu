@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 18:15 sha b66606b6 bytes 226992'):format('2026-10-01 18:15','b66606b6',226992))
+print(('[CheatMenu] build 2026-10-01 18:26 sha 90c67932 bytes 232447'):format('2026-10-01 18:26','90c67932',232447))
 local F = {}
-F.VERSION = "v11.0.1"
+F.VERSION = "v11.0.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2440,6 +2440,7 @@ if not T.AntiAFK then return end
 if VirtualUser then
 pcall(function() VirtualUser:CaptureController() end)
 pcall(function() VirtualUser:ClickButton2(Vector2.new(0, 0)) end)
+pcall(function() VirtualUser:ReleaseController() end)
 end
 end)
 F._afkConn2 = RS.Heartbeat:Connect(function()
@@ -2652,32 +2653,157 @@ end
 return best
 end
 F._fireAt = 0
-function F.AutoFire(tgt)
-if not (T.AutoFire and tgt) then return end
-local now = os.clock()
-if now - (F._fireAt or 0) < (tonumber(C.AutoFireGap) or 0.1) then return end
-F._fireAt = now
-local done = false
+function F.FireOnce()
 if type(mouse1click) == "function" then
-pcall(function() mouse1click() done = true end)
+if pcall(mouse1click) then return "mouse1click()" end
 end
-if not done then
+local viaVu = nil
 pcall(function()
 local vu = game:GetService("VirtualUser")
 local cam = workspace.CurrentCamera
 local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
 vu:CaptureController()
 vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
-done = true
+pcall(function() vu:ReleaseController() end)
+viaVu = "VirtualUser(屏幕中心)"
 end)
-end
-if not done then
+if viaVu then return viaVu end
+local viaTool = nil
 pcall(function()
 local ch = LP.Character
 local tool = ch and ch:FindFirstChildOfClass("Tool")
-if tool then tool:Activate() done = true end
+if tool then tool:Activate() viaTool = "tool:Activate()" end
 end)
+return viaTool
 end
+function F.AutoFire(tgt)
+if not (T.AutoFire and tgt) then return end
+local now = os.clock()
+if now - (F._fireAt or 0) < (tonumber(C.AutoFireGap) or 0.1) then return end
+F._fireAt = now
+F.FireOnce()
+end
+function F.EnsureAimOn()
+if T.AimOn then return end
+T.AimOn = true
+pcall(function() F.AimSet(true) end)
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.AimOn
+if o and o.Set and o.Value ~= true then o:Set(true) end
+end)
+F.Out("[自瞄] 已顺手把「自瞄」一起打开 —— 它才是总开关；只勾 360°/自动开火 是没有任何效果的")
+end
+function F.CombatCheck()
+local cam = workspace.CurrentCamera
+if not cam then F.Out("[战斗体检] 还没有相机(角色没加载完), 稍后再点"); return end
+local vp = cam.ViewportSize
+local cx, cy = vp.X / 2, vp.Y / 2
+local fov = tonumber(C.AimFOV) or 200
+F.Out("════════ 战斗体检 ════════")
+local teamTxt = "关"
+if T.AimTeamCheck then
+teamTxt = "开(我的队伍=" .. tostring(LP.Team and LP.Team.Name or "无") .. ")"
+end
+F.Out("范围模式: " .. (T.Aim360 and "360°(按世界距离)" or "屏幕圈(按像素)")
+.. " · 范围值 " .. tostring(math.floor(fov)) .. (T.Aim360 and " 格" or " px")
+.. " · 墙壁检查=" .. (T.AimWallCheck and "开" or "关")
+.. " · 同队过滤=" .. teamTxt)
+F.Out(string.format("开关状态: 自瞄=%s · 自动开火=%s · 开火才锁=%s · 开火间隔=%.2fs · 平滑=%d",
+T.AimOn and "★开" or "✗关(这个不开, 下面全都不会动)", T.AutoFire and "开" or "关",
+T.AimFireOnly and "开" or "关", tonumber(C.AutoFireGap) or 0.1, tonumber(C.AimSmooth) or 5))
+if not T.AimOn then
+F.Out("⇒ 结论: 「自瞄」是关的 —— 360°/自动开火/FOV圈 都只是它的附属项, 先打开「自瞄」。")
+end
+local rp = RaycastParams.new()
+rp.FilterType = Enum.RaycastFilterType.Exclude
+local ex = {}
+if LP.Character then ex[#ex + 1] = LP.Character end
+local total, lockable, reasons = 0, 0, {}
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+total = total + 1
+local why = nil
+local ch = pl.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+local dist = hrp and (cam.CFrame.Position - hrp.Position).Magnitude or nil
+if not ch then
+why = "没有角色(还没加载/正在重生)"
+elseif not hrp then
+why = "没有 HumanoidRootPart"
+elseif not hum then
+why = "没有 Humanoid"
+elseif hum.Health <= 0 then
+why = "已死(血 " .. tostring(math.floor(hum.Health)) .. ")"
+else
+local bl = false
+if type(C.Blacklist) == "table" then
+for k, v in pairs(C.Blacklist) do
+if v == pl.Name or k == pl.Name then bl = true end
+end
+end
+if bl then
+why = "在你的黑名单里"
+elseif T.AimTeamCheck and LP.Team ~= nil then
+local same = false
+pcall(function()
+if pl.Team ~= nil and pl.Team == LP.Team then same = true end
+if not same and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then same = true end
+end)
+if same then why = "同队(" .. tostring(pl.Team and pl.Team.Name or tostring(pl.TeamColor)) .. ") ⇒ 被同队过滤" end
+end
+if not why then
+if T.Aim360 then
+if dist and dist > fov then why = string.format("太远 %.0f 格 > %d 格", dist, math.floor(fov)) end
+else
+local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
+if not onScreen then
+why = "不在屏幕里(在背后/视野外) ⇒ 开「360°锁敌」"
+else
+local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+if d > fov then why = string.format("在 FOV 圈外(%.0f px > %d px)", d, math.floor(fov)) end
+end
+end
+end
+if not why and T.AimWallCheck then
+ex[#ex + 1] = ch
+rp.FilterDescendantsInstances = ex
+local hint = workspace:Raycast(cam.CFrame.Position, (hrp.Position - cam.CFrame.Position), rp)
+ex[#ex] = nil
+if hint and hint.Instance then why = "被挡住: " .. hint.Instance:GetFullName() end
+end
+end
+if why then
+reasons[#reasons + 1] = why
+F.Out("  ✗ " .. pl.Name .. " · " .. why)
+else
+lockable = lockable + 1
+F.Out(string.format("  ✓ %s · 可锁 · %s", pl.Name,
+dist and string.format("%.0f 格", dist) or "?"))
+end
+end
+end
+F.Out(string.format("── 本局除我 %d 人 · 可锁 %d 人 ──", total, lockable))
+if total > 0 and lockable == 0 then
+local cnt, top, tv = {}, nil, 0
+for _, r in ipairs(reasons) do cnt[r] = (cnt[r] or 0) + 1 end
+for k, v in pairs(cnt) do if v > tv then top, tv = k, v end end
+F.Out(string.format("⇒ 一个都锁不到。最主要原因: %s (占 %d/%d) —— 按上面每行的说明处理即可", tostring(top), tv, total))
+end
+F.Out("── 开火链 ──")
+F.Out("  mouse1click: " .. (type(mouse1click) == "function" and "有(优先用它)" or "没有 ⇒ 用 VirtualUser 兜底"))
+local hasVu = false
+pcall(function() hasVu = (game:GetService("VirtualUser") ~= nil) end)
+F.Out("  VirtualUser: " .. (hasVu and "有" or "没有"))
+local tool = nil
+pcall(function()
+local ch = LP.Character
+if ch then tool = ch:FindFirstChildOfClass("Tool") end
+end)
+F.Out("  当前装备: " .. (tool and ("有 · " .. tool.Name) or "(空手) —— 近战/枪械必须拿着武器才会开火") )
+local via = F.FireOnce()
+F.Out("  试发一次: " .. (via and ("成功 · 走的是 " .. via) or "三条路都没成功(该执行器三条都不支持)") .. " · 没听到枪声/挥砍就说明游戏侧没收到这次输入")
+F.Out("══════════════════════")
 end
 function F.AimSet(on)
 T.AimOn = on and true or false
@@ -2750,16 +2876,7 @@ pick = targets[F._killAuraIdx]
 if not pick then return end
 local cam = workspace.CurrentCamera
 if cam then cam.CFrame = CFrame.lookAt(cam.CFrame.Position, pick.hrp.Position) end
-if type(mouse1click) == "function" then
-pcall(mouse1click)
-elseif cam then
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-local vp = cam.ViewportSize
-vim:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, true, game, 1)
-vim:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, false, game, 1)
-end)
-end
+pcall(function() F.FireOnce() end)
 end)
 end
 function F.KillAuraDisable()
@@ -5549,18 +5666,20 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
+Tabs.Combat:AddButton({ Title = "★ 自瞄/开火体检(没锁到人 / 没开火 ⇒ 点这个, 原因逐条列出来)", Callback = function() F.CombatCheck() end })
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "自瞄(每帧把镜头转向视野内最近的目标)", Default = false, Callback = function(v) F.AimSet(v) end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关 · 每帧把镜头转向最近目标)", Default = false, Callback = function(v) F.AimSet(v) end })
 Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围(屏幕像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火)", Default = false, Callback = function(v) T.AutoFire = v end })
+Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v if v then F.EnsureAimOn() end end })
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火 · 会自动带上「自瞄」)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
 Tabs.Combat:AddToggle("Aim360", { Title = "360°锁敌(背后也能锁 · 范围改按格算)", Default = false, Callback = function(v)
 T.Aim360 = v
+if v then F.EnsureAimOn() end
 F.Out("[自瞄] 360° = " .. (v and "开(不看朝向, 按世界距离; 「自瞄范围」此模式下单位=格)" or "关(只锁屏幕内 FOV 圈里)"))
 end })
-Tabs.Combat:AddDropdown("AimTarget", { Title = "目标选择", Values = {
+Tabs.Combat:AddDropdown("AimTarget", { Title = "目标选择(乱斗/无阵营 ⇒ 选「所有人」)", Values = {
 "所有人(无阵营时自动)",
 "仅敌对阵营(有阵营时)",
 }, Default = "所有人(无阵营时自动)", Callback = function(v)
