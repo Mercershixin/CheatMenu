@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:09 sha 2525a82f bytes 265729'):format('2026-10-01 23:09','2525a82f',265729))
+print(('[CheatMenu] build 2026-10-01 23:17 sha 6f5c6e98 bytes 267038'):format('2026-10-01 23:17','6f5c6e98',267038))
 local F = {}
-F.VERSION = "v11.0.34"
+F.VERSION = "v11.0.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3495,15 +3495,26 @@ end
 function F.EggLock()
 local ch = LP.Character
 if not ch then F._egg, F._eggPart = nil, nil return end
+local carried = F.CarryFind()
+if #carried > 0 then
+local rec = carried[1]
+F._egg, F._eggPart, F._eggHand, F._eggBack = rec.other, rec.other, rec.host, 0
+F.Out("[蛋守卫] 锁定: " .. tostring(rec.other.Name) .. " (来自焊点 " .. tostring(rec.name)
+.. " 的另一端) —— 这才是「手上的东西」的可靠识别")
+return
+end
 local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
-or ch:FindFirstChild("Torso") or ch:FindFirstChild("UpperTorso")
+or ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
 or ch:FindFirstChild("HumanoidRootPart")
 F._eggHand = hand
 local hp = hand and hand.Position
 if not hp then F._egg, F._eggPart = nil, nil return end
-local best, bot, bd = nil, nil, 9
-for _, o in ipairs(workspace:GetChildren()) do
-if o ~= ch and (o:IsA("Model") or o:IsA("BasePart")) and not Players:GetPlayerFromCharacter(o) then
+local best, bot, bd, seen = nil, nil, 13, 0
+for _, o in ipairs(workspace:GetDescendants()) do
+seen = seen + 1
+if seen > 6000 then break end
+if (o:IsA("Model") or o:IsA("BasePart")) and not o:IsDescendantOf(ch)
+and not Players:GetPlayerFromCharacter(o) then
 local q = o:IsA("Model") and (o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")) or o
 if q and q.Parent then
 local d = (q.Position - hp).Magnitude
@@ -3512,8 +3523,8 @@ end
 end
 end
 F._egg, F._eggPart, F._eggBack = best, bot, 0
-F.Out("[蛋守卫] 锁定的手上物体: " .. (best and (best.Name .. " (" .. string.format("%.1f", bd) .. " 格)")
-or "没找到(站到蛋旁边再开一次这个开关)"))
+F.Out("[蛋守卫] 没找到焊点, 退化为按距离找: " .. (best and (best.Name .. " (" .. string.format("%.1f", bd) .. " 格)")
+or "还是没找到(站近点, 或者这个游戏不是焊接式搬运)"))
 end
 function F.EggGuardTick()
 local ch = LP.Character
@@ -3544,14 +3555,52 @@ d, F._eggBack))
 end
 end
 end
+F._pinConn, F._pinAp, F._pinAtt = nil, nil, nil
+function F.PinDisable()
+if F._pinConn then pcall(function() F._pinConn:Disconnect() end) F._pinConn = nil end
+for _, k in ipairs({ "_pinAp", "_pinAtt" }) do
+if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
+end
+end
+function F.PinEnable()
+if F._pinConn then return end
+local _, _, root = GC()
+if not root then return end
+local ok = pcall(function()
+local att = Instance.new("Attachment")
+att.Name = "CMPin"
+att.Parent = root
+local ap = Instance.new("AlignPosition")
+ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+ap.Attachment0 = att
+ap.MaxForce = 1e9
+ap.Responsiveness = 200
+pcall(function() ap.RigidityEnabled = true end)
+ap.Position = root.Position
+ap.Parent = root
+F._pinAtt, F._pinAp = att, ap
+end)
+if not ok or not F._pinAp then F.PinDisable() return end
+F._pinConn = RS.Stepped:Connect(function()
+if not (T.AllInOne and T.SpeedOn) then F.PinDisable() return end
+local _, _, r2 = GC()
+if not (r2 and F._pinAp) then return end
+local intent = F._intent
+if intent then pcall(function() F._pinAp.Position = intent end) end
+end)
+F.Out("[钉位] 已接管位移(刚性约束), 服务端回滚也会被拉回原定位置")
+end
 function F.AllInOneEnable()
 if F._aioConn then return end
 T.BypassDetect = true
 pcall(F.BypassEnable)
 pcall(function() F.GuardSet(true, true, false, true, true, true) end)
+T.StealthGod = true
+pcall(StealthGodEnable)
 T.InstantInteract = true
 pcall(F.InstantInteractEnable)
 F.EggLock()
+pcall(F.PinEnable)
 F._carry = F.CarryFind()
 F.Out("[搬守卫] 已盯上 " .. tostring(#F._carry) .. " 个「焊在你身上的东西」"
 .. (#F._carry > 0 and "(焊点名: " .. tostring(F._carry[1].name) .. ")" or "(手上没东西; 拿到后再关开一次)"))
@@ -3586,9 +3635,12 @@ if F._aioConn then pcall(function() F._aioConn:Disconnect() end) F._aioConn = ni
 F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack = nil, 0
 F._carry, F._carryBack = nil, 0
+pcall(F.PinDisable)
 T.BypassDetect = false
 pcall(F.BypassDisable)
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
+T.StealthGod = false
+pcall(StealthGodDisable)
 T.InstantInteract = false
 pcall(F.InstantInteractDisable)
 F.Out("[全合一] 已关(防护与瞬间交互一并收起)")
@@ -5144,7 +5196,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisable, F.PinDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6308,7 +6360,7 @@ AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
-F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisable,
+F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisable, F.PinDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
@@ -6600,16 +6652,6 @@ if v then F.BringPlayerEnable() else F.BringPlayerDisable() end
 end })
 Tabs.Combat:AddButton({ Title = "清除优先级/黑名单", Callback = function() C.PriorityTargets = {} C.Blacklist = {} end })
 Tabs.Combat:AddSection("生存 / 防御")
-Tabs.Combat:AddDropdown("GodMode", { Title = "生命保护", Values = { "关闭", "无敌(MaxHealth=∞)", "隐蔽无敌(锁满血)" },
-Default = "关闭", Callback = function(v)
-C.GodMode = v
-T.God = (v == "无敌(MaxHealth=∞)")
-T.StealthGod = (v == "隐蔽无敌(锁满血)")
-if F._cfgSyncing then return end
-T.LockHealth, T.NoDeath, T.Regen = false, false, false
-GodDisable() StealthGodDisable() LockHealthDisable() NoDeathDisable() RegenDisable()
-if T.God then GodEnable() elseif T.StealthGod then StealthGodEnable() end
-end })
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
 T.AntiRagdoll, T.AntiKnockdown = v, v
@@ -6635,9 +6677,10 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("AllInOne", { Title = "★ 全合一(不被拉回 · 蛋不掉手 · 防护 · 瞬间交互)", Description = "一个开关全包: 抢角色所有权(0.15s) + 被服务端回滚就续跑 + 不休眠微动 + 蛋离手就拉回 + 防护(稳身/受击/陷阱/弹开/防拉回) + 瞬间交互(长按变点一下)。开着就先站到蛋旁边", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("AllInOne", { Title = "★ 全合一(不被拉回 · 蛋不掉手 · 防护 · 瞬间交互)", Description = "一个开关全包: 抢角色所有权(0.15s) + 被服务端回滚就续跑 + 钉位防拉回 + 不休眠微动 + 搬守卫(焊点被拆就重焊) + 防护 + 瞬间交互。开着就先站到蛋旁边", Default = false, Callback = function(v)
+local changed = (T.AllInOne ~= nil) and (T.AllInOne ~= v)
 T.AllInOne = v
-if F._cfgSyncing then return end
+if F._cfgSyncing or not changed then return end
 if v then F.AllInOneEnable() else F.AllInOneDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
