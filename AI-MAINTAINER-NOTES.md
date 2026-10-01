@@ -2210,8 +2210,8 @@ T.TrapWarn / T.TrapDodge / T.SpeedAntiTP` 全部由 `F.GuardSet(...)` 可达；
 
 - **实测确认**：`Mercershixin/CheatMenu` 现在**只有 4 个文件**（`CheatMenu.lua` / `version.txt` / `loader.lua` /
   `AI-MAINTAINER-NOTES.md`），没有历史快照堆积（`push_docs.py` 在本项目里并不存在 ⇒ 不会再往里塞）。
-- **历代版本归档到"其他位置"**（用户要求）：`D:ƶ\AI工作区\备份\CheatMenu历代版本\`
+- **历代版本归档到"其他位置"**（用户要求）：`D:\666\AI工作区\备份\CheatMenu历代版本\`
   - `源码\`：**57 份**（历代源码 + 每次都改动前的 `pre-XXX` 快照 + 两份笔记备份）
   - `发行产物\`：**10 份** `dist/*.dist.lua`
   - 共约 **20MB**，另附 `说明.txt` 讲清"仓库只留最新、历史放这里"。
-  ★ 遵守本机**放置铁律**：我的产物只放 `D:ƶ\AI工作区\`，绝不进 `D:ƶ\` 根或 `ModOrganizer\`。
+  ★ 遵守本机**放置铁律**：我的产物只放 `D:\666\AI工作区\`，绝不进 `D:\666\` 根或 `ModOrganizer\`。
