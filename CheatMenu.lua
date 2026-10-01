@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:35 sha 07302aa7 bytes 269560'):format('2026-10-01 23:35','07302aa7',269560))
+print(('[CheatMenu] build 2026-10-01 23:45 sha 15555e3f bytes 273327'):format('2026-10-01 23:45','15555e3f',273327))
 local F = {}
-F.VERSION = "v11.0.37"
+F.VERSION = "v11.0.38"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2290,6 +2290,24 @@ if self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
+if KG.blockSet[self] and T.BypassDetect then
+if key == "Anchored" and v == true then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
+if key == "PlatformStand" and v == false and T.FlyOn then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
+if key == "Health" and type(v) == "number" then
+local hv = nil
+pcall(function() hv = rawget(self, "Health") end)
+if type(hv) == "number" and v < hv then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
+end
+end
 return oldNIX(self, key, v)
 end)
 end
@@ -2297,11 +2315,33 @@ KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = mt, oldNC, oldIX, oldNIX
 KG.mtHooked = true
 end)
 if not ok or not KG.mtHooked then KG.mtHooked = nil return end
+KG.blockSet = {}
 KG.logConn = RS.Heartbeat:Connect(function()
 local n = KG.blocked or 0
 if n ~= (KG.lastReport or 0) then
 KG.lastReport = n
 F.Out("[CheatMenu] 拦截 Kick 调用 ×" .. tostring(n) .. " (三条路径: :Kick() / .Kick 取值 / .Kick 赋值)")
+end
+local n2 = KG.blocked3 or 0
+if n2 ~= (KG.lastReport3 or 0) then
+KG.lastReport3 = n2
+F.Out("[屏蔽] 已挡下服务端对我角色的写入 ×" .. tostring(n2) .. " (钉住/清血/打断飞行)")
+end
+if T.BypassDetect then
+local ch = LP.Character
+if ch then
+local now = os.clock()
+if now - (KG.setAt or 0) > 0.5 then
+KG.setAt = now
+local s = {}
+pcall(function()
+for _, o in ipairs(ch:GetDescendants()) do
+if o:IsA("BasePart") or o:IsA("Humanoid") then s[o] = true end
+end
+end)
+KG.blockSet = s
+end
+end
 end
 end)
 end
@@ -3501,6 +3541,85 @@ end
 F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/秒 (%.0f%%)%s",
 tostring(tag), set, actual, ratio * 100, verdict))
 end
+F._invSav, F._invConn = nil, nil
+function F.InvisibleEnable()
+if F._invSav then return end
+local ch = LP.Character
+if not ch then F.Out("[隐身] 现在没有角色, 等进游戏再开") return end
+F._invSav = {}
+local n = 0
+pcall(function()
+for _, o in ipairs(ch:GetDescendants()) do
+if o:IsA("BasePart") or o:IsA("Decal") then
+F._invSav[o] = o.Transparency
+o.Transparency = 1
+n = n + 1
+end
+end
+end)
+F._invConns = {}
+local function apply(ch2)
+task.wait(0.3)
+if not F._invSav then return end
+pcall(function()
+for _, o in ipairs(ch2:GetDescendants()) do
+if o:IsA("BasePart") or o:IsA("Decal") then
+if F._invSav[o] == nil then F._invSav[o] = o.Transparency end
+o.Transparency = 1
+end
+end
+end)
+end
+pcall(function() F._invConns[1] = LP.CharacterAdded:Connect(apply) end)
+pcall(function()
+F._invConns[2] = ch.DescendantAdded:Connect(function(o)
+if not F._invSav then return end
+if o:IsA("BasePart") or o:IsA("Decal") then
+F._invSav[o] = o.Transparency
+pcall(function() o.Transparency = 1 end)
+end
+end)
+end)
+pcall(function()
+local hum = ch:FindFirstChildOfClass("Humanoid")
+if hum then
+F._invSavDist = hum.NameDisplayDistance
+F._invSavHealthDist = hum.HealthDisplayDistance
+hum.NameDisplayDistance = 0
+hum.HealthDisplayDistance = 0
+end
+end)
+F._invConn = RS.Heartbeat:Connect(function()
+if not T.Invisible then return end
+local _, _, root = GC()
+if root and root.Transparency ~= 1 then pcall(function() root.Transparency = 1 end) end
+end)
+F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制给所有人) + 名字/血条距离=0"
+.. " —— 服务端若有「透明检测」会把你拉回, 那不是脚本的问题")
+end
+function F.InvisibleDisable()
+if F._invConns then
+for _, c in ipairs(F._invConns) do pcall(function() c:Disconnect() end) end
+F._invConns = nil
+end
+if F._invConn then pcall(function() F._invConn:Disconnect() end) F._invConn = nil end
+if F._invSav then
+for o, t in pairs(F._invSav) do
+if typeof(o) == "Instance" and o.Parent then pcall(function() o.Transparency = t end) end
+end
+end
+F._invSav = nil
+pcall(function()
+local ch = LP.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum then
+if F._invSavDist then hum.NameDisplayDistance = F._invSavDist end
+if F._invSavHealthDist then hum.HealthDisplayDistance = F._invSavHealthDist end
+end
+end)
+F._invSavDist, F._invSavHealthDist = nil, nil
+F.Out("[隐身] 已关, 透明度已还原")
+end
 F._aioConn, F._egg, F._eggPart, F._eggHand = nil, nil, nil, nil
 function F.CarryFind()
 local ch = LP.Character
@@ -3661,8 +3780,6 @@ if F._aioConn then return end
 T.BypassDetect = true
 pcall(F.BypassEnable)
 pcall(function() F.GuardSet(true, true, false, true, true, true) end)
-T.StealthGod = true
-pcall(F.StealthGodEnable)
 T.InstantInteract = true
 pcall(F.InstantInteractEnable)
 F.EggLock()
@@ -3705,8 +3822,6 @@ pcall(F.PinDisable)
 T.BypassDetect = false
 pcall(F.BypassDisable)
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
-T.StealthGod = false
-pcall(F.StealthGodDisable)
 T.InstantInteract = false
 pcall(F.InstantInteractDisable)
 F.Out("[全合一] 已关(防护与瞬间交互一并收起)")
@@ -6768,6 +6883,11 @@ local changed = (T.AllInOne ~= nil) and (T.AllInOne ~= v)
 T.AllInOne = v
 if F._cfgSyncing or not changed then return end
 if v then F.AllInOneEnable() else F.AllInOneDisable() end
+end })
+Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
+T.Invisible = v
+if F._cfgSyncing then return end
+if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
