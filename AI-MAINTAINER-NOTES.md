@@ -2625,3 +2625,17 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   都用 `newcclosure` 包一层后替换。⛔ 重入红线：**钩子里只做纯判断 + 计数，绝不调用 `F.Out`**
   （`F.Out` 里的 `string.gsub` 会走 namecall ⇒ 重入爆栈）；日志改由 Heartbeat 在钩子外每 2 秒报一次。
 
+## 五十一、2026-10-01（11.0.38/11.0.39）：隐身是真是假 + 逐功能"拦服务端"审计
+
+- **隐身查证**：Roblox 里 `LocalTransparencyModifier` **不复制**（只有自己看不见）—— 公开脚本里叫"隐身"的多半是它；
+  真正对别人隐身要用 **`Transparency`**（属性会复制）。而**客户端持有自己角色的网络所有权**，
+  所以客户端改 `Transparency` 会复制给所有人 ⇒ **真隐身可行**（代价：服务端若查透明度会拉回）。
+  ⇒ 11.0.38 加了**独立功能「隐身」**（全部位/Decal `Transparency=1` + 名字/血条距离=0，关闭按记录还原，
+  重生后自动重施）；**把名不副实的「隐蔽无敌(锁满血)」（其实只是锁血）彻底删净**（11.0.39，残留 0）。
+- **逐功能"拦服务端处理"审计后的补强**：新增 **`__newindex` 白名单拦截**（挂在 Kick 三路径的同一个钩子上）——
+  当全合一开着时，**挡下服务端对我角色的三种"打断式写入"**：`Anchored=true`(钉住你)、
+  `Health` 被调低(清血)、`PlatformStand=false`(打断飞行)，日志 `[屏蔽] 已挡下服务端对我角色的写入 ×N`。
+  ⛔ 两个红线都守住了：①钩子内**只做表查找/比较 + 计数**，绝不 `F.Out`（防 namecall 重入）；
+  ②"我角色的部件集合"在**钩子外**由 Heartbeat 每 0.5s 重建缓存（钩子里不做 `IsDescendantOf`，那会走 namecall）。
+  没拦 `CFrame` 写入：那会和我们自己的顶回/钉位互相打架，位移交给"续跑 + 钉位"更安全。
+
