@@ -2246,3 +2246,12 @@ T.TrapWarn / T.TrapDodge / T.SpeedAntiTP` 全部由 `F.GuardSet(...)` 可达；
 - 修法：**地面上也直接写速度**（去掉 `if h.FloorMaterial == Air` 那条门槛），并且 **WalkSpeed 从每 0.2s 改成每帧重设**
   （守 §"持续保养"：被改回就再设）。「松手即停 / 保留 Y / 不含上下」三条契约不变。
 - ★ 通用原则（又是那条）：**凡"改属性"都要有"被改回就再设"的保养** —— 只设一次会被游戏自己的脚本覆盖。
+
+## 三十七、2026-10-01（下半场之三十二）：「动画没法加速」⇒ 加速时同步动画速度（11.0.22）
+
+- 症状："那个扫描的游戏里，动画没法加速" —— 加速只拉高**移动速度**，但**跑步/动作动画仍是原速**
+  ⇒ 看着像慢动作。
+- 修法：加速循环里每 0.3s 把角色 `Animator` 的播放轨道 `AdjustSpeed(sp/16)`（clamp 1..8）同步到手速。
+- 该游戏（`122278212262864`）动画组件很多：`AnimationManager` / `CutsceneStatus` / `BrainrotAnimationComponent` /
+  `TrainingAnimationComponent`；**若用户说的是"进游戏的过场/合成孵化动画"**（Tween/过场类，不是角色动画），
+  那是另一类，需要另做"跳过/快进"（`CutsceneStatus` + 自动点 Skip 按钮）。
