@@ -2215,3 +2215,13 @@ T.TrapWarn / T.TrapDodge / T.SpeedAntiTP` 全部由 `F.GuardSet(...)` 可达；
   - `发行产物\`：**10 份** `dist/*.dist.lua`
   - 共约 **20MB**，另附 `说明.txt` 讲清"仓库只留最新、历史放这里"。
   ★ 遵守本机**放置铁律**：我的产物只放 `D:\666\AI工作区\`，绝不进 `D:\666\` 根或 `ModOrganizer\`。
+
+## 三十四、2026-10-01（下半场之二十九）：点位换服自动清空 + 右键删除（11.0.19）
+
+- **换服 / 退出 ⇒ 自动清空**：按 `PlaceId .. "/" .. JobId` 记 `C.WpServer`；
+  每次加载时若与上次不同 ⇒ 清空 `C.Waypoints` 并打日志「换服/重进游戏 ⇒ 已自动清空上次的 N 个收藏点位」；
+  **同一局内热加载(同 JobId)不清** ⇒ 刚存的点位保住。旧「删除最近/清空所有」两个按钮保留。
+- **右键(手机长按)删除**：5 个点位按钮现在 **左键=存/传 · 右键(手机长按 0.6s)=删**（`F.WpSlotHook` 里
+  `MouseButton2` + `Touch` 长按计时），标题同步标「点=传 / 右键=删」。
+- ★ Fluent 按钮的**底层实例是探测出来的**（`b.Button` → `b.Frame:FindFirstChildWhichIsA("TextButton")`
+  → `b.Container:…`，逐级 pcall 兜底）—— 因为发布包公开 API 名被压缩、拿不到确切字段名。
