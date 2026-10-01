@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:17 sha 6f5c6e98 bytes 267038'):format('2026-10-01 23:17','6f5c6e98',267038))
+print(('[CheatMenu] build 2026-10-01 23:24 sha 4173eff4 bytes 267120'):format('2026-10-01 23:24','4173eff4',267120))
 local F = {}
-F.VERSION = "v11.0.35"
+F.VERSION = "v11.0.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3596,7 +3596,7 @@ T.BypassDetect = true
 pcall(F.BypassEnable)
 pcall(function() F.GuardSet(true, true, false, true, true, true) end)
 T.StealthGod = true
-pcall(StealthGodEnable)
+pcall(F.StealthGodEnable)
 T.InstantInteract = true
 pcall(F.InstantInteractEnable)
 F.EggLock()
@@ -3640,7 +3640,7 @@ T.BypassDetect = false
 pcall(F.BypassDisable)
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
 T.StealthGod = false
-pcall(StealthGodDisable)
+pcall(F.StealthGodDisable)
 T.InstantInteract = false
 pcall(F.InstantInteractDisable)
 F.Out("[全合一] 已关(防护与瞬间交互一并收起)")
@@ -4571,6 +4571,7 @@ local _, hum = GC()
 if hum and hum.Health > 0 then hum.Health = hum.MaxHealth end
 end)
 end
+F.StealthGodEnable, F.StealthGodDisable = StealthGodEnable, StealthGodDisable
 local NoDeathConn = nil
 local function NoDeathDisable() if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end end
 local function NoDeathEnable()
