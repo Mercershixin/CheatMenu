@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:25 sha 153cea85 bytes 244480'):format('2026-10-01 19:25','153cea85',244480))
+print(('[CheatMenu] build 2026-10-01 19:33 sha 585408dd bytes 248775'):format('2026-10-01 19:33','585408dd',248775))
 local F = {}
-F.VERSION = "v11.0.10"
+F.VERSION = "v11.0.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2187,7 +2187,8 @@ F._scavenging = true
 F.Out("[自动分析] ══════ 全自动分析开始（你不用输入任何东西）══════")
 local kws = F.AutoKeywords()
 if #kws == 0 then
-F.Out("[自动分析] 没找到可用的关键词 —— 可能本服反作弊在服务端(客户端看不到)，这是正常结论")
+F.Out("[自动分析] 按「数字常量」没找到关键词 —— 这只说明没有数值型阈值可读, 不等于客户端干净")
+pcall(F.ScanClientChecks, true)
 F._scavenging = keep
 return
 end
@@ -2697,7 +2698,40 @@ local ch = LP.Character
 local tool = ch and ch:FindFirstChildOfClass("Tool")
 if tool then tool:Activate() viaTool = "tool:Activate()" end
 end)
-return viaTool
+if viaTool then return viaTool end
+local viaBtn = nil
+pcall(function()
+local b = F._fireBtn
+if not (b and b.Parent and b.Visible) then
+b = nil
+local gui = LP:FindFirstChild("PlayerGui")
+if gui then
+local keys = { "attack", "fire", "hit", "shoot", "swing", "slash", "kick", "punch" }
+for _, d in ipairs(gui:GetDescendants()) do
+if d:IsA("TextButton") or d:IsA("ImageButton") then
+local nm = tostring(d.Name):lower()
+for _, k in ipairs(keys) do
+if nm:find(k, 1, true) then b = d break end
+end
+end
+if b then break end
+end
+end
+F._fireBtn = b
+end
+if b then
+if type(firesignal) == "function" then
+pcall(firesignal, b.MouseButton1Click)
+viaBtn = "屏幕按钮:" .. tostring(b.Name)
+elseif type(getconnections) == "function" then
+for _, c in ipairs(getconnections(b.MouseButton1Click)) do
+pcall(function() c:Fire() end)
+viaBtn = "屏幕按钮:" .. tostring(b.Name)
+end
+end
+end
+end)
+return viaBtn
 end
 function F.AutoFire(tgt)
 if not (T.AutoFire and tgt) then return end
@@ -2958,6 +2992,87 @@ end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
+function F.ScanClientChecks(verbose)
+local scripts, conns = {}, {}
+pcall(function()
+local roots = { LP:FindFirstChild("PlayerScripts"), LP:FindFirstChild("PlayerGui"), LP.Character }
+for _, r in ipairs(roots) do
+if r then
+for _, d in ipairs(r:GetDescendants()) do
+if d:IsA("LocalScript") or d:IsA("Script") or d:IsA("ModuleScript") then
+local nm = tostring(d.Name):lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if nm:find(k, 1, true) then scripts[#scripts + 1] = d:GetFullName() break end
+end
+end
+end
+end
+end
+end)
+pcall(function()
+if type(getconnections) ~= "function" then return end
+for _, c in ipairs(getconnections(RS.Heartbeat)) do
+local fn = c.Function
+pcall(function()
+if not fn then return end
+local okN, nm = pcall(debug.info, fn, "n")
+local okS, sc = pcall(debug.info, fn, "s")
+local bag = (tostring(okN and nm or "") .. " " .. tostring(okS and sc or "")):lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if bag:find(k, 1, true) then
+conns[#conns + 1] = tostring(okN and nm or "(匿名)") .. " @ " .. tostring(sc or "?")
+break
+end
+end
+end)
+end
+end)
+if verbose then
+F.Out(string.format("[客户端检测] 按名字扫到脚本 %d 个 · Heartbeat 上可疑连接 %d 条(共 %d 条连接)",
+#scripts, #conns, (function() local n = 0 pcall(function() n = #getconnections(RS.Heartbeat) end) return n end)()))
+for i = 1, math.min(#scripts, 6) do F.Out("   · 脚本: " .. scripts[i]) end
+for i = 1, math.min(#conns, 6) do F.Out("   · 连接: " .. conns[i]) end
+if #scripts == 0 and #conns == 0 then
+F.Out("   (这个游戏客户端侧没有按这些名字出现的检测 ⇒ 它不是「客户端检测」型; 但换个游戏请重扫)")
+end
+end
+return #scripts, #conns
+end
+F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
+F._floorLast = {}
+function F.OnMovingFloor()
+local _, _, root = GC()
+if not root then return false end
+local hit = false
+pcall(function()
+local op = OverlapParams.new()
+op.FilterType = Enum.RaycastFilterType.Exclude
+if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
+local probe = root.Position - Vector3.new(0, 3, 0)
+local seen = {}
+for _, pf in ipairs(workspace:GetPartBoundsInRadius(probe, 7, op)) do
+seen[pf] = true
+local nm = tostring(pf.Name):lower()
+for _, k in ipairs(F.FLOOR_KEYS) do
+if nm:find(k, 1, true) then hit = true break end
+end
+if not hit then
+local av = 0
+pcall(function() av = pf.AssemblyLinearVelocity.Magnitude end)
+if av > 0.5 then hit = true end
+end
+if not hit and F._floorLast[pf] then
+local d = (pf.Position - F._floorLast[pf]).Magnitude
+if d > 0.02 then hit = true end
+end
+F._floorLast[pf] = pf.Position
+end
+for obj in pairs(F._floorLast) do
+if not seen[obj] then F._floorLast[obj] = nil end
+end
+end)
+return hit
+end
 F.ANTITP_KEYS = { "obbyantitp", "antitp", "antiteleport", "antilagback", "lagback",
 "speedcheck", "speedguard", "anticheat", "antiexploit", "antifly", "antimove", "observe" }
 F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
@@ -3072,6 +3187,12 @@ F._hitConn = nil
 function F.HitGuardScan(verbose)
 local found = {}
 pcall(function()
+local pk = RStorage:FindFirstChild("Packages")
+local nw = pk and pk:FindFirstChild("Networking")
+local known = nw and nw:FindFirstChild("RE/RigSync/Refresh")
+if known then found[#found + 1] = known end
+end)
+pcall(function()
 for _, d in ipairs(F.walk(RStorage, 4000)) do
 local cn = tostring(d.ClassName)
 if cn == "RemoteEvent" or cn == "UnreliableRemoteEvent" then
@@ -3131,6 +3252,10 @@ pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], false) end)
 end
 local st = nil
 pcall(function() st = hum:GetState() end)
+if F.OnMovingFloor() and st ~= Enum.HumanoidStateType.Ragdoll
+and st ~= Enum.HumanoidStateType.FallingDown and st ~= Enum.HumanoidStateType.Physics then
+return
+end
 if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown
 or st == Enum.HumanoidStateType.Physics then
 pcall(function() hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics) end)
@@ -3233,6 +3358,14 @@ if not T.SteadyOn then F.SteadyDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
 if not hum.PlatformStand then pcall(function() F.SteadyStates(false) end) end
+if F.OnMovingFloor() then
+if not F._steadyFloorLog then
+F._steadyFloorLog = true
+F.Out("[稳身] 检测到跑步机/移动平台 ⇒ 本项暂时让路(免得把你甩下来)")
+end
+return
+end
+F._steadyFloorLog = nil
 local st = nil
 pcall(function() st = hum:GetState() end)
 if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll then
@@ -6371,8 +6504,9 @@ if v:find("一键分析", 1, true) then
 F.ScanThresholds()
 F.AutoProbe()
 F.ScanFamilies()
+pcall(F.ScanClientChecks, true)
 pcall(F.LogFlush, "一键分析")
-Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族聚类已完成, 明细见控制台 F9", Duration = 8 })
+Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族 + 客户端检测已扫完, 明细见控制台 F9", Duration = 8 })
 elseif v:find("反查持有者", 1, true) then
 local t = F._lastSusRemote
 if t == nil then
