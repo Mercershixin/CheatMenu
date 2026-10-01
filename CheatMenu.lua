@@ -1,6 +1,8 @@
-print(('[CheatMenu] build 2026-10-01 13:57 sha 0675f6c9 bytes 262642'):format('2026-10-01 13:57','0675f6c9',262642))
+print(('[CheatMenu] build 2026-10-01 14:10 sha cbef9e64 bytes 267024'):format('2026-10-01 14:10','cbef9e64',267024))
 local F = {}
-F._flyJumpConn = nil
+F.VERSION = "v10.10.0"
+F._flyDisabledInfJump = nil
+F._flyJumpReqConn = nil
 F._flyJumpAt = 0
 F._menuHoldAt = nil
 F._menuHoldMoved = false
@@ -82,7 +84,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.9.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · " .. F.VERSION .. " =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -3257,6 +3259,7 @@ end
 end
 F._skeletonDrawings = list
 end)
+for _, pl in ipairs(Players:GetPlayers()) do bindSkelPl(pl) end
 if okAll and F._skeletonDrawings then
 F._skeletonConn = RS.RenderStepped:Connect(function()
 if not T.ESPSkeleton then F.SkeletonDisable() return end
@@ -3285,7 +3288,8 @@ end
 end
 end)
 if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
-F._skelQConn = Players.PlayerAdded:Connect(function()
+F._skelQConn = Players.PlayerAdded:Connect(function(pl)
+bindSkelPl(pl)
 if not T.ESPSkeleton then return end
 task.wait(0.8)
 F.SkeletonDisable()
@@ -3317,8 +3321,10 @@ F._skeletonLines[#F._skeletonLines + 1] = { line = line, pl = pl, a = pair[1], b
 end
 end
 end
+for _, pl in ipairs(Players:GetPlayers()) do bindSkelPl(pl) end
 if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
-F._skelQConn = Players.PlayerAdded:Connect(function()
+F._skelQConn = Players.PlayerAdded:Connect(function(pl)
+bindSkelPl(pl)
 if not T.ESPSkeleton then return end
 task.wait(0.8)
 F.SkeletonDisable()
@@ -3959,8 +3965,12 @@ if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
 local _, hum = GC()
 if hum then pcall(function() hum.PlatformStand = false end) end
-if F._flyJumpConn then
-F._flyJumpConn = nil
+if F._flyJumpReqConn then
+pcall(function() F._flyJumpReqConn:Disconnect() end)
+F._flyJumpReqConn = nil
+end
+if F._flyDisabledInfJump then
+F._flyDisabledInfJump = nil
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
 end
 end
@@ -3968,10 +3978,17 @@ function F.FlySet(on)
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
-if T.InfiniteJump and F.JumpConn then pcall(F.InfiniteJumpDisable) F._flyJumpConn = true end
+if T.InfiniteJump and F.JumpConn then
+pcall(F.InfiniteJumpDisable)
+F._flyDisabledInfJump = true
+end
 local _, hum, root = GC()
 if not (hum and root) then return end
 pcall(function() hum.PlatformStand = true end)
+if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
+F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
+if T.FlyOn then F._flyJumpAt = os.clock() end
+end)
 local okAlign = pcall(function()
 local att = Instance.new("Attachment")
 att.Name = "RootTilt"
@@ -4017,12 +4034,27 @@ if not h.PlatformStand then pcall(function() h.PlatformStand = true end) end
 local c = workspace.CurrentCamera
 if not c then return end
 local dir = Vector3.zero
+if UIS.KeyboardEnabled then
 if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + c.CFrame.LookVector end
 if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - c.CFrame.LookVector end
 if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - c.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + c.CFrame.RightVector end
 if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+end
+local md = h.MoveDirection
+if md.Magnitude > 0.01 and UIS.TouchEnabled then
+local hLook = Vector3.new(c.CFrame.LookVector.X, 0, c.CFrame.LookVector.Z)
+local hRight = Vector3.new(c.CFrame.RightVector.X, 0, c.CFrame.RightVector.Z)
+if hLook.Magnitude > 0.001 then hLook = hLook.Unit end
+if hRight.Magnitude > 0.001 then hRight = hRight.Unit end
+local fwd = md:Dot(hLook)
+local side = md:Dot(hRight)
+dir = dir + c.CFrame.LookVector * fwd + c.CFrame.RightVector * side
+end
+if UIS.TouchEnabled and (os.clock() - (F._flyJumpAt or 0) < 0.15) then
+dir = dir + Vector3.new(0, 1, 0)
+end
 local vel = dir.Magnitude > 0 and (dir.Unit * (tonumber(C.FlyValue) or 60)) or Vector3.zero
 if F._flyAp then
 local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
@@ -6042,6 +6074,42 @@ local num = F.ParseNum(s)
 if not num then return nil, "内容=" .. tostring(s) .. " 认不出数字" end
 return num, tostring(s)
 end
+function F.ScanHUD()
+task.spawn(function()
+local pg = LP:FindFirstChild("PlayerGui")
+if not pg then F.Out("[HUD扫描] 没有 PlayerGui") return end
+F.Out("──────── HUD 数字控件扫描(只读) ────────")
+local found = {}
+local function scan(root, path)
+for _, ch in ipairs(root:GetChildren()) do
+local p = path .. "." .. ch.Name
+if ch:IsA("TextLabel") or ch:IsA("TextButton") then
+local txt = ch.Text or ""
+local num = F.ParseNum(txt)
+if num then found[#found + 1] = { path = p, text = txt } end
+end
+if #p < 80 and #found < 200 then scan(ch, p) end
+end
+end
+local roots = { { pg:FindFirstChild("HUD"), "HUD" }, { pg:FindFirstChild("Frames"), "Frames" } }
+for i = 1, #roots do
+if roots[i][1] then scan(roots[i][1], roots[i][2]) end
+end
+if #found == 0 then
+F.Out("  没扫到数字控件 —— 确认已在正确场景(基地内)")
+else
+for i = 1, math.min(#found, 60) do
+F.Out(string.format("  %-58s = %s", found[i].path, found[i].text))
+end
+F.Out(string.format("  共 %d 个数字控件", #found))
+end
+F.Out("────────────────────────────────────")
+pcall(F.LogFlush, "HUD扫描")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "HUD 扫描", Content = "找到 " .. #found .. " 个数字控件, 明细见控制台 F9", Duration = 10 })
+end
+end)
+end
 function F.ReadBase()
 task.spawn(function()
 F.Out("──────── 基地数据(只读) ────────")
@@ -6082,13 +6150,20 @@ if not base then return end
 local lv = toolLevel(tool)
 if lv >= 75 then return end
 local mut = tostring(tool:GetAttribute("Mutation") or "")
-local mm = MutBuff[mut] or 1
+local mm = MutBuff[mut]
+local unknown = false
+if not mm and mut ~= "" then
+unknown = true
+mm = 1
+elseif not mm then
+mm = 1
+end
 local cps = base * mm * (lvMul() ^ (lv - 1))
 local cost = math.floor(base * mm * (1.5 ^ (lv - 1)))
 if cost <= 0 then return end
 local gain = cps * 0.25
 out[#out + 1] = { Name = tool.Name, Where = where, Lv = lv, CPS = cps, Cost = cost,
-Gain = gain, ROI = gain / cost }
+Gain = gain, ROI = gain / cost, Unknown = unknown }
 end
 local ch = LP.Character
 local bp = LP:FindFirstChild("Backpack")
@@ -6102,12 +6177,16 @@ for _, t in ipairs(bp:GetChildren()) do
 if t:IsA("Tool") and isEntityTool(t) then consider(t, "背包") end
 end
 end
-table.sort(out, function(a, b) return a.ROI > b.ROI end)
+table.sort(out, function(a, b)
+if a.Unknown ~= b.Unknown then return not a.Unknown end
+return a.ROI > b.ROI
+end)
 F.Out(string.format("──────── 升级性价比(可升级 %d 个) ────────", #out))
 for i = 1, math.min(#out, 10) do
 local e = out[i]
-F.Out(string.format("  %d) %s [%s] Lv%d · CPS≈%s · 一级花 %s 换 +%s · 性价比 %.5f",
-i, e.Name, e.Where, e.Lv, fmtNum(e.CPS), fmtNum(e.Cost), fmtNum(e.Gain), e.ROI))
+local mark = e.Unknown and " ⚠词缀未知" or ""
+F.Out(string.format("  %d) %s [%s] Lv%d · CPS≈%s · 一级花 %s 换 +%s · 性价比 %.5f%s",
+i, e.Name, e.Where, e.Lv, fmtNum(e.CPS), fmtNum(e.Cost), fmtNum(e.Gain), e.ROI, mark))
 end
 local best = out[1]
 if best then
@@ -6128,6 +6207,12 @@ function F.SellAll()
 if SellThread then F.Out("[卖光] 正在售卖中, 稍后再试") return end
 F._sellThOverride = true
 F.Out("[卖光] 会把背包里能算出 CPS 的、非限定脑红全部卖掉")
+task.delay(300, function()
+if F._sellThOverride then
+F._sellThOverride = nil
+F.Out("[卖光] 兜底超时: 已清掉临时门槛覆盖")
+end
+end)
 F.SellLowCPS(true)
 end
 end
@@ -6546,8 +6631,8 @@ local _w = math.clamp(math.floor(_vw * 0.96), 240, _touch and 520 or 500)
 local _h = math.clamp(math.floor(_vh * 0.88), 240, _touch and 600 or 540)
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.9.0",
-TabWidth = _touch and 66 or 100,
+SubTitle = F.VERSION,
+TabWidth = _touch and math.clamp(math.floor(_w / 8), 50, 66) or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
 Theme = "Aqua",
@@ -6571,9 +6656,9 @@ btn.Size = UDim2.fromOffset(58, 58)
 btn.Position = UDim2.new(0, 10, 0.36, 0)
 btn.BackgroundColor3 = Color3.fromRGB(34, 34, 40)
 btn.BackgroundTransparency = 0.2
-btn.Text = "菜单"
+btn.Text = "菜单\n长按急停"
 btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-btn.TextSize = 17
+btn.TextSize = 13
 btn.Parent = sg
 local c = Instance.new("UICorner")
 c.CornerRadius = UDim.new(0, 12)
@@ -6584,15 +6669,28 @@ if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserIn
 dragInput = i
 sx, sy = i.Position.X, i.Position.Y
 bx, by = btn.Position.X.Offset, btn.Position.Y.Offset
+F._menuHoldAt = os.clock()
+F._menuHoldMoved = false
+task.delay(2.0, function()
+if F._menuHoldAt and not F._menuHoldMoved
+and (os.clock() - F._menuHoldAt) >= 1.9 then
+F._menuHoldAt = nil
+pcall(F.PanicKeyDisableAll)
+end
+end)
 end
 end)
 btn.InputChanged:Connect(function(i)
 if dragInput and i == dragInput then
-btn.Position = UDim2.new(0, bx + (i.Position.X - sx), 0, by + (i.Position.Y - sy))
+local dx = i.Position.X - sx
+local dy = i.Position.Y - sy
+if math.abs(dx) > 10 or math.abs(dy) > 10 then F._menuHoldMoved = true end
+btn.Position = UDim2.new(0, bx + dx, 0, by + dy)
 end
 end)
 btn.InputEnded:Connect(function(i)
 if i == dragInput then dragInput = nil end
+F._menuHoldAt = nil
 end)
 btn.MouseButton1Click:Connect(function()
 local wasOpen = F.MenuOpen()
@@ -6645,7 +6743,11 @@ T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v end })
-Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v) T.FovCircle = v if v then F.FovCircleEnable() else F.FovCircleDisable() end end })
+Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v)
+T.FovCircle = v
+if F._cfgSyncing then return end
+if v then F.FovCircleEnable() else F.FovCircleDisable() end
+end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
@@ -6667,9 +6769,17 @@ T.AntiRagdoll, T.AntiKnockdown = v, v
 if F._cfgSyncing then return end
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
 if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
-end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v) T.HitboxExpand = v if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end end })
+end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v)
+T.HitboxExpand = v
+if F._cfgSyncing then return end
+if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
+end })
 Tabs.Combat:AddSection("自动攻击")
-Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v) T.KillAura = v if v then F.KillAuraEnable() else F.KillAuraDisable() end end })
+Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
+T.KillAura = v
+if F._cfgSyncing then return end
+if v then F.KillAuraEnable() else F.KillAuraDisable() end
+end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
@@ -6679,8 +6789,16 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("其他移动")
-Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v) T.NoClip = v if v then F.NoClipEnable() else F.NoClipDisable() end end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v) T.Hide = v if v then F.HideEnable() else F.HideDisable() end end })
+Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
+T.NoClip = v
+if F._cfgSyncing then return end
+if v then F.NoClipEnable() else F.NoClipDisable() end
+end })
+Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
+T.Hide = v
+if F._cfgSyncing then return end
+if v then F.HideEnable() else F.HideDisable() end
+end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
@@ -6706,15 +6824,55 @@ T.FOV = v T.Zoom = v
 if F._cfgSyncing then return end
 if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 end })
-Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v) C.FOV = v if T.FOV then FOVEnable() end end })
-Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v) C.Zoom = v if T.Zoom then ZoomEnable() end end })
-Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v) T.Mute = v if v then MuteEnable() else MuteDisable() end end })
-Tabs.World:AddToggle("Antilag", { Title = "降画质", Default = false, Callback = function(v) T.Antilag = v if v then AntilagEnable() else AntilagDisable() end end })
+Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v)
+C.FOV = v
+if F._cfgSyncing then return end
+if T.FOV then FOVEnable() end
+end })
+Tabs.World:AddSlider("Zoom", { Title = "缩放距离", Min = 128, Max = 1000, Default = 400, Rounding = 0, Callback = function(v)
+C.Zoom = v
+if F._cfgSyncing then return end
+if T.Zoom then ZoomEnable() end
+end })
+Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
+T.Mute = v
+if F._cfgSyncing then return end
+if v then MuteEnable() else MuteDisable() end
+end })
+Tabs.World:AddToggle("Antilag", { Title = "降画质", Default = false, Callback = function(v)
+T.Antilag = v
+if F._cfgSyncing then return end
+if v then AntilagEnable() else AntilagDisable() end
+end })
 Tabs.World:AddSection("相机 / 准星")
-Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam", Default = false, Callback = function(v) T.Freecam = v if v then F.FreecamEnable() else F.FreecamDisable() end end })
-Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v) T.Hud = v if v then F.HudEnable() else F.HudDisable() end end })
-Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback = function(v) T.Crosshair = v if v then F.CrosshairEnable() else F.CrosshairDisable() end end })
-Tabs.World:AddToggle("LockCam", { Title = "锁相机", Default = false, Callback = function(v) T.LockCam = v if v then F.LockCamEnable() else F.LockCamDisable() end end })
+Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
+if v and UIS.TouchEnabled then
+T.Freecam = false
+pcall(function()
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "Freecam", Content = "手机端不支持(需要鼠标/键盘), 已自动关闭", Duration = 5 })
+end
+end)
+return
+end
+T.Freecam = v
+if v then F.FreecamEnable() else F.FreecamDisable() end
+end })
+Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
+T.Hud = v
+if F._cfgSyncing then return end
+if v then F.HudEnable() else F.HudDisable() end
+end })
+Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback = function(v)
+T.Crosshair = v
+if F._cfgSyncing then return end
+if v then F.CrosshairEnable() else F.CrosshairDisable() end
+end })
+Tabs.World:AddToggle("LockCam", { Title = "锁相机", Default = false, Callback = function(v)
+T.LockCam = v
+if F._cfgSyncing then return end
+if v then F.LockCamEnable() else F.LockCamDisable() end
+end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -6730,10 +6888,22 @@ if F._cfgSyncing then return end
 if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable()
 else F.KickGuardDisable() F.AntiAFKDisable() pcall(F.KickRejoinDisable) end
 end })
-Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v) T.AutoTrain = v if v then F.AutoTrainEnable() end end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then F.AutoBonusEnable() end end })
+Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
+T.AutoTrain = v
+if F._cfgSyncing then return end
+if v then F.AutoTrainEnable() end
+end })
+Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v)
+T.AutoBonus = v
+if F._cfgSyncing then return end
+if v then F.AutoBonusEnable() end
+end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then F.AutoGymEnable() end end })
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v)
+T.AutoGym = v
+if F._cfgSyncing then return end
+if v then F.AutoGymEnable() end
+end })
 Tabs.AFK:AddSection("脑红 / 现金")
 Tabs.AFK:AddButton({ Title = "★ 一键收起脑红(全部槽位, 最多 30)", Callback = function() F.WithdrawAll(30) end })
 Tabs.AFK:AddButton({ Title = "一键收钱(全部槽位)", Callback = function() F.CollectAll(30) end })
@@ -6776,6 +6946,7 @@ if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已�
 end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
 if v then
 F.TranslateEnable()
 else
@@ -6787,14 +6958,20 @@ Default = "zh", Callback = function(v) C.TransLang = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.ChatTranslate = v
+if F._cfgSyncing then return end
 if v then F.ChatTranslateEnable() else F.ChatTranslateDisable() end
 end })
 Tabs.Trans:AddToggle("BubbleTranslate", { Title = "气泡聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.BubbleTranslate = v
+if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACMaster", { Title = "防护(不改写游戏: 反甩 + 护界面 + 权限守卫)", Default = false, Callback = function(v)
+if F._cfgSyncing then
+T.AntiFling = v T.GuiProtect = v T.CharPersist = true
+return
+end
 if v then
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
 F.AntiFlingEnable()
@@ -6904,6 +7081,7 @@ end)
 end })
 Tabs.AC:AddSection("采集与导出")
 Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
 if v then
 local ok = F.CaptureEnable()
 Fluent:Notify({ Title = "采集", Content = ok and "已开始记录上行 remote 参数 —— 玩一会儿后点「一键全量导出」" or "开启失败(执行器不支持 hookmetamethod)", Duration = 8 })
@@ -6926,6 +7104,7 @@ Tabs.Setting:AddSection("系统")
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
+Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
@@ -6949,7 +7128,7 @@ _tip = " · ⚠ 本执行器缺 " .. (_hi == "无" and "hook三件套" or "")
 end
 Fluent:Notify({
 Title = "CheatMenu 已加载",
-Content = "已加载 v10.9.0 · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
+Content = "已加载 " .. F.VERSION .. " · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
 .. " · 存档:" .. _wf .. _tip,
 Duration = 14,
 })
@@ -6964,7 +7143,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.9.0")
+F.Out("[CheatMenu] ✅ 加载完成 " .. F.VERSION)
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
