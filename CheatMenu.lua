@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:20 sha 0fd31e6f bytes 240774'):format('2026-10-01 19:20','0fd31e6f',240774))
+print(('[CheatMenu] build 2026-10-01 19:25 sha 153cea85 bytes 244480'):format('2026-10-01 19:25','153cea85',244480))
 local F = {}
-F.VERSION = "v11.0.9"
+F.VERSION = "v11.0.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2958,6 +2958,113 @@ end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
+F.ANTITP_KEYS = { "obbyantitp", "antitp", "antiteleport", "antilagback", "lagback",
+"speedcheck", "speedguard", "anticheat", "antiexploit", "antifly", "antimove", "observe" }
+F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
+F._atpState = nil
+function F.SpeedAntiTPDisable()
+local st = F._atpState
+F._atpState = nil
+if not st then return end
+for fn, orig in pairs(st.hooked or {}) do
+pcall(function() hookfunction(fn, orig) end)
+end
+for _, c in ipairs(st.conns or {}) do
+pcall(function() if c.Enable then c:Enable() end end)
+end
+if st.attrConn then pcall(function() st.attrConn:Disconnect() end) end
+if st.addConn then pcall(function() st.addConn:Disconnect() end) end
+F.Out("[防拉回] 已还原：解锁 " .. tostring(#(st.conns or {})) .. " 条连接")
+end
+function F.SpeedAntiTPKillScripts()
+local n = 0
+pcall(function()
+local roots = { LP:FindFirstChild("PlayerScripts"), LP.Character, game:GetService("ReplicatedFirst") }
+for _, r in ipairs(roots) do
+if r then
+for _, d in ipairs(r:GetDescendants()) do
+if d:IsA("LocalScript") or d:IsA("Script") then
+local nm = tostring(d.Name):lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if nm:find(k, 1, true) then
+pcall(function() d.Disabled = true d:Destroy() end)
+n = n + 1
+break
+end
+end
+end
+end
+end
+end
+end)
+return n
+end
+function F.SpeedAntiTPEnable()
+if F._atpState then return end
+local st = { hooked = {}, conns = {} }
+F._atpState = st
+local dead = F.SpeedAntiTPKillScripts()
+local conns = 0
+pcall(function()
+if type(getconnections) ~= "function" then return end
+for _, c in ipairs(getconnections(RS.Heartbeat)) do
+local fn = c.Function
+local hit = false
+pcall(function()
+if fn then
+local okN, nm = pcall(debug.info, fn, "n")
+local okS, sc = pcall(debug.info, fn, "s")
+local bag = tostring(okN and nm or "") .. " " .. tostring(okS and sc or "")
+bag = bag:lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if bag:find(k, 1, true) then hit = true break end
+end
+end
+end)
+if hit then
+pcall(function() c:Disable() end)
+st.conns[#st.conns + 1] = c
+conns = conns + 1
+end
+end
+end)
+local neutered = 0
+pcall(function()
+if type(getgc) ~= "function" or type(hookfunction) ~= "function" then return end
+for _, fn in ipairs(getgc(true)) do
+if type(fn) == "function" and not st.hooked[fn] then
+local okN, nm = pcall(debug.info, fn, "n")
+if okN and type(nm) == "string" and F.ANTITP_FNS[nm:lower()] then
+local okS, sc = pcall(debug.info, fn, "s")
+local bag = tostring(okS and sc or ""):lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if bag:find(k, 1, true) then
+local ok, orig = pcall(function() return hookfunction(fn, function() return nil end) end)
+if ok and type(orig) == "function" then
+st.hooked[fn] = orig
+neutered = neutered + 1
+end
+break
+end
+end
+end
+end
+end
+end)
+pcall(function()
+st.addConn = LP.PlayerScripts.DescendantAdded:Connect(function(inst)
+if not F._atpState then return end
+pcall(function()
+local nm = tostring(inst.Name):lower()
+for _, k in ipairs(F.ANTITP_KEYS) do
+if nm:find(k, 1, true) then task.defer(F.SpeedAntiTPKillScripts) break end
+end
+end)
+end)
+end)
+F.Out(string.format("[防拉回] 已清理 %d 个客户端检测脚本 · 禁用 %d 条检测连接 · 中和 %d 个检测函数(公开作品同款做法)",
+dead, conns, neutered))
+end
 F.HIT_KEYS = { "rigsync", "knockback", "knock", "ragdoll", "combatservice", "useitem",
 "stun", "tumble", "pushed", "fling", "blown", "launch" }
 F.HIT_STATES = { "Ragdoll", "FallingDown", "Physics" }
@@ -5697,7 +5804,7 @@ F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet,
-F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable,
+F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
 F._dumpText = nil
@@ -5993,6 +6100,14 @@ T.TrapWarn = (v ~= "关")
 T.TrapDodge = (v == "拦截 + 自动弹开一步")
 if F._cfgSyncing then return end
 if T.TrapWarn then F.TrapGuardEnable() else F.TrapGuardDisable() end
+end })
+Tabs.Move:AddSection("加速防拉回(中和游戏自己的「防加速」检测 · 独立开关)")
+Tabs.Move:AddDropdown("SpeedAntiTP", { Title = "游戏把你拉回/降速时", Values = {
+"关", "清理它(断检测连接 + 中和检测函数)",
+}, Default = "关", Callback = function(v)
+T.SpeedAntiTP = (v ~= "关")
+if F._cfgSyncing then return end
+if T.SpeedAntiTP then F.SpeedAntiTPEnable() else F.SpeedAntiTPDisable() end
 end })
 Tabs.Move:AddSection("防击倒 / 加速稳身")
 Tabs.Move:AddToggle("SteadyOn", { Title = "★ 稳身(加速时不倒 / 不被打飞 / 不会自己飞起来)", Default = false, Callback = function(v)
