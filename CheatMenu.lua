@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 15:28 sha b87e4838 bytes 263035'):format('2026-10-01 15:28','b87e4838',263035))
+print(('[CheatMenu] build 2026-10-01 15:53 sha 45bd6756 bytes 261868'):format('2026-10-01 15:53','45bd6756',261868))
 local F = {}
-F.VERSION = "v10.10.5"
+F.VERSION = "v10.10.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5023,37 +5023,6 @@ end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
 end
-F._binds = {}
-F._keybindConn = nil
-function F.BindKey(keyName, action) F._binds[keyName] = action end
-function F.KeybindEnable()
-if F._keybindConn then return end
-F._keybindConn = UIS.InputBegan:Connect(function(input, processed)
-if processed then return end
-local action = F._binds and F._binds[input.KeyCode.Name]
-if not action then return end
-if action == "飞行" then
-local nv = not (T.FlyOn == true)
-F.FlySet(nv)
-F.SyncMoveUI()
-elseif action == "自动攻击" then
-T.KillAura = not T.KillAura
-if T.KillAura then F.KillAuraEnable() else F.KillAuraDisable() end
-elseif action == "穿墙" then
-T.NoClip = not T.NoClip
-if T.NoClip then F.NoClipEnable() else F.NoClipDisable() end
-elseif action == "ESP 透视" then
-T.ESP = not T.ESP
-if T.ESP then ESPEnable() else ESPDisable() end
-elseif action == "隐身" then
-T.Invisible = not T.Invisible
-if T.Invisible then InvisibleEnable() else InvisibleDisable() end
-end
-end)
-end
-function F.KeybindDisable()
-if F._keybindConn then F._keybindConn:Disconnect() F._keybindConn = nil end
-end
 F._panicConn = nil
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true, PanicKey = true }
 function F.PanicKeyDisableAll()
@@ -6373,7 +6342,7 @@ F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDis
 F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.PanicKeyDisable, F.DupeAttemptDisable, F.ItemMagnetDisable, F.ChamsDisable,
-F.BringPlayerDisable, F.KeybindDisable, F.LockCamDisable, F.SwimDisable,
+F.BringPlayerDisable, F.LockCamDisable, F.SwimDisable,
 F.RemoteSpyDisable,
 F.AntiSitDisable, F.AntiAnchorDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
@@ -7194,11 +7163,6 @@ return n
 end
 task.spawn(function()
 pcall(function()
-for i = 2, 5 do
-local k = "F" .. i
-local act = C["Bind" .. k]
-if type(act) == "string" then F.BindKey(k, act) end
-end
 if C.FlyDisguise == nil then
 C.FlyDisguise = "关闭"
 T.SrvHoldOwn = false
