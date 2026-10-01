@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:58 sha 949d1af2 bytes 239367'):format('2026-10-01 19:58','949d1af2',239367))
+print(('[CheatMenu] build 2026-10-01 20:02 sha 8c63b2e4 bytes 241966'):format('2026-10-01 20:02','8c63b2e4',241966))
 local F = {}
-F.VERSION = "v11.0.16"
+F.VERSION = "v11.0.17"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4329,29 +4329,79 @@ pcall(function() sop:Set(T.SpeedOn) end)
 end
 end)
 end
-function F.HotReload()
+function F.VerNum(v)
+local a, b, c = tostring(v):match("^(%d+)%.(%d+)%.(%d+)$")
+if not a then return 0 end
+return tonumber(a) * 1000000 + tonumber(b) * 1000 + tonumber(c)
+end
+function F.GetRemoteVersion(u)
+local base = tostring(u):gsub("[^/]*$", "")
+local ok, r = pcall(function() return game:HttpGet(base .. "version.txt?cb=" .. tostring(os.time())) end)
+if ok and type(r) == "string" then
+r = tostring(r):gsub("%s+$", "")
+if r:match("^%d+%.%d+%.%d+$") then return r end
+end
+return nil
+end
+function F.HotReload(force)
+local myv = tostring(F.VERSION or ""):gsub("^v", "")
+local urls = F.REMOTE_URLS
+if type(urls) ~= "table" or #urls == 0 then
+F.Out("[热加载] ⚠ 没有可用的下载源")
+return false
+end
+F.Out("[热加载] 正在问各源的最新版本号…(当前 v" .. myv .. ")")
+local best, bestv = nil, nil
+for i = 1, #urls do
+local rv = F.GetRemoteVersion(urls[i])
+if rv and (not bestv or F.VerNum(rv) > F.VerNum(bestv)) then
+best, bestv = urls[i], rv
+end
+end
+if not bestv then
+F.Out("[热加载] ⚠ 所有源都读不到版本号(网络/CDN 抖动) —— 本次不重载, 现有实例照常用, 过会儿再点")
+pcall(function() Fluent:Notify({ Title = "热加载", Content = "读不到远端版本, 已放弃重载(现有实例照常用)", Duration = 6 }) end)
+return false
+end
+if (not force) and F.VerNum(bestv) <= F.VerNum(myv) then
+F.Out("[热加载] 已是最新 v" .. myv .. " (远端最高 " .. bestv .. ") ⇒ 无需重载")
+pcall(function() Fluent:Notify({ Title = "热加载", Content = "你已经是最新 " .. myv .. " —— 没有重载", Duration = 5 }) end)
+return false
+end
+F.Out("[热加载] 远端最新 " .. bestv .. " > 当前 " .. myv .. ", 开始下载(优先最新那个源)…")
+pcall(function() Fluent:Notify({ Title = "热加载", Content = "正在取 " .. bestv .. " …", Duration = 6 }) end)
 local keep, n = {}, 0
 for k, v in pairs(T) do
 if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
 end
-pcall(function() if getgenv then getgenv().CM_RELOAD_KEEP = keep end end)
-F.Out("[热加载] 已记下 " .. tostring(n) .. " 个开着的功能, 开始取最新版…")
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "热加载", Content = "正在下载最新版并重启…", Duration = 6 })
-end
 task.spawn(function()
-pcall(function() F.UnloadAll() end)
-task.wait(0.6)
-local urls = F.REMOTE_URLS
-local body = nil
+local order = { best }
 for i = 1, #urls do
-local u = urls[i] .. "?cb=" .. tostring(os.time())
+if urls[i] ~= best then order[#order + 1] = urls[i] end
+end
+local body, gotv, fallback = nil, nil, nil
+for i = 1, #order do
+if body then break end
+local u = order[i] .. "?cb=" .. tostring(os.time())
 local ok, r = pcall(function() return game:HttpGet(u) end)
-if ok and type(r) == "string" and #r > 100000 then body = r break end
+if ok and type(r) == "string" and #r > 100000 then
+local v = string.match(r, "F%.VERSION%s*=%s*" .. string.char(34) .. "v([%d%.]+)")
+if v and F.VerNum(v) >= F.VerNum(bestv) then
+body, gotv = r, v
+elseif v and F.VerNum(v) > F.VerNum(myv) and not fallback then
+fallback, gotv = r, v
+end
+end
 end
 if not body then
-F.Out("[热加载] ⚠ 所有源都取不到 —— 旧实例已卸载, 请重新执行一次 loader")
+if fallback then
+body = fallback
+F.Out("[热加载] 没有源给到 " .. bestv .. ", 用能拿到的最高版 v" .. tostring(gotv) .. " 顶上")
+else
+F.Out("[热加载] ⚠ 所有源都没给出比当前更新的版本(CDN 还在缓存旧版) —— 已放弃, 现有实例没动")
+pcall(function() Fluent:Notify({ Title = "热加载", Content = "源还在缓存旧版, 已放弃(现有实例照常用)", Duration = 8 }) end)
 return
+end
 end
 local bad = nil
 if #body < 100000 then
@@ -4363,24 +4413,29 @@ else
 local head = string.lower(body:sub(1, 512))
 if head:find("<!doctype", 1, true) or head:find("<html", 1, true) then
 bad = "拿到的是网页不是脚本"
-elseif not body:find('F%.VERSION%s*=%s*"v%d+%.') then
+elseif not body:find("F%.VERSION%s*=%s*" .. string.char(34) .. "v%d+%.") then
 bad = "版本行格式不对"
 end
 end
 if bad then
-F.Out("[热加载] ⚠ 远程内容未通过自检(" .. bad .. "), 已中止 —— 没有执行任何远程代码")
+F.Out("[热加载] ⚠ 远程内容未通过自检(" .. bad .. ") —— 没有执行任何远程代码, 现有实例没动")
 return
 end
 local fnc = loadstring or load
 local chunk, err = fnc(body, "@CheatMenu_hot")
 if not chunk then
-F.Out("[热加载] ⚠ 新版本编译失败: " .. tostring(err))
+F.Out("[热加载] ⚠ 新版本编译失败: " .. tostring(err) .. " —— 现有实例没动")
 return
 end
 pcall(function() if writefile then writefile("CheatMenu_main.lua", body) end end)
-F.Out("[热加载] 已取到 " .. tostring(#body) .. " 字节, 来源已通过内容自检, 正在执行新实例…")
+F.Out("[热加载] 已取到 v" .. tostring(gotv) .. " (" .. tostring(#body) .. " 字节) 并通过自检 ⇒ 现在才卸载旧实例并重启")
+pcall(function() if getgenv then getgenv().CM_RELOAD_KEEP = keep end end)
+pcall(function() F.Out("[热加载] 已记下 " .. tostring(n) .. " 个开着的功能") end)
+pcall(function() F.UnloadAll() end)
+task.wait(0.6)
 pcall(chunk)
 end)
+return true
 end
 F._freecamConn = nil
 function F.FreecamEnable()
@@ -6307,7 +6362,8 @@ Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点�
 Tabs.Setting:AddButton({ Title = "修复角色碰撞(踩不上跑步机 / 道具没反应 时点)", Callback = function() F.FixCharCollision() end })
 Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
 Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自动开, 点这个才开)", Callback = function() F.RestoreSavedFeatures() end })
-Tabs.Setting:AddButton({ Title = "★ 热加载(下载最新版 + 保留已开功能)", Callback = function() F.HotReload() end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能)", Callback = function() F.HotReload(false) end })
+Tabs.Setting:AddButton({ Title = "强制重载(即使已是最新也重下一遍)", Callback = function() F.HotReload(true) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function() UnloadAll() end })
 T.CharPersist = true
