@@ -2255,3 +2255,67 @@ T.TrapWarn / T.TrapDodge / T.SpeedAntiTP` 全部由 `F.GuardSet(...)` 可达；
 - 该游戏（`122278212262864`）动画组件很多：`AnimationManager` / `CutsceneStatus` / `BrainrotAnimationComponent` /
   `TrainingAnimationComponent`；**若用户说的是"进游戏的过场/合成孵化动画"**（Tween/过场类，不是角色动画），
   那是另一类，需要另做"跳过/快进"（`CutsceneStatus` + 自动点 Skip 按钮）。
+
+## 三十八、2026-10-01（下半场之三十三）：点位右键删除失效的**真因** + T 键传送到鼠标（11.0.23）
+
+用户报：`位置保存传送 右键没成功删除` 且要求 `加入T键 传送到鼠标位置, 需要开关功能`。
+
+### 38.1 右键删除为什么一直没生效（★ 重要：拿 Fluent 源码定案，不是猜）
+
+`F.WpSlotHook(i, b)` 里原来这样取底层控件：
+
+```lua
+pcall(function() inst = b.Button end)
+if not inst then pcall(function() inst = b.Frame and b.Frame:FindFirstChildWhichIsA("TextButton") end) end
+if not inst then pcall(function() inst = b.Container and b.Container:FindFirstChildWhichIsA("TextButton") end) end
+if not inst or not inst.InputBegan then return end
+```
+
+去 `dawid-scripts/Fluent` 源码核对（`src/Elements/Button.lua` + `src/Components/Element.lua` + `src/init.lua`）：
+
+- `Element:New` 返回的**就是那个元素表本身**，它的 `Element.Frame` **已经是一个 `TextButton`**
+  （`New("TextButton", { Parent = Parent, ... }, {...})`，按钮文字在 `Element.TitleLabel`）。
+- `AddButton` 的返回值 = 该元素表（`ElementComponent:New(Idx, Config)`）⇒ `b` 上**有** `b.Frame`，**没有** `b.Button`。
+- ⇒ 原代码 `b.Frame:FindFirstChildWhichIsA("TextButton")` = **在按钮里再找一个 TextButton 子控件** ⇒ 永远 `nil`
+  ⇒ `inst == nil` ⇒ 直接 `return` ⇒ **右键处理从未挂上过**（点=存/传 走的是 Fluent 自己的 `MouseButton1Click`，所以只有删除坏）。
+
+修法（11.0.23）：
+
+```lua
+if not inst then
+    pcall(function()
+        local f = b.Frame
+        if typeof(f) == "Instance" and f:IsA("GuiButton") then inst = f end
+    end)
+end
+if not inst then  -- 兜底：某些 Fluent 版本可能把控件包一层
+    pcall(function() inst = b.Frame and b.Frame:FindFirstChildWhichIsA("GuiButton", true) end)
+end
+```
+
+外加三条加固：
+1. **去重**：`MouseButton2Click` 与 `InputBegan(MouseButton2)` 会**同时**触发，用 0.4s 窗口挡掉第二次
+   （否则第一下删掉、第二下报"第 N 个是空位"，看起来像 bug）。去重是**每个槽一份** `lastDel`，互不影响。
+2. **失败要说出来**：拿不到控件就 `F.Out("[点位] 第 N 个点位按钮没拿到底层控件…")` —— 以后再看日志能立刻分辨
+   "没挂上" 与 "挂上了但这游戏不吃右键"。
+3. **自愈**：`F.WaypointRefreshUI` 的循环里每轮 `pcall(F.WpSlotHook, i, b)`（同实例直接 return，无副作用）
+   ＋建完 UI 后 `task.delay(2, …)` 再补挂一次；防 Fluent 重建控件（主题/InterfaceManager 换肤）后钩子丢失。
+
+★ 通用教训：**钩第三方 UI 库的控件前，先读它的源码确认"返回对象 ↔ 底层实例"的对应关系**；
+`FindFirstChildWhichIsA` 只在"控件是子对象"时才对，**控件本身就是返回对象时它会永远返回 nil**（且被 pcall 吞掉，静默失败）。
+
+### 38.2 T 键传送到鼠标（带开关）
+
+- 取点 `F.MouseWorldPos()`：`LP:GetMouse()` 的 X/Y → `Camera:ScreenPointToRay`（老版本退 `ViewportPointToRay`）
+  → `workspace:Raycast(origin, dir * F.TP_MOUSE_REACH(=900), params)`，`params` 排除自己角色；
+  `FilterType` 优先 `Exclude`（老 API 退 `Blacklist`）。**打不到东西**（指天/太远）⇒ 返回 `origin + dir * 150`（`kind="air"`）。
+- 传送：`F.SrvOwnTake(false)` → `smoothTP(CFrame.new(dest + Vector3(0,3,0)))` → 到位检查（<8 studs）→ 记日志；
+  与「点位传送」同一条路径，因此**同一套服务端权威判定边界**（`AuthorityMode=Server` 时传不到是游戏规则）。
+- 开关：`Tabs.TP:AddToggle("TPMouse", { Default = false, ... })`，Callback 里 `T.TPMouse = v`
+  ＋ **`if F._cfgSyncing then return end` 之后**才 `F._tpMouseOn = v`。
+  ⇒ **按名字回填存档时不会"武装"**（守"加载后绝不自动开启任何功能"红线）。
+- 按键：新增独立 `UIS.InputBegan` 连接，`if not F._tpMouseOn then return end` 后才认 `Enum.KeyCode.T`。
+- `F._tpMouseOn = false` 同时写进 **Panic（一键全关）** 与 **UnloadAll** 的清理函数（只清本地标志，**不写游戏属性**）。
+
+★ 又一条与红线一致的范式：**开关的"存档值"和"是否武装"必须分开** —— `T.X` 可以按存档回填（UI 显示上次的样子），
+但真正生效只由"用户亲手点"那次 Callback 打开；热加载的 `CM_RELOAD_KEEP` 也因此不会把功能偷偷打开。
