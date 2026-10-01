@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:34 sha f6120570 bytes 244704'):format('2026-10-01 20:34','f6120570',244704))
+print(('[CheatMenu] build 2026-10-01 20:38 sha 2348e12e bytes 245007'):format('2026-10-01 20:38','2348e12e',245007))
 local F = {}
-F.VERSION = "v11.0.21"
+F.VERSION = "v11.0.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3434,6 +3434,19 @@ elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
 end
 if math.abs((h.WalkSpeed or 0) - sp) > 0.5 then pcall(function() h.WalkSpeed = sp end) end
+local now = os.clock()
+if now - (F._animAt or 0) > 0.3 then
+F._animAt = now
+pcall(function()
+local anim = h:FindFirstChildOfClass("Animator")
+if anim then
+local k = math.clamp(sp / 16, 1, 8)
+for _, t in ipairs(anim:GetPlayingAnimationTracks()) do
+pcall(function() t:AdjustSpeed(k) end)
+end
+end
+end)
+end
 end)
 end
 function F.FlyDestroy()
