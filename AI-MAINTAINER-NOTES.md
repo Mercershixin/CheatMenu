@@ -2471,3 +2471,57 @@ GitHub 代码搜索 `fireproximityprompt` / `PromptShown` / `HoldDuration`，最
 2. **默认 true + Callback 会改游戏状态的开关是危险的**：创建那一刻就会执行一次副作用
    （这也解释了历史上"一加载就被 267 踢"的一类来源）。要么 `Default = false`，
    要么在 Callback 里加 `_cfgSyncing` 式静默标志，**绝不能只在"用户点击"语境里假设**。
+
+## 四十二、2026-10-01（下半场之三十七）：卸载"点了没成功"的真因 + 清理清单查法（11.0.28）
+
+用户：`卸载脚本点击怎么没成功卸载`、`一键设速不要`。
+
+### 42.1 怎么找出根因的（这套查法以后要复用）
+
+**第一步：不猜，做"定义 vs 调用"差异分析。**
+扫全文件所有"关闭类"函数定义
+（`function (F|AC)\.\w*(Disable|Restore|Destroy|Uninstall*|Stop*)`），再扫 `UnloadAll` 函数体里实际调用到的，
+两者取差集 ⇒ 立刻暴露"有卸载接口但没被卸载流程调用"的功能：
+
+| 漏掉的关闭入口 | 用户会看到的残留 |
+|---|---|
+| **`F.AimSet`** | **自瞄还绑在渲染循环上（`RS:BindToRenderStep("CM_Aim")`）⇒ 镜头还在自己转** |
+| `F.KillAuraDisable` | 自动攻击还在打人 |
+| `F.BodyHLDisable` | 敌人/队友高亮还在 |
+| `F.HideDisable` / `F.FullBrightDisable` / `F.NightVisionDisable` / `F.NoFogDisable` | 画面增强还在 |
+| `F.InfiniteJumpDisable` / `F.KickRejoinDisable` | 无限跳 / 抢重进还在 |
+
+**第二步：查可观测性 —— 这里才是"点了没反应"的真正元凶。**
+`F.Out` 只是往 `F._logBuf` 里塞，**攒满 300 行才落盘**。
+⇒ 点一次卸载只产生 1 行日志 ⇒ **永远写不进文件** ⇒ 从外面看就是"点了没反应、查无此事"。
+（实证：把所有 game 日志 grep 一遍，`已干净卸载` 一次都没出现过。）
+
+### 42.2 修法（11.0.28，共 7 处）
+
+1. **清单补全**：上面 9 项全部加入 `UnloadAll` 的 `disables`。
+2. ★ **`ipairs` 静默截断地雷**：`{a, b, nil, d}` 用 `ipairs` 会在 `nil` 处**停下**，
+   后面所有清理**静默不执行**。改成 `for i = 1, #disables do ... type(fn) == "function"` 逐项判断。
+3. **逐项计数 + 报错可见**：`[卸载] 已执行 N 项关闭操作 · 全部无报错` /
+   `⚠ 有 M 项报错(功能可能残留, 把日志发给维护者)` —— 失败不再被 pcall 吞掉。
+4. **卸载后 0.8 秒复核**：检查 `F._aimConn / F._spdConn / F._flyConn / F.KillAuraConn / F.II_CONN /
+   F._touchToggle` 是否还活着；有残留就**再补一轮关闭**，并打印
+   `[卸载] ⚠ 复核发现还在跑的: 自瞄 / 自动攻击 ⇒ 再点一次…仍不行就重进游戏`。
+5. **日志立即落盘**：`pcall(F.LogFlush, "卸载")`（卸载时 + 复核后各一次）。
+6. **UI 连根拔**：除 `CM_Window:Destroy()`，再 `Fluent.GUI:Destroy()`（只销毁窗口 Root 会留下
+   整块 ScreenGui 与通知容器）。
+7. **按钮反馈**：点击先 `Fluent:Notify("正在卸载…")`，再 `task.defer(UnloadAll)`（让提示先渲染出来）。
+
+### 42.3 顺带：F1「一键全关」清单同样漏了 17 项 —— 一并补齐
+
+`F.PanicKeyDisableAll` 原来只覆盖一部分（靠"先把 T 全置 false，循环下一帧自我了断"兜底），
+但**持久状态类**（高亮、画面增强、防踢/反甩守卫、串流角色、自动存档…）不会自己消失。
+11.0.28 补入：`F.AimSet, KickGuardDisable, AntiFlingDisable, AntiAFKDisable, KickRejoinDisable,
+BodyHLDisable, CharPersistDisable, LivePlayersDisable, AutoSaveDisable, GuiProtectionDisable,
+HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedRestore, FlySet, FlyDestroy`。
+
+### 42.4 「一键设速度」按钮已删（用户不要）
+
+上一版加的 `100 / 500 / 1000` 三个按钮整块移除；速度只由滑块设定（16 ~ 5000）。
+
+★ 一条通用规矩（新增到主题记忆）：
+**凡"关闭/清理"入口，都要用"定义 vs 调用"差异分析定期对齐；凡是清理流程，都要有落盘日志。**
