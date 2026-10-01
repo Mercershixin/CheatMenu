@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:37 sha 9dfaa613 bytes 249152'):format('2026-10-01 19:37','9dfaa613',249152))
+print(('[CheatMenu] build 2026-10-01 19:42 sha 0f9adcd3 bytes 249577'):format('2026-10-01 19:42','0f9adcd3',249577))
 local F = {}
-F.VERSION = "v11.0.12"
+F.VERSION = "v11.0.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3038,15 +3038,17 @@ end
 end
 return #scripts, #conns
 end
-function F.GuardSet(steady, hit, lock, trap, dodge, atp)
+function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong)
 T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
 T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
+T.HitStrong = strong and true or false
 pcall(steady and F.SteadyEnable or F.SteadyDisable)
-pcall(hit and F.HitGuardEnable or F.HitGuardDisable)
+if hit then pcall(function() F.HitGuardEnable(strong) end) else pcall(F.HitGuardDisable) end
 pcall(trap and F.TrapGuardEnable or F.TrapGuardDisable)
 pcall(atp and F.SpeedAntiTPEnable or F.SpeedAntiTPDisable)
-F.Out(string.format("[防护] 稳身=%s · 受击保护=%s · 锁满血=%s · 陷阱=%s · 防拉回=%s",
-steady and "开" or "关", hit and "开" or "关", lock and "开" or "关",
+F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 锁满血=%s · 陷阱=%s · 防拉回=%s",
+steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接)" or "(状态法)",
+lock and "开" or "关",
 trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关"))
 end
 function F.GuardApply(v)
@@ -3060,7 +3062,7 @@ F.GuardSet(true, true, false, false, false, false)
 return
 end
 if v:find("全部(再加", 1, true) then
-F.GuardSet(true, true, true, true, true, true)
+F.GuardSet(true, true, true, true, true, true, true)
 return
 end
 if v:find("推荐", 1, true) then
@@ -3104,8 +3106,8 @@ end
 end)
 return hit
 end
-F.ANTITP_KEYS = { "obbyantitp", "antitp", "antiteleport", "antilagback", "lagback",
-"speedcheck", "speedguard", "anticheat", "antiexploit", "antifly", "antimove", "observe" }
+F.ANTITP_KEYS = { "obbyantitp", "antitp", "antilagback", "lagback",
+"speedcheck", "speedguard", "anticheat", "antiexploit", "antifly" }
 F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
 F._atpState = nil
 function F.SpeedAntiTPDisable()
@@ -3129,7 +3131,7 @@ local roots = { LP:FindFirstChild("PlayerScripts"), LP.Character, game:GetServic
 for _, r in ipairs(roots) do
 if r then
 for _, d in ipairs(r:GetDescendants()) do
-if d:IsA("LocalScript") or d:IsA("Script") then
+if d:IsA("LocalScript") then
 local nm = tostring(d.Name):lower()
 for _, k in ipairs(F.ANTITP_KEYS) do
 if nm:find(k, 1, true) then
@@ -3261,10 +3263,11 @@ pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], true) end)
 end
 end
 end
-function F.HitGuardEnable()
+function F.HitGuardEnable(strong)
 if F._hitConn then return end
 F._hitRemotes = {}
 local n = 0
+if strong then
 for _, re in ipairs(F.HitGuardScan(true)) do
 pcall(function()
 for _, c in ipairs(getconnections(re.OnClientEvent)) do
@@ -3273,7 +3276,12 @@ end
 end)
 F._hitRemotes[#F._hitRemotes + 1] = re
 end
-F.Out("[受击] 已禁用 " .. tostring(n) .. " 条「被打时游戏自己的处理」；服务端仍会扣血, 但不会再把你击退/打飞(公开作品同款做法)")
+F.Out("[受击] 【猛档】已禁用 " .. tostring(n) .. " 条「被打时游戏自己的处理」")
+F.Out("[受击] ⚠ 这些通道往往同时承担角色状态同步 ⇒ 可能出现「搬完了还停在拿起状态」。"
+.. "真遇到就把防护档位调回「稳身 + 受击保护」并重进一次游戏")
+else
+F.Out("[受击] 已开启(状态法): 不打断任何远程 —— 只在本地不让你倒地/被击飞, 不会再卡住搬运状态")
+end
 F._hitConn = RS.Heartbeat:Connect(function()
 if not T.HitGuard then F.HitGuardDisable() return end
 local _, hum, root = GC()
@@ -6251,7 +6259,7 @@ Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 ·
 "稳身(加速时不倒 / 不被打飞 / 不自己飞起来)",
 "稳身 + 受击保护(被攻击也不会被击飞)",
 "推荐: 上面全部 + 陷阱拦截 + 加速防拉回",
-"全部(再加 锁满血 + 陷阱自动弹开一步)",
+"全部(再加 锁满血 + 陷阱弹开 + 猛档断连接[可能卡搬运状态])",
 }, Default = "关(全部关闭)", Callback = function(v)
 if F._cfgSyncing then
 T.SteadyOn = not v:find("关(全部关闭)", 1, true)
