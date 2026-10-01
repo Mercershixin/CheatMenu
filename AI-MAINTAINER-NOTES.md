@@ -2598,3 +2598,17 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
    ②飞行回退路径把 **`BodyVelocity`/`BodyGyro` 换成 `LinearVelocity`/`AlignOrientation`**
    （前两者是被反作弊点名检测的实例名；换成新约束后发行版里 `BodyVelocity` 出现 **0** 次）。
 
+## 四十九、2026-10-01（11.0.36）：按用户日志修四处
+
+- **"防护只生效一次"**【日志实证】：加载后紧跟一条 `[全合一] 已关`。真因 = Fluent 创建开关时用 `Default` 触发一次 Callback，
+  `_cfgSyncing` 在构建期是 nil ⇒ 走到底把功能关了一次。修：Callback 加 `changed` 判定（只在实际切换时才动）。
+- **"蛋还是掉"**【日志实证】：`[蛋守卫] 锁定的手上物体: 没找到` —— 原识别只扫 `workspace:GetChildren()` 一层。
+  修：**优先用焊点另一端识别**（`F.CarryFind()` 的结果就是"手上的东西"，服务端搬运机制的真相），
+  退化路径改成扫全部后代（限 6000 个、13 格内）。另：用户当时跑的还是 11.0.33/34，`[搬守卫]` 日志一次都没出现。
+- **"防护里的隐身还在"**：那是战斗页「生命保护」下拉里的 `隐蔽无敌(锁满血)`。已删掉整个下拉，
+  把隐蔽无敌并进全合一（`local StealthGodEnable/Disable` **挂到 F 上**再跨作用域调用）。
+- **"还是被拉回"**【日志实证】：`[绕过] 网络所有权回读: 仍非本地 ⇒ 这游戏持续抢回`。
+  修：新增**钉位（Pin）** —— 用刚性 `AlignPosition` 把角色钉在 `F._intent`（意图位置），
+  约束在**每个物理步**都施力，比每帧写一次 CFrame 更能扛服务端抢回；只在「全合一 + 加速」同时开时生效。
+- ★ 门禁抓漏一次：跨作用域引用 `StealthGodEnable`（局部函数）⇒ `undef-global` ⇒ 11.0.35 作废，改挂 `F.` 后重发 11.0.36。
+
