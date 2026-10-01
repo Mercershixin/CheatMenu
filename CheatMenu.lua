@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:00 sha 1f171eaf bytes 234876'):format('2026-10-01 19:00','1f171eaf',234876))
+print(('[CheatMenu] build 2026-10-01 19:06 sha 3aaf7396 bytes 237171'):format('2026-10-01 19:06','3aaf7396',237171))
 local F = {}
-F.VERSION = "v11.0.5"
+F.VERSION = "v11.0.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1065,14 +1065,14 @@ F.CAP_LIST = {
 { "setreadonly", "解锁只读表" },
 { "islclosure", "区分 Lua 闭包与 C 函数" },
 { "checkcaller", "区分「游戏调用」与「自己调用」" },
-{ "getrenv", "拿游戏侧环境副本 —— 隐身第 2/3 层靠它" },
+{ "getrenv", "拿游戏侧环境副本(读游戏里的表/函数)" },
 { "cloneref", "安全取服务引用" },
 { "getthreadidentity", "线程身份伪装" },
 { "setupvalue", "原地改 upvalue(零 hook 指纹)" },
 { "fireproximityprompt", "直接触发交互" },
 { "sethiddenproperty", "写隐藏属性" },
 { "request", "HTTP 请求" },
-{ "Drawing", "Drawing API(骨骼线/角框高性能绘制)" },
+{ "Drawing", "Drawing API(高性能 2D 绘制)" },
 }
 function F.capProbe(name)
 if type(name) ~= "string" then return false end
@@ -2951,6 +2951,58 @@ end)
 end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
+end
+F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
+"net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt" }
+F._trapConn = nil
+function F.TrapGuardDisable()
+if F._trapConn then F._trapConn:Disconnect() F._trapConn = nil end
+end
+function F.TrapGuardEnable()
+if F._trapConn then return end
+F._trapAt = 0
+F._trapConn = RS.Heartbeat:Connect(function()
+if not T.TrapWarn then F.TrapGuardDisable() return end
+local now = os.clock()
+if now - (F._trapAt or 0) < 0.4 then return end
+F._trapAt = now
+local _, _, root = GC()
+if not root then return end
+local found = nil
+pcall(function()
+local op = OverlapParams.new()
+op.FilterType = Enum.RaycastFilterType.Exclude
+if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
+for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 45, op)) do
+local nm = tostring(pt.Name):lower()
+for _, k in ipairs(F.TRAP_KEYS) do
+if nm:find(k, 1, true) then found = pt break end
+end
+if found then break end
+end
+end)
+if not found then return end
+F._trapHits = (F._trapHits or 0) + 1
+if now - (F._trapLogAt or 0) > 2 then
+F._trapLogAt = now
+local d = 0
+pcall(function() d = (found.Position - root.Position).Magnitude end)
+F.Out(string.format("[陷阱] 附近有可疑物件「%s」(%.0f 格 · 累计 %d 次) —— 绕开它",
+tostring(found.Name), d, F._trapHits))
+pcall(function() Fluent:Notify({ Title = "陷阱预警", Content = "附近: " .. tostring(found.Name), Duration = 3 }) end)
+end
+if T.TrapDodge then
+pcall(function()
+local dir = root.Position - found.Position
+dir = Vector3.new(dir.X, 0, dir.Z)
+if dir.Magnitude > 0.1 then
+local vv = root.AssemblyLinearVelocity
+local push = dir.Unit * 60
+root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 30), push.Z)
+end
+end)
+end
+end)
 end
 F._steadyConn = nil
 local STEADY_STATES = { "Ragdoll", "FallingDown", "PlatformStanding" }
@@ -5545,6 +5597,7 @@ F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet,
+F.SteadyDisable, F.TrapGuardDisable,
 function()
 AC._neutFns = {}
 F._dumpText = nil
@@ -5821,6 +5874,15 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSection("陷阱预警(通用: 夹子/陷阱/香蕉皮 类物件)")
+Tabs.Move:AddDropdown("TrapMode", { Title = "附近出现可疑陷阱时", Values = {
+"关", "只报警(弹提示 + 写日志)", "报警 + 自动弹开一步",
+}, Default = "关", Callback = function(v)
+T.TrapWarn = (v ~= "关")
+T.TrapDodge = (v == "报警 + 自动弹开一步")
+if F._cfgSyncing then return end
+if T.TrapWarn then F.TrapGuardEnable() else F.TrapGuardDisable() end
+end })
 Tabs.Move:AddSection("防击倒 / 加速稳身")
 Tabs.Move:AddToggle("SteadyOn", { Title = "★ 稳身(加速时不倒 / 不被打飞 / 不会自己飞起来)", Default = false, Callback = function(v)
 T.SteadyOn = v
@@ -5842,7 +5904,7 @@ Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Ma
 end
 do
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
-Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(替代 ESP, 只描边不糊本体)", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(只描边不糊本体)", Default = false, Callback = function(v)
 T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
