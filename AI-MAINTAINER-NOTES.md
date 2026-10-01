@@ -2058,3 +2058,35 @@ if hum and root and root.AssemblyLinearVelocity.Magnitude < 1 then hum.Jump = tr
 - ★ **全可还原**：连接用 `Disable/Enable`、函数用 `hookfunction` 回填原函数 ⇒ 守"关闭必须还原"的规矩。
 - ⚠ 诚实边界：① 这是"改游戏"的手段 ⇒ 按用户红线**做成独立开关**、**不进主开关**；
   ② 已被 `Destroy` 掉的检测脚本**要重进游戏才彻底恢复**；③ 服务端判定仍然拦不了。
+
+## 二十七、2026-10-01（下半场之二十二）：公开实现全对比 ⇒ 补 4 处差距 + 修掉"太绝对"（11.0.11）
+
+### 27.1 抽样对比（拉 6 份公开脚本：`schoolediting06`/`xRoxyHubx`/`nutsteal-a-fish`/`StealAFossil`/`xulfo-OxideUI`(131KB)/`phucmax`(296KB)）
+
+| 手段 | 公开实现 | 我们 11.0.10 | 本轮 |
+|---|---|---|---|
+| `getconnections` 断"被打处理" | ✓（`SetNoKnockback`: `getconnections(rigSync.OnClientEvent)`） | ✓ 11.0.9 起 | — |
+| 按 `debug.info` 认函数/连接 | ✓ | ✓ | — |
+| `hookfunction` 中和检测函数 | ✓ | ✓ | — |
+| ★ **跑步机让路** | ✓ 它们的 `SetStateEnabled` 里有 **`if state.onTreadmill then return end`** | ✗ | ★ 加 `F.OnMovingFloor()` |
+| ★ **按已知路径找远程** | ✓ `GetNetRemote("RE/RigSync/Refresh")` | ✗（只按关键词扫） | ★ 加"已知路径优先" |
+| ★ **UI 攻击按钮兜底** | ✓ p6 用 `getconnections(btn.MouseButton1Click):Fire()` / `firesignal` | ✗ | ★ 加开火第 4 路 |
+| `SetStateEnabled` 范围 | 禁 Ragdoll/FallingDown/Physics/PlatformStanding/Seated | 只禁 3 个 | 保持 3 个（够用，少动少风险），蹲机时整项让路 |
+
+★ 结论：**我们的手段已经齐了**（getconnections / hookfunction / getgc / SetStateEnabled 都有），
+差的是**几条"照顾客玩法"的细节** —— 本轮补齐；**跑步机让路**这一条尤其值：它正是我们 24.2 踩过的坑，别人早就显式绕开了。
+
+### 27.2 ★★★ 修掉我们自己的"太绝对"（用户点名："看看我们的 lua 是不是也有的太绝对了"）
+
+| 旧 | 新 |
+|---|---|
+| `[自动分析] 没找到可用的关键词 —— 可能本服反作弊在服务端(客户端看不到)，这是正常结论` | `[自动分析] 按「数字常量」没找到关键词 —— 这只说明没有数值型阈值可读, 不等于客户端干净` **+ 自动接一段客户端检测扫描** |
+| 扫描只按"数字常量"找AC ⇒ **漏掉"名字型/连接型"检测** | ★ 新增 `F.ScanClientChecks()`：按**脚本名**（`PlayerScripts/PlayerGui/Character` 里的 LocalScript/ModuleScript）+ **`getconnections(RS.Heartbeat)` 里 `debug.info(fn,"n"/"s")` 的来源**逐条报出；接进「一键分析」 |
+| 其余"无法/看不到/做不到"类文案 | 复查后**保留** —— 都是事实性描述（执行器缺 API、当时没有角色等），不是武断结论 |
+
+★ 固化成一句：**"扫不到"必须区分「没这类东西」和「我没按这种维度扫」** —— 前者可以下结论，后者不行。
+
+### 27.3 我自己的一个失误（记下来）
+
+写日志字符串时用了 **ASCII 双引号**（`没有"数值型阈值"可读`）⇒ **把 Lua 字符串截断** ⇒ 编译报
+`Expected ')' ... got Unicode character`。**中文文案里只用「」，绝不用 ASCII `"`**（这条已进记忆）。
