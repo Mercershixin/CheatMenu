@@ -2705,3 +2705,18 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   - 抢网络所有权：**0.15s → 0.5s**，且**只在加速/飞行开着时**才抢（没在动就别制造服务端异常信号）。
   - UI 拆分：`挂机防踢` → **`防挂机`（不装钩子，低风险）** + **`防踢`（装元表钩子，按需开，描述里写明风险）**。
 
+### 54.1 补记（11.0.44）：**重写不等于丢掉老逻辑**（用户质问"我之前不是有原本的逻辑吗"）
+
+11.0.43 把 `F.AntiAFKEnable` 整块重写时，**顺手删掉了老实现的两条**（写 `Heartbeat` 属性、静止 90 秒跳一下），
+被用户当场发现。教训：**用户的原实现在"能用"的前提下，改造只能"叠加"，不能"替换"** —— 除非那条确实有害且已说明。
+11.0.44 已并回，最终 AntiAFK = 老 3 条 + 新 3 条：
+
+| 来源 | 逻辑 |
+|---|---|
+| 老① | `LP.Idled` 触发 ⇒ `VirtualUser` 模拟点击 |
+| 老② | 定时写 `LP:SetAttribute("Heartbeat", …)`（**频率 5s → 15s**：5 秒一次太密，容易被当异常） |
+| 老③ | `MoveDirection≈0` 持续 90 秒且速度 < 1 ⇒ `hum.Jump = true` |
+| 新① | `getconnections(LP.Idled)` 按来源脚本名匹配 ⇒ `conn:Disable()`（掐挂机检测连接） |
+| 新② | 模拟操作三路：`VirtualInputManager:SendKeyEvent`(cloneref) / `VirtualUser:ClickButton2` / `hum.Jump` |
+| 新③ | 监听输入时间，**超过 60 秒无操作**才模拟一次 |
+
