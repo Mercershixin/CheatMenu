@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 22:49 sha deb005f4 bytes 264971'):format('2026-10-01 22:49','deb005f4',264971))
+print(('[CheatMenu] build 2026-10-01 22:56 sha 81309295 bytes 263393'):format('2026-10-01 22:56','81309295',263393))
 local F = {}
-F.VERSION = "v11.0.32"
+F.VERSION = "v11.0.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2831,30 +2831,6 @@ steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接
 lock and "开" or "关",
 trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关", bypass and "开" or "关"))
 end
-function F.GuardApply(v)
-if type(v) ~= "string" then return end
-if v:find("关(全部关闭)", 1, true) then
-F.GuardSet(false, false, false, false, false, false)
-return
-end
-if v:find("稳身 + 受击", 1, true) then
-F.GuardSet(true, true, false, false, false, false)
-return
-end
-if v:find("绕过拉回", 1, true) then
-F.GuardSet(true, true, true, true, true, true, true, true)
-return
-end
-if v:find("全部(再加", 1, true) then
-F.GuardSet(true, true, true, true, true, true, true)
-return
-end
-if v:find("推荐", 1, true) then
-F.GuardSet(true, true, false, true, false, true)
-return
-end
-F.GuardSet(true, false, false, false, false, false)
-end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
 F._floorLast = {}
 function F.OnMovingFloor()
@@ -3516,6 +3492,9 @@ function F.AllInOneEnable()
 if F._aioConn then return end
 T.BypassDetect = true
 pcall(F.BypassEnable)
+pcall(function() F.GuardSet(true, true, false, true, true, true) end)
+T.InstantInteract = true
+pcall(F.InstantInteractEnable)
 F.EggLock()
 F._aioConn = RS.Heartbeat:Connect(function()
 if not T.AllInOne then F.AllInOneDisable() return end
@@ -3539,7 +3518,8 @@ end
 end
 F.EggGuardTick()
 end)
-F.Out("[全合一] 已开: 抢所有权(0.15s) + 反拉回续跑 + 不休眠微动 + 蛋守卫")
+F.Out("[全合一] 已开: 抢所有权(0.15s) + 反拉回续跑 + 不休眠微动 + 蛋守卫"
+.. " + 防护(稳身/受击/陷阱/弹开/防拉回) + 瞬间交互")
 end
 function F.AllInOneDisable()
 if F._aioConn then pcall(function() F._aioConn:Disconnect() end) F._aioConn = nil end
@@ -3547,7 +3527,10 @@ F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack = nil, 0
 T.BypassDetect = false
 pcall(F.BypassDisable)
-F.Out("[全合一] 已关")
+pcall(function() F.GuardSet(false, false, false, false, false, false) end)
+T.InstantInteract = false
+pcall(F.InstantInteractDisable)
+F.Out("[全合一] 已关(防护与瞬间交互一并收起)")
 end
 F.bypassConn = nil
 function F.BypassEnable()
@@ -6577,30 +6560,10 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("AllInOne", { Title = "★ 全合一: 不被拉回 + 蛋不掉手", Description = "一个开关搞定: 抢角色所有权(0.15s) + 被服务端回滚就立刻续跑 + 角色不休眠微动 + 手上的蛋离手就拉回来(开之前先站到蛋旁边)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("AllInOne", { Title = "★ 全合一(不被拉回 · 蛋不掉手 · 防护 · 瞬间交互)", Description = "一个开关全包: 抢角色所有权(0.15s) + 被服务端回滚就续跑 + 不休眠微动 + 蛋离手就拉回 + 防护(稳身/受击/陷阱/弹开/防拉回) + 瞬间交互(长按变点一下)。开着就先站到蛋旁边", Default = false, Callback = function(v)
 T.AllInOne = v
 if F._cfgSyncing then return end
 if v then F.AllInOneEnable() else F.AllInOneDisable() end
-end })
-Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
-Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
-"关(全部关闭)",
-"稳身(加速时不倒 / 不被打飞 / 不自己飞起来)",
-"稳身 + 受击保护(被攻击也不会被击飞)",
-"推荐: 上面全部 + 陷阱拦截 + 加速防拉回",
-"全部(再加 锁满血 + 陷阱弹开 + 猛档断连接[可能卡搬运状态])",
-}, Default = "关(全部关闭)", Callback = function(v)
-if F._cfgSyncing then
-T.SteadyOn = not v:find("关(全部关闭)", 1, true)
-T.HitGuard = v:find("受击", 1, true) ~= nil
-T.TrapWarn = v:find("陷阱", 1, true) ~= nil
-T.SpeedAntiTP = v:find("防拉回", 1, true) ~= nil
-T.HitLock = v:find("锁满血", 1, true) ~= nil
-T.TrapDodge = v:find("弹开", 1, true) ~= nil
-T.BypassDetect = v:find("绕过拉回", 1, true) ~= nil
-return
-end
-F.GuardApply(v)
 end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
@@ -6723,11 +6686,6 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
-Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "偷蛋、开箱、机关这类「要按住一会儿」的交互, 开着一律变「点一下就完成」, 且不再要求看得见目标", Default = false, Callback = function(v)
-T.InstantInteract = v
-if F._cfgSyncing then return end
-if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
-end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
