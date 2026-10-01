@@ -2565,3 +2565,11 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - **合并成一个按钮**：新增移动页 `★ 全合一: 不被拉回 + 蛋不掉手`（抢所有权 0.15s + 反拉回续跑 + 不休眠微动 + 蛋守卫），
   并删掉防护下拉里重复的"★ 最强: …+绕过拉回"档。
 
+## 四十七、2026-10-01（11.0.33）：三个入口合成一个「全合一」
+
+- 用户要求：删掉「瞬间交互」开关与「防护档位」下拉，能力全部并进 `★ 全合一`。做法：
+  - 删 UI：`AddToggle("InstantInteract")`、`AddDropdown("GuardMode")`、其空 section 头、以及只被该下拉调用的死函数 **`F.GuardApply`**（`F.GuardSet` 保留，全合一用它）。
+  - 全合一开启 = `F.BypassEnable`(抢所有权0.15s + 反拉回续跑 + 防拉回档) + `F.GuardSet(true,true,false,true,true,true)`
+    (稳身/受击/**锁满血=关**/陷阱/弹开/防拉回) + `F.InstantInteractEnable` + 不休眠微动 + 蛋守卫；关闭时全部回收。
+  - ★ 刻意不并「锁满血/猛档断连接」：锁满血会写血量、猛档可能卡搬运状态（偷蛋时最怕），所以不默认开。
+
