@@ -1,5 +1,9 @@
-print(('[CheatMenu] build 2026-10-01 12:23 sha c897da82 bytes 234963'):format('2026-10-01 12:23','c897da82',234963))
+print(('[CheatMenu] build 2026-10-01 13:30 sha 8bbea571 bytes 237195'):format('2026-10-01 13:30','8bbea571',237195))
 local F = {}
+F._flyJumpConn = nil
+F._flyJumpAt = 0
+F._menuHoldAt = nil
+F._menuHoldMoved = false
 F.LIMITS = {
 SCAN_GC_CAP = 30000, SCAN_ANALYZE_CAP = 12000, SCAN_YIELD_EVERY = 300,
 SCAN_SCRIPT_CAP = 40000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 240,
@@ -78,7 +82,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.5.5 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.6.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -287,7 +291,7 @@ pcall(function()
 if type(getnilinstances) ~= "function" then return end
 local arr = getnilinstances()
 for i = 1, #arr do
-if i > 30000 then break end
+if i > F.LIMITS.SCAN_GC_CAP then break end
 if i % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 local inst = arr[i]
 if typeof(inst) == "Instance" then
@@ -578,9 +582,9 @@ if isHum and (k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight") then
 local _, hum = GC()
 if hum and t == hum then
 if k == "WalkSpeed" then
-if T.Speed then v = (C._baseWalk or 16) * 2 end
+if T.SpeedOn then v = (F._baseWalk or 16) * 2 end
 elseif k == "JumpPower" then
-if T.InfiniteJump or T.Speed then v = 50 end
+if T.InfiniteJump or T.SpeedOn then v = 50 end
 elseif k == "JumpHeight" then
 if T.InfiniteJump then v = 7.5 end
 end
@@ -664,7 +668,7 @@ return function(t, k)
 if (T.SpeedMask or T.ACBypass or T.PropertyLock) and not checkcaller() and typeof(t) == "Instance" then
 local _, hum = GC()
 if hum and t == hum then
-if k == "WalkSpeed" then return C._baseWalk or 16 end
+if k == "WalkSpeed" then return F._baseWalk or 16 end
 if k == "JumpPower" then return 50 end
 if k == "JumpHeight" then return 7.5 end
 if k == "MaxHealth" or k == "Health" then
@@ -819,7 +823,6 @@ pcall(AC.TrapDisable.Compact)
 local n, nScan = 0, 0
 for _, v in ipairs(F.walk(workspace)) do
 nScan = nScan + 1
-if nScan % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nScan > 20000 then break end
 if v:IsA("BasePart") and AC.TrapDisable.isName(v.Name) then AC.TrapDisable.part(v) n = n + 1 end
 end
@@ -1193,7 +1196,7 @@ down = (obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent")) and 1 or 0 }
 end
 for _, d in ipairs(F.walk(RStorage)) do add(d, "RS") end
 if type(getnilinstances) == "function" then
-for _, inst in ipairs(getnilinstances()) do add(inst, "nil") end
+for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end add(inst, "nil") end
 end
 for _, v in pairs(seen) do snap.remotes[#snap.remotes + 1] = v end
 table.sort(snap.remotes, function(a, b) return a.n < b.n end)
@@ -1211,7 +1214,7 @@ local nm = (oki and info and info.name) or ""
 local src = (oki and info and info.source) or ""
 local hit = AC.isSuspicious(nm) or AC.isSuspicious(src)
 if not hit then
-local okc, consts = pcall(debug.getconstants, obj)
+local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
 for i = 1, #consts do
 if type(consts[i]) == "string" and AC.isSuspicious(consts[i]) then hit = true break end
@@ -1240,7 +1243,6 @@ local nAttr = 0
 for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nAttr = nAttr + 1
-if nAttr % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nAttr > 12000 then break end
 local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
 if okA and type(attrs) == "table" then
@@ -1493,7 +1495,6 @@ local nA = 0
 for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
 for j = 1, #bag do
 nA = nA + 1
-if nA % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 if nA > 12000 then break end
 local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
 if okA and type(attrs) == "table" then
@@ -1617,38 +1618,40 @@ F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 �
 F._logFlushing = false
 return nil
 end
-pcall(function()
-local last = base .. "_20.txt"
-local sz = nil
-pcall(function() if isfile and isfile(last) then sz = #readfile(last) end end)
-if sz and sz + #body > F.LOG_MAX and delfile then delfile(base .. ".txt") end
-end)
+local targetIdx = nil
 for idx = 1, 20 do
-local name = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
+local nm = (idx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, idx)
+local sz = nil
+pcall(function() if isfile and isfile(nm) then sz = #readfile(nm) end end)
+if sz == nil or sz + #body <= F.LOG_MAX then
+targetIdx = idx
+break
+end
+end
+if not targetIdx then
+if delfile then pcall(delfile, base .. ".txt") end
+targetIdx = 1
+end
+local name = (targetIdx == 1) and (base .. ".txt") or string.format("%s_%d.txt", base, targetIdx)
 local existed, size = false, 0
 pcall(function()
 if isfile and isfile(name) then
 existed = true
-local old = readfile(name)
-size = #old
+size = #readfile(name)
 end
 end)
-if (not existed) or (size + #body <= F.LOG_MAX) then
 local ok = pcall(function()
 local old = ""
-local oks = pcall(function()
-if isfile and isfile(name) then old = readfile(name) end
-end)
+if existed and size + #body <= F.LOG_MAX then
+local oks = pcall(function() old = readfile(name) end)
 if not oks then old = "" end
+end
 writefile(name, old .. body)
 end)
 if ok then
 okWrite = true
 usedName = name
 F.Out(string.format("[日志] %s 已写入 %s (%d 字节, 本次追加 %d 字符)", tostring(tag or ""), name, size + #body, #body))
-end
-break
-end
 end
 if not okWrite then
 F._logBuf = pending
@@ -1674,7 +1677,7 @@ local keysLog = { "threat", "violation", "flag", "warn", "detect", "suspect", "b
 local keysTel = { "telemetry", "report", "upload", "ping", "heartbeat" }
 pcall(function()
 if type(getnilinstances) == "function" then
-for _, inst in ipairs(getnilinstances()) do
+for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end
 if typeof(inst) == "Instance" then AC.hookOneRemote(inst) end
 end
 end
@@ -1722,7 +1725,7 @@ elseif type(obj) == "function" and islclosure and islclosure(obj) then
 local already = false
 pcall(function() if isfunctionhooked and isfunctionhooked(obj) then already = true end end)
 if not already and hookfunction then
-local okc, consts = pcall(debug.getconstants, obj)
+local okc, consts = pcall(dbgGetConstants, obj)
 if okc and consts then
 local hitAC, hitTel = false, false
 for _, c in ipairs(consts) do
@@ -1781,7 +1784,14 @@ for _, d in ipairs(F.walk(cloned)) do addRemote(d, "RS-clone") end
 end
 end)
 if type(getnilinstances) == "function" then
-pcall(function() for _, inst in ipairs(getnilinstances()) do addRemote(inst, "nil") end end)
+pcall(function()
+local arr = getnilinstances()
+for i = 1, #arr do
+if i % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
+if i > F.LIMITS.SCAN_GC_CAP then break end
+addRemote(arr[i], "nil")
+end
+end)
 end
 if type(getgc) == "function" then
 pcall(function()
@@ -1833,7 +1843,7 @@ end
 local acFunc = 0
 pcall(function()
 if type(getnilinstances) == "function" then
-for _, inst in ipairs(getnilinstances()) do
+for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end
 if typeof(inst) == "Instance" and AC.isSuspicious(inst.Name) then
 F.Out("[模块扫描] ⚠ 隐藏实例(nil parent): " .. tostring(inst.ClassName) .. " · " .. tostring(inst.Name))
 end
@@ -1853,7 +1863,7 @@ local nm = info.name or ""
 local src = info.source or ""
 local hit = AC.isSuspicious(nm) or AC.isSuspicious(src)
 if not hit then
-local okc, consts = pcall(debug.getconstants, obj)
+local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
 for i = 1, #consts do
 local c = consts[i]
@@ -1926,7 +1936,12 @@ end
 if type(getinstances) == "function" then
 local ok, arr = pcall(getinstances)
 if ok and type(arr) == "table" then
-for i = 1, #arr do n = n + 1 note(arr[i], "游离实例", "getinstances") end
+for i = 1, #arr do
+if i % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
+if i > F.LIMITS.SCAN_SCRIPT_CAP then break end
+n = n + 1
+note(arr[i], "游离实例", "getinstances")
+end
 end
 end
 local roots = {
@@ -1945,8 +1960,6 @@ local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 local cnt = 0
 for j = 1, #kids do
-cnt = cnt + 1
-if cnt % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 note(kids[j], nm, nm)
 n = n + 1
 if n >= CAP then break end
@@ -2048,7 +2061,6 @@ if r then
 local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 for j = 1, #kids do
-if j % F.LIMITS.SCAN_DESC_EVERY == 0 then task.wait() end
 scanRemote(kids[j], nm)
 end
 end
@@ -2551,7 +2563,7 @@ F._scavenging = true
 local n = 0
 pcall(function()
 if type(getnilinstances) == "function" then
-for _, inst in ipairs(getnilinstances()) do
+for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end
 if typeof(inst) == "Instance" then
 if AC.isRemoteLike(inst) then
 AC.hookOneRemote(inst)
@@ -2830,7 +2842,11 @@ F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
 local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-if not firing and UIS.TouchEnabled and F._touchDown then firing = true end
+if not firing and UIS.TouchEnabled and F._touchDown then
+local _, hum = GC()
+local md = hum and hum.MoveDirection
+if md and md.Magnitude > 0.1 then firing = false else firing = true end
+end
 if T.AimFireOnly and not T.AutoFire and not firing then return end
 local _, hum = GC()
 if not hum then return end
@@ -2846,8 +2862,6 @@ function F.AimUnbind()
 pcall(function() RS:UnbindFromRenderStep("CM_Aim") end)
 F._aimConn = nil
 end
-local SingleAimConn = nil
-local FaceLockConn = nil
 function F.FlingTarget()
 local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
 local target = name and Players:FindFirstChild(name)
@@ -3123,6 +3137,16 @@ local SKELETON = {
 }
 function F.SkeletonEnable()
 if #F._skeletonLines > 0 or F._skeletonDrawings then return end
+F._skelPlConns = F._skelPlConns or {}
+local function bindSkelPl(pl)
+if pl == LP or F._skelPlConns[pl] then return end
+F._skelPlConns[pl] = pl.CharacterAdded:Connect(function()
+task.wait(0.8)
+if not T.ESPSkeleton then return end
+F.SkeletonDisable()
+if T.ESPSkeleton then F.SkeletonEnable() end
+end)
+end
 local Dw = AC.cap("Drawing")
 if type(Dw) == "table" and type(Dw.new) == "function" then
 local okAll = pcall(function()
@@ -3243,6 +3267,8 @@ end
 for _, item in ipairs(F._skeletonLines) do pcall(function() item.line:Destroy() end) end
 F._skeletonLines = {}
 if F._skeletonGui then F._skeletonGui:Destroy() F._skeletonGui = nil end
+for pl, c in pairs(F._skelPlConns or {}) do pcall(function() c:Disconnect() end) end
+F._skelPlConns = {}
 end
 F._arrowBbs = {}
 F._arrowConn = nil
@@ -3380,9 +3406,11 @@ F._chamsBackup = F._chamsBackup or {}
 local function apply(pl)
 local ch = pl.Character
 if not ch then return end
+local bak = F._chamsBackup
+if not bak then return end
 for _, d in ipairs(ch:GetDescendants()) do
 if d:IsA("BasePart") then
-if not F._chamsBackup[d] then F._chamsBackup[d] = { Material = d.Material, Color = d.Color } end
+if not bak[d] then bak[d] = { Material = d.Material, Color = d.Color } end
 pcall(function()
 d.Material = Enum.Material.Neon
 d.Color = (pl == LP) and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 40, 40)
@@ -3838,11 +3866,16 @@ if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
 local _, hum = GC()
 if hum then pcall(function() hum.PlatformStand = false end) end
+if F._flyJumpConn then
+F._flyJumpConn = nil
+if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
+end
 end
 function F.FlySet(on)
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
+if T.InfiniteJump and F.JumpConn then pcall(F.InfiniteJumpDisable) F._flyJumpConn = true end
 local _, hum, root = GC()
 if not (hum and root) then return end
 pcall(function() hum.PlatformStand = true end)
@@ -3938,6 +3971,7 @@ for part in pairs(F.NoClipParts) do
 if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then part.CanCollide = true end
 end
 F.NoClipParts = {}
+F.NoClipStateOrig = nil
 end
 function F.NoClipEnable()
 if F.NoClipConn then return end
@@ -4442,6 +4476,10 @@ if T.AntiSit then pcall(F.AntiSitEnable) end
 if T.AntiAnchor then pcall(F.AntiAnchorEnable) end
 if T.Translate then pcall(F.TranslateEnable) end
 if T.ESP then pcall(ESPEnable) end
+if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
+if T.KillAura then pcall(F.KillAuraEnable) end
+if T.BodyHL then pcall(F.BodyHLEnable) end
+if T.TrapsESP then pcall(F.TrapsESPEnable) end
 end
 function F.CharPersistEnable() T.CharPersist = true end
 function F.CharPersistDisable() T.CharPersist = false end
@@ -4522,11 +4560,16 @@ end
 F._hudGui, F._hudConn = nil, nil
 function F.HudEnable()
 if F._hudGui then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then F.Out("[HUD] 找不到可挂载的 GUI 容器") return end
 local sg = Instance.new("ScreenGui")
 sg.Name = "StatOverlay"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
-sg.Parent = CoreGui
+sg.Parent = host
 local lbl = Instance.new("TextLabel")
 lbl.Size = UDim2.new(0, 230, 0, 20)
 lbl.Position = UDim2.new(1, -240, 1, -28)
@@ -4561,11 +4604,16 @@ end
 F._crossGui = nil
 function F.CrosshairEnable()
 if F._crossGui then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then F.Out("[准星] 找不到可挂载的 GUI 容器") return end
 local sg = Instance.new("ScreenGui")
 sg.Name = "CrosshairDot"
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
-sg.Parent = CoreGui
+sg.Parent = host
 local function bar(w, h)
 local f = Instance.new("Frame")
 f.Size = UDim2.fromOffset(w, h)
@@ -4637,10 +4685,9 @@ F._fovRing = nil
 end
 F._menuOpen = false
 function F.MenuOpen()
-if F._menuOpen then return true end
 local ok, v = pcall(function() return Fluent and Fluent.GUI and Fluent.GUI.Enabled end)
-if ok and v == true then return true end
-return false
+if ok and v ~= nil then return v and true or false end
+return F._menuOpen and true or false
 end
 pcall(function()
 UIS.InputBegan:Connect(function(input, processed)
@@ -5053,7 +5100,7 @@ pcall(function()
 local _, hum = GC()
 if hum then
 local o = F._orig or {}
-hum.WalkSpeed = o.walk or C._baseWalk or 16
+hum.WalkSpeed = o.walk or F._baseWalk or 16
 if o.jumpPower then hum.JumpPower = o.jumpPower end
 if o.jumpHeight then pcall(function() hum.JumpHeight = o.jumpHeight end) end
 local mh = hum.MaxHealth
@@ -5277,14 +5324,19 @@ end)
 if not got then return end
 F._spyHooked = true
 F._spyLayer = got
+F._spyN = 0
 F._remoteDownConns = {}
+F.SPY_MAX = F.SPY_MAX or 200
 pcall(function()
+local n = 0
 for _, d in ipairs(F.walk(RStorage)) do
+if n >= F.SPY_MAX then break end
 if AC.isRemoteLike(d) then
 local conn = d.OnClientEvent:Connect(function(...)
 if T.RemoteSpy then F.Out(string.format("[下行] %s", d.Name)) end
 end)
 F._remoteDownConns[#F._remoteDownConns + 1] = conn
+n = n + 1
 end
 end
 end)
@@ -5644,13 +5696,11 @@ end)
 end
 function Trans.Save()
 local now = os.clock()
-Trans._dirty = true
 local last = Trans._savedAt or 0
-if now - last < 5 and not (Trans._dirtyOld and now - Trans._dirtyOld > 25) then
+if now - last < 5 then
 Trans._dirtyOld = Trans._dirtyOld or now
-return
+if now - Trans._dirtyOld < 25 then return end
 end
-Trans._dirty = false
 Trans._dirtyOld = nil
 Trans._savedAt = now
 pcall(function()
@@ -5720,6 +5770,19 @@ local r = Trans.Request(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
 Trans.Cache[text] = r
+Trans.CACHE_MAX = Trans.CACHE_MAX or 5000
+local cnt = 0
+for _ in pairs(Trans.Cache) do cnt = cnt + 1 end
+if cnt > Trans.CACHE_MAX then
+local target = math.floor(Trans.CACHE_MAX / 4)
+local removed = 0
+for k in pairs(Trans.Cache) do
+Trans.Cache[k] = nil
+removed = removed + 1
+if removed >= target then break end
+end
+F.Out("[翻译] 缓存超过 " .. Trans.CACHE_MAX .. " 条, 已清理 " .. removed .. " 条")
+end
 Trans.Save()
 return r
 end
@@ -5952,6 +6015,15 @@ getgenv().CM_Window:Destroy()
 getgenv().CM_Window = nil
 end
 end)
+pcall(function()
+if getgenv and getgenv().CM_ToggleSG then
+pcall(function() getgenv().CM_ToggleSG:Destroy() end)
+getgenv().CM_ToggleSG = nil
+end
+end)
+pcall(function()
+if getgenv then getgenv().CM_TogglePolish = nil end
+end)
 pcall(F.Conn.ClearAll)
 F.Out("[CheatMenu] 已干净卸载")
 end
@@ -5978,7 +6050,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.5.5",
+SubTitle = "v10.6.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6227,24 +6299,16 @@ Duration = 8,
 end)
 end })
 Tabs.AC:AddSection("扫描补强(阈值 / 形状 / 反查 / 家族)")
-Tabs.AC:AddButton({ Title = "★ 提取数字阈值(速度/位移/滞空 的观感上限)", Callback = function()
-task.spawn(function() pcall(F.ScanThresholds) pcall(F.LogFlush, "阈值扫描") end)
-end })
-Tabs.AC:AddButton({ Title = "按形状找函数(upvalue数, 常量数)", Callback = function()
-local box = Fluent and Fluent.Options and Fluent.Options.ShapeBox
-local txt = box and tostring(box.Value or "") or ""
-local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
+Tabs.AC:AddButton({ Title = "★ 一键分析(阈值 + 找函数 + 家族, 不用你输入)", Callback = function()
 task.spawn(function()
-if a and b then
-pcall(function() F.FindByShape(tonumber(a), tonumber(b)) end)
-else
-F.Out("[形状] 请在上面的输入框按 `upvalue数,常量数` 格式填写, 例如 `19,15`")
-end
-pcall(F.LogFlush, "形状搜索")
+pcall(F.ScanThresholds)
+pcall(F.AutoProbe)
+pcall(F.ScanFamilies)
+pcall(F.LogFlush, "一键分析")
+Fluent:Notify({ Title = "一键分析", Content = "阈值 + 找函数 + 家族聚类已完成, 明细见控制台 F9", Duration = 8 })
 end)
 end })
-Tabs.AC:AddInput("ShapeBox", { Title = "形状(如 19,15)", Default = "", Placeholder = "upvalue数,常量数", Callback = function() end })
-Tabs.AC:AddButton({ Title = "反查持有者(用最近一次扫描到的可疑 remote)", Callback = function()
+Tabs.AC:AddButton({ Title = "反查持有者(用最近一次可疑 remote)", Callback = function()
 task.spawn(function()
 pcall(function()
 local t = F._lastSusRemote
@@ -6254,34 +6318,52 @@ end)
 pcall(F.LogFlush, "反查")
 end)
 end })
-Tabs.AC:AddButton({ Title = "家族聚类(同一 source 的可疑函数群)", Callback = function()
-task.spawn(function() pcall(F.ScanFamilies) pcall(F.LogFlush, "家族聚类") end)
+Tabs.AC:AddButton({ Title = "把速度压到安全值(会告诉你改了什么)", Callback = function()
+task.spawn(function()
+pcall(F.ApplySafeCaps)
+pcall(F.LogFlush, "安全值")
+Fluent:Notify({ Title = "安全值", Content = "已按分析结果调整速度上限, 改了什么都写在控制台 F9", Duration = 8 })
+end)
 end })
-Tabs.AC:AddButton({ Title = "★ 一键自动分析(不用你输入, 自动挑词→找函数→报阈值)", Callback = function()
-task.spawn(function() pcall(F.AutoProbe) pcall(F.LogFlush, "自动分析") end)
-end })
-Tabs.AC:AddButton({ Title = "按分析结果把速度压到安全值(会告诉你改了什么)", Callback = function()
-task.spawn(function() pcall(F.ApplySafeCaps) pcall(F.LogFlush, "安全值") end)
-end })
-Tabs.AC:AddInput("ConstBox", { Title = "（可选）手动指定关键词, 逗号分隔", Default = "",
-Placeholder = "留空即可, 上面的自动分析不用填", Callback = function() end })
-Tabs.AC:AddButton({ Title = "★ 按常量字符串找函数(不靠名字, 学自 Adonis 绕过)", Callback = function()
+Tabs.AC:AddInput("AdvArg", { Title = "高级参数(可留空): 形状写 19,15 · 关键词写 词1,词2", Default = "",
+Placeholder = "留空 = 走全自动", Callback = function() end })
+Tabs.AC:AddDropdown("AdvScan", { Title = "高级扫描(选完自动复位)", Values = {
+"关闭", "按形状找函数", "按常量字符串找函数", "家族聚类",
+}, Default = "关闭", Callback = function(v)
+if v == "关闭" then return end
+local box = Fluent and Fluent.Options and Fluent.Options.AdvArg
+local txt = box and tostring(box.Value or "") or ""
 task.spawn(function()
 pcall(function()
-local box = Fluent and Fluent.Options and Fluent.Options.ConstBox
-local txt = box and tostring(box.Value or "") or ""
+if v == "按形状找函数" then
+local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
+if a and b then
+F.FindByShape(tonumber(a), tonumber(b))
+else
+F.Out("[形状] 高级参数为空或格式不对 ⇒ 改走全自动分析(不用输入)")
+F.AutoProbe()
+end
+elseif v == "按常量字符串找函数" then
 local list = {}
 for w in txt:gmatch("[^,，]+") do
 local t = w:gsub("^%s+", ""):gsub("%s+$", "")
 if #t > 0 then list[#list + 1] = t end
 end
-if #list == 0 then
-F.Out("[按常量] 请先在上面的输入框按 `关键词1, 关键词2` 填（默认全都要命中）")
-else
+if #list > 0 then
 F.ScanByConstants(list, "all")
+else
+F.Out("[按常量] 高级参数为空 ⇒ 改走全自动分析(自动挑词)")
+F.AutoProbe()
+end
+elseif v == "家族聚类" then
+F.ScanFamilies()
 end
 end)
-pcall(F.LogFlush, "按常量找函数")
+pcall(F.LogFlush, "高级扫描")
+task.defer(function()
+local op = Fluent and Fluent.Options and Fluent.Options.AdvScan
+if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
+end)
 end)
 end })
 Tabs.AC:AddSection("采集与导出")
@@ -6321,7 +6403,7 @@ local _ls = (type(loadstring) == "function") and "有" or "无"
 local _wf = (type(writefile) == "function") and "有" or "无"
 Fluent:Notify({
 Title = "CheatMenu 已加载",
-Content = "已加载 v10.5.5 · " .. _plat .. " · 读脚本:" .. _ls .. " · 存档:" .. _wf
+Content = "已加载 v10.6.0 · " .. _plat .. " · 读脚本:" .. _ls .. " · 存档:" .. _wf
 .. " · 功能默认关(要哪个自己点)",
 Duration = 10,
 })
@@ -6336,7 +6418,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.5.5")
+F.Out("[CheatMenu] ✅ 加载完成 v10.6.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
@@ -6445,6 +6527,7 @@ local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return 0 end
 local n = 0
 F._cfgSyncing = true
+pcall(function()
 for name, opt in pairs(op) do
 if type(name) == "string" and type(opt) == "table" and type(opt.Set) == "function" then
 local dyn = false
@@ -6489,6 +6572,7 @@ end
 end
 end
 end
+end)
 F._cfgSyncing = false
 return n
 end
