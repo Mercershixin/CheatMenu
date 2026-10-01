@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 16:19 sha e0afa0bc bytes 259092'):format('2026-10-01 16:19','e0afa0bc',259092))
+print(('[CheatMenu] build 2026-10-01 17:34 sha 775fb9f0 bytes 217820'):format('2026-10-01 17:34','775fb9f0',217820))
 local F = {}
-F.VERSION = "v10.10.7"
+F.VERSION = "v10.10.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -920,35 +920,14 @@ if type(getgc) ~= "function" then return {} end
 local ok, r = pcall(getgc, pass)
 return (ok and type(r) == "table") and r or {}
 end
-F.GC_SPOOF_KEYS = { "info", "getinfo", "getupvalue", "getupvalues", "getconstants", "getprotos" }
 F._scavenging = false
 F._stealthHooked = setmetatable({}, { __mode = "k" })
-function F.getGameEnv()
-if type(getrenv) ~= "function" then return nil end
-local ok, env = pcall(getrenv)
-return (ok and type(env) == "table") and env or nil
-end
-F.filterList = function(...)
-local out = {}
-for i = 1, select("#", ...) do
-local v = select(i, ...)
-if v ~= nil then out[#out + 1] = v end
-end
-return out
-end
-function F.isProtectedFn(f)
-return type(f) == "function" and (AC._ownFns[f] == true or AC._hookedFns[f] == true)
-end
 function F.stealthHook(obj, wrapperFactory)
 if type(obj) ~= "function" then return nil end
 if F._stealthHooked[obj] then return nil end
 if not (hookfunction and newcclosure) then return nil end
 local box = { orig = nil }
 local wrapper = wrapperFactory(box)
-if T.CloneHook and type(clonefunction) == "function" then
-local okc, cloned = pcall(clonefunction, wrapper)
-if okc and type(cloned) == "function" then wrapper = cloned end
-end
 local ok, res = pcall(function() return hookfunction(obj, newcclosure(wrapper)) end)
 if ok and type(res) == "function" then
 box.orig = res
@@ -1069,7 +1048,6 @@ if ok and v ~= nil then return k end
 end
 return nil
 end
-F.SCAN_ATTR_ROOTS = { workspace, LP, RStorage }
 F.CAP_LIST = {
 { "getgc", "扫描 GC 对象 —— 整个扫描模块的地基" },
 { "filtergc", "按名一步定位函数(反作弊中和强烈依赖)" },
@@ -1141,12 +1119,6 @@ F.Out("[能力探测] ⚠ 缺失: " .. table.concat(miss, ", ") .. " —— 相�
 end
 end
 return res, okN, total
-end
-function F.capSummary()
-local res = F._caps or select(1, F.ProbeCapabilities(false))
-local n, t = 0, 0
-for _, v in pairs(res) do t = t + 1 if v then n = n + 1 end end
-return n, t
 end
 F.AC_INVISIBLE = {
 "服务器脚本源码(ServerScriptService / ServerStorage 不下发到客户端)",
@@ -1303,90 +1275,6 @@ end)
 F._scavenging = keepScav
 snap.caps = F._caps or select(1, F.ProbeCapabilities(false))
 return snap
-end
-function F.SnapshotFile() return "CheatMenu_ACSnapshot.json" end
-function F.SnapshotSave()
-local snap = F.SnapshotCollect()
-local ok = pcall(function() writefile(F.SnapshotFile(), HS:JSONEncode(snap)) end)
-if ok then
-F.Out(string.format("[快照] 已保存: remote %d · 反作弊碎片 %d · 属性名 %d · 脚本指纹 %d",
-#snap.remotes, #snap.acfns, #snap.attrs, #snap.scripthashes))
-else
-F.Out("[快照] ⚠ 写文件失败(执行器可能不支持 writefile), 快照只保留在内存里")
-F._snapMem = snap
-end
-return snap
-end
-function F.SnapshotLoad()
-local snap
-pcall(function()
-if readfile and isfile and isfile(F.SnapshotFile()) then
-snap = HS:JSONDecode(readfile(F.SnapshotFile()))
-end
-end)
-return snap or F._snapMem
-end
-function F.SnapshotDiff()
-local old = F.SnapshotLoad()
-if type(old) ~= "table" then
-F.Out("[对比] 没有旧快照 —— 先点一次「保存扫描快照」, 之后游戏更新再点这个")
-return nil
-end
-local new = F.SnapshotCollect()
-local d = { remoteNew = {}, remoteGone = {}, remoteChanged = {}, acNew = {}, acGone = {},
-attrNew = {}, attrGone = {}, hashChanged = {}, capsLost = {} }
-local function idx(list, key)
-local m = {}
-if type(list) == "table" then for i = 1, #list do m[list[i][key]] = list[i] end end
-return m
-end
-local om, nm = idx(old.remotes, "n"), idx(new.remotes, "n")
-for k, v in pairs(nm) do
-if not om[k] then d.remoteNew[#d.remoteNew + 1] = v
-elseif tostring(om[k].c) ~= tostring(v.c) or tostring(om[k].s) ~= tostring(v.s) then
-d.remoteChanged[#d.remoteChanged + 1] = { n = k, old = om[k].c .. "/可疑" .. tostring(om[k].s), new = v.c .. "/可疑" .. tostring(v.s) }
-end
-end
-for k, v in pairs(om) do if not nm[k] then d.remoteGone[#d.remoteGone + 1] = v end end
-local okk, nkk = {}, {}
-if type(old.acfns) == "table" then for i = 1, #old.acfns do okk[old.acfns[i].f .. "@" .. old.acfns[i].s] = true end end
-if type(new.acfns) == "table" then for i = 1, #new.acfns do nkk[new.acfns[i].f .. "@" .. new.acfns[i].s] = true end end
-for k in pairs(nkk) do if not okk[k] then d.acNew[#d.acNew + 1] = k end end
-for k in pairs(okk) do if not nkk[k] then d.acGone[#d.acGone + 1] = k end end
-local oa, na = idx(old.attrs, "k"), idx(new.attrs, "k")
-for k in pairs(na) do if not oa[k] then d.attrNew[#d.attrNew + 1] = k end end
-for k in pairs(oa) do if not na[k] then d.attrGone[#d.attrGone + 1] = k end end
-local oh, nh = {}, {}
-if type(old.scripthashes) == "table" then for i = 1, #old.scripthashes do oh[old.scripthashes[i].p] = tostring(old.scripthashes[i].h) end end
-if type(new.scripthashes) == "table" then for i = 1, #new.scripthashes do
-local p, h = new.scripthashes[i].p, tostring(new.scripthashes[i].h)
-nh[p] = h
-if oh[p] and oh[p] ~= h then d.hashChanged[#d.hashChanged + 1] = { p = p, old = oh[p], new = h } end
-end end
-if type(old.caps) == "table" and type(new.caps) == "table" then
-for k, v in pairs(old.caps) do if v and not new.caps[k] then d.capsLost[#d.capsLost + 1] = k end end
-end
-d.oldT, d.newT = old.t, new.t
-F.Out("═══ 快照对比(客户端可见面) ═══")
-F.Out(string.format("  新 remote %d · 少 remote %d · remote 变了 %d",
-#d.remoteNew, #d.remoteGone, #d.remoteChanged))
-for i = 1, math.min(#d.remoteNew, 25) do F.Out("    + remote: " .. d.remoteNew[i].n .. " [" .. d.remoteNew[i].c .. "] 来源 " .. d.remoteNew[i].src) end
-for i = 1, math.min(#d.remoteChanged, 25) do F.Out("    ~ remote: " .. d.remoteChanged[i].n .. "  " .. d.remoteChanged[i].old .. " -> " .. d.remoteChanged[i].new) end
-for i = 1, math.min(#d.remoteGone, 15) do F.Out("    - remote: " .. d.remoteGone[i].n) end
-F.Out(string.format("  反作弊碎片: 新增 %d · 消失 %d", #d.acNew, #d.acGone))
-for i = 1, math.min(#d.acNew, 20) do F.Out("    + " .. d.acNew[i]) end
-F.Out(string.format("  属性名: 新增 %d · 消失 %d", #d.attrNew, #d.attrGone))
-for i = 1, math.min(#d.attrNew, 20) do F.Out("    + 属性: " .. d.attrNew[i]) end
-if #d.hashChanged > 0 then
-F.Out(string.format("  ★ 客户端脚本被改过 %d 个(这是最直接的「更新了哪个客户端脚本」证据)", #d.hashChanged))
-for i = 1, math.min(#d.hashChanged, 15) do F.Out("    ~ " .. d.hashChanged[i].p) end
-else
-F.Out("  客户端脚本指纹: 无变化(或执行器不支持 getscripthash)")
-end
-if #d.capsLost > 0 then F.Out("  ⚠ 执行器能力丢失: " .. table.concat(d.capsLost, ", ")) end
-F.Out("  ⚠ 服务端侧变化**看不见**: " .. F.AC_INVISIBLE[1])
-F._lastDiff = d
-return d
 end
 F._capOn = false
 F._capLog = {}
@@ -1586,21 +1474,6 @@ if not gname:match("[%w]") then gname = "game" end
 if #gname > 24 then gname = gname:sub(1, 24) end
 F._logBaseName = string.format("CheatMenu_log_%s_%s", gname, pid)
 return F._logBaseName
-end
-function F.LogWhere()
-local dir, exec = nil, nil
-pcall(function() local gw = AC.cap("getworkspace") if type(gw) == "function" then dir = gw() end end)
-pcall(function() if type(getexecutorname) == "function" then exec = getexecutorname() end end)
-local path
-if dir then
-path = tostring(dir):gsub("[\\/]+$", "") .. "\\" .. F.LogBaseName() .. ".txt"
-else
-path = "(执行器工作目录)\\" .. F.LogBaseName() .. ".txt"
-end
-F.Out("[日志] 执行器: " .. tostring(exec or "未知"))
-F.Out("[日志] 文件路径: " .. path)
-F.Out("[日志] 命名: " .. F.LogBaseName() .. ".txt (游戏名 + PlaceId, 不同游戏不冲突; 超 1.5MB 自动轮转 _2/_3)")
-return path, exec
 end
 function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
@@ -2681,12 +2554,6 @@ C.PriorityTargets = {}
 C.Blacklist = {}
 function F.AddPriorityTarget(name) C.PriorityTargets[name] = true end
 function F.AddBlacklist(name) C.Blacklist[name] = true end
-function F.GetDistanceColor(dist)
-if dist <= 50 then return Color3.fromRGB(255, 105, 180) end
-if dist <= 750 then return Color3.fromRGB(255, 60, 60) end
-if dist <= 1875 then return Color3.fromRGB(255, 255, 60) end
-return Color3.fromRGB(60, 255, 60)
-end
 function F.PlayerNames()
 local n = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -2836,10 +2703,6 @@ cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
 F.AutoFire(tgt)
 end)
 end
-function F.AimUnbind()
-pcall(function() RS:UnbindFromRenderStep("CM_Aim") end)
-F._aimConn = nil
-end
 local GodConn = nil
 local function GodDisable() if GodConn then GodConn:Disconnect() GodConn = nil end end
 local function GodEnable()
@@ -2850,623 +2713,6 @@ if hum then hum.MaxHealth = math.huge hum.Health = math.huge end
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
-end
-local InvConn, InvAddedConn, InvBackup, InvDisplayBackup
-local function InvApply(ch, on)
-if not ch then return end
-InvBackup = InvBackup or {}
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then
-if on then InvBackup[d] = d.Transparency d.Transparency = 1 d.CastShadow = false
-else d.Transparency = InvBackup[d] or ((d.Name == "HumanoidRootPart") and 1 or 0) d.CastShadow = true end
-elseif d:IsA("Decal") or d:IsA("Texture") then
-if on then InvBackup[d] = d.Transparency d.Transparency = 1 else d.Transparency = InvBackup[d] or 0 end
-elseif d:IsA("Accessory") then
-local h = d:FindFirstChild("Handle")
-if h and h:IsA("BasePart") then
-if on then InvBackup[h] = h.Transparency h.Transparency = 1 h.CastShadow = false
-else h.Transparency = InvBackup[h] or 0 h.CastShadow = true end
-end
-elseif d:IsA("ParticleEmitter") or d:IsA("Trail") then d.Enabled = not on
-elseif d:IsA("BillboardGui") or d:IsA("Highlight") then d.Enabled = not on end
-end
-end
-local function InvisibleDisable()
-if InvConn then InvConn:Disconnect() InvConn = nil end
-if InvAddedConn then InvAddedConn:Disconnect() InvAddedConn = nil end
-local ch, hum = GC()
-InvApply(ch, false)
-InvBackup = nil
-if hum and InvDisplayBackup ~= nil then
-pcall(function() hum.DisplayDistanceType = InvDisplayBackup end)
-InvDisplayBackup = nil
-end
-end
-local function InvisibleEnable()
-if InvConn then return end
-local ch, hum = GC()
-if not ch then return end
-if hum then
-InvDisplayBackup = hum.DisplayDistanceType
-pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
-end
-InvApply(ch, true)
-InvAddedConn = ch.DescendantAdded:Connect(function(d)
-pcall(function()
-if d:IsA("BasePart") then d.Transparency = 1 d.CastShadow = false
-elseif d:IsA("Decal") or d:IsA("Texture") then d.Transparency = 1
-elseif d:IsA("Accessory") then
-local h = d:FindFirstChild("Handle")
-if h and h:IsA("BasePart") then h.Transparency = 1 h.CastShadow = false end
-elseif d:IsA("BillboardGui") or d:IsA("Highlight") then d.Enabled = false
-elseif d:IsA("ParticleEmitter") or d:IsA("Trail") then d.Enabled = false end
-end)
-end)
-InvConn = RS.RenderStepped:Connect(function()
-if not T.Invisible then InvisibleDisable() return end
-local c = LP.Character
-if not c then return end
-InvApply(c, true)
-local h = c:FindFirstChildOfClass("Humanoid")
-if h and h.DisplayDistanceType ~= Enum.HumanoidDisplayDistanceType.None then
-pcall(function() h.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
-end
-end)
-end
-local ESPGui, ESPObjs = nil, {}
-local ESPConn = nil
-local ESPHue = 0
-local function espInit()
-if ESPGui and ESPGui.Parent then return end
-ESPGui = Instance.new("ScreenGui")
-ESPGui.Name = "PlayerTags"
-ESPGui.ResetOnSpawn = false
-ESPGui.IgnoreGuiInset = true
-ESPGui.Parent = gethui and gethui() or CoreGui
-end
-local function espRemove(pl)
-local o = ESPObjs[pl]
-if o then for _, inst in pairs(o) do pcall(function() inst:Destroy() end) end ESPObjs[pl] = nil end
-end
-local function espCreate(pl)
-if pl == LP or ESPObjs[pl] then return end
-espInit()
-local o = {}
-local function edge(parent)
-local e = Instance.new("Frame")
-e.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
-e.BorderSizePixel = 0
-e.Parent = parent
-return e
-end
-o.box = Instance.new("Frame")
-o.box.BackgroundTransparency = 1
-o.box.BorderSizePixel = 0
-o.box.Parent = ESPGui
-o.top = edge(o.box) o.bottom = edge(o.box) o.left = edge(o.box) o.right = edge(o.box)
-local function corner()
-local c = Instance.new("Frame")
-c.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
-c.BorderSizePixel = 0
-c.Visible = false
-c.Parent = ESPGui
-return c
-end
-o.corner1, o.corner2 = corner(), corner()
-o.corner3, o.corner4 = corner(), corner()
-o.corner5, o.corner6 = corner(), corner()
-o.corner7, o.corner8 = corner(), corner()
-o.name = Instance.new("TextLabel")
-o.name.BackgroundTransparency = 1
-o.name.TextColor3 = Color3.fromRGB(255, 255, 255)
-o.name.TextSize = 13
-o.name.Font = Enum.Font.GothamBold
-o.name.TextStrokeTransparency = 0.5
-o.name.Parent = ESPGui
-o.dist = Instance.new("TextLabel")
-o.dist.BackgroundTransparency = 1
-o.dist.TextColor3 = Color3.fromRGB(210, 210, 210)
-o.dist.TextSize = 12
-o.dist.Font = Enum.Font.Gotham
-o.dist.TextStrokeTransparency = 0.5
-o.dist.Parent = ESPGui
-o.hp = Instance.new("Frame")
-o.hp.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-o.hp.BorderSizePixel = 0
-o.hp.Parent = ESPGui
-o.tracer = Instance.new("Frame")
-o.tracer.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
-o.tracer.BorderSizePixel = 0
-o.tracer.Parent = ESPGui
-ESPObjs[pl] = o
-end
-local function espUpdate()
-local _now = os.clock()
-if _now - (F._espAt or 0) < 0.033 then return end
-F._espAt = _now
-if T.ESPRainbow then ESPHue = (ESPHue + 0.008) % 1 end
-local cam = workspace.CurrentCamera
-if not cam then return end
-local vp = cam.ViewportSize
-for pl, o in pairs(ESPObjs) do
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hrp and hum and hum.Health > 0 then
-local pos, onScreen = cam:WorldToScreenPoint(hrp.Position)
-if onScreen then
-local dist = (cam.CFrame.Position - hrp.Position).Magnitude
-local col = T.ESPRainbow and Color3.fromHSV(ESPHue, 1, 1) or F.GetDistanceColor(dist)
-if T.ESPTeamColor and pl.Team == LP.Team then col = Color3.fromRGB(90, 220, 120) end
-local h = math.clamp(600 / math.max(1, dist), 20, 320)
-local w = h * 0.6
-local x, y = pos.X - w / 2, pos.Y - h / 2
-local style = C.ESPBoxStyle or "边框"
-local boxOn = T.ESPBox ~= false
-o.box.Visible = boxOn and (style ~= "角框")
-o.box.Position = UDim2.fromOffset(x, y)
-o.box.Size = UDim2.fromOffset(w, h)
-o.top.Position = UDim2.fromOffset(0, 0) o.top.Size = UDim2.new(1, 0, 0, 1) o.top.BackgroundColor3 = col
-o.bottom.Position = UDim2.new(0, 0, 1, -1) o.bottom.Size = UDim2.new(1, 0, 0, 1) o.bottom.BackgroundColor3 = col
-o.left.Position = UDim2.fromOffset(0, 0) o.left.Size = UDim2.new(0, 1, 1, 0) o.left.BackgroundColor3 = col
-o.right.Position = UDim2.new(1, -1, 0, 0) o.right.Size = UDim2.new(0, 1, 1, 0) o.right.BackgroundColor3 = col
-local cl, ct = 12, 2
-if boxOn and style ~= "边框" then
-local cx = { x, x, x + w - cl, x + w - ct, x, x, x + w - cl, x + w - ct }
-local cy = { y, y, y, y, y + h - ct, y + h - cl, y + h - ct, y + h - cl }
-local cw = { cl, ct, cl, ct, cl, ct, cl, ct }
-local chh = { ct, cl, ct, cl, ct, cl, ct, cl }
-for i = 1, 8 do
-local c = o["corner" .. i]
-c.Visible = true
-c.Position = UDim2.fromOffset(cx[i], cy[i])
-c.Size = UDim2.fromOffset(cw[i], chh[i])
-c.BackgroundColor3 = col
-end
-else
-for i = 1, 8 do o["corner" .. i].Visible = false end
-end
-o.name.Visible = T.ESPName ~= false
-o.name.Position = UDim2.fromOffset(x, y - 16)
-o.name.Size = UDim2.fromOffset(w, 16)
-o.name.Text = pl.Name
-o.name.TextColor3 = col
-o.dist.Visible = T.ESPDist ~= false
-o.dist.Position = UDim2.fromOffset(x, y + h)
-o.dist.Size = UDim2.fromOffset(w, 14)
-o.dist.Text = ("[%.0f]"):format(dist)
-o.hp.Visible = T.ESPHealth ~= false
-local hpRatio = math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1)
-o.hp.Position = UDim2.fromOffset(x - 6, y)
-o.hp.Size = UDim2.new(0, 3, hpRatio, 0)
-o.hp.BackgroundColor3 = Color3.fromHSV(hpRatio * 0.33, 1, 1)
-o.tracer.Visible = T.ESPTracer ~= false
-local dx, dy = pos.X - vp.X / 2, pos.Y - vp.Y
-local len = math.sqrt(dx * dx + dy * dy)
-o.tracer.Position = UDim2.fromOffset(vp.X / 2, vp.Y)
-o.tracer.Size = UDim2.fromOffset(len, 1)
-o.tracer.Rotation = math.deg(math.atan2(dy, dx))
-o.tracer.BackgroundColor3 = col
-else
-o.box.Visible = false o.name.Visible = false o.dist.Visible = false o.hp.Visible = false o.tracer.Visible = false
-for i = 1, 8 do o["corner" .. i].Visible = false end
-end
-else
-o.box.Visible = false o.name.Visible = false o.dist.Visible = false o.hp.Visible = false o.tracer.Visible = false
-for i = 1, 8 do o["corner" .. i].Visible = false end
-end
-end
-end
-local ESPAddedConn, ESPRemovedConn = nil, nil
-local function ESPEnable()
-espInit()
-for _, pl in ipairs(Players:GetPlayers()) do espCreate(pl) end
-if ESPAddedConn then ESPAddedConn:Disconnect() end
-if ESPRemovedConn then ESPRemovedConn:Disconnect() end
-F._espPlConns = F._espPlConns or {}
-ESPAddedConn = Players.PlayerAdded:Connect(function(pl)
-if F._espPlConns[pl] then return end
-F._espPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
-end)
-for _, pl in ipairs(Players:GetPlayers()) do
-if not F._espPlConns[pl] then
-F._espPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) espCreate(pl) end)
-end
-end
-ESPRemovedConn = Players.PlayerRemoving:Connect(function(pl)
-if F._espPlConns[pl] then pcall(function() F._espPlConns[pl]:Disconnect() end) F._espPlConns[pl] = nil end
-espRemove(pl)
-end)
-if not ESPConn then ESPConn = RS.RenderStepped:Connect(espUpdate) end
-end
-local function ESPDisable()
-if F._espPlConns then
-for pl, c in pairs(F._espPlConns) do pcall(function() c:Disconnect() end) end
-F._espPlConns = {}
-end
-if ESPConn then ESPConn:Disconnect() ESPConn = nil end
-if ESPAddedConn then ESPAddedConn:Disconnect() ESPAddedConn = nil end
-if ESPRemovedConn then ESPRemovedConn:Disconnect() ESPRemovedConn = nil end
-for pl in pairs(ESPObjs) do espRemove(pl) end
-ESPObjs = {}
-end
-F._skeletonLines = {}
-F._skeletonDrawings = nil
-F._skeletonConn = nil
-local SKELETON = {
-{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},{"LowerTorso","LeftUpperLeg"},
-{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
-{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
-{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
-{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
-}
-function F.SkeletonEnable()
-if #F._skeletonLines > 0 or F._skeletonDrawings then return end
-F._skelPlConns = F._skelPlConns or {}
-local function bindSkelPl(pl)
-if pl == LP or F._skelPlConns[pl] then return end
-F._skelPlConns[pl] = pl.CharacterAdded:Connect(function()
-task.wait(0.8)
-if not T.ESPSkeleton then return end
-F.SkeletonDisable()
-if T.ESPSkeleton then F.SkeletonEnable() end
-end)
-end
-if not F._skelRConn then
-F._skelRConn = Players.PlayerRemoving:Connect(function(pl)
-if F._skelPlConns and F._skelPlConns[pl] then
-pcall(function() F._skelPlConns[pl]:Disconnect() end)
-F._skelPlConns[pl] = nil
-end
-end)
-end
-local Dw = AC.cap("Drawing")
-if type(Dw) == "table" and type(Dw.new) == "function" then
-local okAll = pcall(function()
-local list = {}
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and pl.Character then
-for _, pair in ipairs(SKELETON) do
-local line = Dw.new("Line")
-line.Thickness = 1.5
-line.Color = Color3.fromRGB(0, 255, 150)
-line.Visible = false
-list[#list + 1] = { drawing = line, pl = pl, a = pair[1], b = pair[2] }
-end
-end
-end
-F._skeletonDrawings = list
-end)
-for _, pl in ipairs(Players:GetPlayers()) do bindSkelPl(pl) end
-if okAll and F._skeletonDrawings then
-F._skeletonConn = RS.RenderStepped:Connect(function()
-if not T.ESPSkeleton then F.SkeletonDisable() return end
-local cam = workspace.CurrentCamera
-if not cam then return end
-local list = F._skeletonDrawings
-for i = 1, #list do
-local item = list[i]
-local d = item.drawing
-local ch = item.pl.Character
-local a = ch and ch:FindFirstChild(item.a, true)
-local b = ch and ch:FindFirstChild(item.b, true)
-if a and b then
-local pa, oa = cam:WorldToViewportPoint(a.Position)
-local pb, ob = cam:WorldToViewportPoint(b.Position)
-if oa and ob then
-d.From = Vector2.new(pa.X, pa.Y)
-d.To = Vector2.new(pb.X, pb.Y)
-d.Visible = true
-else
-d.Visible = false
-end
-else
-d.Visible = false
-end
-end
-end)
-if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
-F._skelQConn = Players.PlayerAdded:Connect(function(pl)
-bindSkelPl(pl)
-if not T.ESPSkeleton then return end
-task.wait(0.8)
-F.SkeletonDisable()
-if T.ESPSkeleton then F.SkeletonEnable() end
-end)
-F.Out("[CheatMenu] 骨骼线: 使用 Drawing API (" .. #F._skeletonDrawings .. " 条)")
-return
-end
-if F._skeletonDrawings then
-for _, item in ipairs(F._skeletonDrawings) do pcall(function() item.drawing:Remove() end) end
-F._skeletonDrawings = nil
-end
-end
-local sg = Instance.new("ScreenGui")
-sg.Name = "BoneLines"
-sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true
-sg.Parent = gethui and gethui() or CoreGui
-F._skeletonGui = sg
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and pl.Character then
-for _, pair in ipairs(SKELETON) do
-local line = Instance.new("Frame")
-line.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
-line.BorderSizePixel = 0
-line.AnchorPoint = Vector2.new(0.5, 0.5)
-line.Parent = sg
-F._skeletonLines[#F._skeletonLines + 1] = { line = line, pl = pl, a = pair[1], b = pair[2] }
-end
-end
-end
-for _, pl in ipairs(Players:GetPlayers()) do bindSkelPl(pl) end
-if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) end
-F._skelQConn = Players.PlayerAdded:Connect(function(pl)
-bindSkelPl(pl)
-if not T.ESPSkeleton then return end
-task.wait(0.8)
-F.SkeletonDisable()
-if T.ESPSkeleton then F.SkeletonEnable() end
-end)
-F._skeletonConn = RS.RenderStepped:Connect(function()
-if not T.ESPSkeleton then F.SkeletonDisable() return end
-local cam = workspace.CurrentCamera
-for _, item in ipairs(F._skeletonLines) do
-local ch = item.pl.Character
-local a = ch and ch:FindFirstChild(item.a, true)
-local b = ch and ch:FindFirstChild(item.b, true)
-if a and b then
-local pa, oa = cam:WorldToViewportPoint(a.Position)
-local pb, ob = cam:WorldToViewportPoint(b.Position)
-if oa and ob then
-item.line.Visible = true
-local dx, dy = pb.X - pa.X, pb.Y - pa.Y
-local len = math.sqrt(dx * dx + dy * dy)
-item.line.Position = UDim2.fromOffset((pa.X + pb.X) / 2, (pa.Y + pb.Y) / 2)
-item.line.Size = UDim2.fromOffset(len, 1.5)
-item.line.Rotation = math.deg(math.atan2(dy, dx))
-else
-item.line.Visible = false
-end
-else
-item.line.Visible = false
-end
-end
-end)
-end
-function F.SkeletonDisable()
-if F._skelQConn then pcall(function() F._skelQConn:Disconnect() end) F._skelQConn = nil end
-if F._skeletonConn then F._skeletonConn:Disconnect() F._skeletonConn = nil end
-if F._skeletonDrawings then
-for _, item in ipairs(F._skeletonDrawings) do pcall(function() item.drawing:Remove() end) end
-F._skeletonDrawings = nil
-end
-for _, item in ipairs(F._skeletonLines) do pcall(function() item.line:Destroy() end) end
-F._skeletonLines = {}
-if F._skeletonGui then F._skeletonGui:Destroy() F._skeletonGui = nil end
-for pl, c in pairs(F._skelPlConns or {}) do pcall(function() c:Disconnect() end) end
-F._skelPlConns = {}
-if F._skelRConn then pcall(function() F._skelRConn:Disconnect() end) F._skelRConn = nil end
-end
-F._arrowBbs = {}
-F._arrowConn = nil
-function F.ArrowEnable()
-if #F._arrowBbs > 0 then return end
-local function dropArrow(pl)
-for i = #F._arrowBbs, 1, -1 do
-if F._arrowBbs[i].pl == pl then
-pcall(function() F._arrowBbs[i].bb:Destroy() end)
-table.remove(F._arrowBbs, i)
-end
-end
-end
-local function makeArrow(pl)
-if pl == LP or not pl.Character then return end
-for _, e in ipairs(F._arrowBbs) do if e.pl == pl then return end end
-local bb = Instance.new("BillboardGui")
-bb.Name = "FacingMark"
-bb.Size = UDim2.fromOffset(40, 40)
-bb.StudsOffset = Vector3.new(0, 3.5, 0)
-bb.AlwaysOnTop = true
-bb.Parent = pl.Character
-local lbl = Instance.new("TextLabel")
-lbl.Size = UDim2.fromScale(1, 1)
-lbl.BackgroundTransparency = 1
-lbl.Text = "◆"
-lbl.TextSize = 36
-lbl.TextColor3 = Color3.fromRGB(255, 255, 80)
-lbl.TextStrokeTransparency = 0.5
-lbl.Parent = bb
-F._arrowBbs[#F._arrowBbs + 1] = { bb = bb, lbl = lbl, pl = pl }
-end
-F._arrowPlConns = F._arrowPlConns or {}
-local function bindPl(pl)
-if pl == LP or F._arrowPlConns[pl] then return end
-F._arrowPlConns[pl] = pl.CharacterAdded:Connect(function()
-task.wait(0.8)
-if not T.ESPArrow then return end
-dropArrow(pl)
-makeArrow(pl)
-end)
-end
-for _, pl in ipairs(Players:GetPlayers()) do
-makeArrow(pl)
-bindPl(pl)
-end
-if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) end
-F._arrowQConn = Players.PlayerAdded:Connect(function(pl)
-if not T.ESPArrow then return end
-task.wait(0.8)
-if not T.ESPArrow then return end
-makeArrow(pl)
-bindPl(pl)
-end)
-if F._arrowRConn then pcall(function() F._arrowRConn:Disconnect() end) end
-F._arrowRConn = Players.PlayerRemoving:Connect(function(pl)
-dropArrow(pl)
-if F._arrowPlConns[pl] then
-pcall(function() F._arrowPlConns[pl]:Disconnect() end)
-F._arrowPlConns[pl] = nil
-end
-end)
-F._arrowConn = RS.RenderStepped:Connect(function()
-if not T.ESPArrow then F.ArrowDisable() return end
-local cam = workspace.CurrentCamera
-if not cam then return end
-local camPos = cam.CFrame.Position
-for _, entry in ipairs(F._arrowBbs) do
-local ch = entry.pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-if hrp and (hrp.Position - camPos).Magnitude > 1 then
-local look = hrp.CFrame.LookVector
-local toCam = (camPos - hrp.Position).Unit
-local dot = look:Dot(toCam)
-if dot < -0.5 then
-entry.lbl.Text = "▲"
-entry.lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
-elseif dot > 0.5 then
-entry.lbl.Text = "▼"
-entry.lbl.TextColor3 = Color3.fromRGB(80, 255, 80)
-else
-entry.lbl.Text = "◆"
-entry.lbl.TextColor3 = Color3.fromRGB(255, 255, 80)
-end
-end
-end
-end)
-end
-function F.ArrowDisable()
-if F._arrowQConn then pcall(function() F._arrowQConn:Disconnect() end) F._arrowQConn = nil end
-if F._arrowRConn then pcall(function() F._arrowRConn:Disconnect() end) F._arrowRConn = nil end
-for pl, c in pairs(F._arrowPlConns or {}) do pcall(function() c:Disconnect() end) end
-F._arrowPlConns = {}
-if F._arrowConn then F._arrowConn:Disconnect() F._arrowConn = nil end
-for _, entry in ipairs(F._arrowBbs) do
-local bb = entry.bb or entry
-pcall(function() bb:Destroy() end)
-end
-F._arrowBbs = {}
-end
-F._trapHls = {}
-function F.TrapsESPEnable()
-if F._trapConn then return end
-for _, v in ipairs(F.walk(workspace)) do
-local isPart = v:IsA("BasePart")
-local n = isPart and v.Name:lower() or ""
-if isPart and (n:find("trap") or n:find("mine") or n:find("spike") or n:find("sentry")) then
-local hl = Instance.new("Highlight")
-hl.FillColor = Color3.fromRGB(255, 60, 60)
-hl.FillTransparency = 0.3
-hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-hl.Parent = v
-F._trapHls[#F._trapHls + 1] = hl
-end
-end
-local function markOne(v)
-pcall(function()
-if not T.TrapsESP or not v:IsA("BasePart") then return end
-local n2 = v.Name:lower()
-if not (n2:find("trap") or n2:find("mine") or n2:find("spike") or n2:find("sentry")) then return end
-for _, e in ipairs(F._trapHls) do if e.Parent == v then return end end
-local hl = Instance.new("Highlight")
-hl.FillColor = Color3.fromRGB(255, 60, 60)
-hl.FillTransparency = 0.3
-hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-hl.Parent = v
-F._trapHls[#F._trapHls + 1] = hl
-end)
-end
-F._trapConn = workspace.DescendantAdded:Connect(markOne)
-end
-function F.TrapsESPDisable()
-if F._trapConn then pcall(function() F._trapConn:Disconnect() end) F._trapConn = nil end
-for _, hl in ipairs(F._trapHls) do pcall(function() hl:Destroy() end) end
-F._trapHls = {}
-end
-F._chamsLoop = nil
-F._chamsBackup = nil
-F._chamsAddedConn = nil
-function F.ChamsEnable()
-F._chamsGen = (F._chamsGen or 0) + 1
-local myGen = F._chamsGen
-F._chamsBackup = F._chamsBackup or {}
-local function apply(pl)
-local ch = pl.Character
-if not ch then return end
-local bak = F._chamsBackup
-if not bak then return end
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then
-if not bak[d] then bak[d] = { Material = d.Material, Color = d.Color } end
-pcall(function()
-d.Material = Enum.Material.Neon
-d.Color = (pl == LP) and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 40, 40)
-end)
-end
-end
-end
-local function applyAll() for _, pl in ipairs(Players:GetPlayers()) do apply(pl) end end
-applyAll()
-if F._chamsAddedConn then F._chamsAddedConn:Disconnect() end
-F._chamsPlConns = F._chamsPlConns or {}
-F._chamsAddedConn = Players.PlayerAdded:Connect(function(pl)
-if F._chamsPlConns[pl] then return end
-F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
-end)
-for _, pl in ipairs(Players:GetPlayers()) do
-if not F._chamsPlConns[pl] then
-F._chamsPlConns[pl] = pl.CharacterAdded:Connect(function() task.wait(0.3) apply(pl) end)
-end
-end
-if F._chamsRConn then F._chamsRConn:Disconnect() end
-F._chamsRConn = Players.PlayerRemoving:Connect(function(pl)
-if F._chamsPlConns and F._chamsPlConns[pl] then
-pcall(function() F._chamsPlConns[pl]:Disconnect() end)
-F._chamsPlConns[pl] = nil
-end
-end)
-F._chamsLoop = task.spawn(function()
-while T.Chams and myGen == F._chamsGen do task.wait(1) applyAll() end
-if myGen == F._chamsGen then F._chamsLoop = nil end
-end)
-end
-function F.ChamsDisable()
-if F._chamsAddedConn then F._chamsAddedConn:Disconnect() F._chamsAddedConn = nil end
-if F._chamsPlConns then
-for pl, c in pairs(F._chamsPlConns) do pcall(function() c:Disconnect() end) end
-F._chamsPlConns = {}
-end
-if F._chamsRConn then pcall(function() F._chamsRConn:Disconnect() end) F._chamsRConn = nil end
-if F._chamsBackup then
-for part, bak in pairs(F._chamsBackup) do
-pcall(function() part.Material = bak.Material part.Color = bak.Color end)
-end
-end
-F._chamsBackup = nil
-end
-local BulletHls = {}
-local BulletConn = nil
-local function BulletTracerDisable()
-if BulletConn then BulletConn:Disconnect() BulletConn = nil end
-for _, hl in ipairs(BulletHls) do pcall(function() hl:Destroy() end) end
-BulletHls = {}
-end
-local function BulletTracerEnable()
-if BulletConn then return end
-local function tag(part)
-if not (part:IsA("BasePart") and T.BulletTracer) then return end
-local n = part.Name:lower()
-if n:match("bullet") or n:match("projectile") or n:match("shot") or n:match("rocket") or n:match("bolt") then
-local hl = Instance.new("Highlight")
-hl.FillColor = Color3.fromRGB(255, 255, 0)
-hl.FillTransparency = 0.5
-hl.OutlineColor = Color3.fromRGB(255, 120, 0)
-hl.Parent = part
-BulletHls[#BulletHls + 1] = hl
-end
-end
-BulletConn = workspace.DescendantAdded:Connect(tag)
-for _, part in ipairs(F.walk(workspace)) do tag(part) end
 end
 F.KillAuraConn = nil
 F.lastAttack = 0
@@ -3499,12 +2745,8 @@ if now - (F.lastAttack or 0) < delay then return end
 F.lastAttack = now
 table.sort(targets, function(a, b) return a.dist < b.dist end)
 local pick
-if T.AimPriorityNearest then
-pick = targets[1]
-else
 F._killAuraIdx = ((F._killAuraIdx or 0) % #targets) + 1
 pick = targets[F._killAuraIdx]
-end
 if not pick then return end
 local cam = workspace.CurrentCamera
 if cam then cam.CFrame = CFrame.lookAt(cam.CFrame.Position, pick.hrp.Position) end
@@ -3572,7 +2814,6 @@ end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
-F._antiAimConn = nil
 F.HitboxBackup = {}
 F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
 function F.HitboxApplyOne(pl, k)
@@ -4071,27 +3312,9 @@ if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
-local function smoothTP(targetCF, useSmooth)
+local function smoothTP(targetCF)
 local _, _, root = GC()
 if not root or not targetCF then return end
-if not (T.TPSmooth and useSmooth ~= false) then
-pcall(function() root:PivotTo(targetCF) end)
-breakVelocity()
-return
-end
-local start = root.CFrame
-local dist = (start.Position - targetCF.Position).Magnitude
-local need = math.ceil(dist * 8 / 45)
-local seg = math.max(3, tonumber(C.TPSmoothSeg) or 8, need)
-seg = math.min(seg, 600)
-local stepWait = 0.012
-if dist > 2000 then stepWait = 0.008 end
-for i = 1, seg do
-local t = i / seg
-local eased = (t < 0.5) and (2 * t * t) or (1 - ((-2 * t + 2) ^ 2) / 2)
-root.CFrame = start:Lerp(targetCF, eased)
-task.wait(stepWait)
-end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
 end
@@ -4103,80 +3326,6 @@ if not tchar then return end
 local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
 smoothTP(troot.CFrame + Vector3.new(0, 3, 0))
-end
-F._voidConn = nil
-F._safeCFs = {}
-F.VOID_BUF = 10
-function F.AntiVoidEnable()
-if F._voidConn then return end
-F._safeCFs = {}
-F._voidConn = RS.Heartbeat:Connect(function()
-if not T.AntiVoid then F.AntiVoidDisable() return end
-local _, _, root = GC()
-if not root then return end
-local threshold = tonumber(C.VoidY) or -50
-if root.Position.Y > threshold then
-local buf = F._safeCFs
-buf[#buf + 1] = root.CFrame
-while #buf > F.VOID_BUF do table.remove(buf, 1) end
-elseif #F._safeCFs > 0 then
-local safe = F._safeCFs[#F._safeCFs]
-pcall(function()
-root.CFrame = safe
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-end)
-F._safeCFs = {}
-end
-end)
-end
-function F.AntiVoidDisable()
-if F._voidConn then F._voidConn:Disconnect() F._voidConn = nil end
-F._safeCFs = {}
-end
-F.ClickerConn = nil
-function F.ClickerDisable() if F.ClickerConn then F.ClickerConn:Disconnect() F.ClickerConn = nil end end
-function F.ClickerEnable()
-if F.ClickerConn then return end
-F.ClickerConn = RS.Stepped:Connect(function()
-if not T.Clicker then F.ClickerDisable() return end
-if type(mouse1click) == "function" then mouse1click()
-elseif type(mouse1press) == "function" then mouse1press() task.wait(0.01) mouse1release() end
-end)
-end
-local XrayHls = {}
-local function XrayDisable()
-for _, hl in ipairs(XrayHls) do pcall(function() hl:Destroy() end) end
-XrayHls = {}
-end
-local function XrayEnable()
-local ch = LP.Character
-local made = 0
-for _, obj in ipairs(F.walk(workspace)) do
-if made >= 200 then break end
-if made > 0 and made % 200 == 0 then task.wait() end
-if obj:IsA("BasePart") and ch and not obj:IsDescendantOf(ch) then
-made = made + 1
-local hl = Instance.new("Highlight")
-hl.FillTransparency = 1
-hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-hl.OutlineTransparency = 0.4
-hl.Parent = obj
-XrayHls[#XrayHls + 1] = hl
-end
-end
-end
-local SelfGlowHl = nil
-local function SelfGlowDisable() if SelfGlowHl then SelfGlowHl:Destroy() SelfGlowHl = nil end end
-local function SelfGlowEnable()
-local ch = LP.Character
-if not ch then return end
-if SelfGlowHl then SelfGlowHl:Destroy() end
-SelfGlowHl = Instance.new("Highlight")
-SelfGlowHl.FillColor = Color3.fromRGB(255, 200, 80)
-SelfGlowHl.FillTransparency = 1
-SelfGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
-SelfGlowHl.Parent = ch
 end
 local mutedVolumes = nil
 local function MuteEnable()
@@ -4221,99 +3370,6 @@ L.GlobalShadows = false L.FogEnd = 9e9 L.FogStart = 9e9 L.Brightness = 1
 for _, v in ipairs(F.walk(workspace)) do
 if v:IsA("BasePart") then pcall(function() v.CastShadow = false end) end
 end
-end
-local function Rejoin()
-pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LP) end)
-end
-local ServerHop = Rejoin
-local ToolGlowHl = nil
-local function ToolGlowDisable() if ToolGlowHl then ToolGlowHl:Destroy() ToolGlowHl = nil end end
-local function ToolGlowEnable()
-local ch = LP.Character
-if not ch then return end
-local tool = ch:FindFirstChildOfClass("Tool")
-if not tool then return end
-if ToolGlowHl then ToolGlowHl:Destroy() end
-ToolGlowHl = Instance.new("Highlight")
-ToolGlowHl.FillColor = Color3.fromRGB(150, 200, 255)
-ToolGlowHl.FillTransparency = 1
-ToolGlowHl.OutlineColor = Color3.fromRGB(255, 255, 255)
-ToolGlowHl.Parent = tool
-end
-local AutoInteractConn = nil
-local InstantPromptConn = nil
-local function AutoInteractDisable() if AutoInteractConn then AutoInteractConn:Disconnect() AutoInteractConn = nil end end
-local function AutoInteractEnable()
-if AutoInteractConn then return end
-AutoInteractConn = RS.Stepped:Connect(function()
-if not T.AutoInteract then AutoInteractDisable() return end
-if os.clock() - (F._thr2335 or 0) < 1 then return end
-F._thr2335 = os.clock()
-local _, _, r = GC()
-if not r then return end
-local okp, parts = pcall(function() return workspace:GetPartBoundsInRadius(r.Position, 24) end)
-if not (okp and type(parts) == "table") then return end
-local seen = {}
-for i = 1, #parts do
-local part = parts[i]
-if part then
-local p = part:FindFirstChildWhichIsA("ProximityPrompt")
-if (not p) and part.Parent then p = part.Parent:FindFirstChildWhichIsA("ProximityPrompt") end
-if p and p.Enabled and not seen[p] then
-seen[p] = true
-if type(fireproximityprompt) == "function" then pcall(fireproximityprompt, p) end
-end
-local cd = part:FindFirstChildWhichIsA("ClickDetector")
-if (not cd) and part.Parent then cd = part.Parent:FindFirstChildWhichIsA("ClickDetector") end
-if cd and not seen[cd] then
-seen[cd] = true
-if type(fireclickdetector) == "function" then pcall(fireclickdetector, cd) end
-end
-end
-end
-end)
-end
-local HitboxList = {}
-local function addHitbox(pl)
-if pl == LP or not T.Hitbox then return end
-local ch = pl.Character
-if not ch then return end
-local hrp = ch:FindFirstChild("HumanoidRootPart")
-if not hrp then return end
-local box = Instance.new("Part")
-box.Size = Vector3.new(6, 6, 6)
-box.Transparency = 1
-box.CanCollide = true
-box.CanQuery = true
-box.Anchored = true
-box.Name = "HitZone"
-box.Parent = ch
-local conn = RS.RenderStepped:Connect(function()
-if box.Parent and hrp.Parent then box.CFrame = hrp.CFrame end
-end)
-table.insert(HitboxList, { box = box, conn = conn })
-end
-local function HitboxEnable()
-for _, pl in ipairs(Players:GetPlayers()) do addHitbox(pl) end
-F._hbPlConns = F._hbPlConns or {}
-if not F._hbAddedConn then
-F._hbAddedConn = Players.PlayerAdded:Connect(function(pl)
-if F._hbPlConns[pl] then return end
-F._hbPlConns[pl] = pl.CharacterAdded:Connect(function() addHitbox(pl) end)
-end)
-end
-for _, pl in ipairs(Players:GetPlayers()) do
-if not F._hbPlConns[pl] then
-F._hbPlConns[pl] = pl.CharacterAdded:Connect(function() addHitbox(pl) end)
-end
-end
-end
-local function HitboxDisable()
-for _, e in ipairs(HitboxList) do
-pcall(function() e.conn:Disconnect() end)
-pcall(function() e.box:Destroy() end)
-end
-HitboxList = {}
 end
 local function FOVEnable() workspace.CurrentCamera.FieldOfView = C.FOV or 100 end
 local function FOVDisable()
@@ -4384,36 +3440,6 @@ local _, hum = GC()
 if hum and hum.Health <= 0 then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
-F._antiSitConn = nil
-function F.AntiSitEnable()
-if F._antiSitConn then return end
-F._antiSitConn = RS.Heartbeat:Connect(function()
-if not T.AntiSit then F.AntiSitDisable() return end
-if os.clock() - (F._antiSitAt or 0) < 0.12 then return end
-F._antiSitAt = os.clock()
-local _, hum = GC()
-if hum and hum.Sit then
-pcall(function() hum.Sit = false hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
-end
-end)
-end
-function F.AntiSitDisable()
-if F._antiSitConn then F._antiSitConn:Disconnect() F._antiSitConn = nil end
-end
-F._antiAnchorConn = nil
-function F.AntiAnchorEnable()
-if F._antiAnchorConn then return end
-F._antiAnchorConn = RS.Heartbeat:Connect(function()
-if not T.AntiAnchor then F.AntiAnchorDisable() return end
-if os.clock() - (F._antiAnchorAt or 0) < 0.15 then return end
-F._antiAnchorAt = os.clock()
-local _, _, root = GC()
-if root and root.Anchored then pcall(function() root.Anchored = false end) end
-end)
-end
-function F.AntiAnchorDisable()
-if F._antiAnchorConn then F._antiAnchorConn:Disconnect() F._antiAnchorConn = nil end
-end
 function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
@@ -4428,17 +3454,12 @@ if T.NoClip then pcall(F.NoClipEnable) end
 if T.God then pcall(GodEnable) end
 if T.StealthGod then pcall(StealthGodEnable) end
 if T.LockHealth then pcall(LockHealthEnable) end
-if T.Invisible then pcall(InvisibleEnable) end
 if T.AntiRagdoll then pcall(F.AntiRagdollEnable) end
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
-if T.AntiSit then pcall(F.AntiSitEnable) end
-if T.AntiAnchor then pcall(F.AntiAnchorEnable) end
 if T.Translate then pcall(F.TranslateEnable) end
-if T.ESP then pcall(ESPEnable) end
 if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
 if T.KillAura then pcall(F.KillAuraEnable) end
 if T.BodyHL then pcall(F.BodyHLEnable) end
-if T.TrapsESP then pcall(F.TrapsESPEnable) end
 end
 function F.CharPersistEnable() T.CharPersist = true end
 function F.CharPersistDisable() T.CharPersist = false end
@@ -4496,9 +3517,6 @@ F._guiProtQueue = false
 F.Out("[CheatMenu] 检测到 GUI 被移除(" .. n .. "), 正在重建...")
 pcall(F.ProtectGui)
 task.spawn(function()
-pcall(function() if T.ESP then ESPEnable() end end)
-pcall(function() if T.ESPSkeleton then F.SkeletonEnable() end end)
-pcall(function() if T.ESPArrow then F.ArrowEnable() end end)
 pcall(function() if T.Hud then F.HudEnable() end end)
 pcall(function() if T.Crosshair then F.CrosshairEnable() end end)
 pcall(function() if T.FovCircle then F.FovCircleEnable() end end)
@@ -4953,8 +3971,8 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
-for _, fn in ipairs({ ESPDisable, InvisibleDisable, GodDisable, HitboxDisable, FOVDisable, ZoomDisable, AntilagDisable, XrayDisable, MuteDisable, SelfGlowDisable, BulletTracerDisable, AutoInteractDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.AntiSitDisable, F.AntiAnchorDisable, F.HitboxExpandDisable, F.AntiVoidDisable, F.SkeletonDisable, F.ArrowDisable, F.TrapsESPDisable, F.ChamsDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.ClickerDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.ItemMagnetDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -5040,167 +4058,6 @@ end)
 end
 function F.PanicKeyDisable()
 if F._panicConn then F._panicConn:Disconnect() F._panicConn = nil end
-end
-function F.DropAllTools()
-local bp = LP:FindFirstChild("Backpack")
-local ch = LP.Character
-local n = 0
-local parents = {}
-if bp then parents[#parents + 1] = bp end
-if ch then parents[#parents + 1] = ch end
-for _, parent in ipairs(parents) do
-if parent then
-for _, t in ipairs(parent:GetChildren()) do
-if t:IsA("Tool") then
-pcall(function() t.Parent = workspace end)
-n = n + 1
-end
-end
-end
-end
-return n
-end
-F._magnetConn = nil
-F.MAGNET_TAGS = { "Brainrot", "Item", "Collectible", "Loot", "Pickup", "Cash", "Money" }
-function F.ItemMagnetEnable()
-if F._magnetConn then return end
-if not F._magnetAddedConn then
-F._magnetAddedConn = workspace.DescendantAdded:Connect(function(v)
-if not T.ItemMagnet then return end
-local okKind, isItem = pcall(function() return v:IsA("Tool") or v:IsA("Model") end)
-if okKind and isItem then F._magnetListAt = 0 end
-end)
-end
-F._magnetConn = RS.Heartbeat:Connect(function()
-if not T.ItemMagnet then F.ItemMagnetDisable() return end
-local now = os.clock()
-if now - (F._magnetAt or 0) < 0.1 then return end
-F._magnetAt = now
-local _, _, root = GC()
-if not root then return end
-local radius = tonumber(C.MagnetRadius) or 60
-local kw = tostring(C.MagnetKeyword or ""):lower()
-local rp = root.Position
-local goal = root.CFrame + Vector3.new(0, 2, 0)
-local toMove = {}
-if not (F._magnetList and (now - (F._magnetListAt or 0)) < 0.5) then
-local scanList, nodes = {}, 0
-local queue = { workspace }
-local qi = 1
-while qi <= #queue and nodes < 4000 do
-local node = queue[qi]; qi = qi + 1
-for _, ch2 in ipairs(node:GetChildren()) do
-nodes = nodes + 1
-scanList[#scanList + 1] = ch2
-local okKind, isBranch = pcall(function()
-return ch2:IsA("Folder") or ch2:IsA("Model")
-end)
-if nodes < 4000 and okKind and isBranch then
-queue[#queue + 1] = ch2
-end
-end
-end
-F._magnetList, F._magnetListAt = scanList, now
-end
-local scanList = F._magnetList or {}
-for _, obj in ipairs(scanList) do
-local isModel = false
-local isTool = false
-pcall(function() isModel = obj:IsA("Model") end)
-pcall(function() isTool = obj:IsA("Tool") end)
-if isModel or isTool then
-local match = (kw == "") or tostring(obj.Name):lower():find(kw, 1, true)
-if not match then
-pcall(function()
-for i = 1, #F.MAGNET_TAGS do
-if obj:HasTag(F.MAGNET_TAGS[i]) then match = true break end
-end
-end)
-end
-if match then
-local pos = nil
-if isModel then
-local okp, piv = pcall(function() return obj:GetPivot() end)
-pos = okp and piv.Position or nil
-else
-local okp, p = pcall(function() return obj.Position end)
-pos = okp and p or nil
-end
-if pos and (pos - rp).Magnitude <= radius then
-toMove[#toMove + 1] = obj
-end
-end
-end
-end
-for i = 1, #toMove do
-local obj = toMove[i]
-pcall(function()
-if obj:IsA("Model") then
-obj:PivotTo(goal)
-else
-obj.CFrame = goal
-end
-end)
-end
-end)
-end
-function F.ItemMagnetDisable()
-if F._magnetConn then F._magnetConn:Disconnect() F._magnetConn = nil end
-if F._magnetAddedConn then pcall(function() F._magnetAddedConn:Disconnect() end) F._magnetAddedConn = nil end
-F._magnetList, F._magnetListAt = nil, 0
-end
-F._spyHooked = nil
-F._remoteDownConns = nil
-function F.RemoteSpyEnable()
-if F._spyHooked then return end
-local mt = getrawmetatable(game)
-if not mt then return end
-local prev = mt.__namecall
-if type(prev) ~= "function" then return end
-if not (hookmetamethod and newcclosure and getnamecallmethod) then return end
-local got = F.MetaInstall("__namecall", game, "RemoteSpy", function(box)
-return function(self, ...)
-local method = type(getnamecallmethod) == "function" and getnamecallmethod() or ""
-if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
-if not checkcaller() then
-F._spyN = (F._spyN or 0) + 1
-if F._spyN % 50 == 1 then
-F.Out(string.format("[流量] 已捕获 %d 条上行, 最近: %s:%s",
-F._spyN, tostring(self.Name), method))
-end
-end
-end
-return box.orig(self, ...)
-end
-end)
-if not got then return end
-F._spyHooked = true
-F._spyLayer = got
-F._spyN = 0
-F._remoteDownConns = {}
-F.SPY_MAX = F.SPY_MAX or 200
-pcall(function()
-local n = 0
-for _, d in ipairs(F.walk(RStorage)) do
-if n >= F.SPY_MAX then break end
-if AC.isRemoteLike(d) then
-local conn = d.OnClientEvent:Connect(function(...)
-if T.RemoteSpy then F.Out(string.format("[下行] %s", d.Name)) end
-end)
-F._remoteDownConns[#F._remoteDownConns + 1] = conn
-n = n + 1
-end
-end
-end)
-end
-function F.RemoteSpyDisable()
-if not F._spyHooked then return end
-F.MetaUninstall("__namecall", "RemoteSpy")
-if F._remoteDownConns then
-for _, c in ipairs(F._remoteDownConns) do pcall(function() c:Disconnect() end) end
-F._remoteDownConns = nil
-end
-F._spyHooked = nil
 end
 F._saveThread = nil
 function F.AutoSaveEnable()
@@ -6194,7 +5051,6 @@ end
 return props
 end
 hookedIn._cmOwner = "CM"
-F._chatTransHookFn = hookedIn
 tcs.OnIncomingMessage = hookedIn
 end)
 if ok then F._chatTransHooked = true F.Out("[翻译] 公屏聊天翻译已开启") end
@@ -6236,7 +5092,6 @@ end
 return props
 end
 hookedBb._cmOwner = "CM"
-F._bubbleTransHookFn = hookedBb
 tcs.OnBubbleAdded = hookedBb
 end)
 if ok then F._bubbleTransHooked = true F.Out("[翻译] 气泡翻译已开启") end
@@ -6259,29 +5114,22 @@ local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
 F.FreecamDisable, F.FreezePlayerDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
-F.PanicKeyDisable, F.ItemMagnetDisable, F.ChamsDisable,
+F.PanicKeyDisable,
 F.BringPlayerDisable, F.LockCamDisable,
-F.RemoteSpyDisable,
-F.AntiSitDisable, F.AntiAnchorDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
-F.TrapsESPDisable, F.SkeletonDisable, F.ArrowDisable,
-F.AntiVoidDisable, F.AntiAFKDisable,
+F.AntiAFKDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
-F.GuiProtectionDisable, F.HitboxExpandDisable, F.AntiVoidDisable,
+F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
-F.NoClipDisable, ESPDisable, AutoInteractDisable,
+F.NoClipDisable,
 F.SpeedSet, F.FlySet,
 function()
 AC._neutFns = {}
-F._magnetList = nil
-F._lastDiff = nil
 F._dumpText = nil
-F._snapMem = nil
 F._capLog = {}
 F._autoTh = nil
-F._spyN = nil
 F._cfgSyncing = false
 if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
 end,
@@ -6330,31 +5178,21 @@ go(T.StealthGod, StealthGodEnable)
 go(T.LockHealth, LockHealthEnable)
 go(T.Regen, RegenEnable)
 go(T.NoDeath, NoDeathEnable)
-go(T.Invisible, InvisibleEnable)
 go(T.AntiRagdoll, F.AntiRagdollEnable)
 go(T.AntiKnockdown, F.AntiKnockdownEnable)
 go(T.InfiniteJump, F.InfiniteJumpEnable)
-go(T.AntiSit, F.AntiSitEnable)
-go(T.AntiAnchor, F.AntiAnchorEnable)
 go(T.Translate, F.TranslateEnable)
 go(T.ChatTranslate, F.ChatTranslateEnable)
 go(T.BubbleTranslate, F.BubbleTranslateEnable)
-go(T.ESP, ESPEnable)
-go(T.ESPSkeleton, F.SkeletonEnable)
-go(T.ESPArrow, F.ArrowEnable)
 go(T.HitboxExpand, F.HitboxExpandEnable)
 go(T.KillAura, F.KillAuraEnable)
 go(T.BodyHL, F.BodyHLEnable)
-go(T.TrapsESP, F.TrapsESPEnable)
-go(T.Chams, F.ChamsEnable)
 go(T.AimOn, F.AimSet, true)
 go(T.FovCircle, F.FovCircleEnable)
 go(T.Hud, F.HudEnable)
 go(T.Crosshair, F.CrosshairEnable)
 go(T.LockCam, F.LockCamEnable)
 go(T.Freecam and not UIS.TouchEnabled, F.FreecamEnable)
-go(T.AntiVoid, F.AntiVoidEnable)
-go(T.ItemMagnet, F.ItemMagnetEnable)
 go(T.BringPlayer, F.BringPlayerEnable)
 go(T.FreezePlayer, F.FreezePlayerEnable)
 go(T.KickProtect or T.KickGuard, F.KickGuardEnable)
