@@ -1496,3 +1496,51 @@ UTF-8 合法 · 与产物逐字符一致 · 产物体检 OK。**行注释 = 0** 
 ### 15.5 §10.3「未接线」注册表更新
 
 `F.BindKey` **已从注册表移除**（本轮删除）；`F.KeybindEnable` / `F.KeybindDisable` 从未进过注册表。
+
+---
+
+## 十六、2026-10-01（下半场之十一）：孤儿功能清理（10.10.6 → 10.10.7）
+
+用户要求：「删除掉孤儿代码功能 彻底删除 … 清理全部的孤儿程序代码事件」。
+先写取证脚本 **`.workbuddy/build/orphanscan.py`**（判据：**控件 id 与 T 标志同名**是项目自身的不变式，
+`CfgSyncUI` 就靠它做映射 ⇒ **T.X 没有同名控件、也没有任何写入点 ⇒ 用户永远开不了 = 孤儿**）。
+
+### 16.1 本轮已删（用户点名的 3 个 + 2 处残余开关，11 块 / 79 行）
+
+| 功能 | 删除内容 |
+|---|---|
+| 点击传送 | `F.ClickTPEnable/Disable` + `F._clickTPConn` + Panic/UnloadAll/Restore 三处引用 |
+| 强制游泳 | `F.SwimEnable/Disable` + `F._swimConn` + 三处引用 |
+| 刷物品 | `F.DupeAttemptEnable/Disable` + `F._dupeThread` + Panic/UnloadAll 引用 |
+| 持续保持所有权 | `F.SrvHoldEnable/Disable` + `T.SrvHoldOwn` 强制关 + Panic/UnloadAll/Restore 引用 + 正文里那句失效指引 |
+| Collect 残余门 | `if T.Collect == false then break end` + `T.Collect = false`（没有任何写入点，纯残留） |
+
+门禁：编译 0 错误 · 顶层真局部 **135** · `end` 配平 **2760 == 1481+325+954** · 行注释 0 · 产物体检 OK · 17 个符号复验 = 0。
+
+### 16.2 ★★★ 待用户拍板：还有一大片"有代码、没入口"的功能（**本轮未删**）
+
+用同一判据扫描后确认：**下列功能全部没有 UI 控件、也没有任何写入点**（即：用户永远开不了，代码却还在）。
+**它们不是"死代码"，而是"10.x 界面重写时丢掉入口的功能"** ⇒ 删除等于**永久砍掉这些功能**，所以先报告。
+
+**视觉家族（约 500 行）**：ESP 全套（`T.ESP` / `ESPBox` / `ESPName` / `ESPDist` / `ESPHealth` / `ESPTracer` /
+`ESPRainbow` / `ESPTeamColor`）· 骨骼线 `T.ESPSkeleton` · 方向箭头 `T.ESPArrow` · `T.Chams` ·
+陷阱透视 `T.TrapsESP` · 子弹追踪 `T.BulletTracer` · `T.Xray` · `T.SelfGlow`
+　　★ 旁证：**「视觉」页现在只剩 2 个控件**（`BodyHL` / `TeamColorHL`）—— 即用"身体高亮"取代了 ESP。
+
+**其他（约 300 行）**：隐身 `T.Invisible` · 防坐 `T.AntiSit` · 防锚定 `T.AntiAnchor` · 防坠落 `T.AntiVoid` ·
+自动交互 `T.AutoInteract` · 点击器 `T.Clicker` · 碰撞箱 `T.Hitbox` · 物品磁铁 `T.ItemMagnet` ·
+下行监控 `T.RemoteSpy` · 上下平滑 `T.TPSmooth` / `T.CloneHook` · `T.AimPriorityNearest`。
+
+**三个选项**：
+- **A 全删**：脚本再小约 800 行；这些功能**永久失去**（要恢复只能回滚到 10.10.6）。
+- **B 全给入口**：把它们接回菜单（等于"功能增强"），不是清理。
+- **C 逐个挑**：告诉我留哪些、删哪些。
+
+### 16.3 ★ 工具与教训
+
+1. `orphanscan.py` 的判据可靠，但**有两个盲区**（本轮都踩到并修正）：
+   ① 只统计"有写入点"的 T 标志 ⇒ **纯只读的孤儿（如 `T.ClickTP`）会漏**；
+   ② 写入判定漏掉**多重赋值**（`T.ESPBox, T.ESPName = true, true`）。
+   ⇒ 现在扫描器同时看 **读/写** 与 **是否同名控件**，并对"无写入"单独成组。
+2. ★★ **"孤儿"与"死代码"不是一回事**：死代码 = 没人调用；孤儿 = **有代码但用户碰不到**。
+   孤儿要删必须先确认"这功能是不是已被有意取代"（ESP→BodyHL 就是一次有意取代）。
