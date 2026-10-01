@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:45 sha 15555e3f bytes 273327'):format('2026-10-01 23:45','15555e3f',273327))
+print(('[CheatMenu] build 2026-10-01 23:48 sha 19e2ce8a bytes 272545'):format('2026-10-01 23:48','19e2ce8a',272545))
 local F = {}
-F.VERSION = "v11.0.38"
+F.VERSION = "v11.0.39"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4757,21 +4757,6 @@ hum.Health = math.min(hum.MaxHealth, hum.Health + (C.RegenRate or 10))
 end
 end)
 end
-local StealthGodConn = nil
-local function StealthGodDisable() if StealthGodConn then StealthGodConn:Disconnect() StealthGodConn = nil end end
-local function StealthGodEnable()
-if StealthGodConn then return end
-local _, hum0 = GC()
-if hum0 then pcall(function() if hum0.MaxHealth > 1e6 then hum0.MaxHealth = 100 end end) end
-StealthGodConn = RS.Heartbeat:Connect(function()
-if not T.StealthGod then StealthGodDisable() return end
-if os.clock() - (F._thr4439 or 0) < 0.05 then return end
-F._thr4439 = os.clock()
-local _, hum = GC()
-if hum and hum.Health > 0 then hum.Health = hum.MaxHealth end
-end)
-end
-F.StealthGodEnable, F.StealthGodDisable = StealthGodEnable, StealthGodDisable
 local NoDeathConn = nil
 local function NoDeathDisable() if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end end
 local function NoDeathEnable()
@@ -4796,7 +4781,6 @@ if T.FlyOn then pcall(function() F.FlySet(true) end) end
 if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 if T.NoClip then pcall(F.NoClipEnable) end
 if T.God then pcall(GodEnable) end
-if T.StealthGod then pcall(StealthGodEnable) end
 if T.LockHealth then pcall(LockHealthEnable) end
 if T.AntiRagdoll then pcall(F.AntiRagdollEnable) end
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
@@ -5395,7 +5379,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisable, F.PinDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
@@ -6651,7 +6635,6 @@ go(T.SpeedOn, F.SpeedSet, true)
 go(T.NoClip, F.NoClipEnable)
 go(T.Hide, F.HideEnable)
 go(T.God, GodEnable)
-go(T.StealthGod, StealthGodEnable)
 go(T.LockHealth, LockHealthEnable)
 go(T.Regen, RegenEnable)
 go(T.NoDeath, NoDeathEnable)
