@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 17:58 sha 6128b8a6 bytes 218304'):format('2026-10-01 17:58','6128b8a6',218304))
+print(('[CheatMenu] build 2026-10-01 18:05 sha ce4e24c6 bytes 223652'):format('2026-10-01 18:05','ce4e24c6',223652))
 local F = {}
-F.VERSION = "v10.10.9"
+F.VERSION = "v11.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3340,6 +3340,145 @@ local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
 smoothTP(troot.CFrame + Vector3.new(0, 3, 0))
 end
+F.WAYPOINT_MAX = 40
+function F.WaypointList()
+if type(C.Waypoints) ~= "table" then C.Waypoints = {} end
+return C.Waypoints
+end
+function F.WaypointNames()
+local out = {}
+for _, it in ipairs(F.WaypointList()) do
+if type(it) == "table" and it.name ~= nil then out[#out + 1] = tostring(it.name) end
+end
+if #out == 0 then out[1] = "(还没有点位)" end
+return out
+end
+function F.WaypointFind(name)
+if type(name) ~= "string" then return nil end
+for _, it in ipairs(F.WaypointList()) do
+if type(it) == "table" and tostring(it.name) == name then return it end
+end
+return nil
+end
+function F.WaypointRefreshUI()
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.WaypointSlot
+if o and o.SetValues then o:SetValues(F.WaypointNames()) end
+end)
+end
+function F.WaypointPicked()
+local v = nil
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.WaypointSlot
+v = o and o.Value
+end)
+if type(v) ~= "string" or v:sub(1, 1) == "(" then return nil end
+return v
+end
+function F.WaypointNameOpt()
+local v = nil
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.WaypointName
+v = o and o.Value
+end)
+if type(v) ~= "string" then return nil end
+v = tostring(v):gsub("^%s+", ""):gsub("%s+$", "")
+if v == "" then return nil end
+return v
+end
+function F.WaypointNameClear()
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.WaypointName
+if o and o.Set then o:Set("") end
+end)
+end
+function F.WaypointSave(name)
+local _, _, root = GC()
+if not root then
+F.Out("[点位] ⚠ 现在没有角色(没进游戏 / 正在重生), 这次没法保存")
+return false
+end
+local list = F.WaypointList()
+if #list >= F.WAYPOINT_MAX then
+F.Out("[点位] 已经存了 " .. tostring(F.WAYPOINT_MAX) .. " 个 —— 先在下面删掉几个再存")
+return false
+end
+local nm = name
+if nm == nil then
+local used, i = {}, 1
+for _, it in ipairs(list) do
+if type(it) == "table" then used[tostring(it.name)] = true end
+end
+while used["点位" .. i] do i = i + 1 end
+nm = "点位" .. i
+end
+if F.WaypointFind(nm) then
+F.Out("[点位] 名字「" .. nm .. "」已经用过了 —— 换个名字, 或者先把旧的删掉")
+return false
+end
+local p = root.Position
+local lv = root.CFrame.LookVector
+list[#list + 1] = {
+name = nm,
+x = tonumber(string.format("%.2f", p.X)),
+y = tonumber(string.format("%.2f", p.Y)),
+z = tonumber(string.format("%.2f", p.Z)),
+yaw = tonumber(string.format("%.4f", math.atan2(-lv.X, -lv.Z))),
+}
+F.WaypointRefreshUI()
+pcall(SaveConfig)
+F.Out(string.format("[点位] 已保存「%s」 → (%.0f, %.0f, %.0f)", nm, p.X, p.Y, p.Z))
+pcall(function() Fluent:Notify({ Title = "点位", Content = "已保存「" .. nm .. "」", Duration = 4 }) end)
+return true
+end
+function F.WaypointGoto(name)
+local it = F.WaypointFind(name)
+if not it then
+F.Out("[点位] 没选中点位 —— 先在下面保存一个, 再在下拉里选它")
+return false
+end
+local _, hum, root = GC()
+if not root then
+F.Out("[点位] ⚠ 现在没有角色, 传送取消")
+return false
+end
+local _, srv = F.AuthorityGuard(false)
+pcall(F.SrvOwnTake, false)
+local pos = Vector3.new(tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0)
+smoothTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
+if hum then pcall(function() hum.PlatformStand = false end) end
+local ok = false
+pcall(function()
+local _, _, r2 = GC()
+if r2 then ok = (r2.Position - pos).Magnitude < 6 end
+end)
+F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s",
+tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
+if not ok then
+F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
+or "[点位] ⚠ 没到位: 多半被游戏拉回或角色被冻住 —— 再点一次, 或先关掉「冻结/锁位」类功能")
+end
+return ok
+end
+function F.WaypointDel(name)
+if type(name) ~= "string" then
+F.Out("[点位] 下拉里还没选中点位, 没删任何东西")
+return false
+end
+local list, n = F.WaypointList(), 0
+for i = #list, 1, -1 do
+local it = list[i]
+if type(it) == "table" and tostring(it.name) == name then table.remove(list, i) n = n + 1 end
+end
+F.WaypointRefreshUI()
+if n > 0 then
+pcall(SaveConfig)
+F.Out("[点位] 已删除「" .. name .. "」")
+else
+F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
+end
+return n > 0
+end
 local mutedVolumes = nil
 local function MuteEnable()
 mutedVolumes = {}
@@ -5508,6 +5647,20 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
 end })
+Tabs.TP:AddSection("收藏点位(存当前位置 · 自己选去哪里)")
+Tabs.TP:AddInput("WaypointName", { Title = "点位名(可留空 ⇒ 自动命名 点位1/2/3)", Default = "" })
+Tabs.TP:AddButton({ Title = "★ 保存当前位置为点位", Callback = function()
+if F.WaypointSave(F.WaypointNameOpt()) then F.WaypointNameClear() end
+end })
+Tabs.TP:AddDropdown("WaypointSlot", { Title = "已保存的点位(在这里选中它)", Values = F.WaypointNames(), Default = nil, Callback = function(v)
+local it = F.WaypointFind(v)
+if it then
+F.Out(string.format("[点位] 选中「%s」 → (%.0f, %.0f, %.0f)",
+tostring(it.name), tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0))
+end
+end })
+Tabs.TP:AddButton({ Title = "→ 传送到选中的点位", Callback = function() F.WaypointGoto(F.WaypointPicked()) end })
+Tabs.TP:AddButton({ Title = "删除选中的点位", Callback = function() F.WaypointDel(F.WaypointPicked()) end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
