@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 23:48 sha 19e2ce8a bytes 272545'):format('2026-10-01 23:48','19e2ce8a',272545))
+print(('[CheatMenu] build 2026-10-01 23:57 sha c27221d2 bytes 273049'):format('2026-10-01 23:57','c27221d2',273049))
 local F = {}
-F.VERSION = "v11.0.39"
+F.VERSION = "v11.0.40"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2359,6 +2359,7 @@ KG.lastReport = nil
 end
 function F.KickGuardEnable()
 if KG.hooked then return true end
+F.Out("[防踢] 正在装「Kick 三路径拦截」(会改写全局元表) —— 个别反作弊会因这层 hook 直接踢你; 平时建议关着, 挂机前再开")
 pcall(F.KickGuardPathsEnable)
 local kf = LP.Kick
 if type(kf) ~= "function" or not hookfunction then return false end
@@ -6809,7 +6810,7 @@ C.AimTarget = v
 T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
-Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = true, Callback = function(v) T.AimWallCheck = v end })
+Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = false, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v)
 T.FovCircle = v
 if F._cfgSyncing then return end
@@ -6892,7 +6893,8 @@ T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 end })
-Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = true, Callback = function(v)
+Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
+local changed = (T.TeamColorHL ~= nil) and (T.TeamColorHL ~= v)
 T.TeamColorHL = v
 F.BodyHLRefresh()
 end })
@@ -6994,9 +6996,10 @@ for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
+Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = false, Callback = function(v)
+local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
-if F._cfgSyncing then return end
+if F._cfgSyncing or not changed then return end
 if v then F.AntiAFKEnable() F.KickGuardEnable() F.KickRejoinEnable()
 else F.KickGuardDisable() F.AntiAFKDisable() pcall(F.KickRejoinDisable) end
 end })
@@ -7357,7 +7360,11 @@ end
 addToggleButton(Window)
 startTogglePolish()
 end
-buildMenu()
+F._cfgSyncing = true
+local okBuild = pcall(buildMenu)
+F._cfgSyncing = false
+if not okBuild then F.Out("[CheatMenu] 菜单构建期出错(已兜住)") end
+task.defer(function() F._cfgSyncing = false end)
 task.spawn(function()
 local wasOpen = F.MenuOpen()
 while true do
