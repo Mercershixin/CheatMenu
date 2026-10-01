@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 01:14 sha 59f201e5 bytes 288289'):format('2026-10-02 01:14','59f201e5',288289))
+print(('[CheatMenu] build 2026-10-02 01:29 sha c7300cc7 bytes 290623'):format('2026-10-02 01:29','c7300cc7',290623))
 local F = {}
-F.VERSION = "v11.0.47"
+F.VERSION = "v11.0.48"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2194,6 +2194,7 @@ F.Out("[防挂机] " .. tostring(why) .. " ⇒ 已模拟操作 " .. tostring(F._
 end
 return n
 end
+F._afkDisabledConns = {}
 F.AntiAFKKillIdleConns = function()
 local n = 0
 pcall(function()
@@ -2204,9 +2205,11 @@ pcall(function()
 local sc = c.script
 if sc then nm = tostring(sc.Name):lower() end
 end)
-if nm:find("afk") or nm:find("idle") or nm:find("timeout")
-or nm:find("anti") or nm:find("kick") or nm:find("boot") then
+if nm:find("afk") or nm:find("idle") or nm:find("timeout") or nm:find("anticheat")
+or nm:find("detect") or nm:find("anti") or nm:find("guard") or nm:find("kick")
+or nm:find("boot") then
 pcall(function() c:Disable() end)
+F._afkDisabledConns[#F._afkDisabledConns + 1] = c
 n = n + 1
 end
 end
@@ -2249,22 +2252,26 @@ if hum.MoveDirection.Magnitude > 0.05 then
 F._afkStillSince = nil
 else
 F._afkStillSince = F._afkStillSince or now
-if (now - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
+if T.AFKMotion and (now - F._afkStillSince) > 90 and root.AssemblyLinearVelocity.Magnitude < 1 then
 F._afkStillSince = now
 pcall(function() hum.Jump = true end)
-F.Out("[防挂机] 原地静止 90 秒 ⇒ 跳一下(原版逻辑)")
+F.Out("[防挂机] 原地静止 90 秒 ⇒ 跳一下(你原来那条; 在「防挂机·模拟输入」里)")
 end
 end
 end
+if not T.AFKMotion then return end
 if now - (F._lastInputAt or now) < 60 then return end
 F.AntiAFKSim("超过 60 秒没有任何操作")
 end)
-F.Out("[防挂机] 已开: 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
-.. " + 游戏判挂机就立刻模拟一次操作(按键/鼠标/跳)"
-.. " + 每 15 秒写一次心跳属性 + 原地静止 90 秒自动跳(你原来那两条逻辑都在)")
+F.Out("[防挂机] 已开(不动人物): 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
+.. " + 每 15 秒写一次心跳属性; 要原来那种「按键/跳一下」就另开「防挂机·模拟输入」")
 end
 function F.AntiAFKDisable()
 T.AntiAFK = false
+if F._afkDisabledConns then
+for _, c in ipairs(F._afkDisabledConns) do pcall(function() c:Enable() end) end
+F._afkDisabledConns = {}
+end
 if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
 if F._afkConn2 then pcall(function() F._afkConn2:Disconnect() end) F._afkConn2 = nil end
 if F._afkInputConns then
@@ -2400,6 +2407,22 @@ if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
+if T.SpeedGuard and KG.intent and self == KG.root
+and (key == "CFrame" or key == "Position") then
+local np = nil
+pcall(function()
+if typeof(v) == "CFrame" then np = v.Position
+elseif typeof(v) == "Vector3" then np = v end
+end)
+if np then
+local ip = KG.intent
+local dNew = (Vector3.new(np.X, 0, np.Z) - Vector3.new(ip.X, 0, ip.Z)).Magnitude
+if dNew > (KG.dev or 0) + 12 then
+KG.blocked5 = (KG.blocked5 or 0) + 1
+return nil
+end
+end
+end
 if T.Invisible and key == "Transparency" and v == 0 then
 KG.blocked4 = (KG.blocked4 or 0) + 1
 return nil
@@ -2435,6 +2458,24 @@ end)
 end
 KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = mt, oldNC, oldIX, oldNIX
 KG.mtHooked = true
+pcall(function()
+if type(debug) ~= "table" or type(debug.getinfo) ~= "function" then return end
+if KG.oldGetInfo then return end
+local oldGI = debug.getinfo
+KG.oldGetInfo = oldGI
+local function wrapped(fn, ...)
+local info = oldGI(fn, ...)
+if type(info) == "table" and info.source then
+local src = tostring(info.source)
+if src:find("CheatMenu_hot", 1, true) or src:find("CM_", 1, true) then
+info.source = "=nil"
+info.short_src = "nil"
+end
+end
+return info
+end
+if type(newcclosure) == "function" then debug.getinfo = newcclosure(wrapped) else debug.getinfo = wrapped end
+end)
 end)
 if not ok or not KG.mtHooked then KG.mtHooked = nil return end
 KG.blockSet = {}
@@ -2481,6 +2522,24 @@ else
 KG.spoofHum, KG.spoofWalk, KG.spoofJump = nil, nil, nil
 end
 end
+end
+if T.SpeedGuard then
+local _, _, r3 = GC()
+if r3 then
+KG.root = r3
+local ip = F._intent
+KG.intent = ip
+if ip then
+KG.dev = (Vector3.new(r3.Position.X, 0, r3.Position.Z) - Vector3.new(ip.X, 0, ip.Z)).Magnitude
+end
+end
+else
+KG.root, KG.intent, KG.dev = nil, nil, nil
+end
+local n5 = KG.blocked5 or 0
+if n5 ~= (KG.lastBlock5 or 0) then
+KG.lastBlock5 = n5
+F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
 end
 local n4 = KG.blocked4 or 0
 if n4 ~= (KG.lastBlock4 or 0) then
@@ -7430,6 +7489,12 @@ local changed = (T.AntiAFK ~= nil) and (T.AntiAFK ~= v)
 T.AntiAFK = v
 if F._cfgSyncing or not changed then return end
 if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
+end })
+Tabs.AFK:AddToggle("AFKMotion", { Title = "防挂机·模拟输入(会动一下人物)", Description = "按需开: 游戏判你挂机时按下 W / 移一下鼠标 / 跳一下。默认关 —— 因为挂机时你可能不想角色乱动", Default = false, Callback = function(v)
+local changed = (T.AFKMotion ~= nil) and (T.AFKMotion ~= v)
+T.AFKMotion = v
+if F._cfgSyncing or not changed then return end
+F.Out(v and "[防挂机] 模拟输入 = 开(会动人物)" or "[防挂机] 模拟输入 = 关(只监听, 不动人物)")
 end })
 Tabs.AFK:AddToggle("KickProtect", { Title = "防踢(拦截 Kick + 被踢后抢重进 · 会装元表钩子)", Description = "这层会改写全局元表, 个别反作弊会因为钩子直接踢你 —— 平时关着, 真挂机前再开", Default = false, Callback = function(v)
 local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
