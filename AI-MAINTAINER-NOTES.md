@@ -2687,3 +2687,21 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   排序依据（诚实标注）：优先读模型 **属性**(value/worth/price/cost/weight/mass)，其次**包围盒体积**，再加**名字稀有度词**。
   ★ 边界：这些是**估计值**；而且"远程拿"能不能成，取决于**服务端的距离校验**（服务端不认，客户端再快也拿不到）。
 
+## 五十四、2026-10-02（11.0.43）：防挂机重构（抄近 1 月明文）+ 收掉高危自动动作
+
+- **依据**（近 1 个月抓到的唯一有料明文之一）：`Yuji-source/Vd-autofarm → Main.lua`（71KB，含
+  `hookmetamethod/cloneref/getconnections/SendKeyEvent/VirtualInputManager`）。它的防挂机核心是
+  **`getconnections(LP.Idled)`** —— 找出"挂机检测"那条连接并禁用，而不是只模拟按键。
+- **抄进 AntiAFK（本次重写）**：
+  1. `F.AntiAFKKillIdleConns()`：遍历 `getconnections(LP.Idled)`，**按来源脚本名匹配**
+     (`afk/idle/timeout/anti/kick/boot`) ⇒ `conn:Disable()`；日志报"掐掉 N 条挂机检测连接"。
+  2. 模拟输入升级：`VirtualInputManager:SendKeyEvent(W 按下/抬起, cloneref 包裹)` + `VirtualUser:ClickButton2` + `hum.Jump`，
+     三路都试（执行器支持哪个用哪个）。
+  3. **只在真挂机时动**：监听 `UIS.InputBegan/InputChanged` 记录 `_lastInputAt`；超过 60 秒无操作才模拟
+     （避免"一直在动"被当成机器人行为）。
+  4. ⛔ **删掉旧的 `LP:SetAttribute("Heartbeat", …)` 每 5 秒写属性** —— 那是"持续写用户属性"，既没用又容易被检测。
+- **267 加固（收掉高危自动动作）**：
+  - 「反拉回」不再自动连带「防拉回档（清检测脚本/断检测连接/中和检测函数）」，改为**只在防护里单独开**（那层动作最招反作弊）。
+  - 抢网络所有权：**0.15s → 0.5s**，且**只在加速/飞行开着时**才抢（没在动就别制造服务端异常信号）。
+  - UI 拆分：`挂机防踢` → **`防挂机`（不装钩子，低风险）** + **`防踢`（装元表钩子，按需开，描述里写明风险）**。
+
