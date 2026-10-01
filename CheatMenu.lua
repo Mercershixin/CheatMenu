@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 01:05 sha 2aeb8947 bytes 287681'):format('2026-10-02 01:05','2aeb8947',287681))
+print(('[CheatMenu] build 2026-10-02 01:14 sha 59f201e5 bytes 288289'):format('2026-10-02 01:14','59f201e5',288289))
 local F = {}
-F.VERSION = "v11.0.46"
+F.VERSION = "v11.0.47"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2171,6 +2171,18 @@ n = n + 1
 end
 end)
 pcall(function()
+local vim = game:GetService("VirtualInputManager")
+if type(cloneref) == "function" then pcall(function() vim = cloneref(vim) end) end
+vim:SendMouseMoveEvent(Vector2.new(math.random(-4, 4), math.random(-4, 4)), true, game)
+n = n + 1
+end)
+pcall(function()
+if type(mousemoverel) == "function" then
+mousemoverel(math.random(-3, 3), math.random(-3, 3))
+n = n + 1
+end
+end)
+pcall(function()
 local _, hum = GC()
 if hum then hum.Jump = true end
 end)
@@ -4165,6 +4177,13 @@ pcall(F.SpeedAntiTPDisable)
 end
 F.Out("[绕过] 已关闭(所有权交回引擎管理, 速度不再用位移补足)")
 end
+function F.DriveConnect(fn)
+if RS.PreSimulation then
+local ok, c = pcall(function() return RS.PreSimulation:Connect(function(dt) fn(dt) end) end)
+if ok and c then return c end
+end
+return RS.Stepped:Connect(function(_, dt) fn(dt) end)
+end
 function F.SpeedApply()
 if not T.SpeedOn then return end
 local _, hum = GC()
@@ -4196,7 +4215,7 @@ local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
 end
 F.SpeedApply()
-F._spdConn = RS.Stepped:Connect(function(_, deltaTime)
+F._spdConn = F.DriveConnect(function(deltaTime)
 if not T.SpeedOn then F.SpeedSet(false) return end
 local _, h, r = GC()
 if not (h and r) then return end
@@ -4365,7 +4384,7 @@ bg.Parent = root
 F._flyBv, F._flyBg = bv, bg
 end)
 end
-F._flyConn = RS.Stepped:Connect(function(_, dt)
+F._flyConn = F.DriveConnect(function(dt)
 if not T.FlyOn then F.FlyDestroy() return end
 local _, h, r = GC()
 if not (h and r) then return end
