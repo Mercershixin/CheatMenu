@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:38 sha 2348e12e bytes 245007'):format('2026-10-01 20:38','2348e12e',245007))
+print(('[CheatMenu] build 2026-10-01 21:10 sha a2a68437 bytes 248798'):format('2026-10-01 21:10','a2a68437',248798))
 local F = {}
-F.VERSION = "v11.0.22"
+F.VERSION = "v11.0.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3724,6 +3724,7 @@ else
 txt = string.format("%s 空位 · 点=存 / 右键=删", lbl[i])
 end
 if b and b.SetTitle then pcall(function() b:SetTitle(txt) end) end
+if b then pcall(F.WpSlotHook, i, b) end
 end
 end)
 end
@@ -3791,29 +3792,54 @@ function F.WpSlotHook(i, b)
 if not b then return end
 local inst = nil
 pcall(function() inst = b.Button end)
-if not inst then pcall(function() inst = b.Frame and b.Frame:FindFirstChildWhichIsA("TextButton") end) end
-if not inst then pcall(function() inst = b.Container and b.Container:FindFirstChildWhichIsA("TextButton") end) end
-if not inst or not inst.InputBegan then return end
+if not inst then
+pcall(function()
+local f = b.Frame
+if typeof(f) == "Instance" and f:IsA("GuiButton") then inst = f end
+end)
+end
+if not inst then
+pcall(function()
+local f = b.Frame
+if typeof(f) == "Instance" then inst = f:FindFirstChildWhichIsA("GuiButton", true) end
+end)
+end
+if not inst then pcall(function() inst = b.Container and b.Container:FindFirstChildWhichIsA("GuiButton", true) end) end
+if not inst or not inst.InputBegan then
+F.Out("[点位] 第 " .. tostring(i) .. " 个点位按钮没拿到底层控件, 右键删除不可用(点=存/传 仍可用)")
+return
+end
 F._wpHooked = F._wpHooked or {}
 if F._wpHooked[i] == inst then return end
 F._wpHooked[i] = inst
-local holdAt = nil
-pcall(function()
+local holdAt, lastDel = nil, 0
+local function del()
+local now = os.clock()
+if now - lastDel < 0.4 then return end
+lastDel = now
+F.WpDeleteSlot(i)
+end
+local ok = pcall(function()
+if inst.MouseButton2Click then inst.MouseButton2Click:Connect(function() del() end) end
 inst.InputBegan:Connect(function(input)
 if not input then return end
 if input.UserInputType == Enum.UserInputType.MouseButton2 then
-F.WpDeleteSlot(i)
+del()
 elseif input.UserInputType == Enum.UserInputType.Touch then
 holdAt = os.clock()
 end
 end)
 inst.InputEnded:Connect(function(input)
 if input and input.UserInputType == Enum.UserInputType.Touch and holdAt then
-if os.clock() - holdAt > 0.6 then F.WpDeleteSlot(i) end
+if os.clock() - holdAt > 0.6 then del() end
 holdAt = nil
 end
 end)
 end)
+if ok and not F._wpHookLogged then
+F._wpHookLogged = true
+F.Out("[点位] 右键删除已挂钩(右键=删 / 手机长按0.6秒=删)")
+end
 end
 function F.WpLastName()
 local l = F.WaypointList()
@@ -3876,6 +3902,73 @@ else
 F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
 end
 return n > 0
+end
+F.TP_MOUSE_REACH = 900
+F.TP_MOUSE_AIR = 150
+function F.MouseWorldPos()
+local cam = workspace.CurrentCamera
+if not cam then return nil, "nocam" end
+local px, py
+pcall(function()
+local m = LP:GetMouse()
+px, py = m.X, m.Y
+end)
+if not px then
+pcall(function()
+local loc = UIS:GetMouseLocation()
+px, py = loc.X, loc.Y
+end)
+end
+if not px then return nil, "nomouse" end
+local ray = nil
+local okRay = pcall(function() ray = cam:ScreenPointToRay(px, py) end)
+if (not okRay or not ray) then
+local okL, r2 = pcall(function() return cam:ViewportPointToRay(px, py) end)
+if okL then ray = r2 end
+end
+if not ray then return nil, "noray" end
+local params = RaycastParams.new()
+if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
+pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
+end
+local _, _, root = GC()
+if root and root.Parent then
+pcall(function() params.FilterDescendantsInstances = { root.Parent } end)
+end
+local hit = nil
+pcall(function() hit = workspace:Raycast(ray.Origin, ray.Direction * F.TP_MOUSE_REACH, params) end)
+if hit and hit.Position then return hit.Position, "hit" end
+return ray.Origin + ray.Direction * F.TP_MOUSE_AIR, "air"
+end
+function F.TPMouse()
+local pos, kind = F.MouseWorldPos()
+if not pos then
+F.Out("[T键传送] 拿不到鼠标指向的位置(" .. tostring(kind) .. ") 本次没动")
+return false
+end
+local _, hum, root = GC()
+if not root then
+F.Out("[T键传送] 现在没有角色(没进游戏 / 正在重生) 本次没动")
+return false
+end
+pcall(F.SrvOwnTake, false)
+local dest = pos + Vector3.new(0, 3, 0)
+smoothTP(CFrame.new(dest))
+if hum then pcall(function() hum.PlatformStand = false end) end
+local ok = false
+pcall(function()
+local _, _, r2 = GC()
+if r2 then ok = (r2.Position - dest).Magnitude < 8 end
+end)
+F.Out(string.format("[T键传送] %s -> (%.0f, %.0f, %.0f) 到位: %s",
+(kind == "air") and "鼠标指着天空/太远, 送到正前方" or "鼠标指向点",
+dest.X, dest.Y, dest.Z, ok and "是" or "否"))
+if not ok then
+local _, srv = F.AuthorityGuard(false)
+F.Out(srv and "[T键传送] 这个游戏 AuthorityMode=Server(位移由服务端裁决), 传不到是游戏规则, 不是脚本没生效"
+or "[T键传送] 没到位: 多半被拉回 / 角色被冻住, 再按一次 T")
+end
+return ok
 end
 local mutedVolumes = nil
 local function MuteEnable()
@@ -4311,6 +4404,14 @@ pcall(F.CloseDropdowns)
 end
 end)
 end)
+pcall(function()
+UIS.InputBegan:Connect(function(input, processed)
+if processed then return end
+if not F._tpMouseOn then return end
+if input.KeyCode ~= Enum.KeyCode.T then return end
+F.TPMouse()
+end)
+end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
 function F.BodyHLAdd(pl)
 if not T.BodyHL or pl == LP then return end
@@ -4671,6 +4772,7 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
+F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, StealthGodDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable }) do pcall(fn) end
@@ -5834,6 +5936,7 @@ F._dumpText = nil
 F._capLog = {}
 F._autoTh = nil
 F._cfgSyncing = false
+F._tpMouseOn = false
 if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
 end,
 MuteDisable, FOVDisable, ZoomDisable,
@@ -6231,6 +6334,13 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
 end })
+Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "开: 游戏里按 T 直接瞬移到鼠标指的地方(指着天空就送到正前方) / 关: T 键无效", Default = false, Callback = function(v)
+T.TPMouse = v
+if F._cfgSyncing then return end
+F._tpMouseOn = v and true or false
+F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
+or "[T键传送] 已关闭, T 键不再传送")
+end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
@@ -6245,6 +6355,9 @@ F.WaypointRefreshUI()
 end })
 Tabs.TP:AddButton({ Title = "清空所有点位", Callback = function() F.WpClear() end })
 F.WaypointRefreshUI()
+task.delay(2, function()
+for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
+end)
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("KickProtect", { Title = "挂机防踢(反挂机+拦截Kick+抢传)", Default = true, Callback = function(v)
 T.KickProtect = v T.AntiAFK = v T.KickGuard = v T.KickRejoin = v
