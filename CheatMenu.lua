@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:14 sha a2c246a2 bytes 237590'):format('2026-10-01 19:14','a2c246a2',237590))
+print(('[CheatMenu] build 2026-10-01 19:20 sha 0fd31e6f bytes 240774'):format('2026-10-01 19:20','0fd31e6f',240774))
 local F = {}
-F.VERSION = "v11.0.8"
+F.VERSION = "v11.0.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2958,6 +2958,88 @@ end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
 end
+F.HIT_KEYS = { "rigsync", "knockback", "knock", "ragdoll", "combatservice", "useitem",
+"stun", "tumble", "pushed", "fling", "blown", "launch" }
+F.HIT_STATES = { "Ragdoll", "FallingDown", "Physics" }
+F._hitConn = nil
+function F.HitGuardScan(verbose)
+local found = {}
+pcall(function()
+for _, d in ipairs(F.walk(RStorage, 4000)) do
+local cn = tostring(d.ClassName)
+if cn == "RemoteEvent" or cn == "UnreliableRemoteEvent" then
+local nm = tostring(d.Name):lower()
+for _, k in ipairs(F.HIT_KEYS) do
+if nm:find(k, 1, true) then found[#found + 1] = d break end
+end
+end
+end
+end)
+if verbose then
+local names = {}
+for i = 1, math.min(#found, 8) do names[i] = found[i].Name end
+F.Out("[受击] 命中 " .. tostring(#found) .. " 个疑似「击退/受击」远程: " .. table.concat(names, " · ")
+.. (#found > 8 and " …" or ""))
+end
+return found
+end
+function F.HitGuardDisable()
+if F._hitConn then F._hitConn:Disconnect() F._hitConn = nil end
+if F._hitRemotes then
+for _, re in ipairs(F._hitRemotes) do
+pcall(function()
+for _, c in ipairs(getconnections(re.OnClientEvent)) do
+pcall(function() if c.Enable then c:Enable() end end)
+end
+end)
+end
+end
+F._hitRemotes = nil
+local _, hum = GC()
+if hum then
+for _, k in ipairs(F.HIT_STATES) do
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], true) end)
+end
+end
+end
+function F.HitGuardEnable()
+if F._hitConn then return end
+F._hitRemotes = {}
+local n = 0
+for _, re in ipairs(F.HitGuardScan(true)) do
+pcall(function()
+for _, c in ipairs(getconnections(re.OnClientEvent)) do
+pcall(function() if c.Disable then c:Disable() n = n + 1 end end)
+end
+end)
+F._hitRemotes[#F._hitRemotes + 1] = re
+end
+F.Out("[受击] 已禁用 " .. tostring(n) .. " 条「被打时游戏自己的处理」；服务端仍会扣血, 但不会再把你击退/打飞(公开作品同款做法)")
+F._hitConn = RS.Heartbeat:Connect(function()
+if not T.HitGuard then F.HitGuardDisable() return end
+local _, hum, root = GC()
+if not (hum and root) then return end
+for _, k in ipairs(F.HIT_STATES) do
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], false) end)
+end
+local st = nil
+pcall(function() st = hum:GetState() end)
+if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown
+or st == Enum.HumanoidStateType.Physics then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics) end)
+local ch = LP.Character
+if ch then
+pcall(function()
+for _, v in ipairs(ch:GetDescendants()) do
+if v:IsA("Motor6D") and not v.Enabled then v.Enabled = true
+elseif v:IsA("Constraint") and v.Enabled and v.Name ~= "RootJoint" then v.Enabled = false end
+end
+end)
+end
+end
+if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
+end)
+end
 F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
 "net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt" }
 F._trapConn = nil
@@ -5615,7 +5697,7 @@ F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet,
-F.SteadyDisable, F.TrapGuardDisable,
+F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable,
 function()
 AC._neutFns = {}
 F._dumpText = nil
@@ -5892,6 +5974,17 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSection("受击保护(被打不飞 · 参考公开作品做法)")
+Tabs.Move:AddDropdown("HitGuard", { Title = "被攻击时", Values = {
+"关",
+"防被打飞(断掉游戏自己的击退/受击处理)",
+"防被打飞 + 锁满血",
+}, Default = "关", Callback = function(v)
+T.HitGuard = (v ~= "关")
+T.HitLock = (v == "防被打飞 + 锁满血")
+if F._cfgSyncing then return end
+if T.HitGuard then F.HitGuardEnable() else F.HitGuardDisable() end
+end })
 Tabs.Move:AddSection("陷阱拦截(通用: 夹子/陷阱/香蕉皮 类物件)")
 Tabs.Move:AddDropdown("TrapMode", { Title = "附近的陷阱怎么处理", Values = {
 "关", "拦截(踩上去也不触发)", "拦截 + 自动弹开一步",
