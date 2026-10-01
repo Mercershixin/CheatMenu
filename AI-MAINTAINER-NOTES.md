@@ -1992,3 +1992,30 @@ if hum and root and root.AssemblyLinearVelocity.Magnitude < 1 then hum.Jump = tr
 新增 `OverlapParams` 后门禁 [8] 报"白名单外未定义全局"，**而我当时链式命令继续执行、把这一版推了出去**。
 ⇒ 已把 `OverlapParams / GetPartBoundsInRadius / GetPartsInPart / NumberRange` 加进 `gate.py` 白名单，
 并在 11.0.6/11.0.7/11.0.8 三次发版里逐次跑绿。★ 教训：**门禁红了不许 push**（本轮是我链式 `&&` 写法的锅）。
+
+## 二十五、2026-10-01（下半场之二十）：「被攻击能拦截吗」—— 按公开作品的做法落地（11.0.9）
+
+### 25.1 调研（用户要求"看其他人怎么做的"，两份都是**同款游戏**、都 ≤1 个月）
+
+| 参考 | 时间 | 它怎么做 |
+|---|---|---|
+| `Lutosys/opensrc → stealaeggnoknockback.lua` ★29 | **2026-09-28** | **整套就几行**：定位 `ReplicatedStorage.Packages.Networking["RE/RigSync/Refresh"]`，然后 `for _,c in getconnections(RE.OnClientEvent) do c:Disconnect() end` |
+| `HOSTI1315/Opensurs → ANTI_RAGDOLL_AND_EFFECTS_RZNNQ.lua` | **2026-09-30**（注释写着 "working in STEAL A BRAINROT"） | ① `SetStateEnabled(Ragdoll/FallingDown/Physics/Dead,false)` ② 被打时 `Health=MaxHealth` + `ChangeState(RunningNoPhysics)` + **短暂 Anchor** 打断击退 ③ **`Motor6D.Enabled = true`** 修好被弄断的关节 + 关掉多余 `Constraint` ④ `RemoteKeywords={useitem,combatservice,ragdoll}` 用 `getconnections` 断处理 |
+
+★ 另外用 GitHub **代码搜索**（不是仓库搜索）才找到上面这两份 —— 仓库搜索出来的多是 ★0 引流页。**要找手法就用 code search 搜关键词**。
+
+### 25.2 原理（一句话）
+
+**"被打飞"是分工的**：服务端判定命中 → **通知你的客户端** → **你自己的客户端**执行击退/rig 同步。
+⇒ **客户端能拦的正是"自己这边的执行"**；"完全免疫、不掉血"做不到（判定在服务端/攻击方）。
+⇒ 断掉那些处理连接后：**血还是会掉，但不会再被击飞**（而击飞才是丢东西的直接原因）。
+
+### 25.3 本轮实现：`F.HitGuard*`（移动页「受击保护」下拉，三档）
+
+- 关键词表 `F.HIT_KEYS = rigsync / knockback / knock / ragdoll / combatservice / useitem / stun / tumble / pushed / fling / blown / launch`。
+- ★ **用 `conn:Disable()` 而不是 `conn:Disconnect()`**：Disable 可以 `Enable()` 还原 ⇒ 守住"关闭必须还原"的项目规矩
+  （公开作品是硬断，我们改得更可逆）。
+- 心跳保持：禁 `Ragdoll/FallingDown/Physics` → 若已在倒地态就 `ChangeState(RunningNoPhysics)` + **修 `Motor6D`** + 清多余 `Constraint`。
+- 可选档位加"锁满血"（`hum.Health = hum.MaxHealth`）。
+- ⛔ **刻意不禁 `Dead` 状态**（公开作品禁了）：禁 Dead 容易卡在"半死"状态出不来，风险不划算 —— 已在代码里注明。
+- 开启时把**命中的远程名逐条打进日志**（透明，出问题好定位）。
