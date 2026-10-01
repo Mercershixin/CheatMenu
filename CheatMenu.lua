@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 15:08 sha 61345f1f bytes 273216'):format('2026-10-01 15:08','61345f1f',273216))
+print(('[CheatMenu] build 2026-10-01 15:19 sha 9a7513b7 bytes 273279'):format('2026-10-01 15:19','9a7513b7',273279))
 local F = {}
-F.VERSION = "v10.10.3"
+F.VERSION = "v10.10.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1482,16 +1482,11 @@ function F.CaptureEnable()
 if F._capOn then return true end
 if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
 F._capLog = {}
-F._capN = 0
 local got = F.MetaInstall("__namecall", game, "Capture", function(box)
 return function(self, ...)
 if F._capOn and not checkcaller() and typeof(self) == "Instance" then
 local m = getnamecallmethod()
 if m == "FireServer" or m == "InvokeServer" then
-F._capN = (F._capN or 0) + 1
-if F._capN % 10 == 0 then
-F.Out("[采集] 已记录 " .. F._capN .. " 条上行 remote, 最近: " .. tostring(self.Name) .. ":" .. tostring(m))
-end
 if #F._capLog < F.CAP_MAX then
 local args = { ... }
 local parts = {}
@@ -1517,6 +1512,9 @@ F._capLog[#F._capLog + 1] = {
 n = tostring(self.Name), c = tostring(self.ClassName),
 m = m, a = table.concat(parts, ", "),
 }
+if #F._capLog % 10 == 0 then
+F.Out("[采集] 已记录 " .. #F._capLog .. " 条上行 remote, 最近: " .. tostring(self.Name) .. ":" .. tostring(m))
+end
 end
 end
 end
@@ -1695,7 +1693,8 @@ function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
 if F._logFlushing then return nil end
 F._logFlushing = true
-local body = table.concat(F._logBuf, "\n") .. "\n"
+local ts = os.date("%Y-%m-%d %H:%M:%S")
+local body = "[" .. ts .. "] " .. table.concat(F._logBuf, "\n") .. "\n"
 local pending = F._logBuf
 F._logBuf = {}
 local base = F.LogBaseName()
@@ -4959,7 +4958,7 @@ local body = nil
 for i = 1, #urls do
 local u = urls[i] .. "?cb=" .. tostring(os.time())
 local ok, r = pcall(function() return game:HttpGet(u) end)
-if ok and type(r) == "string" and #r > 20000 then body = r break end
+if ok and type(r) == "string" and #r > 100000 then body = r break end
 end
 if not body then
 F.Out("[热加载] ⚠ 所有源都取不到 —— 旧实例已卸载, 请重新执行一次 loader")
@@ -5571,7 +5570,7 @@ if F._saveThread then return end
 T.AutoSave = true
 F._saveThread = task.spawn(function()
 while T.AutoSave do
-task.wait(25)
+task.wait(5)
 if T.AutoSave then pcall(SaveConfig) end
 end
 F._saveThread = nil
@@ -6695,6 +6694,8 @@ pcall(function()
 if getgenv then getgenv().CM_TogglePolish = nil end
 end)
 pcall(F.Conn.ClearAll)
+F.MetaLayers = {}
+F.MetaTargets = {}
 F.Out("[CheatMenu] 已干净卸载")
 end
 function F.RestoreSavedFeatures()
