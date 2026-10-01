@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:06 sha accac087 bytes 242884'):format('2026-10-01 20:06','accac087',242884))
+print(('[CheatMenu] build 2026-10-01 20:13 sha 5eed60fc bytes 244504'):format('2026-10-01 20:13','5eed60fc',244504))
 local F = {}
-F.VERSION = "v11.0.18"
+F.VERSION = "v11.0.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3706,10 +3706,10 @@ local b = F._wpb and F._wpb[i]
 local it = lst[i]
 local txt
 if type(it) == "table" then
-txt = string.format("%s %s · (%.0f, %.0f) · 点=传送", lbl[i], tostring(it.name),
+txt = string.format("%s %s · (%.0f, %.0f) · 点=传 / 右键=删", lbl[i], tostring(it.name),
 tonumber(it.x) or 0, tonumber(it.z) or 0)
 else
-txt = string.format("%s 空位 · 点=存当前位置", lbl[i])
+txt = string.format("%s 空位 · 点=存 / 右键=删", lbl[i])
 end
 if b and b.SetTitle then pcall(function() b:SetTitle(txt) end) end
 end
@@ -3762,6 +3762,46 @@ pcall(SaveConfig)
 F.Out(string.format("[点位] 已保存「%s」 → (%.0f, %.0f, %.0f)", nm, p.X, p.Y, p.Z))
 pcall(function() Fluent:Notify({ Title = "点位", Content = "已保存「" .. nm .. "」", Duration = 4 }) end)
 return true
+end
+function F.WpDeleteSlot(i)
+local it = F.WaypointList()[i]
+if type(it) ~= "table" then
+F.Out("[点位] 第 " .. tostring(i) .. " 个是空位, 没有可删的")
+return false
+end
+local nm = tostring(it.name)
+F.WaypointDel(nm)
+F.WaypointRefreshUI()
+F.Out("[点位] 已删除「" .. nm .. "」")
+return true
+end
+function F.WpSlotHook(i, b)
+if not b then return end
+local inst = nil
+pcall(function() inst = b.Button end)
+if not inst then pcall(function() inst = b.Frame and b.Frame:FindFirstChildWhichIsA("TextButton") end) end
+if not inst then pcall(function() inst = b.Container and b.Container:FindFirstChildWhichIsA("TextButton") end) end
+if not inst or not inst.InputBegan then return end
+F._wpHooked = F._wpHooked or {}
+if F._wpHooked[i] == inst then return end
+F._wpHooked[i] = inst
+local holdAt = nil
+pcall(function()
+inst.InputBegan:Connect(function(input)
+if not input then return end
+if input.UserInputType == Enum.UserInputType.MouseButton2 then
+F.WpDeleteSlot(i)
+elseif input.UserInputType == Enum.UserInputType.Touch then
+holdAt = os.clock()
+end
+end)
+inst.InputEnded:Connect(function(input)
+if input and input.UserInputType == Enum.UserInputType.Touch and holdAt then
+if os.clock() - holdAt > 0.6 then F.WpDeleteSlot(i) end
+holdAt = nil
+end
+end)
+end)
 end
 function F.WpLastName()
 local l = F.WaypointList()
@@ -5865,6 +5905,18 @@ T.PanicKey = true
 F.LivePlayersEnable()
 end
 LoadConfig()
+pcall(function()
+local sid = tostring(game.PlaceId) .. "/" .. tostring(game.JobId)
+if C.WpServer ~= sid then
+local had = type(C.Waypoints) == "table" and #C.Waypoints or 0
+if had > 0 then
+C.Waypoints = {}
+F.Out("[点位] 换服 / 重进游戏 ⇒ 已自动清空上次的 " .. tostring(had) .. " 个收藏点位")
+end
+C.WpServer = sid
+pcall(SaveConfig)
+end
+end)
 local _touch = (UIS.TouchEnabled == true)
 local _vw, _vh = 500, 540
 pcall(function()
@@ -6167,12 +6219,13 @@ Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
 end })
-Tabs.TP:AddSection("收藏点位(每个点位就是一个按钮: 点空位=存当前位置, 点有点位的=传过去)")
+Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
-F._wpb[i] = Tabs.TP:AddButton({ Title = "点位" .. tostring(i) .. " · 空位(点=存当前位置)", Callback = function()
+F._wpb[i] = Tabs.TP:AddButton({ Title = "点位" .. tostring(i) .. " · 空位(点=存 / 右键=删)", Callback = function()
 F.WpClick(i)
 end })
+F.WpSlotHook(i, F._wpb[i])
 end
 Tabs.TP:AddButton({ Title = "删除最近保存的点位", Callback = function()
 F.WaypointDel(F.WpLastName())
