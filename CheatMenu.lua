@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 19:12 sha 29764e48 bytes 237412'):format('2026-10-01 19:12','29764e48',237412))
+print(('[CheatMenu] build 2026-10-01 19:14 sha a2c246a2 bytes 237590'):format('2026-10-01 19:14','a2c246a2',237590))
 local F = {}
-F.VERSION = "v11.0.7"
+F.VERSION = "v11.0.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2963,10 +2963,17 @@ F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", 
 F._trapConn = nil
 function F.TrapGuardDisable()
 if F._trapConn then F._trapConn:Disconnect() F._trapConn = nil end
+if F._trapBak then
+for obj, bak in pairs(F._trapBak) do
+pcall(function() if obj and obj.Parent then obj.CanTouch = bak.touch end end)
+end
+F._trapBak = nil
+end
 end
 function F.TrapGuardEnable()
 if F._trapConn then return end
 F._trapAt = 0
+F._trapBak = F._trapBak or {}
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
@@ -2974,32 +2981,29 @@ if now - (F._trapAt or 0) < 0.4 then return end
 F._trapAt = now
 local _, _, root = GC()
 if not root then return end
-local found = nil
+local hits = 0
 pcall(function()
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
 if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
 for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 45, op)) do
 local nm = tostring(pt.Name):lower()
+local isTrap = false
 for _, k in ipairs(F.TRAP_KEYS) do
-if nm:find(k, 1, true) then found = pt break end
+if nm:find(k, 1, true) then isTrap = true break end
 end
-if found then break end
-end
-end)
-if not found then return end
-F._trapHits = (F._trapHits or 0) + 1
-if now - (F._trapLogAt or 0) > 2 then
-F._trapLogAt = now
-local d = 0
-pcall(function() d = (found.Position - root.Position).Magnitude end)
-F.Out(string.format("[陷阱] 附近有可疑物件「%s」(%.0f 格 · 累计 %d 次) —— 绕开它",
-tostring(found.Name), d, F._trapHits))
-pcall(function() Fluent:Notify({ Title = "陷阱预警", Content = "附近: " .. tostring(found.Name), Duration = 3 }) end)
-end
-if T.TrapDodge then
+if isTrap then
+hits = hits + 1
+if pt.CanTouch then
 pcall(function()
-local dir = root.Position - found.Position
+F._trapBak[pt] = { touch = pt.CanTouch }
+pt.CanTouch = false
+end)
+end
+if T.TrapDodge and now - (F._trapDodgeAt or 0) > 0.8 then
+F._trapDodgeAt = now
+pcall(function()
+local dir = root.Position - pt.Position
 dir = Vector3.new(dir.X, 0, dir.Z)
 if dir.Magnitude > 0.1 then
 local vv = root.AssemblyLinearVelocity
@@ -3007,6 +3011,14 @@ local push = dir.Unit * 60
 root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 30), push.Z)
 end
 end)
+end
+end
+end
+end)
+if hits > 0 and now - (F._trapLogAt or 0) > 5 then
+F._trapLogAt = now
+F._trapHits = (F._trapHits or 0) + hits
+F.Out("[陷阱] 已让附近 " .. tostring(hits) .. " 个陷阱失效(只关陷阱自己的 CanTouch, 不动你的角色) · 累计 " .. tostring(F._trapHits))
 end
 end)
 end
@@ -5880,12 +5892,12 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 上不封顶)
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 上不封顶)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddSection("陷阱预警(通用: 夹子/陷阱/香蕉皮 类物件)")
-Tabs.Move:AddDropdown("TrapMode", { Title = "附近出现可疑陷阱时", Values = {
-"关", "只报警(弹提示 + 写日志)", "报警 + 自动弹开一步",
+Tabs.Move:AddSection("陷阱拦截(通用: 夹子/陷阱/香蕉皮 类物件)")
+Tabs.Move:AddDropdown("TrapMode", { Title = "附近的陷阱怎么处理", Values = {
+"关", "拦截(踩上去也不触发)", "拦截 + 自动弹开一步",
 }, Default = "关", Callback = function(v)
 T.TrapWarn = (v ~= "关")
-T.TrapDodge = (v == "报警 + 自动弹开一步")
+T.TrapDodge = (v == "拦截 + 自动弹开一步")
 if F._cfgSyncing then return end
 if T.TrapWarn then F.TrapGuardEnable() else F.TrapGuardDisable() end
 end })
