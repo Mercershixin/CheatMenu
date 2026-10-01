@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 20:13 sha 5eed60fc bytes 244504'):format('2026-10-01 20:13','5eed60fc',244504))
+print(('[CheatMenu] build 2026-10-01 20:25 sha c3abbcd9 bytes 244831'):format('2026-10-01 20:25','c3abbcd9',244831))
 local F = {}
-F.VERSION = "v11.0.19"
+F.VERSION = "v11.0.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2761,7 +2761,12 @@ F.Out("   同族已知路径 RE/RigSync/Refresh: " .. (known and "存在(公开�
 end)
 for i = 1, math.min(#conns, 6) do F.Out("   · 连接: " .. conns[i]) end
 if #scripts == 0 and #conns == 0 then
-F.Out("   (这个游戏客户端侧没有按这些名字出现的检测 ⇒ 它不是「客户端检测」型; 但换个游戏请重扫)")
+F.Out("   ★ 结论: 客户端侧没有「防加速/拉回」检测 ⇒ 加速可以直接用(只注意服务端的速度阈值)")
+elseif #scripts == 0 then
+F.Out("   ★ 结论: 没有检测脚本, 但 Heartbeat 上有 " .. tostring(#conns)
+.. " 条可疑连接 ⇒ 谨慎加速, 被拉回就开「加速防拉回」档")
+else
+F.Out("   ★ 结论: 客户端有防加速检测(脚本 " .. tostring(#scripts) .. " 个) ⇒ 先开「加速防拉回」档再加速")
 end
 end
 return #scripts, #conns
