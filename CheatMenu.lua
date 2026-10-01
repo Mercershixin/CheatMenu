@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-01 21:42 sha d6d3168d bytes 256190'):format('2026-10-01 21:42','d6d3168d',256190))
+print(('[CheatMenu] build 2026-10-01 21:55 sha 5a8ea98f bytes 258049'):format('2026-10-01 21:55','5a8ea98f',258049))
 local F = {}
-F.VERSION = "v11.0.25"
+F.VERSION = "v11.0.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -90,10 +90,11 @@ function F.KillPreviousInstance()
 local g = getgenv and getgenv()
 if type(g) ~= "table" then return end
 local prev = g[F.INSTANCE_KEY]
-if type(prev) ~= "table" then return end
+local hadHandle = (type(prev) == "table")
+local ver, okUn = "?", false
+if hadHandle then
 g[F.INSTANCE_KEY] = nil
-local ver = tostring(prev.version or "?")
-local okUn = false
+ver = tostring(prev.version or "?")
 if type(prev.unload) == "function" then okUn = pcall(prev.unload) end
 if type(prev.gui) == "table" then pcall(function() prev.gui:Destroy() end) end
 if type(prev.handles) == "table" then
@@ -101,15 +102,31 @@ for _, h in ipairs(prev.handles) do
 if typeof(h) == "Instance" and h.Parent then pcall(function() h:Destroy() end) end
 end
 end
-for _, k in ipairs({ "CM_Window", "CM_ToggleSG", "CM_TogglePolish" }) do
-local v = g[k]
-if typeof(v) == "Instance" then pcall(function() v:Destroy() end) end
-g[k] = nil
 end
-F.Out("[重复加载] 检测到上一份脚本实例(v" .. ver .. ") ⇒ 已"
+local legacy = false
+local w = g.CM_Window
+if w ~= nil then
+legacy = true
+if type(w) == "table" and type(w.Destroy) == "function" then
+pcall(function() w:Destroy() end)
+elseif typeof(w) == "Instance" then
+pcall(function() w:Destroy() end)
+end
+end
+local sg = g.CM_ToggleSG
+if sg ~= nil then
+legacy = true
+if typeof(sg) == "Instance" then pcall(function() sg:Destroy() end) end
+end
+g.CM_Window, g.CM_ToggleSG, g.CM_TogglePolish = nil, nil, nil
+if hadHandle then
+F.Out("[重复加载] 检测到上一份脚本(v" .. ver .. ") ⇒ 已"
 .. (okUn and "干净卸载它" or "尽力清理(旧版没有卸载接口)") .. "，本次只保留一份")
 if not okUn then
-F.Out("[重复加载] 旧实例的循环可能还挂在引擎上 ⇒ 想彻底干净就「重进一次游戏」")
+F.Out("[重复加载] 旧实例的循环可能还挂在引擎上(旧版没有卸载接口) ⇒ 想彻底干净就「重进一次游戏」")
+end
+elseif legacy then
+F.Out("[重复加载] 检测到旧版实例留下的菜单 ⇒ 已清掉它; 但旧版没有卸载接口, 它的循环可能还在跑 ⇒ 建议「重进一次游戏」拿干净环境")
 end
 end
 pcall(F.KillPreviousInstance)
@@ -3408,10 +3425,14 @@ local params = RaycastParams.new()
 if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
 pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
 end
+local skip = {}
 local ch = LP.Character
-if ch then pcall(function() params.FilterDescendantsInstances = { ch } end) end
+if ch then skip[#skip + 1] = ch end
+if Players then skip[#skip + 1] = Players end
+pcall(function() params.FilterDescendantsInstances = skip end)
+local origin = r.Position + Vector3.new(0, 1, 0)
 local hit = nil
-pcall(function() hit = workspace:Raycast(r.Position, u * (dist + F.BODY_R), params) end)
+pcall(function() hit = workspace:Raycast(origin, u * (dist + F.BODY_R), params) end)
 if hit and hit.Position then return math.max(0, hit.Distance - F.BODY_R) end
 return dist
 end
@@ -3429,9 +3450,16 @@ local actual = (flat - p.pos).Magnitude / span
 local stale = span > 1.5
 F._probe[tag] = { t = now, pos = flat, sp = sp }
 if stale then return end
-if now - (F._probeAt or 0) < 6 then return end
-F._probeAt = now
 local ratio = (set > 1) and (actual / set) or 1
+F._probeRep = F._probeRep or {}
+local rep = F._probeRep[tag]
+if ratio >= 0.85 then
+if rep and rep.sp == set and rep.ok then return end
+F._probeRep[tag] = { sp = set, ok = true }
+else
+if rep and rep.sp == set and (not rep.ok) and (now - (rep.t or 0)) < 20 then return end
+F._probeRep[tag] = { sp = set, ok = false, t = now }
+end
 local verdict
 if ratio >= 0.85 then
 verdict = " · 达标(设定值就是真实速度)"
@@ -3505,15 +3533,16 @@ if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
 local want = sp * dt
 local scale = 1
+F.STEP_CHECK_MIN = 5
+if T.SpeedAntiClip ~= false and want > F.STEP_CHECK_MIN then
 local allow = F.SweepAhead(r, u, want)
-if want > 0.001 and allow < want then
+if allow < want - 0.05 then
 scale = math.clamp(allow / want, 0, 1)
-F._spdWall = (F._spdWall or 0) + 1
 local now2 = os.clock()
-if now2 - (F._wallAt or 0) > 1.5 then
+if now2 - (F._wallAt or 0) > 10 then
 F._wallAt = now2
-F.Out(string.format("[加速] 前方 %.1f 格就是障碍 ⇒ 本帧只给 %.0f%% (防穿墙; 开阔地仍是设定速度 %.0f)",
-allow, scale * 100, sp))
+F.Out(string.format("[加速] 前面是障碍 ⇒ 本帧走 %.0f%% (防穿墙, 可在这页关掉)", scale * 100))
+end
 end
 end
 local v = u * (sp * scale)
@@ -6381,10 +6410,24 @@ Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, 
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 20000)", Min = 10, Max = 20000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 20000)", Min = 16, Max = 20000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+for _, preset in ipairs({ 100, 500, 1000 }) do
+Tabs.Move:AddButton({ Title = "一键设速度 = " .. tostring(preset), Callback = function()
+C.SpeedValue = preset
+pcall(function() if Fluent.Options.SpeedValue then Fluent.Options.SpeedValue:Set(preset) end end)
+if T.SpeedOn then F.SpeedApply() end
+F.Out("[加速] 速度已设为 " .. tostring(preset) .. " 格/秒")
+end })
+end
+Tabs.Move:AddToggle("SpeedAntiClip", { Title = "加速防穿墙(高速撞墙时不穿过去)", Description = "只在速度很高(这一帧要走 5 格以上)时才生效; 日常走动完全不受影响。嫌它拦你就关掉", Default = true, Callback = function(v)
+local changed = (T.SpeedAntiClip ~= nil) and (T.SpeedAntiClip ~= v)
+T.SpeedAntiClip = v
+if F._cfgSyncing or not changed then return end
+F.Out(v and "[加速] 防穿墙 = 开(高速撞墙会停在墙前)" or "[加速] 防穿墙 = 关(高速会直接穿过去, 按你的选择)")
+end })
 Tabs.Move:AddSection("防护(稳身 / 受击 / 陷阱 / 防拉回 ⇒ 一个下拉搞定)")
 Tabs.Move:AddDropdown("GuardMode", { Title = "防护档位(选完自动复位 · 会告诉你开了什么)", Values = {
 "关(全部关闭)",
