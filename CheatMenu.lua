@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 13:30 sha 8bbea571 bytes 237195'):format('2026-10-01 13:30','8bbea571',237195))
+print(('[CheatMenu] build 2026-10-01 13:42 sha 8ddd6215 bytes 250935'):format('2026-10-01 13:42','8ddd6215',250935))
 local F = {}
 F._flyJumpConn = nil
 F._flyJumpAt = 0
@@ -82,7 +82,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.6.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.7.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -5539,68 +5539,330 @@ BonusThread = task.spawn(function()
 while T.AutoBonus do AutoBonusScan() task.wait(1) end
 end)
 end
-local CPS = { ["Noobini Pizzanini"]=2,["Tralalero Tralala"]=17500,["Bombardiro Crocodilo"]=3100,["Lucky Fella"]=5000000 }
-local MutBuff = { Golden=1.5, Diamond=2, Rainbow=40, Astral=50, Infinity=75 }
+do
+local CPS = {
+["Noobini Pizzanini"]=2,["Lirili Larila"]=3,["Tim Cheese"]=3,["Talpa Di Fero"]=4,
+["Svinina Bombardino"]=5,["Pipi Kiwi"]=6,["Fruli Frula"]=7,["Trippi Troppi"]=7,
+["Gangster Footera"]=15,["Bobrito Bandito"]=17,["Boneca Ambalabu"]=17,
+["Ta Ta Ta Ta Sahur"]=18,["Ballerina Cappuccina"]=19,["Cappuccino Assassino"]=22,
+["Brr Brr Patapim"]=22,["Cacto Hipopotamo"]=26,["Garamararam"]=40,
+["Madung"]=44,["Waterdino"]=50,["Pesto Mortioni"]=52,["Pannaburro"]=62,
+["Orcalero"]=64,["Mangolini Parrocini"]=64,["John Pork"]=72,
+["Gattatino Nyanino"]=76,["Chimpanzini Bananini"]=100,["Plan Red"]=130,
+["Plan Blue"]=140,["Capi Taco"]=150,["Trulimero Trulicina"]=160,
+["Bambini Crostini"]=160,["Elefantucci Bananucci"]=170,
+["Bananita Dolphinita"]=235,["Salamino Pinguino"]=280,
+["Penguino Cocosino"]=450,["67"]=500,["Burbaloni Luliloli"]=550,
+["Chef Crabracadabra"]=600,["Capybara Eggplant"]=650,["Bangello"]=725,
+["Elefanto Frigo"]=775,["Rinooccio Verdini"]=880,["Glorbo Fruttodrillo"]=950,
+["Udin Din Din Dun"]=1850,["Pandaccini Bananini"]=2000,
+["Octopusini Bluberini"]=2150,["Strawberelli Flamingelli"]=2300,
+["Sigma Boy"]=2450,["Frigo Camelo"]=2600,["Orangutini Ananasini"]=2700,
+["Rhino Toasterino"]=2950,["Bombardiro Crocodilo"]=3100,
+["Bombini Gusini"]=4750,["Castlino Fortini"]=5000,["Tuff Toucan"]=5300,
+["Fryuro"]=5850,["Burguro"]=6250,["Guest666"]=7000,
+["Zibra Zubra Zibralini"]=7750,["Cavallo Virtuso"]=10000,
+["Gorillo Watermelondrillo"]=12000,["Cocofanto Elefanto"]=14000,
+["Bambu Sahur"]=12500,["W or L"]=15000,["Girafa Celeste"]=16500,
+["Tralalero Tralala"]=17500,["Tralalerita Tralala"]=18000,
+["Peant Jarro"]=19500,["Dipperi Chiperini"]=20000,["Rexosaurus"]=22500,
+["1x1x1x1"]=25000,["Matteo"]=30000,["Espresso Signora"]=36500,
+["Alessio"]=27500,["Tripi Tropi Tropa Tripa"]=28000,["SWAG SODA"]=29000,
+["Stoppo Luminino"]=30000,["Torrtuginni Dragonfrutini"]=32000,
+["Tictac Sahur"]=38000,["Los Primos Blue"]=44500,["Cactus Pingu"]=55000,
+["La Vacca Saturno Saturnita"]=70000,["Agarrini La Palini"]=90000,
+["Bottellini"]=75000,["Karkerkar Kurkur"]=120000,["Blackhole Goat"]=125000,
+["Cappuccino Clownino"]=135000,["Compactoroni Diskaloni"]=135000,
+["Nuclearo Dinossauro"]=190000,["Los Nooo My Hotspotsitos"]=200000,
+["Chillin Chilli"]=220000,["Crazylone Pizaione"]=225000,["Corn Sahur"]=225000,
+["Meowl"]=275000,["Strawberry Elephant"]=420000,
+["Dragonfrutina Dolphinita"]=475000,["Guerriro Digitale"]=490000,
+["Chicleteira Bicicleteira"]=500000,["Pot Hotspot"]=525000,
+["Krupuk Pagi Pagi"]=540000,["Beluga Beluga"]=575000,["Tralaledon"]=625000,
+["Anpali Babel"]=750000,["Los Primos"]=800000,["Ketchuru Matsuru"]=800000,
+["Mastodontico Telepiedone"]=850000,["Espresso Shockantoni"]=1000000,
+["Ketupat Kepat"]=1250000,["Professora 67"]=1400000,["Astro Tim"]=1500000,
+["Dumbelloni"]=1750000,["Baba Yaga"]=2000000,["Don Tiramisotto"]=2250000,
+["Kicky"]=2500000,["Smelloni Papayoni"]=2750000,["Barbelloni Gymrattoni"]=3000000,
+["Dribbloni Spaghetti"]=7500000,["Coinator Baconator"]=6500000,
+["Lucky Fella"]=5000000,["Pulcino Pistoletti"]=10000000,
+["Divinello Starblock"]=8750000,["Cordraculo"]=10000000,
+["Harpini Goosini"]=11250000,["OctoDJ"]=15000000,["Tubafante"]=12500000,
+["Turtinella Melodica"]=16500000,["Cucumbro Nerdino"]=2500000,
+}
+local MutBuff = {Golden=1.5,Diamond=2,Plasma=4,Molten=6,Radioactive=8,
+Shadow=12,Electrified=16,Rainbow=40,Astral=50,Infinity=75,
+Void=12,Virus=14,Wet=16,Alien=22,Bacon=30,Enchanted=12,
+Phantom=35,Volcanic=35,Heavenly=36,Carnival=37,
+["Block Cup"]=38,Undead=35,Jungle=40,Frozen=40}
+local EXCLUSIVE_SET = {["W"]=true,["Dragon Cannelloni"]=true,["Spaghetti Tualetti"]=true,["Esok Sekolah"]=true,["Job Job Job Sahur"]=true,["Yess My Examen"]=true,["Lucky Kick"]=true,["Hippocopter"]=true,["Auto Grizzlioni"]=true,["Los Bombardinos"]=true,["Rocky"]=true,["Hat Tricky"]=true,["GOAT"]=true,["Bronze Block Medali"]=true,["Golden Block Cuppy"]=true,["Silver Block Cuppy"]=true,["Bronze Block Cuppy"]=true,["Golden Block Medali"]=true,["Silver Block Medali"]=true,["Stadoini"]=true,["Cone Cone Cone Sahur"]=true,["Ballberto"]=true,["Soccerdino"]=true,["Netini Goalini"]=true,["Orangutango Supremo"]=true,["Croakumber"]=true,["Lampuccio Raccoonelli"]=true,["Tuki Tuki Taco"]=true,["Professor Tigrellini"]=true,["Patagotitan"]=true,["Frigorex"]=true,["Velacoraptor"]=true,["Bicletairussaurus"]=true,["Jet Jet Raptoret"]=true,["Tricerabob"]=true,["Teacherrina"]=true,["Locko Blocko"]=true,["Scuolabus Giraffini"]=true,["Donutello"]=true,["Professor Penneroni"]=true,["Brain Mogger"]=true}
+local EX_WORDS = { "exclusive", "独家", "专属", "limited", "限定", "vip", "percent", "百分比", "幸运", "lucky", "%", "x2", "x5", "x10", "x20", "x50" }
+local SELLER_NAME = "Timmy"
+local SELLER_CF = CFrame.new(134.125, 0.125, 83.866) * CFrame.Angles(0, -1.5707963267948966, 0)
+local SellThread, WithdrawThread, CollectThread = nil, nil, nil
 local function isEntityTool(t)
 if not t or not t:IsA("Tool") then return false end
 local ok, ht = pcall(function() return t:HasTag("EntityTool") end)
 return ok and ht
 end
-local function getBrainrotCPS(tool)
+local function isExclusiveTool(t)
+if not t then return false end
+if EXCLUSIVE_SET[t.Name] then return true end
+local n = string.lower(t.Name)
+for i = 1, #EX_WORDS do
+if string.find(n, EX_WORDS[i], 1, true) then return true end
+end
+if t:GetAttribute("Exclusive") or t:GetAttribute("IsExclusive")
+or t:GetAttribute("Limited") or t:GetAttribute("IsLimited")
+or t:GetAttribute("Percent") or t:GetAttribute("Multiplier") then
+return true
+end
+return false
+end
+local function baseCPSOf(tool)
+if not tool then return nil end
 local base = CPS[tool.Name]
-if not base then
+if base then return base, "内置表" end
 local a = tool:GetAttribute("CPS") or tool:GetAttribute("BaseCPS")
-if typeof(a) == "number" then base = a else return nil end
+if typeof(a) == "number" then return a, "物品属性" end
+return nil
 end
-local lv = math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1), 1, 75)
+local function lvMul()
+local lm = tonumber(C.SellLvMul) or 1.25
+if lm <= 0 then lm = 1.25 end
+return lm
+end
+local function toolLevel(tool)
+return math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1), 1, 75)
+end
+local function cpsOf(tool)
+if not tool then return nil end
+local base = baseCPSOf(tool)
+if not base then return nil end
 local mut = tostring(tool:GetAttribute("Mutation") or "")
-return base * (MutBuff[mut] or 1) * ((C.SellLvMul or 1.25) ^ (lv - 1))
+return base * (MutBuff[mut] or 1) * (lvMul() ^ (toolLevel(tool) - 1))
 end
-local SellThread = nil
-local function sellLowCPSTools()
-if SellThread then return end
-SellThread = task.spawn(function()
-local total = 0
-for _ = 1, 200 do
-if not T.AutoSell then break end
-local picks = {}
+local function describe(tool)
+if not tool then return "?" end
+local base, src = baseCPSOf(tool)
+if not base then return "(不在内置表且无 CPS 属性 ⇒ 不卖)" end
+local mut = tostring(tool:GetAttribute("Mutation") or "")
+return string.format("基础%.0f(%s)·等级%d·词缀%s×%.2f·乘数%.2f^%d", base, src, toolLevel(tool),
+(mut == "" and "无" or mut), (MutBuff[mut] or 1), lvMul(), toolLevel(tool) - 1)
+end
+local function fmtNum(v)
+v = tonumber(v) or 0
+if v >= 1e12 then return string.format("%.2fT", v / 1e12) end
+if v >= 1e9 then return string.format("%.2fB", v / 1e9) end
+if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
+if v >= 1e3 then return string.format("%.1fK", v / 1e3) end
+return tostring(math.floor(v))
+end
+F.FmtNum = fmtNum
+function F.ParseCPS(s)
+if type(s) == "number" then return s end
+if type(s) ~= "string" then return nil end
+local t = string.lower(s):gsub("%s", "")
+if t == "" then return nil end
+local num, suf = t:match("^(%d+%.?%d*)([kmbtq]?)$")
+local n = tonumber(num)
+if not n then return nil end
+local m = 1
+if suf == "k" then m = 1e3
+elseif suf == "m" then m = 1e6
+elseif suf == "b" then m = 1e9
+elseif suf == "t" then m = 1e12
+elseif suf == "q" then m = 1e15 end
+return n * m
+end
+local function threshold()
+return tonumber(C.SellMinCPS) or 100000
+end
+local function collectLists()
+local picks, all = {}, {}
 local function scan(list)
 if not list then return end
 for _, t in ipairs(list:GetChildren()) do
 if t:IsA("Tool") and isEntityTool(t) then
-local cps = getBrainrotCPS(t)
-local th = tonumber(C.SellMinCPS) or 100000
-if cps and cps < th then picks[#picks + 1] = { Tool = t, CPS = cps } end
+local c = cpsOf(t)
+local ex = isExclusiveTool(t)
+all[#all + 1] = { Tool = t, Name = t.Name, CPS = c or 0, Ex = ex, Known = c ~= nil }
+if c and not ex then picks[#picks + 1] = { Tool = t, Name = t.Name, CPS = c } end
 end
 end
 end
 scan(LP.Character)
 scan(LP:FindFirstChild("Backpack"))
+table.sort(all, function(a, b) return a.CPS < b.CPS end)
 table.sort(picks, function(a, b) return a.CPS < b.CPS end)
-if #picks == 0 then break end
+return picks, all
+end
+local function findSeller()
+local npcs = workspace:FindFirstChild("NPCs")
+if not npcs then return nil end
+for _, o in ipairs(npcs:GetChildren()) do
+if o:IsA("Model") and (o.Name == SELLER_NAME or o:GetAttribute("Name") == SELLER_NAME) then return o end
+end
+for _, o in ipairs(npcs:GetDescendants()) do
+if o:IsA("Model") and (o.Name == SELLER_NAME or o:GetAttribute("Name") == SELLER_NAME) then return o end
+end
+return nil
+end
+local function moveToSeller()
+local _, _, root = GC()
+if not root then return false end
+local seller = findSeller()
+local part = seller and (seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart
+or seller:FindFirstChildWhichIsA("BasePart", true))
+if part then
+local target = part.Position
+local away = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
+if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
+local stand = Vector3.new(target.X, root.Position.Y, target.Z) + away.Unit * 4
+pcall(function()
+root.CFrame = CFrame.new(stand, Vector3.new(target.X, stand.Y, target.Z))
+root.AssemblyLinearVelocity = Vector3.zero
+end)
+else
+local rel = root.CFrame - root.CFrame.Position
+pcall(function()
+root.CFrame = SELLER_CF * rel
+root.AssemblyLinearVelocity = Vector3.zero
+end)
+end
+task.wait(0.2)
+return true
+end
+local function sellHeld()
 local rf = RFunction("B_Sell")
-for _, e in ipairs(picks) do
-if not T.AutoSell then break end
+if rf then
+local ok = pcall(function() return rf:InvokeServer() end)
+if ok then return true end
+end
+local re = REvent("B_Sell")
+if re then
+if pcall(function() re:FireServer() end) then return true end
+end
+F.Out("[售卖] 没找到 B_Sell 的 RemoteFunction / RemoteEvent")
+return false
+end
+function F.PreviewSell()
+task.spawn(function()
+local th = threshold()
+local _, all = collectLists()
+local nSell, nKeep, nUnknown = 0, 0, 0
+for _, e in ipairs(all) do
+if not e.Known then nUnknown = nUnknown + 1
+elseif e.Ex then nKeep = nKeep + 1
+elseif e.CPS < th then nSell = nSell + 1 end
+end
+F.Out(string.format("[预览] 手持+背包实体工具 %d 个 · 门槛 %s", #all, fmtNum(th)))
+F.Out(string.format("[预览] 会卖 %d · 限定/独家保留 %d · 无法估算(不卖) %d", nSell, nKeep, nUnknown))
+local shown = 0
+for _, e in ipairs(all) do
+if shown >= 15 then break end
+local tag = "保留(限定)"
+if not e.Known then tag = "不卖(算不出)"
+elseif not e.Ex and e.CPS < th then tag = "会卖" end
+F.Out(string.format("[预览]  %-10s %-24s CPS≈%-9s %s", tag, e.Name, fmtNum(e.CPS), describe(e.Tool)))
+shown = shown + 1
+end
+if #all == 0 then F.Out("[预览] 没找到实体工具(脑红)") end
+pcall(F.LogFlush, "售卖预览")
+end)
+end
+function F.SellLowCPS(force)
+if SellThread then F.Out("[售卖] 已在进行中") return end
+SellThread = task.spawn(function()
+local ok, err = pcall(function()
+local ch, hum, root = GC()
+if not (hum and root) then F.Out("[售卖] 无角色") return end
+local returnCF = root.CFrame
+local th = threshold()
+F.Out(string.format("[售卖] 开始 · 门槛 %s · 先走到%s身边", fmtNum(th), SELLER_NAME))
+moveToSeller()
+task.wait(0.3)
+local total, rounds, noProgress = 0, 0, 0
+while rounds < 60 do
+if not (force or T.AutoSell) then break end
+rounds = rounds + 1
+local picks = collectLists()
+if #picks == 0 then
+if rounds == 1 then F.Out(string.format("[售卖] 没有低于 %s 的脑红", fmtNum(th))) end
+break
+end
+F.Out(string.format("[售卖] 第 %d 轮 · 待卖 %d 个", rounds, #picks))
+local sold = 0
+for i = 1, #picks do
+if not (force or T.AutoSell) then break end
+local e = picks[i]
 local tool = e.Tool
-if tool and tool.Parent and rf then
-pcall(function() rf:InvokeServer() end)
+if tool and tool.Parent then
+pcall(function() hum:UnequipTools() end)
+task.wait(0.08)
+pcall(function() hum:EquipTool(tool) end)
+task.wait(0.2)
+if tool.Parent == ch then
+F.Out(string.format("[售卖]   %s CPS≈%s · %s", tool.Name, fmtNum(e.CPS), describe(tool)))
+local okf = sellHeld()
+task.wait(0.3)
+if okf and not tool.Parent then
+sold = sold + 1
 total = total + 1
 end
 end
-break
+task.wait(0.05)
 end
-SellThread = nil
-if total > 0 then T.AutoSell = false end
+end
+if sold == 0 then
+noProgress = noProgress + 1
+F.Out(string.format("[售卖] 第 %d 轮无进展 (%d/2)", rounds, noProgress))
+if noProgress >= 2 then break end
+task.wait(0.5)
+else
+noProgress = 0
+end
+local seller = findSeller()
+local _, _, r = GC()
+local part = seller and (seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart)
+if r and part and (r.Position - part.Position).Magnitude > 20 then
+moveToSeller()
+task.wait(0.25)
+end
+end
+pcall(function() hum:UnequipTools() end)
+F.Out(string.format("[售卖] 完成 · 共卖 %d 个 · 走了 %d 轮", total, rounds))
+if total > 0 and T.AutoSell then
+F._sellFinish = true
+T.AutoSell = false
+local op = Fluent and Fluent.Options and Fluent.Options.AutoSell
+if op and op.Value then pcall(function() op:Set(false) end) end
+F._sellFinish = nil
+F.Out("[售卖] 本轮已卖完 ⇒ 自动关闭「按 CPS 卖出」(要再卖请重新打开)")
+end
+local _, _, r2 = GC()
+if r2 then
+pcall(function()
+r2.CFrame = returnCF
+r2.AssemblyLinearVelocity = Vector3.zero
 end)
 end
-local WithdrawThread = nil
-local function withdrawAllBrainrots()
-if WithdrawThread then return end
+end)
+SellThread = nil
+if not ok then F.Out("[售卖] 出错: " .. tostring(err)) end
+end)
+end
+function F.WithdrawAll(maxSlot)
+if WithdrawThread then F.Out("[收起] 已在进行中") return end
 WithdrawThread = task.spawn(function()
-local _, hum = GC()
-if not hum then WithdrawThread = nil return end
-local placed = 0
-for slot = 1, 30 do
+local ok, err = pcall(function()
+local ch, hum = GC()
+if not (ch and hum) then F.Out("[收起] 无角色") return end
+maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
+pcall(function() hum:UnequipTools() end)
+task.wait(0.1)
+local done, failed = 0, 0
+for i = 1, maxSlot do
 local bp = LP:FindFirstChild("Backpack")
 local tool
 if bp then
@@ -5608,29 +5870,49 @@ for _, t in ipairs(bp:GetChildren()) do
 if isEntityTool(t) then tool = t break end
 end
 end
-if not tool then break end
+if not tool then
+F.Out(string.format("[收起] 背包已空(放到第 %d 槽)", i))
+break
+end
+pcall(function() hum:UnequipTools() end)
+task.wait(0.08)
 pcall(function() hum:EquipTool(tool) end)
 task.wait(0.2)
-if tool.Parent == LP.Character then
-Fire("S_Interact", slot)
-placed = placed + 1
+if tool.Parent == ch then
+if Fire("S_Interact", i) then done = done + 1 else failed = failed + 1 end
+else
+failed = failed + 1
+end
 task.wait(0.15)
+if i % 5 == 0 then F.Out(string.format("[收起] %d/%d", i, maxSlot)) end
 end
-end
+pcall(function() hum:UnequipTools() end)
+F.Out(string.format("[收起] 完成 · 成功 %d · 失败 %d", done, failed))
+pcall(F.LogFlush, "收起脑红")
+end)
 WithdrawThread = nil
+if not ok then F.Out("[收起] 出错: " .. tostring(err)) end
 end)
 end
-local CollectThread = nil
-local function collectAllCash()
+function F.CollectAll(maxSlot)
 if CollectThread then return end
 CollectThread = task.spawn(function()
-for i = 1, 30 do
-if not T.Collect then break end
-Fire("B_Collect", i)
-task.wait(0.03)
+local ok, err = pcall(function()
+maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
+local n = 0
+for i = 1, maxSlot do
+if T.Collect == false then break end
+if Fire("B_Collect", i) then n = n + 1 end
+task.wait(0.06)
 end
-CollectThread = nil
+T.Collect = false
+F.Out(string.format("[收钱] 完成 · 触发 %d 个槽位", n))
+pcall(F.LogFlush, "收钱")
 end)
+CollectThread = nil
+if not ok then F.Out("[收钱] 出错: " .. tostring(err)) end
+end)
+end
 end
 local Trans = {}
 Trans.HOST = "http://127.0.0.1:8080"
@@ -6050,7 +6332,7 @@ _h = math.clamp(math.floor(_vh * 0.86), 240, 600)
 end
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.6.0",
+SubTitle = "v10.7.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6238,6 +6520,28 @@ Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callb
 Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v) T.AutoBonus = v if v then F.AutoBonusEnable() end end })
 Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
 Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v) T.AutoGym = v if v then F.AutoGymEnable() end end })
+Tabs.AFK:AddSection("脑红 / 现金")
+Tabs.AFK:AddButton({ Title = "★ 一键收起脑红(全部槽位, 最多 30)", Callback = function() F.WithdrawAll(30) end })
+Tabs.AFK:AddButton({ Title = "一键收钱(全部槽位)", Callback = function() F.CollectAll(30) end })
+Tabs.AFK:AddButton({ Title = "预览: 会卖哪些(只读, 不动背包)", Callback = function() F.PreviewSell() end })
+Tabs.AFK:AddInput("SellMinCPSTxt", { Title = "卖出门槛(可写 80m / 500K / 数字)", Default = "100K",
+Placeholder = "低于它就卖掉", Callback = function(v)
+local n = F.ParseCPS(v)
+if n then
+C.SellMinCPS = n
+C.SellMinCPSTxt = v
+F.Out("[售卖] 门槛已设为 " .. F.FmtNum(n))
+elseif v ~= "" then
+Fluent:Notify({ Title = "门槛格式", Content = "认不出「" .. tostring(v) .. "」—— 请写 500K / 1.5m / 100000", Duration = 6 })
+end
+end })
+Tabs.AFK:AddSlider("SellLvMul", { Title = "等级乘数(估算 CPS 用, 1.25 = 每级 ×1.25)", Min = 1, Max = 2, Default = 1.25, Rounding = 2,
+Callback = function(v) C.SellLvMul = v end })
+Tabs.AFK:AddToggle("AutoSell", { Title = "按 CPS 卖出(走到蒂米身边卖 · 卖完自动关)", Default = false, Callback = function(v)
+T.AutoSell = v
+if F._cfgSyncing then return end
+if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已停止(当前这一轮会跑完)") end
+end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if v then
@@ -6403,7 +6707,7 @@ local _ls = (type(loadstring) == "function") and "有" or "无"
 local _wf = (type(writefile) == "function") and "有" or "无"
 Fluent:Notify({
 Title = "CheatMenu 已加载",
-Content = "已加载 v10.6.0 · " .. _plat .. " · 读脚本:" .. _ls .. " · 存档:" .. _wf
+Content = "已加载 v10.7.0 · " .. _plat .. " · 读脚本:" .. _ls .. " · 存档:" .. _wf
 .. " · 功能默认关(要哪个自己点)",
 Duration = 10,
 })
@@ -6418,7 +6722,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.6.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.7.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
