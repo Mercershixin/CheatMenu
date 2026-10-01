@@ -2730,3 +2730,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - 至此"拦服务端"四类齐全：①Kick 三路径 ②我角色的 Anchored/Health/PlatformStand（反拉回）③Transparency/HoldDuration（隐身/瞬交）
   ④搬运焊点被拆 ⇒ 重焊。位移类（CFrame/速度）仍交给"续跑 + 钉位"，不硬拦（避免自己打自己）。
 
+
+
+## 11.0.47：按不同游戏类型脚本学习：吸收 PreSimulation 时序 + 鼠标模拟防挂机
+
+- 驱动连接优先用 RS.PreSimulation(物理前, 不存在就退 Stepped)；防挂机模拟里加 SendMouseMoveEvent/mousemoverel(更像真人输入)；门禁白名单补 mousemoverel
+
