@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-01 13:49 sha 9f238681 bytes 256777'):format('2026-10-01 13:49','9f238681',256777))
+print(('[CheatMenu] build 2026-10-01 13:57 sha 0675f6c9 bytes 262642'):format('2026-10-01 13:57','0675f6c9',262642))
 local F = {}
 F._flyJumpConn = nil
 F._flyJumpAt = 0
@@ -82,7 +82,7 @@ if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
 end
-F.Out("[CheatMenu] ===== 加载开始 · v10.8.0 =====")
+F.Out("[CheatMenu] ===== 加载开始 · v10.9.0 =====")
 local Players  = game:GetService("Players")
 local RS       = game:GetService("RunService")
 local UIS      = game:GetService("UserInputService")
@@ -5769,6 +5769,7 @@ elseif suf == "q" then m = 1e15 end
 return n * m
 end
 local function threshold()
+if F._sellThOverride then return math.huge end
 return tonumber(C.SellMinCPS) or 100000
 end
 local function collectLists()
@@ -5872,7 +5873,8 @@ local ch, hum, root = GC()
 if not (hum and root) then F.Out("[售卖] 无角色") return end
 local returnCF = root.CFrame
 local th = threshold()
-F.Out(string.format("[售卖] 开始 · 门槛 %s · 先走到%s身边", fmtNum(th), SELLER_NAME))
+local thTxt = F._sellThOverride and "全部(除限定)" or fmtNum(th)
+F.Out(string.format("[售卖] 开始 · 门槛 %s · 先走到%s身边", thTxt, SELLER_NAME))
 moveToSeller()
 task.wait(0.3)
 local total, rounds, noProgress = 0, 0, 0
@@ -5881,7 +5883,7 @@ if not (force or T.AutoSell) then break end
 rounds = rounds + 1
 local picks = collectLists()
 if #picks == 0 then
-if rounds == 1 then F.Out(string.format("[售卖] 没有低于 %s 的脑红", fmtNum(th))) end
+if rounds == 1 then F.Out(string.format("[售卖] 没有低于 %s 的脑红", thTxt)) end
 break
 end
 F.Out(string.format("[售卖] 第 %d 轮 · 待卖 %d 个", rounds, #picks))
@@ -5942,6 +5944,7 @@ end)
 end
 end)
 SellThread = nil
+F._sellThOverride = nil
 if not ok then F.Out("[售卖] 出错: " .. tostring(err)) end
 end)
 end
@@ -6005,6 +6008,127 @@ end)
 CollectThread = nil
 if not ok then F.Out("[收钱] 出错: " .. tostring(err)) end
 end)
+end
+local SUFFIX = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15, qa = 1e15, qi = 1e18, sx = 1e21, sp = 1e24, no = 1e30, dc = 1e33 }
+function F.ParseNum(v)
+if typeof(v) == "number" then return v end
+if type(v) ~= "string" then return nil end
+local t = v:gsub(",", ""):gsub("%$", ""):gsub("%s", "")
+if t == "" then return nil end
+local sci = t:match("[-+]?[%d%.]+[eE][-+]?%d+")
+if sci then return tonumber(sci) end
+local n, suf = t:match("([-+]?[%d%.]+)([%a]*)")
+local base = tonumber(n)
+if not base then return nil end
+if suf and suf ~= "" then
+local m = SUFFIX[string.lower(suf)]
+if m then return base * m end
+end
+return base
+end
+function F.HudNum(...)
+local cur = LP:FindFirstChild("PlayerGui")
+for i = 1, select("#", ...) do
+if not cur then return nil, "路径断了" end
+cur = cur:FindFirstChild(select(i, ...))
+end
+if not cur then return nil, "没这个元素" end
+local s = nil
+pcall(function()
+if cur:IsA("TextLabel") or cur:IsA("TextButton") then s = cur.Text end
+end)
+if s == nil then return nil, "不是文本控件" end
+local num = F.ParseNum(s)
+if not num then return nil, "内容=" .. tostring(s) .. " 认不出数字" end
+return num, tostring(s)
+end
+function F.ReadBase()
+task.spawn(function()
+F.Out("──────── 基地数据(只读) ────────")
+local rows = {
+{ "金币", { "HUD", "BottomLeft", "CoinsFrame", "InsideFrame", "CoinLabel" } },
+{ "踢力", { "HUD", "BottomLeft", "KickLevel", "TextLabel" } },
+{ "精通", { "HUD", "BottomLeft", "KickMastery", "InsideFrame", "CoinLabel" } },
+{ "重生等级", { "Frames", "Rebirth", "RebirthLevel" } },
+}
+for i = 1, #rows do
+local v, note = F.HudNum(table.unpack(rows[i][2]))
+F.Out(string.format("  %-8s %s", rows[i][1],
+v and (fmtNum(v) .. "   (" .. tostring(note) .. ")") or ("读不到 —— " .. tostring(note))))
+end
+local sp, note = F.HudNum("Frames", "SpeedUpgrades", "ScrollingFrame", "+1 Speed", "NameLabel")
+if sp then
+F.Out(string.format("  %-8s %d   (原始 %s)", "速度等级", math.max(0, math.floor(sp - 13 + 0.5)), tostring(note)))
+else
+F.Out("  " .. string.format("%-8s", "速度等级") .. "读不到 —— " .. tostring(note) .. "(需先打开速度升级面板)")
+end
+local step = LP:GetAttribute("TutorialStep")
+F.Out("  " .. string.format("%-8s", "教程步") .. (step == nil and "(无此属性)" or tostring(step)))
+local _, all = collectLists()
+F.Out("  " .. string.format("%-8s", "实体工具") .. #all .. " 个(手持+背包)")
+F.Out("───────────────────────────────")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "基地数据", Content = "已读取, 明细见控制台 F9(只读, 没改动任何东西)", Duration = 10 })
+end
+pcall(F.LogFlush, "基地数据")
+end)
+end
+function F.UpgradeAdvice()
+task.spawn(function()
+local out = {}
+local function consider(tool, where)
+local base = baseCPSOf(tool)
+if not base then return end
+local lv = toolLevel(tool)
+if lv >= 75 then return end
+local mut = tostring(tool:GetAttribute("Mutation") or "")
+local mm = MutBuff[mut] or 1
+local cps = base * mm * (lvMul() ^ (lv - 1))
+local cost = math.floor(base * mm * (1.5 ^ (lv - 1)))
+if cost <= 0 then return end
+local gain = cps * 0.25
+out[#out + 1] = { Name = tool.Name, Where = where, Lv = lv, CPS = cps, Cost = cost,
+Gain = gain, ROI = gain / cost }
+end
+local ch = LP.Character
+local bp = LP:FindFirstChild("Backpack")
+if ch then
+for _, t in ipairs(ch:GetChildren()) do
+if t:IsA("Tool") and isEntityTool(t) then consider(t, "手持") end
+end
+end
+if bp then
+for _, t in ipairs(bp:GetChildren()) do
+if t:IsA("Tool") and isEntityTool(t) then consider(t, "背包") end
+end
+end
+table.sort(out, function(a, b) return a.ROI > b.ROI end)
+F.Out(string.format("──────── 升级性价比(可升级 %d 个) ────────", #out))
+for i = 1, math.min(#out, 10) do
+local e = out[i]
+F.Out(string.format("  %d) %s [%s] Lv%d · CPS≈%s · 一级花 %s 换 +%s · 性价比 %.5f",
+i, e.Name, e.Where, e.Lv, fmtNum(e.CPS), fmtNum(e.Cost), fmtNum(e.Gain), e.ROI))
+end
+local best = out[1]
+if best then
+local secs = (best.Gain > 0) and (best.Cost / best.Gain) or 0
+F.Out(string.format("  结论: 优先升「%s」—— 花 %s, 每秒多 %s, 约 %.0f 秒回本",
+best.Name, fmtNum(best.Cost), fmtNum(best.Gain), secs))
+else
+F.Out("  没有可升级对象(不在已知表里 或 都满级 75)")
+end
+F.Out("────────────────────────────────────")
+if Fluent and Fluent.Notify then
+Fluent:Notify({ Title = "升级性价比", Content = best and ("建议优先升「" .. best.Name .. "」(性价比 " .. string.format("%.5f", best.ROI) .. ")") or "没有可升级对象", Duration = 12 })
+end
+pcall(F.LogFlush, "升级性价比")
+end)
+end
+function F.SellAll()
+if SellThread then F.Out("[卖光] 正在售卖中, 稍后再试") return end
+F._sellThOverride = true
+F.Out("[卖光] 会把背包里能算出 CPS 的、非限定脑红全部卖掉")
+F.SellLowCPS(true)
 end
 end
 local Trans = {}
@@ -6422,7 +6546,7 @@ local _w = math.clamp(math.floor(_vw * 0.96), 240, _touch and 520 or 500)
 local _h = math.clamp(math.floor(_vh * 0.88), 240, _touch and 600 or 540)
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
-SubTitle = "v10.8.0",
+SubTitle = "v10.9.0",
 TabWidth = _touch and 66 or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
@@ -6613,7 +6737,25 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = fal
 Tabs.AFK:AddSection("脑红 / 现金")
 Tabs.AFK:AddButton({ Title = "★ 一键收起脑红(全部槽位, 最多 30)", Callback = function() F.WithdrawAll(30) end })
 Tabs.AFK:AddButton({ Title = "一键收钱(全部槽位)", Callback = function() F.CollectAll(30) end })
-Tabs.AFK:AddButton({ Title = "预览: 会卖哪些(只读, 不动背包)", Callback = function() F.PreviewSell() end })
+Tabs.AFK:AddDropdown("BaseView", { Title = "只读查看(选完自动复位, 不改动任何东西)", Values = {
+"关闭", "会卖哪些(除限定)", "基地数据(金币/踢力/精通/速度/重生)", "升级性价比(先升哪个最划算)",
+}, Default = "关闭", Callback = function(v)
+if v == "关闭" then return end
+task.spawn(function()
+if v == "会卖哪些(除限定)" then
+pcall(F.PreviewSell)
+elseif v == "基地数据(金币/踢力/精通/速度/重生)" then
+pcall(F.ReadBase)
+else
+pcall(F.UpgradeAdvice)
+end
+task.defer(function()
+local op = Fluent and Fluent.Options and Fluent.Options.BaseView
+if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
+end)
+end)
+end })
+Tabs.AFK:AddButton({ Title = "卖光(除限定/独家: 一次卖完可算出的脑红)", Callback = function() F.SellAll() end })
 Tabs.AFK:AddInput("SellMinCPSTxt", { Title = "卖出门槛(可写 80m / 500K / 数字)", Default = "100K",
 Placeholder = "低于它就卖掉", Callback = function(v)
 local n = F.ParseCPS(v)
@@ -6807,7 +6949,7 @@ _tip = " · ⚠ 本执行器缺 " .. (_hi == "无" and "hook三件套" or "")
 end
 Fluent:Notify({
 Title = "CheatMenu 已加载",
-Content = "已加载 v10.8.0 · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
+Content = "已加载 v10.9.0 · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
 .. " · 存档:" .. _wf .. _tip,
 Duration = 14,
 })
@@ -6822,7 +6964,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
-F.Out("[CheatMenu] ✅ 加载完成 v10.8.0")
+F.Out("[CheatMenu] ✅ 加载完成 v10.9.0")
 end
 function F.CloseDropdowns()
 if not (Fluent and Fluent.Options) then return end
