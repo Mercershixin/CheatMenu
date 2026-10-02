@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:58 sha 49de1cca bytes 301718'):format('2026-10-02 21:58','49de1cca',301718))
+print(('[CheatMenu] build 2026-10-02 22:02 sha 1662decf bytes 301720'):format('2026-10-02 22:02','1662decf',301720))
 local F = {}
-F.VERSION = "v12.0.1"
+F.VERSION = "v12.0.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7712,6 +7712,12 @@ T.CarryGuard = v
 if F._cfgSyncing or not changed then return end
 if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
 end })
+Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
+local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
+T.InstantInteract = v
+if F._cfgSyncing or not changed then return end
+if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
+end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
@@ -7827,12 +7833,6 @@ if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
-end })
-Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
-local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
-T.InstantInteract = v
-if F._cfgSyncing or not changed then return end
-if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
