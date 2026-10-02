@@ -2868,3 +2868,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 根因: 我们一共创建 5 个独立 ScreenGui(StatOverlay 状态悬浮窗 / CrosshairDot 准星 / CM_FovRing FOV环 / CMTouchToggle 触屏按钮 / MenuButton 菜单按钮), 但卸载时**只销毁了 CM_Window 和 Fluent.GUI 两个** ⇒ 其余浮窗残留; 热加载重复执行又叠加新的 ⇒ 屏幕上多份 UI. 修法: ① 给这 5 个 ScreenGui **打上 CMOwned 属性标记**; ② 新增 F.NukeAllGUIs(按 CMOwned 标记 + 名字白名单 CM_/CMTouchToggle/StatOverlay/CrosshairDot/MenuButton/Fluent 兜底清扫); ③ **卸载**末尾调用它(日志会写'兜底清掉 N 个残留浮窗'); ④ **加载时**(KillPreviousInstance 最开头)也调用一次 ⇒ 无论之前热加载过几次、哪怕旧实例都死了, 也能把屏幕上残留的 UI 扫干净
 
+
+
+## 11.5.4：蛋信息补强(认蛋名/标被持有) + 档位放回移动页 + 开加速自动升档(修'还有换位置')
+
+- ① 用户日志实证: 蛋容器已找到并扫到 24 个 AreaEgg_* 真蛋, 但'资产表确认 0 · 读到 kg 0' ⇒ 因为模型名是 AreaEgg_数字_数字, 名字里没有蛋名/没有重量. 补强: 新增 F.EggPetName 从**子对象 StringValue(含 name/display/pet/asset/category) + 子 Model 名 + 所有属性**里找'这是什么蛋', 找到就再查一次资产表(命中即给稀有度/掉落权重), 并显示在标签里; 另标记名字含 remote/carried/held 的为**'别人拿着'**(同族 heldByOther 同款); ② 用户反馈'绕过防护怎么合并到那里了' ⇒ 把「绕过/防护 档位」下拉**从反作弊页移回移动页**(加速区), 并把描述改成'加速/飞行不被拉回就靠它'; ③ 用户反馈'我移动开 怎么还有换位置' ⇒ 真因是他只开到档①(默认防挂机)没开反拉回 ⇒ 新增 F.BypassAutoRaise: **开加速或飞行时, 若档位低于②自动升到②**(反拉回+伪装)并同步界面与日志
+
