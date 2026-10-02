@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:29 sha 84ad6f37 bytes 302298'):format('2026-10-02 22:29','84ad6f37',302298))
+print(('[CheatMenu] build 2026-10-02 22:35 sha b2dcddc3 bytes 302343'):format('2026-10-02 22:35','b2dcddc3',302343))
 local F = {}
-F.VERSION = "v12.0.7"
+F.VERSION = "v12.0.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2407,19 +2407,19 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
-if (m == "FireServer" or m == "InvokeServer") and T.TrapWarn then
+if (m == "FireServer" or m == "InvokeServer") and (T.TrapWarn or T.GuardOn) then
 local isInst0 = false
 pcall(function() isInst0 = (typeof(self) == "Instance") end)
 if isInst0 then
 local nm0 = ""
 pcall(function() nm0 = self.Name end)
 if type(nm0) == "string" and nm0 ~= "" then
-if string.find(nm0, "trap", 1, true) or string.find(nm0, "snare", 1, true)
-or string.find(nm0, "cage", 1, true) or string.find(nm0, "catch", 1, true)
-or string.find(nm0, "stun", 1, true) or string.find(nm0, "rats", 1, true)
-or string.find(nm0, "mousetrap", 1, true) or string.find(nm0, "beartrap", 1, true) then
+local low0 = string.lower(nm0)
+for _, kk in ipairs(F.BLOCK_REMOTE_KEYS) do
+if string.find(low0, kk, 1, true) then
 KG.blocked9 = (KG.blocked9 or 0) + 1
 return nil
+end
 end
 end
 end
@@ -2630,7 +2630,8 @@ end
 local n9 = KG.blocked9 or 0
 if n9 ~= (KG.lastBlock9 or 0) then
 KG.lastBlock9 = n9
-F.Out("[反陷阱] 已拦下陷阱触发上报 ×" .. tostring(n9) .. " (踩上去游戏想上报'我被夹了', 被挡掉 ⇒ 服务端收不到就不夹你)")
+F.Out("[拦触发] 已拦下 陷阱/守卫/抓捕 的触发上报 ×" .. tostring(n9)
+.. " (游戏想上报'我被夹/被抓了', 被挡掉 ⇒ 服务端收不到就不会处理你)")
 end
 local n8 = KG.blocked8 or 0
 if n8 ~= (KG.lastBlock8 or 0) then
@@ -3511,6 +3512,10 @@ end
 if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
+F.BLOCK_REMOTE_KEYS = {
+"trap", "snare", "cage", "catch", "caught", "stun", "rats", "mousetrap", "beartrap",
+"guard", "security", "arrest", "jail", "alert", "detect", "wanted", "handcuff", "escort",
+}
 F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
 "net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt",
 "mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise" }
