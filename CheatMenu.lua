@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:11 sha 95d9b6a1 bytes 332238'):format('2026-10-02 21:11','95d9b6a1',332238))
+print(('[CheatMenu] build 2026-10-02 21:21 sha c75535d4 bytes 332538'):format('2026-10-02 21:21','c75535d4',332538))
 local F = {}
-F.VERSION = "v11.7.12"
+F.VERSION = "v11.7.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3522,7 +3522,7 @@ F._selfTouchBak = F._selfTouchBak or nil
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
-if now - (F._trapAt or 0) < 0.25 then return end
+if now - (F._trapAt or 0) < 0.7 then return end
 F._trapAt = now
 local _, _, root = GC()
 if not root then return end
@@ -3531,7 +3531,7 @@ pcall(function()
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
 if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
-for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 45, op)) do
+for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 22, op)) do
 local nm = tostring(pt.Name):lower()
 local isTrap = false
 for _, k in ipairs(F.TRAP_KEYS) do
@@ -4039,7 +4039,7 @@ local function eggTP(cf)
 local _, _, r = GC()
 if not r or not cf then return end
 if F.DropIntent then pcall(F.DropIntent) end
-if F.TPResist then pcall(F.TPResist, cf, 2.0) end
+if F.TPResist then pcall(F.TPResist, cf, 1.0) end
 pcall(function() r:PivotTo(cf) end)
 pcall(function()
 r.AssemblyLinearVelocity = Vector3.zero
@@ -5514,7 +5514,7 @@ end
 end
 F.TPResist = function(cf, secs)
 if not cf then return end
-F._tpTarget = { cf = cf, deadline = os.clock() + (secs or 2.5), last = 0 }
+F._tpTarget = { cf = cf, deadline = os.clock() + math.min(secs or 1.2, 1.2), last = 0 }
 if F._tpResistConn then return end
 F._tpResistConn = RS.Heartbeat:Connect(function()
 local t = F._tpTarget
@@ -5524,11 +5524,20 @@ if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tp
 return
 end
 local now = os.clock()
-if now - (t.last or 0) < 0.12 then return end
+if now - (t.last or 0) < 0.15 then return end
 t.last = now
-local _, _, r = GC()
+local _, hum4, r = GC()
 if not r then return end
-if (r.Position - t.cf.Position).Magnitude > 3 then
+local moving = false
+pcall(function()
+if hum4 and hum4.MoveDirection.Magnitude > 0.12 then moving = true end
+end)
+if moving then
+F._tpTarget = nil
+if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tpResistConn = nil end
+return
+end
+if (r.Position - t.cf.Position).Magnitude > 8 then
 pcall(function() r:PivotTo(t.cf) end)
 pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
 F._tpResistHits = (F._tpResistHits or 0) + 1
@@ -5541,7 +5550,7 @@ if not root or not targetCF then return end
 if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
-if F.TPResist then pcall(F.TPResist, targetCF, 2.5) end
+if F.TPResist then pcall(F.TPResist, targetCF, 1.2) end
 end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
@@ -5732,7 +5741,7 @@ pcall(function()
 local _, _, r2 = GC()
 if r2 then ok = (r2.Position - pos).Magnitude < 6 end
 end)
-F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]2.5秒(不需要开加速)",
+F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]1.2秒(不需要开加速; 你一走动就自动停)",
 tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
 if not ok then
 F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
