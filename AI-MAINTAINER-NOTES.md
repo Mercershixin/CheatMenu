@@ -2934,3 +2934,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 审计方法: 按 15 个功能组(自瞄/自动攻击/加速/飞行/传送/搬运偷蛋/瞬间交互/防护/反拉回/防挂机防踢/隐身伪装/视觉/HUD/翻译/挂机自动化)统计各自用到的事件, 再与同族/通用脚本对照. 结论: 20 类事件里我们已覆盖 19 类(Heartbeat 25/CharacterAdded 12/DescendantAdded 9/属性信号 7/RenderStepped 6/Stepped 5/Idled 5/OnClientEvent 4/Input 4/ChildAdded 3/StateChanged 2/PreSimulation 2/Died 1/HealthChanged 1/PromptTriggered 1...), **唯一明显该用事件却在轮询的是翻译**: Trans.Scan 原本**每秒遍历 PlayerGui+CoreGui+gethui 全部后代** + workspace 顶层 prompts ⇒ 改成 **Trans.WatchOn 事件驱动**: ① 三个 UI 根的 DescendantAdded(新元素立刻翻译) ② 每个文本元素挂 GetPropertyChangedSignal('Text')(文字变化即时翻译, 只挂一次) ③ 兜底全扫由每秒放宽到 15 秒; 关闭时 Trans.WatchOff 断开全部. 另外确认 HUD 的 RenderStepped 是必要的(FPS 统计天然要每帧), 挂机自动化的 while+T.wait 循环合理
 
+
+
+## 11.8.2：继续查其他事件: 补 3 个有价值的(MoveToFinished / CollectionService tag / TeleportInitFailed)
+
+- 对照 Roblox 常用事件清单逐个查'我们有没有用': 21 个候选里 12 个已用, 9 个未用 —— 其中 3 个有价值已补, 6 个价值低不加(PostSimulation/PreRender/PreAnimation/Seated/Touched/Chated/相机信号/Instance.Changed). 补的三个: ① **Humanoid.MoveToFinished** ⇒ '走过去拿'的到达判定改用事件(比纯距离判定准, MoveTo 停下即触发), 结束时断开; ② **CollectionService tag**: 游戏常用 tag 标记对象 ⇒ 蛋容器探测补 Egg/Brainrot/PetEgg/eggSpawn 等 tag, 守卫扫描补 Guard/NPC/Security tag(现代游戏常把守卫打成 tag, 靠名字找不到); ③ **TeleportService.TeleportInitFailed** ⇒ '重新进入服务器'失败时给出原因(否则用户以为点了没反应), 20 秒后自动断开
+
