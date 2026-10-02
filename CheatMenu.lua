@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:02 sha 1662decf bytes 301720'):format('2026-10-02 22:02','1662decf',301720))
+print(('[CheatMenu] build 2026-10-02 22:05 sha fe980c5d bytes 300983'):format('2026-10-02 22:05','fe980c5d',300983))
 local F = {}
-F.VERSION = "v12.0.2"
+F.VERSION = "v12.0.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4453,39 +4453,13 @@ F._flyDisabledInfJump = true
 end
 local _, hum, root = GC()
 if not (hum and root) then return end
-F.Out("[飞行] 已开: 速度只看「飞行速度」滑块 · 与加速完全独立(加速在飞行时不参与)")
+F.Out("[飞行] 已开: **速度驱动**(LinearVelocity) —— 前后左右/上下都按「飞行速度」滑块, 与加速完全独立")
 pcall(function() hum.PlatformStand = true end)
 if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
 F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
 if T.FlyOn then F._flyJumpAt = os.clock() end
 end)
-local okAlign = pcall(function()
-local att = Instance.new("Attachment")
-att.Name = "RootTilt"
-att.Parent = root
-local ap = Instance.new("AlignPosition")
-ap.Attachment0 = att
-ap.Mode = Enum.PositionAlignmentMode.OneAttachment
-ap.MaxForce = 1e9
-ap.Responsiveness = 40
-ap.Position = root.Position
-pcall(function() ap.RigidityEnabled = true end)
-ap.Parent = root
-local ao = Instance.new("AlignOrientation")
-ao.Attachment0 = att
-ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
-ao.MaxTorque = 1e9
-ao.Responsiveness = 40
-ao.CFrame = root.CFrame
-ao.Parent = root
-F._flyAtt, F._flyAp, F._flyAo = att, ap, ao
-end)
-if not okAlign then
-for _, k in ipairs({ "_flyAtt", "_flyAp", "_flyAo" }) do
-local obj = F[k]
-if obj then pcall(function() obj:Destroy() end) F[k] = nil end
-end
-pcall(function()
+local okDrive = pcall(function()
 local att2 = Instance.new("Attachment")
 att2.Name = "CMFlyAtt"
 att2.Parent = root
@@ -4494,15 +4468,18 @@ bv.Attachment0 = att2
 bv.MaxForce = 1e9
 bv.VectorVelocity = Vector3.zero
 bv.Parent = root
-F._flyBvAtt = att2
-local bg = Instance.new("AlignOrientation")
-bg.Mode = Enum.OrientationAlignmentMode.OneAttachment
-bg.Attachment0 = att2
-bg.MaxTorque = 1e9
-bg.Responsiveness = 60
-bg.RigidityEnabled = true
-bg.Parent = root
-F._flyBv, F._flyBg = bv, bg
+F._flyBvAtt, F._flyBv = att2, bv
+end)
+if not okDrive then
+pcall(function()
+local att3 = Instance.new("Attachment")
+att3.Name = "CMFlyAttOld"
+att3.Parent = root
+local bv2 = Instance.new("BodyVelocity")
+bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+bv2.Velocity = Vector3.zero
+bv2.Parent = root
+F._flyBvAtt, F._flyBv = att3, bv2
 end)
 end
 F._flyConn = F.DriveConnect(function(dt)
@@ -4547,15 +4524,18 @@ dir = dir + Vector3.new(0, 1, 0)
 end
 local fsp = tonumber(C.FlyValue) or 60
 local vel = dir.Magnitude > 0 and (dir.Unit * fsp) or Vector3.zero
-if F._flyAp then
-local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
-F._flyAp.Position = r.Position + vel * step
-F._flyAo.CFrame = c.CFrame
-if vel.Magnitude < 0.01 then pcall(function() r.AssemblyLinearVelocity = Vector3.zero end) end
-if vel.Magnitude > 0.01 then F.SpeedProbe(r, "飞行", fsp, step, true) end
-elseif F._flyBv then
+if F._flyBv then
+if F._flyBv:IsA("LinearVelocity") then
 pcall(function() F._flyBv.VectorVelocity = vel end)
-pcall(function() F._flyBg.CFrame = c.CFrame end)
+else
+pcall(function() F._flyBv.Velocity = vel end)
+end
+end
+if vel.Magnitude < 0.01 then
+pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
+else
+local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
+F.SpeedProbe(r, "飞行", fsp, step, true)
 end
 end)
 end
