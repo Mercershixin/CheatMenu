@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:45 sha 2a7164e7 bytes 303639'):format('2026-10-02 22:45','2a7164e7',303639))
+print(('[CheatMenu] build 2026-10-02 22:50 sha 1edb4f69 bytes 305957'):format('2026-10-02 22:50','1edb4f69',305957))
 local F = {}
-F.VERSION = "v12.0.9"
+F.VERSION = "v12.0.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3541,11 +3541,77 @@ F.BLOCK_REMOTE_KEYS = {
 "trap", "snare", "cage", "catch", "caught", "stun", "rats", "mousetrap", "beartrap",
 "guard", "security", "arrest", "jail", "alert", "detect", "wanted", "handcuff", "escort",
 }
+F.TRAP_TAGS = { "PlayerTrap", "Trap", "PlayerTraps", "GuardTrap", "TrapPart", "BearTrap", "ActiveTrap" }
+F.TrapKillTouch = function(part)
+if not part or typeof(part) ~= "Instance" then return false end
+F._trapTouchKilled = F._trapTouchKilled or {}
+if F._trapTouchKilled[part] then return false end
+local ti = nil
+pcall(function() ti = part:FindFirstChild("TouchInterest", true) end)
+if not ti then
+pcall(function() ti = part:FindFirstChildWhichIsA("TouchTransmitter", true) end)
+end
+if not ti then return false end
+local ok = pcall(function() ti:Destroy() end)
+if ok then
+F._trapTouchKilled[part] = true
+F._trapTouchCount = (F._trapTouchCount or 0) + 1
+local now = os.clock()
+if now - (F._trapTouchLog or 0) > 3 then
+F._trapTouchLog = now
+F.Out("[反陷阱] 已解除 " .. tostring(F._trapTouchCount) .. " 个陷阱的触碰(销毁 TouchInterest)"
+.. " ⇒ 这个陷阱踩上去不会再触发(公开作品同款做法)")
+end
+return true
+end
+return false
+end
+F.TrapFromTags = function()
+local out = {}
+pcall(function()
+local CS = game:GetService("CollectionService")
+for _, tg in ipairs(F.TRAP_TAGS) do
+for _, inst in ipairs(CS:GetTagged(tg)) do
+if inst and inst.Parent then out[#out + 1] = inst end
+for _, d in ipairs(inst:GetDescendants()) do
+if d:IsA("BasePart") then out[#out + 1] = d end
+end
+end
+end
+end)
+return out
+end
+F.TrapTagWatch = function(on)
+if on then
+if F._trapTagWatch then return end
+F._trapTagWatch = {}
+pcall(function()
+local CS = game:GetService("CollectionService")
+for _, tg in ipairs(F.TRAP_TAGS) do
+F._trapTagWatch[#F._trapTagWatch + 1] = CS:GetInstanceAddedSignal(tg):Connect(function(inst)
+if not T.TrapWarn then return end
+task.defer(function()
+pcall(function() F.TrapKillTouch(inst) end)
+pcall(function()
+for _, d in ipairs(inst:GetDescendants()) do
+if d:IsA("BasePart") then F.TrapKillTouch(d) end
+end
+end)
+end)
+end)
+end
+end)
+elseif F._trapTagWatch then
+for _, c in ipairs(F._trapTagWatch) do pcall(function() c:Disconnect() end) end
+F._trapTagWatch = nil
+end
+end
 F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
 "net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt",
 "mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise" }
 F._trapConn = nil
 function F.TrapGuardDisable()
+pcall(F.TrapTagWatch, false)
 if F._trapConnOff then
 local back = 0
 for _, list in pairs(F._trapConnOff) do
@@ -3577,6 +3643,7 @@ F._trapAt = 0
 F._trapBak = F._trapBak or {}
 F._selfTouchBak = F._selfTouchBak or nil
 F._trapConnOff = F._trapConnOff or {}
+pcall(F.TrapTagWatch, true)
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
@@ -3605,6 +3672,7 @@ F._trapBak[pt] = { touch = pt.CanTouch }
 pt.CanTouch = false
 end)
 end
+pcall(function() F.TrapKillTouch(pt) end)
 if not F._trapConnOff[pt] then
 F._trapConnOff[pt] = {}
 pcall(function()
@@ -3659,9 +3727,10 @@ end
 end
 end
 end)
-F.Out("[反陷阱] 已开: "
-.. "① 拦下陷阱触发上报(客户端→服务端的 FireServer) ② 断掉陷阱自己的 Touched 回调 "
-.. "③ 靠近时临时关你身体的「可触碰」; 另外踩进范围(6格内)会把你挪出 22 格做兜底")
+F.Out("[反陷阱] 已开(核心=解除触碰): "
+.. "① **销毁陷阱的 TouchInterest(踩上去不触发的真正解法, 公开作品同款)** "
+.. "② 按 tag(PlayerTrap 等)精确识别新陷阱 ③ 拦陷阱触发上报 ④ 断陷阱 Touched 回调 "
+.. "⑤ 靠近时关你身体的「可触碰」; 兜底: 踩进 8 格内把你挪出 24 格")
 end
 elseif F._selfTouchBak then
 for p2, orig in pairs(F._selfTouchBak) do
@@ -3670,6 +3739,11 @@ end
 F._selfTouchBak = nil
 F.Out("[陷阱] 已远离陷阱 ⇒ 身体「可触碰」已还原")
 end
+pcall(function()
+for _, tgPart in ipairs(F.TrapFromTags()) do
+if tgPart:IsA("BasePart") then F.TrapKillTouch(tgPart) end
+end
+end)
 if hits > 0 and now - (F._trapLogAt or 0) > 5 then
 F._trapLogAt = now
 F._trapHits = (F._trapHits or 0) + hits
