@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 20:45 sha 92a06f83 bytes 328310'):format('2026-10-02 20:45','92a06f83',328310))
+print(('[CheatMenu] build 2026-10-02 20:52 sha 9bfd3f66 bytes 328310'):format('2026-10-02 20:52','9bfd3f66',328310))
 local F = {}
-F.VERSION = "v11.7.7"
+F.VERSION = "v11.7.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4266,14 +4266,14 @@ F._eggWatch = {}
 local function hook(box)
 pcall(function()
 F._eggWatch[#F._eggWatch + 1] = box.ChildAdded:Connect(function()
-if os.clock() - (F._eggRescanAt or 0) < 2 then return end
+if os.clock() - (F._eggRescanAt or 0) < 4 then return end
 F._eggRescanAt = os.clock()
 task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
 end)
 end)
 pcall(function()
 F._eggWatch[#F._eggWatch + 1] = box.ChildRemoved:Connect(function()
-if os.clock() - (F._eggRescanAt or 0) < 2 then return end
+if os.clock() - (F._eggRescanAt or 0) < 4 then return end
 F._eggRescanAt = os.clock()
 task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
 end)
