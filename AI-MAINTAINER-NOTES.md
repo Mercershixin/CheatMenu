@@ -3000,3 +3000,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① **删除偷蛋整套**(用户: 包括代码也删了): 函数 19 个(EggScanMap/EggLabels/EggSortNow/EggScanAndFill/EggAssetIndex/EggContainers/EggOwnerOf/EggWeight/EggPetName/EggTextBlob/EggIdxLookup/EggRescanQuiet/EggAutoWatchOn·Off/CleanName/WalkTapPrompt/PromptNear/EggRemoteSteal/EggWalkTo/EggGo) + 常量 8 组(EGG_KEY/BAD/TIER/BOX/SKIPBOX/NAME_SKIP/MUT/SORT_NAME) + 整个『偷蛋(扫描→排序→自选→远程拿)』UI 节 + 变量 _eggs/_eggPick/_eggIdx; 净减 26.6KB; **保留**: 搬运守卫(EggLock/EggGuardTick 仍在用)、瞬间交互、防陷阱(在防护档位里)、安全区; ② **新增『自动拿(一键)』**: FindNearestLoot(名字含 egg/brainrot 的最近模型) + TapNearby(fireproximityprompt→InputHold 兜底) + AutoStealOne(**传过去→触发交互→检查是否拿到→立刻回安全区**, 日志与弹窗报'✅拿到了/⚠没拿到') + 循环开关(间隔可调) + 设安全区/回安全区按钮; ③ **加速防穿墙**(用户: 太快会穿墙但不要影响正常加速): 加速循环里向前射线探测(长度=速度×0.16), **有障碍就把速度临时压到 dist×11**(空旷地全速, 只在快撞墙时压一下, 过了自动恢复), 开关默认开可关; ④ 自杀按钮移到**系统页**; ⑤ 守卫规避开关从被删的偷蛋节挪到自动拿节; ⑥ 顺带修: 发现并删掉重复的瞬间交互开关(重建 UI 节时多写了一个)
 
+
+
+## 11.9.1：修'飞行没速度'(我上版把走路速度置0) + 传送顶住加长(不用开加速) + 再压移动抖动
+
+- ① **飞行没速度 = 我上一版改坏的**: 11.7.9 为了'飞行速度独立'把飞行期间 WalkSpeed 置 0 ⇒ 一旦飞行推进力(AlignPosition/BodyVelocity)异常就没任何速度 ⇒ **撤销这个改动**(PlatformStand 本来就禁止走动, 置 0 是多余的), 保留'加速在飞行时不执行'(SpeedApply 里 if T.FlyOn then return) ⇒ 飞行速度仍只看飞行滑块, 且不会因为置 0 而完全飞不动; ② **点位/玩家传送仍需开加速 = 顶住时间太短**: TPResist 原来只顶 1.2 秒且 0.15 秒才检测一次 → 服务端拉回稍晚就顶不住 ⇒ 改成 **顶住 4 秒 + 0.06 秒检测一次**, 仍是**一检测到你主动移动就立刻放手**(所以不会造成走路卡顿); ③ **移动抖动再压**: 稳身原来**每帧**都调 SteadyStates(设 6 个 Humanoid 状态) ⇒ 改成**只在角色变化或每 5 秒复查时**才设一次; ④ 日志文案同步'已自带[顶住]4秒(不需要开加速 · 你一走动立刻放手)'
+
