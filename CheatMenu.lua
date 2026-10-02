@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:57 sha 1627b7f4 bytes 317193'):format('2026-10-02 18:57','1627b7f4',317193))
+print(('[CheatMenu] build 2026-10-02 19:05 sha de897e55 bytes 317790'):format('2026-10-02 19:05','de897e55',317790))
 local F = {}
-F.VERSION = "v11.6.0"
+F.VERSION = "v11.6.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4516,6 +4516,8 @@ return nil
 end
 local _, _, root = GC()
 if not root then return nil end
+F._walkTgt = nil
+if F.DropIntent then pcall(F.DropIntent) end
 pcall(F.SrvOwnTake, false)
 eggTP(e.part.CFrame + Vector3.new(0, extraY or 3, 0))
 return e
@@ -4626,15 +4628,33 @@ local best, bd = nil, 1e9
 local _, _, root = GC()
 if not root then return nil end
 local rp = root.Position
+local seen = 0
 pcall(function()
 for _, o in ipairs(workspace:GetChildren()) do
 local nm = string.lower(tostring(o.Name))
+local matchSelf = false
 for _, w in ipairs(F.GUARD_WORDS) do
-if string.find(nm, w, 1, true) then
-local p = o.PrimaryPart or (o:IsA("Model") and o:FindFirstChildWhichIsA("BasePart")) or nil
+if string.find(nm, w, 1, true) then matchSelf = true break end
+end
+local cands = nil
+if matchSelf then
+cands = { o }
+else
+cands = o:GetChildren()
+end
+for _, o2 in ipairs(cands) do
+seen = seen + 1
+if seen > 4000 then break end
+local nm2 = string.lower(tostring(o2.Name))
+for _, w in ipairs(F.GUARD_WORDS) do
+if string.find(nm2, w, 1, true) then
+local p = o2.PrimaryPart
+or (o2:IsA("Model") and o2:FindFirstChildWhichIsA("BasePart")) or nil
 if p then
 local d = (p.Position - rp).Magnitude
 if d < bd then bd, best = d, p end
+end
+break
 end
 end
 end
@@ -8701,6 +8721,12 @@ end
 addToggleButton(Window)
 startTogglePolish()
 end
+pcall(function()
+if F.NukeAllGUIs then
+local k = F.NukeAllGUIs(false)
+if k > 0 then F.Out("[清理] 建界面前已清掉 " .. tostring(k) .. " 个残留界面") end
+end
+end)
 F._cfgSyncing = true
 local okBuild = pcall(buildMenu)
 F._cfgSyncing = false
