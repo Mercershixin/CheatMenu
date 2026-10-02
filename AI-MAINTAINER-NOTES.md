@@ -2826,3 +2826,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 移动页新增「★ 一键配置: 速度/飞行 不被拉回」—— 点一下自动开好 反拉回+伪装+防挂机 三样(并同步界面开关状态), 日志告诉你还差什么; ② 偷蛋区新增排序下拉: 最重(kg)/最贵(价值)/稀有度/距离最近/按区域(展台)/自己看 —— 扫描后按所选重排并刷新下拉, 按区域时条目前面带 @展台名; ③ 时效核查: 16 个手法来源里**只有 5 个**是近 1 个月内有更新的(matpatz/Roblox 10-01、aquisisback-alt/lib 09-20、Yuji-source/Vd-autofarm 09-29、project-hades 09-28、havoc-hub 10-01), 其余是半年前~2 年前的成熟仓库 —— 真正的新手法(安全点回滚/防挂机连接清理)恰好来自这 5 个里的 3 个
 
+
+
+## 11.4.3：蛋搜索修误报(164 个里全是门/围栏/标记) + 抄同族的 AssetCategory 识别
+
+- 用户日志实证: 扫到 164 个'蛋'其实是 StarterPen/Gate/ToUpdate/4/5 这类地图物件, 且 kg 全是 0.0 —— 两个根因: (a) 我上版放宽成'在 base/plot 容器里就算蛋' ⇒ 把基地物件全算进去了; (b) 重量探测把名字含 'value' 的 NumberValue 也当重量 ⇒ 读到 0. 修法: ① 识别改成**同族做法: 读模型属性 /, 能在游戏资产表里查到的才算蛋**(最可靠); 退化为'名字命中关键词 且 不在黑名单' 或 '有正的 kg'; ② 加非蛋黑名单(pen/gate/door/wall/floor/spawn/sign/frame/tounpdate…); ③ 重量只认 weight/mass/kg 且必须 > 0; ④ 排序只把 kg>0 的排前; ⑤ 日志改报'资产表确认 N 个 · 读到 kg M 个'便于判断准确度
+
