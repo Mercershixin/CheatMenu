@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 02:02 sha f0988e7e bytes 289803'):format('2026-10-02 02:02','f0988e7e',289803))
+print(('[CheatMenu] build 2026-10-02 08:42 sha 92911b6e bytes 290048'):format('2026-10-02 08:42','92911b6e',290048))
 local F = {}
-F.VERSION = "v11.0.50"
+F.VERSION = "v11.0.51"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2310,11 +2310,17 @@ end
 end
 neuter("kick", function() return task.wait(9e9) end)
 neuter("randomDelayKick", function() return task.wait(9e9) end)
-neuter("Kill", function() return end)
-neuter("Detected", function() return false end)
 neuter("lagback", function() return end)
 neuter("punish", function() return end)
-neuter("flag", function() return end)
+local hasD, hasK = nil, nil
+pcall(function()
+hasD = rawget(v, "Detected")
+hasK = rawget(v, "Kill")
+end)
+if type(hasD) == "function" and type(hasK) == "function" then
+neuter("Detected", function() return false end)
+neuter("Kill", function() return end)
+end
 local bmv = nil
 pcall(function() bmv = rawget(v, "getIsBodyMoverCreatedByGame") end)
 if type(bmv) == "function" then
@@ -2328,7 +2334,6 @@ end
 end
 end
 end)
-F._gcSwept = n
 if n > 0 then
 F.Out("[防踢] getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
 .. " (含「这个物理约束是游戏自己加的」这类判定)")
@@ -2395,6 +2400,9 @@ end)
 end
 if type(oldNIX) == "function" then
 mt.__newindex = wrap(function(self, key, v)
+local exec2 = false
+pcall(function() exec2 = (type(checkcaller) == "function") and checkcaller() end)
+if exec2 then return oldNIX(self, key, v) end
 if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
@@ -4223,7 +4231,6 @@ end
 function F.BypassDisable()
 if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
 F._bypassOwnAt = nil
-F._spdLastPos = nil
 if F._bypassAtp then
 F._bypassAtp = nil
 pcall(F.SpeedAntiTPDisable)
