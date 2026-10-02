@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:14 sha 69ed5982 bytes 303724'):format('2026-10-02 18:14','69ed5982',303724))
+print(('[CheatMenu] build 2026-10-02 18:19 sha 8e164eda bytes 305094'):format('2026-10-02 18:19','8e164eda',305094))
 local F = {}
-F.VERSION = "v11.4.4"
+F.VERSION = "v11.4.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4042,9 +4042,60 @@ F._eggIdx = idx or false
 if idx then F.Out("[偷蛋] 已读到游戏自己的资产表(按稀有度等级排序, 比体积猜测准)") end
 return F._eggIdx or nil
 end
+F.EggTextBlob = function(inst)
+local t = { tostring(inst.Name) }
+pcall(function()
+local q = inst.Parent
+for _ = 1, 3 do
+if not q or q == workspace then break end
+t[#t + 1] = tostring(q.Name)
+q = q.Parent
+end
+end)
+pcall(function()
+for _, d in ipairs(inst:GetDescendants()) do
+if d:IsA("BasePart") then t[#t + 1] = tostring(d.Name) end
+local ok, attrs = pcall(function() return d:GetAttributes() end)
+if ok and type(attrs) == "table" then
+for k, v in pairs(attrs) do t[#t + 1] = tostring(k) .. "=" .. tostring(v) end
+end
+end
+end)
+return string.lower(table.concat(t, " | "))
+end
+F.EGG_MUT = { "spirit bloom", "rainbow", "golden", "bloom", "silver", "shiny" }
+F.EggIdxLookup = function(name)
+local idx = F._eggIdx
+if type(idx) ~= "table" then return nil end
+local k = string.lower(tostring(name or ""))
+k = string.gsub(k, "^%s+", "")
+if k == "" then return nil end
+if idx[k] then return idx[k], "精确" end
+for _, mu in ipairs(F.EGG_MUT) do
+local stripped = string.gsub(k, mu, "")
+stripped = string.gsub(stripped, "^%s+", "")
+stripped = string.gsub(stripped, "%s+$", "")
+if stripped ~= "" and idx[stripped] then return idx[stripped], "去变体" end
+end
+if #k >= 4 then
+for key, v in pairs(idx) do
+if #key >= 4 and string.find(k, key, 1, true) then return v, "包含" end
+end
+end
+return nil
+end
 F.EggWeight = function(o)
 local w, src2 = nil, nil
 pcall(function()
+local blob = F.EggTextBlob(o)
+local nn = string.match(blob, "([%d%.%,]+)%s*kg")
+if nn then
+local v = tonumber(string.gsub(nn, ",", ""))
+if v and v > 0 then w, src2 = v, "文本kg" end
+end
+end)
+pcall(function()
+if w then return end
 for _, a in ipairs(o:GetAttributes()) do
 local al = string.lower(tostring(a))
 if string.find(al, "weight", 1, true) or string.find(al, "mass", 1, true)
@@ -4091,26 +4142,28 @@ local ac = o:GetAttribute("AssetCategory")
 if type(ac) ~= "string" or ac == "" then ac = o:GetAttribute("Category") end
 if type(ac) == "string" and ac ~= "" then isEggObj = ac end
 end)
-local hit = false
+local hit, byCat2 = false, nil
 local wkg, wsrc = nil, nil
 if isEggObj then
-local okIdx = (type(F._eggIdx) == "table") and F._eggIdx[string.lower(isEggObj)]
-hit = okIdx and true or false
-if not hit then
-for _, w in ipairs(F.EGG_KEY) do
-if string.find(low, w, 1, true) then hit = true break end
-end
-end
+local ent, how = F.EggIdxLookup(isEggObj)
+if ent then hit, byCat2 = true, how end
 end
 if not hit then
+local blob = nil
+pcall(function() blob = F.EggTextBlob(o) end)
+blob = blob or low
 local bad = false
 for _, b in ipairs(F.EGG_BAD) do
 if string.find(low, b, 1, true) then bad = true break end
 end
 if not bad then
 for _, w in ipairs(F.EGG_KEY) do
-if string.find(low, w, 1, true) then hit = true break end
+if string.find(blob, w, 1, true) then hit = true break end
 end
+end
+if hit then
+local ent, how = F.EggIdxLookup(o.Name)
+if ent then byCat2 = how end
 end
 if not hit then
 pcall(function() wkg, wsrc = F.EggWeight(o) end)
@@ -4134,6 +4187,14 @@ anc = anc.Parent
 end
 end)
 if not wkg then pcall(function() wkg, wsrc = F.EggWeight(o) end) end
+if not region then
+pcall(function()
+local pp = prim.Position
+region = string.format("%s%s(%d格)",
+pp.Z < 0 and "北" or "南", pp.X < 0 and "西" or "东",
+math.floor((pp - (rp or pp)).Magnitude))
+end)
+end
 local prim = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
 if prim then
 local vol, val, tier = 0, nil, 0
@@ -4177,7 +4238,7 @@ score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
 tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
-region = region, byCat = (isEggObj and true or nil), score = score }
+region = region, byCat = byCat2, score = score }
 end
 end
 end
@@ -4243,6 +4304,7 @@ end
 F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(byCat) .. " 个 · 读到 kg " .. tostring(withKg) .. " 个), 已按所选排序"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
+pcall(F.LogFlush, "偷蛋扫描")
 return n
 end
 function F.EggGo(extraY)
@@ -7611,7 +7673,6 @@ Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddButton({ Title = "★ 一键配置: 速度/飞行 不被拉回(开这三样)", Callback = function() pcall(F.PresetSpeedFlight) end })
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddDropdown("GuardTier", { Title = "自保档位(防护 + 反拉回 + 伪装 · 选完自动复位)", Values = {
@@ -7665,20 +7726,15 @@ T.InfiniteJump = v
 if F._cfgSyncing or not changed then return end
 if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end
 end })
-Tabs.Move:AddDropdown("MoveMode", { Title = "位移方式(穿墙 / 藏地下 · 二选一)", Values = { "关", "穿墙", "藏地下" }, Default = "关", Callback = function(v)
-if F._cfgSyncing then
-T.NoClip = (v == "穿墙")
-T.Hide = (v == "藏地下")
-return
-end
-local wantClip = (v == "穿墙")
-local wantHide = (v == "藏地下")
-if T.NoClip and not wantClip then pcall(F.NoClipDisable) end
-if T.Hide and not wantHide then pcall(F.HideDisable) end
-if wantClip and not T.NoClip then pcall(F.NoClipEnable) end
-if wantHide and not T.Hide then pcall(F.HideEnable) end
-T.NoClip, T.Hide = wantClip, wantHide
-F.Out("[位移方式] " .. tostring(v))
+Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
+T.NoClip = v
+if F._cfgSyncing then return end
+if v then F.NoClipEnable() else F.NoClipDisable() end
+end })
+Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
+T.Hide = v
+if F._cfgSyncing then return end
+if v then F.HideEnable() else F.HideDisable() end
 end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
