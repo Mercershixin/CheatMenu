@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:49 sha e1d7ee19 bytes 300468'):format('2026-10-02 17:49','e1d7ee19',300468))
+print(('[CheatMenu] build 2026-10-02 17:55 sha 1bf62f5a bytes 303034'):format('2026-10-02 17:55','1bf62f5a',303034))
 local F = {}
-F.VERSION = "v11.4.1"
+F.VERSION = "v11.4.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4106,7 +4106,22 @@ anc = anc.Parent
 end
 end)
 end
+local region = nil
 if hit then
+pcall(function()
+local anc = o.Parent
+for _ = 1, 4 do
+if not anc or anc == workspace then break end
+local al = string.lower(anc.Name)
+if string.find(al, "stand", 1, true) or string.find(al, "plot", 1, true)
+or string.find(al, "podium", 1, true) or string.find(al, "base", 1, true)
+or string.find(al, "egg", 1, true) then
+region = tostring(anc.Name)
+break
+end
+anc = anc.Parent
+end
+end)
 if not wkg then pcall(function() wkg, wsrc = F.EggWeight(o) end) end
 local prim = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
 if prim then
@@ -4150,13 +4165,33 @@ else
 score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
-tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc, score = score }
+tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
+region = region, score = score }
 end
 end
 end
 end
 table.sort(F._eggs, function(a, b) return a.score > b.score end)
 return #F._eggs
+end
+F.EggSortNow = function()
+local mode = tostring(C.EggSort or "最重(kg)")
+local list = F._eggs or {}
+table.sort(list, function(a, b)
+if string.find(mode, "贵", 1, true) then
+return (a.val or -1) > (b.val or -1)
+elseif string.find(mode, "稀有", 1, true) then
+return (a.tier or 0) > (b.tier or 0)
+elseif string.find(mode, "距离", 1, true) then
+return (a.dist or 0) < (b.dist or 0)
+elseif string.find(mode, "区域", 1, true) then
+local ar, br = tostring(a.region or "zzz"), tostring(b.region or "zzz")
+if ar ~= br then return ar < br end
+return (a.kg or 0) > (b.kg or 0)
+end
+return (a.kg or -1) > (b.kg or -1)
+end)
+return list
 end
 function F.EggLabels()
 local out = {}
@@ -4171,7 +4206,9 @@ tag = "值 " .. tostring(math.floor(e.val))
 else
 tag = "体积 " .. string.format("%.0f", e.vol)
 end
-out[i] = string.format("#%d %s (%s · %.0f格)", i, e.name, tag, e.dist)
+local rg = (string.find(tostring(C.EggSort or ""), "区域", 1, true) and e.region)
+and ("@" .. tostring(e.region) .. " ") or ""
+out[i] = string.format("#%d %s%s (%s · %.0f格)", i, rg, e.name, tag, e.dist)
 end
 if #out == 0 then out[1] = "(还没扫到)" end
 return out
@@ -4179,6 +4216,7 @@ end
 function F.EggScanAndFill()
 pcall(F.EggAssetIndex)
 local n = F.EggScanMap()
+pcall(F.EggSortNow)
 local labels = F.EggLabels()
 local okRef = pcall(function()
 local op = Fluent and Fluent.Options and Fluent.Options.EggPick
@@ -5154,6 +5192,20 @@ end
 end)
 for _, d in ipairs(seen) do pcall(F.InstantInteractApply, d) end
 return n
+end
+F.PresetSpeedFlight = function()
+local on = {}
+local function setOpt(name, v)
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options[name]
+if op and op.Set then op:Set(v) else on[#on + 1] = name end
+end)
+end
+setOpt("SpeedGuard", true)
+setOpt("Spoof", true)
+setOpt("AntiAFK", true)
+F.Out("[一键配置] 速度/飞行·不拉回 已就绪: 反拉回(抢所有权+钉位+续跑+挡服务端写入) + 伪装(读原值+不复制速度+清痕迹) + 防挂机(掐检测连接)")
+F.Out("[一键配置] 现在打开「加速」或「飞行」并调速度即可; 若还被踢, 再单独开「防踢」; 只在被针对时才动「深度反作弊中和」")
 end
 function F.SpeedGuardEnable()
 T.SpeedGuard = true
@@ -7546,6 +7598,7 @@ Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
+Tabs.Move:AddButton({ Title = "★ 一键配置: 速度/飞行 不被拉回(开这三样)", Callback = function() pcall(F.PresetSpeedFlight) end })
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddToggle("SpeedGuard", { Title = "反拉回(抢所有权 + 钉位 + 被拉回续跑)", Description = "被服务端回滚就立刻续跑；刚性约束钉住你的意图位置；并挡下服务端对你角色的「钉住/清血/打断飞行」写入", Default = false, Callback = function(v)
@@ -7712,15 +7765,29 @@ for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.TP:AddSection("偷蛋(扫描 → 排序 → 自选 → 远程拿)")
 Tabs.TP:AddButton({ Title = "① 扫描地图上的蛋(按最重/最贵排序)", Callback = function() F.EggScanAndFill() end })
-Tabs.TP:AddDropdown("EggPick", { Title = "② 目标蛋(最重在最前, 自己挑)", Values = { "(先点①扫描)" }, Default = nil, Callback = function(v)
+Tabs.TP:AddDropdown("EggSort", { Title = "② 排序方式(扫完按这个排)", Values = {
+"最重(kg)", "最贵(价值)", "稀有度", "距离最近", "按区域(展台)", "自己看",
+}, Default = "最重(kg)", Callback = function(v)
+C.EggSort = v
+if F._eggs and #F._eggs > 0 then
+pcall(F.EggSortNow)
+pcall(function()
+local labels = F.EggLabels()
+local op = Fluent and Fluent.Options and Fluent.Options.EggPick
+if op and op.Refresh then op:Refresh(labels) end
+end)
+F.Out("[偷蛋] 已按「" .. tostring(v) .. "」重排")
+end
+end })
+Tabs.TP:AddDropdown("EggPick", { Title = "③ 目标蛋(按上面排序, 自己挑)", Values = { "(先点①扫描)" }, Default = nil, Callback = function(v)
 local i = tonumber(tostring(v):match("^#(%d+)"))
 F._eggPick = i or 0
 end })
-Tabs.TP:AddButton({ Title = "③ 传送到选中的蛋", Callback = function()
+Tabs.TP:AddButton({ Title = "④ 传送到选中的蛋", Callback = function()
 local e = F.EggGo(3)
 if e then F.Out("[偷蛋] 已传送到 #" .. tostring(F._eggPick) .. " " .. e.name) end
 end })
-Tabs.TP:AddButton({ Title = "④ 设安全点(远程拿的回程点)", Callback = function()
+Tabs.TP:AddButton({ Title = "⑤ 设安全点(远程拿的回程点)", Callback = function()
 local _, _, root = GC()
 if not root then F.Out("[偷蛋] 现在没角色") return end
 local p = root.Position
@@ -7728,7 +7795,7 @@ C.SafePoint = { x = p.X, y = p.Y, z = p.Z }
 pcall(SaveConfig)
 F.Out(string.format("[偷蛋] 安全点已记下: (%.0f, %.0f, %.0f)", p.X, p.Y, p.Z))
 end })
-Tabs.TP:AddButton({ Title = "⑤ 远程拿: 传过去 → 触发交互 → 回安全点", Callback = function() F.EggRemoteSteal() end })
+Tabs.TP:AddButton({ Title = "⑥ 远程拿: 传过去 → 触发交互 → 回安全点", Callback = function() F.EggRemoteSteal() end })
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不被游戏判挂机 · 不装钩子)", Description = "掐掉挂机检测连接 + 游戏判你挂机时立刻模拟一次操作(按键/鼠标/跳); 不写你任何属性", Default = false, Callback = function(v)
