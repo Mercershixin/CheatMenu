@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:44 sha 9cff223d bytes 311273'):format('2026-10-02 21:44','9cff223d',311273))
+print(('[CheatMenu] build 2026-10-02 21:52 sha 0b3390d7 bytes 302236'):format('2026-10-02 21:52','0b3390d7',302236))
 local F = {}
-F.VERSION = "v11.9.1"
+F.VERSION = "v12.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4092,177 +4092,6 @@ end)
 F._walkTgt = nil
 F._egg, F._eggPart, F._carry = nil, nil, nil
 end
-F.GUARD_WORDS = { "guard", "npc", "security", "police", "watcher", "officer", "sentry" }
-F.GuardScan = function()
-local best, bd = nil, 1e9
-local _, _, root = GC()
-if not root then return nil end
-local rp = root.Position
-local seen = 0
-pcall(function()
-local CS = game:GetService("CollectionService")
-for _, tag in ipairs({ "Guard", "guard", "NPC", "npc", "Security" }) do
-for _, inst in ipairs(CS:GetTagged(tag)) do
-if inst and inst.Parent then
-local p = inst:IsA("BasePart") and inst
-or (inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart"))
-if p then
-local d = (p.Position - rp).Magnitude
-if d < bd then bd, best = d, p end
-end
-end
-end
-end
-end)
-pcall(function()
-for _, o in ipairs(workspace:GetChildren()) do
-local nm = string.lower(tostring(o.Name))
-local matchSelf = false
-for _, w in ipairs(F.GUARD_WORDS) do
-if string.find(nm, w, 1, true) then matchSelf = true break end
-end
-local cands = nil
-if matchSelf then
-cands = { o }
-else
-cands = o:GetChildren()
-end
-for _, o2 in ipairs(cands) do
-seen = seen + 1
-if seen > 4000 then break end
-local nm2 = string.lower(tostring(o2.Name))
-for _, w in ipairs(F.GUARD_WORDS) do
-if string.find(nm2, w, 1, true) then
-local p = o2.PrimaryPart
-or (o2:IsA("Model") and o2:FindFirstChildWhichIsA("BasePart")) or nil
-if p then
-local d = (p.Position - rp).Magnitude
-if d < bd then bd, best = d, p end
-end
-break
-end
-end
-end
-end
-end)
-if best then return best, bd end
-return nil
-end
-F.TapNearby = function(pos, radius)
-local best = nil
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("ProximityPrompt") and d.Enabled then
-local host = d.Parent
-local hp = host and host:IsA("BasePart") and host.Position
-if hp and (hp - pos).Magnitude < (radius or 12) then
-if not best or (hp - pos).Magnitude < best.dist then
-best = { prompt = d, dist = (hp - pos).Magnitude }
-end
-end
-end
-end
-end)
-if not best then return false end
-local pr = best.prompt
-local ok = false
-if type(fireproximityprompt) == "function" then
-pcall(function() fireproximityprompt(pr) ok = true end)
-end
-if not ok then
-pcall(function()
-pr.HoldDuration = 0
-pr.RequiresLineOfSight = false
-pr.Enabled = true
-pr.MaxActivationDistance = math.max(pr.MaxActivationDistance, 20)
-pr:InputHoldBegin()
-end)
-task.wait(0.12)
-pcall(function() pr:InputHoldEnd() end)
-ok = true
-end
-return ok
-end
-F.FindNearestLoot = function(maxDist)
-local _, _, root = GC()
-if not root then return nil end
-local best, bd = nil, (maxDist or 1e9)
-pcall(function()
-for _, o in ipairs(workspace:GetDescendants()) do
-if o:IsA("Model") or o:IsA("BasePart") then
-local nm = string.lower(tostring(o.Name))
-if string.find(nm, "areaegg", 1, true) or string.find(nm, "egg", 1, true)
-or string.find(nm, "brainrot", 1, true) then
-local p = o:IsA("BasePart") and o
-or (o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart"))
-if p and p.Parent then
-local d = (p.Position - root.Position).Magnitude
-if d < bd then bd, best = d, p end
-end
-end
-end
-end
-end)
-if best then return best, bd end
-return nil
-end
-F.AutoStealOne = function()
-local _, _, root = GC()
-if not root then F.Out("[自动拿] 没有角色") return false end
-local target, d = F.FindNearestLoot(4000)
-if not target then F.Out("[自动拿] 附近没找到可拿的东西(名字不含 egg/brainrot)") return false end
-local safe = C.SafePoint
-if d > 8 then
-local dest = CFrame.new(target.Position + Vector3.new(0, 3, 0))
-if F.TPResist then pcall(F.TPResist, dest, 0.8) end
-pcall(function() root:PivotTo(dest) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-task.wait(0.22)
-end
-local tapped = false
-pcall(function() tapped = F.TapNearby(target.Position, 13) end)
-if not tapped then pcall(function() tapped = F.TapNearby(target.Position, 26) end) end
-task.wait(0.25)
-local gone = false
-pcall(function() gone = not (target and target.Parent) end)
-if safe and safe.x then
-local cf = CFrame.new(Vector3.new(safe.x, safe.y, safe.z))
-if F.TPResist then pcall(F.TPResist, cf, 0.8) end
-pcall(function() root:PivotTo(cf) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-end
-F._autoSteal = (F._autoSteal or 0) + 1
-F.Out("[自动拿] 第 " .. tostring(F._autoSteal) .. " 次: "
-.. (gone and "✅ 拿到了" or "⚠ 没拿到(东西还在原地)")
-.. (safe and " · 已回安全区" or " · 没设安全区, 所以留在原地")
-.. string.format(" (目标 %.0f 格外)", d))
-if os.clock() - (F._autoLog or 0) > 4 then
-F._autoLog = os.clock()
-pcall(function()
-Fluent:Notify({ Title = "自动拿", Content = (gone and "✅ 拿到了" or "⚠ 没拿到")
-.. (safe and " · 已回安全区" or " · 没设安全区"), Duration = 3 })
-end)
-end
-return gone
-end
-F.AutoStealWatchOn = function()
-if F._asConn then return end
-T.AutoSteal = true
-F._asConn = task.spawn(function()
-while T.AutoSteal do
-task.wait(math.max(1, tonumber(C.AutoStealSec) or 3))
-if not T.AutoSteal then break end
-pcall(F.AutoStealOne)
-end
-F._asConn = nil
-end)
-F.Out("[自动拿] 循环已开: 每 " .. tostring(C.AutoStealSec or 3) .. " 秒自动拿一次")
-end
-F.AutoStealWatchOff = function()
-T.AutoSteal = false
-F._asConn = nil
-F.Out("[自动拿] 循环已关")
-end
 F.EggLock = function()
 local ch = LP.Character
 if not ch then F._egg, F._eggPart = nil, nil return end
@@ -4538,26 +4367,6 @@ if u.Magnitude > 0.001 then u = u.Unit else u = Vector3.zero end
 local dt = tonumber(deltaTime) or (1 / 60)
 if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
-if T.AntiClip ~= false then
-pcall(function()
-local pp = RaycastParams.new()
-pcall(function() pp.FilterType = Enum.RaycastFilterType.Exclude end)
-if LP.Character then pp.FilterDescendantsInstances = { LP.Character } end
-local probeLen = math.max(sp * 0.16, 10)
-local hit = workspace:Raycast(r.Position, u * probeLen, pp)
-if hit then
-local dist = (hit.Position - r.Position).Magnitude
-local capped = math.max(26, dist * 11)
-if capped < sp then
-sp = capped
-if os.clock() - (F._clipLog or 0) > 5 then
-F._clipLog = os.clock()
-F.Out(string.format("[防穿墙] 前方有障碍(%.0f格) ⇒ 临时压速到 %.0f, 过了自动恢复(可在「其他移动」关)", dist, sp))
-end
-end
-end
-end)
-end
 local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
 pcall(function()
@@ -5343,41 +5152,6 @@ T.BypassDetect = false
 pcall(F.PinDisable)
 pcall(F.BypassDisable)
 F.Out("[反拉回] 已关")
-end
-F.GuardAvoidEnable = function()
-if F._gvConn then return end
-T.GuardAvoid = true
-F._gvConn = RS.Heartbeat:Connect(function()
-if not T.GuardAvoid then
-if F._gvConn then pcall(function() F._gvConn:Disconnect() end) F._gvConn = nil end
-return
-end
-local now = os.clock()
-if now - (F._gvAt or 0) < 0.7 then return end
-F._gvAt = now
-local g, d = F.GuardScan()
-if not (g and d) then return end
-if d < 25 then
-local _, _, root = GC()
-if not root then return end
-local away = (root.Position - g.Position)
-if away.Magnitude < 0.5 then away = Vector3.new(1, 0, 0) end
-away = away.Unit * 35
-local dest = root.Position + away + Vector3.new(0, 3, 0)
-pcall(function() root:PivotTo(CFrame.new(dest)) end)
-if F.DropIntent then pcall(F.DropIntent) end
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-if now - (F._gvLog or 0) > 4 then
-F._gvLog = now
-F.Out(string.format("[守卫规避] 守卫离你只有 %.0f 格 ⇒ 已往反方向撤 35 格", d))
-end
-end
-end)
-F.Out("[守卫规避] 已开: 名字含 guard/npc/security/police/watcher 的靠太近(25格)就把你撤开")
-end
-F.GuardAvoidDisable = function()
-T.GuardAvoid = false
-if F._gvConn then pcall(function() F._gvConn:Disconnect() end) F._gvConn = nil end
 end
 F.CarryGuardEnable = function()
 if F._cgConn then return end
@@ -7956,12 +7730,6 @@ if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
 Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
-Tabs.Move:AddToggle("AntiClip", { Title = "防穿墙(太快撞墙时自动压一下速度)", Description = "默认开: 空旷地全速跑, 前方有障碍才临时压速 —— 不影响你正常加速的手感", Default = true, Callback = function(v)
-local changed = (T.AntiClip ~= nil) and (T.AntiClip ~= v)
-T.AntiClip = v
-if F._cfgSyncing or not changed then return end
-F.Out(v and "[防穿墙] 已开(撞墙前自动压速)" or "[防穿墙] 已关(全速, 可能穿墙)")
-end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
@@ -8071,6 +7839,12 @@ F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
 end })
+Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
+local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
+T.InstantInteract = v
+if F._cfgSyncing or not changed then return end
+if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
+end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
@@ -8088,36 +7862,6 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.TP:AddSection("自动拿(一键: 拿完立刻回安全区)")
-Tabs.TP:AddButton({ Title = "★ 一键自动拿(找最近的 → 拿 → 立刻回安全区)", Callback = function() pcall(F.AutoStealOne) end })
-Tabs.TP:AddToggle("AutoSteal", { Title = "自动循环拿(每隔几秒自动来一次)", Default = false, Callback = function(v)
-local changed = (T.AutoSteal ~= nil) and (T.AutoSteal ~= v)
-T.AutoSteal = v
-if F._cfgSyncing or not changed then return end
-if v then pcall(F.AutoStealWatchOn) else pcall(F.AutoStealWatchOff) end
-end })
-Tabs.TP:AddSlider("AutoStealSec", { Title = "自动拿间隔(秒)", Min = 1, Max = 30, Default = 3, Rounding = 0,
-Callback = function(v) C.AutoStealSec = v end })
-Tabs.TP:AddButton({ Title = "设安全区(拿完自动回到这里)", Callback = function()
-local _, _, root = GC()
-if not root then F.Out("[安全区] 现在没有角色, 设不了") return end
-local p2 = root.Position
-C.SafePoint = { x = p2.X, y = p2.Y, z = p2.Z }
-F.Out(string.format("[安全区] 已设: (%.0f, %.0f, %.0f) —— 以后「一键自动拿」拿完就回这里", p2.X, p2.Y, p2.Z))
-end })
-Tabs.TP:AddButton({ Title = "回安全区", Callback = function()
-local sp = C.SafePoint
-if not sp then F.Out("[安全区] 还没设过, 先点上面那个按钮设一下") return end
-if F.TPResist then pcall(F.TPResist, CFrame.new(Vector3.new(sp.x, sp.y, sp.z)), 1.0) end
-pcall(function() local _, _, r = GC() if r then r:PivotTo(CFrame.new(Vector3.new(sp.x, sp.y, sp.z))) end end)
-F.Out("[安全区] 已回到安全区")
-end })
-Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
-local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
-T.InstantInteract = v
-if F._cfgSyncing or not changed then return end
-if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
-end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
