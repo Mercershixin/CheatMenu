@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:26 sha 55387b47 bytes 307977'):format('2026-10-02 18:26','55387b47',307977))
+print(('[CheatMenu] build 2026-10-02 18:31 sha 929b57be bytes 306920'):format('2026-10-02 18:31','929b57be',306920))
 local F = {}
-F.VERSION = "v11.5.1"
+F.VERSION = "v11.5.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5364,6 +5364,55 @@ end)
 for _, d in ipairs(seen) do pcall(F.InstantInteractApply, d) end
 return n
 end
+F.BypassTierApply = function(v)
+v = tostring(v or "")
+local wants = {
+afk = string.find(v, "防挂机", 1, true) ~= nil,
+guard = string.find(v, "②", 1, true) ~= nil or string.find(v, "③", 1, true) ~= nil
+or string.find(v, "④", 1, true) ~= nil,
+kick = string.find(v, "③", 1, true) ~= nil or string.find(v, "④", 1, true) ~= nil,
+deep = string.find(v, "④", 1, true) ~= nil,
+}
+if not wants.afk then
+T.AntiAFK = false
+pcall(F.AntiAFKDisable)
+else
+T.AntiAFK = true
+pcall(F.AntiAFKEnable)
+end
+if not wants.guard then
+T.GuardOn, T.SpeedGuard, T.Spoof = false, false, false
+pcall(function() F.GuardSet(false, false, false, false, false, false) end)
+pcall(F.SpeedGuardDisable)
+pcall(F.SpoofDisable)
+else
+T.GuardOn = true
+pcall(function() F.GuardSet(true, true, false, true, true, true) end)
+T.SpeedGuard = true
+pcall(F.SpeedGuardEnable)
+T.Spoof = true
+pcall(F.SpoofEnable)
+end
+if not wants.kick then
+T.KickProtect, T.KickGuard, T.KickRejoin = false, false, false
+pcall(F.KickGuardDisable)
+pcall(F.KickRejoinDisable)
+else
+T.KickProtect, T.KickGuard, T.KickRejoin = true, true, true
+pcall(F.KickGuardEnable)
+pcall(F.KickRejoinEnable)
+end
+if not wants.deep then
+T.DeepNeuter, T.AntiTPOn = false, false
+pcall(F.DeepNeuterDisable)
+pcall(F.SpeedAntiTPDisable)
+else
+T.DeepNeuter, T.AntiTPOn = true, true
+pcall(F.SpeedAntiTPEnable)
+pcall(F.DeepNeuterEnable)
+end
+F.Out("[绕过防护] 档位 = " .. v)
+end
 F.PresetSpeedFlight = function()
 local on = {}
 local function setOpt(name, v)
@@ -7579,6 +7628,11 @@ end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
+if T.BypassTier == nil then T.BypassTier = "① 默认: 防挂机(不动物物 · 不装钩子)" end
+task.defer(function()
+task.wait(1.5)
+pcall(F.BypassTierApply, T.BypassTier)
+end)
 end
 LoadConfig()
 pcall(function()
@@ -7770,32 +7824,17 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddDropdown("GuardTier", { Title = "自保档位(防护 + 反拉回 + 伪装 · 选完自动复位)", Values = {
-"关",
-"基础: 稳身 + 受击保护",
-"推荐: 基础 + 陷阱拦截/弹开 + 防拉回",
-"最强: 推荐 + 反拉回 + 伪装(抢所有权/钉位/续跑/读原值)",
-}, Default = "关", Callback = function(v)
-if F._cfgSyncing then
-T.GuardOn = not string.find(v, "关", 1, true)
-T.SpeedGuard = string.find(v, "最强", 1, true) ~= nil
-T.Spoof = string.find(v, "最强", 1, true) ~= nil
-return
-end
-local base = not string.find(v, "关", 1, true)
-local full = string.find(v, "推荐", 1, true) ~= nil or string.find(v, "最强", 1, true) ~= nil
-local best = string.find(v, "最强", 1, true) ~= nil
-T.GuardOn = base
-if base then
-pcall(function() F.GuardSet(true, true, false, full, full, full) end)
-else
-pcall(function() F.GuardSet(false, false, false, false, false, false) end)
-end
-T.SpeedGuard = best
-if best then pcall(F.SpeedGuardEnable) else pcall(F.SpeedGuardDisable) end
-T.Spoof = best
-if best then pcall(F.SpoofEnable) else pcall(F.SpoofDisable) end
-F.Out("[自保] 档位 = " .. tostring(v))
+Tabs.AC:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(一个开关管全部)", Values = {
+"关(什么都不开)",
+"① 默认: 防挂机(不动物物 · 不装钩子)",
+"② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)",
+"③ + 防踢(拦 Kick · 抢重进 · 会装元表钩子)",
+"④ 全部: + 防拉回档 + 深度中和(最激进 · 慎用)",
+}, Default = "① 默认: 防挂机(不动物物 · 不装钩子)", Callback = function(v)
+local changed = (T.BypassTier ~= nil) and (T.BypassTier ~= v)
+T.BypassTier = v
+if F._cfgSyncing or not changed then return end
+pcall(F.BypassTierApply, v)
 end })
 Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
 local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
@@ -7976,19 +8015,6 @@ end })
 Tabs.TP:AddButton({ Title = "⑥ 远程拿: 传过去 → 触发交互 → 回安全点", Callback = function() F.EggRemoteSteal() end })
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不被游戏判挂机 · 不装钩子)", Description = "掐掉挂机检测连接 + 游戏判你挂机时立刻模拟一次操作(按键/鼠标/跳); 不写你任何属性", Default = false, Callback = function(v)
-local changed = (T.AntiAFK ~= nil) and (T.AntiAFK ~= v)
-T.AntiAFK = v
-if F._cfgSyncing or not changed then return end
-if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
-end })
-Tabs.AFK:AddToggle("KickProtect", { Title = "防踢(拦截 Kick + 被踢后抢重进 · 会装元表钩子)", Description = "这层会改写全局元表, 个别反作弊会因为钩子直接踢你 —— 平时关着, 真挂机前再开", Default = false, Callback = function(v)
-local changed = (T.KickProtect ~= nil) and (T.KickProtect ~= v)
-T.KickProtect = v T.KickGuard = v T.KickRejoin = v
-if F._cfgSyncing or not changed then return end
-if v then F.KickGuardEnable() F.KickRejoinEnable()
-else F.KickGuardDisable() pcall(F.KickRejoinDisable) end
-end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -8175,19 +8201,6 @@ Duration = 10,
 end)
 end })
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddToggle("DeepNeuter", { Title = "深度反作弊中和(getgc 扫表改函数 · 最容易招踢)", Description = "会遍历内存里的所有表, 把 kick/Kill/Detected/lagback 之类函数中和掉。个别反作弊会因此直接踢你 —— 只在被针对时开", Default = false, Callback = function(v)
-local changed = (T.DeepNeuter ~= nil) and (T.DeepNeuter ~= v)
-T.DeepNeuter = v
-if F._cfgSyncing or not changed then return end
-if v then pcall(F.DeepNeuterEnable) else pcall(F.DeepNeuterDisable) end
-end })
-Tabs.Setting:AddToggle("AntiTP", { Title = "防拉回档(清检测脚本 + 断检测连接 + 中和检测函数)", Description = "最激进的一档: 会主动找出并清掉/断掉/中和游戏侧的检测。个别反作弊会因此盯上你 —— 需要时再开", Default = false, Callback = function(v)
-local changed = (T.AntiTPOn ~= nil) and (T.AntiTPOn ~= v)
-T.AntiTPOn = v
-if F._cfgSyncing or not changed then return end
-if v then pcall(F.SpeedAntiTPEnable) pcall(F.MetaHookEnsure) else pcall(F.SpeedAntiTPDisable) end
-F.Out(v and "[防拉回档] 已开(清脚本/断连接/中和函数)" or "[防拉回档] 已关")
-end })
 Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
 local changed = (T.Session ~= nil) and (T.Session ~= v)
 T.Session = v
