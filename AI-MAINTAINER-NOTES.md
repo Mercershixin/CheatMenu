@@ -2796,3 +2796,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 抄同族 xkrexel-hub/sae 全文: ① isBlocked 关键词除 integrity 还有 violation/anticheat/**honeypot(蜜罐 —— 正常客户端永不调用, 一调用就判你外挂, 我们的扫描/自动交互最容易踩)**; ② 上报拦截从只拦 FireServer 扩到 FireServer+**InvokeServer**; ③ 检测脚本关键词表补 runtime_/honeypot/integrityviolation/monitor(它专门 Disabled 掉 PlayerScripts.Game 下 Runtime_ 开头的反作弊脚本)
 
+
+
+## 11.2.4：幽灵功能整理: 5 个点不到的功能全部给入口(其中 3 个合并)+修掉'加载自动开'
+
+- 扫描'有实现但没入口'的函数: 真幽灵 5 个 —— 无限跳(补入口到移动页)、自动存档/角色持续/实时玩家列表(**合并成一个「会话保持」开关**)、防拉回档(补独立入口到系统页, 它是最激进的一档必须能单独控制); 另外 RestoreFeatures 原本在加载时就自动开 AutoSave+LivePlayers(违反'加载不许自动开任何功能')已改成只设标志; 复查后剩余 13 个'没入口'全是内部函数(由反拉回/防护/防踢间接调用), 无真幽灵
+
