@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 08:42 sha 92911b6e bytes 290048'):format('2026-10-02 08:42','92911b6e',290048))
+print(('[CheatMenu] build 2026-10-02 10:01 sha 7ae8fcc7 bytes 292031'):format('2026-10-02 10:01','7ae8fcc7',292031))
 local F = {}
-F.VERSION = "v11.0.51"
+F.VERSION = "v11.0.52"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3640,7 +3640,14 @@ for _, p in ipairs(ch:GetDescendants()) do
 if p:IsA("BasePart") then parts[#parts + 1] = p end
 end
 end)
-for _, p in ipairs(parts) do pcall(function() p:SetNetworkOwner(LP) end) end
+for _, p in ipairs(parts) do
+pcall(function() p:SetNetworkOwner(LP) end)
+pcall(function()
+if type(sethiddenproperty) == "function" then
+sethiddenproperty(p, "NetworkOwnershipRule", Enum.NetworkOwnership.Automatic)
+end
+end)
+end
 F._srv.ownAt = os.clock()
 local got = false
 pcall(function() local _, _, r2 = GC() if r2 then got = (r2:GetNetworkOwner() == LP) end end)
@@ -3892,6 +3899,7 @@ end
 local function eggTP(cf)
 local _, _, r = GC()
 if not r or not cf then return end
+if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() r:PivotTo(cf) end)
 pcall(function()
 r.AssemblyLinearVelocity = Vector3.zero
@@ -4207,6 +4215,10 @@ if intent then pcall(function() F._pinAp.Position = intent end) end
 end)
 F.Out("[钉位] 已接管位移(刚性约束), 服务端回滚也会被拉回原定位置")
 end
+F.DropIntent = function()
+F._intent = nil
+if KG then KG.intent, KG.dev = nil, nil end
+end
 F.bypassConn = nil
 function F.BypassEnable()
 if F.bypassConn then return end
@@ -4214,9 +4226,56 @@ F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测
 local got = false
 pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
+F.SafeSpotPush = function()
+local _, hum, root = GC()
+if not (hum and root) then return end
+local ok = false
+pcall(function()
+local params = RaycastParams.new()
+if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
+pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
+end
+if LP.Character then params.FilterDescendantsInstances = { LP.Character } end
+local hip = tonumber(hum.HipHeight) or 2
+local half = root.Size.Y / 2
+local down = hip + half + 0.4
+local hit = workspace:Raycast(root.Position, Vector3.new(0, -down, 0), params)
+ok = hit ~= nil
+end)
+if ok then
+local p = root.Position
+F._safeSpot = { x = p.X, y = p.Y + 3, z = p.Z, at = os.clock() }
+end
+return ok
+end
 F.bypassConn = RS.Heartbeat:Connect(function()
 if not T.BypassDetect then F.BypassDisable() return end
 local now = os.clock()
+if now - (F._safeAt or 0) > 0.5 then
+F._safeAt = now
+pcall(F.SafeSpotPush)
+end
+local _, _, rt = GC()
+if rt and F._safeSpot then
+local far = (Vector3.new(rt.Position.X, 0, rt.Position.Z)
+- Vector3.new(F._safeSpot.x, 0, F._safeSpot.z)).Magnitude
+local fell = rt.Position.Y < -120
+if fell or far > 450 then
+local dest = CFrame.new(Vector3.new(F._safeSpot.x, F._safeSpot.y, F._safeSpot.z))
+pcall(function() rt:PivotTo(dest) end)
+pcall(function()
+rt.AssemblyLinearVelocity = Vector3.zero
+rt.AssemblyAngularVelocity = Vector3.zero
+end)
+F.DropIntent()
+F._safeBack = (F._safeBack or 0) + 1
+if now - (F._safeLogAt or 0) > 3 then
+F._safeLogAt = now
+F.Out("[安全点] " .. (fell and "掉出地图" or "被拉离安全点 " .. string.format("%.0f", far) .. " 格")
+.. " ⇒ 已回到最近的安全地面点 (第 " .. tostring(F._safeBack) .. " 次)")
+end
+end
+end
 if now - (F._bypassOwnAt or 0) > 0.5 then
 F._bypassOwnAt = now
 if T.SpeedOn or T.FlyOn then
@@ -4230,6 +4289,8 @@ F.Out("[绕过] 已开启: 抢角色所有权(每0.5s) + 加速位移补足 + �
 end
 function F.BypassDisable()
 if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
+F._safeSpot, F._safeBack = nil, 0
+if F.DropIntent then pcall(F.DropIntent) end
 F._bypassOwnAt = nil
 if F._bypassAtp then
 F._bypassAtp = nil
@@ -4624,6 +4685,7 @@ end
 local function smoothTP(targetCF)
 local _, _, root = GC()
 if not root or not targetCF then return end
+if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
 end
