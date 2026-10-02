@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:35 sha ea85c99f bytes 308384'):format('2026-10-02 18:35','ea85c99f',308384))
+print(('[CheatMenu] build 2026-10-02 18:40 sha cb73f615 bytes 311024'):format('2026-10-02 18:40','cb73f615',311024))
 local F = {}
-F.VERSION = "v11.5.3"
+F.VERSION = "v11.5.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4107,6 +4107,46 @@ end
 end)
 return mine, other, where
 end
+F.EGG_NAME_SKIP = { "mesh", "egg", "part", "root", "hitbox", "handle", "shadow", "ring",
+"beam", "glow", "core", "shell", "plane", "planea", "deco", "vfx", "sfx" }
+F.EggPetName = function(o)
+local best = nil
+local function consider(v)
+if type(v) ~= "string" or v == "" then return end
+local l = string.lower(v)
+if string.match(l, "^%d+$") then return end
+for _, s in ipairs(F.EGG_NAME_SKIP) do
+if l == s then return end
+end
+if #v >= 4 and #v <= 40 and (not best or #v > #best) then best = v end
+end
+pcall(function()
+for _, d in ipairs(o:GetDescendants()) do
+if d:IsA("StringValue") then
+local nl = string.lower(d.Name)
+if string.find(nl, "name", 1, true) or string.find(nl, "display", 1, true)
+or string.find(nl, "pet", 1, true) or string.find(nl, "asset", 1, true)
+or string.find(nl, "category", 1, true) then
+consider(tostring(d.Value))
+end
+elseif d:IsA("Model") then
+consider(d.Name)
+end
+local ok, attrs = pcall(function() return d:GetAttributes() end)
+if ok and type(attrs) == "table" then
+for k, v in pairs(attrs) do
+local kl = string.lower(tostring(k))
+if string.find(kl, "name", 1, true) or string.find(kl, "display", 1, true)
+or string.find(kl, "pet", 1, true) or string.find(kl, "category", 1, true)
+or string.find(kl, "asset", 1, true) then
+consider(tostring(v))
+end
+end
+end
+end
+end)
+return best
+end
 F.EggTextBlob = function(inst)
 local t = { tostring(inst.Name) }
 pcall(function()
@@ -4299,6 +4339,18 @@ for w, t in pairs(F.EGG_TIER) do
 if low:find(w, 1, true) and t > tier then tier = t end
 end
 local dist = rp and (prim.Position - rp).Magnitude or 0
+local petName = nil
+pcall(function() petName = F.EggPetName(o) end)
+if petName and not byCat2 then
+local ent, how = F.EggIdxLookup(petName)
+if ent then
+byCat2 = how
+if ent.tier and ent.tier > 0 then tier = math.max(tier, ent.tier) end
+if ent.drop then gDrop = ent.drop end
+end
+end
+local held = string.find(low, "remote", 1, true) or string.find(low, "carried", 1, true)
+or string.find(low, "held", 1, true)
 local mine, other, where = F.EggOwnerOf(o)
 if mine and not other then
 hit = false
@@ -4339,6 +4391,7 @@ score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
 tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
+petName = petName, heldByOther = held,
 region = region, byCat = byCat2, ownMine = mine, ownOther = other,
 ownWhere = where, inPet = inPet, score = score }
 end
@@ -4375,6 +4428,8 @@ parts[#parts + 1] = e.kg and e.kg > 0 and string.format("%.1f kg", e.kg) or "kg?
 if e.tier and e.tier > 0 then parts[#parts + 1] = "等级" .. tostring(e.tier) end
 if e.val then parts[#parts + 1] = "值" .. tostring(math.floor(e.val)) end
 if e.drop and not e.val then parts[#parts + 1] = "掉重" .. tostring(math.floor(e.drop)) end
+if e.petName then parts[#parts + 1] = tostring(e.petName) end
+if e.heldByOther then parts[#parts + 1] = "别人拿着" end
 if e.ownOther then parts[#parts + 1] = "别人的" end
 if e.ownMine then parts[#parts + 1] = "我的" end
 if e.ownWhere then parts[#parts + 1] = tostring(e.ownWhere) end
@@ -4687,6 +4742,7 @@ F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f", 
 return true
 end
 function F.SpeedSet(on)
+if on then pcall(F.BypassAutoRaise, "你开了加速") end
 local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
 T.SpeedOn = want
@@ -4809,6 +4865,7 @@ if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
 end
 end
 function F.FlySet(on)
+if on then pcall(F.BypassAutoRaise, "你开了飞行") end
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
@@ -5395,6 +5452,19 @@ end
 end
 end
 return n
+end
+F.BypassAutoRaise = function(why)
+pcall(function()
+local t = tostring(T.BypassTier or "")
+if string.find(t, "②", 1, true) or string.find(t, "③", 1, true) or string.find(t, "④", 1, true) then return end
+T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
+F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 自动把档位升到 ②(反拉回+伪装), 免得被服务端拉回/换位置")
+pcall(F.BypassTierApply, T.BypassTier)
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options.BypassTier
+if op and op.Set then op:Set(T.BypassTier) end
+end)
+end)
 end
 F.BypassTierApply = function(v)
 v = tostring(v or "")
@@ -7666,7 +7736,7 @@ end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
-if T.BypassTier == nil then T.BypassTier = "① 默认: 防挂机(不动物物 · 不装钩子)" end
+if T.BypassTier == nil then T.BypassTier = "① 默认: 防挂机(不动人物 · 不装钩子)" end
 task.defer(function()
 task.wait(1.5)
 pcall(F.BypassTierApply, T.BypassTier)
@@ -7863,13 +7933,13 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)"
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.AC:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(一个开关管全部)", Values = {
+Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
 "关(什么都不开)",
-"① 默认: 防挂机(不动物物 · 不装钩子)",
+"① 默认: 防挂机(不动人物 · 不装钩子)",
 "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)",
 "③ + 防踢(拦 Kick · 抢重进 · 会装元表钩子)",
 "④ 全部: + 防拉回档 + 深度中和(最激进 · 慎用)",
-}, Default = "① 默认: 防挂机(不动物物 · 不装钩子)", Callback = function(v)
+}, Default = "① 默认: 防挂机(不动人物 · 不装钩子)", Callback = function(v)
 local changed = (T.BypassTier ~= nil) and (T.BypassTier ~= v)
 T.BypassTier = v
 if F._cfgSyncing or not changed then return end
