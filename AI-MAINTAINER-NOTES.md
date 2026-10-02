@@ -3090,3 +3090,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ★ 用户澄清: '开着加速或飞行 tp 就远, 不开就 tp 不远' —— **这就是根因**: 加速/飞行开着时, 反拉回档会**持续抢角色网络所有权**(SetNetworkOwner(LP)) ⇒ 服务端把位置裁决权交给客户端 ⇒ 你设的 CFrame 被接受 ⇒ 传得远; 不开就一直被服务端裁决 ⇒ 远距离传送被拒. 修法(**把抢所有权做进传送本身, 不再依赖加速/飞行**): ① 新增 **F.TakeAllOwnership()** —— 对**角色所有 BasePart**(不只 root)尝试 SetNetworkOwner(LP); ② **F.HardTP 全程持续抢**: 传送前抢一次 + 分步传送的**每一步都再抢** + 到位后**维持 0.25 秒**(每帧抢一次并把偏离>8格的位置拉回) ⇒ 服务端收不回去; ③ 传送日志写清'已抢所有权 N 个部件(不依赖加速/飞行)'; ④ 传送开始也打一行说明; ⑤ 到位判定 20 格, 失败自动重试共 3 次(12.1.1 已有)
 
+
+
+## 12.1.3：修'被攻击/踩夹子后瞬间交互失效': 拦触发关键词太宽泛误伤了正常交互
+
+- 根因(**我引入的**): 12.0.7/12.0.8 的'拦触发上报'用了过于宽泛的关键词 —— /// 会把**正常交互**的通道一起拦掉(该服就有 、、 等以 Guards: 开头的通道) ⇒ 被攻击/被夹之后那些通道被拦, 表现为**瞬间交互失效**. 修法: ① **新增白名单 F.ALLOW_REMOTE_KEYS**(request/sync/get/steal/place/equip/interact/prompt/purchase/buy/sell/trade/open/claim/collect/use/fire/trigger/update/fetch/query/send/notify/progress/tutorial/lobby/teleport/spawn) ⇒ **含这些词的一律放行**(它们是正常交互/交易/传送); ② **收窄黑名单**: 移除单独的 guard/catch/detect/alert/security, 只留明确是'被抓/被夹'的(trap/snare/cage/stun/mousetrap/beartrap/caught/arrested/handcuff/jailed/wanted/guardcatch/guardhit/securityhit); ③ 防掉蛋同样过白名单(避免误拦正常动作); ④ **瞬间交互加自愈**: 每 5 秒复查并重新处理所有交互点(游戏把它改回去也会被重新压平), 日志节流报'自愈: 又处理了 N 个交互点'
+
