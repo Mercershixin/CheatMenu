@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:05 sha fe980c5d bytes 300983'):format('2026-10-02 22:05','fe980c5d',300983))
+print(('[CheatMenu] build 2026-10-02 22:10 sha e8555f3f bytes 301704'):format('2026-10-02 22:10','e8555f3f',301704))
 local F = {}
-F.VERSION = "v12.0.3"
+F.VERSION = "v12.0.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4453,7 +4453,7 @@ F._flyDisabledInfJump = true
 end
 local _, hum, root = GC()
 if not (hum and root) then return end
-F.Out("[飞行] 已开: **速度驱动**(LinearVelocity) —— 前后左右/上下都按「飞行速度」滑块, 与加速完全独立")
+F.Out("[飞行] 已开: 速度驱动(前后左右/上下都按「飞行速度」滑块) + 姿态稳定(始终直立, 不会翻滚)")
 pcall(function() hum.PlatformStand = true end)
 if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
 F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
@@ -4469,6 +4469,14 @@ bv.MaxForce = 1e9
 bv.VectorVelocity = Vector3.zero
 bv.Parent = root
 F._flyBvAtt, F._flyBv = att2, bv
+local ao = Instance.new("AlignOrientation")
+ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+ao.Attachment0 = att2
+ao.MaxTorque = 1e9
+ao.Responsiveness = 120
+pcall(function() ao.RigidityEnabled = true end)
+ao.Parent = root
+F._flyAo = ao
 end)
 if not okDrive then
 pcall(function()
@@ -4480,6 +4488,12 @@ bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
 bv2.Velocity = Vector3.zero
 bv2.Parent = root
 F._flyBvAtt, F._flyBv = att3, bv2
+local bg = Instance.new("BodyGyro")
+bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+bg.D = 50
+bg.P = 3000
+bg.Parent = root
+F._flyBg = bg
 end)
 end
 F._flyConn = F.DriveConnect(function(dt)
@@ -4531,8 +4545,22 @@ else
 pcall(function() F._flyBv.Velocity = vel end)
 end
 end
+pcall(function()
+local look = c.CFrame.LookVector
+local flat = Vector3.new(look.X, 0, look.Z)
+if flat.Magnitude < 0.02 then flat = Vector3.new(0, 0, -1) end
+local want = CFrame.lookAt(r.Position, r.Position + flat.Unit)
+if F._flyAo then
+F._flyAo.CFrame = want
+elseif F._flyBg then
+F._flyBg.CFrame = want
+end
+end)
 if vel.Magnitude < 0.01 then
-pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function()
+r.AssemblyLinearVelocity = Vector3.zero
+r.AssemblyAngularVelocity = Vector3.zero
+end)
 else
 local step = math.clamp(tonumber(dt) or 0, 0, 0.1)
 F.SpeedProbe(r, "飞行", fsp, step, true)
