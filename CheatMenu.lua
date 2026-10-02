@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 11:03 sha a49a2396 bytes 293738'):format('2026-10-02 11:03','a49a2396',293738))
+print(('[CheatMenu] build 2026-10-02 15:32 sha 48c1cb82 bytes 294536'):format('2026-10-02 15:32','48c1cb82',294536))
 local F = {}
-F.VERSION = "v11.1.0"
+F.VERSION = "v11.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2376,6 +2376,13 @@ if KG.kick and m == "Kick" and self == LP then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
+if T.SpeedGuard and m == "ChangeState" and KG.blockSet[self] then
+local st = select(1, ...)
+if st == Enum.HumanoidStateType.Physics then
+KG.blocked7 = (KG.blocked7 or 0) + 1
+return nil
+end
+end
 if m == "FireServer" and (T.AntiAFK or T.SpeedGuard) then
 local isInst = false
 pcall(function() isInst = (typeof(self) == "Instance") end)
@@ -2462,6 +2469,19 @@ if key == "Anchored" and v == true then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
+if key == "PlatformStand" and v == true then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
+if (key == "WalkSpeed" or key == "JumpPower" or key == "JumpHeight")
+and type(v) == "number" and v <= 0.01 then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
+if key == "AutoRotate" and v == false then
+KG.blocked3 = (KG.blocked3 or 0) + 1
+return nil
+end
 if key == "PlatformStand" and v == false and T.FlyOn then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
@@ -2510,7 +2530,8 @@ end
 local n2 = KG.blocked3 or 0
 if n2 ~= (KG.lastReport3 or 0) then
 KG.lastReport3 = n2
-F.Out("[屏蔽] 已挡下服务端对我角色的写入 ×" .. tostring(n2) .. " (钉住/清血/打断飞行)")
+F.Out("[屏蔽] 已挡下服务端对我角色的写入 ×" .. tostring(n2)
+.. " (钉住/清血/打断飞行/禁走/禁跳/禁转向)")
 end
 local ch = LP.Character
 if ch then
@@ -2562,6 +2583,11 @@ local n5 = KG.blocked5 or 0
 if n5 ~= (KG.lastBlock5 or 0) then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
+end
+local n7 = KG.blocked7 or 0
+if n7 ~= (KG.lastBlock7 or 0) then
+KG.lastBlock7 = n7
+F.Out("[屏蔽] 已挡下把你切成物理道具 ×" .. tostring(n7) .. " (ChangeState(Physics) 是反作弊'冻结你'的常用手法)")
 end
 local n6 = KG.blocked6 or 0
 if n6 ~= (KG.lastBlock6 or 0) then
