@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:59 sha 31338a91 bytes 308162'):format('2026-10-02 22:59','31338a91',308162))
+print(('[CheatMenu] build 2026-10-02 23:04 sha 94325e38 bytes 309327'):format('2026-10-02 23:04','94325e38',309327))
 local F = {}
-F.VERSION = "v12.0.12"
+F.VERSION = "v12.0.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2415,10 +2415,16 @@ local nm1 = ""
 pcall(function() nm1 = self.Name end)
 if type(nm1) == "string" and nm1 ~= "" then
 local low1 = string.lower(nm1)
+local allow1 = false
+for _, ak in ipairs(F.ALLOW_REMOTE_KEYS) do
+if string.find(low1, ak, 1, true) then allow1 = true break end
+end
+if not allow1 then
 for _, kk in ipairs(F.DROP_KEYS) do
 if string.find(low1, kk, 1, true) then
 KG.blocked10 = (KG.blocked10 or 0) + 1
 return nil
+end
 end
 end
 end
@@ -2432,10 +2438,16 @@ local nm0 = ""
 pcall(function() nm0 = self.Name end)
 if type(nm0) == "string" and nm0 ~= "" then
 local low0 = string.lower(nm0)
+local allow = false
+for _, ak in ipairs(F.ALLOW_REMOTE_KEYS) do
+if string.find(low0, ak, 1, true) then allow = true break end
+end
+if not allow then
 for _, kk in ipairs(F.BLOCK_REMOTE_KEYS) do
 if string.find(low0, kk, 1, true) then
 KG.blocked9 = (KG.blocked9 or 0) + 1
 return nil
+end
 end
 end
 end
@@ -3538,8 +3550,13 @@ end
 F.DROP_KEYS = { "dropheld", "droppet", "dropheldegg", "dropitem", "dropcarry", "releaseheld",
 "dropbrainrot", "drop" }
 F.BLOCK_REMOTE_KEYS = {
-"trap", "snare", "cage", "catch", "caught", "stun", "rats", "mousetrap", "beartrap",
-"guard", "security", "arrest", "jail", "alert", "detect", "wanted", "handcuff", "escort",
+"trap", "snare", "cage", "stun", "mousetrap", "beartrap", "ratstrap",
+"caught", "arrested", "handcuff", "jailed", "wanted", "guardcatch", "guardhit", "securityhit",
+}
+F.ALLOW_REMOTE_KEYS = {
+"request", "sync", "get", "steal", "place", "equip", "interact", "prompt", "purchase",
+"buy", "sell", "trade", "open", "claim", "collect", "use", "fire", "trigger", "update",
+"fetch", "query", "send", "notify", "progress", "tutorial", "lobby", "teleport", "spawn",
 }
 F.TRAP_TAGS = { "PlayerTrap", "Trap", "PlayerTraps", "GuardTrap", "TrapPart", "BearTrap", "ActiveTrap" }
 F.TrapKillTouch = function(part)
@@ -5536,6 +5553,7 @@ if T.InstantInteract then pcall(F.InstantInteractApply, pp) end
 end)
 end)
 pcall(F.InteractWatchEnable)
+pcall(F.InstantInteractHeal)
 F.Out("[瞬间交互] 已开启(长按→点一下就成 · 不要求看得见) — 本次处理 " .. tostring(n)
 .. " 个交互点, 新出现的也自动生效; 关闭时逐个还原原值")
 end
@@ -5559,7 +5577,26 @@ end
 F.InteractWatchDisable = function()
 if F._ppConn then pcall(function() F._ppConn:Disconnect() end) F._ppConn = nil end
 end
+F.InstantInteractHeal = function()
+if F._iiHeal then return end
+F._iiHeal = task.spawn(function()
+while T.InstantInteract do
+task.wait(5)
+if not T.InstantInteract then break end
+pcall(function()
+local _, n2 = F.InstantInteractScan()
+F._iiHealHits = (F._iiHealHits or 0) + 1
+if (n2 or 0) > 0 and os.clock() - (F._iiHealLog or 0) > 30 then
+F._iiHealLog = os.clock()
+F.Out("[瞬间交互] 自愈: 又处理了 " .. tostring(n2) .. " 个交互点(第 " .. tostring(F._iiHealHits) .. " 次复查)")
+end
+end)
+end
+F._iiHeal = nil
+end)
+end
 function F.InstantInteractDisable()
+F._iiHeal = nil
 if F.II_CONN then pcall(function() F.II_CONN:Disconnect() end) F.II_CONN = nil end
 if F.II_SHOWN then pcall(function() F.II_SHOWN:Disconnect() end) F.II_SHOWN = nil end
 local n = 0
