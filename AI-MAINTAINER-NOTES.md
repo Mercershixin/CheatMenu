@@ -2802,3 +2802,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 扫描'有实现但没入口'的函数: 真幽灵 5 个 —— 无限跳(补入口到移动页)、自动存档/角色持续/实时玩家列表(**合并成一个「会话保持」开关**)、防拉回档(补独立入口到系统页, 它是最激进的一档必须能单独控制); 另外 RestoreFeatures 原本在加载时就自动开 AutoSave+LivePlayers(违反'加载不许自动开任何功能')已改成只设标志; 复查后剩余 13 个'没入口'全是内部函数(由反拉回/防护/防踢间接调用), 无真幽灵
 
+
+
+## 11.3.0：止 267: 不再销毁游戏脚本 + 拆出最激进的 getgc 中和 + 清陈旧 API
+
+- ① 高危修正: 防拉回档原本对检测脚本做 **Disabled+Destroy** —— 客户端销毁游戏自己的脚本是极强的异常信号(很可能就是'一开就 267'的来源) ⇒ 改成**只 Disabled**, 并把被禁脚本记下来, **关闭时逐个恢复**; ② 「防踢」不再自动跑 getgc 中和, 拆出独立开关「深度反作弊中和」(系统页, 默认关, 用完提醒关) —— 防踢现在只保留轻量的 Kick 三路径; ③ 陈旧 API: 清痕迹从 getfenv 改 getgenv(避免反作弊 hook getfenv 记录), UI 的 Instance.new 两参写法拆成两步; ④ 复查: 无 wait/spawn/delay、无 BodyVelocity/BodyGyro/BodyPosition、无 FilteringEnabled —— 现代 API 已全用
+
