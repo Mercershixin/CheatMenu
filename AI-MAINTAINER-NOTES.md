@@ -2850,3 +2850,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 修: 区域兜底用了尚未声明的 prim ⇒ undef-global, 改成自包含取 PrimaryPart; ② **流程加固: _wrap.py 现在先跑门禁, 不通过就拒绝推送**(宁可发版失败也不能把带问题的产物推给用户) —— 之前 11.4.5 就是这样带着 undef-global 被推上去的
 
+
+
+## 11.5.1：蛋搜索重写: 只扫'游戏自己的蛋容器' + 标归属(我的/别人的) + 排除宠物区 + 显示 kg/等级/价值
+
+- 根因(用户反馈'扫到别人已经偷到在家孵化的蛋'): 我们一直是**全图 GetDescendants 乱扫** ⇒ 把基地里的门/围栏/已孵化的宠物全当成蛋. 抄同族(naharsyaifullah-ai/steal-an-egg-script src/p02_scan.lua): ① 它**只扫游戏自己的蛋容器**(如 Workspace.AreaEggSlotsClient), 命中候选名 areaeggslots/eggslot/eggs/nest/spawner/eggstand… 的容器 ⇒ 我们改成同样做法(找到就只扫容器内, 找不到才退回全图); ② 它用 plot 的 Owner/OwnerName 判定**归属**(myPlot/owned), 并区分 heldByOther ⇒ 我们加了 F.EggOwnerOf(向上6层找 plot/base/pen/stand, 读 Owner ValueBase/属性, 判定 我的/别人的), **并默认跳过'我的'那些**; ③ 排除宠物区(petarea/hatch/incubator/inventory); ④ 标签改成四项齐全: 'kg?'+'等级N'+'值N'+'别人的/我的/地块名'+距离 —— 读不到就显示 kg? 而不是假的 0.0 kg
+
