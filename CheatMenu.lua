@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:40 sha cb73f615 bytes 311024'):format('2026-10-02 18:40','cb73f615',311024))
+print(('[CheatMenu] build 2026-10-02 18:45 sha b643f8d8 bytes 311169'):format('2026-10-02 18:45','b643f8d8',311169))
 local F = {}
-F.VERSION = "v11.5.4"
+F.VERSION = "v11.5.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8327,14 +8327,31 @@ pcall(F.CharPersistDisable)
 F.Out("[会话保持] 已关")
 end
 end })
-Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速; 探针会用异常位移)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
-Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
-Tabs.Setting:AddButton({ Title = "修复角色碰撞(踩不上跑步机 / 道具没反应 时点)", Callback = function() F.FixCharCollision() end })
-Tabs.Setting:AddButton({ Title = "★ 扫描 HUD 数字控件(读不到数值时用)", Callback = function() F.ScanHUD() end })
-Tabs.Setting:AddButton({ Title = "★ 恢复上次开启的功能(读档不自动开, 点这个才开)", Callback = function() F.RestoreSavedFeatures() end })
-Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能)", Callback = function() F.HotReload(false) end })
-Tabs.Setting:AddButton({ Title = "强制重载(即使已是最新也重下一遍)", Callback = function() F.HotReload(true) end })
+Tabs.Setting:AddDropdown("FixTool", { Title = "★ 诊断与修复(选一项执行 · 选完自动复位)", Values = {
+"环境自检(手机/平板没效果先跑这个)",
+"修复角色碰撞(踩不上跑步机 / 道具没反应)",
+"扫描 HUD 数字控件(读不到数值时)",
+"恢复上次开启的功能",
+"反拉回诊断(所有权→夺取→探针, 会用异常位移)",
+"强制重载(即使已是最新也重下一遍)",
+}, Default = nil, Callback = function(v)
+if F._cfgSyncing or type(v) ~= "string" then return end
+if string.find(v, "环境自检", 1, true) then
+pcall(F.EnvSelfCheck)
+elseif string.find(v, "修复角色", 1, true) then
+pcall(F.FixCharCollision)
+elseif string.find(v, "扫描 HUD", 1, true) then
+pcall(F.ScanHUD)
+elseif string.find(v, "恢复上次", 1, true) then
+pcall(F.RestoreSavedFeatures)
+elseif string.find(v, "反拉回诊断", 1, true) then
+pcall(F.SrvOneClick)
+elseif string.find(v, "强制重载", 1, true) then
+pcall(F.HotReload, true)
+end
+end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能; 要强制重下用上面的诊断下拉)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
 F.UnloadAll = UnloadAll
