@@ -2766,3 +2766,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 修真 bug: 传送(smoothTP/eggTP)后没重置 F._intent ⇒ 反拉回的续跑会把角色拽回传送前的位置 ⇒ 新增 F.DropIntent() 在所有自己移动角色的地方调用; ② 抄同族 matpatz/Roblox 的 bypass: 只记录'确实站在地面'(向下 raycast = HipHeight+RootHalfHeight+0.4)的样本作安全点, 掉图(Y<-120)或被拉离>450格就回滚到最近安全点; ③ 抄 AntiSkidWare: 抢所有权后把 NetworkOwnershipRule 复位为 Automatic(别被读出'你抢了所有权')
 
+
+
+## 11.0.53：检查抓到并修 1 个严重逻辑 bug + 补强速度不复制
+
+- ① BUG(严重): 安全点用'距安全点>450格'判被拉离 —— 加速 5000 时 0.09 秒就跑 450 格 ⇒ 一开加速就被自己误判并拽回安全点 ⇒ 改成 **掉出地图(Y<-120) 或 静止时(没开加速/飞行)位置突变>300格** 才回滚; ② 加固: HipHeight 异常时兜底 2, 关闭时清 _safePrevPos; ③ 补强反检测: 伪装里试装 (先 gethiddenproperty 读, 存在才设) ⇒ 改过的速度不再复制给服务端; ④ 第四批挖掘脚本崩了(list 当 dict 键用)已修重启
+
