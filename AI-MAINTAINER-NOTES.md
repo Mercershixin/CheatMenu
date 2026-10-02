@@ -2844,3 +2844,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 来源: naharsyaifullah-ai/steal-an-egg-script 的 src/p02_scan.lua(同族扫描模块, 仍在维护) —— ① 它不靠 inst.Name 认蛋, 而是把**模型名+父链3层+子部件名+所有子对象属性**拼成一个文本 blob 再匹配(textBlob), 我原来只看 inst.Name ⇒ 漏报; ② 它查稀有度/名字**由严到宽**(精确 → 去变体 SpiritBloom/Rainbow/Golden/Bloom/Silver → 才允许包含), 我原来是'包含即命中' ⇒ 误报(KingMammoth 撞 Mammoth); ③ 重量取值顺序: **先文本里的 '数字kg', 再子 NumberValue 名字含 weight**; ④ 区域: 它硬编码了 11 个 biome 的 X 区间, 我们没法抄别的游戏坐标 ⇒ 改成**容器名优先 + 坐标象限兜底(北/南+东/西+距离)**, 保证'按区域排'永远有值; ⑤ 扫描后 LogFlush 落盘(以后扫描结果随时可查). 另外按用户要求: 穿墙/藏地下**还原成两个独立开关**(撤销上版合并), **删掉一键配置按钮**(改为回复里告知开哪些)
 
+
+
+## 11.4.6：重建(11.4.5 产物含 prim 未定义)+ 收尾脚本加门禁硬门
+
+- ① 修: 区域兜底用了尚未声明的 prim ⇒ undef-global, 改成自包含取 PrimaryPart; ② **流程加固: _wrap.py 现在先跑门禁, 不通过就拒绝推送**(宁可发版失败也不能把带问题的产物推给用户) —— 之前 11.4.5 就是这样带着 undef-global 被推上去的
+
