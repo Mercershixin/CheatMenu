@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:08 sha f8eaabb9 bytes 317790'):format('2026-10-02 19:08','f8eaabb9',317790))
+print(('[CheatMenu] build 2026-10-02 19:12 sha 25dcf351 bytes 318466'):format('2026-10-02 19:12','25dcf351',318466))
 local F = {}
-F.VERSION = "v11.6.2"
+F.VERSION = "v11.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3546,7 +3546,7 @@ end
 end)
 end
 F._steadyConn = nil
-local STEADY_STATES = { "Ragdoll", "FallingDown", "PlatformStanding" }
+local STEADY_STATES = { "Ragdoll", "FallingDown" }
 function F.SteadyStates(on)
 local _, hum = GC()
 if not hum then return end
@@ -4754,6 +4754,28 @@ for _, k in ipairs({ "_pinAp", "_pinAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
 end
+F.PinPulse = function(dest, secs)
+if not dest then return end
+pcall(function()
+local _, _, root = GC()
+if not root then return end
+local att = Instance.new("Attachment")
+att.Name = "CMPinPulse"
+att.Parent = root
+local ap = Instance.new("AlignPosition")
+ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+ap.Attachment0 = att
+ap.MaxForce = 1e9
+ap.Responsiveness = 200
+pcall(function() ap.RigidityEnabled = true end)
+ap.Position = dest
+ap.Parent = root
+task.delay(secs or 0.3, function()
+pcall(function() ap:Destroy() end)
+pcall(function() att:Destroy() end)
+end)
+end)
+end
 function F.PinEnable()
 if F._pinConn then return end
 local _, _, root = GC()
@@ -4848,16 +4870,22 @@ F.Out("[安全点] " .. (fell and "掉出地图" or "静止时被瞬间挪走 " 
 end
 end
 end
-if now - (F._bypassOwnAt or 0) > 0.5 then
+if now - (F._bypassOwnAt or 0) > 1.2 then
 F._bypassOwnAt = now
 if T.SpeedOn or T.FlyOn then
+local owner = nil
+pcall(function()
+local _, _, r3 = GC()
+if r3 then owner = r3:GetNetworkOwner() end
+end)
+if owner ~= LP then
 F._bypassOwnOK = pcall(F.SrvOwnTake, false)
+end
 end
 end
 end)
 F.Out("[绕过] 网络所有权回读: " .. (got and "本地(拿到)" or "仍非本地 ⇒ 这游戏持续抢回, 靠「被拉回就续跑」硬顶"))
-F.Out("[绕过] 已开启: 抢角色所有权(每0.5s) + 加速位移补足 + 客户端检测清理"
-.. (F._bypassAtp and "(连带开了防拉回档)" or ""))
+F.Out("[绕过] 已开启: 所有权**只在被夺走时**才抢(平时零干预) + 被拉回才顶回 + 安全点回滚")
 end
 function F.BypassDisable()
 if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
@@ -4952,6 +4980,7 @@ local rolled = (dev > thr) or (dev > want * 0.5 and dxz.Unit:Dot(u) < -0.3)
 if rolled then
 local dest = Vector3.new(intent.X, cur2.Y, intent.Z)
 pcall(function() r.CFrame = CFrame.new(dest) * (r.CFrame - r.CFrame.Position) end)
+pcall(function() F.PinPulse(dest, 0.3) end)
 F._tpBack = (F._tpBack or 0) + 1
 local t0 = os.clock()
 if t0 - (F._tpBackAt or 0) > 3 then
@@ -5685,9 +5714,8 @@ function F.SpeedGuardEnable()
 T.SpeedGuard = true
 T.BypassDetect = true
 pcall(F.BypassEnable)
-pcall(F.PinEnable)
 pcall(F.MetaHookEnsure)
-F.Out("[反拉回] 已开: 抢所有权(0.15s) + 钉位 + 被拉回就续跑 + 挡服务端钉住/清血/打断飞行")
+F.Out("[反拉回] 已开(平时零干预, 被拉回才出手): 所有权被夺才抢 + 被回滚就用 0.3 秒脉冲顶回")
 end
 function F.SpeedGuardDisable()
 T.SpeedGuard = false
