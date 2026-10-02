@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:45 sha b643f8d8 bytes 311169'):format('2026-10-02 18:45','b643f8d8',311169))
+print(('[CheatMenu] build 2026-10-02 18:48 sha 22f32584 bytes 312387'):format('2026-10-02 18:48','22f32584',312387))
 local F = {}
-F.VERSION = "v11.5.5"
+F.VERSION = "v11.5.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4401,24 +4401,56 @@ end
 table.sort(F._eggs, function(a, b) return a.score > b.score end)
 return #F._eggs
 end
+F.EGG_SORT_NAME = {
+kg = "重量(kg)", val = "价值", tier = "稀有度等级", vol = "体积", dist = "距离最近", region = "区域",
+}
 F.EggSortNow = function()
 local mode = tostring(C.EggSort or "最重(kg)")
 local list = F._eggs or {}
-table.sort(list, function(a, b)
-if string.find(mode, "贵", 1, true) then
-return (a.val or -1) > (b.val or -1)
-elseif string.find(mode, "稀有", 1, true) then
-return (a.tier or 0) > (b.tier or 0)
-elseif string.find(mode, "距离", 1, true) then
-return (a.dist or 0) < (b.dist or 0)
-elseif string.find(mode, "区域", 1, true) then
-local ar, br = tostring(a.region or "zzz"), tostring(b.region or "zzz")
-if ar ~= br then return ar < br end
-return (a.kg or 0) > (b.kg or 0)
+local function keyOf(kind, e)
+if kind == "kg" then return e.kg and e.kg > 0 and e.kg or -1 end
+if kind == "val" then return e.val or -1 end
+if kind == "tier" then return e.tier or -1 end
+if kind == "vol" then return e.vol or 0 end
+if kind == "dist" then return -(e.dist or 1e9) end
+if kind == "region" then return tostring(e.region or "zzz") end
+return 0
 end
-return (a.kg or 0) > (b.kg or 0)
+local order
+if string.find(mode, "贵", 1, true) then
+order = { "val", "tier", "kg", "vol" }
+elseif string.find(mode, "稀有", 1, true) then
+order = { "tier", "val", "kg", "vol" }
+elseif string.find(mode, "距离", 1, true) then
+order = { "dist", "kg", "vol" }
+elseif string.find(mode, "区域", 1, true) then
+order = { "region", "kg", "val", "vol" }
+else
+order = { "kg", "val", "tier", "vol" }
+end
+local used = order[1]
+for _, k in ipairs(order) do
+local seen, distinct = {}, 0
+for _, e in ipairs(list) do
+local v = tostring(keyOf(k, e))
+if not seen[v] then
+seen[v] = true
+distinct = distinct + 1
+end
+end
+if distinct > 1 then used = k break end
+end
+local tie = order[#order]
+table.sort(list, function(a, b)
+local ka, kb = keyOf(used, a), keyOf(used, b)
+if ka == kb then
+ka, kb = keyOf(tie, a), keyOf(tie, b)
+if ka == kb then return tostring(a.name) < tostring(b.name) end
+end
+return ka > kb
 end)
-return list
+F._eggSortUsed = used
+return used
 end
 function F.EggLabels()
 local out = {}
@@ -4444,7 +4476,8 @@ end
 function F.EggScanAndFill()
 pcall(F.EggAssetIndex)
 local n = F.EggScanMap()
-pcall(F.EggSortNow)
+local used = nil
+pcall(function() used = F.EggSortNow() end)
 local labels = F.EggLabels()
 local okRef = pcall(function()
 local op = Fluent and Fluent.Options and Fluent.Options.EggPick
@@ -4457,7 +4490,9 @@ for _, e in ipairs(F._eggs) do
 if e.kg and e.kg > 0 then withKg = withKg + 1 end
 if e.byCat then byCat = byCat + 1 end
 end
-F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(byCat) .. " 个 · 读到 kg " .. tostring(withKg) .. " 个), 已按所选排序"
+local usedName = (used and F.EGG_SORT_NAME[used]) or "原始顺序"
+F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(byCat) .. " 个 · 读到 kg " .. tostring(withKg)
+.. " 个) · 排序方式=" .. tostring(C.EggSort or "最重(kg)") .. " ⇒ 实际按「" .. usedName .. "」从高到低"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
 pcall(F.LogFlush, "偷蛋扫描")
@@ -8102,7 +8137,9 @@ local labels = F.EggLabels()
 local op = Fluent and Fluent.Options and Fluent.Options.EggPick
 if op and op.Refresh then op:Refresh(labels) end
 end)
-F.Out("[偷蛋] 已按「" .. tostring(v) .. "」重排")
+local u2 = F._eggSortUsed
+F.Out("[偷蛋] 已按「" .. tostring(v) .. "」重排"
+.. (u2 and (" (实际用「" .. tostring(F.EGG_SORT_NAME[u2] or u2) .. "」)") or ""))
 end
 end })
 Tabs.TP:AddDropdown("EggPick", { Title = "③ 目标蛋(按上面排序, 自己挑)", Values = { "(先点①扫描)" }, Default = nil, Callback = function(v)
