@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:30 sha dfa0edbf bytes 316731'):format('2026-10-02 19:30','dfa0edbf',316731))
+print(('[CheatMenu] build 2026-10-02 19:42 sha e9c12504 bytes 320081'):format('2026-10-02 19:42','e9c12504',320081))
 local F = {}
-F.VERSION = "v11.7.1"
+F.VERSION = "v11.7.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3211,6 +3211,7 @@ end
 return #scripts, #conns
 end
 function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong, bypass)
+if steady or hit then pcall(F.CharEventsEnable) else pcall(F.CharEventsDisable) end
 T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
 T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
 T.HitStrong = strong and true or false
@@ -5722,6 +5723,7 @@ F.CarryGuardEnable = function()
 if F._cgConn then return end
 F.EggLock()
 F._carry = F.CarryFind()
+pcall(F.CarryWatchEnable)
 F._cgConn = RS.Heartbeat:Connect(function()
 if not T.CarryGuard then F.CarryGuardDisable() return end
 F.EggGuardTick()
@@ -5729,11 +5731,106 @@ F.CarryGuardTick()
 end)
 F.Out("[搬运守卫] 已开(焊点被拆就重焊 + 离手就拉回); 先站到蛋旁边再开")
 end
+F.CarryRescan = function(why)
+if not T.CarryGuard then return end
+pcall(F.EggLock)
+pcall(function() F._carry = F.CarryFind() end)
+F.Out("[搬运守卫] " .. tostring(why) .. " ⇒ 已重新锁定手上的东西")
+end
+F.CarryWatchEnable = function()
+if F._carryWatch then return end
+F._carryWatch = {}
+pcall(function()
+F._carryWatch[#F._carryWatch + 1] = LP.CharacterAdded:Connect(function()
+task.wait(0.8)
+F.CarryRescan("角色重生")
+end)
+end)
+local function watchChar(ch)
+if not ch then return end
+pcall(function()
+F._carryWatch[#F._carryWatch + 1] = ch.ChildAdded:Connect(function(o)
+if not T.CarryGuard then return end
+if o:IsA("Tool") then
+task.wait(0.2)
+F.CarryRescan("你装备了 " .. tostring(o.Name))
+end
+end)
+end)
+pcall(function()
+F._carryWatch[#F._carryWatch + 1] = ch.ChildRemoved:Connect(function(o)
+if not T.CarryGuard then return end
+if o:IsA("Tool") then
+F.Out("[搬运守卫] " .. tostring(o.Name) .. " 离手了(放下/被收走)")
+end
+end)
+end)
+end
+watchChar(LP.Character)
+pcall(function()
+F._carryWatch[#F._carryWatch + 1] = LP.CharacterAdded:Connect(function(ch)
+task.wait(0.8)
+watchChar(ch)
+end)
+end)
+end
+F.CarryWatchDisable = function()
+if F._carryWatch then
+for _, c in ipairs(F._carryWatch) do pcall(function() c:Disconnect() end) end
+F._carryWatch = nil
+end
+end
 function F.CarryGuardDisable()
+pcall(F.CarryWatchDisable)
 if F._cgConn then pcall(function() F._cgConn:Disconnect() end) F._cgConn = nil end
 F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack, F._carry, F._carryBack = nil, 0, nil, 0
 F.Out("[搬运守卫] 已关")
+end
+F.CharEventsEnable = function()
+if F._charEv then return end
+F._charEv = {}
+local function hook(ch)
+if not ch then return end
+local hum = ch:FindFirstChildOfClass("Humanoid")
+if not hum then return end
+pcall(function()
+F._charEv[#F._charEv + 1] = hum.Died:Connect(function()
+F._walkTgt = nil
+F._egg, F._eggPart, F._carry = nil, nil, nil
+F.Out("[角色] 你死了 ⇒ 已清掉走路目标与搬运锁定(重进后可再开)")
+end)
+end)
+pcall(function()
+F._charEv[#F._charEv + 1] = hum.StateChanged:Connect(function(_, new)
+if new == Enum.HumanoidStateType.FallingDown or new == Enum.HumanoidStateType.Ragdoll
+or new == Enum.HumanoidStateType.PlatformStanding then
+F._lastBadState = tostring(new)
+end
+end)
+end)
+pcall(function()
+F._charEv[#F._charEv + 1] = hum.HealthChanged:Connect(function(hp)
+local max = hum.MaxHealth
+if max and max > 1 and hp > 0 and hp < max * 0.35 then
+F._lastHurtAt = os.clock()
+end
+end)
+end)
+end
+hook(LP.Character)
+pcall(function()
+F._charEv[#F._charEv + 1] = LP.CharacterAdded:Connect(function(ch)
+task.wait(0.6)
+hook(ch)
+end)
+end)
+end
+F.CharEventsDisable = function()
+if F._charEv then
+for _, c in ipairs(F._charEv) do pcall(function() c:Disconnect() end) end
+F._charEv = nil
+end
 end
 function F.GuardOnDisable()
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
@@ -5804,8 +5901,29 @@ F.II_SHOWN = game:GetService("ProximityPromptService").PromptShown:Connect(funct
 if T.InstantInteract then pcall(F.InstantInteractApply, pp) end
 end)
 end)
+pcall(F.InteractWatchEnable)
 F.Out("[瞬间交互] 已开启(长按→点一下就成 · 不要求看得见) — 本次处理 " .. tostring(n)
 .. " 个交互点, 新出现的也自动生效; 关闭时逐个还原原值")
+end
+F.InteractWatchEnable = function()
+if F._ppConn then return end
+pcall(function()
+local PPS = game:GetService("ProximityPromptService")
+F._ppConn = PPS.PromptTriggered:Connect(function(prompt, plr)
+if plr ~= LP then return end
+F._promptHits = (F._promptHits or 0) + 1
+local now = os.clock()
+if now - (F._ppLogAt or 0) > 3 then
+F._ppLogAt = now
+local hn = ""
+pcall(function() hn = tostring(prompt and prompt.Parent and prompt.Parent.Name or "?") end)
+F.Out("[交互] 已达成交互 " .. tostring(F._promptHits) .. " 次(最近: " .. hn .. ")")
+end
+end)
+end)
+end
+F.InteractWatchDisable = function()
+if F._ppConn then pcall(function() F._ppConn:Disconnect() end) F._ppConn = nil end
 end
 function F.InstantInteractDisable()
 if F.II_CONN then pcall(function() F.II_CONN:Disconnect() end) F.II_CONN = nil end
