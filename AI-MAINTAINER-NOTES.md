@@ -2898,3 +2898,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 从同族 12 个模块(AutoFarm/InventoryManager/FarmFilters/Movement/GuardZone/PetAutomation/scanner-v3/autofarm-v2 等)抽出功能分布, 对照后发现我们缺三块 ⇒ 补齐: **走过去拿**(F.EggWalkTo: MoveTo 走位+到达自动触发交互, 不传送避免位置差检测) / **守卫规避**(扫 guard·npc·security·police·watcher·sentry 类模型, 25格内反向撤35格) / **偷蛋筛选**(全部·稀有度≥3·≥5·只要有重量); ② 流程验证有效: 本次 _wrap 的**门禁硬门拦下了一次带 undef-global(gTier 作用域)的推送**, 修好才推出去 —— 远端未被污染
 
+
+
+## 11.6.1：检查抓到并修掉 3 个真 bug
+
+- ① **加载时的残留 UI 清理完全没生效**: F.KillPreviousInstance 在 92 行定义/141 行调用, 而 F.NukeAllGUIs 在 5661 行才定义 ⇒ 调用时它是 nil, if 判断直接跳过('热加载多次出现多个UI'其实没被真正修好) ⇒ 改为在 **buildMenu() 之前**补一次清理; ② **守卫扫描只扫 workspace 第一层** ⇒ 守卫通常在 Workspace.NPCs 之类的子容器里, 扫不到 ⇒ 改成'命中的容器深入一层 + 其余扫其直接子级'(限 4000); ③ 走路与传送两套逻辑会打架 ⇒ 点'传送到选中的蛋'或'远程拿'时先清掉走路目标(_walkTgt)并重置意图位置; 门禁全绿后推送
+
