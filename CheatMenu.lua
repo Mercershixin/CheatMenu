@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:36 sha 1cf55540 bytes 297068'):format('2026-10-02 17:36','1cf55540',297068))
+print(('[CheatMenu] build 2026-10-02 17:41 sha 5737e1d4 bytes 298619'):format('2026-10-02 17:41','5737e1d4',298619))
 local F = {}
-F.VERSION = "v11.2.4"
+F.VERSION = "v11.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2287,6 +2287,20 @@ end
 end
 local KG = { hooked = false, target = nil, rjConn = nil, blocked = 0 }
 F.MetaHookUninstall = function() pcall(F.KickGuardPathsDisable) end
+function F.DeepNeuterEnable()
+T.DeepNeuter = true
+pcall(F.MetaHookEnsure)
+local n = 0
+pcall(function() n = F.AntiCheatGCSweep() end)
+F.Out("[深度中和] 已开: getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
+.. " —— 这层最容易招反作弊, 用完记得关")
+end
+function F.DeepNeuterDisable()
+T.DeepNeuter = false
+local n = 0
+pcall(function() n = F.AntiCheatGCRestore() end)
+F.Out("[深度中和] 已关(还原 " .. tostring(n) .. " 个被改过的函数)")
+end
 function F.MetaHookEnsure()
 if KG.mtHooked then return end
 pcall(F.KickGuardPathsEnable)
@@ -2625,7 +2639,6 @@ KG.lastReport = nil
 end
 function F.KickGuardEnable()
 if KG.hooked then return true end
-pcall(F.AntiCheatGCSweep)
 F.Out("[防踢] 正在装「Kick 三路径拦截」(会改写全局元表) —— 个别反作弊会因这层 hook 直接踢你; 平时建议关着, 挂机前再开")
 pcall(F.KickGuardPathsEnable)
 local kf = LP.Kick
@@ -3247,7 +3260,18 @@ F.ANTITP_KEYS = { "obbyantitp", "antitp", "antilagback", "lagback",
 F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
 F._atpState = nil
 function F.SpeedAntiTPDisable()
-local st = F._atpState
+if F._atpDisabled then
+local back = 0
+for _, d in ipairs(F._atpDisabled) do
+if typeof(d) == "Instance" and d.Parent then
+pcall(function() d.Disabled = false end)
+back = back + 1
+end
+end
+F._atpDisabled = nil
+if back > 0 then F.Out("[防拉回] 已把 " .. tostring(back) .. " 个被禁用的游戏脚本恢复回来") end
+end
+if not F._atpState then return end
 F._atpState = nil
 if not st then return end
 for fn, orig in pairs(st.hooked or {}) do
@@ -3271,8 +3295,12 @@ if d:IsA("LocalScript") then
 local nm = tostring(d.Name):lower()
 for _, k in ipairs(F.ANTITP_KEYS) do
 if nm:find(k, 1, true) then
-pcall(function() d.Disabled = true d:Destroy() end)
+local okd = pcall(function() d.Disabled = true end)
+if okd then
+F._atpDisabled = F._atpDisabled or {}
+F._atpDisabled[#F._atpDisabled + 1] = d
 n = n + 1
+end
 break
 end
 end
@@ -5142,8 +5170,8 @@ local g = getgenv and getgenv()
 if type(g) == "table" and g[n] ~= nil then g[n] = nil cleaned = cleaned + 1 end
 end)
 pcall(function()
-local e = getfenv and getfenv()
-if type(e) == "table" and e[n] ~= nil then e[n] = nil cleaned = cleaned + 1 end
+local g2 = (type(getgenv) == "function") and getgenv() or nil
+if type(g2) == "table" and g2[n] ~= nil then g2[n] = nil cleaned = cleaned + 1 end
 end)
 end
 end)
@@ -5981,7 +6009,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -7146,7 +7174,7 @@ F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
-F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable,
+F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
@@ -7843,6 +7871,12 @@ Duration = 10,
 end)
 end })
 Tabs.Setting:AddSection("系统")
+Tabs.Setting:AddToggle("DeepNeuter", { Title = "深度反作弊中和(getgc 扫表改函数 · 最容易招踢)", Description = "会遍历内存里的所有表, 把 kick/Kill/Detected/lagback 之类函数中和掉。个别反作弊会因此直接踢你 —— 只在被针对时开", Default = false, Callback = function(v)
+local changed = (T.DeepNeuter ~= nil) and (T.DeepNeuter ~= v)
+T.DeepNeuter = v
+if F._cfgSyncing or not changed then return end
+if v then pcall(F.DeepNeuterEnable) else pcall(F.DeepNeuterDisable) end
+end })
 Tabs.Setting:AddToggle("AntiTP", { Title = "防拉回档(清检测脚本 + 断检测连接 + 中和检测函数)", Description = "最激进的一档: 会主动找出并清掉/断掉/中和游戏侧的检测。个别反作弊会因此盯上你 —— 需要时再开", Default = false, Callback = function(v)
 local changed = (T.AntiTPOn ~= nil) and (T.AntiTPOn ~= v)
 T.AntiTPOn = v
@@ -8008,7 +8042,9 @@ btn.BackgroundTransparency = 0.25
 btn.BorderSizePixel = 0
 btn.AutoButtonColor = false
 btn.Parent = sg
-Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+local uc = Instance.new("UICorner")
+uc.CornerRadius = UDim.new(1, 0)
+uc.Parent = btn
 local dragging, dragStart, btnStart = false, nil, nil
 btn.InputBegan:Connect(function(input)
 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
