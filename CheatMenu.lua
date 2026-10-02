@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 10:17 sha d760b50d bytes 292779'):format('2026-10-02 10:17','d760b50d',292779))
+print(('[CheatMenu] build 2026-10-02 11:03 sha a49a2396 bytes 293738'):format('2026-10-02 11:03','a49a2396',293738))
 local F = {}
-F.VERSION = "v11.0.53"
+F.VERSION = "v11.1.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1781,7 +1781,8 @@ local oki, info = pcall(debug.getinfo, obj, "nS")
 if oki and info then
 local nm = info.name or ""
 local src = info.source or ""
-local hit = AC.isSuspicious(nm) or AC.isSuspicious(src)
+local mine = F.IsOursSrc(tostring(src):lower()) or F.IsOursSrc(tostring(nm):lower())
+local hit = (not mine) and (AC.isSuspicious(nm) or AC.isSuspicious(src))
 if not hit then
 local okc, consts = pcall(dbgGetConstants, obj)
 if okc and type(consts) == "table" then
@@ -2180,6 +2181,7 @@ if F._afkConn then return end
 T.AntiAFK = true
 F._afkKilled = 0
 F._afkFixes = 0
+pcall(F.MetaHookEnsure)
 local killed = F.AntiAFKKillIdleConns()
 F._afkConn = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
@@ -2374,6 +2376,26 @@ if KG.kick and m == "Kick" and self == LP then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
+if m == "FireServer" and (T.AntiAFK or T.SpeedGuard) then
+local isInst = false
+pcall(function() isInst = (typeof(self) == "Instance") end)
+if isInst then
+local nm = ""
+pcall(function() nm = self.Name end)
+if type(nm) == "string" and nm ~= "" then
+if T.AntiAFK and string.find(nm, "ReportAfkState", 1, true) then
+KG.blocked6 = (KG.blocked6 or 0) + 1
+return nil
+end
+if T.SpeedGuard and (string.find(nm, "Integrity", 1, true)
+or string.find(nm, "IntegrityHeartbeat", 1, true)
+or string.find(nm, "IntegrityViolation", 1, true)) then
+KG.blocked6 = (KG.blocked6 or 0) + 1
+return nil
+end
+end
+end
+end
 return oldNC(self, ...)
 end)
 if type(oldIX) == "function" then
@@ -2540,6 +2562,11 @@ local n5 = KG.blocked5 or 0
 if n5 ~= (KG.lastBlock5 or 0) then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
+end
+local n6 = KG.blocked6 or 0
+if n6 ~= (KG.lastBlock6 or 0) then
+KG.lastBlock6 = n6
+F.Out("[反检测] 已拦下客户端上报 ×" .. tostring(n6) .. " (完整性/挂机状态 —— 服务端收不到这些就少一条判你的依据)")
 end
 local n4 = KG.blocked4 or 0
 if n4 ~= (KG.lastBlock4 or 0) then
