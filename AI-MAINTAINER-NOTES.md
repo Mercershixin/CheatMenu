@@ -2754,3 +2754,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 抄 novahub/Bypassed.lua: getgc(true) 扫 GC 表, 按精确方法名中和 kick/randomDelayKick→挂起, Kill/Detected/lagback/punish/flag→空函数, **getIsBodyMoverCreatedByGame→true**(破'检测你插了物理约束'那类反作弊); 开防踢时扫一次, 关闭/卸载全部还原(记录原函数)
 
+
+
+## 11.0.51：体检抓到并修掉 2 个真 bug
+
+- ① **传送会被自己拦**: __newindex 的位置拦截分支没做 checkcaller 放行 —— 我们自己的 PivotTo(点位/T键/偷蛋传送)也会走 __newindex, 距离一远就被自己拦掉 ⇒ 已加 checkcaller 放行(执行器线程直接放行); ② getgc 中和过宽: Kill/Detected 改成**必须同表共存**(Adonis 特征)才动, flag 太通用已移除; ③ 清掉 2 个只写不读的死字段
+
