@@ -3030,3 +3030,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 把「瞬间交互」开关从传送页移到**移动页的『加速』节**(放在搬运守卫之后), 并把注册的 tab 前缀从 Tabs.TP 改为 Tabs.Move(第一次挪位置时前缀忘了改, 已修) ⇒ 现在加速节里的顺序: 加速开关 / 加速速度 / 绕过防护档位 / 搬运守卫 / 瞬间交互
 
+
+
+## 12.0.3：飞行改回'速度驱动'(修'拉速度没反应'): 我把它改成了位置驱动, 追不上速度
+
+- 根因(**我改坏的**): 飞行原来被我改成 **位置驱动**(AlignPosition 刚性约束 + Responsiveness=40 + AlignOrientation 锁朝向) —— 位置约束每帧只把目标点前移 速度×dt, **约束追不上高速** ⇒ 调'飞行速度'滑块没反应(实际速度被约束能力限住), 朝向还被强行锁到相机. 修法(与公开脚本一致): ① 驱动改成 **LinearVelocity 速度驱动**(老执行器回退 BodyVelocity·MaxForce=1e9), 每帧  ⇒ **速度严格等于滑块值**; ② dir 含 Y(W 前/S 后/A 左/D 右 + 空格升/Ctrl降, 触屏用 MoveDirection) ⇒ **水平与上下都跟着滑块走**; ③ **删掉 AlignOrientation**(不再锁朝向, 你能自由转向); ④ 松手即停(VectorVelocity=0 + 清速度); ⑤ 与加速仍完全独立(加速在飞行时不执行)
+
