@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:16 sha 3f819eb4 bytes 302339'):format('2026-10-02 22:16','3f819eb4',302339))
+print(('[CheatMenu] build 2026-10-02 22:24 sha 05326d4b bytes 300634'):format('2026-10-02 22:24','05326d4b',300634))
 local F = {}
-F.VERSION = "v12.0.5"
+F.VERSION = "v12.0.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3108,14 +3108,6 @@ F._antiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-if F.OnMovingFloor and F.OnMovingFloor() then return end
-local lim = math.max(1500,
-(T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 2.0,
-(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 2.0)
-if root.AssemblyLinearVelocity.Magnitude > lim then
-pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0) end)
-pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
-end
 end)
 end
 function F.AntiKnockdownDisable()
@@ -3558,7 +3550,6 @@ if dir.Magnitude < 0.1 then dir = Vector3.new(1, 0, 0) end
 if dd < 6 then
 local dest = root.Position + dir.Unit * 22 + Vector3.new(0, 4, 0)
 local cf = CFrame.new(dest)
-if F.TPResist then pcall(F.TPResist, cf, 1.0) end
 pcall(function() root:PivotTo(cf) end)
 pcall(function()
 root.AssemblyLinearVelocity = Vector3.zero
@@ -4049,7 +4040,6 @@ local function eggTP(cf)
 local _, _, r = GC()
 if not r or not cf then return end
 if F.DropIntent then pcall(F.DropIntent) end
-if F.TPResist then pcall(F.TPResist, cf, 1.0) end
 pcall(function() r:PivotTo(cf) end)
 pcall(function()
 r.AssemblyLinearVelocity = Vector3.zero
@@ -4706,45 +4696,12 @@ if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
-F.TPResist = function(cf, secs)
-if not cf then return end
-F._tpTarget = { cf = cf, deadline = os.clock() + math.min(secs or 1.2, 5.0), last = 0 }
-if F._tpResistConn then return end
-F._tpResistConn = RS.Heartbeat:Connect(function()
-local t = F._tpTarget
-if not t or os.clock() > t.deadline then
-F._tpTarget = nil
-if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tpResistConn = nil end
-return
-end
-local now = os.clock()
-if now - (t.last or 0) < 0.06 then return end
-t.last = now
-local _, hum4, r = GC()
-if not r then return end
-local moving = false
-pcall(function()
-if hum4 and hum4.MoveDirection.Magnitude > 0.12 then moving = true end
-end)
-if moving then
-F._tpTarget = nil
-if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tpResistConn = nil end
-return
-end
-if (r.Position - t.cf.Position).Magnitude > 8 then
-pcall(function() r:PivotTo(t.cf) end)
-pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
-F._tpResistHits = (F._tpResistHits or 0) + 1
-end
-end)
-end
 local function smoothTP(targetCF)
 local _, _, root = GC()
 if not root or not targetCF then return end
 if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
-if F.TPResist then pcall(F.TPResist, targetCF, 4.0) end
 end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
@@ -4925,8 +4882,7 @@ if not root then
 F.Out("[点位] ⚠ 现在没有角色, 传送取消")
 return false
 end
-local _, srv = F.AuthorityGuard(false)
-pcall(F.SrvOwnTake, false)
+local srv = nil
 local pos = Vector3.new(tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0)
 smoothTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
 if hum then pcall(function() hum.PlatformStand = false end) end
@@ -4935,7 +4891,7 @@ pcall(function()
 local _, _, r2 = GC()
 if r2 then ok = (r2.Position - pos).Magnitude < 6 end
 end)
-F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]4秒(不需要开加速 · 你一走动立刻放手)",
+F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 瞬间到位",
 tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
 if not ok then
 F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
