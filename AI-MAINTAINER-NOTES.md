@@ -2772,3 +2772,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① BUG(严重): 安全点用'距安全点>450格'判被拉离 —— 加速 5000 时 0.09 秒就跑 450 格 ⇒ 一开加速就被自己误判并拽回安全点 ⇒ 改成 **掉出地图(Y<-120) 或 静止时(没开加速/飞行)位置突变>300格** 才回滚; ② 加固: HipHeight 异常时兜底 2, 关闭时清 _safePrevPos; ③ 补强反检测: 伪装里试装 (先 gethiddenproperty 读, 存在才设) ⇒ 改过的速度不再复制给服务端; ④ 第四批挖掘脚本崩了(list 当 dict 键用)已修重启
 
+
+
+## 11.1.0：修扫描把自己当反作弊的 bug + 新增拦客户端上报(反检测)
+
+- ① BUG: 模块扫描把本脚本 526 个函数报成'疑似反作弊函数'(@CheatMenu_hot) ⇒ 加 F.IsOursSrc 排除; ② 新能力: 在 __namecall 里拦 FireServer 到名字含 Integrity*/ReportAfkState 的 remote(受 反拉回/防挂机 开关控制) ⇒ 服务端收不到'客户端完整性'和'挂机状态'上报; 钩子内所有字符串操作改 string.xxx 形式避免 namecall 重入
+
