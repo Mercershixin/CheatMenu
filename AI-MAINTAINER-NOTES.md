@@ -3078,3 +3078,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 来源: **Lutosys/opensrc → StealAnEggAntiTrap.lua**(专门的反陷阱开源, 用户质问'别人怎么做得到') —— 它的做法是: ① 用 **CollectionService tag **(QueryDescendants('#PlayerTrap'))精确识别陷阱; ② ★★★ 核心: **销毁陷阱里的  实例**( ⇒ Destroy) —— TouchInterest 是 Roblox 内部负责'接触触发'的对象, **销毁它 ⇒ 该部件 Touched 永不触发 ⇒ 踩上去确实不触发**(这才是用户要的; 我之前那套'关 CanTouch/拦 remote/挪开'都只是外围); ③ 监听 DescendantAdded 处理新出现的陷阱. 已抄入: F.TRAP_TAGS(PlayerTrap/Trap/GuardTrap/BearTrap/ActiveTrap…) + **F.TrapKillTouch**(找 TouchInterest 或 TouchTransmitter 并销毁, 记数并日志) + **F.TrapTagWatch**(GetInstanceAddedSignal 监听新 tag 陷阱) + 心跳里对识别到的陷阱和 tag 陷阱都执行解除触碰; 开启日志改成'核心=解除触碰'; 兜底挪走提前到 8 格/24 格; 另外从 groovyrey/paste 的 SAE.lua 得知: **DropHeldEgg 是客户端实例**(偷窃完成的标志), 该服里它同时是 RemoteEvent ⇒ 我们的'防掉蛋'拦截与它对应(待实测)
 
+
+
+## 12.1.1：点位传送重做: 分步瞬移(远距离也能到) + 拿所有权 + 清速度 + 自动重试 3 次
+
+- 用户: '不开飞行/加速 用点位传送 还没开启远, 单独功能不需要依赖, 看别人怎么实现'. 查证: 我们的点位传送**本来就不依赖加速/飞行**(代码里没有 T.SpeedOn/T.FlyOn 判断), 真正原因是 **单帧巨位移被服务端拒绝**(近处能到、远处失败). 公开脚本的成熟做法(分步瞬移)已抄入: 新增 **F.HardTP(cf)**: ① 先拿网络所有权(CanSetNetworkOwnership ⇒ SetNetworkOwner(LP)); ② 临时 PlatformStand 减少 Humanoid 对位置的校正(传完恢复原值); ③ 清线速度/角速度; ④ **分步瞬移**: 距离>300 格时按每步 400 格分 2~12 步, **每步等一帧**(避免单帧巨位移被拒), 最后一步精确到位; ⑤ 到位校验(20 格内算成功), 失败**自动重试 3 次**(每次间隔 50~80ms); ⑥ smoothTP(点位传送/传送玩家)全部走它; 日志写清'距离 N 格 · 分步传送(M 步)/一次到位 · 不需要开加速/飞行', 失败时明确'被服务端拒绝'的说法; ⑦ 传送前后不再有任何'顶住'逻辑(12.0.6 已删), 传完就是传完
+
