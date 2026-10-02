@@ -2982,3 +2982,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① **蛋名处理**(用户: 名字要正确显示): 新增 F.CleanName —— 把 32 位十六进制/GUID(UUID) 形态的部分从名字里剥掉, 全剥空就显示'未命名蛋'; 蛋名探测新增 **MeshPart/SpecialMesh 的 MeshId 尾号、Decal/Texture 的资产尾号、ObjectValue 的 Value.Name** 三类来源(用户那个服蛋名是 AreaEgg_<uuid>, 现会显示为 AreaEgg_ 或内部宠物名); ② **每次点扫描都刷新**: 扫描完若之前选中的编号越界, 自动归 1 并把下拉选中项同步到第一条(避免'刷新了但选中的还是旧的/空的'); ③ **新增「自杀 / 重置角色」按钮**(移动页·其他移动, 用户问'自杀功能呢'): 优先走**游戏自己的重置通道**(角色里名为 Reset/ResetCharacter/Respawn/ResetPlayer 的 RemoteEvent/RemoteFunction ⇒ FireServer, 尊重游戏规则), 找不到才 hum.Health=0; 执行前统计手上拿着几个东西并**警告会掉**; 执行后清掉走路目标与搬运锁定
 
+
+
+## 11.8.2：传送独立化(不再需要开加速) + 删掉空的'交互'节
+
+- ① **根因**: 点位传送/玩家传送本身不依赖加速, 但'被服务端拉回就续跑'那套机制**只写在加速循环里**(靠 F._intent) ⇒ 不开加速时传过去就被拉回, 于是表现为'必须先开加速才能用'. 修法: 新增 **F.TPResist(cf, secs) 通用顶住** —— 传送后 2~2.5 秒内每 0.12 秒检查一次, 偏离目标 >3 格就重新 PivotTo + 清速度(独立心跳, 与加速/飞行无关), 接到 **smoothTP(点位传送/传送玩家)** 与 **eggTP(偷蛋传送)** 上 ⇒ 现在所有传送都自带顶住能力, 不需要开加速; 点位日志会写明'已自带[顶住]2.5秒(不需要开加速)'; ② 删掉传送页里空的『交互(偷蛋/开箱/机关)』小节(瞬间交互已整合在偷蛋区, 那个节下面没有任何控件); ③ 修一个 Lua 保留字坑: 我一开始用了 table 字段名 until(Lua 关键字)导致编译失败, 已改名 deadline
+
