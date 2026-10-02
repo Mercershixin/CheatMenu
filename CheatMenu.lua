@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:03 sha ae1b6372 bytes 295136'):format('2026-10-02 17:03','ae1b6372',295136))
+print(('[CheatMenu] build 2026-10-02 17:32 sha 3714f7fb bytes 295378'):format('2026-10-02 17:32','3714f7fb',295378))
 local F = {}
-F.VERSION = "v11.2.2"
+F.VERSION = "v11.2.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2383,7 +2383,7 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
-if m == "FireServer" and (T.AntiAFK or T.SpeedGuard) then
+if (m == "FireServer" or m == "InvokeServer") and (T.AntiAFK or T.SpeedGuard) then
 local isInst = false
 pcall(function() isInst = (typeof(self) == "Instance") end)
 if isInst then
@@ -2395,7 +2395,10 @@ KG.blocked6 = (KG.blocked6 or 0) + 1
 return nil
 end
 if T.SpeedGuard and (string.find(nm, "Integrity", 1, true)
-or string.find(nm, "Correction", 1, true)) then
+or string.find(nm, "Correction", 1, true)
+or string.find(nm, "Violation", 1, true)
+or string.find(nm, "anticheat", 1, true)
+or string.find(nm, "honeypot", 1, true)) then
 KG.blocked6 = (KG.blocked6 or 0) + 1
 return nil
 end
@@ -2592,7 +2595,7 @@ local n6 = KG.blocked6 or 0
 if n6 ~= (KG.lastBlock6 or 0) then
 KG.lastBlock6 = n6
 F.Out("[反检测] 已拦下客户端上报 ×" .. tostring(n6)
-.. " (完整性心跳Integrity/拉回前奏Correction/挂机状态Afk —— 服务端收不到这些就少一条判你的依据)")
+.. " (完整性Integrity/拉回前奏Correction/违规Violation/反作弊anticheat/蜜罐honeypot/挂机Afk —— 服务端收不到这些就少一条判你的依据)")
 end
 local n4 = KG.blocked4 or 0
 if n4 ~= (KG.lastBlock4 or 0) then
@@ -3239,7 +3242,8 @@ end)
 return hit
 end
 F.ANTITP_KEYS = { "obbyantitp", "antitp", "antilagback", "lagback",
-"speedcheck", "speedguard", "anticheat", "antiexploit", "antifly" }
+"speedcheck", "speedguard", "anticheat", "antiexploit", "antifly",
+"runtime_", "honeypot", "integrityviolation", "monitor" }
 F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
 F._atpState = nil
 function F.SpeedAntiTPDisable()
