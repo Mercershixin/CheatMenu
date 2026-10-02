@@ -3072,3 +3072,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ★ 用户实测(v12.0.8 · 服 76377501906469)日志分析: ① 档位②已开、[陷阱] 附近 8 个陷阱已处理 ⇒ **识别正常**; ② **完全没有 [拦触发] 行** ⇒ 说明该服的陷阱是**服务端直接判定**(客户端没上报可拦) ⇒ 这类踩上去不触发客户端做不到, 只能提前挪开 ⇒ 兜底从 6 格提前到 **8 格挪出 24 格**; ③ ★★ 从该服抓包名单里发现 **** —— 这就是'蛋掉了'的通道! 陷阱触发后游戏让客户端上报'放下蛋' ⇒ **新增「防掉蛋」(默认开)**: 拦 FireServer/InvokeServer 到名字含 dropheld/droppet/dropitem/dropcarry/releaseheld/drop 的通道 ⇒ 被夹/被抓后**蛋不掉**; 日志'[防掉蛋] 已拦下掉蛋/放下上报 ×N'; 开关放在移动页加速节(不想要可关, 关了就能正常放下蛋); ④ 注意: 只拦 drop 类, **不拦** StealEgg/PlaceEgg/EquipEgg/Eggs:(拦了就拿不到蛋了)
 
+
+
+## 12.1.0：抄到公开作品的'反陷阱'真解法: 销毁陷阱的 TouchInterest(踩上去不触发)
+
+- 来源: **Lutosys/opensrc → StealAnEggAntiTrap.lua**(专门的反陷阱开源, 用户质问'别人怎么做得到') —— 它的做法是: ① 用 **CollectionService tag **(QueryDescendants('#PlayerTrap'))精确识别陷阱; ② ★★★ 核心: **销毁陷阱里的  实例**( ⇒ Destroy) —— TouchInterest 是 Roblox 内部负责'接触触发'的对象, **销毁它 ⇒ 该部件 Touched 永不触发 ⇒ 踩上去确实不触发**(这才是用户要的; 我之前那套'关 CanTouch/拦 remote/挪开'都只是外围); ③ 监听 DescendantAdded 处理新出现的陷阱. 已抄入: F.TRAP_TAGS(PlayerTrap/Trap/GuardTrap/BearTrap/ActiveTrap…) + **F.TrapKillTouch**(找 TouchInterest 或 TouchTransmitter 并销毁, 记数并日志) + **F.TrapTagWatch**(GetInstanceAddedSignal 监听新 tag 陷阱) + 心跳里对识别到的陷阱和 tag 陷阱都执行解除触碰; 开启日志改成'核心=解除触碰'; 兜底挪走提前到 8 格/24 格; 另外从 groovyrey/paste 的 SAE.lua 得知: **DropHeldEgg 是客户端实例**(偷窃完成的标志), 该服里它同时是 RemoteEvent ⇒ 我们的'防掉蛋'拦截与它对应(待实测)
+
