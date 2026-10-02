@@ -2922,3 +2922,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 编译 0 错误, 门禁 8 项全绿(含与发行版逐字符一致), luau-analyze 只有 task/Enum/Instance 这类 Roblox 全局噪声(非问题); ② 循环自停自查: 31 个事件循环逐个看过, 9 个'疑似'经复核全是假阳性(自停条件在传入的 fn 里或清理列表里); ③ 开关闭环: 55 个开关/下拉的清理走 F.XxxDisable 形式, 之前已系统核对过(本轮键名匹配工具报的 35 项为假阳性); ④ **死码扫描抓到 3 处真死代码并删净**: F.PinEnable(28 行, 改成按需脉冲后无人调用) / F.PresetSpeedFlight(13 行, 一键配置按钮已按用户要求删除) / F.GuardOnEnable(3 行, 防护档位合并后无人调用), 共删 1680 字节, 残留引用 0; ⑤ 保留的 PinDisable 仍在清理列表里(卸载/一键全关会调)
 
+
+
+## 11.8.0：对比同族/通用脚本后发现我们缺 4 类监听事件, 已全部补上
+
+- 对比方法: 抽我们自己的监听清单 vs 同族 AutoFarm/InventoryManager/Movement/p02_scan + 通用 VapeV4. 结果: 我们有 RunService 循环 30 / UIS 输入 4 / Player 事件 4 / 子对象 9 / 属性信号 7, 但 **Humanoid 事件 0 个**、**Tool 装备事件 0 个**(同族库存脚本用了 11 次). 补齐: ① **Tool 装备/卸下 + 角色 ChildAdded/Removed 监听**(F.CarryWatchEnable) ⇒ 装备/放下蛋时**自动重新锁定**手上的东西(以前要'关开一次'); ② **Humanoid.Died / StateChanged / HealthChanged**(F.CharEventsEnable, 随防护开启) ⇒ 死亡自动清走路目标与搬运锁定、倒地/被击飞/平台上状态立刻记录、血量掉到 35% 以下记录时间; ③ **ProximityPromptService.PromptTriggered**(随瞬间交互开启) ⇒ 确认'交互真的成功了', 日志报'已达成交互 N 次(最近: xxx)'; ④ 全部监听都在关闭对应功能时断开(无残留)
+
