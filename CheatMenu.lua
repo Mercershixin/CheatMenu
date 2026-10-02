@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:10 sha e8555f3f bytes 301704'):format('2026-10-02 22:10','e8555f3f',301704))
+print(('[CheatMenu] build 2026-10-02 22:16 sha 3f819eb4 bytes 302339'):format('2026-10-02 22:16','3f819eb4',302339))
 local F = {}
-F.VERSION = "v12.0.4"
+F.VERSION = "v12.0.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3498,7 +3498,8 @@ if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
 F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
-"net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt" }
+"net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt",
+"mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise" }
 F._trapConn = nil
 function F.TrapGuardDisable()
 if F._selfTouchBak then
@@ -3548,15 +3549,31 @@ F._trapBak[pt] = { touch = pt.CanTouch }
 pt.CanTouch = false
 end)
 end
-if T.TrapDodge and dd < 8 and now - (F._trapDodgeAt or 0) > 0.8 then
+if T.TrapDodge and dd < 8 and now - (F._trapDodgeAt or 0) > 0.5 then
 F._trapDodgeAt = now
 pcall(function()
 local dir = root.Position - pt.Position
 dir = Vector3.new(dir.X, 0, dir.Z)
-if dir.Magnitude > 0.1 then
+if dir.Magnitude < 0.1 then dir = Vector3.new(1, 0, 0) end
+if dd < 6 then
+local dest = root.Position + dir.Unit * 22 + Vector3.new(0, 4, 0)
+local cf = CFrame.new(dest)
+if F.TPResist then pcall(F.TPResist, cf, 1.0) end
+pcall(function() root:PivotTo(cf) end)
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+F._trapJumped = (F._trapJumped or 0) + 1
+if now - (F._trapJumpLog or 0) > 3 then
+F._trapJumpLog = now
+F.Out(string.format("[陷阱] 你已踩进陷阱范围(%.0f格) ⇒ 已把你挪出 22 格(第 %d 次)",
+dd, F._trapJumped))
+end
+else
 local vv = root.AssemblyLinearVelocity
-local push = dir.Unit * 70
-root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 35), push.Z)
+local push = dir.Unit * 90
+root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 40), push.Z)
 end
 end)
 end
@@ -3577,8 +3594,7 @@ end
 end
 end
 end)
-F.Out("[陷阱] 附近有陷阱(最近 " .. string.format("%.0f", nearD) .. " 格) ⇒ 已临时关掉你身体的「可触碰」"
-.. "(这个会同步到服务端 ⇒ 服务端不再判定你踩上陷阱)")
+F.Out("[陷阱] 已开: 每 0.7 秒扫周围 22 格(名字含 trap/bear/snare/mousetrap 等都算); 踩进范围会直接把你挪出, 并临时关你身体的「可触碰」")
 end
 elseif F._selfTouchBak then
 for p2, orig in pairs(F._selfTouchBak) do
