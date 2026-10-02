@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 10:01 sha 7ae8fcc7 bytes 292031'):format('2026-10-02 10:01','7ae8fcc7',292031))
+print(('[CheatMenu] build 2026-10-02 10:17 sha d760b50d bytes 292779'):format('2026-10-02 10:17','d760b50d',292779))
 local F = {}
-F.VERSION = "v11.0.52"
+F.VERSION = "v11.0.53"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4237,8 +4237,9 @@ pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
 end
 if LP.Character then params.FilterDescendantsInstances = { LP.Character } end
 local hip = tonumber(hum.HipHeight) or 2
+if hip ~= hip or hip < 0 then hip = 2 end
 local half = root.Size.Y / 2
-local down = hip + half + 0.4
+local down = math.max(hip + half + 0.4, 2)
 local hit = workspace:Raycast(root.Position, Vector3.new(0, -down, 0), params)
 ok = hit ~= nil
 end)
@@ -4260,7 +4261,11 @@ if rt and F._safeSpot then
 local far = (Vector3.new(rt.Position.X, 0, rt.Position.Z)
 - Vector3.new(F._safeSpot.x, 0, F._safeSpot.z)).Magnitude
 local fell = rt.Position.Y < -120
-if fell or far > 450 then
+local prev = F._safePrevPos
+F._safePrevPos = rt.Position
+local jumped = prev and (rt.Position - prev).Magnitude > 300
+local idle = (not T.SpeedOn) and (not T.FlyOn)
+if fell or (jumped and idle) then
 local dest = CFrame.new(Vector3.new(F._safeSpot.x, F._safeSpot.y, F._safeSpot.z))
 pcall(function() rt:PivotTo(dest) end)
 pcall(function()
@@ -4271,7 +4276,7 @@ F.DropIntent()
 F._safeBack = (F._safeBack or 0) + 1
 if now - (F._safeLogAt or 0) > 3 then
 F._safeLogAt = now
-F.Out("[安全点] " .. (fell and "掉出地图" or "被拉离安全点 " .. string.format("%.0f", far) .. " 格")
+F.Out("[安全点] " .. (fell and "掉出地图" or "静止时被瞬间挪走 " .. string.format("%.0f", far) .. " 格")
 .. " ⇒ 已回到最近的安全地面点 (第 " .. tostring(F._safeBack) .. " 次)")
 end
 end
@@ -4289,7 +4294,7 @@ F.Out("[绕过] 已开启: 抢角色所有权(每0.5s) + 加速位移补足 + �
 end
 function F.BypassDisable()
 if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
-F._safeSpot, F._safeBack = nil, 0
+F._safeSpot, F._safeBack, F._safePrevPos = nil, 0, nil
 if F.DropIntent then pcall(F.DropIntent) end
 F._bypassOwnAt = nil
 if F._bypassAtp then
@@ -5059,7 +5064,19 @@ pcall(F.MetaHookEnsure)
 F._spoofConn = RS.Heartbeat:Connect(function()
 if not T.Spoof then F.SpoofDisable() return end
 end)
-F.Out("[伪装] 已开: 游戏侧读你的 WalkSpeed/JumpPower 拿到的是原值(执行器自己的代码读到真值)")
+local rw = false
+pcall(function()
+if type(gethiddenproperty) ~= "function" or type(sethiddenproperty) ~= "function" then return end
+local _, hum = GC()
+if not hum then return end
+local cur = nil
+pcall(function() cur = gethiddenproperty(hum, "ReplicateWalkSpeed") end)
+if cur == nil then return end
+pcall(function() sethiddenproperty(hum, "ReplicateWalkSpeed", false) end)
+rw = true
+end)
+F.Out("[伪装] 已开: 游戏侧读你的 WalkSpeed/JumpPower 拿到的是原值(执行器自己的代码读到真值)"
+.. (rw and " · 另已试装 ReplicateWalkSpeed=false(不再把改过的速度复制给服务端)" or ""))
 end
 function F.SpoofDisable()
 T.Spoof = false
