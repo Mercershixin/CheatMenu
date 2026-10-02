@@ -2856,3 +2856,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 根因(用户反馈'扫到别人已经偷到在家孵化的蛋'): 我们一直是**全图 GetDescendants 乱扫** ⇒ 把基地里的门/围栏/已孵化的宠物全当成蛋. 抄同族(naharsyaifullah-ai/steal-an-egg-script src/p02_scan.lua): ① 它**只扫游戏自己的蛋容器**(如 Workspace.AreaEggSlotsClient), 命中候选名 areaeggslots/eggslot/eggs/nest/spawner/eggstand… 的容器 ⇒ 我们改成同样做法(找到就只扫容器内, 找不到才退回全图); ② 它用 plot 的 Owner/OwnerName 判定**归属**(myPlot/owned), 并区分 heldByOther ⇒ 我们加了 F.EggOwnerOf(向上6层找 plot/base/pen/stand, 读 Owner ValueBase/属性, 判定 我的/别人的), **并默认跳过'我的'那些**; ③ 排除宠物区(petarea/hatch/incubator/inventory); ④ 标签改成四项齐全: 'kg?'+'等级N'+'值N'+'别人的/我的/地块名'+距离 —— 读不到就显示 kg? 而不是假的 0.0 kg
 
+
+
+## 11.5.2：防挂机默认开(按用户要求) + 绕过/防护散落按钮收成 1 个档位下拉
+
+- ★ 用户新指令覆盖旧铁律'加载不许自动开': 现在加载后自动应用'① 默认: 防挂机'档(轻量、不装钩子); ② 把散落在 4 个页面的 6 个开关(防挂机/防踢/防拉回档/深度中和/自保档位/伪装)合并成**反作弊页一个「绕过/防护 档位」下拉**: 关 / ①默认防挂机 / ②+防护反拉回伪装 / ③+防踢(装钩子) / ④全部含防拉回档与深度中和(最激进) —— 一个下拉管全部, 逐级递增; ③ 移动页因此只剩 飞行/加速/其他移动(无限跳·穿墙·藏地下·深度·隐身)+搬运守卫
+
