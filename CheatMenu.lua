@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:24 sha 05326d4b bytes 300634'):format('2026-10-02 22:24','05326d4b',300634))
+print(('[CheatMenu] build 2026-10-02 22:29 sha 84ad6f37 bytes 302298'):format('2026-10-02 22:29','84ad6f37',302298))
 local F = {}
-F.VERSION = "v12.0.6"
+F.VERSION = "v12.0.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2407,6 +2407,23 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
+if (m == "FireServer" or m == "InvokeServer") and T.TrapWarn then
+local isInst0 = false
+pcall(function() isInst0 = (typeof(self) == "Instance") end)
+if isInst0 then
+local nm0 = ""
+pcall(function() nm0 = self.Name end)
+if type(nm0) == "string" and nm0 ~= "" then
+if string.find(nm0, "trap", 1, true) or string.find(nm0, "snare", 1, true)
+or string.find(nm0, "cage", 1, true) or string.find(nm0, "catch", 1, true)
+or string.find(nm0, "stun", 1, true) or string.find(nm0, "rats", 1, true)
+or string.find(nm0, "mousetrap", 1, true) or string.find(nm0, "beartrap", 1, true) then
+KG.blocked9 = (KG.blocked9 or 0) + 1
+return nil
+end
+end
+end
+end
 if (m == "FireServer" or m == "InvokeServer") and (T.AntiAFK or T.SpeedGuard) then
 local isInst = false
 pcall(function() isInst = (typeof(self) == "Instance") end)
@@ -2609,6 +2626,11 @@ local n5 = KG.blocked5 or 0
 if n5 ~= (KG.lastBlock5 or 0) then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
+end
+local n9 = KG.blocked9 or 0
+if n9 ~= (KG.lastBlock9 or 0) then
+KG.lastBlock9 = n9
+F.Out("[反陷阱] 已拦下陷阱触发上报 ×" .. tostring(n9) .. " (踩上去游戏想上报'我被夹了', 被挡掉 ⇒ 服务端收不到就不夹你)")
 end
 local n8 = KG.blocked8 or 0
 if n8 ~= (KG.lastBlock8 or 0) then
@@ -3494,6 +3516,17 @@ F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", 
 "mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise" }
 F._trapConn = nil
 function F.TrapGuardDisable()
+if F._trapConnOff then
+local back = 0
+for _, list in pairs(F._trapConnOff) do
+for _, c in ipairs(list) do
+pcall(function() if c.Enable then c:Enable() end end)
+back = back + 1
+end
+end
+F._trapConnOff = {}
+if back > 0 then F.Out("[反陷阱] 已恢复 " .. tostring(back) .. " 条陷阱的触碰回调") end
+end
 if F._selfTouchBak then
 for p2, orig in pairs(F._selfTouchBak) do
 if typeof(p2) == "Instance" and p2.Parent then pcall(function() p2.CanTouch = orig end) end
@@ -3513,6 +3546,7 @@ if F._trapConn then return end
 F._trapAt = 0
 F._trapBak = F._trapBak or {}
 F._selfTouchBak = F._selfTouchBak or nil
+F._trapConnOff = F._trapConnOff or {}
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
@@ -3539,6 +3573,16 @@ if pt.CanTouch then
 pcall(function()
 F._trapBak[pt] = { touch = pt.CanTouch }
 pt.CanTouch = false
+end)
+end
+if not F._trapConnOff[pt] then
+F._trapConnOff[pt] = {}
+pcall(function()
+if type(getconnections) ~= "function" then return end
+for _, c in ipairs(getconnections(pt.Touched) or {}) do
+pcall(function() if c.Disable then c:Disable() end end)
+F._trapConnOff[pt][#F._trapConnOff[pt] + 1] = c
+end
 end)
 end
 if T.TrapDodge and dd < 8 and now - (F._trapDodgeAt or 0) > 0.5 then
@@ -3585,7 +3629,9 @@ end
 end
 end
 end)
-F.Out("[陷阱] 已开: 每 0.7 秒扫周围 22 格(名字含 trap/bear/snare/mousetrap 等都算); 踩进范围会直接把你挪出, 并临时关你身体的「可触碰」")
+F.Out("[反陷阱] 已开(三重拦截, 目的就是'踩上去也不触发'): "
+.. "① 拦下陷阱触发上报(客户端→服务端的 FireServer) ② 断掉陷阱自己的 Touched 回调 "
+.. "③ 靠近时临时关你身体的「可触碰」; 另外踩进范围(6格内)会把你挪出 22 格做兜底")
 end
 elseif F._selfTouchBak then
 for p2, orig in pairs(F._selfTouchBak) do
