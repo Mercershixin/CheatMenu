@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:35 sha b2dcddc3 bytes 302343'):format('2026-10-02 22:35','b2dcddc3',302343))
+print(('[CheatMenu] build 2026-10-02 22:45 sha 2a7164e7 bytes 303639'):format('2026-10-02 22:45','2a7164e7',303639))
 local F = {}
-F.VERSION = "v12.0.8"
+F.VERSION = "v12.0.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2407,6 +2407,23 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
+if (m == "FireServer" or m == "InvokeServer") and T.NoDrop then
+local isInst1 = false
+pcall(function() isInst1 = (typeof(self) == "Instance") end)
+if isInst1 then
+local nm1 = ""
+pcall(function() nm1 = self.Name end)
+if type(nm1) == "string" and nm1 ~= "" then
+local low1 = string.lower(nm1)
+for _, kk in ipairs(F.DROP_KEYS) do
+if string.find(low1, kk, 1, true) then
+KG.blocked10 = (KG.blocked10 or 0) + 1
+return nil
+end
+end
+end
+end
+end
 if (m == "FireServer" or m == "InvokeServer") and (T.TrapWarn or T.GuardOn) then
 local isInst0 = false
 pcall(function() isInst0 = (typeof(self) == "Instance") end)
@@ -2626,6 +2643,12 @@ local n5 = KG.blocked5 or 0
 if n5 ~= (KG.lastBlock5 or 0) then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
+end
+local n10 = KG.blocked10 or 0
+if n10 ~= (KG.lastBlock10 or 0) then
+KG.lastBlock10 = n10
+F.Out("[防掉蛋] 已拦下'掉蛋/放下'上报 ×" .. tostring(n10)
+.. " (被夹/被抓后游戏想让你的蛋掉出去, 被挡掉 ⇒ 蛋还在你手上)")
 end
 local n9 = KG.blocked9 or 0
 if n9 ~= (KG.lastBlock9 or 0) then
@@ -3512,6 +3535,8 @@ end
 if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
+F.DROP_KEYS = { "dropheld", "droppet", "dropheldegg", "dropitem", "dropcarry", "releaseheld",
+"dropbrainrot", "drop" }
 F.BLOCK_REMOTE_KEYS = {
 "trap", "snare", "cage", "catch", "caught", "stun", "rats", "mousetrap", "beartrap",
 "guard", "security", "arrest", "jail", "alert", "detect", "wanted", "handcuff", "escort",
@@ -3596,8 +3621,8 @@ pcall(function()
 local dir = root.Position - pt.Position
 dir = Vector3.new(dir.X, 0, dir.Z)
 if dir.Magnitude < 0.1 then dir = Vector3.new(1, 0, 0) end
-if dd < 6 then
-local dest = root.Position + dir.Unit * 22 + Vector3.new(0, 4, 0)
+if dd < 8 then
+local dest = root.Position + dir.Unit * 24 + Vector3.new(0, 4, 0)
 local cf = CFrame.new(dest)
 pcall(function() root:PivotTo(cf) end)
 pcall(function()
@@ -3634,7 +3659,7 @@ end
 end
 end
 end)
-F.Out("[反陷阱] 已开(三重拦截, 目的就是'踩上去也不触发'): "
+F.Out("[反陷阱] 已开: "
 .. "① 拦下陷阱触发上报(客户端→服务端的 FireServer) ② 断掉陷阱自己的 Touched 回调 "
 .. "③ 靠近时临时关你身体的「可触碰」; 另外踩进范围(6格内)会把你挪出 22 格做兜底")
 end
@@ -7742,6 +7767,13 @@ local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
 T.CarryGuard = v
 if F._cfgSyncing or not changed then return end
 if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
+end })
+Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "拦下游戏'让蛋掉出去'的上报 —— 这是最实用的防掉蛋手段(陷阱本身由服务端判定, 客户端拦不掉, 但掉蛋这一步能拦)", Default = true, Callback = function(v)
+local changed = (T.NoDrop ~= nil) and (T.NoDrop ~= v)
+T.NoDrop = v
+if F._cfgSyncing or not changed then return end
+pcall(F.MetaHookEnsure)
+F.Out(v and "[防掉蛋] 已开(被夹/被抓后不掉蛋)" or "[防掉蛋] 已关(会正常掉蛋)")
 end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
