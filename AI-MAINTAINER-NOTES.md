@@ -2778,3 +2778,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① BUG: 模块扫描把本脚本 526 个函数报成'疑似反作弊函数'(@CheatMenu_hot) ⇒ 加 F.IsOursSrc 排除; ② 新能力: 在 __namecall 里拦 FireServer 到名字含 Integrity*/ReportAfkState 的 remote(受 反拉回/防挂机 开关控制) ⇒ 服务端收不到'客户端完整性'和'挂机状态'上报; 钩子内所有字符串操作改 string.xxx 形式避免 namecall 重入
 
+
+
+## 11.2.0：按开源反作弊(shprotect-ac)的动作序列补齐服务端处置拦截
+
+- 它处理玩家时做: WalkSpeed=0 / JumpPower=0 / AutoRotate=false / PlatformStand=true / ChangeState(Physics) / Anchored=true / PivotTo(最后位置) / SetNetworkOwner(nil); 我们原本只拦了 Anchored/Health/PlatformStand=false, 现补齐: 拦 PlatformStand=true(钉住)、WalkSpeed/JumpPower/JumpHeight<=0(禁走禁跳)、AutoRotate=false(禁转向)、namecall 拦 ChangeState(Physics)(把你切成物理道具); 全部只在「反拉回」开着时生效, 且 checkcaller 放行我们自己的写入
+
