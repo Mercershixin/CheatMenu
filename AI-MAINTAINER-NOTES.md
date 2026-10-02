@@ -2790,3 +2790,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 抄同族 xkrexel-hub/sae 的 BlockedRemotes 名单(比我们全): 现拦 Afk*(含 ReportAfkState/RequestAfkTeleportFlush/ReportAfkTeleport) 与 Integrity*/Correction*(Correction = 服务端开始纠正你 = 拉回前奏); ② 抄 aquisisback-alt 'Hide exploit traces': 伪装开关里清 syn/KRNL_LOADED/EXECUTOR_NAME/is_sirhurt_closure 等执行器环境标记(故意不清 identifyexecutor —— 我们自己要用); ③ 记录不可做: checkcaller 全局伪装会破坏我们自己的放行判断, setthreadidentity 风险高, 都未采用
 
+
+
+## 11.2.3：拦截名单补齐: honeypot 蜜罐 + InvokeServer + Runtime_ 脚本
+
+- 抄同族 xkrexel-hub/sae 全文: ① isBlocked 关键词除 integrity 还有 violation/anticheat/**honeypot(蜜罐 —— 正常客户端永不调用, 一调用就判你外挂, 我们的扫描/自动交互最容易踩)**; ② 上报拦截从只拦 FireServer 扩到 FireServer+**InvokeServer**; ③ 检测脚本关键词表补 runtime_/honeypot/integrityviolation/monitor(它专门 Disabled 掉 PlayerScripts.Game 下 Runtime_ 开头的反作弊脚本)
+
