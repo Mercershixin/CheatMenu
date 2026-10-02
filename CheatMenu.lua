@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 15:32 sha 48c1cb82 bytes 294536'):format('2026-10-02 15:32','48c1cb82',294536))
+print(('[CheatMenu] build 2026-10-02 17:03 sha ae1b6372 bytes 295136'):format('2026-10-02 17:03','ae1b6372',295136))
 local F = {}
-F.VERSION = "v11.2.0"
+F.VERSION = "v11.2.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2390,13 +2390,12 @@ if isInst then
 local nm = ""
 pcall(function() nm = self.Name end)
 if type(nm) == "string" and nm ~= "" then
-if T.AntiAFK and string.find(nm, "ReportAfkState", 1, true) then
+if T.AntiAFK and string.find(nm, "Afk", 1, true) then
 KG.blocked6 = (KG.blocked6 or 0) + 1
 return nil
 end
 if T.SpeedGuard and (string.find(nm, "Integrity", 1, true)
-or string.find(nm, "IntegrityHeartbeat", 1, true)
-or string.find(nm, "IntegrityViolation", 1, true)) then
+or string.find(nm, "Correction", 1, true)) then
 KG.blocked6 = (KG.blocked6 or 0) + 1
 return nil
 end
@@ -2592,7 +2591,8 @@ end
 local n6 = KG.blocked6 or 0
 if n6 ~= (KG.lastBlock6 or 0) then
 KG.lastBlock6 = n6
-F.Out("[反检测] 已拦下客户端上报 ×" .. tostring(n6) .. " (完整性/挂机状态 —— 服务端收不到这些就少一条判你的依据)")
+F.Out("[反检测] 已拦下客户端上报 ×" .. tostring(n6)
+.. " (完整性心跳Integrity/拉回前奏Correction/挂机状态Afk —— 服务端收不到这些就少一条判你的依据)")
 end
 local n4 = KG.blocked4 or 0
 if n4 ~= (KG.lastBlock4 or 0) then
@@ -5128,6 +5128,24 @@ if cur == nil then return end
 pcall(function() sethiddenproperty(hum, "ReplicateWalkSpeed", false) end)
 rw = true
 end)
+local cleaned = 0
+pcall(function()
+local marks = { "syn", "KRNL_LOADED", "EXECUTOR_NAME", "is_sirhurt_closure",
+"synapsed", "sirhurt", "krnl", "fluxus", "delta", "wave", "elysian" }
+for _, n in ipairs(marks) do
+pcall(function()
+local g = getgenv and getgenv()
+if type(g) == "table" and g[n] ~= nil then g[n] = nil cleaned = cleaned + 1 end
+end)
+pcall(function()
+local e = getfenv and getfenv()
+if type(e) == "table" and e[n] ~= nil then e[n] = nil cleaned = cleaned + 1 end
+end)
+end
+end)
+if cleaned > 0 then
+F.Out("[伪装] 已清掉 " .. tostring(cleaned) .. " 个执行器环境标记(反作弊常靠这些认执行器)")
+end
 F.Out("[伪装] 已开: 游戏侧读你的 WalkSpeed/JumpPower 拿到的是原值(执行器自己的代码读到真值)"
 .. (rw and " · 另已试装 ReplicateWalkSpeed=false(不再把改过的速度复制给服务端)" or ""))
 end
