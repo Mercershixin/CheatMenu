@@ -2904,3 +2904,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① **加载时的残留 UI 清理完全没生效**: F.KillPreviousInstance 在 92 行定义/141 行调用, 而 F.NukeAllGUIs 在 5661 行才定义 ⇒ 调用时它是 nil, if 判断直接跳过('热加载多次出现多个UI'其实没被真正修好) ⇒ 改为在 **buildMenu() 之前**补一次清理; ② **守卫扫描只扫 workspace 第一层** ⇒ 守卫通常在 Workspace.NPCs 之类的子容器里, 扫不到 ⇒ 改成'命中的容器深入一层 + 其余扫其直接子级'(限 4000); ③ 走路与传送两套逻辑会打架 ⇒ 点'传送到选中的蛋'或'远程拿'时先清掉走路目标(_walkTgt)并重置意图位置; 门禁全绿后推送
 
+
+
+## 11.6.2：修'开防护后走路一顿一顿': 把两个周期性干预改成按需触发
+
+- 根因是两个**周期性动作**在干扰行走物理: ① **每 0.5 秒抢一次网络所有权** —— Roblox 每次所有权转移都会让角色短暂停顿, 0.5s 一次就是'一顿一顿' ⇒ 改成**先读 GetNetworkOwner, 只有所有权真不在我手上时**才抢(节流 1.2s), 平时一次都不动; ② **常驻刚性钉位(AlignPosition RigidityEnabled)** 与 Humanoid 行走物理打架(且松手后 _intent 停在旧位置会把人钉住) ⇒ 改成 **F.PinPulse 按需脉冲**: 只在'检测到被拉回'那一刻用 0.3 秒临时约束顶回去, 用完立刻销毁, 平时完全没有约束; ③ 稳身不再禁用 PlatformStanding 状态(站在移动平台/载具上不会被反复切状态抖动); 日志文案改为'平时零干预, 被拉回才出手'
+
