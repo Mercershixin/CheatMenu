@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:50 sha 4fc1598a bytes 321344'):format('2026-10-02 19:50','4fc1598a',321344))
+print(('[CheatMenu] build 2026-10-02 19:56 sha 1f399776 bytes 323100'):format('2026-10-02 19:56','1f399776',323100))
 local F = {}
-F.VERSION = "v11.7.3"
+F.VERSION = "v11.7.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4074,6 +4074,14 @@ end
 end
 end
 end)
+pcall(function()
+local CS = game:GetService("CollectionService")
+for _, tag in ipairs({ "Egg", "egg", "Brainrot", "brainrot", "PetEgg", "eggSpawn" }) do
+for _, inst in ipairs(CS:GetTagged(tag)) do
+if inst and inst.Parent then out[#out + 1] = inst end
+end
+end
+end)
 return out
 end
 F.EggOwnerOf = function(o)
@@ -4534,6 +4542,21 @@ if not (hum and root) then return end
 F._walkTgt = e
 F._walkUntil = os.clock() + 40
 F.Out("[偷蛋] 走路去拿: " .. tostring(e.name) .. " (不传送, 不容易被位置差检测抓)")
+pcall(function()
+if F._mtf then pcall(function() F._mtf:Disconnect() end) end
+F._mtf = hum.MoveToFinished:Connect(function(reached)
+if not T.EggWalk then return end
+local tgt = F._walkTgt
+if not (tgt and tgt.part and tgt.part.Parent) then return end
+local _, _, r4 = GC()
+local d = r4 and (r4.Position - tgt.part.Position).Magnitude or 99
+if reached or d < 9 then
+pcall(function() F.WalkTapPrompt(tgt.part.Position, 15) end)
+F.Out("[偷蛋] 已走到 " .. tostring(tgt.name) .. " 身边(MoveTo 完成)并触发交互")
+F._walkTgt = nil
+end
+end)
+end)
 if F._walkConn then return end
 F._walkConn = RS.Heartbeat:Connect(function()
 if not F._walkTgt or not T.EggWalk then
@@ -4557,6 +4580,7 @@ end
 if os.clock() > (F._walkUntil or 0) then
 F.Out("[偷蛋] 走路超时(可能被挡住), 改用传送吧")
 F._walkTgt = nil
+if F._mtf then pcall(function() F._mtf:Disconnect() end) F._mtf = nil end
 return
 end
 if (os.clock() - (F._walkStep or 0)) > 0.25 then
@@ -4630,6 +4654,21 @@ local _, _, root = GC()
 if not root then return nil end
 local rp = root.Position
 local seen = 0
+pcall(function()
+local CS = game:GetService("CollectionService")
+for _, tag in ipairs({ "Guard", "guard", "NPC", "npc", "Security" }) do
+for _, inst in ipairs(CS:GetTagged(tag)) do
+if inst and inst.Parent then
+local p = inst:IsA("BasePart") and inst
+or (inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart"))
+if p then
+local d = (p.Position - rp).Magnitude
+if d < bd then bd, best = d, p end
+end
+end
+end
+end
+end)
 pcall(function()
 for _, o in ipairs(workspace:GetChildren()) do
 local nm = string.lower(tostring(o.Name))
@@ -6819,6 +6858,16 @@ F.Out("[重进] 拿不到当前服务器 ID(JobId 为空: 多半在 Studio / 非
 return false
 end
 local ts = game:GetService("TeleportService")
+pcall(function()
+if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) end
+F._tpFailConn = ts.TeleportInitFailed:Connect(function(plr, code, msg)
+if plr ~= LP then return end
+F.Out("[重进] 传送失败: " .. tostring(code) .. " · " .. tostring(msg) .. " ⇒ 手动从 Roblox 菜单重进吧")
+end)
+task.delay(20, function()
+if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) F._tpFailConn = nil end
+end)
+end)
 F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")")
 local ok = pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, jid, LP) end)
 if ok then
