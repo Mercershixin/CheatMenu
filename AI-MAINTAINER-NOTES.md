@@ -2760,3 +2760,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① **传送会被自己拦**: __newindex 的位置拦截分支没做 checkcaller 放行 —— 我们自己的 PivotTo(点位/T键/偷蛋传送)也会走 __newindex, 距离一远就被自己拦掉 ⇒ 已加 checkcaller 放行(执行器线程直接放行); ② getgc 中和过宽: Kill/Detected 改成**必须同表共存**(Adonis 特征)才动, flag 太通用已移除; ③ 清掉 2 个只写不读的死字段
 
+
+
+## 11.0.52：加速专项：抄同族 bypass 的安全点回滚 + 修传送后意图位置不重置的 bug
+
+- ① 修真 bug: 传送(smoothTP/eggTP)后没重置 F._intent ⇒ 反拉回的续跑会把角色拽回传送前的位置 ⇒ 新增 F.DropIntent() 在所有自己移动角色的地方调用; ② 抄同族 matpatz/Roblox 的 bypass: 只记录'确实站在地面'(向下 raycast = HipHeight+RootHalfHeight+0.4)的样本作安全点, 掉图(Y<-120)或被拉离>450格就回滚到最近安全点; ③ 抄 AntiSkidWare: 抢所有权后把 NetworkOwnershipRule 复位为 Automatic(别被读出'你抢了所有权')
+
