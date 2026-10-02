@@ -2886,3 +2886,15 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 用户反馈'排序没按我选的来' ⇒ 根因: 若所选维度全部缺项(如 kg 全是 kg?), 原实现拿全 0 比较 ⇒ 顺序等于没排. 修法: ① 按所选维度排出**候选优先链**(最重=kg→价值→稀有度→体积; 最贵=价值→稀有度→kg→体积; 稀有=稀有度→价值→kg→体积; 距离=距离; 区域=区域→kg→价值→体积); ② 排序前**检测每个维度是否有'至少两个不同值'**, 取第一个能真正区分的维度; ③ 相同值再按体积兜底、最后按名字, 保证**永远有稳定顺序**; ④ 日志直接写明实际用了哪个维度: '排序方式=X ⇒ 实际按「Y」从高到低', 切换排序时也报
 
+
+
+## 11.5.7：横比全部同族脚本(12 个模块)后补齐三块: 走路去拿 / 守卫规避 / 偷蛋筛选
+
+- 同族模块功能分布(从 Steal-An-Egg/EggESP 全套 + ideBob/StealAnEgg-Autofarm + NotzeeSix3/scanner-v3·autofarm-v2 抽出): AutoFarm=waypoint74/pickup68/carry44/deposit31(寻路捡搬运存), InventoryManager=sell229/plot66(卖蛋放基地), FarmFilters=rarity95(按稀有度筛), Movement=walk91/guard10(走位避守卫), GuardZone=guard27, PetAutomation=hatch23(自动孵化), scanner-v3=path26. 对照我们: 扫蛋/归属/传送拿/搬运守卫/卖掉 已有; **缺 走路去拿(只能传送)、守卫规避、筛选** ⇒ 本轮补齐: ① F.EggWalkTo 按钮'走过去拿': Humanoid:MoveTo 走向目标(每0.25s重设, 40秒超时), 距 7 格内自动触发交互(不传送, 避免位置差检测); ② F.GuardAvoidEnable 开关'守卫规避': 扫 workspace 下名字含 guard/npc/security/police/watcher/sentry 的模型, 25 格内往反方向撤 35 格; ③ 新增'筛选'下拉: 全部 / 稀有度≥3 / ≥5 / 只要有重量, 扫描时按它过滤
+
+
+
+## 11.6.0：同族横比补齐三块(走路去拿/守卫规避/筛选) + 门禁拦下一次带 bug 推送
+
+- ① 从同族 12 个模块(AutoFarm/InventoryManager/FarmFilters/Movement/GuardZone/PetAutomation/scanner-v3/autofarm-v2 等)抽出功能分布, 对照后发现我们缺三块 ⇒ 补齐: **走过去拿**(F.EggWalkTo: MoveTo 走位+到达自动触发交互, 不传送避免位置差检测) / **守卫规避**(扫 guard·npc·security·police·watcher·sentry 类模型, 25格内反向撤35格) / **偷蛋筛选**(全部·稀有度≥3·≥5·只要有重量); ② 流程验证有效: 本次 _wrap 的**门禁硬门拦下了一次带 undef-global(gTier 作用域)的推送**, 修好才推出去 —— 远端未被污染
+
