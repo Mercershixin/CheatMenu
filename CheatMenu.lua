@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:19 sha 8e164eda bytes 305094'):format('2026-10-02 18:19','8e164eda',305094))
+print(('[CheatMenu] build 2026-10-02 18:23 sha fc5e35bf bytes 305179'):format('2026-10-02 18:23','fc5e35bf',305179))
 local F = {}
-F.VERSION = "v11.4.5"
+F.VERSION = "v11.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4189,10 +4189,13 @@ end)
 if not wkg then pcall(function() wkg, wsrc = F.EggWeight(o) end) end
 if not region then
 pcall(function()
-local pp = prim.Position
+local pb = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
+local pp = pb and pb.Position
+if pp then
 region = string.format("%s%s(%d格)",
 pp.Z < 0 and "北" or "南", pp.X < 0 and "西" or "东",
 math.floor((pp - (rp or pp)).Magnitude))
+end
 end)
 end
 local prim = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
