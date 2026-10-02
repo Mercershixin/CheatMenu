@@ -3060,3 +3060,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 用户明确: 要的是'**踩上去不会触发**', 而我做的'靠近就挪走'是躲开(方向不对). 参考公开脚本思路重做 —— 陷阱触发的链路是'你踩到 → 客户端把事件上报服务端 → 服务端夹你', 所以在链路上拦截: ① **拦下陷阱触发上报**(__namecall 里拦 FireServer/InvokeServer 到名字含 trap/snare/cage/catch/stun/rats/mousetrap/beartrap 的 remote, 受防护档位里的'陷阱'开关控制) ⇒ **服务端收不到'我被夹了'就不会夹你**, 日志'[反陷阱] 已拦下陷阱触发上报 ×N'; ② **断掉陷阱自己的 Touched 回调**(getconnections(pt.Touched) ⇒ Disable, 客户端侧直接不响应; 关闭防护时逐条恢复) ; ③ 靠近时临时关你身体「可触碰」(挡 Touched 类判定); ④ '踩进 6 格内挪出 22 格'降级为兜底手段; 开启日志改成三重拦截的说明
 
+
+
+## 12.0.8：守卫也改成'拦触发通道' + 全功能实现方向自检
+
+- ① **守卫按陷阱同款处理**(用户要求): 新增 F.BLOCK_REMOTE_KEYS 统一关键词表(trap/snare/cage/catch/caught/stun/rats/mousetrap/beartrap + **guard/security/arrest/jail/alert/detect/wanted/handcuff/escort**) ⇒ __namecall 里统一拦 FireServer/InvokeServer 到这些通道的上报(受'陷阱'或'防护'开关控制) ⇒ **守卫想上报'抓到你'也被挡掉**; 日志统一为'[拦触发] 已拦下 陷阱/守卫/抓捕 的触发上报 ×N'; ② **全功能实现方向自检**(脚本扫描 80 个功能项): ①拦通道(正确对抗)123 处 / ②躲开(兜底)6 处 / ③限制·上限 3 处 / ④自动干预 41 处; 逐条核对后: ③ 里只有'反甩的 8000 阈值'是真的限制类(它是'防被甩飞'的功能逻辑, 用户开启的防护档位里; 跑步机速度远达不到 8000, 不会误伤) 其余 2 处是日志文案; ④ 的 41 处**绝大多数是误报**(出现在 UI 标题/功能名/日志里, 不是真自动干预) ⇒ **除反甩阈值外, 已无更多需要解除的限制/干预**; ③ 功能盘点: 战斗 23 / 移动 12 / 世界 10 / 挂机 10 / 系统 8 / 传送 6 / 翻译 4 / 反作弊 5 / 视觉 2 = 共 80 项
+
