@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 20:52 sha 9bfd3f66 bytes 328310'):format('2026-10-02 20:52','9bfd3f66',328310))
+print(('[CheatMenu] build 2026-10-02 20:57 sha 2f5b90ed bytes 328747'):format('2026-10-02 20:57','2f5b90ed',328747))
 local F = {}
-F.VERSION = "v11.7.8"
+F.VERSION = "v11.7.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5040,6 +5040,7 @@ return RS.Stepped:Connect(function(_, dt) fn(dt) end)
 end
 function F.SpeedApply()
 if not T.SpeedOn then return end
+if T.FlyOn then return end
 local _, hum = GC()
 if not hum then return end
 pcall(function() hum.WalkSpeed = tonumber(C.SpeedValue) or 60 end)
@@ -5163,6 +5164,11 @@ end
 end)
 end
 function F.FlyDestroy()
+if F._flyPreWalk then
+local _, hum2 = GC()
+if hum2 then pcall(function() hum2.WalkSpeed = tonumber(F._flyPreWalk) or 16 end) end
+F._flyPreWalk = nil
+end
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt", "_flyBvAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
@@ -5197,6 +5203,11 @@ F._flyDisabledInfJump = true
 end
 local _, hum, root = GC()
 if not (hum and root) then return end
+pcall(function()
+F._flyPreWalk = tonumber(hum.WalkSpeed) or 16
+hum.WalkSpeed = 0
+end)
+F.Out("[飞行] 已开: 速度只看「飞行速度」滑块(飞行期间走路速度置 0, 不参与) · 与加速完全独立")
 pcall(function() hum.PlatformStand = true end)
 if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
 F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
@@ -8435,10 +8446,10 @@ Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, 
 Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 最高 5000)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
 "关(什么都不开)",
 "① 默认: 防挂机(不动人物 · 不装钩子)",
