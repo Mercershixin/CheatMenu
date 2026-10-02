@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:55 sha 1bf62f5a bytes 303034'):format('2026-10-02 17:55','1bf62f5a',303034))
+print(('[CheatMenu] build 2026-10-02 18:03 sha 225c9657 bytes 303637'):format('2026-10-02 18:03','225c9657',303637))
 local F = {}
-F.VERSION = "v11.4.2"
+F.VERSION = "v11.4.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3991,6 +3991,9 @@ r.AssemblyLinearVelocity = Vector3.zero
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
+F.EGG_BAD = { "pen", "gate", "door", "wall", "floor", "spawn", "sign", "billboard",
+"part", "frame", "button", "light", "lamp", "tree", "grass", "rock", "road", "path",
+"touplate", "trigger", "zone", "barrier", "fence", "stair", "plat", "tounpdate", "toupdate" }
 F.EGG_KEY = { "egg", "brainrot", "pet", "animal", "creature", "mythic", "secret",
 "god", "divine", "legendary", "dragon", "unicorn", "crate", "chest" }
 F.EGG_TIER = { common = 1, uncommon = 1, rare = 2, epic = 3, legendary = 4, mythic = 5, secret = 5, god = 6, divine = 6 }
@@ -4047,7 +4050,7 @@ local al = string.lower(tostring(a))
 if string.find(al, "weight", 1, true) or string.find(al, "mass", 1, true)
 or string.find(al, "kg", 1, true) then
 local v = tonumber(o:GetAttribute(a))
-if v then w, src2 = v, "属性" .. tostring(a) end
+if v and v > 0 then w, src2 = v, "属性" .. tostring(a) end
 end
 end
 end)
@@ -4057,9 +4060,9 @@ for _, c in ipairs(o:GetDescendants()) do
 if c:IsA("NumberValue") or c:IsA("IntValue") or c:IsA("StringValue") then
 local cl = string.lower(c.Name)
 if string.find(cl, "weight", 1, true) or string.find(cl, "mass", 1, true)
-or string.find(cl, "kg", 1, true) or cl == "value" then
+or string.find(cl, "kg", 1, true) then
 local v = tonumber(c.Value)
-if v then w, src2 = v, "数值" .. tostring(c.Name) end
+if v and v > 0 then w, src2 = v, "数值" .. tostring(c.Name) end
 end
 end
 end
@@ -4082,29 +4085,37 @@ seen = seen + 1
 if seen > 9000 then break end
 if o:IsA("Model") and not o:IsDescendantOf(ch) and not Players:GetPlayerFromCharacter(o) then
 local low = string.lower(o.Name)
+local isEggObj = nil
+pcall(function()
+local ac = o:GetAttribute("AssetCategory")
+if type(ac) ~= "string" or ac == "" then ac = o:GetAttribute("Category") end
+if type(ac) == "string" and ac ~= "" then isEggObj = ac end
+end)
 local hit = false
+local wkg, wsrc = nil, nil
+if isEggObj then
+local okIdx = (type(F._eggIdx) == "table") and F._eggIdx[string.lower(isEggObj)]
+hit = okIdx and true or false
+if not hit then
 for _, w in ipairs(F.EGG_KEY) do
 if string.find(low, w, 1, true) then hit = true break end
 end
-local wkg, wsrc = nil, nil
+end
+end
+if not hit then
+local bad = false
+for _, b in ipairs(F.EGG_BAD) do
+if string.find(low, b, 1, true) then bad = true break end
+end
+if not bad then
+for _, w in ipairs(F.EGG_KEY) do
+if string.find(low, w, 1, true) then hit = true break end
+end
+end
 if not hit then
 pcall(function() wkg, wsrc = F.EggWeight(o) end)
 if wkg then hit = true end
 end
-if not hit then
-pcall(function()
-local anc = o.Parent
-for _ = 1, 4 do
-if not anc or anc == workspace then break end
-local al = string.lower(anc.Name)
-if string.find(al, "egg", 1, true) or string.find(al, "stand", 1, true)
-or string.find(al, "plot", 1, true) or string.find(al, "podium", 1, true)
-or string.find(al, "pet", 1, true) or string.find(al, "base", 1, true) then
-hit = true break
-end
-anc = anc.Parent
-end
-end)
 end
 local region = nil
 if hit then
@@ -4157,7 +4168,7 @@ end
 if hit2 then gTier, gDrop, gName = hit2.tier, hit2.drop, hit2.display end
 end
 local score
-if wkg then
+if wkg and wkg > 0 then
 score = 1e12 + wkg * 1000
 elseif gTier then
 score = gTier * 1e7 - (gDrop or 1e9)
@@ -4166,7 +4177,7 @@ score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
 tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
-region = region, score = score }
+region = region, byCat = (isEggObj and true or nil), score = score }
 end
 end
 end
@@ -4189,7 +4200,7 @@ local ar, br = tostring(a.region or "zzz"), tostring(b.region or "zzz")
 if ar ~= br then return ar < br end
 return (a.kg or 0) > (b.kg or 0)
 end
-return (a.kg or -1) > (b.kg or -1)
+return (a.kg or 0) > (b.kg or 0)
 end)
 return list
 end
@@ -4224,9 +4235,12 @@ if op and op.Refresh then op:Refresh(labels) return true end
 if op and op.SetValues then op:SetValues(labels) return true end
 return false
 end)
-local withKg = 0
-for _, e in ipairs(F._eggs) do if e.kg then withKg = withKg + 1 end end
-F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个蛋(其中 " .. tostring(withKg) .. " 个读到了 kg), 已按最重/最贵排序"
+local withKg, byCat = 0, 0
+for _, e in ipairs(F._eggs) do
+if e.kg and e.kg > 0 then withKg = withKg + 1 end
+if e.byCat then byCat = byCat + 1 end
+end
+F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(byCat) .. " 个 · 读到 kg " .. tostring(withKg) .. " 个), 已按所选排序"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
 return n
