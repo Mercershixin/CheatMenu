@@ -3042,3 +3042,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 根因: 我把飞行改成速度驱动时**把朝向约束一起删了** ⇒ PlatformStand 状态下角色没有姿态基准 + 飞行时身体部件 CanCollide=false ⇒ **物理自由翻滚**. 修法(速度驱动与稳定兼得): ① 保留 LinearVelocity 速度驱动(滑块＝真实速度, 含上下); ② **加回 AlignOrientation 姿态稳定**, 但锁的是 **'始终直立 + 跟随相机的水平朝向'**(CFrame.lookAt(r.Position, r.Position + 水平LookVector)) ⇒ **不会翻滚, 相机上下看也不影响姿态**(不像原来那样把整个朝向锁到相机); ③ 老执行器回退分支同样加了 BodyGyro(MaxTorque=1e9); ④ 松手时同时清线速度与角速度(避免残留旋转); ⑤ 不再删任何东西, 也不加任何速度限制
 
+
+
+## 12.0.5：陷阱防护强化 + 查证: 用户测的是旧版 11.7.4
+
+- ★ 日志查证: 用户最新日志是 **v11.7.4**(20:32), 而陷阱防护的正确方向(关自身 CanTouch)是 **11.7.5** 才改的 ⇒ 他测的是旧版, 旧做法(改陷阱自身 CanTouch)在服务端复制规则下**本来就无效**; 且日志里**完全没有 [陷阱] 行** ⇒ 连识别都没发生. 本次强化: ① 陷阱关键词补 10 个(mousetrap/rats/stun/web/tangle/glue/pitfall/spring/clamp/vise); ② **弹开升级为'近距直接挪走'**: 距离 <6 格时**直接把人 PivotTo 到陷阱外 22 格**(再也不是只给个推力), 6~8 格才用推速; 带动画日志'[陷阱] 你已踩进陷阱范围(N格) ⇒ 已把你挪出 22 格'; ③ 开启时打两行明确日志(扫描频率/半径/关键词 + 关自身可触碰), 便于确认它真在跑
+
