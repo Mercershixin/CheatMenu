@@ -2784,3 +2784,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 它处理玩家时做: WalkSpeed=0 / JumpPower=0 / AutoRotate=false / PlatformStand=true / ChangeState(Physics) / Anchored=true / PivotTo(最后位置) / SetNetworkOwner(nil); 我们原本只拦了 Anchored/Health/PlatformStand=false, 现补齐: 拦 PlatformStand=true(钉住)、WalkSpeed/JumpPower/JumpHeight<=0(禁走禁跳)、AutoRotate=false(禁转向)、namecall 拦 ChangeState(Physics)(把你切成物理道具); 全部只在「反拉回」开着时生效, 且 checkcaller 放行我们自己的写入
 
+
+
+## 11.2.2：学'不被发现'这一层: 拦拉回前奏 + 清执行器痕迹
+
+- ① 抄同族 xkrexel-hub/sae 的 BlockedRemotes 名单(比我们全): 现拦 Afk*(含 ReportAfkState/RequestAfkTeleportFlush/ReportAfkTeleport) 与 Integrity*/Correction*(Correction = 服务端开始纠正你 = 拉回前奏); ② 抄 aquisisback-alt 'Hide exploit traces': 伪装开关里清 syn/KRNL_LOADED/EXECUTOR_NAME/is_sirhurt_closure 等执行器环境标记(故意不清 identifyexecutor —— 我们自己要用); ③ 记录不可做: checkcaller 全局伪装会破坏我们自己的放行判断, setthreadidentity 风险高, 都未采用
+
