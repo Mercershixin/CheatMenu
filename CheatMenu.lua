@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:23 sha fc5e35bf bytes 305179'):format('2026-10-02 18:23','fc5e35bf',305179))
+print(('[CheatMenu] build 2026-10-02 18:26 sha 55387b47 bytes 307977'):format('2026-10-02 18:26','55387b47',307977))
 local F = {}
-F.VERSION = "v11.5.0"
+F.VERSION = "v11.5.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4042,6 +4042,65 @@ F._eggIdx = idx or false
 if idx then F.Out("[偷蛋] 已读到游戏自己的资产表(按稀有度等级排序, 比体积猜测准)") end
 return F._eggIdx or nil
 end
+F.EGG_BOX = { "areaeggslots", "eggslot", "eggs", "areaegg", "wildegg", "eggspawn",
+"nest", "spawner", "displayegg", "eggstand", "eggdisplay", "podium" }
+F.EGG_SKIPBOX = { "petarea", "pets", "hatched", "hatch", "incubator", "inventory",
+"storage", "backpack", "uiprovider" }
+F.EggContainers = function()
+local out, seen = {}, 0
+pcall(function()
+for _, o in ipairs(workspace:GetChildren()) do
+seen = seen + 1
+if seen > 400 then break end
+local nm = string.lower(tostring(o.Name))
+local skip = false
+for _, s in ipairs(F.EGG_SKIPBOX) do
+if string.find(nm, s, 1, true) then skip = true break end
+end
+if not skip then
+for _, k in ipairs(F.EGG_BOX) do
+if string.find(nm, k, 1, true) then
+out[#out + 1] = o
+break
+end
+end
+end
+end
+end)
+return out
+end
+F.EggOwnerOf = function(o)
+local mine, other, where = false, false, nil
+pcall(function()
+local q = o.Parent
+for _ = 1, 6 do
+if not q or q == workspace then break end
+local nm = string.lower(tostring(q.Name))
+if string.find(nm, "plot", 1, true) or string.find(nm, "base", 1, true)
+or string.find(nm, "pen", 1, true) or string.find(nm, "stand", 1, true) then
+where = tostring(q.Name)
+local owner = nil
+for _, key in ipairs({ "Owner", "OwnerName", "Player", "PlayerName" }) do
+local vv = q:FindFirstChild(key)
+if vv and vv:IsA("ValueBase") then owner = tostring(vv.Value) end
+end
+if not owner then
+for _, a in ipairs(q:GetAttributes()) do
+if string.find(string.lower(tostring(a)), "owner", 1, true) then
+owner = tostring(q:GetAttribute(a))
+end
+end
+end
+if owner then
+if owner == LP.Name then mine = true else other = true end
+end
+break
+end
+q = q.Parent
+end
+end)
+return mine, other, where
+end
 F.EggTextBlob = function(inst)
 local t = { tostring(inst.Name) }
 pcall(function()
@@ -4131,7 +4190,22 @@ local root = ch and ch:FindFirstChild("HumanoidRootPart")
 local rp = root and root.Position
 F._eggs = {}
 local seen = 0
-for _, o in ipairs(workspace:GetDescendants()) do
+local roots = F.EggContainers()
+local scanList = nil
+if #roots > 0 then
+scanList = {}
+local cnt = 0
+for _, r in ipairs(roots) do
+for _, d in ipairs(r:GetDescendants()) do
+cnt = cnt + 1
+if cnt > 20000 then break end
+scanList[#scanList + 1] = d
+end
+end
+F.Out("[偷蛋] 找到游戏自己的蛋容器 " .. tostring(#roots) .. " 个(只扫这些, 不再全图乱扫)")
+end
+local iterList = scanList or workspace:GetDescendants()
+for _, o in ipairs(iterList) do
 seen = seen + 1
 if seen > 9000 then break end
 if o:IsA("Model") and not o:IsDescendantOf(ch) and not Players:GetPlayerFromCharacter(o) then
@@ -4219,6 +4293,24 @@ for w, t in pairs(F.EGG_TIER) do
 if low:find(w, 1, true) and t > tier then tier = t end
 end
 local dist = rp and (prim.Position - rp).Magnitude or 0
+local mine, other, where = F.EggOwnerOf(o)
+if mine and not other then
+hit = false
+end
+local inPet = false
+pcall(function()
+local q = o.Parent
+for _ = 1, 6 do
+if not q or q == workspace then break end
+local nm = string.lower(tostring(q.Name))
+if string.find(nm, "petarea", 1, true) or string.find(nm, "hatch", 1, true)
+or string.find(nm, "incubator", 1, true) or string.find(nm, "inventory", 1, true) then
+inPet = true break
+end
+q = q.Parent
+end
+end)
+if inPet and not hit then hit = false end
 local idx = F._eggIdx
 local gTier, gDrop, gName = nil, nil, nil
 if type(idx) == "table" then
@@ -4241,7 +4333,8 @@ score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
 tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
-region = region, byCat = byCat2, score = score }
+region = region, byCat = byCat2, ownMine = mine, ownOther = other,
+ownWhere = where, inPet = inPet, score = score }
 end
 end
 end
@@ -4271,19 +4364,18 @@ end
 function F.EggLabels()
 local out = {}
 for i, e in ipairs(F._eggs) do
-local tag
-if e.kg then
-tag = string.format("%.1f kg", e.kg) .. (e.kgSrc and ("·" .. tostring(e.kgSrc)) or "")
-elseif e.drop then
-tag = "稀有度 " .. tostring(e.tier) .. " · 掉落权重 " .. tostring(math.floor(e.drop))
-elseif e.val then
-tag = "值 " .. tostring(math.floor(e.val))
-else
-tag = "体积 " .. string.format("%.0f", e.vol)
-end
+local parts = {}
+parts[#parts + 1] = e.kg and e.kg > 0 and string.format("%.1f kg", e.kg) or "kg?"
+if e.tier and e.tier > 0 then parts[#parts + 1] = "等级" .. tostring(e.tier) end
+if e.val then parts[#parts + 1] = "值" .. tostring(math.floor(e.val)) end
+if e.drop and not e.val then parts[#parts + 1] = "掉重" .. tostring(math.floor(e.drop)) end
+if e.ownOther then parts[#parts + 1] = "别人的" end
+if e.ownMine then parts[#parts + 1] = "我的" end
+if e.ownWhere then parts[#parts + 1] = tostring(e.ownWhere) end
 local rg = (string.find(tostring(C.EggSort or ""), "区域", 1, true) and e.region)
 and ("@" .. tostring(e.region) .. " ") or ""
-out[i] = string.format("#%d %s%s (%s · %.0f格)", i, rg, e.name, tag, e.dist)
+out[i] = string.format("#%d %s%s (%s · %.0f格)", i, rg, e.name,
+table.concat(parts, " · "), e.dist)
 end
 if #out == 0 then out[1] = "(还没扫到)" end
 return out
