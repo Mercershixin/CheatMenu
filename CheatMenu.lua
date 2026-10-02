@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 20:57 sha 2f5b90ed bytes 328747'):format('2026-10-02 20:57','2f5b90ed',328747))
+print(('[CheatMenu] build 2026-10-02 21:01 sha 891fb6a1 bytes 328749'):format('2026-10-02 21:01','891fb6a1',328749))
 local F = {}
-F.VERSION = "v11.7.9"
+F.VERSION = "v11.7.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5822,7 +5822,7 @@ pcall(F.SpeedGuardDisable)
 pcall(F.SpoofDisable)
 else
 T.GuardOn = true
-pcall(function() F.GuardSet(true, true, false, true, true, true) end)
+pcall(function() F.GuardSet(true, true, false, true, true, false) end)
 T.SpeedGuard = true
 pcall(F.SpeedGuardEnable)
 T.Spoof = true
