@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:21 sha c75535d4 bytes 332538'):format('2026-10-02 21:21','c75535d4',332538))
+print(('[CheatMenu] build 2026-10-02 21:35 sha cbfc66fa bytes 311394'):format('2026-10-02 21:35','cbfc66fa',311394))
 local F = {}
-F.VERSION = "v11.7.13"
+F.VERSION = "v11.9.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4046,624 +4046,6 @@ r.AssemblyLinearVelocity = Vector3.zero
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
-F.EGG_BAD = { "pen", "gate", "door", "wall", "floor", "spawn", "sign", "billboard",
-"part", "frame", "button", "light", "lamp", "tree", "grass", "rock", "road", "path",
-"touplate", "trigger", "zone", "barrier", "fence", "stair", "plat", "tounpdate", "toupdate" }
-F.EGG_KEY = { "egg", "brainrot", "pet", "animal", "creature", "mythic", "secret",
-"god", "divine", "legendary", "dragon", "unicorn", "crate", "chest" }
-F.EGG_TIER = { common = 1, uncommon = 1, rare = 2, epic = 3, legendary = 4, mythic = 5, secret = 5, god = 6, divine = 6 }
-F._eggs, F._eggPick = {}, 0
-F._eggIdx = nil
-F.EggAssetIndex = function()
-if F._eggIdx ~= nil then return F._eggIdx end
-local idx = nil
-local function tryMod(m)
-local ok, t = pcall(require, m)
-if not ok or type(t) ~= "table" then return nil end
-local dir = t.Directory or (type(t.Assets) == "table" and t.Assets.Directory) or nil
-if type(dir) ~= "table" then return nil end
-local out, n = {}, 0
-for k, v in pairs(dir) do
-if type(v) == "table" then
-local rar = v.Rarity
-out[tostring(k):gsub("^%s+", ""):gsub("%s+$", "")] = {
-tier = (type(rar) == "table" and tonumber(rar.RarityNumber)) or 0,
-drop = tonumber(v.DropWeight) or 1e9,
-display = (type(v.Egg) == "table" and v.Egg.DisplayName) or tostring(k),
-}
-n = n + 1
-end
-end
-return (n > 0) and out or nil
-end
-pcall(function()
-local RStorage = game:GetService("ReplicatedStorage")
-local roots = { RStorage, RStorage:FindFirstChild("Shared"), RStorage:FindFirstChild("Source"),
-RStorage:FindFirstChild("Assets"), RStorage:FindFirstChild("Configs") }
-for _, root in ipairs(roots) do
-if root then
-for _, m in ipairs(root:GetDescendants()) do
-if m:IsA("ModuleScript") and (m.Name == "Assets" or m.Name == "EggData"
-or m.Name == "Directory" or m.Name == "Configs") then
-idx = tryMod(m)
-if idx then break end
-end
-end
-end
-if idx then break end
-end
-end)
-F._eggIdx = idx or false
-if idx then F.Out("[偷蛋] 已读到游戏自己的资产表(按稀有度等级排序, 比体积猜测准)") end
-return F._eggIdx or nil
-end
-F.EGG_BOX = { "areaeggslots", "eggslot", "eggs", "areaegg", "wildegg", "eggspawn",
-"nest", "spawner", "displayegg", "eggstand", "eggdisplay", "podium" }
-F.EGG_SKIPBOX = { "petarea", "pets", "hatched", "hatch", "incubator", "inventory",
-"storage", "backpack", "uiprovider" }
-F.EggContainers = function()
-local out, seen = {}, 0
-pcall(function()
-for _, o in ipairs(workspace:GetChildren()) do
-seen = seen + 1
-if seen > 400 then break end
-local nm = string.lower(tostring(o.Name))
-local skip = false
-for _, s in ipairs(F.EGG_SKIPBOX) do
-if string.find(nm, s, 1, true) then skip = true break end
-end
-if not skip then
-for _, k in ipairs(F.EGG_BOX) do
-if string.find(nm, k, 1, true) then
-out[#out + 1] = o
-break
-end
-end
-end
-end
-end)
-pcall(function()
-local CS = game:GetService("CollectionService")
-for _, tag in ipairs({ "Egg", "egg", "Brainrot", "brainrot", "PetEgg", "eggSpawn" }) do
-for _, inst in ipairs(CS:GetTagged(tag)) do
-if inst and inst.Parent then out[#out + 1] = inst end
-end
-end
-end)
-return out
-end
-F.EggOwnerOf = function(o)
-local mine, other, where = false, false, nil
-pcall(function()
-local q = o.Parent
-for _ = 1, 6 do
-if not q or q == workspace then break end
-local nm = string.lower(tostring(q.Name))
-if string.find(nm, "plot", 1, true) or string.find(nm, "base", 1, true)
-or string.find(nm, "pen", 1, true) or string.find(nm, "stand", 1, true) then
-where = tostring(q.Name)
-local owner = nil
-for _, key in ipairs({ "Owner", "OwnerName", "Player", "PlayerName" }) do
-local vv = q:FindFirstChild(key)
-if vv and vv:IsA("ValueBase") then owner = tostring(vv.Value) end
-end
-if not owner then
-for _, a in ipairs(q:GetAttributes()) do
-if string.find(string.lower(tostring(a)), "owner", 1, true) then
-owner = tostring(q:GetAttribute(a))
-end
-end
-end
-if owner then
-if owner == LP.Name then mine = true else other = true end
-end
-break
-end
-q = q.Parent
-end
-end)
-return mine, other, where
-end
-F.CleanName = function(v)
-if type(v) ~= "string" or v == "" then return "" end
-local s = v
-s = string.gsub(s, "%s*[%w]*%-?%x%x%x%x%x%x%x%x%-?%x%x%x%x%-?%x%x%x%x%-?%x%x%x%x%x%x%x%x%x%x%x%x%x?%x?", "")
-s = string.gsub(s, "_?%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x$", "")
-s = string.gsub(s, "%s+$", "")
-return s
-end
-F.EGG_NAME_SKIP = { "mesh", "egg", "part", "root", "hitbox", "handle", "shadow", "ring",
-"beam", "glow", "core", "shell", "plane", "planea", "deco", "vfx", "sfx" }
-F.EggPetName = function(o)
-local best = nil
-local function consider(v)
-if type(v) ~= "string" or v == "" then return end
-local l = string.lower(v)
-if string.match(l, "^%d+$") then return end
-for _, s in ipairs(F.EGG_NAME_SKIP) do
-if l == s then return end
-end
-local cleaned = F.CleanName(v)
-if #cleaned >= 3 and #cleaned <= 40 and (not best or #cleaned > #best) then best = cleaned end
-end
-pcall(function()
-for _, d in ipairs(o:GetDescendants()) do
-if d:IsA("StringValue") then
-local nl = string.lower(d.Name)
-if string.find(nl, "name", 1, true) or string.find(nl, "display", 1, true)
-or string.find(nl, "pet", 1, true) or string.find(nl, "asset", 1, true)
-or string.find(nl, "category", 1, true) then
-consider(tostring(d.Value))
-end
-elseif d:IsA("Model") then
-consider(d.Name)
-elseif d:IsA("MeshPart") or d:IsA("SpecialMesh") then
-local mid = nil
-pcall(function() mid = d.MeshId or d.MeshId end)
-if type(mid) == "string" then
-local tail = string.match(mid, "(%d+)$")
-if tail and #tail >= 6 then consider("mesh" .. tail) end
-end
-elseif d:IsA("ObjectValue") then
-pcall(function() consider(d.Value and d.Value.Name) end)
-elseif d:IsA("Decal") or d:IsA("Texture") then
-local tid = nil
-pcall(function() tid = d.Texture end)
-if type(tid) == "string" then
-local tail = string.match(tid, "(%d+)$")
-if tail and #tail >= 6 then consider("tex" .. tail) end
-end
-end
-local ok, attrs = pcall(function() return d:GetAttributes() end)
-if ok and type(attrs) == "table" then
-for k, v in pairs(attrs) do
-local kl = string.lower(tostring(k))
-if string.find(kl, "name", 1, true) or string.find(kl, "display", 1, true)
-or string.find(kl, "pet", 1, true) or string.find(kl, "category", 1, true)
-or string.find(kl, "asset", 1, true) then
-consider(tostring(v))
-end
-end
-end
-end
-end)
-return best
-end
-F.EggTextBlob = function(inst)
-local t = { tostring(inst.Name) }
-pcall(function()
-local q = inst.Parent
-for _ = 1, 3 do
-if not q or q == workspace then break end
-t[#t + 1] = tostring(q.Name)
-q = q.Parent
-end
-end)
-pcall(function()
-for _, d in ipairs(inst:GetDescendants()) do
-if d:IsA("BasePart") then t[#t + 1] = tostring(d.Name) end
-local ok, attrs = pcall(function() return d:GetAttributes() end)
-if ok and type(attrs) == "table" then
-for k, v in pairs(attrs) do t[#t + 1] = tostring(k) .. "=" .. tostring(v) end
-end
-end
-end)
-return string.lower(table.concat(t, " | "))
-end
-F.EGG_MUT = { "spirit bloom", "rainbow", "golden", "bloom", "silver", "shiny" }
-F.EggIdxLookup = function(name)
-local idx = F._eggIdx
-if type(idx) ~= "table" then return nil end
-local k = string.lower(tostring(name or ""))
-k = string.gsub(k, "^%s+", "")
-if k == "" then return nil end
-if idx[k] then return idx[k], "精确" end
-for _, mu in ipairs(F.EGG_MUT) do
-local stripped = string.gsub(k, mu, "")
-stripped = string.gsub(stripped, "^%s+", "")
-stripped = string.gsub(stripped, "%s+$", "")
-if stripped ~= "" and idx[stripped] then return idx[stripped], "去变体" end
-end
-if #k >= 4 then
-for key, v in pairs(idx) do
-if #key >= 4 and string.find(k, key, 1, true) then return v, "包含" end
-end
-end
-return nil
-end
-F.EggRescanQuiet = function()
-if not T.EggAutoRefresh then return end
-pcall(F.EggScanMap)
-pcall(function() F.EggSortNow() end)
-pcall(function()
-local labels = F.EggLabels()
-local op = Fluent and Fluent.Options and Fluent.Options.EggPick
-if op and op.Refresh then op:Refresh(labels) end
-end)
-F._eggRescans = (F._eggRescans or 0) + 1
-if os.clock() - (F._eggRescanLog or 0) > 10 then
-F._eggRescanLog = os.clock()
-F.Out("[偷蛋] 蛋有变化 ⇒ 已自动刷新列表(第 " .. tostring(F._eggRescans) .. " 次, 当前 " .. tostring(#(F._eggs or {})) .. " 个)")
-end
-end
-F.EggAutoWatchOn = function()
-if F._eggWatch then return end
-F._eggWatch = {}
-local function hook(box)
-pcall(function()
-F._eggWatch[#F._eggWatch + 1] = box.ChildAdded:Connect(function()
-if os.clock() - (F._eggRescanAt or 0) < 4 then return end
-F._eggRescanAt = os.clock()
-task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
-end)
-end)
-pcall(function()
-F._eggWatch[#F._eggWatch + 1] = box.ChildRemoved:Connect(function()
-if os.clock() - (F._eggRescanAt or 0) < 4 then return end
-F._eggRescanAt = os.clock()
-task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
-end)
-end)
-end
-local boxes = F.EggContainers()
-for _, b in ipairs(boxes) do hook(b) end
-pcall(function() hook(workspace) end)
-F.Out("[偷蛋] 自动刷新已开: 蛋出现/消失会自动更新列表(监听 " .. tostring(#boxes) .. " 个蛋容器)")
-end
-F.EggAutoWatchOff = function()
-if F._eggWatch then
-for _, c in ipairs(F._eggWatch) do pcall(function() c:Disconnect() end) end
-F._eggWatch = nil
-end
-end
-F.EggWeight = function(o)
-local w, src2 = nil, nil
-pcall(function()
-local blob = F.EggTextBlob(o)
-local nn = string.match(blob, "([%d%.%,]+)%s*kg")
-if nn then
-local v = tonumber(string.gsub(nn, ",", ""))
-if v and v > 0 then w, src2 = v, "文本kg" end
-end
-end)
-pcall(function()
-if w then return end
-for _, a in ipairs(o:GetAttributes()) do
-local al = string.lower(tostring(a))
-if string.find(al, "weight", 1, true) or string.find(al, "mass", 1, true)
-or string.find(al, "kg", 1, true) then
-local v = tonumber(o:GetAttribute(a))
-if v and v > 0 then w, src2 = v, "属性" .. tostring(a) end
-end
-end
-end)
-if not w then
-pcall(function()
-for _, c in ipairs(o:GetDescendants()) do
-if c:IsA("NumberValue") or c:IsA("IntValue") or c:IsA("StringValue") then
-local cl = string.lower(c.Name)
-if string.find(cl, "weight", 1, true) or string.find(cl, "mass", 1, true)
-or string.find(cl, "kg", 1, true) then
-local v = tonumber(c.Value)
-if v and v > 0 then w, src2 = v, "数值" .. tostring(c.Name) end
-end
-end
-end
-end)
-end
-if not w then
-local num = string.match(o.Name, "(%d+%.?%d*)%s*[kK][gG]")
-if num then w, src2 = tonumber(num), "名字" end
-end
-return w, src2
-end
-function F.EggScanMap()
-local ch = LP.Character
-local root = ch and ch:FindFirstChild("HumanoidRootPart")
-local rp = root and root.Position
-F._eggs = {}
-local flt = tostring(C.EggFilter or "全部")
-local minTier, onlyKg = 0, false
-if string.find(flt, "稀有度 ≥", 1, true) then
-minTier = tonumber(string.match(flt, "≥%s*(%d+)")) or 0
-end
-if string.find(flt, "只要有重量", 1, true) then onlyKg = true end
-local skipHeld = string.find(flt, "排除别人拿着的", 1, true) ~= nil
-local seen = 0
-local roots = F.EggContainers()
-local scanList = nil
-if #roots > 0 then
-scanList = {}
-local cnt = 0
-for _, r in ipairs(roots) do
-for _, d in ipairs(r:GetDescendants()) do
-cnt = cnt + 1
-if cnt > 20000 then break end
-scanList[#scanList + 1] = d
-end
-end
-F.Out("[偷蛋] 找到游戏自己的蛋容器 " .. tostring(#roots) .. " 个(只扫这些, 不再全图乱扫)")
-end
-local iterList = scanList or workspace:GetDescendants()
-for _, o in ipairs(iterList) do
-seen = seen + 1
-if seen > 9000 then break end
-if o:IsA("Model") and not o:IsDescendantOf(ch) and not Players:GetPlayerFromCharacter(o) then
-local low = string.lower(o.Name)
-local isEggObj = nil
-pcall(function()
-local ac = o:GetAttribute("AssetCategory")
-if type(ac) ~= "string" or ac == "" then ac = o:GetAttribute("Category") end
-if type(ac) == "string" and ac ~= "" then isEggObj = ac end
-end)
-local hit, byCat2 = false, nil
-local wkg, wsrc = nil, nil
-if isEggObj then
-local ent, how = F.EggIdxLookup(isEggObj)
-if ent then hit, byCat2 = true, how end
-end
-if not hit then
-local blob = nil
-pcall(function() blob = F.EggTextBlob(o) end)
-blob = blob or low
-local bad = false
-for _, b in ipairs(F.EGG_BAD) do
-if string.find(low, b, 1, true) then bad = true break end
-end
-if not bad then
-for _, w in ipairs(F.EGG_KEY) do
-if string.find(blob, w, 1, true) then hit = true break end
-end
-end
-if hit then
-local ent, how = F.EggIdxLookup(o.Name)
-if ent then byCat2 = how end
-end
-if not hit then
-pcall(function() wkg, wsrc = F.EggWeight(o) end)
-if wkg then hit = true end
-end
-end
-local region = nil
-if hit then
-pcall(function()
-local anc = o.Parent
-for _ = 1, 4 do
-if not anc or anc == workspace then break end
-local al = string.lower(anc.Name)
-if string.find(al, "stand", 1, true) or string.find(al, "plot", 1, true)
-or string.find(al, "podium", 1, true) or string.find(al, "base", 1, true)
-or string.find(al, "egg", 1, true) then
-region = tostring(anc.Name)
-break
-end
-anc = anc.Parent
-end
-end)
-if not wkg then pcall(function() wkg, wsrc = F.EggWeight(o) end) end
-if not region then
-pcall(function()
-local pb = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
-local pp = pb and pb.Position
-if pp then
-region = string.format("%s%s(%d格)",
-pp.Z < 0 and "北" or "南", pp.X < 0 and "西" or "东",
-math.floor((pp - (rp or pp)).Magnitude))
-end
-end)
-end
-local prim = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
-if prim then
-local vol, val, tier = 0, nil, 0
-pcall(function()
-local _, sz = o:GetBoundingBox()
-vol = sz.X * sz.Y * sz.Z
-end)
-pcall(function()
-for _, a in ipairs(o:GetAttributes()) do
-local al = tostring(a):lower()
-if al:find("value") or al:find("worth") or al:find("price")
-or al:find("cost") or al:find("weight") or al:find("mass") then
-local v = tonumber(o:GetAttribute(a))
-if v then val = v end
-end
-end
-end)
-for w, t in pairs(F.EGG_TIER) do
-if low:find(w, 1, true) and t > tier then tier = t end
-end
-local dist = rp and (prim.Position - rp).Magnitude or 0
-local petName = nil
-pcall(function() petName = F.EggPetName(o) end)
-if petName and not byCat2 then
-local ent, how = F.EggIdxLookup(petName)
-if ent then
-byCat2 = how
-if ent.tier and ent.tier > 0 then tier = math.max(tier, ent.tier) end
-if ent.drop then gDrop = ent.drop end
-end
-end
-local held = string.find(low, "remote", 1, true) or string.find(low, "carried", 1, true)
-or string.find(low, "held", 1, true)
-local mine, other, where = F.EggOwnerOf(o)
-if mine and not other then
-hit = false
-end
-local inPet = false
-pcall(function()
-local q = o.Parent
-for _ = 1, 6 do
-if not q or q == workspace then break end
-local nm = string.lower(tostring(q.Name))
-if string.find(nm, "petarea", 1, true) or string.find(nm, "hatch", 1, true)
-or string.find(nm, "incubator", 1, true) or string.find(nm, "inventory", 1, true) then
-inPet = true break
-end
-q = q.Parent
-end
-end)
-if inPet and not hit then hit = false end
-if hit then
-if skipHeld and held then hit = false end
-if minTier > 0 and (tonumber(tier) or 0) < minTier then hit = false end
-if onlyKg and not (wkg and wkg > 0) then hit = false end
-end
-local idx = F._eggIdx
-local gTier, gDrop, gName = nil, nil, nil
-if type(idx) == "table" then
-local hit2 = idx[o.Name] or idx[low]
-if not hit2 then
-for k, v in pairs(idx) do
-local kl = tostring(k):lower()
-if kl ~= "" and (low == kl or low:find(kl, 1, true)) then hit2 = v break end
-end
-end
-if hit2 then gTier, gDrop, gName = hit2.tier, hit2.drop, hit2.display end
-end
-local score
-if wkg and wkg > 0 then
-score = 1e12 + wkg * 1000
-elseif gTier then
-score = gTier * 1e7 - (gDrop or 1e9)
-else
-score = (val or 0) * 1000 + vol + tier * 5000
-end
-local showName = F.CleanName(o.Name)
-if showName == "" then showName = "未命名蛋" end
-F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = showName, vol = vol, val = val,
-tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
-petName = petName, heldByOther = held,
-region = region, byCat = byCat2, ownMine = mine, ownOther = other,
-ownWhere = where, inPet = inPet, score = score }
-end
-end
-end
-end
-table.sort(F._eggs, function(a, b) return a.score > b.score end)
-return #F._eggs
-end
-F.EGG_SORT_NAME = {
-kg = "重量(kg)", val = "价值", tier = "稀有度等级", vol = "体积", dist = "距离最近", region = "区域",
-}
-F.EggSortNow = function()
-local mode = tostring(C.EggSort or "最重(kg)")
-local list = F._eggs or {}
-local function keyOf(kind, e)
-if kind == "kg" then return e.kg and e.kg > 0 and e.kg or -1 end
-if kind == "val" then return e.val or -1 end
-if kind == "tier" then return e.tier or -1 end
-if kind == "vol" then return e.vol or 0 end
-if kind == "dist" then return -(e.dist or 1e9) end
-if kind == "region" then return tostring(e.region or "zzz") end
-return 0
-end
-local order
-if string.find(mode, "贵", 1, true) then
-order = { "val", "tier", "kg", "vol" }
-elseif string.find(mode, "稀有", 1, true) then
-order = { "tier", "val", "kg", "vol" }
-elseif string.find(mode, "距离", 1, true) then
-order = { "dist", "kg", "vol" }
-elseif string.find(mode, "区域", 1, true) then
-order = { "region", "kg", "val", "vol" }
-else
-order = { "kg", "val", "tier", "vol" }
-end
-local used = order[1]
-for _, k in ipairs(order) do
-local seen, distinct = {}, 0
-for _, e in ipairs(list) do
-local v = tostring(keyOf(k, e))
-if not seen[v] then
-seen[v] = true
-distinct = distinct + 1
-end
-end
-if distinct > 1 then used = k break end
-end
-local tie = order[#order]
-table.sort(list, function(a, b)
-local ka, kb = keyOf(used, a), keyOf(used, b)
-if ka == kb then
-ka, kb = keyOf(tie, a), keyOf(tie, b)
-if ka == kb then return tostring(a.name) < tostring(b.name) end
-end
-return ka > kb
-end)
-F._eggSortUsed = used
-return used
-end
-function F.EggLabels()
-local out = {}
-for i, e in ipairs(F._eggs) do
-local parts = {}
-parts[#parts + 1] = e.kg and e.kg > 0 and string.format("%.1f kg", e.kg) or "kg?"
-if e.tier and e.tier > 0 then parts[#parts + 1] = "等级" .. tostring(e.tier) end
-if e.val then parts[#parts + 1] = "值" .. tostring(math.floor(e.val)) end
-if e.drop and not e.val then parts[#parts + 1] = "掉重" .. tostring(math.floor(e.drop)) end
-if e.petName and e.petName ~= "" then parts[#parts + 1] = tostring(e.petName) end
-if e.heldByOther then parts[#parts + 1] = "别人拿着" end
-if e.ownOther then parts[#parts + 1] = "别人的" end
-if e.ownMine then parts[#parts + 1] = "我的" end
-if e.ownWhere then parts[#parts + 1] = tostring(e.ownWhere) end
-local rg = (string.find(tostring(C.EggSort or ""), "区域", 1, true) and e.region)
-and ("@" .. tostring(e.region) .. " ") or ""
-out[i] = string.format("#%d %s%s (%s · %.0f格)", i, rg, e.name,
-table.concat(parts, " · "), e.dist)
-end
-if #out == 0 then out[1] = "(还没扫到)" end
-return out
-end
-function F.EggScanAndFill()
-pcall(F.EggAssetIndex)
-local n = F.EggScanMap()
-local used = nil
-pcall(function() used = F.EggSortNow() end)
-local labels = F.EggLabels()
-local okRef = pcall(function()
-local op = Fluent and Fluent.Options and Fluent.Options.EggPick
-if op and op.Refresh then op:Refresh(labels) return true end
-if op and op.SetValues then op:SetValues(labels) return true end
-return false
-end)
-local withKg, byCat = 0, 0
-for _, e in ipairs(F._eggs) do
-if e.kg and e.kg > 0 then withKg = withKg + 1 end
-if e.byCat then byCat = byCat + 1 end
-end
-local usedName = (used and F.EGG_SORT_NAME[used]) or "原始顺序"
-F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(byCat) .. " 个 · 读到 kg " .. tostring(withKg)
-.. " 个) · 排序方式=" .. tostring(C.EggSort or "最重(kg)") .. " ⇒ 实际按「" .. usedName .. "」从高到低"
-.. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
-for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
-if (F._eggPick or 0) > #(F._eggs or {}) then
-F._eggPick = #(F._eggs or {}) > 0 and 1 or 0
-pcall(function()
-local op2 = Fluent and Fluent.Options and Fluent.Options.EggPick
-if op2 and op2.Set and labels[1] then op2:Set(labels[1]) end
-end)
-end
-if T.EggAutoRefresh then
-pcall(F.EggAutoWatchOff)
-pcall(F.EggAutoWatchOn)
-end
-pcall(F.LogFlush, "偷蛋扫描")
-return n
-end
-function F.EggGo(extraY)
-local e = F._eggs[F._eggPick or 0]
-if not e then
-F.Out("[偷蛋] 先点「扫描」, 再在下拉里选一个目标")
-return nil
-end
-local _, _, root = GC()
-if not root then return nil end
-F._walkTgt = nil
-if F.DropIntent then pcall(F.DropIntent) end
-pcall(F.SrvOwnTake, false)
-eggTP(e.part.CFrame + Vector3.new(0, extraY or 3, 0))
-return e
-end
 F.SuicideNow = function()
 local _, hum, ch = GC()
 if not (hum and ch) then
@@ -4704,147 +4086,6 @@ and ("已重生 ⚠ 手上的 " .. tostring(bag) .. " 个东西会掉") or "已�
 end)
 F._walkTgt = nil
 F._egg, F._eggPart, F._carry = nil, nil, nil
-end
-F.EggWalkTo = function()
-local e = F._eggs[F._eggPick or 0]
-if not e then
-F.Out("[偷蛋] 先点「扫描」, 再在下拉里选一个目标")
-pcall(function()
-Fluent:Notify({ Title = "偷蛋", Content = "还没选目标 —— 先点①扫描, 再在③下拉里挑一个", Duration = 5 })
-end)
-return
-end
-local _, hum, root = GC()
-if not (hum and root) then return end
-F._walkTgt = e
-F._walkUntil = os.clock() + 40
-F.Out("[偷蛋] 走路去拿: " .. tostring(e.name) .. " (不传送, 不容易被位置差检测抓)")
-pcall(function()
-if F._mtf then pcall(function() F._mtf:Disconnect() end) end
-F._mtf = hum.MoveToFinished:Connect(function(reached)
-if not T.EggWalk then return end
-local tgt = F._walkTgt
-if not (tgt and tgt.part and tgt.part.Parent) then return end
-local _, _, r4 = GC()
-local d = r4 and (r4.Position - tgt.part.Position).Magnitude or 99
-if reached or d < 9 then
-pcall(function() F.WalkTapPrompt(tgt.part.Position, 15) end)
-F.Out("[偷蛋] 已走到 " .. tostring(tgt.name) .. " 身边(MoveTo 完成)并触发交互")
-F._walkTgt = nil
-end
-end)
-end)
-if F._walkConn then return end
-F._walkConn = RS.Heartbeat:Connect(function()
-if not F._walkTgt or not T.EggWalk then
-if F._walkConn then pcall(function() F._walkConn:Disconnect() end) F._walkConn = nil end
-return
-end
-local _, h2, r2 = GC()
-if not (h2 and r2) then return end
-local tgt = F._walkTgt
-if not (tgt and tgt.part and tgt.part.Parent) then
-F._walkTgt = nil
-return
-end
-local d = (r2.Position - tgt.part.Position).Magnitude
-if d < 7 then
-pcall(function() F.WalkTapPrompt(tgt.part.Position, 14) end)
-F.Out("[偷蛋] 已走到 " .. tostring(tgt.name) .. " 身边并触发交互")
-F._walkTgt = nil
-return
-end
-if os.clock() > (F._walkUntil or 0) then
-F.Out("[偷蛋] 走路超时(可能被挡住), 改用传送吧")
-F._walkTgt = nil
-if F._mtf then pcall(function() F._mtf:Disconnect() end) F._mtf = nil end
-return
-end
-if (os.clock() - (F._walkStep or 0)) > 0.25 then
-F._walkStep = os.clock()
-pcall(function() h2:MoveTo(tgt.part.Position) end)
-end
-end)
-end
-F.WalkTapPrompt = function(pos, radius)
-local fired = false
-local hit = nil
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("ProximityPrompt") and d.Enabled then
-local host = d.Parent
-local hp = host and host:IsA("BasePart") and host.Position
-if hp and (hp - pos).Magnitude < (radius or 12) then
-if not hit or (hp - pos).Magnitude < (hit.Position - pos).Magnitude then
-hit = { prompt = d, Position = hp }
-end
-end
-end
-end
-end)
-if not hit then return false end
-local pr = hit.prompt
-if type(fireproximityprompt) == "function" then
-pcall(function() fireproximityprompt(pr) fired = true end)
-end
-if not fired then
-pcall(function()
-pr.HoldDuration = 0
-pr.RequiresLineOfSight = false
-pr.Enabled = true
-pr.MaxActivationDistance = math.max(pr.MaxActivationDistance, 20)
-pr:InputHoldBegin()
-end)
-task.wait(0.12)
-pcall(function() pr:InputHoldEnd() end)
-fired = true
-end
-return fired
-end
-F.PromptNear = function(pos, radius)
-local best = nil
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("ProximityPrompt") and d.Enabled then
-local host = d.Parent
-local hp = host and host:IsA("BasePart") and host.Position
-if hp and (hp - pos).Magnitude < (radius or 12) then
-if not best or (hp - pos).Magnitude < best.dist then
-best = { prompt = d, dist = (hp - pos).Magnitude }
-end
-end
-end
-end
-end)
-return best
-end
-function F.EggRemoteSteal()
-local e = F.EggGo(3)
-if not e then return end
-local safe = C.SafePoint
-task.wait(0.3)
-local ok = false
-pcall(function() ok = F.WalkTapPrompt(e.part.Position, 15) end)
-if not ok then
-pcall(function() ok = F.WalkTapPrompt(e.part.Position, 25) end)
-end
-task.wait(0.35)
-local stillThere = false
-pcall(function() stillThere = (e.part and e.part.Parent ~= nil) end)
-if stillThere then
-F.Out("[偷蛋] 到蛋旁边但「没拿到」(蛋还在原地) —— 这个服的拿取要服务端点头(距离/权限校验), 客户端再快也没用")
-pcall(function()
-Fluent:Notify({ Title = "偷蛋", Content = "已经到蛋旁边, 但服务端没放行拿取(蛋还在原地)。这种服只能手动拿, 或换「走过去拿」再试", Duration = 6 })
-end)
-else
-F.Out("[偷蛋] ✅ 拿到了(蛋已从原地消失)")
-pcall(function() Fluent:Notify({ Title = "偷蛋", Content = "✅ 拿到了", Duration = 4 }) end)
-end
-if safe then
-eggTP(CFrame.new(Vector3.new(safe.x, safe.y, safe.z)))
-F.Out("[偷蛋] 已传送回安全点")
-end
-if T.EggAutoRefresh then task.delay(1, function() pcall(F.EggRescanQuiet) end) end
 end
 F.GUARD_WORDS = { "guard", "npc", "security", "police", "watcher", "officer", "sentry" }
 F.GuardScan = function()
@@ -4901,6 +4142,121 @@ end
 end)
 if best then return best, bd end
 return nil
+end
+F.TapNearby = function(pos, radius)
+local best = nil
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("ProximityPrompt") and d.Enabled then
+local host = d.Parent
+local hp = host and host:IsA("BasePart") and host.Position
+if hp and (hp - pos).Magnitude < (radius or 12) then
+if not best or (hp - pos).Magnitude < best.dist then
+best = { prompt = d, dist = (hp - pos).Magnitude }
+end
+end
+end
+end
+end)
+if not best then return false end
+local pr = best.prompt
+local ok = false
+if type(fireproximityprompt) == "function" then
+pcall(function() fireproximityprompt(pr) ok = true end)
+end
+if not ok then
+pcall(function()
+pr.HoldDuration = 0
+pr.RequiresLineOfSight = false
+pr.Enabled = true
+pr.MaxActivationDistance = math.max(pr.MaxActivationDistance, 20)
+pr:InputHoldBegin()
+end)
+task.wait(0.12)
+pcall(function() pr:InputHoldEnd() end)
+ok = true
+end
+return ok
+end
+F.FindNearestLoot = function(maxDist)
+local _, _, root = GC()
+if not root then return nil end
+local best, bd = nil, (maxDist or 1e9)
+pcall(function()
+for _, o in ipairs(workspace:GetDescendants()) do
+if o:IsA("Model") or o:IsA("BasePart") then
+local nm = string.lower(tostring(o.Name))
+if string.find(nm, "areaegg", 1, true) or string.find(nm, "egg", 1, true)
+or string.find(nm, "brainrot", 1, true) then
+local p = o:IsA("BasePart") and o
+or (o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart"))
+if p and p.Parent then
+local d = (p.Position - root.Position).Magnitude
+if d < bd then bd, best = d, p end
+end
+end
+end
+end
+end)
+if best then return best, bd end
+return nil
+end
+F.AutoStealOne = function()
+local _, _, root = GC()
+if not root then F.Out("[自动拿] 没有角色") return false end
+local target, d = F.FindNearestLoot(4000)
+if not target then F.Out("[自动拿] 附近没找到可拿的东西(名字不含 egg/brainrot)") return false end
+local safe = C.SafePoint
+if d > 8 then
+local dest = CFrame.new(target.Position + Vector3.new(0, 3, 0))
+if F.TPResist then pcall(F.TPResist, dest, 0.8) end
+pcall(function() root:PivotTo(dest) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+task.wait(0.22)
+end
+local tapped = false
+pcall(function() tapped = F.TapNearby(target.Position, 13) end)
+if not tapped then pcall(function() tapped = F.TapNearby(target.Position, 26) end) end
+task.wait(0.25)
+local gone = false
+pcall(function() gone = not (target and target.Parent) end)
+if safe and safe.x then
+local cf = CFrame.new(Vector3.new(safe.x, safe.y, safe.z))
+if F.TPResist then pcall(F.TPResist, cf, 0.8) end
+pcall(function() root:PivotTo(cf) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+end
+F._autoSteal = (F._autoSteal or 0) + 1
+F.Out("[自动拿] 第 " .. tostring(F._autoSteal) .. " 次: "
+.. (gone and "✅ 拿到了" or "⚠ 没拿到(东西还在原地)")
+.. (safe and " · 已回安全区" or " · 没设安全区, 所以留在原地")
+.. string.format(" (目标 %.0f 格外)", d))
+if os.clock() - (F._autoLog or 0) > 4 then
+F._autoLog = os.clock()
+pcall(function()
+Fluent:Notify({ Title = "自动拿", Content = (gone and "✅ 拿到了" or "⚠ 没拿到")
+.. (safe and " · 已回安全区" or " · 没设安全区"), Duration = 3 })
+end)
+end
+return gone
+end
+F.AutoStealWatchOn = function()
+if F._asConn then return end
+T.AutoSteal = true
+F._asConn = task.spawn(function()
+while T.AutoSteal do
+task.wait(math.max(1, tonumber(C.AutoStealSec) or 3))
+if not T.AutoSteal then break end
+pcall(F.AutoStealOne)
+end
+F._asConn = nil
+end)
+F.Out("[自动拿] 循环已开: 每 " .. tostring(C.AutoStealSec or 3) .. " 秒自动拿一次")
+end
+F.AutoStealWatchOff = function()
+T.AutoSteal = false
+F._asConn = nil
+F.Out("[自动拿] 循环已关")
 end
 F.EggLock = function()
 local ch = LP.Character
@@ -5177,6 +4533,26 @@ if u.Magnitude > 0.001 then u = u.Unit else u = Vector3.zero end
 local dt = tonumber(deltaTime) or (1 / 60)
 if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
+if T.AntiClip ~= false then
+pcall(function()
+local pp = RaycastParams.new()
+pcall(function() pp.FilterType = Enum.RaycastFilterType.Exclude end)
+if LP.Character then pp.FilterDescendantsInstances = { LP.Character } end
+local probeLen = math.max(sp * 0.16, 10)
+local hit = workspace:Raycast(r.Position, u * probeLen, pp)
+if hit then
+local dist = (hit.Position - r.Position).Magnitude
+local capped = math.max(26, dist * 11)
+if capped < sp then
+sp = capped
+if os.clock() - (F._clipLog or 0) > 5 then
+F._clipLog = os.clock()
+F.Out(string.format("[防穿墙] 前方有障碍(%.0f格) ⇒ 临时压速到 %.0f, 过了自动恢复(可在「其他移动」关)", dist, sp))
+end
+end
+end
+end)
+end
 local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
 pcall(function()
@@ -8577,19 +7953,19 @@ T.CarryGuard = v
 if F._cfgSyncing or not changed then return end
 if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
 end })
-Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "偷蛋、开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
-local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
-T.InstantInteract = v
-if F._cfgSyncing or not changed then return end
-if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
-end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
-Tabs.Move:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
+Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
+Tabs.Move:AddToggle("AntiClip", { Title = "防穿墙(太快撞墙时自动压一下速度)", Description = "默认开: 空旷地全速跑, 前方有障碍才临时压速 —— 不影响你正常加速的手感", Default = true, Callback = function(v)
+local changed = (T.AntiClip ~= nil) and (T.AntiClip ~= v)
+T.AntiClip = v
+if F._cfgSyncing or not changed then return end
+F.Out(v and "[防穿墙] 已开(撞墙前自动压速)" or "[防穿墙] 已关(全速, 可能穿墙)")
+end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
@@ -8716,59 +8092,35 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.TP:AddSection("偷蛋(扫描 → 排序 → 自选 → 远程拿)")
-Tabs.TP:AddToggle("EggAutoRefresh", { Title = "蛋列表自动刷新(蛋出现/消失自动更新)", Default = true, Callback = function(v)
-local changed = (T.EggAutoRefresh ~= nil) and (T.EggAutoRefresh ~= v)
-T.EggAutoRefresh = v
+Tabs.TP:AddSection("自动拿(一键: 拿完立刻回安全区)")
+Tabs.TP:AddButton({ Title = "★ 一键自动拿(找最近的 → 拿 → 立刻回安全区)", Callback = function() pcall(F.AutoStealOne) end })
+Tabs.TP:AddToggle("AutoSteal", { Title = "自动循环拿(每隔几秒自动来一次)", Default = false, Callback = function(v)
+local changed = (T.AutoSteal ~= nil) and (T.AutoSteal ~= v)
+T.AutoSteal = v
 if F._cfgSyncing or not changed then return end
-if v then pcall(F.EggAutoWatchOn) else pcall(F.EggAutoWatchOff) end
+if v then pcall(F.AutoStealWatchOn) else pcall(F.AutoStealWatchOff) end
 end })
-Tabs.TP:AddButton({ Title = "① 扫描地图上的蛋(按最重/最贵排序)", Callback = function() F.EggScanAndFill() end })
-Tabs.TP:AddDropdown("EggFilter", { Title = "② 筛选(只要这些)", Values = {
-"全部", "排除别人拿着的", "稀有度 ≥ 3", "稀有度 ≥ 5", "只要有重量",
-}, Default = "排除别人拿着的", Callback = function(v)
-C.EggFilter = v
-F.Out("[偷蛋] 筛选 = " .. tostring(v) .. " (下次扫描生效)")
-end })
-Tabs.TP:AddDropdown("EggSort", { Title = "③ 排序方式(扫完按这个排)", Values = {
-"最重(kg)", "最贵(价值)", "稀有度", "距离最近", "按区域(展台)", "自己看",
-}, Default = "最重(kg)", Callback = function(v)
-C.EggSort = v
-if F._eggs and #F._eggs > 0 then
-pcall(F.EggSortNow)
-pcall(function()
-local labels = F.EggLabels()
-local op = Fluent and Fluent.Options and Fluent.Options.EggPick
-if op and op.Refresh then op:Refresh(labels) end
-end)
-local u2 = F._eggSortUsed
-F.Out("[偷蛋] 已按「" .. tostring(v) .. "」重排"
-.. (u2 and (" (实际用「" .. tostring(F.EGG_SORT_NAME[u2] or u2) .. "」)") or ""))
-end
-end })
-Tabs.TP:AddDropdown("EggPick", { Title = "③ 目标蛋(按上面排序, 自己挑)", Values = { "(先点①扫描)" }, Default = nil, Callback = function(v)
-local i = tonumber(tostring(v):match("^#(%d+)"))
-F._eggPick = i or 0
-end })
-Tabs.TP:AddButton({ Title = "⑦ 走过去拿(不传送 · 不容易被位置差检测抓)", Callback = function() T.EggWalk = true pcall(F.EggWalkTo) end })
-Tabs.TP:AddToggle("GuardAvoid", { Title = "守卫规避(靠太近自动撤开)", Default = false, Callback = function(v)
-local changed = (T.GuardAvoid ~= nil) and (T.GuardAvoid ~= v)
-T.GuardAvoid = v
-if F._cfgSyncing or not changed then return end
-if v then pcall(F.GuardAvoidEnable) else pcall(F.GuardAvoidDisable) end
-end })
-Tabs.TP:AddButton({ Title = "④ 传过去拿(传送 + 自动交互 + 回安全点)", Callback = function() pcall(F.EggRemoteSteal) end })
-Tabs.TP:AddButton({ Title = "④b 只传送过去(不拿)", Callback = function()
-local e = F.EggGo(3)
-if e then F.Out("[偷蛋] 已传送到 #" .. tostring(F._eggPick) .. " " .. e.name .. " (只传送, 不触发拿取)") end
-end })
-Tabs.TP:AddButton({ Title = "⑤ 设安全点(远程拿的回程点)", Callback = function()
+Tabs.TP:AddSlider("AutoStealSec", { Title = "自动拿间隔(秒)", Min = 1, Max = 30, Default = 3, Rounding = 0,
+Callback = function(v) C.AutoStealSec = v end })
+Tabs.TP:AddButton({ Title = "设安全区(拿完自动回到这里)", Callback = function()
 local _, _, root = GC()
-if not root then F.Out("[偷蛋] 现在没角色") return end
-local p = root.Position
-C.SafePoint = { x = p.X, y = p.Y, z = p.Z }
-pcall(SaveConfig)
-F.Out(string.format("[偷蛋] 安全点已记下: (%.0f, %.0f, %.0f)", p.X, p.Y, p.Z))
+if not root then F.Out("[安全区] 现在没有角色, 设不了") return end
+local p2 = root.Position
+C.SafePoint = { x = p2.X, y = p2.Y, z = p2.Z }
+F.Out(string.format("[安全区] 已设: (%.0f, %.0f, %.0f) —— 以后「一键自动拿」拿完就回这里", p2.X, p2.Y, p2.Z))
+end })
+Tabs.TP:AddButton({ Title = "回安全区", Callback = function()
+local sp = C.SafePoint
+if not sp then F.Out("[安全区] 还没设过, 先点上面那个按钮设一下") return end
+if F.TPResist then pcall(F.TPResist, CFrame.new(Vector3.new(sp.x, sp.y, sp.z)), 1.0) end
+pcall(function() local _, _, r = GC() if r then r:PivotTo(CFrame.new(Vector3.new(sp.x, sp.y, sp.z))) end end)
+F.Out("[安全区] 已回到安全区")
+end })
+Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
+local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
+T.InstantInteract = v
+if F._cfgSyncing or not changed then return end
+if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
