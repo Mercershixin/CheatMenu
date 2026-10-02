@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 23:04 sha 94325e38 bytes 309327'):format('2026-10-02 23:04','94325e38',309327))
+print(('[CheatMenu] build 2026-10-02 23:22 sha 8982ed0d bytes 309244'):format('2026-10-02 23:22','8982ed0d',309244))
 local F = {}
-F.VERSION = "v12.0.13"
+F.VERSION = "v12.0.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2117,11 +2117,6 @@ end
 function F.IsOursSrc(low)
 if type(low) ~= "string" then return false end
 return (low:find("cheatmenu", 1, true) ~= nil) or (low:find("fluent", 1, true) ~= nil)
-end
-function F.IsOurs(f)
-if type(f) ~= "function" then return false end
-local ok, s = pcall(dbgGetInfo, f, "s")
-return ok and F.IsOursSrc(tostring(s or ""):lower())
 end
 function F.FindByShape(nups, nconsts)
 if type(getgc) ~= "function" then
@@ -5597,6 +5592,7 @@ end)
 end
 function F.InstantInteractDisable()
 F._iiHeal = nil
+pcall(function() if F.InteractWatchDisable then F.InteractWatchDisable() end end)
 if F.II_CONN then pcall(function() F.II_CONN:Disconnect() end) F.II_CONN = nil end
 if F.II_SHOWN then pcall(function() F.II_SHOWN:Disconnect() end) F.II_SHOWN = nil end
 local n = 0
