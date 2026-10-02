@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:50 sha 1edb4f69 bytes 305957'):format('2026-10-02 22:50','1edb4f69',305957))
+print(('[CheatMenu] build 2026-10-02 22:56 sha 5663d5d5 bytes 307398'):format('2026-10-02 22:56','5663d5d5',307398))
 local F = {}
-F.VERSION = "v12.0.10"
+F.VERSION = "v12.0.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4846,11 +4846,60 @@ if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
-local function smoothTP(targetCF)
-local _, _, root = GC()
-if not root or not targetCF then return end
+F.HardTP = function(cf)
+if not cf then return false end
+local _, hum, root = GC()
+if not root then return false end
 if F.DropIntent then pcall(F.DropIntent) end
-pcall(function() root:PivotTo(targetCF) end)
+pcall(function()
+if root.CanSetNetworkOwnership and root:CanSetNetworkOwnership() then
+root:SetNetworkOwner(LP)
+end
+end)
+local wasStand = nil
+pcall(function()
+if hum then
+wasStand = hum.PlatformStand
+hum.PlatformStand = true
+end
+end)
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+local from = root.Position
+local dist = (cf.Position - from).Magnitude
+local steps = 1
+if dist > 300 then
+steps = math.clamp(math.ceil(dist / 400), 2, 12)
+end
+local rot = cf - cf.Position
+for i = 1, steps do
+local t = i / steps
+local p = from:Lerp(cf.Position, t)
+pcall(function() root.CFrame = CFrame.new(p) * rot end)
+if i < steps then
+pcall(function() RS.Heartbeat:Wait() end)
+end
+end
+pcall(function() root.CFrame = cf end)
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+if wasStand ~= nil then
+pcall(function() RS.Heartbeat:Wait() end)
+pcall(function() hum.PlatformStand = wasStand end)
+end
+return (root.Position - cf.Position).Magnitude < 20
+end
+local function smoothTP(targetCF)
+if F.HardTP then
+F.HardTP(targetCF)
+else
+local _, _, root = GC()
+if root and targetCF then pcall(function() root:PivotTo(targetCF) end) end
+end
 breakVelocity()
 end
 local function TeleportToPlayer(target)
@@ -5032,20 +5081,26 @@ if not root then
 F.Out("[点位] ⚠ 现在没有角色, 传送取消")
 return false
 end
-local srv = nil
 local pos = Vector3.new(tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0)
-smoothTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
-if hum then pcall(function() hum.PlatformStand = false end) end
-local ok = false
-pcall(function()
-local _, _, r2 = GC()
-if r2 then ok = (r2.Position - pos).Magnitude < 6 end
-end)
-F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 瞬间到位",
-tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
+local from = root.Position
+local dist = (pos - from).Magnitude
+local ok = F.HardTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
 if not ok then
-F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
-or "[点位] ⚠ 没到位: 多半被游戏拉回或角色被冻住 —— 再点一次, 或先关掉「冻结/锁位」类功能")
+task.wait(0.05)
+ok = F.HardTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
+if not ok then
+task.wait(0.08)
+ok = F.HardTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
+end
+end
+local now2 = nil
+pcall(function() local _, _, r2 = GC() if r2 then now2 = (r2.Position - pos).Magnitude end end)
+F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · %s(不需要开加速/飞行)",
+tostring(it.name), dist,
+ok and "已到位" or ("没到位(还差 " .. string.format("%.0f", now2 or -1) .. " 格)"),
+dist > 300 and ("分步传送(" .. tostring(math.clamp(math.ceil(dist / 400), 2, 12)) .. " 步)") or "一次到位"))
+if not ok then
+F.Out("[点位] ⚠ 传送被服务端拒绝(这游戏的位移由服务端裁决) —— 换个近一点的点, 或把速度调低再试")
 end
 return ok
 end
