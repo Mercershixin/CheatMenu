@@ -2862,3 +2862,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ★ 用户新指令覆盖旧铁律'加载不许自动开': 现在加载后自动应用'① 默认: 防挂机'档(轻量、不装钩子); ② 把散落在 4 个页面的 6 个开关(防挂机/防踢/防拉回档/深度中和/自保档位/伪装)合并成**反作弊页一个「绕过/防护 档位」下拉**: 关 / ①默认防挂机 / ②+防护反拉回伪装 / ③+防踢(装钩子) / ④全部含防拉回档与深度中和(最激进) —— 一个下拉管全部, 逐级递增; ③ 移动页因此只剩 飞行/加速/其他移动(无限跳·穿墙·藏地下·深度·隐身)+搬运守卫
 
+
+
+## 11.5.3：修'卸载后浮窗没清掉'与'热加载多次出现多个UI'
+
+- 根因: 我们一共创建 5 个独立 ScreenGui(StatOverlay 状态悬浮窗 / CrosshairDot 准星 / CM_FovRing FOV环 / CMTouchToggle 触屏按钮 / MenuButton 菜单按钮), 但卸载时**只销毁了 CM_Window 和 Fluent.GUI 两个** ⇒ 其余浮窗残留; 热加载重复执行又叠加新的 ⇒ 屏幕上多份 UI. 修法: ① 给这 5 个 ScreenGui **打上 CMOwned 属性标记**; ② 新增 F.NukeAllGUIs(按 CMOwned 标记 + 名字白名单 CM_/CMTouchToggle/StatOverlay/CrosshairDot/MenuButton/Fluent 兜底清扫); ③ **卸载**末尾调用它(日志会写'兜底清掉 N 个残留浮窗'); ④ **加载时**(KillPreviousInstance 最开头)也调用一次 ⇒ 无论之前热加载过几次、哪怕旧实例都死了, 也能把屏幕上残留的 UI 扫干净
+
