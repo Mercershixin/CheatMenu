@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:46 sha 4eed70e3 bytes 298607'):format('2026-10-02 17:46','4eed70e3',298607))
+print(('[CheatMenu] build 2026-10-02 17:49 sha e1d7ee19 bytes 300468'):format('2026-10-02 17:49','e1d7ee19',300468))
 local F = {}
-F.VERSION = "v11.4.0"
+F.VERSION = "v11.4.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4039,6 +4039,38 @@ F._eggIdx = idx or false
 if idx then F.Out("[偷蛋] 已读到游戏自己的资产表(按稀有度等级排序, 比体积猜测准)") end
 return F._eggIdx or nil
 end
+F.EggWeight = function(o)
+local w, src2 = nil, nil
+pcall(function()
+for _, a in ipairs(o:GetAttributes()) do
+local al = string.lower(tostring(a))
+if string.find(al, "weight", 1, true) or string.find(al, "mass", 1, true)
+or string.find(al, "kg", 1, true) then
+local v = tonumber(o:GetAttribute(a))
+if v then w, src2 = v, "属性" .. tostring(a) end
+end
+end
+end)
+if not w then
+pcall(function()
+for _, c in ipairs(o:GetDescendants()) do
+if c:IsA("NumberValue") or c:IsA("IntValue") or c:IsA("StringValue") then
+local cl = string.lower(c.Name)
+if string.find(cl, "weight", 1, true) or string.find(cl, "mass", 1, true)
+or string.find(cl, "kg", 1, true) or cl == "value" then
+local v = tonumber(c.Value)
+if v then w, src2 = v, "数值" .. tostring(c.Name) end
+end
+end
+end
+end)
+end
+if not w then
+local num = string.match(o.Name, "(%d+%.?%d*)%s*[kK][gG]")
+if num then w, src2 = tonumber(num), "名字" end
+end
+return w, src2
+end
 function F.EggScanMap()
 local ch = LP.Character
 local root = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -4049,12 +4081,33 @@ for _, o in ipairs(workspace:GetDescendants()) do
 seen = seen + 1
 if seen > 9000 then break end
 if o:IsA("Model") and not o:IsDescendantOf(ch) and not Players:GetPlayerFromCharacter(o) then
-local low = o.Name:lower()
+local low = string.lower(o.Name)
 local hit = false
 for _, w in ipairs(F.EGG_KEY) do
-if low:find(w, 1, true) then hit = true break end
+if string.find(low, w, 1, true) then hit = true break end
+end
+local wkg, wsrc = nil, nil
+if not hit then
+pcall(function() wkg, wsrc = F.EggWeight(o) end)
+if wkg then hit = true end
+end
+if not hit then
+pcall(function()
+local anc = o.Parent
+for _ = 1, 4 do
+if not anc or anc == workspace then break end
+local al = string.lower(anc.Name)
+if string.find(al, "egg", 1, true) or string.find(al, "stand", 1, true)
+or string.find(al, "plot", 1, true) or string.find(al, "podium", 1, true)
+or string.find(al, "pet", 1, true) or string.find(al, "base", 1, true) then
+hit = true break
+end
+anc = anc.Parent
+end
+end)
 end
 if hit then
+if not wkg then pcall(function() wkg, wsrc = F.EggWeight(o) end) end
 local prim = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
 if prim then
 local vol, val, tier = 0, nil, 0
@@ -4089,13 +4142,15 @@ end
 if hit2 then gTier, gDrop, gName = hit2.tier, hit2.drop, hit2.display end
 end
 local score
-if gTier then
+if wkg then
+score = 1e12 + wkg * 1000
+elseif gTier then
 score = gTier * 1e7 - (gDrop or 1e9)
 else
 score = (val or 0) * 1000 + vol + tier * 5000
 end
 F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
-tier = gTier or tier, dist = dist, drop = gDrop, score = score }
+tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc, score = score }
 end
 end
 end
@@ -4107,7 +4162,9 @@ function F.EggLabels()
 local out = {}
 for i, e in ipairs(F._eggs) do
 local tag
-if e.drop then
+if e.kg then
+tag = string.format("%.1f kg", e.kg) .. (e.kgSrc and ("·" .. tostring(e.kgSrc)) or "")
+elseif e.drop then
 tag = "稀有度 " .. tostring(e.tier) .. " · 掉落权重 " .. tostring(math.floor(e.drop))
 elseif e.val then
 tag = "值 " .. tostring(math.floor(e.val))
@@ -4129,7 +4186,9 @@ if op and op.Refresh then op:Refresh(labels) return true end
 if op and op.SetValues then op:SetValues(labels) return true end
 return false
 end)
-F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个蛋, 已按最重/最贵排序"
+local withKg = 0
+for _, e in ipairs(F._eggs) do if e.kg then withKg = withKg + 1 end end
+F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个蛋(其中 " .. tostring(withKg) .. " 个读到了 kg), 已按最重/最贵排序"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
 return n
