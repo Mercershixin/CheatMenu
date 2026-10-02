@@ -2928,3 +2928,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 对比方法: 抽我们自己的监听清单 vs 同族 AutoFarm/InventoryManager/Movement/p02_scan + 通用 VapeV4. 结果: 我们有 RunService 循环 30 / UIS 输入 4 / Player 事件 4 / 子对象 9 / 属性信号 7, 但 **Humanoid 事件 0 个**、**Tool 装备事件 0 个**(同族库存脚本用了 11 次). 补齐: ① **Tool 装备/卸下 + 角色 ChildAdded/Removed 监听**(F.CarryWatchEnable) ⇒ 装备/放下蛋时**自动重新锁定**手上的东西(以前要'关开一次'); ② **Humanoid.Died / StateChanged / HealthChanged**(F.CharEventsEnable, 随防护开启) ⇒ 死亡自动清走路目标与搬运锁定、倒地/被击飞/平台上状态立刻记录、血量掉到 35% 以下记录时间; ③ **ProximityPromptService.PromptTriggered**(随瞬间交互开启) ⇒ 确认'交互真的成功了', 日志报'已达成交互 N 次(最近: xxx)'; ④ 全部监听都在关闭对应功能时断开(无残留)
 
+
+
+## 11.8.1：逐功能监听审计(15 个功能组) + 把翻译从'每秒全量扫 UI'改成事件驱动
+
+- 审计方法: 按 15 个功能组(自瞄/自动攻击/加速/飞行/传送/搬运偷蛋/瞬间交互/防护/反拉回/防挂机防踢/隐身伪装/视觉/HUD/翻译/挂机自动化)统计各自用到的事件, 再与同族/通用脚本对照. 结论: 20 类事件里我们已覆盖 19 类(Heartbeat 25/CharacterAdded 12/DescendantAdded 9/属性信号 7/RenderStepped 6/Stepped 5/Idled 5/OnClientEvent 4/Input 4/ChildAdded 3/StateChanged 2/PreSimulation 2/Died 1/HealthChanged 1/PromptTriggered 1...), **唯一明显该用事件却在轮询的是翻译**: Trans.Scan 原本**每秒遍历 PlayerGui+CoreGui+gethui 全部后代** + workspace 顶层 prompts ⇒ 改成 **Trans.WatchOn 事件驱动**: ① 三个 UI 根的 DescendantAdded(新元素立刻翻译) ② 每个文本元素挂 GetPropertyChangedSignal('Text')(文字变化即时翻译, 只挂一次) ③ 兜底全扫由每秒放宽到 15 秒; 关闭时 Trans.WatchOff 断开全部. 另外确认 HUD 的 RenderStepped 是必要的(FPS 统计天然要每帧), 挂机自动化的 while+T.wait 循环合理
+
