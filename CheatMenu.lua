@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:32 sha 3714f7fb bytes 295378'):format('2026-10-02 17:32','3714f7fb',295378))
+print(('[CheatMenu] build 2026-10-02 17:36 sha 1cf55540 bytes 297068'):format('2026-10-02 17:36','1cf55540',297068))
 local F = {}
-F.VERSION = "v11.2.3"
+F.VERSION = "v11.2.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7268,9 +7268,8 @@ F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (
 pcall(F.LogFlush, "恢复存档功能")
 end
 local function RestoreFeatures()
-if T.CharPersist ~= false then T.CharPersist = true end
-if T.AutoSave ~= false then F.AutoSaveEnable() end
-F.LivePlayersEnable()
+if T.CharPersist == nil then T.CharPersist = false end
+if T.AutoSave == nil then T.AutoSave = false end
 end
 LoadConfig()
 pcall(function()
@@ -7498,6 +7497,12 @@ if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
+Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
+local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
+T.InfiniteJump = v
+if F._cfgSyncing or not changed then return end
+if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end
+end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
 if F._cfgSyncing then return end
@@ -7838,6 +7843,30 @@ Duration = 10,
 end)
 end })
 Tabs.Setting:AddSection("系统")
+Tabs.Setting:AddToggle("AntiTP", { Title = "防拉回档(清检测脚本 + 断检测连接 + 中和检测函数)", Description = "最激进的一档: 会主动找出并清掉/断掉/中和游戏侧的检测。个别反作弊会因此盯上你 —— 需要时再开", Default = false, Callback = function(v)
+local changed = (T.AntiTPOn ~= nil) and (T.AntiTPOn ~= v)
+T.AntiTPOn = v
+if F._cfgSyncing or not changed then return end
+if v then pcall(F.SpeedAntiTPEnable) pcall(F.MetaHookEnsure) else pcall(F.SpeedAntiTPDisable) end
+F.Out(v and "[防拉回档] 已开(清脚本/断连接/中和函数)" or "[防拉回档] 已关")
+end })
+Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
+local changed = (T.Session ~= nil) and (T.Session ~= v)
+T.Session = v
+if F._cfgSyncing or not changed then return end
+if v then
+T.AutoSave, T.CharPersist = true, true
+pcall(F.AutoSaveEnable)
+pcall(F.LivePlayersEnable)
+F.Out("[会话保持] 已开: 自动存档 + 角色持续 + 实时玩家列表")
+else
+T.AutoSave, T.CharPersist = false, false
+pcall(F.AutoSaveDisable)
+pcall(F.LivePlayersDisable)
+pcall(F.CharPersistDisable)
+F.Out("[会话保持] 已关")
+end
+end })
 Tabs.Move:AddButton({ Title = "★ 反拉回诊断(一键: 所有权→夺取→探针→必要时压速; 探针会用异常位移)", Callback = function() F.SrvOneClick() end })
 Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
 Tabs.Setting:AddButton({ Title = "★ 环境自检(手机/平板没效果先点这个)", Callback = function() F.EnvSelfCheck() end })
