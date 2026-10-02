@@ -2814,3 +2814,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 修复: F.SpeedAntiTPDisable 里 st 未定义 ⇒ 关闭防拉回档时会提前 return, 导致断连接/还原全都不执行(功能级 bug); 现已 local st = F._atpState 并对齐
 
+
+
+## 11.4.1：蛋扫描: 按 kg 显示重量 + 最重排前 + 识别放宽(扫得到更多)
+
+- ① 新增 F.EggWeight 三路取重: 模型 Attribute(weight/mass/kg) → 子对象 NumberValue/IntValue/StringValue(含 weight/mass/kg/value) → 名字里的 '数字+kg'; 显示为 '12.5 kg'; ② 排序改成 **有 kg 的按 kg 降序放最前**(正合'最重排一下'), 再退稀有度表/体积; ③ 识别放宽: 原来只认名字含 egg/brainrot 的, 现在**有重量属性也算蛋** + **位于 egg/stand/plot/podium/pet/base 类容器内的模型也算**; ④ 扫描报告加'其中 N 个读到了 kg', 扫不到就是这游戏重量不在客户端
+
