@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 20:36 sha 9be1567a bytes 324149'):format('2026-10-02 20:36','9be1567a',324149))
+print(('[CheatMenu] build 2026-10-02 20:45 sha 92a06f83 bytes 328310'):format('2026-10-02 20:45','92a06f83',328310))
 local F = {}
-F.VERSION = "v11.7.5"
+F.VERSION = "v11.7.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2396,8 +2396,12 @@ if KG.kick and m == "Kick" and self == LP then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
 end
-if T.SpeedGuard and m == "ChangeState" and KG.blockSet[self] then
+if (T.SpeedGuard or T.SteadyOn or T.HitGuard) and m == "ChangeState" and KG.blockSet[self] then
 local st = select(1, ...)
+if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown then
+KG.blocked8 = (KG.blocked8 or 0) + 1
+return nil
+end
 if st == Enum.HumanoidStateType.Physics then
 KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
@@ -2605,6 +2609,11 @@ local n5 = KG.blocked5 or 0
 if n5 ~= (KG.lastBlock5 or 0) then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
+end
+local n8 = KG.blocked8 or 0
+if n8 ~= (KG.lastBlock8 or 0) then
+KG.lastBlock8 = n8
+F.Out("[屏蔽] 已挡下把你打晕/打成布娃娃 ×" .. tostring(n8) .. " (被球棒打晕会掉蛋, 这层就是防这个)")
 end
 local n7 = KG.blocked7 or 0
 if n7 ~= (KG.lastBlock7 or 0) then
@@ -3211,7 +3220,12 @@ end
 return #scripts, #conns
 end
 function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong, bypass)
-if steady or hit then pcall(F.CharEventsEnable) else pcall(F.CharEventsDisable) end
+if steady or hit then
+pcall(F.CharEventsEnable)
+pcall(F.MetaHookEnsure)
+else
+pcall(F.CharEventsDisable)
+end
 T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
 T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
 T.HitStrong = strong and true or false
@@ -4231,6 +4245,51 @@ end
 end
 return nil
 end
+F.EggRescanQuiet = function()
+if not T.EggAutoRefresh then return end
+pcall(F.EggScanMap)
+pcall(function() F.EggSortNow() end)
+pcall(function()
+local labels = F.EggLabels()
+local op = Fluent and Fluent.Options and Fluent.Options.EggPick
+if op and op.Refresh then op:Refresh(labels) end
+end)
+F._eggRescans = (F._eggRescans or 0) + 1
+if os.clock() - (F._eggRescanLog or 0) > 10 then
+F._eggRescanLog = os.clock()
+F.Out("[偷蛋] 蛋有变化 ⇒ 已自动刷新列表(第 " .. tostring(F._eggRescans) .. " 次, 当前 " .. tostring(#(F._eggs or {})) .. " 个)")
+end
+end
+F.EggAutoWatchOn = function()
+if F._eggWatch then return end
+F._eggWatch = {}
+local function hook(box)
+pcall(function()
+F._eggWatch[#F._eggWatch + 1] = box.ChildAdded:Connect(function()
+if os.clock() - (F._eggRescanAt or 0) < 2 then return end
+F._eggRescanAt = os.clock()
+task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
+end)
+end)
+pcall(function()
+F._eggWatch[#F._eggWatch + 1] = box.ChildRemoved:Connect(function()
+if os.clock() - (F._eggRescanAt or 0) < 2 then return end
+F._eggRescanAt = os.clock()
+task.delay(0.6, function() pcall(F.EggRescanQuiet) end)
+end)
+end)
+end
+local boxes = F.EggContainers()
+for _, b in ipairs(boxes) do hook(b) end
+pcall(function() hook(workspace) end)
+F.Out("[偷蛋] 自动刷新已开: 蛋出现/消失会自动更新列表(监听 " .. tostring(#boxes) .. " 个蛋容器)")
+end
+F.EggAutoWatchOff = function()
+if F._eggWatch then
+for _, c in ipairs(F._eggWatch) do pcall(function() c:Disconnect() end) end
+F._eggWatch = nil
+end
+end
 F.EggWeight = function(o)
 local w, src2 = nil, nil
 pcall(function()
@@ -4283,6 +4342,7 @@ if string.find(flt, "稀有度 ≥", 1, true) then
 minTier = tonumber(string.match(flt, "≥%s*(%d+)")) or 0
 end
 if string.find(flt, "只要有重量", 1, true) then onlyKg = true end
+local skipHeld = string.find(flt, "排除别人拿着的", 1, true) ~= nil
 local seen = 0
 local roots = F.EggContainers()
 local scanList = nil
@@ -4418,6 +4478,7 @@ end
 end)
 if inPet and not hit then hit = false end
 if hit then
+if skipHeld and held then hit = false end
 if minTier > 0 and (tonumber(tier) or 0) < minTier then hit = false end
 if onlyKg and not (wkg and wkg > 0) then hit = false end
 end
@@ -4547,6 +4608,10 @@ F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(b
 .. " 个) · 排序方式=" .. tostring(C.EggSort or "最重(kg)") .. " ⇒ 实际按「" .. usedName .. "」从高到低"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
+if T.EggAutoRefresh then
+pcall(F.EggAutoWatchOff)
+pcall(F.EggAutoWatchOn)
+end
 pcall(F.LogFlush, "偷蛋扫描")
 return n
 end
@@ -4568,6 +4633,9 @@ F.EggWalkTo = function()
 local e = F._eggs[F._eggPick or 0]
 if not e then
 F.Out("[偷蛋] 先点「扫描」, 再在下拉里选一个目标")
+pcall(function()
+Fluent:Notify({ Title = "偷蛋", Content = "还没选目标 —— 先点①扫描, 再在③下拉里挑一个", Duration = 5 })
+end)
 return
 end
 local _, hum, root = GC()
@@ -4624,61 +4692,83 @@ end)
 end
 F.WalkTapPrompt = function(pos, radius)
 local fired = false
+local hit = nil
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 if d:IsA("ProximityPrompt") and d.Enabled then
 local host = d.Parent
 local hp = host and host:IsA("BasePart") and host.Position
 if hp and (hp - pos).Magnitude < (radius or 12) then
+if not hit or (hp - pos).Magnitude < (hit.Position - pos).Magnitude then
+hit = { prompt = d, Position = hp }
+end
+end
+end
+end
+end)
+if not hit then return false end
+local pr = hit.prompt
+if type(fireproximityprompt) == "function" then
+pcall(function() fireproximityprompt(pr) fired = true end)
+end
 if not fired then
-fired = true
 pcall(function()
-d.HoldDuration = 0
-d.RequiresLineOfSight = false
-d:InputHoldBegin()
+pr.HoldDuration = 0
+pr.RequiresLineOfSight = false
+pr.Enabled = true
+pr.MaxActivationDistance = math.max(pr.MaxActivationDistance, 20)
+pr:InputHoldBegin()
 end)
-task.wait(0.1)
-pcall(function() d:InputHoldEnd() end)
+task.wait(0.12)
+pcall(function() pr:InputHoldEnd() end)
+fired = true
 end
+return fired
 end
-end
-end
-end)
-end
-function F.EggRemoteSteal()
-local e = F.EggGo(3)
-if not e then return end
-local safe = C.SafePoint
-task.wait(0.28)
-local fired, n = false, 0
+F.PromptNear = function(pos, radius)
+local best = nil
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 if d:IsA("ProximityPrompt") and d.Enabled then
 local host = d.Parent
 local hp = host and host:IsA("BasePart") and host.Position
-if hp and (hp - e.part.Position).Magnitude < 14 then
-n = n + 1
-if not fired then
-fired = true
+if hp and (hp - pos).Magnitude < (radius or 12) then
+if not best or (hp - pos).Magnitude < best.dist then
+best = { prompt = d, dist = (hp - pos).Magnitude }
+end
+end
+end
+end
+end)
+return best
+end
+function F.EggRemoteSteal()
+local e = F.EggGo(3)
+if not e then return end
+local safe = C.SafePoint
+task.wait(0.3)
+local ok = false
+pcall(function() ok = F.WalkTapPrompt(e.part.Position, 15) end)
+if not ok then
+pcall(function() ok = F.WalkTapPrompt(e.part.Position, 25) end)
+end
+task.wait(0.35)
+local stillThere = false
+pcall(function() stillThere = (e.part and e.part.Parent ~= nil) end)
+if stillThere then
+F.Out("[偷蛋] 到蛋旁边但「没拿到」(蛋还在原地) —— 这个服的拿取要服务端点头(距离/权限校验), 客户端再快也没用")
 pcall(function()
-d.HoldDuration = 0
-d.RequiresLineOfSight = false
-d:InputHoldBegin()
+Fluent:Notify({ Title = "偷蛋", Content = "已经到蛋旁边, 但服务端没放行拿取(蛋还在原地)。这种服只能手动拿, 或换「走过去拿」再试", Duration = 6 })
 end)
-task.wait(0.1)
-pcall(function() d:InputHoldEnd() end)
+else
+F.Out("[偷蛋] ✅ 拿到了(蛋已从原地消失)")
+pcall(function() Fluent:Notify({ Title = "偷蛋", Content = "✅ 拿到了", Duration = 4 }) end)
 end
-end
-end
-end
-end)
-task.wait(0.2)
 if safe then
 eggTP(CFrame.new(Vector3.new(safe.x, safe.y, safe.z)))
-F.Out("[偷蛋] 已触发 " .. tostring(n) .. " 个交互候选 ⇒ 已传送回安全点")
-else
-F.Out("[偷蛋] 已触发 " .. tostring(n) .. " 个交互候选 (没设安全点, 所以留在原地)")
+F.Out("[偷蛋] 已传送回安全点")
 end
+if T.EggAutoRefresh then task.delay(1, function() pcall(F.EggRescanQuiet) end) end
 end
 F.GUARD_WORDS = { "guard", "npc", "security", "police", "watcher", "officer", "sentry" }
 F.GuardScan = function()
@@ -4829,24 +4919,22 @@ end
 end
 F.PinPulse = function(dest, secs)
 if not dest then return end
+if F._pinPulseConn then pcall(function() F._pinPulseConn:Disconnect() end) F._pinPulseConn = nil end
+local endT = os.clock() + (secs or 0.3)
+F._pinPulseConn = RS.Heartbeat:Connect(function()
+if os.clock() > endT then
+if F._pinPulseConn then pcall(function() F._pinPulseConn:Disconnect() end) F._pinPulseConn = nil end
+return
+end
+local _, _, r = GC()
+if not r then return end
+local cur = r.Position
+local d = Vector3.new(dest.X - cur.X, 0, dest.Z - cur.Z)
+if d.Magnitude > 0.5 then
 pcall(function()
-local _, _, root = GC()
-if not root then return end
-local att = Instance.new("Attachment")
-att.Name = "CMPinPulse"
-att.Parent = root
-local ap = Instance.new("AlignPosition")
-ap.Mode = Enum.PositionAlignmentMode.OneAttachment
-ap.Attachment0 = att
-ap.MaxForce = 1e9
-ap.Responsiveness = 200
-pcall(function() ap.RigidityEnabled = true end)
-ap.Position = dest
-ap.Parent = root
-task.delay(secs or 0.3, function()
-pcall(function() ap:Destroy() end)
-pcall(function() att:Destroy() end)
+r.CFrame = CFrame.new(cur + d * 0.5) * (r.CFrame - cur)
 end)
+end
 end)
 end
 F.DropIntent = function()
@@ -4984,6 +5072,7 @@ end
 F.SpeedApply()
 F._spdConn = F.DriveConnect(function(deltaTime)
 if not T.SpeedOn then F.SpeedSet(false) return end
+if T.FlyOn then return end
 local _, h, r = GC()
 if not (h and r) then return end
 local sp = tonumber(C.SpeedValue) or 60
@@ -5013,6 +5102,12 @@ if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
 local v = u * sp
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
+pcall(function()
+if r.AssemblyAngularVelocity.Magnitude > 15 then
+r.AssemblyAngularVelocity = Vector3.zero
+F._flipFix = (F._flipFix or 0) + 1
+end
+end)
 if T.BypassDetect then
 local want = sp * dt
 local intent = F._intent
@@ -5750,6 +5845,7 @@ pcall(F.MetaHookEnsure)
 F.Out("[反拉回] 已开(平时零干预, 被拉回才出手): 所有权被夺才抢 + 被回滚就用 0.3 秒脉冲顶回")
 end
 function F.SpeedGuardDisable()
+if F._pinPulseConn then pcall(function() F._pinPulseConn:Disconnect() end) F._pinPulseConn = nil end
 T.SpeedGuard = false
 T.BypassDetect = false
 pcall(F.PinDisable)
@@ -8500,10 +8596,16 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.TP:AddSection("偷蛋(扫描 → 排序 → 自选 → 远程拿)")
+Tabs.TP:AddToggle("EggAutoRefresh", { Title = "蛋列表自动刷新(蛋出现/消失自动更新)", Default = true, Callback = function(v)
+local changed = (T.EggAutoRefresh ~= nil) and (T.EggAutoRefresh ~= v)
+T.EggAutoRefresh = v
+if F._cfgSyncing or not changed then return end
+if v then pcall(F.EggAutoWatchOn) else pcall(F.EggAutoWatchOff) end
+end })
 Tabs.TP:AddButton({ Title = "① 扫描地图上的蛋(按最重/最贵排序)", Callback = function() F.EggScanAndFill() end })
 Tabs.TP:AddDropdown("EggFilter", { Title = "② 筛选(只要这些)", Values = {
-"全部", "稀有度 ≥ 3", "稀有度 ≥ 5", "只要有重量",
-}, Default = "全部", Callback = function(v)
+"全部", "排除别人拿着的", "稀有度 ≥ 3", "稀有度 ≥ 5", "只要有重量",
+}, Default = "排除别人拿着的", Callback = function(v)
 C.EggFilter = v
 F.Out("[偷蛋] 筛选 = " .. tostring(v) .. " (下次扫描生效)")
 end })
@@ -8534,9 +8636,10 @@ T.GuardAvoid = v
 if F._cfgSyncing or not changed then return end
 if v then pcall(F.GuardAvoidEnable) else pcall(F.GuardAvoidDisable) end
 end })
-Tabs.TP:AddButton({ Title = "④ 传送到选中的蛋", Callback = function()
+Tabs.TP:AddButton({ Title = "④ 传过去拿(传送 + 自动交互 + 回安全点)", Callback = function() pcall(F.EggRemoteSteal) end })
+Tabs.TP:AddButton({ Title = "④b 只传送过去(不拿)", Callback = function()
 local e = F.EggGo(3)
-if e then F.Out("[偷蛋] 已传送到 #" .. tostring(F._eggPick) .. " " .. e.name) end
+if e then F.Out("[偷蛋] 已传送到 #" .. tostring(F._eggPick) .. " " .. e.name .. " (只传送, 不触发拿取)") end
 end })
 Tabs.TP:AddButton({ Title = "⑤ 设安全点(远程拿的回程点)", Callback = function()
 local _, _, root = GC()
@@ -8546,7 +8649,6 @@ C.SafePoint = { x = p.X, y = p.Y, z = p.Z }
 pcall(SaveConfig)
 F.Out(string.format("[偷蛋] 安全点已记下: (%.0f, %.0f, %.0f)", p.X, p.Y, p.Z))
 end })
-Tabs.TP:AddButton({ Title = "⑥ 远程拿: 传过去 → 触发交互 → 回安全点", Callback = function() F.EggRemoteSteal() end })
 Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
