@@ -2970,3 +2970,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① SpeedApply(加速写 WalkSpeed) 在飞行时**完全不执行**; ② 飞行开启时把角色的 **WalkSpeed 记下来并置 0** ⇒ 飞行期间走路引擎不产生任何速度, 速度唯一来源就是「飞行速度」滑块的 AlignPosition 推动; ③ 飞行关闭(FlyDestroy)时**还原**你原本的 WalkSpeed; ④ 开启日志写明'速度只看飞行速度滑块 · 与加速完全独立'; ⑤ 两个滑块标题改成'飞行速度(只影响飞行, 和加速互不影响)'与'加速速度(只影响加速, 和飞行互不影响)'
 
+
+
+## 11.8.0：核实'防陷阱/防攻击是否进了档位2': 是, 但发现档位2还连带开了最激进的防拉回档, 已拆掉
+
+- 核实结果(逐项看代码): ① **防陷阱** ✅ 档位②调用 GuardSet(true,true,false,true,true,·) 第4参=trap ⇒ T.TrapWarn=true ⇒ TrapGuardEnable 生效(关自身 CanTouch 那套); 弹开=dodge 第5参 ✓; ② **防攻击** ✅ hit=第2参 ⇒ T.HitGuard=true ⇒ HitGuardEnable(状态法) + CharEventsEnable(死亡/状态/血量) 生效; **拦击晕**条件 '(T.SpeedGuard or T.SteadyOn or T.HitGuard)' 在档②下 SteadyOn/HitGuard 都 true ⇒ 生效(拦 ChangeState(Ragdoll/FallingDown)); ③ ⚠ **发现隐患并修掉**: GuardSet 第6参 atp 原本档②传的是 **true** ⇒ 会连带开启『防拉回档』(清游戏脚本/断连接/中和检测函数 —— 我之前判定'最招反作弊'的那层)! 已改成 false ⇒ 档②只做防护+反拉回+伪装, 激进层只留给档④
+
