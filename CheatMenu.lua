@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:56 sha 1f399776 bytes 323100'):format('2026-10-02 19:56','1f399776',323100))
+print(('[CheatMenu] build 2026-10-02 20:36 sha 9be1567a bytes 324149'):format('2026-10-02 20:36','9be1567a',324149))
 local F = {}
-F.VERSION = "v11.7.4"
+F.VERSION = "v11.7.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3486,6 +3486,12 @@ F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", 
 "net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt" }
 F._trapConn = nil
 function F.TrapGuardDisable()
+if F._selfTouchBak then
+for p2, orig in pairs(F._selfTouchBak) do
+if typeof(p2) == "Instance" and p2.Parent then pcall(function() p2.CanTouch = orig end) end
+end
+F._selfTouchBak = nil
+end
 if F._trapConn then F._trapConn:Disconnect() F._trapConn = nil end
 if F._trapBak then
 for obj, bak in pairs(F._trapBak) do
@@ -3498,14 +3504,15 @@ function F.TrapGuardEnable()
 if F._trapConn then return end
 F._trapAt = 0
 F._trapBak = F._trapBak or {}
+F._selfTouchBak = F._selfTouchBak or nil
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
-if now - (F._trapAt or 0) < 0.4 then return end
+if now - (F._trapAt or 0) < 0.25 then return end
 F._trapAt = now
 local _, _, root = GC()
 if not root then return end
-local hits = 0
+local hits, nearD = 0, nil
 pcall(function()
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
@@ -3518,31 +3525,57 @@ if nm:find(k, 1, true) then isTrap = true break end
 end
 if isTrap then
 hits = hits + 1
+local dd = (pt.Position - root.Position).Magnitude
+if dd < 12 then nearD = dd end
 if pt.CanTouch then
 pcall(function()
 F._trapBak[pt] = { touch = pt.CanTouch }
 pt.CanTouch = false
 end)
 end
-if T.TrapDodge and now - (F._trapDodgeAt or 0) > 0.8 then
+if T.TrapDodge and dd < 8 and now - (F._trapDodgeAt or 0) > 0.8 then
 F._trapDodgeAt = now
 pcall(function()
 local dir = root.Position - pt.Position
 dir = Vector3.new(dir.X, 0, dir.Z)
 if dir.Magnitude > 0.1 then
 local vv = root.AssemblyLinearVelocity
-local push = dir.Unit * 60
-root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 30), push.Z)
+local push = dir.Unit * 70
+root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 35), push.Z)
 end
 end)
 end
 end
 end
 end)
+if nearD then
+if not F._selfTouchBak then
+F._selfTouchBak = {}
+pcall(function()
+local ch = LP.Character
+if ch then
+for _, p2 in ipairs(ch:GetDescendants()) do
+if p2:IsA("BasePart") then
+F._selfTouchBak[p2] = p2.CanTouch
+p2.CanTouch = false
+end
+end
+end
+end)
+F.Out("[陷阱] 附近有陷阱(最近 " .. string.format("%.0f", nearD) .. " 格) ⇒ 已临时关掉你身体的「可触碰」"
+.. "(这个会同步到服务端 ⇒ 服务端不再判定你踩上陷阱)")
+end
+elseif F._selfTouchBak then
+for p2, orig in pairs(F._selfTouchBak) do
+if typeof(p2) == "Instance" and p2.Parent then pcall(function() p2.CanTouch = orig end) end
+end
+F._selfTouchBak = nil
+F.Out("[陷阱] 已远离陷阱 ⇒ 身体「可触碰」已还原")
+end
 if hits > 0 and now - (F._trapLogAt or 0) > 5 then
 F._trapLogAt = now
 F._trapHits = (F._trapHits or 0) + hits
-F.Out("[陷阱] 已让附近 " .. tostring(hits) .. " 个陷阱失效(只关陷阱自己的 CanTouch, 不动你的角色) · 累计 " .. tostring(F._trapHits))
+F.Out("[陷阱] 附近 " .. tostring(hits) .. " 个陷阱已处理(陷阱自身+你的身体双重拦截) · 累计 " .. tostring(F._trapHits))
 end
 end)
 end
