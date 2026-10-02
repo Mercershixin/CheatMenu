@@ -3036,3 +3036,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 根因(**我改坏的**): 飞行原来被我改成 **位置驱动**(AlignPosition 刚性约束 + Responsiveness=40 + AlignOrientation 锁朝向) —— 位置约束每帧只把目标点前移 速度×dt, **约束追不上高速** ⇒ 调'飞行速度'滑块没反应(实际速度被约束能力限住), 朝向还被强行锁到相机. 修法(与公开脚本一致): ① 驱动改成 **LinearVelocity 速度驱动**(老执行器回退 BodyVelocity·MaxForce=1e9), 每帧  ⇒ **速度严格等于滑块值**; ② dir 含 Y(W 前/S 后/A 左/D 右 + 空格升/Ctrl降, 触屏用 MoveDirection) ⇒ **水平与上下都跟着滑块走**; ③ **删掉 AlignOrientation**(不再锁朝向, 你能自由转向); ④ 松手即停(VectorVelocity=0 + 清速度); ⑤ 与加速仍完全独立(加速在飞行时不执行)
 
+
+
+## 12.0.4：飞行不再翻滚: 速度驱动 + 姿态稳定(直立锁)
+
+- 根因: 我把飞行改成速度驱动时**把朝向约束一起删了** ⇒ PlatformStand 状态下角色没有姿态基准 + 飞行时身体部件 CanCollide=false ⇒ **物理自由翻滚**. 修法(速度驱动与稳定兼得): ① 保留 LinearVelocity 速度驱动(滑块＝真实速度, 含上下); ② **加回 AlignOrientation 姿态稳定**, 但锁的是 **'始终直立 + 跟随相机的水平朝向'**(CFrame.lookAt(r.Position, r.Position + 水平LookVector)) ⇒ **不会翻滚, 相机上下看也不影响姿态**(不像原来那样把整个朝向锁到相机); ③ 老执行器回退分支同样加了 BodyGyro(MaxTorque=1e9); ④ 松手时同时清线速度与角速度(避免残留旋转); ⑤ 不再删任何东西, 也不加任何速度限制
+
