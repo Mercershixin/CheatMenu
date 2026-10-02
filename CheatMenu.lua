@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:12 sha 25dcf351 bytes 318466'):format('2026-10-02 19:12','25dcf351',318466))
+print(('[CheatMenu] build 2026-10-02 19:30 sha dfa0edbf bytes 316731'):format('2026-10-02 19:30','dfa0edbf',316731))
 local F = {}
-F.VERSION = "v11.7.0"
+F.VERSION = "v11.7.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4776,34 +4776,6 @@ pcall(function() att:Destroy() end)
 end)
 end)
 end
-function F.PinEnable()
-if F._pinConn then return end
-local _, _, root = GC()
-if not root then return end
-local ok = pcall(function()
-local att = Instance.new("Attachment")
-att.Name = "CMPin"
-att.Parent = root
-local ap = Instance.new("AlignPosition")
-ap.Mode = Enum.PositionAlignmentMode.OneAttachment
-ap.Attachment0 = att
-ap.MaxForce = 1e9
-ap.Responsiveness = 200
-pcall(function() ap.RigidityEnabled = true end)
-ap.Position = root.Position
-ap.Parent = root
-F._pinAtt, F._pinAp = att, ap
-end)
-if not ok or not F._pinAp then F.PinDisable() return end
-F._pinConn = RS.Stepped:Connect(function()
-if not (T.SpeedGuard and T.SpeedOn) then F.PinDisable() return end
-local _, _, r2 = GC()
-if not (r2 and F._pinAp) then return end
-local intent = F._intent
-if intent then pcall(function() F._pinAp.Position = intent end) end
-end)
-F.Out("[钉位] 已接管位移(刚性约束), 服务端回滚也会被拉回原定位置")
-end
 F.DropIntent = function()
 F._intent = nil
 if KG then KG.intent, KG.dev = nil, nil end
@@ -5697,19 +5669,6 @@ pcall(F.DeepNeuterEnable)
 end
 F.Out("[绕过防护] 档位 = " .. v)
 end
-F.PresetSpeedFlight = function()
-local on = {}
-local function setOpt(name, v)
-pcall(function()
-local op = Fluent and Fluent.Options and Fluent.Options[name]
-if op and op.Set then op:Set(v) else on[#on + 1] = name end
-end)
-end
-setOpt("GuardTier", "最强: 推荐 + 反拉回 + 伪装(抢所有权/钉位/续跑/读原值)")
-setOpt("AntiAFK", true)
-F.Out("[一键配置] 速度/飞行·不拉回 已就绪: 反拉回(抢所有权+钉位+续跑+挡服务端写入) + 伪装(读原值+不复制速度+清痕迹) + 防挂机(掐检测连接)")
-F.Out("[一键配置] 现在打开「加速」或「飞行」并调速度即可; 若还被踢, 再单独开「防踢」; 只在被针对时才动「深度反作弊中和」")
-end
 function F.SpeedGuardEnable()
 T.SpeedGuard = true
 T.BypassDetect = true
@@ -5775,9 +5734,6 @@ if F._cgConn then pcall(function() F._cgConn:Disconnect() end) F._cgConn = nil e
 F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack, F._carry, F._carryBack = nil, 0, nil, 0
 F.Out("[搬运守卫] 已关")
-end
-function F.GuardOnEnable()
-pcall(function() F.GuardSet(true, true, false, true, true, true) end)
 end
 function F.GuardOnDisable()
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
