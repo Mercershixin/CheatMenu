@@ -2808,3 +2808,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 高危修正: 防拉回档原本对检测脚本做 **Disabled+Destroy** —— 客户端销毁游戏自己的脚本是极强的异常信号(很可能就是'一开就 267'的来源) ⇒ 改成**只 Disabled**, 并把被禁脚本记下来, **关闭时逐个恢复**; ② 「防踢」不再自动跑 getgc 中和, 拆出独立开关「深度反作弊中和」(系统页, 默认关, 用完提醒关) —— 防踢现在只保留轻量的 Kick 三路径; ③ 陈旧 API: 清痕迹从 getfenv 改 getgenv(避免反作弊 hook getfenv 记录), UI 的 Instance.new 两参写法拆成两步; ④ 复查: 无 wait/spawn/delay、无 BodyVelocity/BodyGyro/BodyPosition、无 FilteringEnabled —— 现代 API 已全用
 
+
+
+## 11.4.0：重建发布(11.3.0 的产物含 st 未定义, 已修)
+
+- 修复: F.SpeedAntiTPDisable 里 st 未定义 ⇒ 关闭防拉回档时会提前 return, 导致断连接/还原全都不执行(功能级 bug); 现已 local st = F._atpState 并对齐
+
