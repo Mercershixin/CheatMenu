@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:52 sha 0b3390d7 bytes 302236'):format('2026-10-02 21:52','0b3390d7',302236))
+print(('[CheatMenu] build 2026-10-02 21:58 sha 49de1cca bytes 301718'):format('2026-10-02 21:58','49de1cca',301718))
 local F = {}
-F.VERSION = "v12.0.0"
+F.VERSION = "v12.0.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3108,9 +3108,10 @@ F._antiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-local lim = math.max(200,
-(T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 1.5,
-(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 1.5)
+if F.OnMovingFloor and F.OnMovingFloor() then return end
+local lim = math.max(1500,
+(T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 2.0,
+(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 2.0)
 if root.AssemblyLinearVelocity.Magnitude > lim then
 pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0) end)
 pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
@@ -3635,18 +3636,6 @@ pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
 F._steadyHits = (F._steadyHits or 0) + 1
 end
 local v = root.AssemblyLinearVelocity
-local lim = math.max(200, (T.SpeedOn and (tonumber(C.SpeedValue) or 0) or 0) * 1.5,
-(T.FlyOn and (tonumber(C.FlyValue) or 0) or 0) * 1.5)
-if v.Magnitude > lim then
-pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 50), 0) end)
-pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
-F._steadyHits = (F._steadyHits or 0) + 1
-if os.clock() - (F._steadyLogAt or 0) > 3 then
-F._steadyLogAt = os.clock()
-F.Out(string.format("[稳身] 挡下异常速度 %.0f 格/秒(上限 %.0f) · 累计 %d 次",
-v.Magnitude, lim, F._steadyHits or 0))
-end
-end
 local okSt = (st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall
 or st == Enum.HumanoidStateType.Climbing or hum.PlatformStand)
 if v.Y > 90 and not okSt then
