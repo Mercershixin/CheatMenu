@@ -2820,3 +2820,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① 新增 F.EggWeight 三路取重: 模型 Attribute(weight/mass/kg) → 子对象 NumberValue/IntValue/StringValue(含 weight/mass/kg/value) → 名字里的 '数字+kg'; 显示为 '12.5 kg'; ② 排序改成 **有 kg 的按 kg 降序放最前**(正合'最重排一下'), 再退稀有度表/体积; ③ 识别放宽: 原来只认名字含 egg/brainrot 的, 现在**有重量属性也算蛋** + **位于 egg/stand/plot/podium/pet/base 类容器内的模型也算**; ④ 扫描报告加'其中 N 个读到了 kg', 扫不到就是这游戏重量不在客户端
 
+
+
+## 11.4.2：一键配置按钮(速度/飞行不拉回) + 蛋扫描四种排序(含按区域)
+
+- ① 移动页新增「★ 一键配置: 速度/飞行 不被拉回」—— 点一下自动开好 反拉回+伪装+防挂机 三样(并同步界面开关状态), 日志告诉你还差什么; ② 偷蛋区新增排序下拉: 最重(kg)/最贵(价值)/稀有度/距离最近/按区域(展台)/自己看 —— 扫描后按所选重排并刷新下拉, 按区域时条目前面带 @展台名; ③ 时效核查: 16 个手法来源里**只有 5 个**是近 1 个月内有更新的(matpatz/Roblox 10-01、aquisisback-alt/lib 09-20、Yuji-source/Vd-autofarm 09-29、project-hades 09-28、havoc-hub 10-01), 其余是半年前~2 年前的成熟仓库 —— 真正的新手法(安全点回滚/防挂机连接清理)恰好来自这 5 个里的 3 个
+
