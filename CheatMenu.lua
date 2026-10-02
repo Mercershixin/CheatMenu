@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:31 sha 929b57be bytes 306920'):format('2026-10-02 18:31','929b57be',306920))
+print(('[CheatMenu] build 2026-10-02 18:35 sha ea85c99f bytes 308384'):format('2026-10-02 18:35','ea85c99f',308384))
 local F = {}
-F.VERSION = "v11.5.2"
+F.VERSION = "v11.5.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -87,6 +87,12 @@ end
 F.Out("[CheatMenu] ===== 加载开始 · " .. F.VERSION .. " =====")
 F.INSTANCE_KEY = "CM_Instance"
 function F.KillPreviousInstance()
+pcall(function()
+if F.NukeAllGUIs then
+local k = F.NukeAllGUIs(false)
+if k > 0 then F.Out("[清理] 加载前已清掉 " .. tostring(k) .. " 个上次残留的界面") end
+end
+end)
 local g = getgenv and getgenv()
 if type(g) ~= "table" then return end
 local prev = g[F.INSTANCE_KEY]
@@ -5364,6 +5370,32 @@ end)
 for _, d in ipairs(seen) do pcall(F.InstantInteractApply, d) end
 return n
 end
+F.OUR_GUI_NAMES = { "CM_", "CMTouchToggle", "StatOverlay", "CrosshairDot", "MenuButton", "CheatMenu" }
+F.NukeAllGUIs = function(keepFluent)
+local n = 0
+local roots = {}
+pcall(function() if type(gethui) == "function" then roots[#roots + 1] = gethui() end end)
+pcall(function() roots[#roots + 1] = LP:FindFirstChild("PlayerGui") end)
+pcall(function() roots[#roots + 1] = game:GetService("CoreGui") end)
+for _, r in ipairs(roots) do
+if r then
+for _, d in ipairs(r:GetChildren()) do
+local nm = tostring(d.Name)
+local ours = false
+pcall(function() if d:GetAttribute("CMOwned") then ours = true end end)
+for _, k in ipairs(F.OUR_GUI_NAMES) do
+if string.find(nm, k, 1, true) then ours = true break end
+end
+if nm == "Fluent" and not keepFluent then ours = true end
+if ours then
+pcall(function() d:Destroy() end)
+n = n + 1
+end
+end
+end
+end
+return n
+end
 F.BypassTierApply = function(v)
 v = tostring(v or "")
 local wants = {
@@ -5835,6 +5867,7 @@ if not host then pcall(function() host = game:GetService("CoreGui") end) end
 if not host then F.Out("[HUD] 找不到可挂载的 GUI 容器") return end
 local sg = Instance.new("ScreenGui")
 sg.Name = "StatOverlay"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = host
@@ -5879,6 +5912,7 @@ if not host then pcall(function() host = game:GetService("CoreGui") end) end
 if not host then F.Out("[准星] 找不到可挂载的 GUI 容器") return end
 local sg = Instance.new("ScreenGui")
 sg.Name = "CrosshairDot"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = host
@@ -5907,6 +5941,7 @@ if not host then F.Out("[准星] 找不到可挂载的 GUI 容器"); return end
 local ok = pcall(function()
 local sg = Instance.new("ScreenGui")
 sg.Name = "CM_FovRing"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.DisplayOrder = 999
@@ -7556,6 +7591,9 @@ end)
 pcall(function()
 if getgenv then getgenv().CM_TogglePolish = nil end
 end)
+local killed = 0
+pcall(function() killed = F.NukeAllGUIs(true) end)
+if killed > 0 then F.Out("[卸载] 兜底清掉 " .. tostring(killed) .. " 个残留浮窗") end
 pcall(F.Conn.ClearAll)
 F.MetaLayers = {}
 F.MetaTargets = {}
@@ -7675,6 +7713,7 @@ if not host then pcall(function() host = game:GetService("CoreGui") end) end
 if not host then return end
 local sg = Instance.new("ScreenGui")
 sg.Name = "CMTouchToggle"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -8345,6 +8384,7 @@ local function addToggleButton(Window)
 local sg = Instance.new("ScreenGui")
 if getgenv then getgenv().CM_ToggleSG = sg end
 sg.Name = "MenuButton"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = gethui and gethui() or game:GetService("CoreGui")
