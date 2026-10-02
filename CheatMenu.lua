@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:48 sha 22f32584 bytes 312387'):format('2026-10-02 18:48','22f32584',312387))
+print(('[CheatMenu] build 2026-10-02 18:57 sha 1627b7f4 bytes 317193'):format('2026-10-02 18:57','1627b7f4',317193))
 local F = {}
-F.VERSION = "v11.5.6"
+F.VERSION = "v11.6.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4235,6 +4235,12 @@ local ch = LP.Character
 local root = ch and ch:FindFirstChild("HumanoidRootPart")
 local rp = root and root.Position
 F._eggs = {}
+local flt = tostring(C.EggFilter or "全部")
+local minTier, onlyKg = 0, false
+if string.find(flt, "稀有度 ≥", 1, true) then
+minTier = tonumber(string.match(flt, "≥%s*(%d+)")) or 0
+end
+if string.find(flt, "只要有重量", 1, true) then onlyKg = true end
 local seen = 0
 local roots = F.EggContainers()
 local scanList = nil
@@ -4369,6 +4375,10 @@ q = q.Parent
 end
 end)
 if inPet and not hit then hit = false end
+if hit then
+if minTier > 0 and (tonumber(tier) or 0) < minTier then hit = false end
+if onlyKg and not (wkg and wkg > 0) then hit = false end
+end
 local idx = F._eggIdx
 local gTier, gDrop, gName = nil, nil, nil
 if type(idx) == "table" then
@@ -4510,6 +4520,71 @@ pcall(F.SrvOwnTake, false)
 eggTP(e.part.CFrame + Vector3.new(0, extraY or 3, 0))
 return e
 end
+F.EggWalkTo = function()
+local e = F._eggs[F._eggPick or 0]
+if not e then
+F.Out("[偷蛋] 先点「扫描」, 再在下拉里选一个目标")
+return
+end
+local _, hum, root = GC()
+if not (hum and root) then return end
+F._walkTgt = e
+F._walkUntil = os.clock() + 40
+F.Out("[偷蛋] 走路去拿: " .. tostring(e.name) .. " (不传送, 不容易被位置差检测抓)")
+if F._walkConn then return end
+F._walkConn = RS.Heartbeat:Connect(function()
+if not F._walkTgt or not T.EggWalk then
+if F._walkConn then pcall(function() F._walkConn:Disconnect() end) F._walkConn = nil end
+return
+end
+local _, h2, r2 = GC()
+if not (h2 and r2) then return end
+local tgt = F._walkTgt
+if not (tgt and tgt.part and tgt.part.Parent) then
+F._walkTgt = nil
+return
+end
+local d = (r2.Position - tgt.part.Position).Magnitude
+if d < 7 then
+pcall(function() F.WalkTapPrompt(tgt.part.Position, 14) end)
+F.Out("[偷蛋] 已走到 " .. tostring(tgt.name) .. " 身边并触发交互")
+F._walkTgt = nil
+return
+end
+if os.clock() > (F._walkUntil or 0) then
+F.Out("[偷蛋] 走路超时(可能被挡住), 改用传送吧")
+F._walkTgt = nil
+return
+end
+if (os.clock() - (F._walkStep or 0)) > 0.25 then
+F._walkStep = os.clock()
+pcall(function() h2:MoveTo(tgt.part.Position) end)
+end
+end)
+end
+F.WalkTapPrompt = function(pos, radius)
+local fired = false
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("ProximityPrompt") and d.Enabled then
+local host = d.Parent
+local hp = host and host:IsA("BasePart") and host.Position
+if hp and (hp - pos).Magnitude < (radius or 12) then
+if not fired then
+fired = true
+pcall(function()
+d.HoldDuration = 0
+d.RequiresLineOfSight = false
+d:InputHoldBegin()
+end)
+task.wait(0.1)
+pcall(function() d:InputHoldEnd() end)
+end
+end
+end
+end
+end)
+end
 function F.EggRemoteSteal()
 local e = F.EggGo(3)
 if not e then return end
@@ -4545,7 +4620,30 @@ else
 F.Out("[偷蛋] 已触发 " .. tostring(n) .. " 个交互候选 (没设安全点, 所以留在原地)")
 end
 end
-function F.EggLock()
+F.GUARD_WORDS = { "guard", "npc", "security", "police", "watcher", "officer", "sentry" }
+F.GuardScan = function()
+local best, bd = nil, 1e9
+local _, _, root = GC()
+if not root then return nil end
+local rp = root.Position
+pcall(function()
+for _, o in ipairs(workspace:GetChildren()) do
+local nm = string.lower(tostring(o.Name))
+for _, w in ipairs(F.GUARD_WORDS) do
+if string.find(nm, w, 1, true) then
+local p = o.PrimaryPart or (o:IsA("Model") and o:FindFirstChildWhichIsA("BasePart")) or nil
+if p then
+local d = (p.Position - rp).Magnitude
+if d < bd then bd, best = d, p end
+end
+end
+end
+end
+end)
+if best then return best, bd end
+return nil
+end
+F.EggLock = function()
 local ch = LP.Character
 if not ch then F._egg, F._eggPart = nil, nil return end
 local toolEgg = nil
@@ -5578,7 +5676,42 @@ pcall(F.PinDisable)
 pcall(F.BypassDisable)
 F.Out("[反拉回] 已关")
 end
-function F.CarryGuardEnable()
+F.GuardAvoidEnable = function()
+if F._gvConn then return end
+T.GuardAvoid = true
+F._gvConn = RS.Heartbeat:Connect(function()
+if not T.GuardAvoid then
+if F._gvConn then pcall(function() F._gvConn:Disconnect() end) F._gvConn = nil end
+return
+end
+local now = os.clock()
+if now - (F._gvAt or 0) < 0.7 then return end
+F._gvAt = now
+local g, d = F.GuardScan()
+if not (g and d) then return end
+if d < 25 then
+local _, _, root = GC()
+if not root then return end
+local away = (root.Position - g.Position)
+if away.Magnitude < 0.5 then away = Vector3.new(1, 0, 0) end
+away = away.Unit * 35
+local dest = root.Position + away + Vector3.new(0, 3, 0)
+pcall(function() root:PivotTo(CFrame.new(dest)) end)
+if F.DropIntent then pcall(F.DropIntent) end
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+if now - (F._gvLog or 0) > 4 then
+F._gvLog = now
+F.Out(string.format("[守卫规避] 守卫离你只有 %.0f 格 ⇒ 已往反方向撤 35 格", d))
+end
+end
+end)
+F.Out("[守卫规避] 已开: 名字含 guard/npc/security/police/watcher 的靠太近(25格)就把你撤开")
+end
+F.GuardAvoidDisable = function()
+T.GuardAvoid = false
+if F._gvConn then pcall(function() F._gvConn:Disconnect() end) F._gvConn = nil end
+end
+F.CarryGuardEnable = function()
 if F._cgConn then return end
 F.EggLock()
 F._carry = F.CarryFind()
@@ -8126,7 +8259,13 @@ for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.TP:AddSection("偷蛋(扫描 → 排序 → 自选 → 远程拿)")
 Tabs.TP:AddButton({ Title = "① 扫描地图上的蛋(按最重/最贵排序)", Callback = function() F.EggScanAndFill() end })
-Tabs.TP:AddDropdown("EggSort", { Title = "② 排序方式(扫完按这个排)", Values = {
+Tabs.TP:AddDropdown("EggFilter", { Title = "② 筛选(只要这些)", Values = {
+"全部", "稀有度 ≥ 3", "稀有度 ≥ 5", "只要有重量",
+}, Default = "全部", Callback = function(v)
+C.EggFilter = v
+F.Out("[偷蛋] 筛选 = " .. tostring(v) .. " (下次扫描生效)")
+end })
+Tabs.TP:AddDropdown("EggSort", { Title = "③ 排序方式(扫完按这个排)", Values = {
 "最重(kg)", "最贵(价值)", "稀有度", "距离最近", "按区域(展台)", "自己看",
 }, Default = "最重(kg)", Callback = function(v)
 C.EggSort = v
@@ -8145,6 +8284,13 @@ end })
 Tabs.TP:AddDropdown("EggPick", { Title = "③ 目标蛋(按上面排序, 自己挑)", Values = { "(先点①扫描)" }, Default = nil, Callback = function(v)
 local i = tonumber(tostring(v):match("^#(%d+)"))
 F._eggPick = i or 0
+end })
+Tabs.TP:AddButton({ Title = "⑦ 走过去拿(不传送 · 不容易被位置差检测抓)", Callback = function() T.EggWalk = true pcall(F.EggWalkTo) end })
+Tabs.TP:AddToggle("GuardAvoid", { Title = "守卫规避(靠太近自动撤开)", Default = false, Callback = function(v)
+local changed = (T.GuardAvoid ~= nil) and (T.GuardAvoid ~= v)
+T.GuardAvoid = v
+if F._cfgSyncing or not changed then return end
+if v then pcall(F.GuardAvoidEnable) else pcall(F.GuardAvoidDisable) end
 end })
 Tabs.TP:AddButton({ Title = "④ 传送到选中的蛋", Callback = function()
 local e = F.EggGo(3)
