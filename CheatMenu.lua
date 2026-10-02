@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 02:39 sha 5aaa232a bytes 396116'):format('2026-10-03 02:39','5aaa232a',396116))
+print(('[CheatMenu] build 2026-10-03 02:40 sha 2094d4c6 bytes 396115'):format('2026-10-03 02:40','2094d4c6',396115))
 local F = {}
-F.VERSION = "v12.0.14"
+F.VERSION = "v12.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
