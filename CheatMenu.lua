@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 17:41 sha 5737e1d4 bytes 298619'):format('2026-10-02 17:41','5737e1d4',298619))
+print(('[CheatMenu] build 2026-10-02 17:46 sha 4eed70e3 bytes 298607'):format('2026-10-02 17:46','4eed70e3',298607))
 local F = {}
-F.VERSION = "v11.3.0"
+F.VERSION = "v11.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3271,7 +3271,7 @@ end
 F._atpDisabled = nil
 if back > 0 then F.Out("[防拉回] 已把 " .. tostring(back) .. " 个被禁用的游戏脚本恢复回来") end
 end
-if not F._atpState then return end
+local st = F._atpState
 F._atpState = nil
 if not st then return end
 for fn, orig in pairs(st.hooked or {}) do
