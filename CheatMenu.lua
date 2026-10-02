@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 19:42 sha e9c12504 bytes 320081'):format('2026-10-02 19:42','e9c12504',320081))
+print(('[CheatMenu] build 2026-10-02 19:50 sha 4fc1598a bytes 321344'):format('2026-10-02 19:50','4fc1598a',321344))
 local F = {}
-F.VERSION = "v11.7.2"
+F.VERSION = "v11.7.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7775,6 +7775,7 @@ return true, tostring(res.Body or ""):sub(1, 120)
 end
 function Trans.Disable()
 T.Translate = false
+pcall(Trans.WatchOff)
 if Trans.Loop then Trans.Loop = nil end
 if T.ChatTranslate then F.ChatTranslateDisable() end
 if T.BubbleTranslate then F.BubbleTranslateDisable() end
@@ -7790,14 +7791,51 @@ end
 if Trans.Loop then return true end
 Trans.Prewarm()
 Trans.Scan()
+Trans.WatchOn()
 Trans.Loop = task.spawn(function()
 while T.Translate do
-task.wait(1)
+task.wait(15)
+if not T.Translate then break end
 Trans.Scan()
 end
 Trans.Loop = nil
 end)
+F.Out("[翻译] 已开: 新出现的文字会立刻翻译, 文字变化即时跟上; 每 15 秒兜底全扫一次(原来每秒全扫, 现在省很多)")
 return true
+end
+Trans.WatchOn = function()
+if Trans._watch then return end
+Trans._watch, Trans._sig = {}, {}
+local function one(d)
+if not T.Translate or not d then return end
+pcall(function() Trans.GuiEl(d) end)
+if (d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox"))
+and not Trans._sig[d] then
+Trans._sig[d] = true
+pcall(function()
+Trans._watch[#Trans._watch + 1] = d:GetPropertyChangedSignal("Text"):Connect(function()
+if T.Translate then pcall(function() Trans.GuiEl(d) end) end
+end)
+end)
+end
+end
+local function watch(root)
+if not root then return end
+pcall(function()
+Trans._watch[#Trans._watch + 1] = root.DescendantAdded:Connect(function(d)
+task.defer(function() one(d) end)
+end)
+end)
+end
+pcall(function() watch(LP:FindFirstChild("PlayerGui")) end)
+pcall(function() watch(game:GetService("CoreGui")) end)
+pcall(function() if gethui then watch(gethui()) end end)
+end
+Trans.WatchOff = function()
+if Trans._watch then
+for _, c in ipairs(Trans._watch) do pcall(function() c:Disconnect() end) end
+end
+Trans._watch, Trans._sig = nil, nil
 end
 function F.ChatTranslateEnable()
 if F._chatTransHooked then return end
