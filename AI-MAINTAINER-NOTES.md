@@ -2994,3 +2994,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ① **真凶(我上一版引入)**: 11.7.12 加的 F.TPResist『传送后顶住』原本是'偏离目标>3格就 PivotTo 回去' —— **你一走路就偏离>3格 ⇒ 被拽回传送点 ⇒ 走两步卡一下** ⇒ 修: **一检测到你在移动(MoveDirection.Magnitude>0.12) 立刻停止顶住**, 阈值 3→8 格, 顶住时长 2.5→1.2 秒(只护传送那一刻, 之后完全放手), 偷蛋传送 2.0→1.0 秒; ② **陷阱扫描太重**: 每 0.25 秒做一次 45 格半径的 GetPartBoundsInRadius(附近几百个部件全遍历) ⇒ 周期性卡顿 ⇒ 改成 **0.7 秒一次、半径 22 格**(脚下附近的陷阱才重要), 负载降到约 1/4; ③ 日志文案同步'你一走动就自动停'
 
+
+
+## 11.8.1：删掉偷蛋整套(含代码) + 换成'一键自动拿(拿完回安全区)' + 加速防穿墙 + 自杀移到系统页
+
+- ① **删除偷蛋整套**(用户: 包括代码也删了): 函数 19 个(EggScanMap/EggLabels/EggSortNow/EggScanAndFill/EggAssetIndex/EggContainers/EggOwnerOf/EggWeight/EggPetName/EggTextBlob/EggIdxLookup/EggRescanQuiet/EggAutoWatchOn·Off/CleanName/WalkTapPrompt/PromptNear/EggRemoteSteal/EggWalkTo/EggGo) + 常量 8 组(EGG_KEY/BAD/TIER/BOX/SKIPBOX/NAME_SKIP/MUT/SORT_NAME) + 整个『偷蛋(扫描→排序→自选→远程拿)』UI 节 + 变量 _eggs/_eggPick/_eggIdx; 净减 26.6KB; **保留**: 搬运守卫(EggLock/EggGuardTick 仍在用)、瞬间交互、防陷阱(在防护档位里)、安全区; ② **新增『自动拿(一键)』**: FindNearestLoot(名字含 egg/brainrot 的最近模型) + TapNearby(fireproximityprompt→InputHold 兜底) + AutoStealOne(**传过去→触发交互→检查是否拿到→立刻回安全区**, 日志与弹窗报'✅拿到了/⚠没拿到') + 循环开关(间隔可调) + 设安全区/回安全区按钮; ③ **加速防穿墙**(用户: 太快会穿墙但不要影响正常加速): 加速循环里向前射线探测(长度=速度×0.16), **有障碍就把速度临时压到 dist×11**(空旷地全速, 只在快撞墙时压一下, 过了自动恢复), 开关默认开可关; ④ 自杀按钮移到**系统页**; ⑤ 守卫规避开关从被删的偷蛋节挪到自动拿节; ⑥ 顺带修: 发现并删掉重复的瞬间交互开关(重建 UI 节时多写了一个)
+
