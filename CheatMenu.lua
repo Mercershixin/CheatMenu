@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:01 sha 891fb6a1 bytes 328749'):format('2026-10-02 21:01','891fb6a1',328749))
+print(('[CheatMenu] build 2026-10-02 21:06 sha ac438cb5 bytes 331388'):format('2026-10-02 21:06','ac438cb5',331388))
 local F = {}
-F.VERSION = "v11.7.10"
+F.VERSION = "v11.7.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4163,6 +4163,14 @@ end
 end)
 return mine, other, where
 end
+F.CleanName = function(v)
+if type(v) ~= "string" or v == "" then return "" end
+local s = v
+s = string.gsub(s, "%s*[%w]*%-?%x%x%x%x%x%x%x%x%-?%x%x%x%x%-?%x%x%x%x%-?%x%x%x%x%x%x%x%x%x%x%x%x%x?%x?", "")
+s = string.gsub(s, "_?%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x$", "")
+s = string.gsub(s, "%s+$", "")
+return s
+end
 F.EGG_NAME_SKIP = { "mesh", "egg", "part", "root", "hitbox", "handle", "shadow", "ring",
 "beam", "glow", "core", "shell", "plane", "planea", "deco", "vfx", "sfx" }
 F.EggPetName = function(o)
@@ -4174,7 +4182,8 @@ if string.match(l, "^%d+$") then return end
 for _, s in ipairs(F.EGG_NAME_SKIP) do
 if l == s then return end
 end
-if #v >= 4 and #v <= 40 and (not best or #v > #best) then best = v end
+local cleaned = F.CleanName(v)
+if #cleaned >= 3 and #cleaned <= 40 and (not best or #cleaned > #best) then best = cleaned end
 end
 pcall(function()
 for _, d in ipairs(o:GetDescendants()) do
@@ -4187,6 +4196,22 @@ consider(tostring(d.Value))
 end
 elseif d:IsA("Model") then
 consider(d.Name)
+elseif d:IsA("MeshPart") or d:IsA("SpecialMesh") then
+local mid = nil
+pcall(function() mid = d.MeshId or d.MeshId end)
+if type(mid) == "string" then
+local tail = string.match(mid, "(%d+)$")
+if tail and #tail >= 6 then consider("mesh" .. tail) end
+end
+elseif d:IsA("ObjectValue") then
+pcall(function() consider(d.Value and d.Value.Name) end)
+elseif d:IsA("Decal") or d:IsA("Texture") then
+local tid = nil
+pcall(function() tid = d.Texture end)
+if type(tid) == "string" then
+local tail = string.match(tid, "(%d+)$")
+if tail and #tail >= 6 then consider("tex" .. tail) end
+end
 end
 local ok, attrs = pcall(function() return d:GetAttributes() end)
 if ok and type(attrs) == "table" then
@@ -4502,7 +4527,9 @@ score = gTier * 1e7 - (gDrop or 1e9)
 else
 score = (val or 0) * 1000 + vol + tier * 5000
 end
-F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = o.Name, vol = vol, val = val,
+local showName = F.CleanName(o.Name)
+if showName == "" then showName = "未命名蛋" end
+F._eggs[#F._eggs + 1] = { obj = o, part = prim, name = showName, vol = vol, val = val,
 tier = gTier or tier, dist = dist, drop = gDrop, kg = wkg, kgSrc = wsrc,
 petName = petName, heldByOther = held,
 region = region, byCat = byCat2, ownMine = mine, ownOther = other,
@@ -4573,7 +4600,7 @@ parts[#parts + 1] = e.kg and e.kg > 0 and string.format("%.1f kg", e.kg) or "kg?
 if e.tier and e.tier > 0 then parts[#parts + 1] = "等级" .. tostring(e.tier) end
 if e.val then parts[#parts + 1] = "值" .. tostring(math.floor(e.val)) end
 if e.drop and not e.val then parts[#parts + 1] = "掉重" .. tostring(math.floor(e.drop)) end
-if e.petName then parts[#parts + 1] = tostring(e.petName) end
+if e.petName and e.petName ~= "" then parts[#parts + 1] = tostring(e.petName) end
 if e.heldByOther then parts[#parts + 1] = "别人拿着" end
 if e.ownOther then parts[#parts + 1] = "别人的" end
 if e.ownMine then parts[#parts + 1] = "我的" end
@@ -4608,6 +4635,13 @@ F.Out("[偷蛋] 扫到 " .. tostring(n) .. " 个(资产表确认 " .. tostring(b
 .. " 个) · 排序方式=" .. tostring(C.EggSort or "最重(kg)") .. " ⇒ 实际按「" .. usedName .. "」从高到低"
 .. (okRef and "(下拉已刷新)" or "(下拉没刷新就重开一次菜单)"))
 for i = 1, math.min(n, 6) do F.Out("   " .. labels[i]) end
+if (F._eggPick or 0) > #(F._eggs or {}) then
+F._eggPick = #(F._eggs or {}) > 0 and 1 or 0
+pcall(function()
+local op2 = Fluent and Fluent.Options and Fluent.Options.EggPick
+if op2 and op2.Set and labels[1] then op2:Set(labels[1]) end
+end)
+end
 if T.EggAutoRefresh then
 pcall(F.EggAutoWatchOff)
 pcall(F.EggAutoWatchOn)
@@ -4628,6 +4662,47 @@ if F.DropIntent then pcall(F.DropIntent) end
 pcall(F.SrvOwnTake, false)
 eggTP(e.part.CFrame + Vector3.new(0, extraY or 3, 0))
 return e
+end
+F.SuicideNow = function()
+local _, hum, ch = GC()
+if not (hum and ch) then
+F.Out("[自杀] 没有角色, 现在不能重置")
+return
+end
+local bag = 0
+pcall(function()
+for _, c in ipairs(ch:GetChildren()) do
+if c:IsA("Tool") then bag = bag + 1 end
+end
+end)
+local done = false
+pcall(function()
+for _, nm in ipairs({ "Reset", "ResetCharacter", "Respawn", "ResetPlayer" }) do
+local rf = ch:FindFirstChild(nm)
+if rf then
+if rf:IsA("RemoteEvent") then
+rf:FireServer()
+done = true
+elseif rf:IsA("RemoteFunction") then
+pcall(function() rf:InvokeServer() end)
+done = true
+end
+if done then break end
+end
+end
+end)
+if done then
+F.Out("[自杀] 已用游戏自己的重置通道重生" .. (bag > 0 and (" ⚠ 手上还有 " .. tostring(bag) .. " 个东西, 会掉") or ""))
+else
+pcall(function() hum.Health = 0 end)
+F.Out("[自杀] 已把血量归零重生" .. (bag > 0 and (" ⚠ 手上还有 " .. tostring(bag) .. " 个东西, 会掉") or ""))
+end
+pcall(function()
+Fluent:Notify({ Title = "自杀/重置", Content = bag > 0
+and ("已重生 ⚠ 手上的 " .. tostring(bag) .. " 个东西会掉") or "已重生", Duration = 4 })
+end)
+F._walkTgt = nil
+F._egg, F._eggPart, F._carry = nil, nil, nil
 end
 F.EggWalkTo = function()
 local e = F._eggs[F._eggPick or 0]
@@ -8480,6 +8555,7 @@ if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("其他移动")
+Tabs.Move:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
