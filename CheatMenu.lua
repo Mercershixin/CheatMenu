@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:06 sha ac438cb5 bytes 331388'):format('2026-10-02 21:06','ac438cb5',331388))
+print(('[CheatMenu] build 2026-10-02 21:11 sha 95d9b6a1 bytes 332238'):format('2026-10-02 21:11','95d9b6a1',332238))
 local F = {}
-F.VERSION = "v11.7.11"
+F.VERSION = "v11.7.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4039,6 +4039,7 @@ local function eggTP(cf)
 local _, _, r = GC()
 if not r or not cf then return end
 if F.DropIntent then pcall(F.DropIntent) end
+if F.TPResist then pcall(F.TPResist, cf, 2.0) end
 pcall(function() r:PivotTo(cf) end)
 pcall(function()
 r.AssemblyLinearVelocity = Vector3.zero
@@ -5511,12 +5512,36 @@ if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
+F.TPResist = function(cf, secs)
+if not cf then return end
+F._tpTarget = { cf = cf, deadline = os.clock() + (secs or 2.5), last = 0 }
+if F._tpResistConn then return end
+F._tpResistConn = RS.Heartbeat:Connect(function()
+local t = F._tpTarget
+if not t or os.clock() > t.deadline then
+F._tpTarget = nil
+if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tpResistConn = nil end
+return
+end
+local now = os.clock()
+if now - (t.last or 0) < 0.12 then return end
+t.last = now
+local _, _, r = GC()
+if not r then return end
+if (r.Position - t.cf.Position).Magnitude > 3 then
+pcall(function() r:PivotTo(t.cf) end)
+pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
+F._tpResistHits = (F._tpResistHits or 0) + 1
+end
+end)
+end
 local function smoothTP(targetCF)
 local _, _, root = GC()
 if not root or not targetCF then return end
 if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
+if F.TPResist then pcall(F.TPResist, targetCF, 2.5) end
 end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
@@ -5707,7 +5732,7 @@ pcall(function()
 local _, _, r2 = GC()
 if r2 then ok = (r2.Position - pos).Magnitude < 6 end
 end)
-F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s",
+F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]2.5秒(不需要开加速)",
 tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
 if not ok then
 F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
@@ -8736,7 +8761,6 @@ C.SafePoint = { x = p.X, y = p.Y, z = p.Z }
 pcall(SaveConfig)
 F.Out(string.format("[偷蛋] 安全点已记下: (%.0f, %.0f, %.0f)", p.X, p.Y, p.Z))
 end })
-Tabs.TP:AddSection("交互(偷蛋/开箱/机关)")
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
