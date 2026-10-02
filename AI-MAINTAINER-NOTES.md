@@ -2976,3 +2976,9 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - 核实结果(逐项看代码): ① **防陷阱** ✅ 档位②调用 GuardSet(true,true,false,true,true,·) 第4参=trap ⇒ T.TrapWarn=true ⇒ TrapGuardEnable 生效(关自身 CanTouch 那套); 弹开=dodge 第5参 ✓; ② **防攻击** ✅ hit=第2参 ⇒ T.HitGuard=true ⇒ HitGuardEnable(状态法) + CharEventsEnable(死亡/状态/血量) 生效; **拦击晕**条件 '(T.SpeedGuard or T.SteadyOn or T.HitGuard)' 在档②下 SteadyOn/HitGuard 都 true ⇒ 生效(拦 ChangeState(Ragdoll/FallingDown)); ③ ⚠ **发现隐患并修掉**: GuardSet 第6参 atp 原本档②传的是 **true** ⇒ 会连带开启『防拉回档』(清游戏脚本/断连接/中和检测函数 —— 我之前判定'最招反作弊'的那层)! 已改成 false ⇒ 档②只做防护+反拉回+伪装, 激进层只留给档④
 
+
+
+## 11.8.1：蛋名清洗(GUID→可读名) + 扫描后选择自动归位 + 新增'自杀/重置角色'
+
+- ① **蛋名处理**(用户: 名字要正确显示): 新增 F.CleanName —— 把 32 位十六进制/GUID(UUID) 形态的部分从名字里剥掉, 全剥空就显示'未命名蛋'; 蛋名探测新增 **MeshPart/SpecialMesh 的 MeshId 尾号、Decal/Texture 的资产尾号、ObjectValue 的 Value.Name** 三类来源(用户那个服蛋名是 AreaEgg_<uuid>, 现会显示为 AreaEgg_ 或内部宠物名); ② **每次点扫描都刷新**: 扫描完若之前选中的编号越界, 自动归 1 并把下拉选中项同步到第一条(避免'刷新了但选中的还是旧的/空的'); ③ **新增「自杀 / 重置角色」按钮**(移动页·其他移动, 用户问'自杀功能呢'): 优先走**游戏自己的重置通道**(角色里名为 Reset/ResetCharacter/Respawn/ResetPlayer 的 RemoteEvent/RemoteFunction ⇒ FireServer, 尊重游戏规则), 找不到才 hum.Health=0; 执行前统计手上拿着几个东西并**警告会掉**; 执行后清掉走路目标与搬运锁定
+
