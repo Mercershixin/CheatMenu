@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-02 23:22 sha 8982ed0d bytes 309244'):format('2026-10-02 23:22','8982ed0d',309244))
+print(('[CheatMenu] build 2026-10-03 02:39 sha 5aaa232a bytes 396116'):format('2026-10-03 02:39','5aaa232a',396116))
 local F = {}
 F.VERSION = "v12.0.14"
 F._flyDisabledInfJump = nil
@@ -249,9 +249,7 @@ if not readfile or not isfile or not isfile(SaveFile) then return end
 local d = HS:JSONDecode(readfile(SaveFile))
 if type(d) == "table" then
 if type(d.T) == "table" then
-for k, v in pairs(d.T) do
-if type(v) ~= "boolean" then T[k] = v end
-end
+for k, v in pairs(d.T) do T[k] = v end
 end
 if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
 end
@@ -442,9 +440,14 @@ local box = { alive = true, orig = nil, id = id, slot = slot }
 local raw = wrapperFactory(box)
 if type(raw) ~= "function" then return nil end
 local rec = { id = id, slot = slot, target = target, box = box, raw = raw, alive = true }
+local mk = newcclosure
+if T.CMX_HookHard and type(AC) == "table" and type(AC.cap) == "function" then
+local okN, nl = pcall(AC.cap, "newlclosure")
+if okN and type(nl) == "function" then mk = nl end
+end
 local wrapped
 local okW = pcall(function()
-wrapped = newcclosure(function(self, ...)
+wrapped = mk(function(self, ...)
 if not rec.alive then return box.orig(self, ...) end
 return raw(self, ...)
 end)
@@ -455,6 +458,7 @@ local okH = pcall(function() origFn = hookmetamethod(target, slot, wrapped) end)
 if not (okH and type(origFn) == "function") then return nil end
 box.orig = origFn
 rec.wrapper = wrapped
+if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, wrapped) end
 bucket[id] = rec
 return wrapped
 end
@@ -2188,6 +2192,7 @@ F._afkConn = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
 F._afkIdleHits = (F._afkIdleHits or 0) + 1
 end)
+pcall(F.AntiAFKInputLoop)
 F._afkConn2 = RS.Heartbeat:Connect(function()
 if not T.AntiAFK then F.AntiAFKDisable() return end
 local now = os.clock()
@@ -2208,6 +2213,7 @@ F.Out("[防挂机] 已开(完全不动你的人物): 掐掉 " .. tostring(killed
 end
 function F.AntiAFKDisable()
 T.AntiAFK = false
+F._afkInput = nil
 if F._afkDisabledConns then
 for _, c in ipairs(F._afkDisabledConns) do pcall(function() c:Enable() end) end
 F._afkDisabledConns = {}
@@ -2727,6 +2733,20 @@ orig = result
 KG.target = kf
 KG.orig = result
 KG.hooked = true
+if not F._kgHeal then
+F._kgHeal = task.spawn(function()
+while T.KickProtect or T.KickGuard do
+task.wait(6)
+if not (T.KickProtect or T.KickGuard) then break end
+if not KG.kick or not KG.mtHooked then
+F.Out("[防踢] 检测到拦截层被摘掉 ⇒ 正在重装")
+pcall(F.KickGuardPathsEnable)
+F._kgHealFix = (F._kgHealFix or 0) + 1
+end
+end
+F._kgHeal = nil
+end)
+end
 return true
 end
 function F.KickGuardDisable()
@@ -3062,7 +3082,9 @@ if not hum then return end
 local cam = workspace.CurrentCamera
 local tgt = F.AimPick()
 if not (cam and tgt) then return end
-local want = CFrame.lookAt(cam.CFrame.Position, tgt.Position)
+local aimPos = tgt.Position
+if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
+local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
 cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
 F.AutoFire(tgt)
 end)
@@ -3161,6 +3183,28 @@ F._antiKnockConn = RS.Heartbeat:Connect(function()
 if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
+if hum.Health <= 0 then return end
+if T.FlyOn then return end
+local fixed = false
+if hum.PlatformStand then
+pcall(function() hum.PlatformStand = false end)
+fixed = true
+end
+local st = hum:GetState()
+if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll
+or st == Enum.HumanoidStateType.Physics or st == Enum.HumanoidStateType.PlatformStanding then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end)
+fixed = true
+end
+if fixed then
+F._antiKnockFix = (F._antiKnockFix or 0) + 1
+local now = os.clock()
+if now - (F._antiKnockLog or 0) > 5 then
+F._antiKnockLog = now
+F.Out("[防击倒] 已顶掉 " .. tostring(F._antiKnockFix) .. " 次被强行按倒/击倒")
+end
+end
 end)
 end
 function F.AntiKnockdownDisable()
@@ -4466,6 +4510,7 @@ if not T.SpeedOn then return end
 if T.FlyOn then return end
 local _, hum = GC()
 if not hum then return end
+if tostring(C.SpeedDrive or ""):find("意图", 1, true) then return end
 pcall(function() hum.WalkSpeed = tonumber(C.SpeedValue) or 60 end)
 end
 function F.SpeedRestore()
@@ -4525,7 +4570,12 @@ local dt = tonumber(deltaTime) or (1 / 60)
 if dt < 0.001 then dt = 1 / 60 end
 if dt > 0.1 then dt = 0.1 end
 local v = u * sp
+if tostring(C.SpeedDrive or ""):find("意图", 1, true) then
+local base = math.max(1, tonumber(h.WalkSpeed) or 16)
+pcall(function() h:Move(u * math.clamp(sp / base, 1, 12)) end)
+else
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(v.X, cur.Y, v.Z) end)
+end
 pcall(function()
 if r.AssemblyAngularVelocity.Magnitude > 15 then
 r.AssemblyAngularVelocity = Vector3.zero
@@ -4561,11 +4611,19 @@ F._tpBack = 0
 end
 F.SpeedProbe(r, "加速", sp, dt)
 elseif math.abs(cur.X) > 0.5 or math.abs(cur.Z) > 0.5 then
+if tostring(C.SpeedDrive or ""):find("意图", 1, true) then
+pcall(function() h:Move(Vector3.zero) end)
+else
 pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, cur.Y, 0) end)
+end
 end
 if dir.Magnitude <= 0.01 then F._intent = nil end
 if T.BypassDetect then
 if math.abs((h.WalkSpeed or 0) - (F._preSpeed or h.WalkSpeed or 16)) > 0.5 then
+pcall(function() h.WalkSpeed = F._preSpeed or h.WalkSpeed end)
+end
+elseif tostring(C.SpeedDrive or ""):find("意图", 1, true) then
+if math.abs((h.WalkSpeed or 16) - (F._preSpeed or h.WalkSpeed or 16)) > 0.5 then
 pcall(function() h.WalkSpeed = F._preSpeed or h.WalkSpeed end)
 end
 elseif math.abs((h.WalkSpeed or 0) - sp) > 0.5 then
@@ -4588,6 +4646,10 @@ end)
 end
 function F.FlyDestroy()
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
+if (not T.FlyOn) and F._flyRebuild then
+pcall(function() F._flyRebuild:Disconnect() end)
+F._flyRebuild = nil
+end
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt", "_flyBvAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
 end
@@ -4627,17 +4689,14 @@ if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
 F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
 if T.FlyOn then F._flyJumpAt = os.clock() end
 end)
+local useAlign = tostring(C.FlyDrive or ""):find("位置约束", 1, true) ~= nil
 local okDrive = pcall(function()
 local att2 = Instance.new("Attachment")
 att2.Name = "CMFlyAtt"
 att2.Parent = root
-local bv = Instance.new("LinearVelocity")
-bv.Attachment0 = att2
-bv.MaxForce = 1e9
-bv.VectorVelocity = Vector3.zero
-bv.Parent = root
-F._flyBvAtt, F._flyBv = att2, bv
+F._flyBvAtt, F._flyAtt = att2, att2
 local ao = Instance.new("AlignOrientation")
+ao.Name = "CMFlyAo"
 ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
 ao.Attachment0 = att2
 ao.MaxTorque = 1e9
@@ -4645,18 +4704,50 @@ ao.Responsiveness = 120
 pcall(function() ao.RigidityEnabled = true end)
 ao.Parent = root
 F._flyAo = ao
+if useAlign then
+local ap = Instance.new("AlignPosition")
+ap.Name = "CMFlyAp"
+ap.Attachment0 = att2
+ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+ap.Position = root.Position
+ap.Responsiveness = 30
+ap.MaxForce = 1e9
+pcall(function() ap.ApplyAtCenterOfMass = false end)
+ap.Parent = root
+F._flyAp = ap
+else
+local bv = Instance.new("LinearVelocity")
+bv.Name = "CMFlyBv"
+bv.Attachment0 = att2
+bv.MaxForce = 1e9
+bv.VectorVelocity = Vector3.zero
+bv.Parent = root
+F._flyBv = bv
+end
 end)
+if not F._flyRebuild then
+pcall(function()
+F._flyRebuild = LP.CharacterAdded:Connect(function()
+task.wait(0.6)
+if not T.FlyOn then return end
+F.Out("[飞行] 检测到重生 ⇒ 已自动重装约束实例")
+pcall(function() F.FlySet(true) end)
+end)
+end)
+end
 if not okDrive then
 pcall(function()
 local att3 = Instance.new("Attachment")
 att3.Name = "CMFlyAttOld"
 att3.Parent = root
 local bv2 = Instance.new("BodyVelocity")
+bv2.Name = "CMFlyBv"
 bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
 bv2.Velocity = Vector3.zero
 bv2.Parent = root
 F._flyBvAtt, F._flyBv = att3, bv2
 local bg = Instance.new("BodyGyro")
+bg.Name = "CMFlyBg"
 bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
 bg.D = 50
 bg.P = 3000
@@ -4706,7 +4797,10 @@ dir = dir + Vector3.new(0, 1, 0)
 end
 local fsp = tonumber(C.FlyValue) or 60
 local vel = dir.Magnitude > 0 and (dir.Unit * fsp) or Vector3.zero
-if F._flyBv then
+if F._flyAp then
+local fstep = math.clamp(tonumber(dt) or 0, 0, 0.1)
+pcall(function() F._flyAp.Position = r.Position + vel * fstep end)
+elseif F._flyBv then
 if F._flyBv:IsA("LinearVelocity") then
 pcall(function() F._flyBv.VectorVelocity = vel end)
 else
@@ -4726,7 +4820,7 @@ end
 end)
 if vel.Magnitude < 0.01 then
 pcall(function()
-r.AssemblyLinearVelocity = Vector3.zero
+if F._flyAp then F._flyAp.Position = r.Position else r.AssemblyLinearVelocity = Vector3.zero end
 r.AssemblyAngularVelocity = Vector3.zero
 end)
 else
@@ -4791,6 +4885,7 @@ end
 F.HideConn, F.HideBaseY = nil, nil
 function F.HideDisable()
 if F.HideConn then F.HideConn:Disconnect() F.HideConn = nil end
+if F._hideCharConn then pcall(function() F._hideCharConn:Disconnect() end) F._hideCharConn = nil end
 pcall(function()
 local _, _, r = GC()
 if r and F.HideBaseY then r.CFrame = CFrame.new(r.Position.X, F.HideBaseY, r.Position.Z) end
@@ -4800,6 +4895,17 @@ function F.HideEnable()
 if F.HideConn then return end
 local _, _, root = GC()
 if root then F.HideBaseY = root.Position.Y end
+if not F._hideCharConn then
+pcall(function()
+F._hideCharConn = LP.CharacterAdded:Connect(function()
+task.wait(0.8)
+if not T.Hide then return end
+local _, _, r = GC()
+if r then F.HideBaseY = r.Position.Y end
+F.Out("[藏地下] 检测到重生 ⇒ 已按新位置重置基准高度")
+end)
+end)
+end
 F.HideConn = RS.RenderStepped:Connect(function()
 if not T.Hide then F.HideDisable() return end
 local _, _, r = GC()
@@ -4816,6 +4922,50 @@ end
 end)
 end
 F.savedLight = nil
+F.LightReassert = function()
+if not (T.FullBright or T.NightVision or T.NoFog) then return end
+local L = game:GetService("Lighting")
+if not L then return end
+if T.FullBright then
+if L.Brightness ~= 2 or L.ClockTime ~= 14 or L.FogEnd ~= 100000 then pcall(F.FullBrightEnable) end
+end
+if T.NightVision then
+if L.Brightness ~= 1.5 or L.ClockTime ~= 0 then pcall(F.NightVisionEnable) end
+end
+if T.NoFog then
+if L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.NoFogEnable) end
+end
+end
+F.LightWatchEnable = function()
+if F._lightConn then return end
+F._lightConn = true
+pcall(function()
+local L = game:GetService("Lighting")
+local props = { "Brightness", "ClockTime", "Ambient", "OutdoorAmbient", "FogEnd", "FogStart", "GlobalShadows" }
+F._lightConns = {}
+for i = 1, #props do
+local c = L:GetPropertyChangedSignal(props[i]):Connect(function()
+pcall(F.LightReassert)
+end)
+F._lightConns[#F._lightConns + 1] = c
+end
+end)
+F._lightLoop = task.spawn(function()
+while T.FullBright or T.NightVision or T.NoFog do
+task.wait(2)
+pcall(F.LightReassert)
+end
+F._lightLoop = nil
+end)
+F.Out("[视觉增强] 已挂复写监听: 游戏把光照改回去会自动重设")
+end
+F.LightWatchDisable = function()
+if F._lightConns then
+for i = 1, #F._lightConns do pcall(function() F._lightConns[i]:Disconnect() end) end
+end
+F._lightConns, F._lightConn = nil, nil
+F._lightLoop = nil
+end
 function F.FullBrightEnable()
 local L = game:GetService("Lighting")
 if not F.savedLight then
@@ -4898,11 +5048,33 @@ root.AssemblyAngularVelocity = Vector3.zero
 end)
 local from = root.Position
 local dist = (cf.Position - from).Magnitude
+local rot = cf - cf.Position
+if tostring(C.TPStep or ""):find("补间", 1, true) then
+local dur = math.clamp(tonumber(C.TweenDur) or 0.8, 0.1, 5)
+local ts = game:GetService("TweenService")
+local okT = pcall(function()
+local tw = ts:Create(root, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = cf })
+F._tpTween = tw
+tw:Play()
+tw.Completed:Wait()
+end)
+F._tpTween = nil
+if okT then
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+if wasStand ~= nil then pcall(function() hum.PlatformStand = wasStand end) end
+F._tpOwnInfo = own
+F.Out(string.format("[传送] 补间到位 · %.1fs · %.0f 格(没抢所有权, 被拉回就换回分步瞬移)", dur, dist))
+return (root.Position - cf.Position).Magnitude < 20
+end
+F.Out("[传送] 补间失败 ⇒ 自动退回分步瞬移")
+end
 local steps = 1
 if dist > 300 then
 steps = math.clamp(math.ceil(dist / 400), 2, 12)
 end
-local rot = cf - cf.Position
 for i = 1, steps do
 local t = i / steps
 local p = from:Lerp(cf.Position, t)
@@ -5246,10 +5418,14 @@ function F.InstantInteractApply(pp)
 if not F.II_SAVED then return end
 if typeof(pp) ~= "Instance" or not pp:IsA("ProximityPrompt") then return end
 if F.II_SAVED[pp] then return end
-local snap = { E = pp.Enabled, H = pp.HoldDuration, R = pp.RequiresLineOfSight }
+local lvl = tostring(C.IILevel or "①")
+local snap = { E = pp.Enabled, H = pp.HoldDuration, R = pp.RequiresLineOfSight, M = pp.MaxActivationDistance }
 F.II_SAVED[pp] = snap
 pcall(function() pp.HoldDuration = 0 end)
+if lvl ~= "①" then
 pcall(function() pp.RequiresLineOfSight = false end)
+pcall(function() pp.MaxActivationDistance = 1000000 end)
+end
 F.II_COUNT = F.II_COUNT + 1
 end
 function F.InstantInteractScan()
@@ -5549,6 +5725,7 @@ end)
 end)
 pcall(F.InteractWatchEnable)
 pcall(F.InstantInteractHeal)
+pcall(F.InstantInteractAutoLoop)
 F.Out("[瞬间交互] 已开启(长按→点一下就成 · 不要求看得见) — 本次处理 " .. tostring(n)
 .. " 个交互点, 新出现的也自动生效; 关闭时逐个还原原值")
 end
@@ -5592,6 +5769,7 @@ end)
 end
 function F.InstantInteractDisable()
 F._iiHeal = nil
+F._iiAuto = nil
 pcall(function() if F.InteractWatchDisable then F.InteractWatchDisable() end end)
 if F.II_CONN then pcall(function() F.II_CONN:Disconnect() end) F.II_CONN = nil end
 if F.II_SHOWN then pcall(function() F.II_SHOWN:Disconnect() end) F.II_SHOWN = nil end
@@ -5601,6 +5779,7 @@ for pp, snap in pairs(F.II_SAVED) do
 if typeof(pp) == "Instance" and pp.Parent then
 pcall(function() pp.HoldDuration = snap.H end)
 pcall(function() pp.RequiresLineOfSight = snap.R end)
+pcall(function() if snap.M then pp.MaxActivationDistance = snap.M end end)
 pcall(function() pp.Enabled = snap.E end)
 n = n + 1
 end
@@ -6304,8 +6483,9 @@ local pl = name and Players:FindFirstChild(name)
 local ch = pl and pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 if hrp then
-if F._freezeWho ~= name then
+if F._freezeWho ~= name or F._freezeChar ~= ch then
 F._freezeWho = name
+F._freezeChar = ch
 F._freezeCF = nil
 end
 F._freezeCF = F._freezeCF or hrp.CFrame
@@ -6315,7 +6495,7 @@ end)
 end
 function F.FreezePlayerDisable()
 if F._freezeConn then F._freezeConn:Disconnect() F._freezeConn = nil end
-F._freezeCF = nil
+F._freezeCF, F._freezeChar = nil, nil
 end
 F._hiddenPlayers = nil
 function F.HidePlayerEnable()
@@ -6402,7 +6582,7 @@ F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -7734,6 +7914,38 @@ go(T.AutoTrain, F.AutoTrainEnable)
 go(T.AutoBonus, F.AutoBonusEnable)
 go(T.AutoGym, F.AutoGymEnable)
 go(T.AutoSell, F.SellLowCPS)
+go(T.InstantInteract, F.InstantInteractEnable)
+go(T.Invisible, F.InvisibleEnable)
+go(T.FullBright, F.FullBrightEnable)
+go(T.NightVision, F.NightVisionEnable)
+go(T.NoFog, F.NoFogEnable)
+if T.FullBright or T.NightVision or T.NoFog then pcall(F.LightWatchEnable) end
+go(T.Antilag, AntilagEnable)
+go(T.Mute, MuteEnable)
+go(T.TPMouse, function() F._tpMouseOn = true end)
+go(T.CMX_Gravity, F.CMX_GravityEnable)
+go(T.CMX_Anchor, F.CMX_AnchorEnable)
+go(T.CMX_BoxESP, F.CMX_BoxESPEnable)
+go(T.CMX_AdornESP, F.CMX_AdornESPEnable)
+go(T.CMX_ClickSpam, F.CMX_ClickSpamEnable)
+go(T.CMX_AutoScrub, F.CMX_AutoScrubEnable)
+go(T.CMX_HookHard, F.CMX_HookHardApply)
+go(T.CMX_IdentityMask, F.CMX_IdentityMaskEnable)
+go(T.CMX_FFlagPack, F.CMX_FFlagApplyPack)
+go(T.CMX_SpoofIndex, F.CMX_SpoofIndexEnable)
+go(T.CMX_ViewFilter, F.CMX_ViewFilterEnable)
+go(T.CMX_Humanize, F.CMX_HumanizeEnable)
+go(T.CMX_InstNew, F.CMX_InstNewEnable)
+go(T.CMX_DebugMask, F.CMX_DebugMaskEnable)
+go(T.CMX_RequireBlock, F.CMX_RequireBlockEnable)
+go(T.CMX_ClockMask, F.CMX_ClockMaskEnable)
+go(T.CMX_HitFeed, F.CMX_HitFeedEnable)
+go(T.CMX_Bones, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
+go(T.CMX_Tracer, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
+go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
+if T.CharPersist then pcall(F.CharPersistEnable) end
+if T.AutoSave then pcall(F.AutoSaveEnable) end
+if T.Session then pcall(F.LivePlayersEnable) end
 local synced = F.CfgSyncUI()
 F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (", 已同步 " .. synced .. " 个控件显示") or ""))
 pcall(F.LogFlush, "恢复存档功能")
@@ -7852,6 +8064,1954 @@ F.Out("[移动端] 已加常驻「菜单」按钮(可拖动)")
 end)
 pcall(function() Fluent:ToggleTransparency(true) end)
 local function buildMenu()
+function F.CMX_G(n)
+if type(n) ~= "string" then return nil end
+local ok, v = pcall(AC.cap, n)
+if ok then return v end
+return nil
+end
+F.CMX_DisableAll = function()
+for _, fn in ipairs({
+F.CMX_GravityDisable, F.CMX_ClickSpamDisable, F.CMX_BoxESPDisable, F.CMX_AdornESPDisable,
+F.CMX_AnchorDisable, F.CMX_ArgScrubDisable, F.CMX_AutoScrubDisable,
+F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
+F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
+F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
+F.CMX_HitFeedDisable,
+}) do pcall(fn) end
+T.CMX_SpoofPos, T.CMX_AimPredict = false, false
+end
+F.CMX_GravityApply = function()
+if not F.CMX_GravityOn then return end
+pcall(function() WS.Gravity = tonumber(C.CMX_GravityValue) or 60 end)
+end
+F.CMX_GravityEnable = function()
+if F.CMX_GravityOn then return end
+F.CMX_GravityOn = true
+if F.CMX_GravitySaved == nil then F.CMX_GravitySaved = tonumber(WS.Gravity) or 196.2 end
+C.CMX_GravityValue = tonumber(C.CMX_GravityValue) or 60
+F.CMX_GravityApply()
+F.Out("[补强·低重力] 已开: 重力 " .. tostring(F.CMX_GravitySaved) .. " → " .. tostring(C.CMX_GravityValue))
+end
+F.CMX_GravityDisable = function()
+if not F.CMX_GravityOn then return end
+F.CMX_GravityOn = false
+if F.CMX_GravitySaved ~= nil then
+pcall(function() WS.Gravity = F.CMX_GravitySaved end)
+F.Out("[补强·低重力] 已关: 重力还原为 " .. tostring(F.CMX_GravitySaved))
+end
+F.CMX_GravitySaved = nil
+end
+F.CMX_ClickScan = function(radius)
+local list = {}
+local _, _, root = GC()
+if not root then return list end
+local r = tonumber(radius) or 60
+local n = 0
+for _, d in ipairs(WS:GetDescendants()) do
+n = n + 1
+if n > 6000 then break end
+if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
+local p = d.Parent
+if p and p:IsA("BasePart") then
+local dist = (p.Position - root.Position).Magnitude
+if dist <= r then
+list[#list + 1] = { d = d, dist = dist }
+if d:IsA("ClickDetector") and not F.CMX_ClickSaved[d] then
+F.CMX_ClickSaved[d] = d.MaxActivationDistance
+pcall(function() d.MaxActivationDistance = math.huge end)
+end
+end
+end
+end
+end
+table.sort(list, function(a, b) return a.dist < b.dist end)
+return list
+end
+F.CMX_ClickSpamStep = function()
+local fc = F.CMX_G("fireclickdetector")
+local fp = F.CMX_G("fireproximityprompt")
+if type(fc) ~= "function" and type(fp) ~= "function" then return end
+local list = F.CMX_ClickScan(C.CMX_ClickRange)
+local n = math.min(#list, 12)
+for i = 1, n do
+local d = list[i].d
+if d:IsA("ClickDetector") and type(fc) == "function" then
+pcall(fc, d, 0)
+elseif type(fp) == "function" then
+pcall(fp, d, 0, true)
+end
+end
+F._cmxClickHits = n
+end
+F.CMX_ClickSpamEnable = function()
+if F.CMX_ClickThread then return end
+local fc = F.CMX_G("fireclickdetector")
+local fp = F.CMX_G("fireproximityprompt")
+if type(fc) ~= "function" and type(fp) ~= "function" then
+T.CMX_ClickSpam = false
+F.Out("[补强·点击采集] 本执行器没有 fireclickdetector / fireproximityprompt, 该功能不可用")
+return false
+end
+C.CMX_ClickRange = tonumber(C.CMX_ClickRange) or 60
+F.CMX_ClickSaved = {}
+F.CMX_ClickThread = task.spawn(function()
+while T.CMX_ClickSpam do
+pcall(F.CMX_ClickSpamStep)
+local gap = 0.5
+if F.CMX_HumanizeOn then gap = F.CMX_Jitter(0.5, 0.35) end
+task.wait(gap)
+end
+F.CMX_ClickThread = nil
+end)
+F.Out("[补强·点击采集] 已开: 每 0.5s 触发半径 " .. tostring(C.CMX_ClickRange) .. " 格内的点击器/提示")
+return true
+end
+F.CMX_ClickSpamDisable = function()
+if not F.CMX_ClickThread and not F.CMX_ClickSaved then return end
+T.CMX_ClickSpam = false
+F.CMX_ClickThread = nil
+local n = 0
+for cd, md in pairs(F.CMX_ClickSaved or {}) do
+n = n + 1
+pcall(function() if cd.Parent then cd.MaxActivationDistance = md end end)
+end
+F.CMX_ClickSaved = nil
+F.Out("[补强·点击采集] 已关: 已还原 " .. tostring(n) .. " 个点击器的触发距离")
+end
+F.CMX_BoxESPBuild = function(pl)
+local D = F.CMX_BoxESPD
+if not D then return nil end
+local ok, it = pcall(function()
+local o = {
+box = D.new("Square"),
+name = D.new("Text"),
+dist = D.new("Text"),
+tracer = D.new("Line"),
+hpo = D.new("Square"),
+hpb = D.new("Square"),
+bones = {},
+}
+for i = 1, 15 do
+local ln = D.new("Line")
+if ln then o.bones[i] = ln end
+end
+return o
+end)
+if not ok or not it then
+F.CMX_BoxESPOn = false
+T.CMX_BoxESP = false
+F.Out("[补强·方框ESP] Drawing.new 失败 ⇒ 已自动停用, 请改用 Adornment 方框ESP")
+return nil
+end
+it.box.Filled = false
+it.box.Thickness = 1
+it.box.Color = Color3.fromRGB(255, 60, 60)
+it.box.Visible = false
+it.name.Center = true
+it.name.Outline = true
+it.name.Size = 14
+it.name.Color = Color3.fromRGB(255, 255, 255)
+it.name.Visible = false
+it.dist.Center = true
+it.dist.Outline = true
+it.dist.Size = 12
+it.dist.Color = Color3.fromRGB(255, 235, 120)
+it.dist.Visible = false
+it.tracer.Thickness = 1
+it.tracer.Visible = false
+it.hpo.Filled = true
+it.hpo.Thickness = 1
+it.hpo.Color = Color3.fromRGB(15, 15, 15)
+it.hpo.Transparency = 0.35
+it.hpo.Visible = false
+it.hpb.Filled = true
+it.hpb.Thickness = 1
+it.hpb.Visible = false
+for i = 1, #it.bones do
+local ln = it.bones[i]
+ln.Thickness = 1
+ln.Transparency = 0.15
+ln.Visible = false
+end
+return it
+end
+F.CMX_BoxESPStep = function()
+local cam = workspace.CurrentCamera
+if not cam then return end
+local D = F.CMX_BoxESPD
+local store = F.CMX_BoxESPItems
+if not D or not store then return end
+local vh = cam.ViewportSize.Y
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hrp and hum and hum.Health > 0 then
+local it = store[pl]
+if not it then
+it = F.CMX_BoxESPBuild(pl)
+store[pl] = it
+end
+if it then
+local top = hrp.Position + Vector3.new(0, 2.6, 0)
+local bot = hrp.Position - Vector3.new(0, 2.9, 0)
+local p1, o1 = cam:WorldToViewportPoint(top)
+local p2, o2 = cam:WorldToViewportPoint(bot)
+if o1 or o2 then
+local h = math.abs(p2.Y - p1.Y)
+local w = h * 0.55
+local x = (p1.X + p2.X) * 0.5 - w * 0.5
+local y = math.min(p1.Y, p2.Y)
+it.box.Position = Vector2.new(x, y)
+it.box.Size = Vector2.new(w, h)
+it.box.Visible = true
+it.name.Position = Vector2.new(x + w * 0.5, y - 16)
+it.name.Text = pl.Name
+it.name.Visible = true
+local root = GC()
+local d = 0
+if root then d = math.floor((hrp.Position - root.Position).Magnitude) end
+it.dist.Position = Vector2.new(x + w * 0.5, y + h + 8)
+it.dist.Text = tostring(d) .. "m"
+it.dist.Visible = true
+if T.CMX_Bones then
+pcall(F.CMX_DrawBones, it, ch, cam)
+else
+pcall(F.CMX_HideBones, it)
+end
+if T.CMX_Tracer then
+local vs = cam.ViewportSize
+local ox, oy = vs.X * 0.5, vs.Y - 4
+if C.CMX_TracerFrom == "屏幕中心" then ox, oy = vs.X * 0.5, vs.Y * 0.5 end
+it.tracer.From = Vector2.new(ox, oy)
+it.tracer.To = Vector2.new(x + w * 0.5, y + h)
+it.tracer.Color = it.box.Color
+it.tracer.Visible = true
+else
+it.tracer.Visible = false
+end
+if T.CMX_HealthBar and hum then
+local pct = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+it.hpo.Position = Vector2.new(x - 7, y - 1)
+it.hpo.Size = Vector2.new(6, h + 2)
+it.hpo.Visible = true
+it.hpb.Position = Vector2.new(x - 6, y + (h - h * pct))
+it.hpb.Size = Vector2.new(4, math.max(1, h * pct))
+it.hpb.Color = Color3.fromRGB(70, 220, 90):Lerp(Color3.fromRGB(255, 70, 70), 1 - pct)
+it.hpb.Visible = true
+else
+it.hpo.Visible = false
+it.hpb.Visible = false
+end
+else
+it.box.Visible = false
+it.name.Visible = false
+it.dist.Visible = false
+pcall(F.CMX_HideBones, it)
+it.tracer.Visible = false
+it.hpo.Visible = false
+it.hpb.Visible = false
+end
+end
+else
+local it = store[pl]
+if it then
+pcall(function() it.box.Visible = false end)
+pcall(function() it.name.Visible = false end)
+pcall(function() it.dist.Visible = false end)
+pcall(function() it.tracer.Visible = false end)
+pcall(function() it.hpo.Visible = false end)
+pcall(function() it.hpb.Visible = false end)
+pcall(F.CMX_HideBones, it)
+end
+end
+end
+end
+end
+F.CMX_BoxESPDisableOne = function(pl)
+local it = F.CMX_BoxESPItems and F.CMX_BoxESPItems[pl]
+if not it then return end
+for _, k in ipairs({ "box", "name", "dist", "tracer", "hpo", "hpb" }) do
+pcall(function() it[k]:Remove() end)
+end
+if it.bones then for i = 1, #it.bones do pcall(function() it.bones[i]:Remove() end) end end
+F.CMX_BoxESPItems[pl] = nil
+end
+F.CMX_BoxESPEnable = function()
+if F.CMX_BoxESPOn then return end
+local D = F.CMX_G("Drawing")
+if type(D) ~= "table" or type(D.new) ~= "function" then
+T.CMX_BoxESP = false
+F.Out("[补强·方框ESP] 本执行器没有 Drawing 库 ⇒ 改用「Adornment 方框ESP」")
+return false
+end
+F.CMX_BoxESPD = D
+F.CMX_BoxESPItems = {}
+F.CMX_BoxESPOn = true
+pcall(function()
+F._boxLeaver = Players.PlayerRemoving:Connect(function(pl)
+if F.CMX_BoxESPItems and F.CMX_BoxESPItems[pl] then
+pcall(function()
+if F.CMX_BoxESPDisableOne then F.CMX_BoxESPDisableOne(pl) end
+end)
+end
+end)
+end)
+F.CMX_BoxESPConn = RS.RenderStepped:Connect(function() pcall(F.CMX_BoxESPStep) end)
+F.Out("[补强·方框ESP] 已开(Drawing 线框 + 名字 + 距离)")
+return true
+end
+F.CMX_BoxESPDisable = function()
+if not F.CMX_BoxESPOn then return end
+F.CMX_BoxESPOn = false
+if F.CMX_BoxESPConn then pcall(function() F.CMX_BoxESPConn:Disconnect() end) end
+F.CMX_BoxESPConn = nil
+if F._boxLeaver then pcall(function() F._boxLeaver:Disconnect() end) F._boxLeaver = nil end
+local store = F.CMX_BoxESPItems or {}
+for _, it in pairs(store) do
+for _, k in ipairs({ "box", "name", "dist", "tracer", "hpo", "hpb" }) do
+pcall(function() it[k]:Remove() end)
+end
+if it.bones then
+for i = 1, #it.bones do pcall(function() it.bones[i]:Remove() end) end
+end
+end
+F.CMX_BoneCache = setmetatable({}, { __mode = "k" })
+F.CMX_BoxESPItems = nil
+F.CMX_BoxESPD = nil
+F.Out("[补强·方框ESP] 已关")
+end
+F.CMX_AdornApply = function(pl)
+local ch = pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+local store = F.CMX_AdornItems
+local a = store[pl]
+if not a or not a.Parent then
+a = Instance.new("BoxHandleAdornment")
+a.Name = "CMX_Adorn"
+a.Adornee = hrp
+a.AlwaysOnTop = true
+a.ZIndex = 5
+a.Transparency = 0.55
+a.Color3 = Color3.fromRGB(255, 70, 70)
+a.Size = hrp.Size
+a.Parent = hrp
+store[pl] = a
+end
+a.Adornee = hrp
+a.Size = hrp.Size
+end
+F.CMX_AdornStep = function()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then pcall(F.CMX_AdornApply, pl) end
+end
+end
+F.CMX_AdornESPEnable = function()
+if F.CMX_AdornOn then return end
+F.CMX_AdornItems = {}
+F.CMX_AdornOn = true
+F.CMX_AdornStep()
+F.CMX_AdornConn = RS.Heartbeat:Connect(function() pcall(F.CMX_AdornStep) end)
+F.Out("[补强·AdornmentESP] 已开(方框跟随) ")
+return true
+end
+F.CMX_AdornESPDisable = function()
+if not F.CMX_AdornOn then return end
+F.CMX_AdornOn = false
+if F.CMX_AdornConn then pcall(function() F.CMX_AdornConn:Disconnect() end) end
+F.CMX_AdornConn = nil
+for _, a in pairs(F.CMX_AdornItems or {}) do pcall(function() a:Destroy() end) end
+F.CMX_AdornItems = nil
+F.Out("[补强·AdornmentESP] 已关")
+end
+F.CMX_AnchorEnable = function()
+if F.CMX_AnchorOn then return end
+local _, _, root = GC()
+if not root then
+T.CMX_Anchor = false
+F.Out("[补强·自身锚定] 没角色")
+return false
+end
+if not F.CMX_AnchorConn then
+pcall(function()
+F.CMX_AnchorConn = LP.CharacterAdded:Connect(function()
+task.wait(1)
+if not F.CMX_AnchorOn then return end
+local _, _, r2 = GC()
+if r2 then pcall(function() r2.Anchored = true end) end
+F.Out("[补强·自身锚定] 检测到重生, 已自动重新钉住")
+end)
+end)
+end
+F.CMX_AnchorSaved = root.Anchored and true or false
+root.Anchored = true
+F.CMX_AnchorOn = true
+F.Out("[补强·自身锚定] 已钉住(原值=" .. tostring(F.CMX_AnchorSaved) .. ") · 松开开关即还原")
+return true
+end
+F.CMX_AnchorDisable = function()
+if not F.CMX_AnchorOn then return end
+F.CMX_AnchorOn = false
+if F.CMX_AnchorConn then pcall(function() F.CMX_AnchorConn:Disconnect() end) F.CMX_AnchorConn = nil end
+local _, _, root = GC()
+if root then
+local want = F.CMX_AnchorSaved and true or false
+pcall(function() root.Anchored = want end)
+end
+F.CMX_AnchorSaved = nil
+F.Out("[补强·自身锚定] 已解开")
+end
+F.CMX_NetOwnerReport = function()
+local _, _, root = GC()
+if not root then
+F.Out("[补强·所有权诊断] 没角色")
+return
+end
+F.Out("[补强·所有权诊断] 本机角色 HumanoidRootPart:")
+pcall(function()
+local o = root:GetNetworkOwner()
+F.Out("   GetNetworkOwner = " .. (o and (o.Name .. "(" .. tostring(o.UserId) .. ")") or "nil(服务器持有或不可读)"))
+end)
+pcall(function() F.Out("   IsGrounded = " .. tostring(root:IsGrounded())) end)
+local cam = workspace.CurrentCamera
+if cam then
+pcall(function()
+local o2 = cam:GetNetworkOwner()
+F.Out("   Camera.GetNetworkOwner = " .. (o2 and o2.Name or "nil"))
+end)
+end
+local cnt = 0
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if hrp then
+local o = nil
+pcall(function() o = hrp:GetNetworkOwner() end)
+F.Out("   " .. pl.Name .. " 的角色所有权 = " .. (o and o.Name or "nil(非本机)"))
+cnt = cnt + 1
+end
+if cnt >= 6 then break end
+end
+end
+end
+F.CMX_BBReport = function()
+local _, _, root = GC()
+if not root then
+F.Out("[补强·包围盒] 没角色")
+return
+end
+pcall(function()
+local cf, sz = root.CFrame, root.Size
+F.Out("[补强·包围盒] HumanoidRootPart Size=" .. tostring(sz))
+F.Out("   世界包围盒 中心=" .. tostring(cf.Position) .. " 半径≈" .. string.format("%.2f", sz.Magnitude * 0.5))
+end)
+local ch = LP.Character
+if ch then
+pcall(function()
+local cf, sz = ch:GetBoundingBox()
+F.Out("   角色 Model 包围盒 尺寸=" .. tostring(sz) .. " (精确含所有部件)")
+end)
+pcall(function()
+local sz2 = ch:GetExtentsSize()
+F.Out("   角色 GetExtentsSize=" .. tostring(sz2) .. " (轴对齐外接盒)")
+end)
+local names = {}
+pcall(function()
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") and d.CanCollide then names[#names + 1] = d.Name end
+end
+end)
+F.Out("   可碰撞部件 " .. tostring(#names) .. " 个: " .. table.concat(names, ", "):sub(1, 200))
+end
+local _, _, r2 = GC()
+if r2 then
+pcall(function()
+local parts = WS:GetPartBoundsInRadius(r2.Position, 12, OverlapParams.new())
+F.Out("   半径12格内部件 " .. tostring(#parts) .. " 个 (可评估命中盒是否够大)")
+end)
+end
+end
+F.CMX_SafeHook = function(f, wrapper)
+if type(f) ~= "function" or type(wrapper) ~= "function" then return nil end
+if type(hookfunction) ~= "function" then return nil end
+local box = wrapper
+local newl = F.CMX_G("newlclosure")
+local newc = F.CMX_G("newcclosure")
+if type(newl) == "function" then
+local okL, w = pcall(newl, wrapper)
+if okL and type(w) == "function" then box = w end
+elseif type(newc) == "function" then
+local okC, w = pcall(newc, wrapper)
+if okC and type(w) == "function" then box = w end
+end
+local orig = nil
+if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, box) end
+local ok = pcall(function() orig = hookfunction(f, box) end)
+if not ok or type(orig) ~= "function" then return nil end
+return orig
+end
+F.CMX_FindClosure = function(nups, nconsts)
+if type(getgc) ~= "function" then return nil, 0 end
+local found, seen = nil, 0
+pcall(function()
+for _, f in next, getgc() do
+seen = seen + 1
+if seen > 60000 then break end
+if type(f) == "function" and (not islclosure or islclosure(f)) then
+local ops, ocs = nil, nil
+pcall(function() ops = debug.getupvalues(f) end)
+pcall(function() ocs = debug.getconstants(f) end)
+if ops and ocs and #ops == nups and #ocs == nconsts then
+found = f
+break
+end
+end
+end
+end)
+return found, seen
+end
+F.CMX_FindClosureFast = function(nups, nconsts)
+local fg = F.CMX_G("filtergc")
+if type(fg) == "function" then
+local shapes = {
+{ { UpvalueCount = nups, ConstantCount = nconsts }, true },
+{ { Upvalues = nups, Constants = nconsts }, true },
+{ { UpvalueCount = nups }, true },
+}
+for i = 1, #shapes do
+local ok, r = pcall(fg, "function", shapes[i][1], shapes[i][2])
+if ok and type(r) == "function" then
+local fp = nil
+pcall(function() fp = F.FnFingerprint(r) end)
+if fp and fp.nups == nups and fp.nconsts == nconsts then
+return r, -1, true
+end
+end
+end
+end
+local f, seen = F.CMX_FindClosure(nups, nconsts)
+return f, seen, false
+end
+F.CMX_ConstList = function(txt)
+local a, b = F.CMX_ScrubParse(txt)
+local f, seen, fast = F.CMX_FindClosureFast(a, b)
+if not f then
+F.Out("[绕过·常量] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 无命中(扫了 " .. tostring(seen) .. " 个)")
+return false
+end
+F.Out("[绕过·常量] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 命中"
+.. (fast and " · filtergc 加速" or (" · 全扫 " .. tostring(seen) .. " 个")))
+local consts = nil
+pcall(function() consts = debug.getconstants(f) end)
+consts = consts or {}
+local shown = 0
+for i = 1, #consts do
+local v = consts[i]
+local t = type(v)
+if t == "string" or t == "number" then
+shown = shown + 1
+if shown <= 60 then
+F.Out(string.format("[绕过·常量]   [%d] %s = %s", i, t, tostring(v):sub(1, 90)))
+end
+end
+end
+F.Out("[绕过·常量] 共 " .. tostring(#consts) .. " 个常量, 其中可打印的 " .. tostring(shown) .. " 个")
+return true
+end
+F.CMX_HookLedger = function()
+F.Out("[绕过·台账] ===== 本脚本当前已安装的钩子/拦截层 =====")
+local n, listed = 0, 0
+pcall(function()
+for slot, bucket in pairs(F.MetaLayers or {}) do
+for id, rec in pairs(bucket) do
+if rec and rec.alive then
+n = n + 1
+if listed < 20 then
+listed = listed + 1
+local tn = "?"
+pcall(function()
+local t = rec.target
+if t == game then tn = "game"
+elseif typeof(t) == "Instance" then tn = tostring(t.Name)
+else tn = tostring(t) end
+end)
+F.Out(string.format("[绕过·台账]   #%d 元方法 %s · 层「%s」· 目标 %s", n, tostring(slot), tostring(id), tn))
+end
+end
+end
+end
+end)
+local hooked = 0
+pcall(function()
+for _ in pairs(AC._hookedFns or {}) do hooked = hooked + 1 end
+end)
+local guarded = 0
+pcall(function()
+for _ in pairs(F._stealthHooked or {}) do guarded = guarded + 1 end
+end)
+F.Out("[绕过·台账]   元方法拦截层 " .. tostring(n) .. " 个 · 被我们钩过的函数 " .. tostring(hooked) .. " 个"
+.. " · 隐身钩 " .. tostring(guarded) .. " 个")
+if F.CMX_ScrubOn then
+F.Out("[绕过·台账]   ★ 参数清洗钩子: 开 · 已清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次 · 自愈重装 "
+.. tostring(F.CMX_ScrubHealFix or 0) .. " 次")
+end
+if KG.hooked then
+F.Out("[绕过·台账]   ★ 防踢 Kick 钩子: 开 · 拦截 " .. tostring(KG.blocked or 0) .. " 次 · 自愈重装 "
+.. tostring(F._kgHealFix or 0) .. " 次")
+end
+if F._lightConn then F.Out("[绕过·台账]   ★ 光照复写监听: 开") end
+F.Out("[绕过·台账]   要全卸: 系统页「一键全关」/ 设置页「卸载脚本」")
+end
+F.CMX_Own = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
+F.CMX_HiddenCount = 0
+F.CMX_Jitter = function(base, pct)
+local b = tonumber(base) or 0.5
+local p = tonumber(pct) or 0.3
+return b * (1 - p + math.random() * p * 2)
+end
+F.CMX_MarkOwn = function(o)
+if typeof(o) == "Instance" then
+F.CMX_Own[o] = true
+F.CMX_HiddenCount = F.CMX_HiddenCount + 1
+end
+return o
+end
+F.CMX_IsHidden = function(o)
+if typeof(o) ~= "Instance" then return false end
+if F.CMX_Own[o] then return true end
+local nm = nil
+pcall(function() nm = o.Name end)
+if type(nm) == "string" then
+if nm:find("CMFly", 1, true) or nm:find("CMX_", 1, true) then
+F.CMX_Own[o] = true
+F.CMX_HiddenCount = F.CMX_HiddenCount + 1
+return true
+end
+end
+return false
+end
+F.CMX_IsOwnPart = function(t)
+if F.CMX_SpoofParts[t] then return true end
+if F.CMX_SpoofMiss[t] == F.CMX_SpoofGen then return false end
+local ok, ours = pcall(function()
+local ch = LP.Character
+return ch ~= nil and (t == ch or t:IsDescendantOf(ch))
+end)
+if ok and ours then
+F.CMX_SpoofParts[t] = true
+return true
+end
+F.CMX_SpoofMiss[t] = F.CMX_SpoofGen
+return false
+end
+F.CMX_LegitWalk = function()
+local w = tonumber(F._orig and F._orig.walk) or tonumber(F._preSpeed)
+if not w or w <= 0 or w > 40 then w = 16 end
+return w
+end
+F.CMX_IsCaller = function()
+if type(checkcaller) ~= "function" then return true end
+local ok, r = pcall(checkcaller)
+if not ok then return true end
+return r and true or false
+end
+F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofMiss = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofGen = 1
+F.CMX_SpoofKey = {
+AssemblyLinearVelocity = true, Velocity = true,
+AssemblyAngularVelocity = true, RotVelocity = true,
+Position = true, CFrame = true,
+}
+F.CMX_SmoothPos = function(t, real)
+local now = os.clock()
+local st = F.CMX_SpoofLast[t]
+if not st then
+F.CMX_SpoofLast[t] = { p = real, t = now }
+return real
+end
+local dt = now - st.t
+if dt < 0 then dt = 0 end
+if dt > 0.5 then dt = 0.5 end
+st.t = now
+local maxStep = F.CMX_LegitWalk() * dt + 0.6
+local d = real - st.p
+local m = d.Magnitude
+if m > maxStep then
+st.p = st.p + d.Unit * maxStep
+else
+st.p = real
+end
+return st.p
+end
+F.CMX_SpoofIndexEnable = function()
+if F.CMX_SpoofOn then return false end
+F.CMX_SpoofUseCount = 0
+F.CMX_SpoofLast = nil
+local got = F.MetaInstall("game.__index", game, "CMXSpoof", function(box)
+return function(t, k)
+if not F.CMX_SpoofOn then return box.orig(t, k) end
+if not F.CMX_SpoofKey[k] then return box.orig(t, k) end
+if F.CMX_IsCaller() then return box.orig(t, k) end
+if typeof(t) ~= "Instance" then return box.orig(t, k) end
+if not F.CMX_IsOwnPart(t) then return box.orig(t, k) end
+if (k == "Position" or k == "CFrame") and not T.CMX_SpoofPos then return box.orig(t, k) end
+if k == "AssemblyLinearVelocity" or k == "Velocity" then
+local v = box.orig(t, k)
+if typeof(v) == "Vector3" then
+local sp = F.CMX_LegitWalk()
+local h = Vector3.new(v.X, 0, v.Z)
+if h.Magnitude > sp and h.Magnitude > 0.001 then
+h = h.Unit * sp
+end
+F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
+return Vector3.new(h.X, v.Y, h.Z)
+end
+elseif k == "AssemblyAngularVelocity" or k == "RotVelocity" then
+local v = box.orig(t, k)
+if typeof(v) == "Vector3" and v.Magnitude > 0.5 then
+F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
+return Vector3.zero
+end
+elseif k == "Position" then
+local v = box.orig(t, k)
+if typeof(v) == "Vector3" then
+F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
+return F.CMX_SmoothPos(t, v)
+end
+elseif k == "CFrame" then
+local cf = box.orig(t, k)
+if typeof(cf) == "CFrame" then
+F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
+return CFrame.new(F.CMX_SmoothPos(t, cf.Position)) * (cf - cf.Position)
+end
+end
+return box.orig(t, k)
+end
+end)
+if not got then
+T.CMX_SpoofIndex = false
+F.Out("[绕过·属性伪装] 装不上 __index 钩子(执行器不支持) ⇒ 该层不可用")
+return false
+end
+F.CMX_SpoofOn = true
+pcall(function()
+F._spoofCharConn = LP.CharacterAdded:Connect(function()
+F.CMX_SpoofGen = (F.CMX_SpoofGen or 1) + 1
+F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofMiss = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
+end)
+end)
+F.Out("[绕过·属性伪装] 已开: 别人读你角色的 速度/角速度/位置/CFrame 会拿到「按合法速度平滑后」的值"
+.. " · 我们自己(含加速/飞行/传送)读到的仍是真值(checkcaller 分流)")
+return true
+end
+F.CMX_SpoofIndexDisable = function()
+if not F.CMX_SpoofOn then return end
+F.CMX_SpoofOn = false
+pcall(function() F.MetaUninstall("game.__index", "CMXSpoof") end)
+if F._spoofCharConn then pcall(function() F._spoofCharConn:Disconnect() end) F._spoofCharConn = nil end
+F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
+F.Out("[绕过·属性伪装] 已关 · 本次共伪装 " .. tostring(F.CMX_SpoofUseCount or 0) .. " 次属性读取")
+end
+F.CMX_ViewFilterEnable = function()
+if F.CMX_ViewOn then return false end
+local got = F.MetaInstall("__namecall", game, "CMXView", function(box)
+return function(self, ...)
+local m = getnamecallmethod and getnamecallmethod() or ""
+if (m == "GetChildren" or m == "GetDescendants" or m == "FindFirstChild"
+or m == "FindFirstChildOfClass" or m == "FindFirstChildWhichIsA")
+and (F.CMX_HiddenCount or 0) > 0 and not F.CMX_IsCaller() then
+local res = box.orig(self, ...)
+if m == "GetChildren" or m == "GetDescendants" then
+if type(res) == "table" then
+local out, n = {}, 0
+for i = 1, #res do
+if not F.CMX_IsHidden(res[i]) then
+n = n + 1
+out[n] = res[i]
+end
+end
+F.CMX_ViewUseCount = (F.CMX_ViewUseCount or 0) + 1
+return out
+end
+return res
+end
+if F.CMX_IsHidden(res) then return nil end
+return res
+end
+return box.orig(self, ...)
+end
+end)
+if not got then
+T.CMX_ViewFilter = false
+F.Out("[绕过·视图过滤] 装不上 __namecall 钩子 ⇒ 该层不可用")
+return false
+end
+F.CMX_ViewOn = true
+F.CMX_ViewUseCount = 0
+pcall(function()
+F.CMX_MarkOwn(F._flyAtt)
+F.CMX_MarkOwn(F._flyAo)
+F.CMX_MarkOwn(F._flyAp)
+F.CMX_MarkOwn(F._flyBv)
+F.CMX_MarkOwn(F._flyBg)
+if F.CMX_AdornItems then
+for _, a in pairs(F.CMX_AdornItems) do F.CMX_MarkOwn(a) end
+end
+end)
+F.Out("[绕过·视图过滤] 已开: 反作弊遍历你的角色时, 看不见我们挂上去的东西(飞行约束/附件/方框)"
+.. " · 我们自己的遍历不受影响")
+return true
+end
+F.CMX_ViewFilterDisable = function()
+if not F.CMX_ViewOn then return end
+F.CMX_ViewOn = false
+pcall(function() F.MetaUninstall("__namecall", "CMXView") end)
+F.Out("[绕过·视图过滤] 已关 · 本次过滤 " .. tostring(F.CMX_ViewUseCount or 0) .. " 次遍历")
+end
+F.CMX_HumanizeEnable = function()
+F.CMX_HumanizeOn = true
+F.Out("[绕过·去机械化] 已开: 自动点击/自动交互/挂机注入的间隔改成随机抖动(0.7~1.3 倍), 不再是死板等间隔")
+return true
+end
+F.CMX_HumanizeDisable = function()
+if not F.CMX_HumanizeOn then return end
+F.CMX_HumanizeOn = false
+F.Out("[绕过·去机械化] 已关: 恢复固定间隔")
+end
+F.CMX_FakeSrc = "@game/PlayerScripts/PlayerModule/ControlModule"
+F.CMX_IsOursFn = function(f)
+if type(f) ~= "function" then return false end
+return F.CMX_Own[f] == true
+end
+F.CMX_InstNewEnable = function()
+if F.CMX_InstNewOn then return false end
+if type(Instance) ~= "table" or type(Instance.new) ~= "function" then return false end
+local orig
+orig = F.CMX_SafeHook(Instance.new, function(cls, parent, ...)
+local o = orig(cls, parent, ...)
+if F.CMX_InstNewOn and F.CMX_MarkFromOurs and F.CMX_IsCaller() then
+pcall(F.CMX_MarkOwn, o)
+end
+return o
+end)
+if not orig then
+T.CMX_InstNew = false
+F.Out("[绕过·自产登记] 钩不上 Instance.new ⇒ 该层不可用")
+return false
+end
+F.CMX_InstNewOrig = orig
+F.CMX_InstNewOn = true
+F.CMX_MarkFromOurs = true
+F.Out("[绕过·自产登记] 已开: 此后**我们**创建的任何实例自动登记为「自己人」"
+.. " ⇒ 视图过滤不用再靠名字, 游戏/反作弊的遍历一律看不见(游戏自己 created 的不受影响)")
+return true
+end
+F.CMX_InstNewDisable = function()
+if not F.CMX_InstNewOn then return end
+F.CMX_InstNewOn = false
+F.CMX_MarkFromOurs = false
+if F.CMX_InstNewOrig then
+pcall(function() hookfunction(Instance.new, F.CMX_InstNewOrig) end)
+end
+F.CMX_InstNewOrig = nil
+F.Out("[绕过·自产登记] 已关(已还原 Instance.new)")
+end
+F.CMX_DebugMaskEnable = function()
+if F.CMX_DebugMaskOn then return false end
+local d = debug
+if type(d) ~= "table" then return false end
+local target = d.info or d.getinfo
+if type(target) ~= "function" then return false end
+local orig
+orig = F.CMX_SafeHook(target, function(a, b, ...)
+local r = orig(a, b, ...)
+if not F.CMX_DebugMaskOn then return r end
+if F.CMX_IsCaller() then return r end
+if type(r) == "table" then
+local src = r.source
+if type(src) == "string" and (src:find("CheatMenu", 1, true)
+or src:find("PlayerScripts/", 1, true) == nil and src:sub(1, 1) == "=") then
+pcall(function()
+r.source = F.CMX_FakeSrc
+r.short_src = "ControlModule"
+r.what = "Lua"
+end)
+F.CMX_DebugMaskCount = (F.CMX_DebugMaskCount or 0) + 1
+elseif F.CMX_IsOursFn(a) then
+pcall(function()
+r.source = F.CMX_FakeSrc
+r.short_src = "ControlModule"
+r.what = "Lua"
+end)
+F.CMX_DebugMaskCount = (F.CMX_DebugMaskCount or 0) + 1
+end
+end
+return r
+end)
+if not orig then
+T.CMX_DebugMask = false
+F.Out("[绕过·栈取证伪装] 钩不上 debug.info ⇒ 该层不可用")
+return false
+end
+F.CMX_DebugMaskOrig = orig
+F.CMX_DebugMaskTarget = target
+F.CMX_DebugMaskOn = true
+F.CMX_DebugMaskCount = 0
+F.Out("[绕过·栈取证伪装] 已开: 反作弊用 debug.info/getinfo 做栈取证时, 我们的代码会显示成 "
+.. F.CMX_FakeSrc .. " · 我们自己查栈拿到的仍是真信息")
+return true
+end
+F.CMX_DebugMaskDisable = function()
+if not F.CMX_DebugMaskOn then return end
+F.CMX_DebugMaskOn = false
+if F.CMX_DebugMaskTarget and F.CMX_DebugMaskOrig then
+pcall(function() hookfunction(F.CMX_DebugMaskTarget, F.CMX_DebugMaskOrig) end)
+end
+F.CMX_DebugMaskTarget, F.CMX_DebugMaskOrig = nil, nil
+F.Out("[绕过·栈取证伪装] 已关 · 本次伪装 " .. tostring(F.CMX_DebugMaskCount or 0) .. " 次查询")
+end
+F.CMX_RequireBlockEnable = function()
+if F.CMX_RequireOn then return false end
+if type(require) ~= "function" then return false end
+F.CMX_RequireKeys = F.CMX_RequireKeys or {
+"anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack", "anti-hack",
+"cheatdetector", "detection", "detector", "integrity", "checksum", "watchdog",
+"sentinel", "serverguard", "clientguard", "banmodule", "kickmodule",
+}
+local orig
+orig = F.CMX_SafeHook(require, function(mod, ...)
+if F.CMX_RequireOn and not F.CMX_IsCaller() then
+local nm = nil
+pcall(function() nm = tostring(mod) end)
+if type(nm) == "string" then
+local low = nm:lower()
+for i = 1, #F.CMX_RequireKeys do
+if low:find(F.CMX_RequireKeys[i], 1, true) then
+F.CMX_ReqBlocked = (F.CMX_ReqBlocked or 0) + 1
+local now = os.clock()
+if now - (F.CMX_ReqLogAt or 0) > 3 then
+F.CMX_ReqLogAt = now
+F.Out("[绕过·模块拦截] 已拦下可疑模块加载: " .. nm:sub(1, 70)
+.. " (累计 " .. tostring(F.CMX_ReqBlocked) .. " 次)")
+end
+return setmetatable({}, { __index = function() return function() end end })
+end
+end
+end
+end
+return orig(mod, ...)
+end)
+if not orig then
+T.CMX_RequireBlock = false
+F.Out("[绕过·模块拦截] 钩不上 require ⇒ 该层不可用")
+return false
+end
+F.CMX_RequireOrig = orig
+F.CMX_RequireOn = true
+F.CMX_ReqBlocked = 0
+F.Out("[绕过·模块拦截] 已开: 名字里带 anticheat/detector/integrity/checksum 之类的模块会被拦下并返回空模块"
+.. " · 我们自己的 require 不受影响")
+return true
+end
+F.CMX_RequireBlockDisable = function()
+if not F.CMX_RequireOn then return end
+F.CMX_RequireOn = false
+if F.CMX_RequireOrig then pcall(function() hookfunction(require, F.CMX_RequireOrig) end) end
+F.CMX_RequireOrig = nil
+F.Out("[绕过·模块拦截] 已关(已还原 require) · 本次拦下 " .. tostring(F.CMX_ReqBlocked or 0) .. " 个")
+end
+F.CMX_ClockMaskEnable = function()
+if F.CMX_ClockOn then return false end
+local q = tonumber(C.CMX_ClockStep) or 0.1
+F.CMX_ClockStepVal = q
+if type(os) ~= "table" or type(os.clock) ~= "function" then return false end
+local orig
+orig = F.CMX_SafeHook(os.clock, function(...)
+local v = orig(...)
+if not F.CMX_ClockOn then return v end
+if F.CMX_IsCaller() then return v end
+if type(v) ~= "number" then return v end
+F.CMX_ClockMaskCount = (F.CMX_ClockMaskCount or 0) + 1
+return math.floor(v / F.CMX_ClockStepVal) * F.CMX_ClockStepVal
+end)
+if not orig then
+T.CMX_ClockMask = false
+F.Out("[绕过·时钟粗化] 钩不上 os.clock ⇒ 该层不可用")
+return false
+end
+F.CMX_ClockOrig = orig
+F.CMX_ClockOn = true
+F.CMX_ClockMaskCount = 0
+F.Out("[绕过·时钟粗化] 已开: 别人用 os.clock 量时间只能拿到 " .. tostring(q)
+.. " 秒的整数倍(量不出我们 10ms 级的动作节奏) · 我们自己量时间仍是精确的")
+return true
+end
+F.CMX_ClockMaskDisable = function()
+if not F.CMX_ClockOn then return end
+F.CMX_ClockOn = false
+if F.CMX_ClockOrig then pcall(function() hookfunction(os.clock, F.CMX_ClockOrig) end) end
+F.CMX_ClockOrig = nil
+F.Out("[绕过·时钟粗化] 已关 · 本次粗化 " .. tostring(F.CMX_ClockMaskCount or 0) .. " 次取时")
+end
+F.CMX_BONES_R15 = {
+{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
+{ "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
+{ "UpperTorso", "RightUpperArm" }, { "RightUpperArm", "RightLowerArm" }, { "RightLowerArm", "RightHand" },
+{ "LowerTorso", "LeftUpperLeg" }, { "LeftUpperLeg", "LeftLowerLeg" }, { "LeftLowerLeg", "LeftFoot" },
+{ "LowerTorso", "RightUpperLeg" }, { "RightUpperLeg", "RightLowerLeg" }, { "RightLowerLeg", "RightFoot" },
+}
+F.CMX_BONES_R6 = {
+{ "Head", "Torso" }, { "Torso", "Left Arm" }, { "Torso", "Right Arm" },
+{ "Torso", "Left Leg" }, { "Torso", "Right Leg" },
+}
+F.CMX_BoneCache = setmetatable({}, { __mode = "k" })
+F.CMX_GetBones = function(ch)
+local got = F.CMX_BoneCache[ch]
+if got then return got end
+local map = ch:FindFirstChild("UpperTorso") and F.CMX_BONES_R15 or F.CMX_BONES_R6
+local list = {}
+for i = 1, #map do
+local a = ch:FindFirstChild(map[i][1])
+local b = ch:FindFirstChild(map[i][2])
+if a and b then list[#list + 1] = { a, b } end
+end
+if #list > 0 then F.CMX_BoneCache[ch] = list end
+return list
+end
+F.CMX_DrawBones = function(it, ch, cam)
+local bones = F.CMX_GetBones(ch)
+if not it.bones then return end
+local lines = it.bones
+for i = 1, #bones do
+local ln = lines[i]
+if ln then
+local pa, va = cam:WorldToViewportPoint(bones[i][1].Position)
+local pb, vb = cam:WorldToViewportPoint(bones[i][2].Position)
+if va and vb then
+ln.From = Vector2.new(pa.X, pa.Y)
+ln.To = Vector2.new(pb.X, pb.Y)
+ln.Color = Color3.fromRGB(255, 255, 255)
+ln.Visible = true
+else
+ln.Visible = false
+end
+end
+end
+for i = #bones + 1, #lines do
+if lines[i] then lines[i].Visible = false end
+end
+end
+F.CMX_HideBones = function(it)
+if not it or not it.bones then return end
+for i = 1, #it.bones do
+if it.bones[i] then it.bones[i].Visible = false end
+end
+end
+F.CMX_AimLead = function(part, cam)
+local pos = part.Position
+local v = nil
+pcall(function() v = part.AssemblyLinearVelocity end)
+if typeof(v) ~= "Vector3" then pcall(function() v = part.Velocity end) end
+if typeof(v) ~= "Vector3" or v.Magnitude < 0.5 then return pos end
+local speed = tonumber(C.CMX_ProjSpeed) or 300
+if speed <= 1 then return pos end
+local origin = cam.CFrame.Position
+local t = (pos - origin).Magnitude / speed
+for _ = 1, 3 do
+t = ((pos + v * t) - origin).Magnitude / speed
+end
+if t > 1.5 then t = 1.5 end
+local lead = pos + v * t
+if C.CMX_ProjDrop then
+local g = 196.2
+pcall(function() g = workspace.Gravity end)
+lead = lead + Vector3.new(0, 0.5 * g * t * t, 0)
+end
+F.CMX_LeadT = t
+return lead
+end
+F.CMX_HitFeedShow = function(text, col)
+if not F._hitGui then return end
+if not F._hitLines then return end
+F._hitIdx = (F._hitIdx or 0) + 1
+local slot = (F._hitIdx - 1) % 6 + 1
+local lbl = F._hitLines[slot]
+if not lbl then return end
+lbl.Text = text
+lbl.TextColor3 = col or Color3.fromRGB(255, 240, 160)
+lbl.Visible = true
+F._hitAt = F._hitAt or {}
+F._hitAt[slot] = os.clock()
+end
+F.CMX_HitFeedEnable = function()
+if F._hitConn then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if host and not F._hitGui then
+pcall(function()
+local sg = Instance.new("ScreenGui")
+sg.Name = "CM_HitFeed"
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.Parent = host
+F._hitGui = sg
+F._hitLines = {}
+for i = 1, 6 do
+local t = Instance.new("TextLabel")
+t.Size = UDim2.new(0, 220, 0, 18)
+t.Position = UDim2.new(0.5, -110, 0, 60 + (i - 1) * 18)
+t.BackgroundTransparency = 1
+t.Font = Enum.Font.Code
+t.TextSize = 14
+t.TextStrokeTransparency = 0.35
+t.Text = ""
+t.Visible = false
+t.Parent = sg
+F._hitLines[i] = t
+end
+end)
+end
+F._hitPrev = {}
+F._hitIdx = 0
+F._hitConn = RS.Heartbeat:Connect(function()
+if not T.CMX_HitFeed then F.CMX_HitFeedDisable() return end
+local now = os.clock()
+if now - (F._hitScanAt or 0) < 0.15 then return end
+F._hitScanAt = now
+local seen = {}
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum then
+seen[pl] = true
+local prev = F._hitPrev[pl]
+local hp, mx = hum.Health, math.max(hum.MaxHealth, 1)
+if prev then
+if hp < prev.h - 0.5 and prev.h > 0 then
+local lost = prev.h - hp
+F.CMX_HitFeedShow(string.format("%s  -%d  (剩 %d)", pl.Name, math.floor(lost + 0.5), math.floor(hp)),
+Color3.fromRGB(255, 170, 90))
+F.Out(string.format("[命中] %s 掉血 %d (剩 %d/%d)", pl.Name, math.floor(lost + 0.5), math.floor(hp), math.floor(mx)))
+end
+if hp <= 0 and prev.h > 0 then
+F.CMX_HitFeedShow("★ 击杀 " .. pl.Name, Color3.fromRGB(255, 90, 90))
+F.Out("[命中] ★ 击杀 " .. pl.Name)
+end
+end
+F._hitPrev[pl] = { h = hp }
+end
+end
+end
+for pl in pairs(F._hitPrev) do
+if not seen[pl] then F._hitPrev[pl] = nil end
+end
+if F._hitLines then
+for i = 1, #F._hitLines do
+local at = F._hitAt and F._hitAt[i] or 0
+if F._hitLines[i].Visible and now - at > 5 then
+F._hitLines[i].Visible = false
+end
+end
+end
+end)
+F.Out("[命中提示] 已开: 视野内玩家掉血/被击杀会在屏幕上滚动提示(并写日志)")
+end
+F.CMX_HitFeedDisable = function()
+if F._hitConn then pcall(function() F._hitConn:Disconnect() end) F._hitConn = nil end
+if F._hitGui then pcall(function() F._hitGui:Destroy() end) F._hitGui = nil end
+F._hitLines, F._hitPrev = nil, nil
+F.Out("[命中提示] 已关")
+end
+F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
+F.CMX_Remember = function(key, on)
+if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
+local list = C.CMX_BypassOn
+for i = #list, 1, -1 do
+if tostring(list[i]) == tostring(key) then table.remove(list, i) end
+end
+if on then list[#list + 1] = tostring(key) end
+end
+F.CMX_AutoScrubEnable = function()
+if F.CMX_AutoScrubOn then return false end
+local good = nil
+for i = 1, #F.CMX_ScrubShapes do
+local sh = F.CMX_ScrubShapes[i]
+local f = F.CMX_FindClosureFast(sh[1], sh[2])
+if f then
+local t = nil
+pcall(function() t = debug.getupvalue(f, sh[3]) end)
+if type(t) == "function" then good = { sh[1], sh[2], sh[3] } break end
+end
+end
+if not good then
+F.Out("[绕过·自动清洗] 常见形状全试完都没命中(执行器 getgc 受限?) ⇒ 改用「参数清洗钩子」手填形状")
+return false
+end
+F.CMX_ShapeOverride = tostring(good[1]) .. "," .. tostring(good[2]) .. "," .. tostring(good[3])
+F.CMX_AutoScrubOn = true
+local ok = F.CMX_ArgScrubEnable()
+if not ok then
+F.CMX_AutoScrubOn = false
+return false
+end
+F.Out("[绕过·自动清洗] 已开: 形状 " .. tostring(good[1]) .. "," .. tostring(good[2]) .. "," .. tostring(good[3])
+.. " 的第 " .. tostring(good[3]) .. " 个 upvalue 已挂钩")
+return true
+end
+F.CMX_AutoScrubDisable = function()
+if not F.CMX_AutoScrubOn then return end
+F.CMX_AutoScrubOn = false
+pcall(F.CMX_ArgScrubDisable)
+F.Out("[绕过·自动清洗] 已关")
+end
+F.CMX_HookHardApply = function()
+local nl = F.CMX_G("newlclosure")
+if type(nl) ~= "function" then
+T.CMX_HookHard = false
+F.Out("[绕过·钩子加固] 本执行器没有 newlclosure ⇒ 加固不可用, 其余绕过照常")
+return false
+end
+T.CMX_HookHard = true
+local n = 0
+for slot, bucket in pairs(F.MetaLayers or {}) do
+for id, rec in pairs(bucket) do
+if rec and rec.alive and type(rec.raw) == "function" and rec.box then
+local ok, w = pcall(nl, function(self, ...)
+if not rec.alive then return rec.box.orig(self, ...) end
+return rec.raw(self, ...)
+end)
+if ok and type(w) == "function" then
+local ok2 = pcall(function() hookmetamethod(rec.target, slot, w) end)
+if ok2 then rec.wrapper = w n = n + 1 end
+end
+end
+end
+end
+F.Out("[绕过·钩子加固] 已把 " .. tostring(n) .. " 层元方法钩子重建成 LClosure 形态"
+.. " —— 反作弊用 islclosure 自检钩子时会看到「这是个普通 Lua 函数」; 之后新装的钩子也走这条")
+return true
+end
+F.CMX_HookHardRestore = function()
+if not T.CMX_HookHard then return end
+T.CMX_HookHard = false
+local nc = F.CMX_G("newcclosure")
+if type(nc) ~= "function" then return end
+local n = 0
+for slot, bucket in pairs(F.MetaLayers or {}) do
+for id, rec in pairs(bucket) do
+if rec and rec.alive and type(rec.raw) == "function" and rec.box then
+local ok, w = pcall(nc, function(self, ...)
+if not rec.alive then return rec.box.orig(self, ...) end
+return rec.raw(self, ...)
+end)
+if ok and type(w) == "function" then
+local ok2 = pcall(function() hookmetamethod(rec.target, slot, w) end)
+if ok2 then rec.wrapper = w n = n + 1 end
+end
+end
+end
+end
+F.Out("[绕过·钩子加固] 已还原 " .. tostring(n) .. " 层为新 C 闭包形态")
+end
+F.CMX_IdentityMaskEnable = function()
+if F.CMX_IdentityOn then return false end
+local g = F.CMX_G("getthreadidentity") or F.CMX_G("getidentity")
+if type(g) == "function" then
+pcall(function() F.CMX_IdentitySaved = g() end)
+end
+local before = F.CMX_IdentitySaved
+local ok = F.CMX_SetIdentity(8)
+if not ok then return false end
+F.CMX_IdentityOn = true
+F.Out("[绕过·身份] 已伪装: 线程身份 " .. tostring(before or "?") .. " → 8")
+return true
+end
+F.CMX_IdentityMaskDisable = function()
+if not F.CMX_IdentityOn then return end
+F.CMX_IdentityOn = false
+local want = tonumber(F.CMX_IdentitySaved) or 2
+pcall(function() F.CMX_SetIdentity(want) end)
+F.CMX_IdentitySaved = nil
+F.Out("[绕过·身份] 已还原线程身份")
+end
+F.CMX_FFlagPreset = {
+{ "FFlagDebugDisableTelemetryV2", "true" },
+{ "DFIntTaskSchedulerTargetFps", "240" },
+}
+F.CMX_FFlagApplyPack = function()
+local sf = F.CMX_G("setfflag")
+if type(sf) ~= "function" then
+T.CMX_FFlagPack = false
+F.Out("[绕过·FFlag] 本执行器没有 setfflag ⇒ 该层不可用")
+return false
+end
+if F.CMX_FFlagOn then return false end
+local gf = F.CMX_G("getfflag")
+F.CMX_FFlagSaved = {}
+local n = 0
+for i = 1, #F.CMX_FFlagPreset do
+local k, v = F.CMX_FFlagPreset[i][1], F.CMX_FFlagPreset[i][2]
+if type(gf) == "function" then
+local ok, old = pcall(gf, k)
+if ok then F.CMX_FFlagSaved[k] = old end
+end
+local num = tonumber(v)
+local ok2 = pcall(sf, k, num ~= nil and num or v)
+if ok2 then n = n + 1 end
+end
+F.CMX_FFlagOn = true
+F.Out("[绕过·FFlag] 已写入预设 " .. tostring(n) .. "/" .. tostring(#F.CMX_FFlagPreset)
+.. " 条(遥测关闭 + 帧率上限) · 想加自己的一条用下面「写自定义 FFlag」")
+return n > 0
+end
+F.CMX_FFlagRestore = function()
+if not F.CMX_FFlagOn then return end
+F.CMX_FFlagOn = false
+local sf = F.CMX_G("setfflag")
+if type(sf) == "function" and type(F.CMX_FFlagSaved) == "table" then
+for k, v in pairs(F.CMX_FFlagSaved) do
+if v ~= nil then pcall(sf, k, v) end
+end
+end
+F.CMX_FFlagSaved = nil
+F.Out("[绕过·FFlag] 已尽力还原(取不到旧值的项无法还原, 重进游戏即可复位)")
+end
+F.CMX_AntiDetectAudit = function()
+F.Out("[反检测] ===== 自检: 我们会在哪些地方被看见 =====")
+local hooked, lc, cc = 0, 0, 0
+pcall(function()
+for fn in pairs(AC._hookedFns or {}) do
+hooked = hooked + 1
+if type(fn) == "function" and type(islclosure) == "function" then
+if islclosure(fn) then lc = lc + 1 else cc = cc + 1 end
+end
+end
+end)
+F.Out(string.format("[反检测] ① 我们钩过的函数 %d 个 · 其中 LClosure %d / C 闭包 %d", hooked, lc, cc))
+if cc > 0 and not T.CMX_HookHard then
+F.Out("[反检测]    ⚠ C 闭包形态会被「islclosure 自检」认出来 ⇒ 建议开「钩子加固(newlclosure)」")
+end
+local layers = 0
+pcall(function()
+for _ in pairs(F.MetaLayers or {}) do layers = layers + 1 end
+end)
+F.Out("[反检测] ② 已装的元方法拦截层 " .. tostring(layers) .. " 个(每个都是一次 hookmetamethod)")
+local inCore, inHui = 0, 0
+pcall(function()
+local hui = gethui and gethui()
+local core = game:GetService("CoreGui")
+for _, d in ipairs(core:GetChildren()) do
+local ours = false
+pcall(function() if d:GetAttribute("CMOwned") then ours = true end end)
+for _, k in ipairs(F.OUR_GUI_NAMES) do
+if string.find(tostring(d.Name), k, 1, true) then ours = true break end
+end
+if ours then
+if hui and d.Parent == hui then inHui = inHui + 1 else inCore = inCore + 1 end
+end
+end
+end)
+F.Out("[反检测] ③ 我们的界面: 在隐藏容器里 " .. tostring(inHui) .. " 个 · 直接挂在 CoreGui 明文可见 " .. tostring(inCore) .. " 个")
+if inCore > 0 then F.Out("[反检测]    ⚠ 明文挂在 CoreGui 的界面, 游戏用 CoreGui:GetChildren() 就能看到 ⇒ 点下面「一键藏匿」") end
+local mtRO = "?"
+pcall(function()
+local mt = getrawmetatable(game)
+if mt and type(isreadonly) == "function" then mtRO = tostring(isreadonly(mt)) end
+end)
+F.Out("[反检测] ④ game 元表只读状态 = " .. mtRO .. "(false 表示我们为了挂钩把它解锁了)")
+if F.CMX_ScrubOn or F.CMX_AutoScrubOn then
+F.Out("[反检测] ⑤ 参数清洗钩子: 开 · 已清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次")
+end
+F.Out("[反检测] 结论: 上面带 ⚠ 的项就是当前暴露面, 点「一键藏匿」能自动处理 ①③④")
+end
+F.CMX_AntiDetectHide = function()
+F.Out("[反检测] 正在藏匿…")
+pcall(F.CMX_AntiDetectAudit)
+if not T.CMX_HookHard and type(F.CMX_G("newlclosure")) == "function" then
+pcall(F.CMX_HookHardApply)
+end
+local moved = 0
+pcall(function()
+local hui = gethui and gethui()
+if not hui then return end
+local roots = { game:GetService("CoreGui") }
+pcall(function() roots[#roots + 1] = LP:FindFirstChild("PlayerGui") end)
+for _, r in ipairs(roots) do
+if r then
+for _, d in ipairs(r:GetChildren()) do
+local ours = false
+pcall(function() if d:GetAttribute("CMOwned") then ours = true end end)
+for _, k in ipairs(F.OUR_GUI_NAMES) do
+if string.find(tostring(d.Name), k, 1, true) then ours = true break end
+end
+if ours and d.Parent ~= hui then
+pcall(function() d.Parent = hui moved = moved + 1 end)
+end
+end
+end
+end
+end)
+local protected = 0
+local pg = F.CMX_G("protect_gui") or F.CMX_G("protectgui")
+if type(pg) == "function" then
+pcall(function()
+local hui = gethui and gethui()
+if not hui then return end
+for _, d in ipairs(hui:GetChildren()) do
+if pcall(pg, d) then protected = protected + 1 end
+end
+end)
+end
+local roFixed = false
+if type(F.MetaLayers) == "table" then
+local alive = false
+pcall(function()
+for _, bucket in pairs(F.MetaLayers) do
+for _, rec in pairs(bucket) do
+if rec and rec.alive then alive = true end
+end
+end
+end)
+if not alive then
+pcall(function()
+local mt = getrawmetatable(game)
+if mt and type(setreadonly) == "function" then setreadonly(mt, true) roFixed = true end
+end)
+end
+end
+F.Out("[反检测] 已藏匿: 界面挪进隐藏容器 " .. tostring(moved) .. " 个 · 加保护 " .. tostring(protected)
+.. " 个 · game 元表恢复只读 " .. (roFixed and "是" or "否(还有活着的钩子层, 不能恢复)"))
+end
+F.CMX_AutoRestoreApply = function()
+if not T.CMX_AutoRestore then return end
+local list = C.CMX_BypassOn
+if type(list) ~= "table" or #list == 0 then return end
+local map = {
+CMX_ScrubOn = function() F.CMX_ArgScrubEnable() end,
+CMX_AutoScrub = function() F.CMX_AutoScrubEnable() end,
+CMX_HookHard = function() F.CMX_HookHardApply() end,
+CMX_IdentityMask = function() F.CMX_IdentityMaskEnable() end,
+CMX_FFlagPack = function() F.CMX_FFlagApplyPack() end,
+CMX_SpoofIndex = function() F.CMX_SpoofIndexEnable() end,
+CMX_ViewFilter = function() F.CMX_ViewFilterEnable() end,
+CMX_Humanize = function() F.CMX_HumanizeEnable() end,
+CMX_InstNew = function() F.CMX_InstNewEnable() end,
+CMX_DebugMask = function() F.CMX_DebugMaskEnable() end,
+CMX_RequireBlock = function() F.CMX_RequireBlockEnable() end,
+CMX_ClockMask = function() F.CMX_ClockMaskEnable() end,
+CMX_HitFeed = function() F.CMX_HitFeedEnable() end,
+}
+local n = 0
+for i = 1, #list do
+local k = tostring(list[i])
+if map[k] then
+T[k] = true
+n = n + 1
+pcall(map[k])
+end
+end
+if n > 0 then
+F.Out("[自动恢复] 加载后自动开了 " .. tostring(n) .. " 层绕过(是你自己勾的「注入后自动开启」)")
+end
+end
+F.ACWriteTierApply = function(v)
+v = tostring(v or "")
+local on = v:find("②", 1, true) ~= nil or v:find("③", 1, true) ~= nil
+local deep = v:find("③", 1, true) ~= nil
+F.Out("[防护·改写档] = " .. v)
+if on then
+pcall(F.MetaHookEnsure)
+pcall(AC.InstallNamecallHook)
+pcall(AC.InstallIndexMask)
+pcall(AC.InstallSetmetatableHook)
+pcall(function() AC.DisableACConnections(true) end)
+pcall(function() AC.WatchNewScriptsEnable() end)
+pcall(function() AC.WatchNewRemotesEnable() end)
+F.Out("[防护·改写档] 已注入: 元表钩(__namecall/__index/setmetatable) + 拦 remote + 断了可疑监听 + 新脚本/新远程监视")
+else
+pcall(AC.UninstallNamecallHook)
+pcall(AC.UninstallIndexMask)
+pcall(AC.UninstallSetmetatableHook)
+pcall(function() AC.WatchNewScriptsDisable() end)
+pcall(function() AC.WatchNewRemotesDisable() end)
+F.Out("[防护·改写档] 已还原: 元表钩已卸, 不再改写游戏")
+end
+if deep then
+pcall(F.DeepNeuterEnable)
+else
+pcall(F.DeepNeuterDisable)
+end
+end
+F.CMX_ShapeOverride = nil
+F.CMX_ShapeDefault = "19,15,2"
+F.CMX_ScrubParse = function(txt)
+if txt == nil then txt = F.CMX_ShapeOverride end
+if txt == nil then txt = F.CMX_ShapeDefault end
+local a, b, c = tostring(txt or ""):match("^%s*(%d+)%s*[,%s]%s*(%d+)%s*[,%s]%s*(%d+)%s*$")
+if a and b then return tonumber(a), tonumber(b), tonumber(c) or 2 end
+return 19, 15, 2
+end
+F.CMX_ScanCapabilities = function()
+F.Out("[扫描·1/6 能力] ===== 执行器能力清单 =====")
+pcall(F.CMX_CapReport)
+end
+F.CMX_ScanHookLedger = function()
+F.Out("[扫描·2/6 钩子] ===== 本脚本已装的钩子 / 拦截层 =====")
+pcall(F.CMX_HookLedger)
+end
+F.CMX_ScanExposure = function()
+F.Out("[扫描·3/6 曝光面] ===== 我们会在哪里被看见 =====")
+pcall(F.CMX_AntiDetectAudit)
+end
+F.CMX_ScanStack = function()
+F.Out("[扫描·4/6 调用栈] ===== 当前调用栈 =====")
+pcall(F.CMX_StackDump)
+end
+F.CMX_ScanHidden = function()
+F.Out("[扫描·5/6 空实例] ===== Parent=nil 的对象(反作弊藏匿点) =====")
+pcall(F.CMX_NilInstReport)
+end
+F.CMX_ScanShapes = function()
+F.Out("[扫描·6/6 函数族] ===== 按常见形状自动找函数 + 逐条列常量 =====")
+for i = 1, #F.CMX_ScrubShapes do
+local sh = F.CMX_ScrubShapes[i]
+local txt = tostring(sh[1]) .. "," .. tostring(sh[2]) .. "," .. tostring(sh[3])
+F.CMX_ShapeOverride = txt
+pcall(F.CMX_FnInfo, txt)
+pcall(F.CMX_ConstList, txt)
+end
+F.CMX_ShapeOverride = nil
+end
+F.CMX_ScanBypassSurface = function()
+pcall(F.CMX_ScanCapabilities)
+pcall(F.CMX_ScanHookLedger)
+pcall(F.CMX_ScanExposure)
+pcall(F.CMX_ScanStack)
+pcall(F.CMX_ScanHidden)
+end
+F.CMX_ScanACFamily = function()
+pcall(F.CMX_ScanShapes)
+end
+F.CMX_ScanListeners = function()
+F.Out("[扫描·监听] ===== 谁在监听你的角色 / 相机 / 玩家 =====")
+if type(getconnections) ~= "function" then
+F.Out("[扫描·监听] 本执行器没有 getconnections, 跳过")
+return
+end
+local _, hum, root = GC()
+local cam = workspace.CurrentCamera
+local sigs = {}
+local function add(n, s) if s then sigs[#sigs + 1] = { n, s } end end
+add("LocalPlayer.Idled", LP.Idled)
+add("LocalPlayer.CharacterAdded", LP.CharacterAdded)
+add("LocalPlayer.OnTeleport", game:GetService("TeleportService").TeleportInitFailed)
+add("RunService.Heartbeat", RS.Heartbeat)
+add("RunService.Stepped", RS.Stepped)
+add("RunService.RenderStepped", RS.RenderStepped)
+add("Players.PlayerAdded", Players.PlayerAdded)
+if hum then
+add("Humanoid.Died", hum.Died)
+add("Humanoid.StateChanged", hum.StateChanged)
+end
+if root then
+add("RootPart.Touched", root.Touched)
+pcall(function()
+for _, p in ipairs({ "CFrame", "Position", "Velocity", "AssemblyLinearVelocity" }) do
+add("RootPart." .. p .. "Changed", root:GetPropertyChangedSignal(p))
+end
+end)
+end
+if cam then add("Camera.CFrameChanged", cam:GetPropertyChangedSignal("CFrame")) end
+local total, susp = 0, 0
+for i = 1, #sigs do
+local ok, conns = pcall(getconnections, sigs[i][2])
+if ok and type(conns) == "table" then
+total = total + #conns
+F.Out(string.format("[扫描·监听]   %-34s %d 条连接", sigs[i][1], #conns))
+for j = 1, #conns do
+local c = conns[j]
+local fn, src, nm = nil, "", ""
+pcall(function() fn = c.Function end)
+if fn == nil then pcall(function() fn = c.__function end) end
+if fn then
+pcall(function()
+local si = debug.getinfo(fn, "sln")
+src = tostring(si and si.source or "")
+nm = tostring(si and si.name or "")
+end)
+end
+local low = (src .. " " .. nm):lower()
+local bad = low:find("anti", 1, true) or low:find("detect", 1, true)
+or low:find("cheat", 1, true) or low:find("ban", 1, true)
+or low:find("kick", 1, true) or low:find("report", 1, true)
+if bad then
+susp = susp + 1
+if susp <= 20 then
+F.Out("[扫描·监听]     ⚠ 可疑: " .. sigs[i][1] .. " ← " .. nm .. " @ " .. src:sub(-70))
+end
+end
+end
+end
+end
+F.Out("[扫描·监听] 共 " .. tostring(total) .. " 条连接 · 可疑 " .. tostring(susp) .. " 条")
+end
+F.CMX_ScanAll = function()
+F.Out("[扫描] ===== 一键全扫描 开始 =====")
+pcall(F.CMX_ScanBypassSurface)
+pcall(F.CMX_ScanACFamily)
+pcall(F.CMX_ScanListeners)
+pcall(F.ScanScripts)
+pcall(F.ScanGameModules)
+pcall(F.ScanRemotes)
+pcall(F.ScanConnections)
+pcall(F.ScanClientChecks, true)
+pcall(F.CMX_ScanAutoHeal)
+pcall(F.LogFlush, "一键全扫描")
+F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
+end
+F.CMX_ScanAutoHeal = function()
+if not T.ScanAutoFix then return end
+F.Out("[扫描·处置] 已开 ⇒ 对扫到的可处置项直接动手")
+pcall(F.CMX_AntiDetectHide)
+pcall(function()
+if type(AC) == "table" and AC.DisableACConnections then AC.DisableACConnections(true) end
+end)
+F.Out("[扫描·处置] 完成(界面已藏 + 可疑监听按 force 模式已断)")
+end
+F.CMX_ScanExport = function()
+local lines = F._logBuf or {}
+local txt = table.concat(lines, "\n")
+local ok = false
+pcall(function()
+local sc = F.CMX_G("setclipboard") or F.CMX_G("toclipboard") or F.CMX_G("write_clipboard")
+if type(sc) == "function" then sc(txt) ok = true end
+end)
+F.Out("[扫描·导出] 日志 " .. tostring(#lines) .. " 行 / " .. tostring(#txt) .. " 字"
+.. (ok and " · 已复制到剪贴板, 直接粘给我就行" or " · 复制失败(执行器没剪贴板), 用下面「一键全量导出」"))
+end
+F.CMX_LoadAutoEnable = function()
+if T.CMX_AutoAll == false then
+F.Out("[自动开启] 你关掉了「加载后自动开启」⇒ 本次只恢复绕过层")
+task.delay(3, function() pcall(F.CMX_AutoRestoreApply) end)
+return
+end
+local delay = tonumber(C.CMX_AutoDelay)
+if delay == nil then delay = 10 end
+if delay < 0 then delay = 0 end
+if delay > 60 then delay = 60 end
+F.Out("[自动开启] 已开 ⇒ 等 " .. tostring(delay) .. " 秒(让游戏先加载完) 再分批恢复"
+.. " —— 同一帧装一堆钩子/写一堆属性正是被踢的形态, 所以分开做")
+task.delay(delay, function()
+if T.CMX_AutoAll == false then
+F.Out("[自动开启] 等待期间你关掉了 ⇒ 取消自动开启")
+return
+end
+local ok, err = pcall(F.RestoreSavedFeatures)
+if not ok then F.Out("[自动开启] 恢复功能时报错(已忽略, 不影响其他): " .. tostring(err)) end
+task.wait(2.5)
+local ok2 = pcall(F.CMX_AutoRestoreApply)
+if not ok2 then F.Out("[自动开启] 恢复绕过层时报错(已忽略)") end
+F.Out("[自动开启] 分批恢复完成")
+end)
+end
+F.CMX_ArgScrubEnable = function()
+if F.CMX_ScrubOn then return false end
+local nups, nconsts, upidx = F.CMX_ScrubParse()
+local f, seen = F.CMX_FindClosure(nups, nconsts)
+if not f then
+F.Out("[绕过·参数清洗] 形状(" .. tostring(nups) .. "," .. tostring(nconsts)
+.. ") 没找到闭包(已扫 " .. tostring(seen or 0) .. " 个) —— 换个形状或提高扫描上限")
+return false
+end
+local target = nil
+pcall(function() target = debug.getupvalue(f, upidx) end)
+if type(target) ~= "function" then
+F.Out("[绕过·参数清洗] 该闭包第 " .. tostring(upidx) .. " 个 upvalue 不是函数 —— 换 upindex(常见 2)")
+return false
+end
+local orig = nil
+local hits = 0
+local wrap = function(a1, a2, ...)
+if typeof(a2) == "table" then
+pcall(setmetatable, a2, {})
+hits = hits + 1
+F.CMX_ScrubHits = hits
+end
+if type(orig) ~= "function" then return nil end
+return orig(a1, a2, ...)
+end
+local o = F.CMX_SafeHook(target, wrap)
+if not o then
+F.Out("[绕过·参数清洗] hookfunction 失败(该函数被保护 / 执行器不支持)")
+return false
+end
+orig = o
+F.CMX_ScrubOrig = o
+F.CMX_ScrubHook = target
+F.CMX_ScrubOn = true
+F.CMX_ScrubHits = 0
+F.CMX_ScrubShape = { nups, nconsts, upidx }
+local sig = ""
+pcall(function()
+local si = debug.getinfo(target, "s")
+sig = tostring(si and si.source or "?") .. "#" .. tostring(si and si.linedefined or -1)
+end)
+F.CMX_ScrubSig = sig
+if not F.CMX_ScrubHeal then
+F.CMX_ScrubHeal = task.spawn(function()
+while F.CMX_ScrubOn do
+task.wait(8)
+if not F.CMX_ScrubOn then break end
+local cur = ""
+pcall(function()
+local si = debug.getinfo(F.CMX_ScrubHook, "s")
+cur = tostring(si and si.source or "?") .. "#" .. tostring(si and si.linedefined or -1)
+end)
+if cur ~= F.CMX_ScrubSig then
+F.Out("[绕过·参数清洗] 目标函数被重建 ⇒ 正在重新定位并重装钩子")
+local sp = F.CMX_ScrubShape
+pcall(F.CMX_ArgScrubDisable)
+if sp then
+F.CMX_ShapeOverride = tostring(sp[1]) .. "," .. tostring(sp[2]) .. "," .. tostring(sp[3])
+pcall(F.CMX_ArgScrubEnable)
+end
+F.CMX_ScrubHealFix = (F.CMX_ScrubHealFix or 0) + 1
+end
+end
+F.CMX_ScrubHeal = nil
+end)
+end
+F.Out("[绕过·参数清洗] 已开: 形状(" .. tostring(nups) .. "," .. tostring(nconsts)
+.. ") 的第 " .. tostring(upidx) .. " 个 upvalue 已挂钩 · 参数表元表会被抹成空表(反指纹检测)")
+return true
+end
+F.CMX_ArgScrubDisable = function()
+if not F.CMX_ScrubOn then return end
+F.CMX_ScrubOn = false
+pcall(function()
+if F.CMX_ScrubHook and F.CMX_ScrubOrig then hookfunction(F.CMX_ScrubHook, F.CMX_ScrubOrig) end
+end)
+F.CMX_ScrubHook, F.CMX_ScrubOrig = nil, nil
+F.Out("[绕过·参数清洗] 已关 · 本次共清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次参数表")
+end
+F.CMX_StackDump = function()
+F.Out("[绕过·栈] ===== 当前调用栈(从内往外) =====")
+local i, n = 1, 0
+while n < 25 do
+local info = nil
+pcall(function() info = debug.getinfo(i, "sln") end)
+if not info then break end
+n = n + 1
+local src = tostring(info.source or "?")
+if #src > 70 then src = "..." .. src:sub(-67) end
+F.Out(string.format("[绕过·栈]   #%d %-22s %s : %s", i, tostring(info.name or "(匿名)"),
+tostring(info.what or "?"), src))
+i = i + 1
+end
+F.Out("[绕过·栈] 共 " .. tostring(n) .. " 层 (想知道「谁在调用这个函数」就这么看)")
+end
+F.CMX_NilInstReport = function()
+local f = F.CMX_G("getnilinstances")
+if type(f) ~= "function" then
+F.Out("[绕过·空实例] 本执行器没有 getnilinstances —— 换 getinstances 也试一下")
+f = F.CMX_G("getinstances")
+end
+if type(f) ~= "function" then
+F.Out("[绕过·空实例] 该执行器不支持, 跳过")
+return false
+end
+local list = nil
+pcall(function() list = f() end)
+if type(list) ~= "table" then
+F.Out("[绕过·空实例] 取不到结果")
+return false
+end
+F.Out("[绕过·空实例] 共 " .. tostring(#list) .. " 个 Parent=nil 的实例(反作弊最爱藏这儿)")
+local byClass = {}
+local mine = 0
+for i = 1, #list do
+local o = list[i]
+local cn = "?"
+pcall(function() cn = tostring(o.ClassName) end)
+byClass[cn] = (byClass[cn] or 0) + 1
+pcall(function()
+if o:GetAttribute("CMOwned") then mine = mine + 1 end
+end)
+end
+local arr = {}
+for k, v in pairs(byClass) do arr[#arr + 1] = { k, v } end
+table.sort(arr, function(a, b) return a[2] > b[2] end)
+for i = 1, math.min(#arr, 25) do
+F.Out(string.format("[绕过·空实例]   %-30s %d", tostring(arr[i][1]), arr[i][2]))
+end
+F.Out("[绕过·空实例] 本脚本自己的 " .. tostring(mine) .. " 个(可忽略)")
+end
+F.CMX_CapReport = function()
+local list = {
+"newlclosure", "newcclosure", "islclosure", "clonefunction", "replaceclosure",
+"hookfunction", "hookmetamethod", "getrawmetatable", "setreadonly", "isreadonly",
+"getconnections", "firesignal", "hooksignal", "checkcaller", "cloneref",
+"sethiddenproperty", "gethiddenproperty", "setthreadidentity", "getthreadidentity",
+"setfflag", "getfflag", "getcallbackvalue", "filtergc", "compareinstances",
+"decompile", "getscriptbytecode", "getscriptsource", "getloadedmodules", "getnilinstances",
+"queue_on_teleport", "protect_gui", "gethui", "getcustomasset", "mousemoverel",
+"mouse1press", "keypress", "fireclickdetector", "firetouchinterest", "fireproximityprompt",
+"setclipboard", "identifyexecutor",
+}
+local ok, miss = 0, {}
+F.Out("[绕过·能力] ===== 执行器能力总览 =====")
+for i = 1, #list do
+local v = F.CMX_G(list[i])
+if v ~= nil then
+ok = ok + 1
+F.Out(string.format("[绕过·能力]   ✓ %-22s %s", list[i], type(v)))
+else
+miss[#miss + 1] = list[i]
+end
+end
+F.Out("[绕过·能力] 可用 " .. tostring(ok) .. "/" .. tostring(#list))
+if #miss > 0 then F.Out("[绕过·能力] ✗ 缺失: " .. table.concat(miss, ", ")) end
+pcall(function()
+F.Out("[绕过·能力]   当前线程身份 = " .. tostring(getthreadidentity and getthreadidentity() or "?"))
+end)
+end
+F.CMX_SetIdentity = function(n)
+local f = F.CMX_G("setthreadidentity") or F.CMX_G("setidentity")
+if type(f) ~= "function" then
+F.Out("[绕过·身份] 本执行器没有 setthreadidentity/setidentity —— 无法改线程身份")
+return false
+end
+local want = tonumber(n) or 8
+local ok = pcall(f, want)
+local now = "?"
+pcall(function()
+local g = F.CMX_G("getthreadidentity") or F.CMX_G("getidentity")
+if type(g) == "function" then now = tostring(g()) end
+end)
+F.Out("[绕过·身份] " .. (ok and ("已设为 " .. tostring(want)) or "设置被拒") .. " · 当前读回 = " .. now)
+return ok
+end
+F.CMX_FnInfo = function(txt)
+local a, b, c = F.CMX_ScrubParse(txt)
+local f, seen = F.CMX_FindClosure(a, b)
+if not f then
+F.Out("[绕过·定位] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 无命中(扫了 " .. tostring(seen or 0) .. " 个)")
+return false
+end
+F.Out("[绕过·定位] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 命中 · 开始逐层展开 upvalue:")
+local n = 0
+pcall(function()
+local ops = debug.getupvalues(f)
+if ops then
+for i = 1, #ops do
+local v = ops[i]
+n = n + 1
+if n > 20 then break end
+local kind = typeof(v)
+local extra = ""
+if type(v) == "string" then extra = " = " .. v:sub(1, 60) end
+if type(v) == "number" then extra = " = " .. tostring(v) end
+F.Out(string.format("[绕过·定位]   upvalue[%d] %s%s", i, kind, extra))
+end
+end
+end)
+local t = nil
+pcall(function() t = debug.getupvalue(f, c or 2) end)
+if type(t) == "function" then
+F.Out("[绕过·定位] upvalue[" .. tostring(c or 2) .. "] 是函数 ⇒ 可直接用「参数清洗钩子」(upindex=" .. tostring(c or 2) .. ")")
+end
+return true
+end
+F.InstantInteractAutoLoop = function()
+if F._iiAuto then return end
+F._iiAuto = task.spawn(function()
+while T.InstantInteract do
+local igap = 0.6
+if F.CMX_HumanizeOn then igap = F.CMX_Jitter(0.6, 0.3) end
+task.wait(igap)
+if not T.InstantInteract then break end
+if tostring(C.IILevel or "①"):find("③", 1, true) then
+local _, _, root = GC()
+if root then
+pcall(function()
+local n = 0
+for _, d in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 6000 then break end
+if d:IsA("ProximityPrompt") and d.Enabled and d.Parent and d.Parent:IsA("BasePart") then
+if (d.Parent.Position - root.Position).Magnitude <= 60 then
+pcall(function()
+d.HoldDuration = 0
+d.MaxActivationDistance = 1000000
+d.InputHoldBegin:Fire()
+end)
+end
+end
+end
+end)
+end
+end
+end
+F._iiAuto = nil
+end)
+end
+F.AntiAFKInputLoop = function()
+if F._afkInput then return end
+F._afkInput = task.spawn(function()
+while T.AntiAFK do
+local mode = tostring(C.AFKMode or "")
+if mode:find("鼠标抖动", 1, true) then
+local mm = F.CMX_G("mousemoverel")
+if type(mm) == "function" then
+pcall(mm, 40, 0)
+task.wait(0.05)
+pcall(mm, -40, 0)
+else
+local vu = F.CMX_G("VirtualUser")
+if vu then
+pcall(function()
+vu:CaptureController()
+vu:MoveMouse(Vector2.new(60, 60))
+end)
+end
+end
+end
+if mode:find("按键注入", 1, true) then
+local kp, kr = F.CMX_G("keypress"), F.CMX_G("keyrelease")
+if type(kp) == "function" and type(kr) == "function" then
+pcall(kp, 0x20)
+task.wait(0.06)
+pcall(kr, 0x20)
+else
+local vim = nil
+pcall(function() vim = game:GetService("VirtualInputManager") end)
+if vim then
+pcall(function()
+vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+task.wait(0.06)
+vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+end)
+end
+end
+end
+local agap = 30
+if F.CMX_HumanizeOn then agap = F.CMX_Jitter(30, 0.4) end
+task.wait(agap)
+end
+F._afkInput = nil
+end)
+end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
@@ -7887,6 +10047,18 @@ T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = false, Callback = function(v) T.AimWallCheck = v end })
+Tabs.Combat:AddToggle("CMX_AimPredict", { Title = "弹道预判(打移动目标时提前量 · 打枪战/弓箭必备)", Description = "对移动中的目标按「距离 ÷ 弹速」算出提前量再瞄。打瞬发武器(近战/射线枪)请关掉", Default = false, Callback = function(v)
+T.CMX_AimPredict = v
+if F._cfgSyncing then return end
+if v then F.Out("[自瞄] 弹道预判已开 · 当前弹速 " .. tostring(C.CMX_ProjSpeed or 300) .. " 格/秒") end
+end })
+Tabs.Combat:AddSlider("CMX_ProjSpeed", { Title = "弹速(格/秒 · 枪一般 200~600, 弓箭 100~200)", Min = 30, Max = 2000, Default = 300, Rounding = 0, Callback = function(v) C.CMX_ProjSpeed = v end })
+Tabs.Combat:AddToggle("CMX_ProjDrop", { Title = "弹道预判 · 补下落(远距离抛物线)", Default = false, Callback = function(v) T.CMX_ProjDrop = v C.CMX_ProjDrop = v end })
+Tabs.Combat:AddToggle("CMX_HitFeed", { Title = "命中提示(视野内玩家掉血/被击杀 → 屏幕滚动提示 + 日志)", Default = false, Callback = function(v)
+T.CMX_HitFeed = v
+if F._cfgSyncing then return end
+if v then F.CMX_HitFeedEnable() else F.CMX_HitFeedDisable() end
+end })
 Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v)
 T.FovCircle = v
 if F._cfgSyncing then return end
@@ -7935,9 +10107,25 @@ Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", 
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddDropdown("FlyDrive", { Title = "飞行驱动方式(改完立刻生效, 不用重开)", Values = {
+"速度驱动(LinearVelocity · 现状: 快、稳)",
+"位置约束(AlignPosition · 速度交给引擎算, 对只查速度的检测更钝)",
+}, Default = "速度驱动(LinearVelocity · 现状: 快、稳)", Callback = function(v)
+C.FlyDrive = v
+if F._cfgSyncing then return end
+if T.FlyOn then F.FlySet(true) end
+end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddDropdown("SpeedDrive", { Title = "加速驱动方式(改完立刻生效, 不用重开)", Values = {
+"速度驱动(直接写线性速度 · 现状: 快)",
+"意图驱动(Humanoid:Move · 不写 WalkSpeed 也不写速度, 对只查速度的检测更钝; 斜坡/台阶效率低)",
+}, Default = "速度驱动(直接写线性速度 · 现状: 快)", Callback = function(v)
+C.SpeedDrive = v
+if F._cfgSyncing then return end
+if T.SpeedOn then F.SpeedSet(true) end
+end })
 Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
 "关(什么都不开)",
 "① 默认: 防挂机(不动人物 · 不装钩子)",
@@ -7969,6 +10157,18 @@ T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
+Tabs.Move:AddDropdown("IILevel", { Title = "瞬间交互强度(改完立刻对已处理的交互点生效)", Values = {
+"① 只改长按(现状)",
+"② 上面 + 免视线 + 拉大触发距离",
+"③ 上面 + 自动触发(每 0.6s 替你按 · 最激进)",
+}, Default = "① 只改长按(现状)", Callback = function(v)
+C.IILevel = v
+if F._cfgSyncing then return end
+if not T.InstantInteract then return end
+pcall(F.InstantInteractDisable)
+T.InstantInteract = true
+pcall(F.InstantInteractEnable)
+end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
@@ -7995,6 +10195,22 @@ end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
+Tabs.Move:AddSection("★ 补强 · 抄自近30天公开脚本")
+Tabs.Move:AddToggle("CMX_Gravity", { Title = "低重力场(改 workspace.Gravity · 关时还原)", Default = false, Callback = function(v)
+T.CMX_Gravity = v
+if F._cfgSyncing then return end
+if v then F.CMX_GravityEnable() else F.CMX_GravityDisable() end
+end })
+Tabs.Move:AddSlider("CMX_GravityValue", { Title = "低重力值(196.2 = 原版)", Min = 0, Max = 196, Default = 60, Rounding = 0, Callback = function(v)
+C.CMX_GravityValue = v
+if F._cfgSyncing then return end
+if T.CMX_Gravity then F.CMX_GravityApply() end
+end })
+Tabs.Move:AddToggle("CMX_Anchor", { Title = "自身锚定(钉在原地 · 关时还原原值)", Default = false, Callback = function(v)
+T.CMX_Anchor = v
+if F._cfgSyncing then return end
+if v then F.CMX_AnchorEnable() else F.CMX_AnchorDisable() end
+end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(只描边不糊本体)", Default = false, Callback = function(v)
 T.BodyHL = v
@@ -8010,8 +10226,8 @@ Tabs.World:AddSection("画面增强")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮+夜视+去雾)", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
 if F._cfgSyncing then return end
-if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable()
-else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() end
+if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable() pcall(F.LightWatchEnable)
+else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() pcall(F.LightWatchDisable) end
 end })
 Tabs.World:AddToggle("ViewBoost", { Title = "视角增强(FOV+无限缩放)", Default = false, Callback = function(v)
 T.FOV = v T.Zoom = v
@@ -8072,7 +10288,42 @@ if v then F.LockCamEnable() else F.LockCamDisable() end
 end })
 end
 do
+Tabs.World:AddSection("★ 补强 · 方框 ESP(抄自近30天公开脚本)")
+Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
+T.CMX_BoxESP = v
+if F._cfgSyncing then return end
+if v then F.CMX_BoxESPEnable() else F.CMX_BoxESPDisable() end
+end })
+Tabs.World:AddToggle("CMX_Bones", { Title = "骨骼 ESP(头-身-四肢连线 · R15/R6 自动)", Default = false, Callback = function(v)
+T.CMX_Bones = v
+if F._cfgSyncing then return end
+if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
+end })
+Tabs.World:AddToggle("CMX_Tracer", { Title = "追踪线(从屏幕下方 / 中心连到目标)", Default = false, Callback = function(v)
+T.CMX_Tracer = v
+if F._cfgSyncing then return end
+if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
+end })
+Tabs.World:AddDropdown("CMX_TracerFrom", { Title = "追踪线起点", Values = { "屏幕下方", "屏幕中心" }, Default = "屏幕下方", Callback = function(v) C.CMX_TracerFrom = v end })
+Tabs.World:AddToggle("CMX_HealthBar", { Title = "血量条(左边竖条 · 绿→红)", Default = false, Callback = function(v)
+T.CMX_HealthBar = v
+if F._cfgSyncing then return end
+if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
+end })
+Tabs.World:AddToggle("CMX_AdornESP", { Title = "方框ESP · BoxHandleAdornment(不需要 Drawing 库)", Default = false, Callback = function(v)
+T.CMX_AdornESP = v
+if F._cfgSyncing then return end
+if v then F.CMX_AdornESPEnable() else F.CMX_AdornESPDisable() end
+end })
 Tabs.TP:AddSection("传送")
+Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收藏点位 全部适用)", Values = {
+"分步瞬移(现状 · 每步抢网络所有权, 最稳)",
+"补间步进(TweenService 平滑过渡 · 不抢所有权, 长距离更容易被拉回)",
+}, Default = "分步瞬移(现状 · 每步抢网络所有权, 最稳)", Callback = function(v)
+C.TPStep = v
+if F._cfgSyncing then return end
+end })
+Tabs.TP:AddSlider("TweenDur", { Title = "补间传送时长(秒 · 只在上面选「补间步进」时生效)", Min = 0.1, Max = 5, Default = 0.8, Rounding = 1, Callback = function(v) C.TweenDur = v end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
@@ -8102,7 +10353,17 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
+Tabs.TP:AddSection("★ 补强 · 平滑传送(抄自近30天公开脚本)")
 Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddDropdown("AFKMode", { Title = "防挂机方式(改完立刻生效)", Values = {
+"不动人物(现状 · 只掐检测连接 + 写心跳属性)",
+"上面 + 鼠标抖动(不按键、不碰人物)",
+"上面 + 鼠标抖动 + 按键注入(空格 / 虚拟点击)",
+}, Default = "不动人物(现状 · 只掐检测连接 + 写心跳属性)", Callback = function(v)
+C.AFKMode = v
+if F._cfgSyncing then return end
+if T.AntiAFK then F.AntiAFKDisable() F.AntiAFKEnable() end
+end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -8159,6 +10420,13 @@ T.AutoSell = v
 if F._cfgSyncing then return end
 if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已停止(当前这一轮会跑完)") end
 end })
+Tabs.AFK:AddSection("★ 补强 · 挂机(抄自近30天公开脚本)")
+Tabs.AFK:AddToggle("CMX_ClickSpam", { Title = "自动点击采集(遍历附近 ClickDetector / 提示并触发)", Default = false, Callback = function(v)
+T.CMX_ClickSpam = v
+if F._cfgSyncing then return end
+if v then F.CMX_ClickSpamEnable() else F.CMX_ClickSpamDisable() end
+end })
+Tabs.AFK:AddSlider("CMX_ClickRange", { Title = "自动点击半径(格)", Min = 5, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.CMX_ClickRange = v end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -8226,47 +10494,134 @@ Duration = 8,
 })
 end)
 end })
-Tabs.AC:AddSection("扫描补强(一个下拉全搞定 · 选完自动复位)")
+Tabs.AC:AddSection("★ 扫描 / 收集(全自动 · 无参数 · 结果直接导出给我)")
 Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行(选完自动复位)", Values = {
-"关闭", "按形状找函数(高级参数填 19,15)",
-"按常量字符串找函数(高级参数填 词1,词2)", "客户端检测扫描(脚本名 + 连接来源)",
+"关闭",
+"① 绕过面扫描(能力清单 + 钩子台账 + 曝光面 + 调用栈 + 空实例)",
+"② 反作弊函数族扫描(常见形状自动找 + 逐条列常量)",
+"③ 监听来源扫描(谁在监听你的角色 / 相机 / 玩家)",
+"④ 脚本与模块扫描(可疑脚本名 + 已加载模块 + 远程)",
+"⑤ 客户端检测扫描(检测名 + 连接来源)",
+"⑥ 一键全扫描(上面全部跑一遍 + 自动导出)",
 }, Default = "关闭", Callback = function(v)
 if v == "关闭" then return end
-local box = Fluent and Fluent.Options and Fluent.Options.AdvArg
-local txt = box and tostring(box.Value or "") or ""
+local which = v
 task.spawn(function()
 pcall(function()
-if v:find("按形状", 1, true) then
-local a, b = txt:match("^(%d+)[,%s]+(%d+)$")
-if a and b then
-F.FindByShape(tonumber(a), tonumber(b))
-else
-F.Out("[形状] 高级参数为空或格式不对 —— 形状就是 (upvalue 个数, 常量个数), 例如 19,15")
-end
-elseif v:find("按常量字符串", 1, true) then
-local list = {}
-for w in txt:gmatch("[^,，]+") do
-local t = w:gsub("^%s+", ""):gsub("%s+$", "")
-if #t > 0 then list[#list + 1] = t end
-end
-if #list > 0 then
-F.ScanByConstants(list, "all")
-else
-F.Out("[按常量] 高级参数为空 —— 填你从脚本/日志里看到的原文, 例如 anti-cheat,speed")
-end
-elseif v:find("客户端检测", 1, true) then
-pcall(F.ScanClientChecks, true)
+if which:find("①", 1, true) then
+F.CMX_ScanBypassSurface()
+elseif which:find("②", 1, true) then
+F.CMX_ScanACFamily()
+elseif which:find("③", 1, true) then
+F.CMX_ScanListeners()
+elseif which:find("④", 1, true) then
+pcall(F.ScanScripts) pcall(F.ScanGameModules) pcall(F.ScanRemotes)
+elseif which:find("⑤", 1, true) then
+pcall(F.ScanClientChecks, true) pcall(F.ScanConnections)
+elseif which:find("⑥", 1, true) then
+F.CMX_ScanAll()
 end
 end)
-pcall(F.LogFlush, "扫描补强")
+pcall(F.LogFlush, "扫描")
+Fluent:Notify({ Title = "扫描完成", Content = "结果已进控制台(F9)与日志 · 点下面「复制扫描结果」直接给我", Duration = 8 })
 task.defer(function()
 local op = Fluent and Fluent.Options and Fluent.Options.AdvScan
 if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
 end)
 end)
 end })
-Tabs.AC:AddInput("AdvArg", { Title = "高级参数(可留空 = 走全自动): 形状写 19,15 · 关键词写 词1,词2", Default = "",
-Placeholder = "留空 = 走全自动", Callback = function() end })
+Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", Callback = function() task.spawn(function() pcall(F.CMX_ScanExport) end) end })
+Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
+T.ScanAutoFix = v
+end })
+Tabs.AC:AddSection("★ 绕过(能实际生效的层 · 自己开)")
+Tabs.AC:AddToggle("CMX_AutoScrub", { Title = "① 参数清洗(全自动 · 免填形状)", Description = "自动试常见形状 → 命中就挂钩 → 每次调用把反作弊回调的参数表元表抹成空表 → 带自愈", Default = false, Callback = function(v)
+T.CMX_AutoScrub = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_AutoScrub", v)
+if v then F.CMX_AutoScrubEnable() else F.CMX_AutoScrubDisable() end
+end })
+Tabs.AC:AddToggle("CMX_HookHard", { Title = "② 钩子加固(newlclosure · 让我们的钩子看起来还是普通 Lua 函数)", Description = "反作弊用 islclosure 自检「这函数是不是被换成 C 闭包了」; 开了之后所有元方法钩子(含防踢/远程拦截)重建成 LClosure 形态", Default = false, Callback = function(v)
+T.CMX_HookHard = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_HookHard", v)
+if v then F.CMX_HookHardApply() else F.CMX_HookHardRestore() end
+end })
+Tabs.AC:AddToggle("CMX_IdentityMask", { Title = "③ 线程身份伪装(提到 8 · 关时还原)", Default = false, Callback = function(v)
+T.CMX_IdentityMask = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_IdentityMask", v)
+if v then F.CMX_IdentityMaskEnable() else F.CMX_IdentityMaskDisable() end
+end })
+Tabs.AC:AddToggle("CMX_FFlagPack", { Title = "④ FFlag 反检测包(预设: 遥测关闭 + 帧率上限)", Default = false, Callback = function(v)
+T.CMX_FFlagPack = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_FFlagPack", v)
+if v then F.CMX_FFlagApplyPack() else F.CMX_FFlagRestore() end
+end })
+Tabs.AC:AddToggle("CMX_SpoofIndex", { Title = "⑤ 属性读回伪装(别人读你的 速度/角速度/位置/CFrame → 按合法速度平滑后的值)", Description = "防御方语料里出现最多的检测就是「读位置(207份)/读线性速度(20份)」。开了之后反作弊读到你角色的速度会被压到合法值、位置会按合法速度平滑推进; 我们自己(加速/飞行/传送)读到的仍是真值", Default = false, Callback = function(v)
+T.CMX_SpoofIndex = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_SpoofIndex", v)
+if v then F.CMX_SpoofIndexEnable() else F.CMX_SpoofIndexDisable() end
+end })
+Tabs.AC:AddToggle("CMX_SpoofPos", { Title = "⑤b 位置/CFrame 也伪装(默认关 · 会扰乱游戏自己的区域/门窗/NPC 判定, 慎开)", Description = "只开⑤时: 反作弊读你的速度/角速度会被压到合法值, 但读到的位置是真的。开了这一项位置也会被平滑 ⇒ 更隐蔽, 但游戏自己按位置判定的机制(传送带/触发区/NPC 索敌)会跟着不准", Default = false, Callback = function(v)
+T.CMX_SpoofPos = v
+if F._cfgSyncing then return end
+F.Out("[绕过·属性伪装] 位置/CFrame 伪装 = " .. (v and "开(注意游戏判定可能异常)" or "关(只伪装速度和角速度)"))
+end })
+Tabs.AC:AddToggle("CMX_ViewFilter", { Title = "⑥ 视图过滤(反作弊遍历你的角色时, 看不见我们挂的约束/附件/方框)", Description = "反作弊常用 GetChildren/GetDescendants 找角色里的异常实例(飞行约束、附件、方框)。开了之后这类遍历看不到我们的东西; 我们自己的遍历不受影响", Default = false, Callback = function(v)
+T.CMX_ViewFilter = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_ViewFilter", v)
+if v then F.CMX_ViewFilterEnable() else F.CMX_ViewFilterDisable() end
+end })
+Tabs.AC:AddToggle("CMX_Humanize", { Title = "⑦ 自动化去机械化(自动点击/自动交互/挂机注入 的间隔加随机抖动)", Description = "固定间隔会被统计检测抓(官方给的规避建议第一条就是加随机)。开了之后这些循环的等待时间变成 0.7~1.3 倍随机", Default = false, Callback = function(v)
+T.CMX_Humanize = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_Humanize", v)
+if v then F.CMX_HumanizeEnable() else F.CMX_HumanizeDisable() end
+end })
+Tabs.AC:AddToggle("CMX_InstNew", { Title = "⑧ 自产登记(钩 Instance.new · 我们自己建的东西自动隐身)", Description = "开了之后凡是**我们**创建的实例(约束/附件/方框/临时件)自动登记; 配合⑥的视图过滤, 反作弊遍历时不用再靠名字就能看不见它们。游戏自己创建的不受影响", Default = false, Callback = function(v)
+T.CMX_InstNew = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_InstNew", v)
+if v then F.CMX_InstNewEnable() else F.CMX_InstNewDisable() end
+end })
+Tabs.AC:AddToggle("CMX_DebugMask", { Title = "⑨ 栈取证伪装(反作弊用 debug.info 查栈时, 我们的代码显示成官方脚本)", Description = "反作弊做栈取证时会看到调用来源是执行器加载的脚本 —— 这是最硬的证据之一。开了之后, 反作弊查到的 source 会显示成 @game/PlayerScripts/PlayerModule/ControlModule; 我们自己查栈拿到的仍是真信息", Default = false, Callback = function(v)
+T.CMX_DebugMask = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_DebugMask", v)
+if v then F.CMX_DebugMaskEnable() else F.CMX_DebugMaskDisable() end
+end })
+Tabs.AC:AddToggle("CMX_RequireBlock", { Title = "⑩ 模块拦截(名字带 anticheat/detector/integrity/checksum 的模块加载被拦下)", Description = "部分反作弊把检测逻辑放在 ModuleScript 里, 靠 require 加载。开了之后这类模块加载失败(返回空模块), 反作弊那部分逻辑直接不启动", Default = false, Callback = function(v)
+T.CMX_RequireBlock = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_RequireBlock", v)
+if v then F.CMX_RequireBlockEnable() else F.CMX_RequireBlockDisable() end
+end })
+Tabs.AC:AddToggle("CMX_ClockMask", { Title = "⑪ 时钟粗化(别人量时间只能拿到 0.1 秒整数倍)", Description = "反作弊靠 os.clock 算「两次动作间隔」来判断你是不是机器(10ms 一次必是人不可能做到)。开了之后别人量到的时间被粗化到 0.1 秒整数倍, 量不出我们的节奏; 我们自己量时间仍精确", Default = false, Callback = function(v)
+T.CMX_ClockMask = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_ClockMask", v)
+if v then F.CMX_ClockMaskEnable() else F.CMX_ClockMaskDisable() end
+end })
+Tabs.AC:AddSlider("CMX_AutoDelay", { Title = "自动开启延迟(秒 · 让游戏先加载完, 避免同一帧装一堆钩子被踢)", Min = 0, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.CMX_AutoDelay = v end })
+Tabs.AC:AddToggle("CMX_AutoAll", { Title = "★ 加载后自动开启(恢复你上次开着的全部功能 · 含玩法与绕过)", Description = "默认开。关掉它就退回「只恢复绕过层, 玩法不自动开」", Default = true, Callback = function(v)
+T.CMX_AutoAll = v
+if F._cfgSyncing then return end
+F.Out("[自动开启] " .. (v and "已开: 下次加载会自动恢复上次开着的全部功能" or "已关: 加载后只恢复绕过层"))
+end })
+Tabs.AC:AddSection("★ 防护 · 改写档(把「反作弊主开关」也接上会改游戏的手段)")
+Tabs.AC:AddDropdown("ACWriteTier", { Title = "主开关注入的改写强度(叠加在「防护」开关之上)", Values = {
+"① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)",
+"② + 元表钩(拦 remote / 属性读回伪装) + 断可疑监听",
+"③ + 深度中和(按名中和检测函数 · 最激进)",
+}, Default = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)", Callback = function(v)
+T.ACWriteTier = v
+if F._cfgSyncing then return end
+pcall(F.ACWriteTierApply, v)
+end })
 Tabs.AC:AddSection("采集与导出")
 Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -8333,6 +10688,10 @@ end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能; 要强制重下用上面的诊断下拉)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
+Tabs.Setting:AddSection("★ 补强 · 诊断(抄自近30天公开脚本)")
+Tabs.Setting:AddButton({ Title = "网络所有权只读诊断(本机/相机/其他玩家的归属 · 不改任何东西)", Callback = function() task.spawn(function() pcall(F.CMX_NetOwnerReport) end) end })
+Tabs.Setting:AddButton({ Title = "包围盒只读诊断(角色精确包围盒 + 半径内部件数)", Callback = function() task.spawn(function() pcall(F.CMX_BBReport) end) end })
+Tabs.Setting:AddButton({ Title = "★ 补强功能一键全关(只关本轮新增的那些)", Callback = function() task.spawn(function() pcall(F.CMX_DisableAll) end) end })
 F.UnloadAll = UnloadAll
 pcall(function()
 local g = getgenv and getgenv()
@@ -8380,6 +10739,7 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 .. " · writefile:" .. _wf .. " —— 标“无”的项只影响依赖它的子功能, 不会让整个脚本失效")
 end)
 RestoreFeatures()
+pcall(F.CMX_LoadAutoEnable)
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
