@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 21:35 sha cbfc66fa bytes 311394'):format('2026-10-02 21:35','cbfc66fa',311394))
+print(('[CheatMenu] build 2026-10-02 21:44 sha 9cff223d bytes 311273'):format('2026-10-02 21:44','9cff223d',311273))
 local F = {}
-F.VERSION = "v11.9.0"
+F.VERSION = "v11.9.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3614,7 +3614,12 @@ F._steadyConn = RS.Heartbeat:Connect(function()
 if not T.SteadyOn then F.SteadyDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-if not hum.PlatformStand then pcall(function() F.SteadyStates(false) end) end
+if not hum.PlatformStand then
+if (F._steadySetFor ~= hum) or (os.clock() - (F._steadySetAt or 0) > 5) then
+F._steadySetFor, F._steadySetAt = hum, os.clock()
+pcall(function() F.SteadyStates(false) end)
+end
+end
 if F.OnMovingFloor() then
 if not F._steadyFloorLog then
 F._steadyFloorLog = true
@@ -4616,11 +4621,6 @@ end
 end)
 end
 function F.FlyDestroy()
-if F._flyPreWalk then
-local _, hum2 = GC()
-if hum2 then pcall(function() hum2.WalkSpeed = tonumber(F._flyPreWalk) or 16 end) end
-F._flyPreWalk = nil
-end
 if F._flyConn then F._flyConn:Disconnect() F._flyConn = nil end
 for _, k in ipairs({ "_flyBv", "_flyBg", "_flyAp", "_flyAo", "_flyAtt", "_flyBvAtt" }) do
 if F[k] then pcall(function() F[k]:Destroy() end) F[k] = nil end
@@ -4655,11 +4655,7 @@ F._flyDisabledInfJump = true
 end
 local _, hum, root = GC()
 if not (hum and root) then return end
-pcall(function()
-F._flyPreWalk = tonumber(hum.WalkSpeed) or 16
-hum.WalkSpeed = 0
-end)
-F.Out("[飞行] 已开: 速度只看「飞行速度」滑块(飞行期间走路速度置 0, 不参与) · 与加速完全独立")
+F.Out("[飞行] 已开: 速度只看「飞行速度」滑块 · 与加速完全独立(加速在飞行时不参与)")
 pcall(function() hum.PlatformStand = true end)
 if F._flyJumpReqConn then F._flyJumpReqConn:Disconnect() end
 F._flyJumpReqConn = UIS.JumpRequest:Connect(function()
@@ -4890,7 +4886,7 @@ end
 end
 F.TPResist = function(cf, secs)
 if not cf then return end
-F._tpTarget = { cf = cf, deadline = os.clock() + math.min(secs or 1.2, 1.2), last = 0 }
+F._tpTarget = { cf = cf, deadline = os.clock() + math.min(secs or 1.2, 5.0), last = 0 }
 if F._tpResistConn then return end
 F._tpResistConn = RS.Heartbeat:Connect(function()
 local t = F._tpTarget
@@ -4900,7 +4896,7 @@ if F._tpResistConn then pcall(function() F._tpResistConn:Disconnect() end) F._tp
 return
 end
 local now = os.clock()
-if now - (t.last or 0) < 0.15 then return end
+if now - (t.last or 0) < 0.06 then return end
 t.last = now
 local _, hum4, r = GC()
 if not r then return end
@@ -4926,7 +4922,7 @@ if not root or not targetCF then return end
 if F.DropIntent then pcall(F.DropIntent) end
 pcall(function() root:PivotTo(targetCF) end)
 breakVelocity()
-if F.TPResist then pcall(F.TPResist, targetCF, 1.2) end
+if F.TPResist then pcall(F.TPResist, targetCF, 4.0) end
 end
 local function TeleportToPlayer(target)
 local _, _, root = GC()
@@ -5117,7 +5113,7 @@ pcall(function()
 local _, _, r2 = GC()
 if r2 then ok = (r2.Position - pos).Magnitude < 6 end
 end)
-F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]1.2秒(不需要开加速; 你一走动就自动停)",
+F.Out(string.format("[点位] 传送到「%s」 (%.0f, %.0f, %.0f) · 到位检查: %s · 已自带[顶住]4秒(不需要开加速 · 你一走动立刻放手)",
 tostring(it.name), pos.X, pos.Y, pos.Z, ok and "已到位" or "没到位"))
 if not ok then
 F.Out(srv and "[点位] ⚠ 这个游戏 AuthorityMode=Server(位移由服务端裁决) ⇒ 传送到不了是游戏规则, 不是脚本没生效"
