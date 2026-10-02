@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 22:56 sha 5663d5d5 bytes 307398'):format('2026-10-02 22:56','5663d5d5',307398))
+print(('[CheatMenu] build 2026-10-02 22:59 sha 31338a91 bytes 308162'):format('2026-10-02 22:59','31338a91',308162))
 local F = {}
-F.VERSION = "v12.0.11"
+F.VERSION = "v12.0.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4846,16 +4846,33 @@ if root then
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
+F.TakeAllOwnership = function()
+local _, _, root = GC()
+local ch = LP.Character
+if not ch then return 0 end
+local n = 0
+local function take(p)
+pcall(function()
+if p.CanSetNetworkOwnership and not p:CanSetNetworkOwnership() then return end
+p:SetNetworkOwner(LP)
+n = n + 1
+end)
+end
+if root then take(root) end
+pcall(function()
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then take(d) end
+end
+end)
+return n
+end
 F.HardTP = function(cf)
 if not cf then return false end
 local _, hum, root = GC()
 if not root then return false end
 if F.DropIntent then pcall(F.DropIntent) end
-pcall(function()
-if root.CanSetNetworkOwnership and root:CanSetNetworkOwnership() then
-root:SetNetworkOwner(LP)
-end
-end)
+local own = 0
+pcall(function() own = F.TakeAllOwnership() end)
 local wasStand = nil
 pcall(function()
 if hum then
@@ -4878,6 +4895,7 @@ for i = 1, steps do
 local t = i / steps
 local p = from:Lerp(cf.Position, t)
 pcall(function() root.CFrame = CFrame.new(p) * rot end)
+pcall(function() F.TakeAllOwnership() end)
 if i < steps then
 pcall(function() RS.Heartbeat:Wait() end)
 end
@@ -4887,10 +4905,16 @@ pcall(function()
 root.AssemblyLinearVelocity = Vector3.zero
 root.AssemblyAngularVelocity = Vector3.zero
 end)
-if wasStand ~= nil then
+local t0 = os.clock()
+while os.clock() - t0 < 0.25 do
+pcall(function() F.TakeAllOwnership() end)
+pcall(function() if (root.Position - cf.Position).Magnitude > 8 then root.CFrame = cf end end)
 pcall(function() RS.Heartbeat:Wait() end)
+end
+if wasStand ~= nil then
 pcall(function() hum.PlatformStand = wasStand end)
 end
+F._tpOwnInfo = own
 return (root.Position - cf.Position).Magnitude < 20
 end
 local function smoothTP(targetCF)
@@ -5083,6 +5107,7 @@ return false
 end
 local pos = Vector3.new(tonumber(it.x) or 0, tonumber(it.y) or 0, tonumber(it.z) or 0)
 local from = root.Position
+F.Out("[点位] 开始传送(自行抢所有权, 不需要开加速/飞行)")
 local dist = (pos - from).Magnitude
 local ok = F.HardTP(CFrame.new(pos) * CFrame.Angles(0, tonumber(it.yaw) or 0, 0))
 if not ok then
@@ -5095,10 +5120,11 @@ end
 end
 local now2 = nil
 pcall(function() local _, _, r2 = GC() if r2 then now2 = (r2.Position - pos).Magnitude end end)
-F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · %s(不需要开加速/飞行)",
+F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · %s · 已抢所有权 %d 个部件(不依赖加速/飞行)",
 tostring(it.name), dist,
 ok and "已到位" or ("没到位(还差 " .. string.format("%.0f", now2 or -1) .. " 格)"),
-dist > 300 and ("分步传送(" .. tostring(math.clamp(math.ceil(dist / 400), 2, 12)) .. " 步)") or "一次到位"))
+dist > 300 and ("分步传送(" .. tostring(math.clamp(math.ceil(dist / 400), 2, 12)) .. " 步)") or "一次到位",
+tonumber(F._tpOwnInfo) or 0))
 if not ok then
 F.Out("[点位] ⚠ 传送被服务端拒绝(这游戏的位移由服务端裁决) —— 换个近一点的点, 或把速度调低再试")
 end
