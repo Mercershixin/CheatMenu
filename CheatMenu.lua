@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-02 18:03 sha 225c9657 bytes 303637'):format('2026-10-02 18:03','225c9657',303637))
+print(('[CheatMenu] build 2026-10-02 18:14 sha 69ed5982 bytes 303724'):format('2026-10-02 18:14','69ed5982',303724))
 local F = {}
-F.VERSION = "v11.4.3"
+F.VERSION = "v11.4.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5215,8 +5215,7 @@ local op = Fluent and Fluent.Options and Fluent.Options[name]
 if op and op.Set then op:Set(v) else on[#on + 1] = name end
 end)
 end
-setOpt("SpeedGuard", true)
-setOpt("Spoof", true)
+setOpt("GuardTier", "最强: 推荐 + 反拉回 + 伪装(抢所有权/钉位/续跑/读原值)")
 setOpt("AntiAFK", true)
 F.Out("[一键配置] 速度/飞行·不拉回 已就绪: 反拉回(抢所有权+钉位+续跑+挡服务端写入) + 伪装(读原值+不复制速度+清痕迹) + 防挂机(掐检测连接)")
 F.Out("[一键配置] 现在打开「加速」或「飞行」并调速度即可; 若还被踢, 再单独开「防踢」; 只在被针对时才动「深度反作弊中和」")
@@ -7615,29 +7614,38 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddButton({ Title = "★ 一键配置: 速度/飞行 不被拉回(开这三样)", Callback = function() pcall(F.PresetSpeedFlight) end })
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "速度(格/秒 · 人类默认 16 · 最高 5000)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddToggle("SpeedGuard", { Title = "反拉回(抢所有权 + 钉位 + 被拉回续跑)", Description = "被服务端回滚就立刻续跑；刚性约束钉住你的意图位置；并挡下服务端对你角色的「钉住/清血/打断飞行」写入", Default = false, Callback = function(v)
-local changed = (T.SpeedGuard ~= nil) and (T.SpeedGuard ~= v)
-T.SpeedGuard = v
-if F._cfgSyncing or not changed then return end
-if v then F.SpeedGuardEnable() else F.SpeedGuardDisable() end
+Tabs.Move:AddDropdown("GuardTier", { Title = "自保档位(防护 + 反拉回 + 伪装 · 选完自动复位)", Values = {
+"关",
+"基础: 稳身 + 受击保护",
+"推荐: 基础 + 陷阱拦截/弹开 + 防拉回",
+"最强: 推荐 + 反拉回 + 伪装(抢所有权/钉位/续跑/读原值)",
+}, Default = "关", Callback = function(v)
+if F._cfgSyncing then
+T.GuardOn = not string.find(v, "关", 1, true)
+T.SpeedGuard = string.find(v, "最强", 1, true) ~= nil
+T.Spoof = string.find(v, "最强", 1, true) ~= nil
+return
+end
+local base = not string.find(v, "关", 1, true)
+local full = string.find(v, "推荐", 1, true) ~= nil or string.find(v, "最强", 1, true) ~= nil
+local best = string.find(v, "最强", 1, true) ~= nil
+T.GuardOn = base
+if base then
+pcall(function() F.GuardSet(true, true, false, full, full, full) end)
+else
+pcall(function() F.GuardSet(false, false, false, false, false, false) end)
+end
+T.SpeedGuard = best
+if best then pcall(F.SpeedGuardEnable) else pcall(F.SpeedGuardDisable) end
+T.Spoof = best
+if best then pcall(F.SpoofEnable) else pcall(F.SpoofDisable) end
+F.Out("[自保] 档位 = " .. tostring(v))
 end })
 Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
 local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
 T.CarryGuard = v
 if F._cfgSyncing or not changed then return end
 if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
-end })
-Tabs.Move:AddToggle("GuardOn", { Title = "防护(稳身 + 受击保护 + 陷阱拦截+弹开 + 防拉回)", Description = "原来「防护档位」的推荐档", Default = false, Callback = function(v)
-local changed = (T.GuardOn ~= nil) and (T.GuardOn ~= v)
-T.GuardOn = v
-if F._cfgSyncing or not changed then return end
-if v then F.GuardOnEnable() else F.GuardOnDisable() end
-end })
-Tabs.Move:AddToggle("Spoof", { Title = "伪装(游戏侧读你的速度 = 原值)", Description = "hook 属性读取: 游戏自己的脚本读 WalkSpeed/JumpPower 拿到的是原值(我们自己的代码读到真值) —— 骗过客户端的「速度检查」", Default = false, Callback = function(v)
-local changed = (T.Spoof ~= nil) and (T.Spoof ~= v)
-T.Spoof = v
-if F._cfgSyncing or not changed then return end
-if v then F.SpoofEnable() else F.SpoofDisable() end
 end })
 Tabs.TP:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "偷蛋、开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
@@ -7657,15 +7665,20 @@ T.InfiniteJump = v
 if F._cfgSyncing or not changed then return end
 if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end
 end })
-Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
-T.NoClip = v
-if F._cfgSyncing then return end
-if v then F.NoClipEnable() else F.NoClipDisable() end
-end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
-T.Hide = v
-if F._cfgSyncing then return end
-if v then F.HideEnable() else F.HideDisable() end
+Tabs.Move:AddDropdown("MoveMode", { Title = "位移方式(穿墙 / 藏地下 · 二选一)", Values = { "关", "穿墙", "藏地下" }, Default = "关", Callback = function(v)
+if F._cfgSyncing then
+T.NoClip = (v == "穿墙")
+T.Hide = (v == "藏地下")
+return
+end
+local wantClip = (v == "穿墙")
+local wantHide = (v == "藏地下")
+if T.NoClip and not wantClip then pcall(F.NoClipDisable) end
+if T.Hide and not wantHide then pcall(F.HideDisable) end
+if wantClip and not T.NoClip then pcall(F.NoClipEnable) end
+if wantHide and not T.Hide then pcall(F.HideEnable) end
+T.NoClip, T.Hide = wantClip, wantHide
+F.Out("[位移方式] " .. tostring(v))
 end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
