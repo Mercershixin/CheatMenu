@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 19:12 sha e28e37da bytes 445289'):format('2026-10-03 19:12','e28e37da',445289))
+print(('[CheatMenu] build 2026-10-03 19:21 sha 272803f1 bytes 445361'):format('2026-10-03 19:21','272803f1',445361))
 local F = {}
-F.VERSION = "v13.10.25"
+F.VERSION = "v13.10.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8973,7 +8973,10 @@ end
 F.PetESPKeys = { "egg", "pet", "brainrot", "animal", "item", "coin", "gem", "crate", "chest", "brain" }
 F.PetESPScan = function()
 local seen = {}
+local scanned = 0
 for _, d in ipairs(workspace:GetDescendants()) do
+scanned = scanned + 1
+if scanned > 30000 then break end
 if typeof(d) == "Instance" and (d:IsA("Model") or d:IsA("BasePart")) then
 local nm = tostring(d.Name):lower()
 local hit = false
@@ -9055,7 +9058,7 @@ pcall(F.PetESPScan)
 F._petConn = RS.Heartbeat:Connect(function()
 if not T.PetItemESP then F.PetESPDisable() return end
 local now = os.clock()
-if now - (F._petScanAt or 0) < 0.5 then return end
+if now - (F._petScanAt or 0) < 1 then return end
 F._petScanAt = now
 pcall(F.PetESPScan)
 end)
