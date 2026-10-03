@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:00 sha c224bd5a bytes 453321'):format('2026-10-03 17:00','c224bd5a',453321))
+print(('[CheatMenu] build 2026-10-03 17:07 sha 42ef6188 bytes 452649'):format('2026-10-03 17:07','42ef6188',452649))
 local F = {}
-F.VERSION = "v13.10.2"
+F.VERSION = "v13.10.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1386,7 +1386,7 @@ F._capOn = true
 F._capLayer = got
 F.Out("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
 F.Out("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
-F.Out("[采集] 玩完点「一键全量导出」, 内容会复制到剪贴板, 直接粘给我即可")
+F.Out("[采集] 玩完点「复制扫描结果」, 内容会复制到剪贴板, 直接粘给我即可")
 return true
 end
 function F.CaptureDisable()
@@ -1545,7 +1545,7 @@ local usedName = nil
 local hasRW = false
 pcall(function() hasRW = (type(writefile) == "function" and type(readfile) == "function") end)
 if not hasRW then
-F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「一键全量导出」可复制)")
+F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「复制扫描结果」可复制)")
 F._logFlushing = false
 return nil
 end
@@ -11109,7 +11109,7 @@ local sc = F.CMX_G("setclipboard") or F.CMX_G("toclipboard") or F.CMX_G("write_c
 if type(sc) == "function" then sc(txt) ok = true end
 end)
 F.Out("[扫描·导出] 日志 " .. tostring(#lines) .. " 行 / " .. tostring(#txt) .. " 字"
-.. (ok and " · 已复制到剪贴板, 直接粘给我就行" or " · 复制失败(执行器没剪贴板), 用下面「一键全量导出」"))
+.. (ok and " · 已复制到剪贴板, 直接粘给我就行" or " · 复制失败(执行器没剪贴板)"))
 end
 F.CMX_LoadAutoEnable = function()
 if T.CMX_AutoAll == false then
@@ -11832,16 +11832,6 @@ F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面�
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
-Tabs.Trans:AddDropdown("TransRTMode", { Title = "富文本处理(<b>/<font>/<color> 这类标签怎么办)", Values = {
-"① 保标签(推荐) · 抽出标签→只译文字→原样塞回",
-"② 去标签 · 直接丢掉所有标签只译文字",
-"③ 关 · 不特殊处理(标签会被当普通文字送去翻译)",
-}, Default = "① 保标签(推荐) · 抽出标签→只译文字→原样塞回", Callback = function(v)
-C.TransRTMode = v
-if F._cfgSyncing then return end
-Trans.Cache = {}
-F.Out("[翻译·富文本] 模式 = " .. tostring(v) .. " (缓存已清)")
-end })
 Tabs.Trans:AddButton({ Title = "把界面全部重译一遍(切完语言 / 改完词条后点这个)", Callback = function()
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
@@ -11932,7 +11922,7 @@ if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
-Tabs.AC:AddToggle("ACMaster", { Title = "★ 一键防护(一个开关全开 · 不用一项项点)", Description = "开: 反甩 + 护界面 + 权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③ 一次全上; 关: 全部还原。想细调的项在下面高级区还在", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("ACMaster", { Title = "★ 一键防护(一个开关全开 · 不用一项项点)", Description = "开: 反甩 + 护界面 + 权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③ 一次全上; 关: 全部还原", Default = false, Callback = function(v)
 if F._cfgSyncing then
 T.AntiFling = v T.GuiProtect = v T.CharPersist = true
 return
@@ -11947,25 +11937,28 @@ if acName then pcall(AC.SetQuiet, true) end
 pcall(F.ProtectGui)
 pcall(F.GuiProtectionEnable)
 pcall(F.AuthorityGuard, true)
-local n = 0
-local function go(fn, ...)
-if type(fn) ~= "function" then return end
-if pcall(fn, ...) then n = n + 1 end
-end
+task.delay(1, function()
 T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
-go(F.BypassTierApply, T.BypassTier)
+pcall(F.BypassTierApply, T.BypassTier)
+end)
+task.delay(2, function()
 T.CMX_AntiBanAll = true
-go(F.CMX_BanAllApply, true)
+pcall(F.CMX_BanAllApply, true)
+end)
+task.delay(3, function()
 T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
-go(F.ACWriteTierApply, T.ACWriteTier)
+pcall(F.ACWriteTierApply, T.ACWriteTier)
+end)
+task.delay(4, function()
 pcall(F.CfgSyncUI)
 Fluent:Notify({
 Title = "一键防护",
-Content = "已全开 " .. tostring(n) .. " 组: 反甩 + 护界面 + 权限守卫 + 反封禁 + 全部绕过层 + 改写档③"
+Content = "已全开: 反甩 + 护界面 + 权限守卫 + 反封禁 + 全部绕过层 + 改写档③"
 .. " · 环境 " .. tostring(acName or "未识别"),
 Duration = 10,
 })
-F.Out("[一键防护] 已全开 " .. tostring(n) .. " 组 —— 反甩/护界面/权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③")
+F.Out("[一键防护] 已全开(重项分批装载完成) —— 反甩/护界面/权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③")
+end)
 end)
 else
 T.AntiFling = false T.GuiProtect = false
