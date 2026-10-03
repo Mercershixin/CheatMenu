@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:19 sha 0354915a bytes 439209'):format('2026-10-03 18:19','0354915a',439209))
+print(('[CheatMenu] build 2026-10-03 18:23 sha 0904f842 bytes 439059'):format('2026-10-03 18:23','0904f842',439059))
 local F = {}
-F.VERSION = "v13.10.15"
+F.VERSION = "v13.10.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8539,6 +8539,7 @@ local function g(v, fn, ...)
 if not v then return end
 if pcall(fn, ...) then done = done + 1 end
 end
+g(T.ACMaster, F.ProtectTierApply, T.ACMaster)
 g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
 g(T.AntiFling or T.GuiProtect, function()
 if T.AntiFling then pcall(F.AntiFlingEnable) end
@@ -11742,54 +11743,48 @@ if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
-Tabs.AC:AddToggle("ACMaster", { Title = "★ 一键防护(一个开关全开 · 不用一项项点)", Description = "开: 反甩 + 护界面 + 权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③ 一次全上; 关: 全部还原", Default = false, Callback = function(v)
-if F._cfgSyncing then
-T.AntiFling = v T.GuiProtect = v T.CharPersist = true
-return
-end
-if v then
-T.AntiFling = true T.GuiProtect = true T.CharPersist = true
-pcall(F.AntiFlingEnable)
-task.spawn(function()
-local acName = nil
-pcall(function() acName = AC.DetectStrongAC(true) end)
-if acName then pcall(AC.SetQuiet, true) end
-pcall(F.ProtectGui)
-pcall(F.GuiProtectionEnable)
-pcall(F.AuthorityGuard, true)
-task.delay(1, function()
-T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
-pcall(F.BypassTierApply, T.BypassTier)
-end)
-task.delay(2, function()
-T.CMX_AntiBanAll = true
-pcall(F.CMX_BanAllApply, true)
-end)
-task.delay(3, function()
-T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
-pcall(F.ACWriteTierApply, T.ACWriteTier)
-end)
-task.delay(4, function()
-pcall(F.CfgSyncUI)
-Fluent:Notify({
-Title = "一键防护",
-Content = "已全开: 反甩 + 护界面 + 权限守卫 + 反封禁 + 全部绕过层 + 改写档③"
-.. " · 环境 " .. tostring(acName or "未识别"),
-Duration = 10,
-})
-F.Out("[一键防护] 已全开(重项分批装载完成) —— 反甩/护界面/权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③")
-end)
-end)
-else
-T.AntiFling = false T.GuiProtect = false
+F.ProtectTierApply = function(v)
+v = tostring(v or "")
+local lvl = 0
+if v:find("①", 1, true) then lvl = 1 end
+if v:find("②", 1, true) then lvl = 2 end
+if v:find("③", 1, true) then lvl = 3 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
 pcall(function() T.CMX_AntiBanAll = false F.CMX_BanAllApply(false) end)
 pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
-pcall(F.CfgSyncUI)
-Fluent:Notify({ Title = "一键防护", Content = "已全部关闭并还原", Duration = 4 })
+if lvl == 0 then
+T.AntiFling = false T.GuiProtect = false
+F.Out("[防护档位] 已关(什么都不开)")
+pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
+return
 end
+T.AntiFling = true T.GuiProtect = true T.CharPersist = true
+pcall(F.AntiFlingEnable)
+pcall(F.AuthorityGuard, true)
+if lvl >= 2 then
+T.CMX_AntiBanAll = true
+pcall(F.CMX_BanAllApply, true)
+end
+if lvl >= 3 then
+T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
+pcall(F.ACWriteTierApply, T.ACWriteTier)
+T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
+pcall(F.BypassTierApply, T.BypassTier)
+end
+F.Out("[防护档位] = " .. v)
+pcall(function() Fluent:Notify({ Title = "防护档位", Content = v, Duration = 6 }) end)
+end
+Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻越稳)", Values = {
+"关(什么都不开)",
+"① 轻 · 反甩+护界面(不装钩子 · 最稳)",
+"② 中 · +反封禁全家桶(装元表钩 · 一般够用)",
+"③ 重 · +深度中和+全部绕过层(最激进 · 枪战服慎用)",
+}, Default = "关(什么都不开)", Callback = function(v)
+T.ACMaster = v
+if F._cfgSyncing then return end
+pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
 task.spawn(function()
