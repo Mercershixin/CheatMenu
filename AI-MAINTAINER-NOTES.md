@@ -3263,3 +3263,14 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ⚠ **待用户裁定**：另有 **14 个 CMX 检测面伪装层**（HookHard / IdentityMask / ArgScrub / AutoScrub / ViewFilter / InstNew / DebugMask / GcinfoMask / ClockMask / RequireBlock / HitFeed / Humanize / NoPurchase / ClickSpam）**既无 UI 入口、也不被任何档位引用**（死能力）⇒「高档覆盖全部」目前**不成立**，是否纳入③档待定（会改变行为）。
 - 新增**静默瞄准**：`F.SilentAimSet` / `F.SilentAimDisable` 走 `F.MetaInstall("game.__index", game, "CMSilent", …)` 分层栈，只改写 `mouse.Hit` / `mouse.Target`；`checkcaller()` 保护 + 只读缓存部件（每帧零开销）；锁定目标 `Died` 立刻清缓存。诚实边界：**只在游戏用「鼠标命中」判定时有效**。
 - 自瞄「让路」按用户要求**静默化**：菜单/打字时让路照旧生效，但**不显示专属文案、不做成独立开关**（跟着自瞄一起开/关）。
+
+
+## 血量显示 + 血量隔离（2026-10-04 · 14.0.13）
+
+- 用户问「能不能像绕过那样不接收服务器信息、本地不掉血」⇒ 技术事实：**能做的只有两件** —— ① **读取伪装**（外部读 `humanoid.Health` / `MaxHealth` 得到满血）② **断开游戏自己的血量变化监听**（`HealthChanged` / `GetPropertyChangedSignal`）。
+  **做不到**「真不死」：血量是服务端权威，服务端照样判你死并重生 ⇒ 只能说成「本地看起来不掉血」。判据是 `workspace.AuthorityMode`（`Server` = 服务端裁决），已在开关日志里**直接告诉用户本游戏属于哪种**。
+- 新增 `F.HealthShowSet`（复用 `CM_CombatHud`，**不加新 UI 元素**；自瞄关时显示自己血量、开时显示锁定目标血量）与 `F.HealthIsolateSet/Disable`。
+- 断连接用**自己的** `F._hpIsoKill` **精确记录**，关闭时逐条 `Enable` 还原 —— ⛔ **不复用** `AC.ReenableDisabledConns`（那是全局的，会把别的功能禁的连接一起放开）。
+- ★★★ **差点埋下的重入炸弹（已避免）**：`__index` wrapper 里**绝不能读同一个 key**（`hum.MaxHealth`）—— 外部调用链里再读会**再次进入 wrapper** ⇒ 无限递归 ⇒ 爆栈闪退。
+  ⇒ 改为只读缓存 `F._myMaxHP`（在**我们自己的线程**里刷新，`checkcaller()=true` 天然安全）。这就是记忆里那条坑的又一次现身。
+- 同类**只有「读取伪装」这条路可推广**（`ACIndexMask` 已覆盖 WalkSpeed / JumpPower / MaxHealth / Health）；**服务端权威的实质状态（真位移 / 真伤害 / 真资源）本地改不了**，别承诺。
