@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:45 sha 55b8e89a bytes 441589'):format('2026-10-03 18:45','55b8e89a',441589))
+print(('[CheatMenu] build 2026-10-03 18:47 sha 1fde7b6f bytes 441774'):format('2026-10-03 18:47','1fde7b6f',441774))
 local F = {}
-F.VERSION = "v13.10.20"
+F.VERSION = "v13.10.21"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1528,7 +1528,12 @@ pcall(function() pid = tostring(game.PlaceId) end)
 gname = tostring(gname):gsub("[^%w_%-]", "_"):gsub("_+", "_")
 if not gname:match("[%w]") then gname = "game" end
 if #gname > 24 then gname = gname:sub(1, 24) end
-F._logBaseName = string.format("CheatMenu_log_%s_%s", gname, pid)
+pcall(function()
+if type(isfolder) == "function" and type(makefolder) == "function" then
+if not isfolder("CheatMenu_Logs") then makefolder("CheatMenu_Logs") end
+end
+end)
+F._logBaseName = string.format("CheatMenu_Logs/CheatMenu_log_%s_%s", gname, pid)
 return F._logBaseName
 end
 function F.LogFlush(tag)
