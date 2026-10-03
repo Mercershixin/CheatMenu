@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:39 sha 0667987d bytes 452201'):format('2026-10-03 16:39','0667987d',452201))
+print(('[CheatMenu] build 2026-10-03 16:44 sha aedac05b bytes 454916'):format('2026-10-03 16:44','aedac05b',454916))
 local F = {}
-F.VERSION = "v13.9.8"
+F.VERSION = "v13.9.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8552,6 +8552,8 @@ local function g(v, fn, ...)
 if not v then return end
 if pcall(fn, ...) then done = done + 1 end
 end
+if T.CMX_NoPurchase == nil then T.CMX_NoPurchase = true end
+if T.CMX_NoPurchase then pcall(F.CMX_NoPurchaseEnable) end
 g(T.HidePlayer, F.HidePlayerEnable)
 g(T.FOV, FOVEnable)
 g(T.Zoom, ZoomEnable)
@@ -9388,6 +9390,76 @@ F.CMX_LegitWalk = function()
 local w = tonumber(F._orig and F._orig.walk) or tonumber(F._preSpeed)
 if not w or w <= 0 or w > 40 then w = 16 end
 return w
+end
+F.CMX_NoPurchaseN = 0
+F.CMX_NoPurchaseEnable = function()
+if F._npOn then return true end
+local ms = nil
+pcall(function() ms = game:GetService("MarketplaceService") end)
+if type(ms) ~= "table" and type(ms) ~= "userdata" then
+F.Out("[反购买] 拿不到 MarketplaceService ⇒ 该功能不可用")
+T.CMX_NoPurchase = false
+return false
+end
+F._npOn = true
+F._npOrig = {}
+local names = { "PromptProductPurchase", "PromptGamePassPurchase", "PromptPurchase",
+"PromptBundlePurchase", "PromptPremiumPurchase" }
+local hooked = 0
+for i = 1, #names do
+local nm = names[i]
+local raw = ms[nm]
+if type(raw) == "function" then
+local o
+o = F.CMX_SafeHook(raw, function(self, a, b, c, ...)
+if F.CMX_IsCaller() then return o(self, a, b, c, ...) end
+F.CMX_NoPurchaseN = (F.CMX_NoPurchaseN or 0) + 1
+F.Out("[反购买] 已拦下 " .. nm .. " (第 " .. tostring(F.CMX_NoPurchaseN) .. " 次) —— 没弹窗, 也没扣钱")
+return nil
+end)
+if o then
+F._npOrig[nm] = raw
+hooked = hooked + 1
+end
+end
+end
+F._npConns = {}
+local function kill(d)
+pcall(function()
+local n = tostring(d.Name)
+if n:sub(1, 8) == "Purchase" or n == "BuyRobux" then
+F.Out("[反购买] 清掉官方购买弹窗: " .. n)
+task.defer(function() pcall(function() d:Destroy() end) end)
+end
+end)
+end
+local cg = nil
+pcall(function() cg = game:GetService("CoreGui") end)
+if cg then
+pcall(function() F._npConns[#F._npConns + 1] = cg.DescendantAdded:Connect(kill) end)
+pcall(function()
+for _, d in ipairs(cg:GetDescendants()) do kill(d) end
+end)
+end
+F.Out("[反购买] 已开: 堵了 " .. tostring(hooked) .. " 个购买入口 + 盯住官方弹窗(一出现就清)")
+return true
+end
+F.CMX_NoPurchaseDisable = function()
+if not F._npOn then return end
+F._npOn = false
+local ms = nil
+pcall(function() ms = game:GetService("MarketplaceService") end)
+if ms and F._npOrig then
+for nm, raw in pairs(F._npOrig) do
+pcall(function() ms[nm] = raw end)
+end
+end
+F._npOrig = nil
+if F._npConns then
+for i = 1, #F._npConns do pcall(function() F._npConns[i]:Disconnect() end) end
+end
+F._npConns = nil
+F.Out("[反购买] 已关: 购买提示恢复正常")
 end
 F.CMX_IsCaller = function()
 if type(checkcaller) ~= "function" then return true end
@@ -11893,6 +11965,11 @@ pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
 Fluent:Notify({ Title = "防护", Content = "已关闭", Duration = 3 })
 end
+end })
+Tabs.AC:AddToggle("CMX_NoPurchase", { Title = "★ 拦住 R 币购买弹窗(不弹窗 · 不扣钱 · 不打断游戏)", Description = "开: 游戏里任何'花 Robux 买'的提示都弹不出来(客户端弹的直接拦, 服务端发来的引擎弹窗一出现就清掉) ⇒ 你就算碰到了也不会扣钱; 关: 恢复正常", Default = true, Callback = function(v)
+T.CMX_NoPurchase = v
+if F._cfgSyncing then return end
+if v then pcall(F.CMX_NoPurchaseEnable) else pcall(F.CMX_NoPurchaseDisable) end
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
 task.spawn(function()
