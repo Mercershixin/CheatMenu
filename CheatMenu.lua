@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 15:59 sha beebb572 bytes 470639'):format('2026-10-03 15:59','beebb572',470639))
+print(('[CheatMenu] build 2026-10-03 16:07 sha bf49d0aa bytes 470822'):format('2026-10-03 16:07','bf49d0aa',470822))
 local F = {}
-F.VERSION = "v13.9.1"
+F.VERSION = "v13.9.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6255,7 +6255,7 @@ pcall(function()
 top.OutlineColor = c top.FillColor = c
 top.FillTransparency = 1 top.OutlineTransparency = 0
 end)
-if occ then pcall(function() occ.FillTransparency = 1 occ.OutlineTransparency = 1 end) end
+if occ then pcall(function() occ.FillTransparency = 0.55 occ.OutlineTransparency = 1 end) end
 return
 end
 local team = F.CMX_HLTeamColor(pl)
@@ -6289,7 +6289,7 @@ pcall(function()
 top.OutlineColor = team top.FillColor = team
 top.FillTransparency = 1 top.OutlineTransparency = 0
 end)
-if occ then pcall(function() occ.FillTransparency = 1 occ.OutlineTransparency = 1 end) end
+if occ then pcall(function() occ.FillTransparency = 0.55 occ.OutlineTransparency = 1 end) end
 end
 end
 function F.BodyHLAdd(pl)
@@ -6297,7 +6297,8 @@ if not T.BodyHL or pl == LP then return end
 local ch = pl.Character
 if not ch then return end
 local mode = F.CMX_HLMode()
-local needOcc = (mode:find("②", 1, true) ~= nil) or (mode:find("③", 1, true) ~= nil)
+local needOcc = true
+F.CMX_HLSeen = true
 local rec = F._hlObjs[pl]
 if type(rec) == "table" and rec.top and rec.top.Parent == ch
 and ((needOcc and rec.occ ~= nil and rec.occ.Parent == ch) or (not needOcc)) then
@@ -8576,16 +8577,6 @@ go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end
 if T.CharPersist then pcall(F.CharPersistEnable) end
 if T.AutoSave then pcall(F.AutoSaveEnable) end
 if T.Session then pcall(F.LivePlayersEnable) end
-go(T.HidePlayer, F.HidePlayerEnable)
-go(T.FOV, FOVEnable)
-go(T.Zoom, ZoomEnable)
-go(T.CarryGuard, F.CarryGuardEnable)
-go(T.ACWriteTier, F.ACWriteTierApply, true)
-go(T.AntiFling or T.GuiProtect, function()
-if T.AntiFling then pcall(F.AntiFlingEnable) end
-if T.GuiProtect then pcall(F.ProtectGui) pcall(F.GuiProtectionEnable) end
-pcall(F.AuthorityGuard, true)
-end)
 local synced = F.CfgSyncUI()
 F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (", 已同步 " .. synced .. " 个控件显示") or ""))
 pcall(F.LogFlush, "恢复存档功能")
@@ -8597,6 +8588,24 @@ if T.BypassTier == nil then T.BypassTier = "① 默认: 防挂机(不动人物 �
 task.defer(function()
 task.wait(1.5)
 pcall(F.BypassTierApply, T.BypassTier)
+end)
+task.delay(8, function()
+if not T then return end
+local done = 0
+local function g(v, fn, ...)
+if not v then return end
+if pcall(fn, ...) then done = done + 1 end
+end
+g(T.HidePlayer, F.HidePlayerEnable)
+g(T.FOV, FOVEnable)
+g(T.Zoom, ZoomEnable)
+g(T.CarryGuard, F.CarryGuardEnable)
+g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
+g(T.AntiFling or T.GuiProtect, function()
+if T.AntiFling then pcall(F.AntiFlingEnable) end
+if T.GuiProtect then pcall(F.AuthorityGuard, true) end
+end)
+if done > 0 then F.Out("[恢复] 延迟补开 " .. done .. " 项(等菜单与角色就绪后)") end
 end)
 end
 LoadConfig()
