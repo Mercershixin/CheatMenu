@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:56 sha d6a95221 bytes 423008'):format('2026-10-04 00:56','d6a95221',423008))
+print(('[CheatMenu] build 2026-10-04 00:58 sha 5725509c bytes 422079'):format('2026-10-04 00:58','5725509c',422079))
 local F = {}
-F.VERSION = "v14.0.6"
+F.VERSION = "v14.0.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3067,7 +3067,7 @@ local dist = (part.Position - root.Position).Magnitude
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
 .. (T.AutoFire and " · 自动开火中" or ""))
 local dir = part.Position - root.Position
-if T.AimTurnBody ~= false then
+if T.AimTurnBody == true then
 local flat = Vector3.new(dir.X, 0, dir.Z)
 if flat.Magnitude > 0.05 then
 F._aimFacing = true
@@ -3075,7 +3075,7 @@ pcall(function() hum.AutoRotate = false end)
 pcall(function() root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit) end)
 end
 end
-if T.AimTurnCamera then
+if T.AimTurnCamera ~= false then
 local cam = workspace.CurrentCamera
 if cam then pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, part.Position) end) end
 end
@@ -3142,22 +3142,8 @@ F.KillAuraConn = nil
 F.lastAttack = 0
 F.KillAuraConn = nil
 function F.KillAuraEnable()
-T.KillAura = true
-if F.KillAuraConn then return end
-F.Out("[自动攻击] 已开: 范围内有人就按攻速自动开火(自动跳过 死人/无敌·出生保护/隔墙的)")
-F.KillAuraConn = RS.Heartbeat:Connect(function()
-if not T.KillAura then F.KillAuraDisable() return end
-local _, _, root = GC()
-if not root then return end
-local ch, tgt = F.CombatPick()
-if not (ch and tgt) then return end
-local rng = tonumber(C.KillAuraRange) or 20
-if (tgt.Position - root.Position).Magnitude > rng then return end
-local now = os.clock()
-if now - (F._auraAt or 0) < (1 / math.max(1, tonumber(C.KillAuraSpeed) or 10)) then return end
-F._auraAt = now
-pcall(F.FireOnce)
-end)
+T.KillAura = false
+F.Out("[自动攻击] 已移除 —— 战斗页只保留 FPS 自瞄 + 自动开火(锁定后自动扳机)")
 end
 function F.KillAuraDisable()
 T.KillAura = false
@@ -10915,24 +10901,18 @@ T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AimTurnCamera", { Title = "锁定时把视角也转过去(默认关)", Description = "关: 只转你的人物朝向, 视角完全归你(适合踢/打类游戏); 开: 连相机一起转过去(适合按相机方向判定弹道的枪战游戏)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AimTurnCamera", { Title = "锁定时把视角也转过去(默认关)", Description = "关: 只转你的人物朝向, 视角完全归你(适合踢/打类游戏); 开: 连相机一起转过去(适合按相机方向判定弹道的枪战游戏)", Default = true, Callback = function(v)
 T.AimTurnCamera = v
 T.AimTurnBody = not v
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定时转视角 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "锁定后自动开火", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Default = true, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
 end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddToggle("CombatAura", { Title = "自动攻击(范围内有人就打 · 和自瞄独立)", Default = false, Callback = function(v)
-T.CombatAura = v
-if F._cfgSyncing then return end
-if v then pcall(F.KillAuraEnable) else pcall(F.KillAuraDisable) end
-end })
-Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围(格)", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
 Tabs.Combat:AddSection("生存")
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
