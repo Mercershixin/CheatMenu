@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:30 sha 271052b8 bytes 444075'):format('2026-10-03 17:30','271052b8',444075))
+print(('[CheatMenu] build 2026-10-03 17:34 sha 4714fee0 bytes 445947'):format('2026-10-03 17:34','4714fee0',445947))
 local F = {}
-F.VERSION = "v13.10.8"
+F.VERSION = "v13.10.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5708,6 +5708,67 @@ function F.SpoofDisable()
 T.Spoof = false
 if F._spoofConn then pcall(function() F._spoofConn:Disconnect() end) F._spoofConn = nil end
 F._spoofWalkBase, F._spoofJumpBase = nil, nil
+end
+F.IsEggPrompt = function(pp)
+if typeof(pp) ~= "Instance" or not pp:IsA("ProximityPrompt") then return false end
+local p, steps = pp, 0
+while p and steps < 8 do
+local nm = tostring(p.Name):lower()
+local it = nil
+pcall(function() it = p:GetAttribute("ItemType") end)
+if nm:find("egg") or nm:find("brainrot") or nm:find("steal")
+or (type(it) == "string" and (it:lower():find("egg") or it:lower():find("asset") or it:lower():find("brainrot"))) then
+return true
+end
+p = p.Parent
+steps = steps + 1
+end
+return false
+end
+F.InstantEggStealOnce = function()
+local ch = LP.Character
+local root = ch and ch:FindFirstChild("HumanoidRootPart")
+if not root then return end
+local fp = F.CMX_G("fireproximityprompt")
+local n = 0
+for _, d in ipairs(workspace:GetDescendants()) do
+if typeof(d) == "Instance" and d:IsA("ProximityPrompt") and d.Enabled and F.IsEggPrompt(d) then
+local pos = nil
+pcall(function() pos = (d.Parent and d.Parent.Position) end)
+if pos and (pos - root.Position).Magnitude <= 80 then
+pcall(function() d.HoldDuration = 0 end)
+if type(fp) == "function" then
+pcall(fp, d)
+else
+pcall(function() d.InputHoldBegin:Fire() end)
+end
+n = n + 1
+end
+end
+end
+if n > 0 then
+F._eggStealN = (F._eggStealN or 0) + n
+F.Out("[瞬间偷蛋] 本轮触发 " .. tostring(n) .. " 个蛋的交互 (累计 " .. tostring(F._eggStealN) .. ")")
+end
+end
+F.InstantEggStealEnable = function()
+if F._eggStealLoop then return end
+T.InstantEggSteal = true
+pcall(F.InstantEggStealOnce)
+F._eggStealLoop = task.spawn(function()
+while T.InstantEggSteal do
+task.wait(0.4)
+if not T.InstantEggSteal then break end
+pcall(F.InstantEggStealOnce)
+end
+F._eggStealLoop = nil
+end)
+F.Out("[瞬间偷蛋] 已开: 每 0.4 秒扫一次, 蛋靠近你 80 格内就自动触发它的交互, 瞬间偷到手")
+end
+F.InstantEggStealDisable = function()
+T.InstantEggSteal = false
+F._eggStealLoop = nil
+F.Out("[瞬间偷蛋] 已关")
 end
 function F.InstantInteractEnable()
 if F.II_SAVED then return end
@@ -11522,11 +11583,9 @@ if F._cfgSyncing or not changed then return end
 pcall(F.MetaHookEnsure)
 F.Out(v and "[防掉蛋] 已开(被夹/被抓后不掉蛋)" or "[防掉蛋] 已关(会正常掉蛋)")
 end })
-Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
-local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
-T.InstantInteract = v
-if F._cfgSyncing or not changed then return end
-if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
+Tabs.Move:AddToggle("InstantEggSteal", { Title = "★ 瞬间偷蛋(自动偷别人的蛋 · 靠近瞬间拿到)", Description = "开: 每 0.4 秒扫一次场景, 蛋(名字/属性带 egg/brainrot)靠近你 80 格内就自动触发它的交互, 瞬间偷到手 —— 不用走到跟前按 E", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+if v then pcall(F.InstantEggStealEnable) else pcall(F.InstantEggStealDisable) end
 end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
