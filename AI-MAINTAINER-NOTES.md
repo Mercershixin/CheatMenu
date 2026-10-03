@@ -3370,3 +3370,18 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ★★ **扫描能力全部并入「一键全扫描」**：先确认 `F.CMX_ScanBypassSurface` 内部已经把 `ScanCapabilities / ScanHookLedger / ScanExposure / ScanStack / ScanHidden / ScanDetectors / ScanShapes` 全调了一遍
   ⇒ 那 7 个**本来就在一键扫描里**，无需再并。只把「附近可交互点」从**独立按钮**改成 `F.ScanNearbyInteract()` 并进 `CMX_ScanAll`（纯只读，只列清单不点任何东西）。
 - 原则固化：**扫描页 = 只扫描、只列清单**；任何"扫完自动动手"一律不做（自动点击 / 自动处置已全部归档）。
+
+
+## 跨游戏通用性评估 + 属性锁定层（2026-10-04 · 14.0.21）
+
+- ★★ **受击保护 / 反陷阱 能不能覆盖同类型游戏？——机制通用，"识别"要靠关键词**：
+  `HitGuard` 默认走**状态法**（禁 `Ragdoll/FallingDown/Physics` + 倒地把状态改回 `RunningNoPhysics` + 修 `Motor6D`）⇒ **完全不依赖具体游戏**，换任何游戏都成立；
+  `TrapGuard` 走 **销毁 `TouchInterest` + 断 `Touched` 回调 + 关 `CanTouch`** ⇒ 机制也通用。**唯一会漏的是"哪些物件算陷阱/攻击"**（靠 `TRAP_KEYS` / `HIT_KEYS` 名字匹配 + `TRAP_TAGS` 标签）。
+  ⇒ 本轮**扩充关键词**：`TRAP_KEYS` 27→59 个（加 hazard/killbrick/killzone/void/lava/flame/laser/blade/crusher/pendulum/dart/arrow/bomb/freeze/quicksand/vine/rope/chain/prison/cell/instakill 等）；
+  `HIT_KEYS` 12→32 个（加 damage/hit/attack/punch/slap/strike/projectile/shove/impulse/explode/blast/hurt/takedamage/applyforce 等）。
+  ⇒ 仍有兜底：`F.AntiFling` 按**速度阈值**判"被击飞"（不靠名字）✓
+- ★★★ **新增「属性锁定」层 `CMLockFields`（`__newindex`）**：游戏想改你的属性时**按你开着的功能改写回去** —— 这是"写侧熔断"（读侧有伪装、发侧有 remote 熔断）。
+  管 7 个键：`WalkSpeed`（跟 `T.SpeedOn` + `C.SpeedValue`）/ `JumpPower`·`JumpHeight`（跟无限跳）/ `PlatformStand`（跟飞行）/ `Health`·`MaxHealth`（跟无敌/锁血/不死）/ `CanCollide`（跟穿墙，仅限自己角色）。
+  ★ 实现要点：① **走 `F.MetaInstall("__newindex", ...)` 进分层栈**（可精确卸载、与其它层共存）；② 第一道就是 `F._LOCK_KEYS[k]` 白名单，**不在名单直接转发**（每帧零开销）；
+  ③ `checkcaller()` 排除自己；④ **只改 `v`、绝不读同一个 key**（避免递归，这条坑已复发过）。
+  ⇒ **只在档位②③挂载**（`ProtectTierApply` 的 lvl>=2 / lvl>=3），关档 / 急停 / 卸载都会卸 —— 符合"不开档位=普通效果、开档位才上钩子"的设计。
