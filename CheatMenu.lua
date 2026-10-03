@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 22:54 sha 64c054e9 bytes 440848'):format('2026-10-03 22:54','64c054e9',440848))
+print(('[CheatMenu] build 2026-10-03 23:17 sha 174669e4 bytes 428886'):format('2026-10-03 23:17','174669e4',428886))
 local F = {}
-F.VERSION = "v13.10.36"
+F.VERSION = "v14.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -247,11 +247,8 @@ local function LoadConfig()
 pcall(function()
 if not readfile or not isfile or not isfile(SaveFile) then return end
 local d = HS:JSONDecode(readfile(SaveFile))
-if type(d) == "table" then
-if type(d.T) == "table" then
-for k, v in pairs(d.T) do T[k] = v end
-end
-if type(d.C) == "table" then for k, v in pairs(d.C) do C[k] = v end end
+if type(d) == "table" and type(d.C) == "table" then
+for k, v in pairs(d.C) do C[k] = v end
 end
 end)
 end
@@ -3170,10 +3167,20 @@ function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
 if not T.AimOn then
+if F._aimFacing then
+F._aimFacing = nil
+pcall(function()
+local _, hum = GC()
+if hum then hum.AutoRotate = true end
+end)
+end
 pcall(function()
 local cam = workspace.CurrentCamera
 local _, myHum = GC()
-if cam and myHum then cam.CameraSubject = myHum end
+if cam and myHum and typeof(cam.CameraSubject) == "Instance"
+and cam.CameraSubject:IsA("Humanoid") and cam.CameraSubject ~= myHum then
+cam.CameraSubject = myHum
+end
 end)
 return
 end
@@ -3182,26 +3189,28 @@ RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
 local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 if not firing and UIS.TouchEnabled and F._touchDown then
-local _, hum = GC()
-local md = hum and hum.MoveDirection
+local _, hum0 = GC()
+local md = hum0 and hum0.MoveDirection
 if md and md.Magnitude > 0.1 then firing = false else firing = true end
 end
 if T.AimFireOnly and not T.AutoFire and not firing then return end
-local _, myHum = GC()
-if not myHum then return end
-local cam = workspace.CurrentCamera
-if not cam then return end
+local _, hum, root = GC()
+if not (hum and root) then return end
 local tgt = F.AimPick()
-if tgt then
+if not tgt then return end
 local th = nil
 pcall(function() th = tgt.Parent and tgt.Parent:FindFirstChildOfClass("Humanoid") end)
-if th and th.Health > 0 then
-if cam.CameraSubject ~= th then cam.CameraSubject = th end
+if not (th and th.Health > 0) then return end
+local dir = tgt.Position - root.Position
+local flat = Vector3.new(dir.X, 0, dir.Z)
+if flat.Magnitude > 0.05 then
+F._aimFacing = true
+pcall(function() hum.AutoRotate = false end)
+pcall(function()
+root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit)
+end)
+end
 F.AutoFire(tgt)
-return
-end
-end
-if cam.CameraSubject ~= myHum then cam.CameraSubject = myHum end
 end)
 end
 local GodConn = nil
@@ -3443,7 +3452,7 @@ else
 pcall(F.CharEventsDisable)
 end
 T.SteadyOn, T.HitGuard, T.HitLock = steady, hit, lock
-T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, dodge, atp
+T.TrapWarn, T.TrapDodge, T.SpeedAntiTP = trap, false, atp
 T.HitStrong = strong and true or false
 T.BypassDetect = bypass and true or false
 if bypass then pcall(F.BypassEnable) else pcall(F.BypassDisable) end
@@ -3454,7 +3463,7 @@ pcall(atp and F.SpeedAntiTPEnable or F.SpeedAntiTPDisable)
 F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 锁满血=%s · 陷阱=%s · 防拉回=%s · 绕过拉回=%s",
 steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接)" or "(状态法)",
 lock and "开" or "关",
-trap and (dodge and "拦截+弹开" or "拦截") or "关", atp and "开" or "关", bypass and "开" or "关"))
+trap and "拦截(只做不触发)" or "关", atp and "开" or "关", bypass and "开" or "关"))
 end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
 F._floorLast = {}
@@ -3805,12 +3814,6 @@ end
 F._trapConnOff = {}
 if back > 0 then F.Out("[反陷阱] 已恢复 " .. tostring(back) .. " 条陷阱的触碰回调") end
 end
-if F._selfTouchBak then
-for p2, orig in pairs(F._selfTouchBak) do
-if typeof(p2) == "Instance" and p2.Parent then pcall(function() p2.CanTouch = orig end) end
-end
-F._selfTouchBak = nil
-end
 if F._trapConn then F._trapConn:Disconnect() F._trapConn = nil end
 if F._trapBak then
 for obj, bak in pairs(F._trapBak) do
@@ -3823,7 +3826,6 @@ function F.TrapGuardEnable()
 if F._trapConn then return end
 F._trapAt = 0
 F._trapBak = F._trapBak or {}
-F._selfTouchBak = F._selfTouchBak or nil
 F._trapConnOff = F._trapConnOff or {}
 pcall(F.TrapTagWatch, true)
 F._trapConn = RS.Heartbeat:Connect(function()
@@ -3833,7 +3835,7 @@ if now - (F._trapAt or 0) < 0.7 then return end
 F._trapAt = now
 local _, _, root = GC()
 if not root then return end
-local hits, nearD = 0, nil
+local hits = 0
 pcall(function()
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
@@ -3846,8 +3848,6 @@ if nm:find(k, 1, true) then isTrap = true break end
 end
 if isTrap then
 hits = hits + 1
-local dd = (pt.Position - root.Position).Magnitude
-if dd < 12 then nearD = dd end
 if pt.CanTouch then
 pcall(function()
 F._trapBak[pt] = { touch = pt.CanTouch }
@@ -3865,61 +3865,14 @@ F._trapConnOff[pt][#F._trapConnOff[pt] + 1] = c
 end
 end)
 end
-if T.TrapDodge and dd < 8 and now - (F._trapDodgeAt or 0) > 0.5 then
-F._trapDodgeAt = now
-pcall(function()
-local dir = root.Position - pt.Position
-dir = Vector3.new(dir.X, 0, dir.Z)
-if dir.Magnitude < 0.1 then dir = Vector3.new(1, 0, 0) end
-if dd < 8 then
-local dest = root.Position + dir.Unit * 24 + Vector3.new(0, 4, 0)
-local cf = CFrame.new(dest)
-pcall(function() root:PivotTo(cf) end)
-pcall(function()
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-end)
-F._trapJumped = (F._trapJumped or 0) + 1
-if now - (F._trapJumpLog or 0) > 3 then
-F._trapJumpLog = now
-F.Out(string.format("[陷阱] 你已踩进陷阱范围(%.0f格) ⇒ 已把你挪出 22 格(第 %d 次)",
-dd, F._trapJumped))
-end
-else
-local vv = root.AssemblyLinearVelocity
-local push = dir.Unit * 90
-root.AssemblyLinearVelocity = Vector3.new(push.X, math.max(vv.Y, 40), push.Z)
-end
-end)
-end
 end
 end
 end)
-if nearD then
-if not F._selfTouchBak then
-F._selfTouchBak = {}
-pcall(function()
-local ch = LP.Character
-if ch then
-for _, p2 in ipairs(ch:GetDescendants()) do
-if p2:IsA("BasePart") then
-F._selfTouchBak[p2] = p2.CanTouch
-p2.CanTouch = false
-end
-end
-end
-end)
-F.Out("[反陷阱] 已开(核心=解除触碰): "
-.. "① **销毁陷阱的 TouchInterest(踩上去不触发的真正解法, 公开作品同款)** "
-.. "② 按 tag(PlayerTrap 等)精确识别新陷阱 ③ 拦陷阱触发上报 ④ 断陷阱 Touched 回调 "
-.. "⑤ 靠近时关你身体的「可触碰」; 兜底: 踩进 8 格内把你挪出 24 格")
-end
-elseif F._selfTouchBak then
-for p2, orig in pairs(F._selfTouchBak) do
-if typeof(p2) == "Instance" and p2.Parent then pcall(function() p2.CanTouch = orig end) end
-end
-F._selfTouchBak = nil
-F.Out("[陷阱] 已远离陷阱 ⇒ 身体「可触碰」已还原")
+if hits > 0 and not F._trapOnLog then
+F._trapOnLog = true
+F.Out("[反陷阱] 已开(只做『不触发』, 和反攻击一样不挪你): "
+.. "① 销毁陷阱的 TouchInterest(踩上去不触发的真正解法) ② 按 tag(PlayerTrap 等)识别新陷阱 "
+.. "③ 拦陷阱触发上报 ④ 断陷阱自身的 Touched 回调 —— 不动你的位置、不关你身体的「可触碰」")
 end
 pcall(function()
 for _, tgPart in ipairs(F.TrapFromTags()) do
@@ -6041,7 +5994,7 @@ if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
 if T.KillAura then pcall(F.KillAuraEnable) end
 if T.BodyHL then pcall(F.BodyHLEnable) end
 end
-function F.CharPersistEnable() T.CharPersist = true end
+T.AutoSave = true
 function F.CharPersistDisable() T.CharPersist = false end
 function F.ProtectGui()
 local targets = {}
@@ -6272,13 +6225,6 @@ if processed then return end
 if not F._tpMouseOn then return end
 if input.KeyCode ~= Enum.KeyCode.T then return end
 F.TPMouse()
-end)
-end)
-pcall(function()
-UIS.InputBegan:Connect(function(input)
-if input.KeyCode ~= Enum.KeyCode.F2 then return end
-local did = F.CamRelease(true, "F2 热键")
-if not did or #did == 0 then F.Out("[视角] F2: 现在没有相机/鼠标被占用") end
 end)
 end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
@@ -6672,25 +6618,9 @@ end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
 end
-F.CamReleaseToggleOff = function()
-local op = Fluent and Fluent.Options
-if type(op) ~= "table" then return end
-local keep = F._cfgSyncing
-F._cfgSyncing = true
-for _, k in ipairs({ "AimOn", "LockCam", "Freecam", "TPMouse" }) do
-local o = op[k]
-if o and o.Set and o.Value ~= false then pcall(function() o:Set(false) end) end
-end
-F._cfgSyncing = keep
-end
-F.CamRelease = function(force, why)
-if not force and (T.Freecam or T.LockCam or T.AimOn) then return nil end
+F.CamRelease = function()
+if T.Freecam or T.LockCam or T.AimOn then return nil end
 local did = {}
-if force then
-T.AimOn, T.LockCam, T.Freecam, T.TPMouse = false, false, false, false
-F._tpMouseOn = false
-pcall(F.CamReleaseToggleOff)
-end
 if F._aimConn then pcall(function() F.AimSet(false) end) did[#did + 1] = "自瞄" end
 if F._lockCamConn then pcall(F.LockCamDisable) did[#did + 1] = "锁相机" end
 if F._freecamConn then pcall(F.FreecamDisable) did[#did + 1] = "自由视角" end
@@ -6701,14 +6631,13 @@ pcall(function() cam.CameraType = Enum.CameraType.Custom end)
 did[#did + 1] = "相机类型"
 end
 local _, hum = GC()
-local subj = cam.CameraSubject
-if hum and (subj == nil or subj ~= hum) then
+if hum and cam.CameraSubject ~= hum then
 local other = false
 pcall(function()
-other = typeof(subj) == "Instance" and subj:IsA("Humanoid")
-and Players:GetPlayerFromCharacter(subj.Parent) ~= nil
+other = typeof(cam.CameraSubject) == "Instance" and cam.CameraSubject:IsA("Humanoid")
+and Players:GetPlayerFromCharacter(cam.CameraSubject.Parent) ~= nil
 end)
-if subj == nil or other then
+if cam.CameraSubject == nil or other then
 pcall(function() cam.CameraSubject = hum end)
 did[#did + 1] = "相机目标"
 end
@@ -6720,19 +6649,8 @@ UIS.MouseBehavior = Enum.MouseBehavior.Default
 did[#did + 1] = "鼠标"
 end
 end)
-if #did > 0 then
-F.Out("[视角] 已释放: " .. table.concat(did, " · ") .. (why and ("  ← " .. tostring(why)) or ""))
-end
+if #did > 0 then F.Out("[视角] 已释放: " .. table.concat(did, " · ")) end
 return did
-end
-F.CamReleaseSchedule = function()
-F.Out("[视角] 已关掉「加载即锁视角/锁鼠标」的所有路径 —— 若仍转不动: 按 F2, 或去「系统」页点「视角被锁了」按钮")
-task.delay(6, function() pcall(F.CamRelease, false, "加载后 6 秒保底") end)
-local more = { 15, 30, 60 }
-for i = 1, #more do
-local t = more[i]
-task.delay(t, function() pcall(F.CamRelease, false, "保底 " .. tostring(t) .. " 秒") end)
-end
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
 function F.PanicKeyDisableAll()
@@ -8550,103 +8468,10 @@ end
 pcall(function() F.LogFlush("卸载复核") end)
 end)
 end
-function F.RestoreSavedFeatures()
-if not T then return end
-T.AimOn, T.LockCam, T.Freecam, T.TPMouse = false, false, false, false
-F._tpMouseOn = false
-pcall(F.CamRelease, false, "加载恢复前")
-F.Out("[恢复] 会接管视角/鼠标的(自瞄/锁相机/自由视角/锁鼠标)已跳过自动恢复, 需要请手动开")
-F.Out("[恢复] 按存档恢复你上次主动开启的功能(没开过的不会自动开)")
-local n = 0
-local function go(v, fn, ...)
-if not v then return end
-if pcall(fn, ...) then n = n + 1 end
-end
-go(T.FlyOn, F.FlySet, true)
-go(T.SpeedOn, F.SpeedSet, true)
-go(T.NoClip, F.NoClipEnable)
-go(T.Hide, F.HideEnable)
-go(T.God, GodEnable)
-go(T.LockHealth, LockHealthEnable)
-go(T.Regen, RegenEnable)
-go(T.NoDeath, NoDeathEnable)
-go(T.AntiRagdoll, F.AntiRagdollEnable)
-go(T.AntiKnockdown, F.AntiKnockdownEnable)
-go(T.InfiniteJump, F.InfiniteJumpEnable)
-go(T.Translate, F.TranslateEnable)
-go(T.ChatTranslate, F.ChatTranslateEnable)
-go(T.BubbleTranslate, F.BubbleTranslateEnable)
-go(T.HitboxExpand, F.HitboxExpandEnable)
-go(T.KillAura, F.KillAuraEnable)
-go(T.BodyHL, F.BodyHLEnable)
-go(T.Hud, F.HudEnable)
-go(T.Crosshair, F.CrosshairEnable)
-go(T.AutoTrain, F.AutoTrainEnable)
-go(T.AutoBonus, F.AutoBonusEnable)
-go(T.AutoGym, F.AutoGymEnable)
-go(T.AutoSell, F.SellLowCPS)
-go(T.Invisible, F.InvisibleEnable)
-go(T.FullBright, F.FullBrightEnable)
-go(T.NightVision, F.NightVisionEnable)
-go(T.NoFog, F.NoFogEnable)
-if T.FullBright or T.NightVision or T.NoFog then pcall(F.LightWatchEnable) end
-go(T.Antilag, AntilagEnable)
-go(T.Mute, MuteEnable)
-go(T.CMX_Gravity, F.CMX_GravityEnable)
-go(T.CMX_Anchor, F.CMX_AnchorEnable)
-go(T.CMX_ClickSpam, F.CMX_ClickSpamEnable)
-go(T.CMX_AutoScrub, F.CMX_AutoScrubEnable)
-go(T.CMX_HookHard, F.CMX_HookHardApply)
-go(T.CMX_IdentityMask, F.CMX_IdentityMaskEnable)
-go(T.CMX_FFlagPack, F.CMX_FFlagApplyPack)
-go(T.CMX_SpoofIndex, F.CMX_SpoofIndexEnable)
-go(T.CMX_ViewFilter, F.CMX_ViewFilterEnable)
-go(T.CMX_Humanize, F.CMX_HumanizeEnable)
-go(T.CMX_InstNew, F.CMX_InstNewEnable)
-go(T.CMX_DebugMask, F.CMX_DebugMaskEnable)
-go(T.CMX_RequireBlock, F.CMX_RequireBlockEnable)
-if T.CMX_ClockMask then
-T.CMX_ClockMask = false
-pcall(F.CMX_ClockMaskDisable)
-F.Out("[绕过·时钟粗化] 不再随加载自动开(它会把 os.clock 粗化给整个游戏 ⇒ 用时间步进的游戏逻辑/视角会发死); 需要时手动开")
-end
-go(T.CMX_HitFeed, F.CMX_HitFeedEnable)
-go(T.CMX_BlockReport, F.CMX_BlockReportEnable)
-go(T.CMX_CutLog, F.CMX_CutLogEnable)
-go(T.CMX_NeuterPlus, F.CMX_NeuterPlusEnable)
-go(T.CMX_HashFreeze, F.CMX_HashFreezeEnable)
-if T.CMX_AntiBanAll then pcall(F.CMX_BanAllApply, true) end
-if T.CharPersist then pcall(F.CharPersistEnable) end
-if T.AutoSave then pcall(F.AutoSaveEnable) end
-if T.Session then pcall(F.LivePlayersEnable) end
-local synced = F.CfgSyncUI()
-F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (", 已同步 " .. synced .. " 个控件显示") or ""))
-pcall(F.LogFlush, "恢复存档功能")
-end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
-if T.BypassTier == nil then T.BypassTier = "关(什么都不开)" end
 if T.Aim360 == nil then T.Aim360 = true end
-task.defer(function()
-task.wait(1.5)
-pcall(F.BypassTierApply, T.BypassTier)
-end)
-task.delay(8, function()
-if not T then return end
-local done = 0
-local function g(v, fn, ...)
-if not v then return end
-if pcall(fn, ...) then done = done + 1 end
-end
-g(T.ACMaster, F.ProtectTierApply, T.ACMaster)
-g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
-g(T.AntiFling or T.GuiProtect, function()
-if T.AntiFling then pcall(F.AntiFlingEnable) end
-if T.GuiProtect then pcall(F.AuthorityGuard, true) end
-end)
-if done > 0 then F.Out("[恢复] 延迟补开 " .. done .. " 项(等菜单与角色就绪后)") end
-end)
 end
 LoadConfig()
 pcall(function()
@@ -8775,8 +8600,7 @@ return nil
 end
 F.CMX_DisableAll = function()
 for _, fn in ipairs({
-F.CMX_GravityDisable, F.CMX_ClickSpamDisable,
-F.CMX_AnchorDisable, F.CMX_ArgScrubDisable, F.CMX_AutoScrubDisable,
+F.CMX_ClickSpamDisable,
 F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
 F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
 F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
@@ -8786,27 +8610,6 @@ F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 T.CMX_SpoofPos, T.CMX_AimPredict = false, false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
 task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
-end
-F.CMX_GravityApply = function()
-if not F.CMX_GravityOn then return end
-pcall(function() WS.Gravity = tonumber(C.CMX_GravityValue) or 60 end)
-end
-F.CMX_GravityEnable = function()
-if F.CMX_GravityOn then return end
-F.CMX_GravityOn = true
-if F.CMX_GravitySaved == nil then F.CMX_GravitySaved = tonumber(WS.Gravity) or 196.2 end
-C.CMX_GravityValue = tonumber(C.CMX_GravityValue) or 60
-F.CMX_GravityApply()
-F.Out("[补强·低重力] 已开: 重力 " .. tostring(F.CMX_GravitySaved) .. " → " .. tostring(C.CMX_GravityValue))
-end
-F.CMX_GravityDisable = function()
-if not F.CMX_GravityOn then return end
-F.CMX_GravityOn = false
-if F.CMX_GravitySaved ~= nil then
-pcall(function() WS.Gravity = F.CMX_GravitySaved end)
-F.Out("[补强·低重力] 已关: 重力还原为 " .. tostring(F.CMX_GravitySaved))
-end
-F.CMX_GravitySaved = nil
 end
 F.CMX_ClickScan = function(radius)
 local list = {}
@@ -8884,43 +8687,6 @@ pcall(function() if cd.Parent then cd.MaxActivationDistance = md end end)
 end
 F.CMX_ClickSaved = nil
 F.Out("[补强·点击采集] 已关: 已还原 " .. tostring(n) .. " 个点击器的触发距离")
-end
-F.CMX_AnchorEnable = function()
-if F.CMX_AnchorOn then return end
-local _, _, root = GC()
-if not root then
-T.CMX_Anchor = false
-F.Out("[补强·自身锚定] 没角色")
-return false
-end
-if not F.CMX_AnchorConn then
-pcall(function()
-F.CMX_AnchorConn = LP.CharacterAdded:Connect(function()
-task.wait(1)
-if not F.CMX_AnchorOn then return end
-local _, _, r2 = GC()
-if r2 then pcall(function() r2.Anchored = true end) end
-F.Out("[补强·自身锚定] 检测到重生, 已自动重新钉住")
-end)
-end)
-end
-F.CMX_AnchorSaved = root.Anchored and true or false
-root.Anchored = true
-F.CMX_AnchorOn = true
-F.Out("[补强·自身锚定] 已钉住(原值=" .. tostring(F.CMX_AnchorSaved) .. ") · 松开开关即还原")
-return true
-end
-F.CMX_AnchorDisable = function()
-if not F.CMX_AnchorOn then return end
-F.CMX_AnchorOn = false
-if F.CMX_AnchorConn then pcall(function() F.CMX_AnchorConn:Disconnect() end) F.CMX_AnchorConn = nil end
-local _, _, root = GC()
-if root then
-local want = F.CMX_AnchorSaved and true or false
-pcall(function() root.Anchored = want end)
-end
-F.CMX_AnchorSaved = nil
-F.Out("[补强·自身锚定] 已解开")
 end
 F.CMX_NetOwnerReport = function()
 local _, _, root = GC()
@@ -10741,42 +10507,6 @@ end
 F.Out("[反检测] 已藏匿: 界面挪进隐藏容器 " .. tostring(moved) .. " 个 · 加保护 " .. tostring(protected)
 .. " 个 · game 元表恢复只读 " .. (roFixed and "是" or "否(还有活着的钩子层, 不能恢复)"))
 end
-F.CMX_AutoRestoreApply = function()
-if T.CMX_AutoAll ~= false then return end
-local list = C.CMX_BypassOn
-if type(list) ~= "table" or #list == 0 then return end
-local map = {
-CMX_ScrubOn = function() F.CMX_ArgScrubEnable() end,
-CMX_AutoScrub = function() F.CMX_AutoScrubEnable() end,
-CMX_HookHard = function() F.CMX_HookHardApply() end,
-CMX_IdentityMask = function() F.CMX_IdentityMaskEnable() end,
-CMX_FFlagPack = function() F.CMX_FFlagApplyPack() end,
-CMX_SpoofIndex = function() F.CMX_SpoofIndexEnable() end,
-CMX_ViewFilter = function() F.CMX_ViewFilterEnable() end,
-CMX_Humanize = function() F.CMX_HumanizeEnable() end,
-CMX_InstNew = function() F.CMX_InstNewEnable() end,
-CMX_DebugMask = function() F.CMX_DebugMaskEnable() end,
-CMX_RequireBlock = function() F.CMX_RequireBlockEnable() end,
-CMX_ClockMask = function() T.CMX_ClockMask = false end,
-CMX_HitFeed = function() F.CMX_HitFeedEnable() end,
-CMX_BlockReport = function() F.CMX_BlockReportEnable() end,
-CMX_CutLog = function() F.CMX_CutLogEnable() end,
-CMX_NeuterPlus = function() F.CMX_NeuterPlusEnable() end,
-CMX_HashFreeze = function() F.CMX_HashFreezeEnable() end,
-}
-local n = 0
-for i = 1, #list do
-local k = tostring(list[i])
-if map[k] then
-T[k] = true
-n = n + 1
-pcall(map[k])
-end
-end
-if n > 0 then
-F.Out("[自动恢复] 加载后自动开了 " .. tostring(n) .. " 层绕过(是你自己勾的「注入后自动开启」)")
-end
-end
 F.ACWriteTierApply = function(v)
 v = tostring(v or "")
 local on = v:find("②", 1, true) ~= nil or v:find("③", 1, true) ~= nil
@@ -10978,31 +10708,6 @@ if type(sc) == "function" then sc(txt) ok = true end
 end)
 F.Out("[扫描·导出] 日志 " .. tostring(#lines) .. " 行 / " .. tostring(#txt) .. " 字"
 .. (ok and " · 已复制到剪贴板, 直接粘给我就行" or " · 复制失败(执行器没剪贴板)"))
-end
-F.CMX_LoadAutoEnable = function()
-if T.CMX_AutoAll == false then
-F.Out("[自动开启] 你关掉了「加载后自动开启」⇒ 本次只恢复绕过层")
-task.delay(3, function() pcall(F.CMX_AutoRestoreApply) end)
-return
-end
-local delay = tonumber(C.CMX_AutoDelay)
-if delay == nil then delay = 10 end
-if delay < 0 then delay = 0 end
-if delay > 60 then delay = 60 end
-F.Out("[自动开启] 已开 ⇒ 等 " .. tostring(delay) .. " 秒(让游戏先加载完) 再分批恢复"
-.. " —— 同一帧装一堆钩子/写一堆属性正是被踢的形态, 所以分开做")
-task.delay(delay, function()
-if T.CMX_AutoAll == false then
-F.Out("[自动开启] 等待期间你关掉了 ⇒ 取消自动开启")
-return
-end
-local ok, err = pcall(F.RestoreSavedFeatures)
-if not ok then F.Out("[自动开启] 恢复功能时报错(已忽略, 不影响其他): " .. tostring(err)) end
-task.wait(2.5)
-local ok2 = pcall(F.CMX_AutoRestoreApply)
-if not ok2 then F.Out("[自动开启] 恢复绕过层时报错(已忽略)") end
-F.Out("[自动开启] 分批恢复完成")
-end)
 end
 F.CMX_ArgScrubEnable = function()
 if F.CMX_ScrubOn then return false end
@@ -11319,7 +11024,7 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(自动锁在目标身上 · 不抢视角/不抢鼠标)", Description = "锁定方式 = 每帧把你的人物朝向锁在目标身上(自动转身对准) + 可选自动开火; 相机和鼠标始终归你, 视角一动不动。注: 若某游戏是按『相机方向』判定弹道, 只转身不保证命中(那属于改弹道, 你之前明确不要)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
 Tabs.Combat:AddDropdown("AimMode", { Title = "★ 瞄准模式(二选一)", Values = {
 "360°全方位(背后也锁 · 范围单位=格 · 推荐)",
 "正面(只锁屏幕圈内 · 范围单位=像素)",
@@ -11428,9 +11133,8 @@ T.HitGuard = v
 if F._cfgSyncing then return end
 pcall(F.ProtectApply)
 end })
-Tabs.Move:AddToggle("TrapWarn", { Title = "反陷阱(踩到陷阱不触发 · 靠近自动挪开)", Description = "销毁陷阱的 TouchInterest + 靠近时临时关掉你身体的「可触碰」(离开自动还原)。临时会影响 Touched 类交互, 走开即恢复", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("TrapWarn", { Title = "反陷阱(踩上去也不触发 · 和反攻击一样不挪你)", Description = "只做『不触发』: 销毁陷阱的 TouchInterest + 断掉陷阱自身的 Touched 回调 + 拦陷阱触发上报。不挪你的位置、不关你身体的「可触碰」、不影响任何正常交互", Default = false, Callback = function(v)
 T.TrapWarn = v
-T.TrapDodge = v
 if F._cfgSyncing then return end
 pcall(F.ProtectApply)
 end })
@@ -11483,17 +11187,6 @@ if v then F.HideEnable() else F.HideDisable() end
 end })
 end
 do
-Tabs.Move:AddSection("★ 补强 · 移动强化(低重力 / 自身锚定)")
-Tabs.Move:AddToggle("CMX_Gravity", { Title = "低重力场(改 workspace.Gravity · 关时还原)", Default = false, Callback = function(v)
-T.CMX_Gravity = v
-if F._cfgSyncing then return end
-if v then F.CMX_GravityEnable() else F.CMX_GravityDisable() end
-end })
-Tabs.Move:AddToggle("CMX_Anchor", { Title = "自身锚定(钉在原地 · 关时还原原值)", Default = false, Callback = function(v)
-T.CMX_Anchor = v
-if F._cfgSyncing then return end
-if v then F.CMX_AnchorEnable() else F.CMX_AnchorDisable() end
-end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到别人 · 半透明色块 + 外框)", Description = "用的是通用做法: 一个 Highlight, 填充半透明 + 描边 + 始终显示在最上层 ⇒ 隔着墙也看得见。队友绿、敌人红(配合下面的敌我识别)", Default = false, Callback = function(v)
 T.BodyHL = v
@@ -11597,16 +11290,17 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.AFK:AddSection("★ 挂机 / 防踢")
-Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不动人物 · 掐掉挂机检测连接)", Description = "不写人物任何属性, 只把游戏挂在 Idled 上的检测连接断掉 + 每 15 秒写一次心跳属性", Default = false, Callback = function(v)
-T.AntiAFK = v
+Tabs.AFK:AddSection("★ 挂机防踢")
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值), 反作弊或服务端踢你时本地拦下", Default = false, Callback = function(v)
+T.AntiAFK, T.KickGuard = v, v
 if F._cfgSyncing then return end
-if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
-end })
-Tabs.AFK:AddToggle("KickGuard", { Title = "防踢(拦本地 Kick · 反作弊踢你时本地拦下)", Description = "钩住 LocalPlayer:Kick 与全局 __namecall 的 Kick 路径, 反作弊/服务端踢你时本地吞掉", Default = false, Callback = function(v)
-T.KickGuard = v
-if F._cfgSyncing then return end
-if v then F.KickGuardEnable() else F.KickGuardDisable() end
+if v then
+pcall(F.AntiAFKEnable)
+pcall(F.KickGuardEnable)
+else
+pcall(F.AntiAFKDisable)
+pcall(F.KickGuardDisable)
+end
 end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
@@ -11732,11 +11426,6 @@ Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文�
 end)
 end })
 Tabs.AC:AddSection("自动开启")
-Tabs.AC:AddToggle("CMX_AutoAll", { Title = "★ 加载后自动开启(恢复你上次开着的全部功能 · 含玩法与绕过)", Description = "默认开。关掉它就退回「只恢复绕过层, 玩法不自动开」", Default = true, Callback = function(v)
-T.CMX_AutoAll = v
-if F._cfgSyncing then return end
-F.Out("[自动开启] " .. (v and "已开: 下次加载会自动恢复上次开着的全部功能" or "已关: 加载后只恢复绕过层"))
-end })
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
 local changed = (T.Session ~= nil) and (T.Session ~= v)
@@ -11760,36 +11449,35 @@ Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已是�
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
-Tabs.Setting:AddButton({ Title = "★ 视角/鼠标被锁住了?点这里(释放相机 + 恢复鼠标)", Callback = function()
-local did = F.CamRelease(true, "手动按钮")
-F.Out("[视角] 手动释放完成" .. ((did and #did > 0) and (" · " .. table.concat(did, " · ")) or " · 当前没发现被占用的相机/鼠标"))
-pcall(function() Fluent:Notify({ Title = "视角修复", Content = "已释放相机/鼠标(自瞄/锁相机/自由视角/锁鼠标 都关了)。还不动就点下面那条「游戏异常一键恢复」", Duration = 8 }) end)
-end })
-Tabs.Setting:AddButton({ Title = "★ 游戏异常(视角/交互/卡死)?点这里一键恢复干净状态", Callback = function()
-task.spawn(function()
-pcall(F.CamRelease, true, "一键恢复")
-pcall(AC.ReenableDisabledConns)
-pcall(AC.UnblockRemotes)
-pcall(AC.UninstallNamecallHook)
-pcall(AC.UninstallIndexMask)
-pcall(AC.UninstallSetmetatableHook)
-pcall(AC.UninstallPropertyLock)
-pcall(AC.UninstallAntiTP)
-pcall(F.CMX_HookHardRestore)
-pcall(F.CMX_ViewFilterDisable)
-pcall(F.CMX_InstNewDisable)
-pcall(F.CMX_RequireBlockDisable)
-pcall(F.CMX_ClockMaskDisable)
-pcall(F.CMX_DebugMaskDisable)
-pcall(F.CMX_SpoofIndexDisable)
-pcall(F.CMX_SpoofIndexDisable)
-pcall(F.DeepNeuterDisable)
-pcall(F.SpeedAntiTPDisable)
-pcall(F.ACWriteTierApply, "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)")
-F.Out("[恢复] 已把「会改写游戏」的层全部卸掉 + 还原了被禁的连接与相机 —— 若还不正常, 请重进一次游戏")
-pcall(function() Fluent:Notify({ Title = "一键恢复", Content = "已卸掉改写游戏的层, 并还原被禁的连接与相机/鼠标", Duration = 8 }) end)
-end)
-end })
+F.DumpFeatureList = function()
+local op = Fluent and Fluent.Options
+if type(op) ~= "table" then F.Out("[清单] 界面还没建好, 稍后再点"); return end
+local names = {}
+for k in pairs(op) do names[#names + 1] = tostring(k) end
+table.sort(names)
+local n = 0
+F.Out("[清单] ===== 功能总览(控件名 · 类型 · 当前值 · 含义) =====")
+for i = 1, #names do
+local o = op[names[i]]
+if type(o) == "table" then
+local ty = "其它"
+if type(o.Type) == "string" then ty = o.Type
+elseif type(o.Value) == "boolean" then ty = "开关"
+elseif type(o.Value) == "number" then ty = "滑块"
+elseif type(o.Value) == "table" then ty = "下拉" end
+local val = o.Value
+if type(val) == "boolean" then val = val and "开" or "关"
+elseif type(val) == "table" then val = "(多选列表)" end
+local desc = o.Description
+if type(desc) ~= "string" then desc = "" end
+n = n + 1
+F.Out(string.format("[清单] %-24s %-4s %-8s %s", names[i], ty, tostring(val), desc))
+end
+end
+F.Out("[清单] 共 " .. tostring(n) .. " 项 —— 这份清单同时写进日志文件, 直接发给我就行")
+end
+Tabs.Setting:AddButton({ Title = "★ 打印功能清单(每个功能的含义与当前状态 → 日志)", Callback = function() pcall(F.DumpFeatureList) end })
+Tabs.Setting:AddButton({ Title = "套用本游戏上次的设置(档位 / 飞行·加速通道 / 传送方式)", Callback = function() pcall(F.CMX_ProfileApply) end })
 F.UnloadAll = UnloadAll
 pcall(function()
 local g = getgenv and getgenv()
@@ -11837,9 +11525,8 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 .. " · writefile:" .. _wf .. " —— 标“无”的项只影响依赖它的子功能, 不会让整个脚本失效")
 end)
 RestoreFeatures()
-pcall(F.CMX_LoadAutoEnable)
-F.CamReleaseSchedule()
-task.delay(5, function() pcall(F.CMX_ProfileApply) end)
+task.delay(6, function() pcall(F.CamRelease) end)
+F.Out("[加载] 没有任何功能会被自动开启 —— 要用什么点什么")
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
