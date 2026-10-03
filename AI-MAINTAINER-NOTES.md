@@ -3241,3 +3241,14 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - 对照结论（**我们已达标**）：**R6/R15 已兼容**（`F.COMBAT_PARTS`/`F.HB_PARTS` 两套肢体名都列了）；**元方法钩子防重入做得对**（`box.alive`+`rec.alive` 双守卫、`newcclosure`、`checkcaller()`、钩子里只 `task.defer` 打日志）；连接禁用/恢复配对（`AC.ReenableDisabledConns` 在卸载与急停链里）；`WaitForChild` 仅 2 处且都带超时；`LP.Character`.x 无 nil 守卫的写法 0 处。
 - ★ **本轮补的真缺口**：`F.CombatTick` 每帧转相机 + 自动开火，**没给菜单和打字让路** ⇒ 菜单开着想点按钮时视角被抢、在聊天框打字会被锁视角并误开火。修法：监听 `UIS.TextBoxFocused` / `TextBoxFocusReleased` 置 `F._typing`，与 `F.MenuOpen()` 一起在 `CombatTick` 开头让路（同时还原 `AutoRotate`、清 `F._combatNow`）。
 - 评估后**不做**（收益低，非遗漏）：`LP.CharacterRemoving`（关键引用都有守卫或在新角色上重建）、`workspace.DescendantRemoving` 清理（`Disable` 时已遍历还原）。
+
+
+## 逐页功能完整性对账（2026-10-04 · 14.0.11）
+
+- 手段：新增 `_audit_pages.py` —— 逐 Toggle 对账「世界改动函数 → 卸载链/急停链是否有还原」「有没有日志」「callback 调的函数与开关 id 语义是否相符」。
+- ★ **真缺口 2 类（已修）**：① **12 个开关没有日志**（God / LockHealth / Regen / NoDeath / InfiniteJump / NoClip / BodyHL / TeamColorHL / ViewBoost / Mute / Antilag / LockCam）⇒ 用户拨了看不到状态，已逐个补 `F.Out`；
+  ② **3 个自动化线程没有显式停止函数**（AutoTrain / AutoBonus / AutoGym 只靠 `while T.X` 自然退出）⇒ 新增 `F.AutoTrainDisable` / `F.AutoBonusDisable` / `F.AutoGymDisable`，并挂进急停链与卸载链。
+- ★★ **判据自身的三个坑（这轮踩了两次，必须记住）**：① `Enable` 后缀没剥掉 ⇒ 一次报 30+ 条假「缺还原」；② 卸载链里的名字带 `F.` 前缀、而候选名不带前缀 ⇒ 全部误判为「没还原」；
+  ③ **`sed -n 'A,Bp;C,Dp'` 的多段拼接输出会让人把后一段的代码当成前一段的** —— 本轮据此误判「敌我识别接错成准星」，实际那段是「准星」自己的控件。**核代码必须单段精确读**。
+- 复核后**确认假报**：`F.ProtectApply`（内部对稳身/反攻击/反陷阱/防拉回逐个成对 enable/disable，本就有还原+日志）、`F.EnsureAimOn`（联动首选，最终走 `F.AimSet`，在链里）、`F._tpMouseOn`（布尔字段不是函数）、`Trans.Enable`（日志在被调函数里）。
+- 结论：67 个控件**全部有「世界改动 → 还原」闭环或本身就是纯设置项**；「callback 调的函数与开关 id 语义不符」14 条**全部合理**（功能复用 / 联动 / 按钮类）。
