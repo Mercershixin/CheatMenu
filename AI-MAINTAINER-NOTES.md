@@ -3284,3 +3284,15 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ★ 另确认 `CMX_GcinfoMask` / `CMX_ArgScrub` **不是死层** —— 它们由 `CMXSpoof` / `CMX_AutoScrub` **内部配套调用**（我的「死能力」审计漏看了这层间接引用，属假报）。
 - ★★ **②档的「拦上报」原本是空承诺**：它依赖 `__namecall` 钩子，而只有③档才装 ⇒ ②档补 `AC.InstallNamecallHook()`，现在②档 = ①档 + namecall 拦上报 + 断日志 + 按名中和+ + 哈希冻结。
 - **三档描述原来是错的**（①档写「不装钩子」，实际装了 `__index` 读钩子）⇒ 三条文案按实现改写准确（文案与实现一致是用户明确要求）。
+
+
+## 拦受伤上报 + ②档扩容 + 删命中提示（2026-10-04 · 14.0.15）
+
+- ★★ 用户问「服务端权威的话, 受伤/死亡是不是还要客户端上报? 那就拦上报」⇒ 思路对, 但要**分两种情况**：① **客户端算伤害再 FireServer 上报** ⇒ 拦下有效（服务端真不知道你受伤）② **服务端算伤害** ⇒ 客户端只是收通知, 拦不到东西。
+  ⇒ 判据只能靠**实测**：新增 `AC.HP_KEYS`（damage / hurt / death / ragdoll / knockback …）+ namecall 钩子里的 `T.HpBlock` 分支, **日志会列出实际拦到了哪些 remote** —— 拦不到就是服务端算的, 不是开关没开。
+- 新开关 `T.HpBlock`（AC 页「拦受伤/死亡上报」）+ **②档自动带上它**（用户要「最大化保护」）。生效前提是 namecall 钩子在, 开关会自己 `AC.InstallNamecallHook()`。
+- **命中提示（HitFeed）整段删除**（用户说不要了）：−3947 字节, `HitFeed` 0 残留；`F._hitConn` 是**受击保护**在用的另一处, 保留。
+- ★★ **②档原来连 `F.CMX_TierSync` 都没调** ⇒ 档位表里 lv>=2 的绕过层（AutoScrub / SpoofIndex / ViewFilter / BlockReport）**根本不会因②档而开**。已给②档补 `F.CMX_TierSync(2)`。
+- **按用户「把不极端的下放」**：`ClockMask`（时钟伪装）/ `DebugMask`（调试名伪装）/ `InstNew`（Instance.new 伪装）**从③档下放到②档**；
+  留在③档的是真激进的：`HookHard`（硬钩子）/ `RequireBlock`（require 拦截）/ `NeuterPlus`（getgc 中和）/ `HashFreeze` / `IdentityMask` / `FFlagPack`。
+  ⇒ 现在 ①=只读钩 / ②=7 层 / ③=14 层全开, **包含关系 ①⊂②⊂③ 仍成立**。
