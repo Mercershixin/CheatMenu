@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 14:43 sha 1fc42223 bytes 460745'):format('2026-10-03 14:43','1fc42223',460745))
+print(('[CheatMenu] build 2026-10-03 15:05 sha 9adf80ac bytes 462875'):format('2026-10-03 15:05','9adf80ac',462875))
 local F = {}
-F.VERSION = "v13.5.0"
+F.VERSION = "v13.6.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7568,6 +7568,7 @@ Trans.QUICK = {
 ["health"] = "生命", ["open"] = "开启", ["max"] = "最大", ["unlock"] = "解锁", ["locked"] = "已锁定",
 ["owned"] = "已拥有", ["equipped"] = "已装备", ["win"] = "胜利", ["lose"] = "失败", ["ready"] = "准备",
 ["equip"] = "装备", ["use"] = "使用", ["slots"] = "槽位", ["plot"] = "基地", ["gems shop"] = "宝石商店",
+["op"] = "强力", ["afk"] = "挂机", ["dps"] = "输出", ["pvp"] = "对战", ["pve"] = "刷怪",
 }
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
@@ -7857,6 +7858,7 @@ Trans.GL.PRESET[k] = want
 end
 Trans.QUICK[k] = nil
 Trans.Cache = {}
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
 F.Out("[翻译·词条] 已加: " .. term .. " -> " .. tostring(Trans.GL.KEEP[k] or Trans.GL.PRESET[k]))
 return true
 end
@@ -7865,6 +7867,7 @@ local k = tostring(term or ""):lower()
 local hadP, hadK = Trans.GL.PRESET[k] ~= nil, Trans.GL.KEEP[k] ~= nil
 Trans.GL.PRESET[k], Trans.GL.KEEP[k] = nil, nil
 Trans.Cache = {}
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
 F.Out("[翻译·词条] 已删: " .. tostring(term) .. (hadP or hadK and "" or " (本来就没有)"))
 return hadP or hadK
 end
@@ -7899,18 +7902,66 @@ F.Out("[翻译·词条] 自动加入 " .. tostring(n) .. " 条(游戏名 + 本�
 .. " · 当前词条共 " .. tostring(Trans.GL.Count()) .. " 条")
 return n
 end
+Trans.KNOWN = function(w)
+if type(w) ~= "string" or w == "" then return false end
+local k = w:lower()
+if Trans.QUICK and Trans.QUICK[k] ~= nil then return true end
+if Trans.GL then
+if Trans.GL.PRESET and Trans.GL.PRESET[k] ~= nil then return true end
+if Trans.GL.KEEP and Trans.GL.KEEP[k] ~= nil then return true end
+end
+return false
+end
+Trans.ShouldV2 = function(s)
+local n = #s
+if n < 2 or n > 300 then return false, "长度" end
+if not s:find("[A-Za-z]") then return false, "无字母" end
+if (C.TransLang or "zh") == "zh" and s:find("[\228-\233]") then return false, "已是中文" end
+if s:match("^https?://") or s:match("rbxassetid") or s:match("rbxthumb")
+or s:match("rbxgameasset") or s:match("^rbx") then return false, "资源" end
+if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org")
+or s:match("%.io") or s:match("%.gg") or s:match("%w@%w+%.%w") then return false, "网址" end
+if s:match("^[/\\#]") then return false, "路径" end
+if s:find("€", 1, true) or s:find("¥", 1, true) then return false, "货币符" end
+if #s <= 12 and s:match("%%[%a%%]") then return false, "格式占位符" end
+if not s:find("%s") then
+local core = s:gsub("^[%p%s]+", ""):gsub("[%p%s]+$", "")
+if core == "" then return false, "空" end
+if Trans.KNOWN(core) then return true end
+if core:find("_") then return false, "标识符(下划线)" end
+if core:match("^[%d%.]+$") then return false, "纯数字" end
+if core:match("^v%d") then return false, "版本号" end
+local letters = select(1, core:gsub("[^A-Za-z]", ""))
+local digits = select(1, core:gsub("[^%d]", ""))
+local nlet, ndig = #letters, #digits
+if ndig > 0 and #core <= 16 then return false, "含数字的短串" end
+if core:match("^[IVXLCM]+$") and #core <= 7 then return false, "罗马数字" end
+if core:match("^%u+$") and #core <= 4 then return false, "大写缩写" end
+if nlet >= 3 and not core:find("[aeiouAEIOU]") then return false, "无元音乱码" end
+end
+return true
+end
+Trans._sCache = {}
+Trans._sN = 0
+Trans.SHOULD_CACHE_MAX = 4000
+Trans.ShouldCacheClear = function()
+Trans._sCache = {}
+Trans._sN = 0
+end
 function Trans.Should(s)
 if type(s) ~= "string" then return false end
-s = s:gsub("^%s+", ""):gsub("%s+$", "")
-if #s < 2 or #s > 300 then return false end
-if not s:find("[%a\128-\255]") then return false end
-if s:match("^[%d%.,%%%+%-%s/():;!?*#&@'\"|\\~`%[%]{}<>=]+$") then return false end
-if s:match("^https?://") or s:find("www%.%w+") or s:find("%.com") or s:find("%.net") or s:find("%.org") then return false end
-if s:match("^/") then return false end
-if s:find("€", 1, true) or s:find("¥", 1, true) then return false end
-local hasCJK = s:find("[\228-\233]") ~= nil
-if (C.TransLang or "zh") == "zh" and hasCJK then return false end
-return true
+local hit = Trans._sCache[s]
+if hit ~= nil then return hit end
+local ok = Trans.ShouldV2(s:gsub("^%s+", ""):gsub("%s+$", "")) and true or false
+if Trans._sN < Trans.SHOULD_CACHE_MAX then
+Trans._sCache[s] = ok
+Trans._sN = Trans._sN + 1
+else
+Trans.ShouldCacheClear()
+Trans._sCache[s] = ok
+Trans._sN = 1
+end
+return ok
 end
 function Trans.Translate(text, force)
 if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
@@ -11650,7 +11701,11 @@ F.TranslateDisable()
 end
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
-Default = "zh", Callback = function(v) C.TransLang = v end })
+Default = "zh", Callback = function(v)
+C.TransLang = v
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+Trans.Cache = {}
+end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddDropdown("TransRTMode", { Title = "富文本处理(<b>/<font>/<color> 这类标签怎么办)", Values = {
 "① 保标签(推荐) · 抽出标签→只译文字→原样塞回",
