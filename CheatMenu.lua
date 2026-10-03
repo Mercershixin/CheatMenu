@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:02 sha aee1e113 bytes 438428'):format('2026-10-03 18:02','aee1e113',438428))
+print(('[CheatMenu] build 2026-10-03 18:19 sha 0354915a bytes 439209'):format('2026-10-03 18:19','0354915a',439209))
 local F = {}
-F.VERSION = "v13.10.14"
+F.VERSION = "v13.10.15"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2833,15 +2833,44 @@ local rp = RaycastParams.new()
 rp.FilterType = Enum.RaycastFilterType.Exclude
 local ex = {}
 if LP.Character then ex[#ex + 1] = LP.Character end
+local now = os.clock()
+if now - (F._crossScanAt or 0) > 1 then
+F._crossScanAt = now
+F._crossCands = {}
+local _, _, myRoot = GC()
+for _, hum in ipairs(workspace:GetDescendants()) do
+if hum:IsA("Humanoid") then
+local ch = hum.Parent
+if ch and ch:IsA("Model") and ch ~= LP.Character and not (myRoot and ch:IsDescendantOf(myRoot.Parent)) then
+F._crossCands[#F._crossCands + 1] = ch
+end
+end
+end
+end
 local best, bestScore = nil, nil
+local cands, seen = {}, {}
+local function push(ch, pl)
+if not ch or seen[ch] then return end
+seen[ch] = true
+cands[#cands + 1] = { ch = ch, pl = pl }
+end
 for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP and not inTbl(C.Blacklist, pl.Name) then
-local ch = pl.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if pl ~= LP then push(pl.Character, pl) end
+end
+if F._crossCands then
+for i = 1, #F._crossCands do
+push(F._crossCands[i], nil)
+end
+end
+for i = 1, #cands do
+local c = cands[i]
+local ch, pl = c.ch, c.pl
+local hum = ch:FindFirstChildOfClass("Humanoid")
+local hrp = ch:FindFirstChild("HumanoidRootPart")
 if hrp and hum and hum.Health > 0 then
 local skip = false
-if T.AimTeamCheck and LP.Team ~= nil then
+if pl and inTbl(C.Blacklist, pl.Name) then skip = true end
+if not skip and T.AimTeamCheck and LP.Team ~= nil and pl then
 pcall(function()
 if pl.Team ~= nil and pl.Team == LP.Team then skip = true end
 if not skip and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then skip = true end
@@ -2869,9 +2898,9 @@ ex[#ex] = nil
 if hit and hit.Instance then skip = true end
 end
 if not skip then
-score = score - (inTbl(C.PriorityTargets, pl.Name) and 1e6 or 0)
+local pname = pl and pl.Name or tostring(ch.Name)
+score = score - (inTbl(C.PriorityTargets, pname) and 1e6 or 0)
 if not bestScore or score < bestScore then best, bestScore = hrp, score end
-end
 end
 end
 end
