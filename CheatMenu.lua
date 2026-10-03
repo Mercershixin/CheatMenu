@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:47 sha 1fde7b6f bytes 441774'):format('2026-10-03 18:47','1fde7b6f',441774))
+print(('[CheatMenu] build 2026-10-03 18:49 sha 8e2f9b2f bytes 440491'):format('2026-10-03 18:49','8e2f9b2f',440491))
 local F = {}
-F.VERSION = "v13.10.21"
+F.VERSION = "v13.10.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2928,50 +2928,6 @@ if best and best.Parent then F._aimStick = best.Parent end
 return best
 end
 F._fireAt = 0
-F.SilentAimEnable = function()
-if F._silentOn then return end
-local cam = workspace.CurrentCamera
-if not cam then F.Out("[静默自瞄] 相机还没就绪, 稍后再开"); T.SilentAim = false return end
-local fn = nil
-pcall(function() fn = cam.ViewportPointToRay end)
-if type(fn) ~= "function" then
-F.Out("[静默自瞄] 拿不到相机射线方法 ⇒ 该执行器不可用")
-T.SilentAim = false
-return
-end
-local function makeBox(orig)
-return function(self, x, y, ...)
-local ray = orig(self, x, y, ...)
-if T.AimOn and not F.CMX_IsCaller() then
-local tgt = F.AimPick()
-if tgt then
-local d = tgt.Position - ray.Origin
-if d.Magnitude > 0.01 then return Ray.new(ray.Origin, d.Unit * 1000) end
-end
-end
-return ray
-end
-end
-local ok = pcall(function()
-if type(hookfunction) == "function" and type(newcclosure) == "function" then
-hookfunction(fn, newcclosure(makeBox(fn)))
-else
-local orig = fn
-cam.ViewportPointToRay = makeBox(orig)
-end
-end)
-F._silentOn = ok and true or false
-if F._silentOn then
-F.Out("[静默自瞄] 已开: 视角完全自由, 只在开火时把子弹方向悄悄改向目标")
-else
-F.Out("[静默自瞄] 安装失败(执行器不支持 hook 相机方法) ⇒ 该模式不可用")
-T.SilentAim = false
-end
-end
-F.SilentAimDisable = function()
-F._silentOn = false
-F.Out("[静默自瞄] 已关(相机射线恢复)")
-end
 function F.FireOnce()
 local did = {}
 local cam = workspace.CurrentCamera
@@ -3168,7 +3124,6 @@ if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._ai
 if not T.AimOn then
 return
 end
-if not F._silentOn then pcall(F.SilentAimEnable) end
 F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
@@ -3186,12 +3141,10 @@ local tgt = F.AimPick()
 if not (cam and tgt) then return end
 local aimPos = tgt.Position
 if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
-if not F._silentOn then
 local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
 local lerpK = 1 / math.max(1, tonumber(C.AimSmooth) or 5)
 if T.Aim360 then lerpK = math.min(lerpK, 0.12) end
 cam.CFrame = cam.CFrame:Lerp(want, lerpK)
-end
 F.AutoFire(tgt)
 end)
 end
@@ -11837,7 +11790,9 @@ pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
 T.CMX_SpoofIndex = false
-F.Out("[防护档位] 已关(什么都不开)")
+pcall(F.CMX_SpoofIndexDisable)
+pcall(F.MetaHookUninstall)
+F.Out("[防护档位] 已关 —— 所有钩子已卸载(namecall/index/setmetatable/属性伪装), 最不暴露")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
 return
 end
