@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:45 sha dace35b7 bytes 438830'):format('2026-10-04 02:45','dace35b7',438830))
+print(('[CheatMenu] build 2026-10-04 02:47 sha 15950ce0 bytes 438834'):format('2026-10-04 02:47','15950ce0',438834))
 local F = {}
-F.VERSION = "v14.0.16"
+F.VERSION = "v14.0.17"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -732,7 +732,7 @@ if isHum and (k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight") then
 local _, hum = GC()
 if hum and t == hum then
 if k == "WalkSpeed" then
-if T.SpeedOn then v = (F._baseWalk or 16) * 2 end
+if T.SpeedOn then v = tonumber(C.SpeedValue) or v end
 elseif k == "JumpPower" then
 if T.InfiniteJump or T.SpeedOn then v = 50 end
 elseif k == "JumpHeight" then
