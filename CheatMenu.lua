@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:26 sha 64073f13 bytes 439631'):format('2026-10-03 18:26','64073f13',439631))
+print(('[CheatMenu] build 2026-10-03 18:33 sha de7dc9e0 bytes 440330'):format('2026-10-03 18:33','de7dc9e0',440330))
 local F = {}
-F.VERSION = "v13.10.17"
+F.VERSION = "v13.10.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2911,13 +2911,16 @@ return best
 end
 F._fireAt = 0
 function F.FireOnce()
-local viaTool = nil
+local viaVIM = nil
 pcall(function()
-local ch = LP.Character
-local tool = ch and ch:FindFirstChildOfClass("Tool")
-if tool then tool:Activate() viaTool = "tool:Activate()" end
+local vim = game:GetService("VirtualInputManager")
+local cam = workspace.CurrentCamera
+local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+viaVIM = "VirtualInputManager(不抢鼠标)"
 end)
-if viaTool then return viaTool end
+if viaVIM then return viaVIM end
 local viaBtn = nil
 pcall(function()
 local b = F._fireBtn
@@ -2951,20 +2954,16 @@ end
 end
 end)
 if viaBtn then return viaBtn end
-local viaVIM = nil
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-local cam = workspace.CurrentCamera
-local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
-vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
-task.wait(0.05)
-vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
-viaVIM = "VirtualInputManager(不抢鼠标)"
-end)
-if viaVIM then return viaVIM end
 if type(mouse1click) == "function" then
 if pcall(mouse1click) then return "mouse1click()" end
 end
+local viaTool = nil
+pcall(function()
+local ch = LP.Character
+local tool = ch and ch:FindFirstChildOfClass("Tool")
+if tool then tool:Activate() viaTool = "tool:Activate()" end
+end)
+if viaTool then return viaTool end
 local viaVu = nil
 pcall(function()
 local vu = game:GetService("VirtualUser")
@@ -3111,12 +3110,8 @@ function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
 if not T.AimOn then
-T.FovCircle = false
-pcall(F.FovCircleDisable)
 return
 end
-T.FovCircle = true
-pcall(F.FovCircleEnable)
 F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
@@ -3135,7 +3130,9 @@ if not (cam and tgt) then return end
 local aimPos = tgt.Position
 if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
 local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
-cam.CFrame = cam.CFrame:Lerp(want, 1 / math.max(1, tonumber(C.AimSmooth) or 5))
+local lerpK = 1 / math.max(1, tonumber(C.AimSmooth) or 5)
+if T.Aim360 then lerpK = math.min(lerpK, 0.12) end
+cam.CFrame = cam.CFrame:Lerp(want, lerpK)
 F.AutoFire(tgt)
 end)
 end
@@ -8582,6 +8579,20 @@ MinimizeKey = Enum.KeyCode.G,
 })
 if getgenv then getgenv().CM_Window = Window end
 pcall(function()
+local g = Fluent and Fluent.GUI
+if not g then return end
+local function rel()
+if not g.Enabled then return end
+pcall(function()
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
+UIS.MouseBehavior = Enum.MouseBehavior.Default
+end
+end)
+end
+pcall(function() g:GetPropertyChangedSignal("Enabled"):Connect(rel) end)
+pcall(function() RS.Heartbeat:Connect(rel) end)
+end)
+pcall(function()
 if not _touch then return end
 local host = nil
 pcall(function() host = gethui and gethui() end)
@@ -11416,13 +11427,22 @@ Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄")
 Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) F.AimSet(v) end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "★ 范围(屏幕像素 · 360°模式下单位=格)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddToggle("Aim360", { Title = "★ 360°全方位(背后也能锁)", Default = false, Callback = function(v)
-T.Aim360 = v
-if v then F.EnsureAimOn() end
-F.Out("[自瞄] 360° = " .. (v and "开(不看朝向, 按世界距离; 「范围」此模式下单位=格)" or "关(只锁屏幕内 FOV 圈里)"))
+Tabs.Combat:AddDropdown("AimMode", { Title = "★ 瞄准模式(二选一)", Values = {
+"360°全方位(背后也锁 · 范围单位=格 · 推荐)",
+"正面(只锁屏幕圈内 · 范围单位=像素)",
+}, Default = "360°全方位(背后也锁 · 范围单位=格 · 推荐)", Callback = function(v)
+T.Aim360 = (string.find(v, "360", 1, true) ~= nil)
+if T.AimOn then pcall(F.EnsureAimOn) end
+F.Out("[自瞄] 模式 = " .. tostring(v))
 end })
+Tabs.Combat:AddSlider("AimFOV", { Title = "★ 范围(360°模式=格 / 正面模式=像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddToggle("FovCircleShow", { Title = "显示范围圈(把「范围」画成屏幕上的圈)", Description = "开: 屏幕中间画一个跟随「范围」大小的圈, 方便看清锁多远; 「正面」模式下最直观(360°模式按格算)", Default = false, Callback = function(v)
+T.FovCircle = v
+if F._cfgSyncing then return end
+if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
+end })
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
+Tabs.Combat:AddToggle("AimWallCheck", { Title = "★ 不打隔墙(墙后的敌人不锁)", Description = "开: 自瞄先从相机到目标打一条射线, 中间有墙/障碍物就不锁他 —— 不会隔着墙开枪露位置", Default = false, Callback = function(v) T.AimWallCheck = v F.Out("[自瞄] 不打隔墙 = " .. (v and "开" or "关")) end })
 Tabs.Combat:AddDropdown("AimTarget", { Title = "★ 目标选择", Values = {
 "所有人(无阵营时自动)",
 "仅敌对阵营(有阵营时)",
@@ -11791,27 +11811,11 @@ T.CMX_SpoofIndex = v
 if F._cfgSyncing then return end
 if v then pcall(F.CMX_SpoofIndexEnable) else pcall(F.CMX_SpoofIndexDisable) end
 end })
-Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
-task.spawn(function()
-local _, capOk, capTotal = F.ProbeCapabilities(false)
-local n = F.UnifiedACPass()
-pcall(F.ScanRemotes)
-pcall(F.ScanGameModules)
-pcall(F.ScanScripts)
-pcall(F.ScanConnections)
-pcall(F.LogFlush, "统一扫描")
-Fluent:Notify({
-Title = "扫描完成",
-Content = "Hook 层数 " .. tostring(n) .. " · 执行器能力 " .. tostring(capOk) .. "/" .. tostring(capTotal) .. " —— 明细见控制台 F9",
-Duration = 8,
-})
-end)
-end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
 task.spawn(function()
 pcall(F.CMX_ScanAll)
-Fluent:Notify({ Title = "全扫描完成", Content = "点下面「复制扫描结果」直接给我", Duration = 8 })
+Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
 end })
 Tabs.AC:AddSection("自动开启")
