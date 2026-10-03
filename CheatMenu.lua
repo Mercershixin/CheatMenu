@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:37 sha 827b9a8a bytes 455500'):format('2026-10-03 16:37','827b9a8a',455500))
+print(('[CheatMenu] build 2026-10-03 16:39 sha 0667987d bytes 452201'):format('2026-10-03 16:39','0667987d',452201))
 local F = {}
-F.VERSION = "v13.9.7"
+F.VERSION = "v13.9.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11449,27 +11449,9 @@ Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", 
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
-Tabs.Move:AddDropdown("FlyDrive", { Title = "飞行驱动方式(改完立刻生效, 不用重开)", Values = {
-"速度驱动(LinearVelocity · 现状: 快、稳)",
-"位置约束(AlignPosition · 速度交给引擎算, 对只查速度的检测更钝)",
-}, Default = "速度驱动(LinearVelocity · 现状: 快、稳)", Callback = function(v)
-C.FlyDrive = v
-if F._cfgSyncing then return end
-pcall(F.CMX_ProfilePut, "fly", v)
-if T.FlyOn then F.FlySet(true) end
-end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddDropdown("SpeedDrive", { Title = "加速驱动方式(改完立刻生效, 不用重开)", Values = {
-"速度驱动(直接写线性速度 · 现状: 快)",
-"意图驱动(Humanoid:Move · 不写 WalkSpeed 也不写速度, 对只查速度的检测更钝; 斜坡/台阶效率低)",
-}, Default = "速度驱动(直接写线性速度 · 现状: 快)", Callback = function(v)
-C.SpeedDrive = v
-if F._cfgSyncing then return end
-pcall(F.CMX_ProfilePut, "speed", v)
-if T.SpeedOn then F.SpeedSet(true) end
-end })
 Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
 "关(什么都不开)",
 "① 默认: 防挂机(不动人物 · 不装钩子)",
@@ -11502,18 +11484,6 @@ T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
-Tabs.Move:AddDropdown("IILevel", { Title = "瞬间交互强度(改完立刻对已处理的交互点生效)", Values = {
-"① 只改长按(现状)",
-"② 上面 + 免视线 + 拉大触发距离",
-"③ 上面 + 自动触发(每 0.6s 替你按 · 最激进)",
-}, Default = "① 只改长按(现状)", Callback = function(v)
-C.IILevel = v
-if F._cfgSyncing then return end
-if not T.InstantInteract then return end
-pcall(F.InstantInteractDisable)
-T.InstantInteract = true
-pcall(F.InstantInteractEnable)
-end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
@@ -11537,7 +11507,6 @@ T.Hide = v
 if F._cfgSyncing then return end
 if v then F.HideEnable() else F.HideDisable() end
 end })
-Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
 Tabs.Move:AddSection("★ 补强 · 移动强化(低重力 / 自身锚定)")
@@ -11545,11 +11514,6 @@ Tabs.Move:AddToggle("CMX_Gravity", { Title = "低重力场(改 workspace.Gravity
 T.CMX_Gravity = v
 if F._cfgSyncing then return end
 if v then F.CMX_GravityEnable() else F.CMX_GravityDisable() end
-end })
-Tabs.Move:AddSlider("CMX_GravityValue", { Title = "低重力值(196.2 = 原版)", Min = 0, Max = 196, Default = 60, Rounding = 0, Callback = function(v)
-C.CMX_GravityValue = v
-if F._cfgSyncing then return end
-if T.CMX_Gravity then F.CMX_GravityApply() end
 end })
 Tabs.Move:AddToggle("CMX_Anchor", { Title = "自身锚定(钉在原地 · 关时还原原值)", Default = false, Callback = function(v)
 T.CMX_Anchor = v
@@ -11579,18 +11543,6 @@ T.FOV = v T.Zoom = v
 if F._cfgSyncing then return end
 if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 end })
-Tabs.World:AddSlider("FOV", { Title = "视野 FOV", Min = 70, Max = 120, Default = 100, Rounding = 0, Callback = function(v)
-C.FOV = v
-if F._cfgSyncing then return end
-if T.FOV then FOVEnable() end
-end })
-Tabs.World:AddSlider("Zoom", { Title = "缩放距离(POV · 拖了立刻生效)", Min = 128, Max = 3000, Default = 400, Rounding = 0, Callback = function(v)
-C.Zoom = v
-pcall(function()
-LP.CameraMaxZoomDistance = v
-LP.CameraMinZoomDistance = 0.5
-end)
-end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
 T.Mute = v
 if F._cfgSyncing then return end
@@ -11602,7 +11554,6 @@ if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 end })
 Tabs.World:AddSection("相机 / 准星")
-Tabs.World:AddSlider("FreecamSpeed", { Title = "Freecam 速度(格/秒 · Shift 加速 3 倍)", Min = 5, Max = 500, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v and UIS.TouchEnabled then
@@ -11655,7 +11606,6 @@ T.CMX_Tracer = v
 if F._cfgSyncing then return end
 if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
 end })
-Tabs.World:AddDropdown("CMX_TracerFrom", { Title = "追踪线起点", Values = { "屏幕下方", "屏幕中心" }, Default = "屏幕下方", Callback = function(v) C.CMX_TracerFrom = v end })
 Tabs.World:AddToggle("CMX_HealthBar", { Title = "血量条(左边竖条 · 绿→红)", Default = false, Callback = function(v)
 T.CMX_HealthBar = v
 if F._cfgSyncing then return end
@@ -11675,7 +11625,6 @@ C.TPStep = v
 if F._cfgSyncing then return end
 pcall(F.CMX_ProfilePut, "tpstep", v)
 end })
-Tabs.TP:AddSlider("TweenDur", { Title = "补间传送时长(秒 · 只在上面选「补间步进」时生效)", Min = 0.1, Max = 5, Default = 0.8, Rounding = 1, Callback = function(v) C.TweenDur = v end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
@@ -11725,7 +11674,6 @@ T.AutoBonus = v
 if F._cfgSyncing then return end
 if v then F.AutoBonusEnable() end
 end })
-Tabs.AFK:AddSlider("AutoTrainSec", { Title = "训练循环间隔(秒)", Min = 1, Max = 30, Default = 5, Rounding = 1, Callback = function(v) C.AutoTrainSec = v end })
 Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
@@ -11777,7 +11725,6 @@ T.CMX_ClickSpam = v
 if F._cfgSyncing then return end
 if v then F.CMX_ClickSpamEnable() else F.CMX_ClickSpamDisable() end
 end })
-Tabs.AFK:AddSlider("CMX_ClickRange", { Title = "自动点击半径(格)", Min = 5, Max = 300, Default = 60, Rounding = 0, Callback = function(v) C.CMX_ClickRange = v end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
