@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 22:17 sha 0627e22a bytes 432172'):format('2026-10-03 22:17','0627e22a',432172))
+print(('[CheatMenu] build 2026-10-03 22:48 sha 8982f81e bytes 440841'):format('2026-10-03 22:48','8982f81e',440841))
 local F = {}
-F.VERSION = "v13.10.34"
+F.VERSION = "v13.10.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -495,7 +495,21 @@ local method = getnamecallmethod and getnamecallmethod() or ""
 if (method == "FireServer" or method == "InvokeServer") and T.RemoteBlock and not checkcaller() then
 local name = tostring(self and self.Name or ""):lower()
 for _, kw in ipairs(AC.BLOCK_KEYS) do
-if name:find(kw, 1, true) then return nil end
+local hit = false
+if type(F.CMX_KeyIsolate) == "function" then hit = F.CMX_KeyIsolate(name, kw)
+else hit = name:find(kw, 1, true) ~= nil end
+if hit then
+AC._remoteBlocked = (AC._remoteBlocked or 0) + 1
+local now = os.clock()
+if now - (AC._remoteLogAt or 0) > 3 then
+AC._remoteLogAt = now
+local msg = "[拦 remote] " .. tostring(name) .. " ← 关键词 " .. tostring(kw)
+.. " (累计 " .. tostring(AC._remoteBlocked) .. " 次; 游戏功能异常就说明这个词误伤了)"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, msg) end)
+else pcall(F.Out, msg) end
+end
+return nil
+end
 end
 end
 return box.orig(self, ...)
@@ -785,6 +799,7 @@ AC._idxMaskOn = false
 AC._idxMaskLayer = nil
 end
 AC._connDisabled = 0
+AC._disabledConns = {}
 AC._forceConnSignals = true
 function AC.disableSignalConns(sig, force, out)
 if not sig or type(getconnections) ~= "function" then return out end
@@ -804,8 +819,17 @@ local cnm = ""
 pcall(function() cnm = tostring(c.Name or "") end)
 local sus = AC.isSuspicious(src) or AC.isSuspicious(nm) or AC.isSuspicious(cnm)
 if sus or (force and AC._forceConnSignals) then
-pcall(function() c:Disable() end)
+local okd = pcall(function() c:Disable() end)
+if okd then
 out.disabled = out.disabled + 1
+AC._disabledConns[#AC._disabledConns + 1] = c
+out.logged = (out.logged or 0) + 1
+if out.logged <= 12 then
+F.Out("[连接清理] 已禁用: " .. tostring(cnm ~= "" and cnm or "(无名)")
+.. " ← " .. tostring(nm ~= "" and nm or "?")
+.. " @ " .. tostring(src ~= "" and src:sub(1, 90) or "?"))
+end
+end
 end
 end
 end
@@ -818,16 +842,16 @@ local keepScav = F._scavenging
 F._scavenging = true
 pcall(F.markOwnClosures)
 local ch, hum, root = GC()
-local hardSigs, softSigs = {}, {}
+local hardSigs, stateSigs, softSigs = {}, {}, {}
 local function add(list, sig) if sig then list[#list + 1] = sig end end
 if hum then
 pcall(function() add(hardSigs, hum:GetPropertyChangedSignal("WalkSpeed")) end)
 pcall(function() add(hardSigs, hum:GetPropertyChangedSignal("JumpPower")) end)
 pcall(function() add(hardSigs, hum:GetPropertyChangedSignal("JumpHeight")) end)
-pcall(function() add(hardSigs, hum:GetPropertyChangedSignal("Health")) end)
-pcall(function() add(hardSigs, hum:GetPropertyChangedSignal("MaxHealth")) end)
-pcall(function() add(hardSigs, hum.Changed) end)
-pcall(function() add(hardSigs, hum.StateChanged) end)
+pcall(function() add(stateSigs, hum:GetPropertyChangedSignal("Health")) end)
+pcall(function() add(stateSigs, hum:GetPropertyChangedSignal("MaxHealth")) end)
+pcall(function() add(stateSigs, hum.Changed) end)
+pcall(function() add(stateSigs, hum.StateChanged) end)
 end
 if root then
 pcall(function() add(hardSigs, root:GetPropertyChangedSignal("CFrame")) end)
@@ -839,6 +863,7 @@ local keepForce = AC._forceConnSignals
 AC._forceConnSignals = true
 for i = 1, #hardSigs do AC.disableSignalConns(hardSigs[i], force ~= false, out) end
 AC._forceConnSignals = false
+for i = 1, #stateSigs do AC.disableSignalConns(stateSigs[i], false, out) end
 for i = 1, #softSigs do AC.disableSignalConns(softSigs[i], false, out) end
 if not force then
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
@@ -849,8 +874,20 @@ end
 AC._forceConnSignals = keepForce
 F._scavenging = keepScav
 AC._connDisabled = AC._connDisabled + out.disabled
-F.Out(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条", out.scanned, out.disabled))
+F.Out(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条(每一条都打了日志, 异常时用「游戏异常一键恢复」可全部还原)",
+out.scanned, out.disabled))
 return out.disabled, out.scanned
+end
+function AC.ReenableDisabledConns()
+local n = 0
+local list = AC._disabledConns or {}
+for i = 1, #list do
+local c = list[i]
+if c and pcall(function() if c.Enable then c:Enable() end end) then n = n + 1 end
+end
+AC._disabledConns = {}
+if n > 0 then F.Out("[连接清理] 已还原 " .. tostring(n) .. " 条之前被我们禁用的游戏连接") end
+return n
 end
 AC._antiTPOld = nil
 function AC.InstallAntiTP()
@@ -5541,6 +5578,7 @@ pcall(F.SpeedAntiTPEnable)
 pcall(F.DeepNeuterEnable)
 end
 pcall(F.CMX_TierSync, F.CMX_TierLevel(v))
+pcall(F.CfgSyncUI)
 F.Out("[绕过防护] 档位 = " .. v)
 end
 function F.SpeedGuardEnable()
@@ -6236,6 +6274,13 @@ if input.KeyCode ~= Enum.KeyCode.T then return end
 F.TPMouse()
 end)
 end)
+pcall(function()
+UIS.InputBegan:Connect(function(input)
+if input.KeyCode ~= Enum.KeyCode.F2 then return end
+local did = F.CamRelease(true, "F2 热键")
+if not did or #did == 0 then F.Out("[视角] F2: 现在没有相机/鼠标被占用") end
+end)
+end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
 F.CMX_HLMode = function() return tostring(C.BodyHLMode or "①") end
 F.CMX_HLTeamColor = function(pl)
@@ -6627,6 +6672,68 @@ end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
 end
+F.CamReleaseToggleOff = function()
+local op = Fluent and Fluent.Options
+if type(op) ~= "table" then return end
+local keep = F._cfgSyncing
+F._cfgSyncing = true
+for _, k in ipairs({ "AimOn", "LockCam", "Freecam", "TPMouse" }) do
+local o = op[k]
+if o and o.Set and o.Value ~= false then pcall(function() o:Set(false) end) end
+end
+F._cfgSyncing = keep
+end
+F.CamRelease = function(force, why)
+if not force and (T.Freecam or T.LockCam or T.AimOn) then return nil end
+local did = {}
+if force then
+T.AimOn, T.LockCam, T.Freecam, T.TPMouse = false, false, false, false
+F._tpMouseOn = false
+pcall(F.CamReleaseToggleOff)
+end
+if F._aimConn then pcall(function() F.AimSet(false) end) did[#did + 1] = "自瞄" end
+if F._lockCamConn then pcall(F.LockCamDisable) did[#did + 1] = "锁相机" end
+if F._freecamConn then pcall(F.FreecamDisable) did[#did + 1] = "自由视角" end
+local cam = workspace.CurrentCamera
+if cam then
+if cam.CameraType == Enum.CameraType.Scriptable then
+pcall(function() cam.CameraType = Enum.CameraType.Custom end)
+did[#did + 1] = "相机类型"
+end
+local _, hum = GC()
+local subj = cam.CameraSubject
+if hum and (subj == nil or subj ~= hum) then
+local other = false
+pcall(function()
+other = typeof(subj) == "Instance" and subj:IsA("Humanoid")
+and Players:GetPlayerFromCharacter(subj.Parent) ~= nil
+end)
+if subj == nil or other then
+pcall(function() cam.CameraSubject = hum end)
+did[#did + 1] = "相机目标"
+end
+end
+end
+pcall(function()
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
+UIS.MouseBehavior = Enum.MouseBehavior.Default
+did[#did + 1] = "鼠标"
+end
+end)
+if #did > 0 then
+F.Out("[视角] 已释放: " .. table.concat(did, " · ") .. (why and ("  ← " .. tostring(why)) or ""))
+end
+return did
+end
+F.CamReleaseSchedule = function()
+F.Out("[视角] 已关掉「加载即锁视角/锁鼠标」的所有路径 —— 若仍转不动: 按 F2, 或去「系统」页点「视角被锁了」按钮")
+task.delay(6, function() pcall(F.CamRelease, true, "加载后 6 秒") end)
+local more = { 15, 30, 60 }
+for i = 1, #more do
+local t = more[i]
+task.delay(t, function() pcall(F.CamRelease, false, "保底 " .. tostring(t) .. " 秒") end)
+end
+end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
 function F.PanicKeyDisableAll()
 local keep = {}
@@ -6639,7 +6746,7 @@ F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -8355,7 +8462,7 @@ F.LockCamDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
-AC.UnblockRemotes, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
+AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
@@ -8445,6 +8552,9 @@ end)
 end
 function F.RestoreSavedFeatures()
 if not T then return end
+T.AimOn, T.LockCam, T.Freecam, T.TPMouse = false, false, false, false
+F._tpMouseOn = false
+pcall(F.CamRelease, false, "加载恢复前")
 F.Out("[恢复] 会接管视角/鼠标的(自瞄/锁相机/自由视角/锁鼠标)已跳过自动恢复, 需要请手动开")
 F.Out("[恢复] 按存档恢复你上次主动开启的功能(没开过的不会自动开)")
 local n = 0
@@ -8495,7 +8605,11 @@ go(T.CMX_Humanize, F.CMX_HumanizeEnable)
 go(T.CMX_InstNew, F.CMX_InstNewEnable)
 go(T.CMX_DebugMask, F.CMX_DebugMaskEnable)
 go(T.CMX_RequireBlock, F.CMX_RequireBlockEnable)
-go(T.CMX_ClockMask, F.CMX_ClockMaskEnable)
+if T.CMX_ClockMask then
+T.CMX_ClockMask = false
+pcall(F.CMX_ClockMaskDisable)
+F.Out("[绕过·时钟粗化] 不再随加载自动开(它会把 os.clock 粗化给整个游戏 ⇒ 用时间步进的游戏逻辑/视角会发死); 需要时手动开")
+end
 go(T.CMX_HitFeed, F.CMX_HitFeedEnable)
 go(T.CMX_BlockReport, F.CMX_BlockReportEnable)
 go(T.CMX_CutLog, F.CMX_CutLogEnable)
@@ -9741,7 +9855,7 @@ if lv >= 2 then
 want.CMX_BlockReport = true
 end
 if lv >= 3 then
-want.CMX_HookHard, want.CMX_RequireBlock, want.CMX_ClockMask = true, true, true
+want.CMX_HookHard, want.CMX_RequireBlock = true, true
 want.CMX_CutLog, want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true, true
 end
 if lv >= 4 then
@@ -9910,15 +10024,24 @@ F.CMX_BAN_KEYS = {
 "hash", "hashcheck", "exploit", "iy", "submit", "flag", "flagged",
 "logdetect", "logban", "punish", "detect", "detectionreport", "moderation",
 }
+F.CMX_KeyIsolate = function(low, key)
+local s, e = low:find(key, 1, true)
+if not s then return false end
+if #key > 4 then return true end
+local b = (s > 1) and low:sub(s - 1, s - 1) or ""
+local a = low:sub(e + 1, e + 1)
+local function alpha(ch) return ch ~= "" and ch:match("%a") ~= nil end
+return not (alpha(b) or alpha(a))
+end
 F.CMX_ReportKeyHit = function(name)
 if type(name) ~= "string" then return nil end
 local low = name:lower()
 local L = AC.BLOCK_KEYS
 if type(L) == "table" then
-for i = 1, #L do if low:find(L[i], 1, true) then return L[i] end end
+for i = 1, #L do if F.CMX_KeyIsolate(low, L[i]) then return L[i] end end
 end
 L = F.CMX_BAN_KEYS
-for i = 1, #L do if low:find(L[i], 1, true) then return L[i] end end
+for i = 1, #L do if F.CMX_KeyIsolate(low, L[i]) then return L[i] end end
 return nil
 end
 F.CMX_ScanReportRemotes = function(quiet)
@@ -10634,7 +10757,7 @@ CMX_Humanize = function() F.CMX_HumanizeEnable() end,
 CMX_InstNew = function() F.CMX_InstNewEnable() end,
 CMX_DebugMask = function() F.CMX_DebugMaskEnable() end,
 CMX_RequireBlock = function() F.CMX_RequireBlockEnable() end,
-CMX_ClockMask = function() F.CMX_ClockMaskEnable() end,
+CMX_ClockMask = function() T.CMX_ClockMask = false end,
 CMX_HitFeed = function() F.CMX_HitFeedEnable() end,
 CMX_BlockReport = function() F.CMX_BlockReportEnable() end,
 CMX_CutLog = function() F.CMX_CutLogEnable() end,
@@ -11196,7 +11319,7 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) F.AimSet(v) end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
 Tabs.Combat:AddDropdown("AimMode", { Title = "★ 瞄准模式(二选一)", Values = {
 "360°全方位(背后也锁 · 范围单位=格 · 推荐)",
 "正面(只锁屏幕圈内 · 范围单位=像素)",
@@ -11277,6 +11400,45 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞�
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
+F.ProtectApply = function()
+local steady, hit = T.SteadyOn == true, T.HitGuard == true
+if steady or hit then
+pcall(F.CharEventsEnable)
+pcall(F.MetaHookEnsure)
+else
+pcall(F.CharEventsDisable)
+end
+if steady then pcall(F.SteadyEnable) else pcall(F.SteadyDisable) end
+if hit then pcall(function() F.HitGuardEnable(T.HitStrong) end) else pcall(F.HitGuardDisable) end
+if T.TrapWarn then pcall(F.TrapGuardEnable) else pcall(F.TrapGuardDisable) end
+if T.SpeedAntiTP then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
+F.Out(string.format("[防护] 稳身=%s · 反攻击(受击保护)=%s · 反陷阱=%s · 防拉回=%s",
+steady and "开" or "关",
+hit and ("开" .. (T.HitStrong and "(猛档)" or "(状态法)")) or "关",
+T.TrapWarn and "开" or "关", T.SpeedAntiTP and "开" or "关"))
+end
+Tabs.Move:AddToggle("SteadyOn", { Title = "稳身(不被击倒 / 不被甩飞)", Description = "只动本地状态: 禁掉 Ragdoll/FallingDown 两个状态 + 压异常上升速度; 不碰任何远程、不改碰撞属性。站在跑步机/移动平台上会自动让路", Default = false, Callback = function(v)
+T.SteadyOn = v
+if F._cfgSyncing then return end
+pcall(F.ProtectApply)
+end })
+Tabs.Move:AddToggle("HitGuard", { Title = "反攻击 / 受击保护(被打不倒地、不被击飞)", Description = "状态法: 只在本地不让你进倒地/被击飞状态, 不打断游戏的远程 ⇒ 搬运动作不会被卡住。想更猛请去「系统」页把防护档位调到②/③", Default = false, Callback = function(v)
+T.HitGuard = v
+if F._cfgSyncing then return end
+pcall(F.ProtectApply)
+end })
+Tabs.Move:AddToggle("TrapWarn", { Title = "反陷阱(踩到陷阱不触发 · 靠近自动挪开)", Description = "销毁陷阱的 TouchInterest + 靠近时临时关掉你身体的「可触碰」(离开自动还原)。临时会影响 Touched 类交互, 走开即恢复", Default = false, Callback = function(v)
+T.TrapWarn = v
+T.TrapDodge = v
+if F._cfgSyncing then return end
+pcall(F.ProtectApply)
+end })
+Tabs.Move:AddToggle("SpeedAntiTP", { Title = "防拉回(清检测脚本 + 断检测连接 · 最招反作弊)", Description = "⚠ 会禁用命中的客户端检测脚本、断掉检测连接、中和检测函数 —— 只在真被拉回时开; 关掉后建议重进一次游戏恢复干净", Default = false, Callback = function(v)
+T.SpeedAntiTP = v
+if F._cfgSyncing then return end
+if v then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
+end })
 Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
 local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
 T.CarryGuard = v
@@ -11528,6 +11690,7 @@ T.AntiFling = false T.GuiProtect = false
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 pcall(F.MetaHookUninstall)
+pcall(F.CfgSyncUI)
 F.Out("[防护档位] 已关 —— 所有钩子已卸载(namecall/index/setmetatable/属性伪装), 最不暴露")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
 return
@@ -11547,6 +11710,7 @@ pcall(F.ACWriteTierApply, T.ACWriteTier)
 T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
 pcall(F.BypassTierApply, T.BypassTier)
 end
+pcall(F.CfgSyncUI)
 F.Out("[防护档位] = " .. v)
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = v, Duration = 6 }) end)
 end
@@ -11596,6 +11760,36 @@ Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已是�
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
+Tabs.Setting:AddButton({ Title = "★ 视角/鼠标被锁住了?点这里(释放相机 + 恢复鼠标)", Callback = function()
+local did = F.CamRelease(true, "手动按钮")
+F.Out("[视角] 手动释放完成" .. ((did and #did > 0) and (" · " .. table.concat(did, " · ")) or " · 当前没发现被占用的相机/鼠标"))
+pcall(function() Fluent:Notify({ Title = "视角修复", Content = "已释放相机/鼠标(自瞄/锁相机/自由视角/锁鼠标 都关了)。还不动就点下面那条「游戏异常一键恢复」", Duration = 8 }) end)
+end })
+Tabs.Setting:AddButton({ Title = "★ 游戏异常(视角/交互/卡死)?点这里一键恢复干净状态", Callback = function()
+task.spawn(function()
+pcall(F.CamRelease, true, "一键恢复")
+pcall(AC.ReenableDisabledConns)
+pcall(AC.UnblockRemotes)
+pcall(AC.UninstallNamecallHook)
+pcall(AC.UninstallIndexMask)
+pcall(AC.UninstallSetmetatableHook)
+pcall(AC.UninstallPropertyLock)
+pcall(AC.UninstallAntiTP)
+pcall(F.CMX_HookHardRestore)
+pcall(F.CMX_ViewFilterDisable)
+pcall(F.CMX_InstNewDisable)
+pcall(F.CMX_RequireBlockDisable)
+pcall(F.CMX_ClockMaskDisable)
+pcall(F.CMX_DebugMaskDisable)
+pcall(F.CMX_SpoofIndexDisable)
+pcall(F.CMX_SpoofIndexDisable)
+pcall(F.DeepNeuterDisable)
+pcall(F.SpeedAntiTPDisable)
+pcall(F.ACWriteTierApply, "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)")
+F.Out("[恢复] 已把「会改写游戏」的层全部卸掉 + 还原了被禁的连接与相机 —— 若还不正常, 请重进一次游戏")
+pcall(function() Fluent:Notify({ Title = "一键恢复", Content = "已卸掉改写游戏的层, 并还原被禁的连接与相机/鼠标", Duration = 8 }) end)
+end)
+end })
 F.UnloadAll = UnloadAll
 pcall(function()
 local g = getgenv and getgenv()
@@ -11644,13 +11838,7 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 end)
 RestoreFeatures()
 pcall(F.CMX_LoadAutoEnable)
-task.delay(6, function()
-pcall(F.LockCamDisable)
-pcall(F.FreecamDisable)
-if T.AimOn then T.AimOn = false pcall(function() F.AimSet(false) end) end
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-F.Out("[视角] 已强制释放相机/鼠标(锁相机/自由视角/自瞄 需手动开, 加载不再锁视角)")
-end)
+F.CamReleaseSchedule()
 task.delay(5, function() pcall(F.CMX_ProfileApply) end)
 pcall(function()
 local ex = "?"
@@ -11792,6 +11980,7 @@ if wasOpen and not now then pcall(F.CloseDropdowns) end
 wasOpen = now
 end
 end)
+F.CFG_NOSYNC = { AimOn = true, LockCam = true, Freecam = true, TPMouse = true }
 function F.CfgSyncUI()
 local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return 0 end
@@ -11800,7 +11989,7 @@ F._cfgSyncing = true
 pcall(function()
 for name, opt in pairs(op) do
 if type(name) == "string" and type(opt) == "table" and type(opt.Set) == "function" then
-local dyn = false
+local dyn = F.CFG_NOSYNC[name] == true
 for _, k in ipairs(F.PLAYER_DROPDOWNS) do
 if k == name then dyn = true break end
 end
