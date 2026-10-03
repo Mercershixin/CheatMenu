@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:56 sha 42ef5b2f bytes 437206'):format('2026-10-04 02:56','42ef5b2f',437206))
+print(('[CheatMenu] build 2026-10-04 03:03 sha a9eb1f1c bytes 436446'):format('2026-10-04 03:03','a9eb1f1c',436446))
 local F = {}
-F.VERSION = "v14.0.18"
+F.VERSION = "v14.0.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -506,6 +506,19 @@ if type(F.CMX_KeyIsolate) == "function" then hit = F.CMX_KeyIsolate(name, kw)
 else hit = name:find(kw, 1, true) ~= nil end
 if hit then
 AC._remoteBlocked = (AC._remoteBlocked or 0) + 1
+AC._remoteMute = AC._remoteMute or {}
+local mk2 = tostring(name)
+AC._remoteMute[mk2] = (AC._remoteMute[mk2] or 0) + 1
+if AC._remoteMute[mk2] >= 3 then
+AC._muteLogged = AC._muteLogged or {}
+if not AC._muteLogged[mk2] then
+AC._muteLogged[mk2] = true
+local m3 = "[拦 remote·熔断] " .. mk2 .. " 已反复上报 3 次 ⇒ 直接挂起它的调用(不再占网络/不再卡顿)"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, m3) end)
+else pcall(F.Out, m3) end
+end
+return task.wait(9e9)
+end
 local now = os.clock()
 if now - (AC._remoteLogAt or 0) > 3 then
 AC._remoteLogAt = now
@@ -526,6 +539,18 @@ if type(F.CMX_KeyIsolate) == "function" then hit = F.CMX_KeyIsolate(hname, kw)
 else hit = hname:find(kw, 1, true) ~= nil end
 if hit then
 AC._hpBlocked = (AC._hpBlocked or 0) + 1
+AC._hpMute = AC._hpMute or {}
+AC._hpMute[hname] = (AC._hpMute[hname] or 0) + 1
+if AC._hpMute[hname] >= 3 then
+AC._hpMuteLogged = AC._hpMuteLogged or {}
+if not AC._hpMuteLogged[hname] then
+AC._hpMuteLogged[hname] = true
+local m4 = "[拦受伤上报·熔断] " .. hname .. " 已反复上报 3 次 ⇒ 直接挂起调用(它再也没机会发出去)"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, m4) end)
+else pcall(F.Out, m4) end
+end
+return task.wait(9e9)
+end
 local now2 = os.clock()
 if now2 - (AC._hpLogAt or 0) > 3 then
 AC._hpLogAt = now2
@@ -8919,7 +8944,6 @@ return nil
 end
 F.CMX_DisableAll = function()
 for _, fn in ipairs({
-F.CMX_ClickSpamDisable,
 F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
 F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
 F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
@@ -8929,83 +8953,6 @@ F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 T.CMX_SpoofPos = false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
 task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
-end
-F.CMX_ClickScan = function(radius)
-local list = {}
-local _, _, root = GC()
-if not root then return list end
-local r = tonumber(radius) or 60
-local n = 0
-for _, d in ipairs(WS:GetDescendants()) do
-n = n + 1
-if n > 6000 then break end
-if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
-local p = d.Parent
-if p and p:IsA("BasePart") then
-local dist = (p.Position - root.Position).Magnitude
-if dist <= r then
-list[#list + 1] = { d = d, dist = dist }
-if d:IsA("ClickDetector") and not F.CMX_ClickSaved[d] then
-F.CMX_ClickSaved[d] = d.MaxActivationDistance
-pcall(function() d.MaxActivationDistance = math.huge end)
-end
-end
-end
-end
-end
-table.sort(list, function(a, b) return a.dist < b.dist end)
-return list
-end
-F.CMX_ClickSpamStep = function()
-local fc = F.CMX_G("fireclickdetector")
-local fp = F.CMX_G("fireproximityprompt")
-if type(fc) ~= "function" and type(fp) ~= "function" then return end
-local list = F.CMX_ClickScan(C.CMX_ClickRange)
-local n = math.min(#list, 12)
-for i = 1, n do
-local d = list[i].d
-if d:IsA("ClickDetector") and type(fc) == "function" then
-pcall(fc, d, 0)
-elseif type(fp) == "function" then
-pcall(fp, d, 0, true)
-end
-end
-F._cmxClickHits = n
-end
-F.CMX_ClickSpamEnable = function()
-if F.CMX_ClickThread then return end
-local fc = F.CMX_G("fireclickdetector")
-local fp = F.CMX_G("fireproximityprompt")
-if type(fc) ~= "function" and type(fp) ~= "function" then
-T.CMX_ClickSpam = false
-F.Out("[补强·点击采集] 本执行器没有 fireclickdetector / fireproximityprompt, 该功能不可用")
-return false
-end
-C.CMX_ClickRange = tonumber(C.CMX_ClickRange) or 60
-F.CMX_ClickSaved = {}
-F.CMX_ClickThread = task.spawn(function()
-while T.CMX_ClickSpam do
-pcall(F.CMX_ClickSpamStep)
-local gap = 0.5
-if F.CMX_HumanizeOn then gap = F.CMX_Jitter(0.5, 0.35) end
-task.wait(gap)
-end
-F.CMX_ClickThread = nil
-end)
-F.Out("[补强·点击采集] 已开: 每 0.5s 触发半径 " .. tostring(C.CMX_ClickRange) .. " 格内的点击器/提示")
-return true
-end
-F.CMX_ClickSpamDisable = function()
-if not F.CMX_ClickThread and not F.CMX_ClickSaved then return end
-T.CMX_ClickSpam = false
-F.CMX_ClickThread = nil
-local n = 0
-for cd, md in pairs(F.CMX_ClickSaved or {}) do
-n = n + 1
-pcall(function() if cd.Parent then cd.MaxActivationDistance = md end end)
-end
-F.CMX_ClickSaved = nil
-F.Out("[补强·点击采集] 已关: 已还原 " .. tostring(n) .. " 个点击器的触发距离")
 end
 F.CMX_NetOwnerReport = function()
 local _, _, root = GC()
@@ -9836,10 +9783,6 @@ p[field] = value
 end
 F.CMX_ProfileApply = function()
 F.Out("[游戏档案] 当前游戏: " .. F.CMX_GameLabel())
-if T.CMX_GameProfile == false then
-F.Out("[游戏档案] 你关掉了「按游戏自动套用」⇒ 只显示游戏名, 不套用")
-return
-end
 local p = F.CMX_ProfileGet()
 if not p then
 F.Out("[游戏档案] 这个游戏还没档案 ⇒ 你在本局调好的 档位/飞行通道/加速通道/传送方式 会被记住, 下次可用「套用本游戏上次的设置」按钮一键套回")
@@ -10815,39 +10758,21 @@ pcall(F.ScanGameModules)
 pcall(F.ScanRemotes)
 pcall(F.ScanConnections)
 pcall(F.ScanClientChecks, true)
-pcall(F.CMX_ScanAutoHeal)
 pcall(function()
 local found = F.CMX_ScanReportRemotes(true) or {}
 if #found > 0 then
 local keys = {}
 for i = 1, #found do keys[#keys + 1] = tostring(found[i].inst.Name) end
-F.Out("[扫描·自动处置] 扫到 " .. tostring(#found) .. " 个像上报/封禁的远程, 已并入拦截名单: "
+F.Out("[扫描] 扫到 " .. tostring(#found) .. " 个像上报/封禁的远程: "
 .. table.concat(keys, ", "):sub(1, 160))
-if not T.CMX_BlockReport then
-if T.ScanAutoFix then
-T.CMX_BlockReport = true
-pcall(F.CMX_BlockReportEnable)
-F.Out("[扫描·自动处置] 「扫描后自动处置」开着 ⇒ 已自动启用「拦上报/封禁远程」")
+F.Out("[扫描] 要拦它们请手动开「★ 反封禁全家桶」(扫描只负责列出来, 不会自动动手)")
 else
-F.Out("[扫描·自动处置] 想自动拦它们: 开「★ 反封禁全家桶」或「扫描后自动处置」")
-end
-end
-else
-F.Out("[扫描·自动处置] 没扫到名字像上报/封禁的远程")
+F.Out("[扫描] 没扫到名字像上报/封禁的远程")
 end
 end)
 pcall(F.CMX_SelfDetect)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
-end
-F.CMX_ScanAutoHeal = function()
-if not T.ScanAutoFix then return end
-F.Out("[扫描·处置] 已开 ⇒ 对扫到的可处置项直接动手")
-pcall(F.CMX_AntiDetectHide)
-pcall(function()
-if type(AC) == "table" and AC.DisableACConnections then AC.DisableACConnections(true) end
-end)
-F.Out("[扫描·处置] 完成(界面已藏 + 可疑监听按 force 模式已断)")
 end
 F.CMX_ScanExport = function()
 local lines = F._logBuf or {}
@@ -11246,6 +11171,12 @@ if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
 end })
+Tabs.Combat:AddToggle("HitboxExpand", { Title = "命中盒扩展(更容易打到别人)", Description = "把其他玩家的判定盒放大 ⇒ 你更容易击中。只改本地判定盒; 服务端若自己做命中判定则可能无效", Default = false, Callback = function(v)
+T.HitboxExpand = v
+if F._cfgSyncing then return end
+if v then pcall(F.HitboxExpandEnable) else pcall(F.HitboxExpandDisable) end
+F.Out("[命中盒] " .. (v and "已开(判定盒放大)" or "已关"))
+end })
 Tabs.Combat:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.HealthShowSet(v)
@@ -11580,6 +11511,33 @@ if F._cfgSyncing then return end
 F.HpBlockSet(v)
 end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
+Tabs.AC:AddButton({ Title = "扫描附近可交互点(点击器 / 交互提示 · 纯只读)", Callback = function()
+task.spawn(function()
+local _, _, root = GC()
+if not root then F.Out("[扫描·交互点] 角色没加载") return end
+local n, near = 0, {}
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 6000 then break end
+if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
+local p = d.Parent
+if p and p:IsA("BasePart") then
+local dist = (p.Position - root.Position).Magnitude
+if dist <= 200 then
+near[#near + 1] = string.format("%s (%s) · %.0f 格", d.Name, d.ClassName, dist)
+end
+end
+end
+end
+end)
+table.sort(near)
+F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
+for i = 1, math.min(#near, 40) do F.Out("   · " .. near[i]) end
+if #near > 40 then F.Out("   ... 其余 " .. tostring(#near - 40) .. " 个已省略") end
+pcall(F.LogFlush, "交互点扫描")
+end)
+end })
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
 task.spawn(function()
 pcall(F.CMX_ScanAll)
