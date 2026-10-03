@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:58 sha 5725509c bytes 422079'):format('2026-10-04 00:58','5725509c',422079))
+print(('[CheatMenu] build 2026-10-04 01:22 sha 4ad5bf2f bytes 431977'):format('2026-10-04 01:22','4ad5bf2f',431977))
 local F = {}
-F.VERSION = "v14.0.7"
+F.VERSION = "v14.0.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3048,6 +3048,47 @@ F.CombatHudHide = function()
 if F._combatHudGui then pcall(function() F._combatHudGui:Destroy() end) end
 F._combatHud, F._combatHudGui = nil, nil
 end
+F._aimHeart, F._aimErr, F._aimLastHeart = 0, 0, 0
+F._AIM_STEP = "CM_Combat"
+F.CombatTickSafe = function()
+F._aimHeart = (F._aimHeart or 0) + 1
+local ok, err = pcall(F.CombatTick)
+if not ok then
+F._aimErr = (F._aimErr or 0) + 1
+if F._aimErr <= 3 or F._aimErr % 120 == 0 then
+F.Out("[战斗] 自瞄每帧逻辑报错(第 " .. tostring(F._aimErr) .. " 次): " .. tostring(err))
+end
+end
+end
+function F.AimBindStep()
+if F._aimBind then pcall(function() RS:UnbindFromRenderStep(F._AIM_STEP) end) F._aimBind = nil end
+if F._aimConn then pcall(function() F._aimConn:Disconnect() end) F._aimConn = nil end
+local ok = pcall(function()
+RS:BindToRenderStep(F._AIM_STEP, Enum.RenderPriority.Camera.Value + 1, function() F.CombatTickSafe() end)
+end)
+if ok then F._aimBind = true return end
+F.Out("[战斗] 自瞄主绑定失败 ⇒ 改用 RenderStepped 兜底")
+F._aimConn = RS.RenderStepped:Connect(function() F.CombatTickSafe() end)
+end
+function F.AimWatch()
+if F._aimWatch then return end
+F._aimWatch = true
+F._aimWatchId = (F._aimWatchId or 0) + 1
+local myId = F._aimWatchId
+task.spawn(function()
+while F._aimWatch and F._aimWatchId == myId do
+task.wait(2)
+if T.AimOn then
+if (F._aimHeart or 0) == (F._aimLastHeart or -1) then
+F.Out("[战斗] 自瞄心跳停了 ⇒ 自动重新绑定(避免看起来像自己关掉)")
+F.AimBindStep()
+F._aimLastHeart = F._aimHeart
+end
+F._aimLastHeart = F._aimHeart
+end
+end
+end)
+end
 F.CombatTick = function()
 if not T.AimOn then return end
 local _, hum, root = GC()
@@ -3087,9 +3128,10 @@ pcall(F.FireOnce)
 end
 end
 end
-function F.AimSet(on)
+function F.AimSet(on, why)
 T.AimOn = on and true or false
-if F._aimBind then pcall(function() RS:UnbindFromRenderStep("CM_Combat") end) F._aimBind = nil end
+if F._aimBind then pcall(function() RS:UnbindFromRenderStep(F._AIM_STEP) end) F._aimBind = nil end
+if F._aimConn then pcall(function() F._aimConn:Disconnect() end) F._aimConn = nil end
 if not T.AimOn then
 pcall(function()
 local _, hum = GC()
@@ -3097,11 +3139,24 @@ if hum and F._aimFacing then hum.AutoRotate = true end
 end)
 F._aimFacing, F._combatNow = nil, nil
 F.CombatHudHide()
+F._aimWatch = false
+F._aimWatchId = (F._aimWatchId or 0) + 1
+F.Out("[战斗] 自瞄已关闭" .. (why and (" (" .. tostring(why) .. ")") or ""))
 return
 end
+F._aimHeart, F._aimErr, F._aimLastHeart = 0, 0, 0
 F.CombatHudShow()
-F._aimBind = true
-RS:BindToRenderStep("CM_Combat", Enum.RenderPriority.Camera.Value + 1, function() F.CombatTick() end)
+F.AimBindStep()
+F.AimWatch()
+F.Out("[战斗] 自瞄已开启 · 每帧逻辑已绑定" .. (why and (" (" .. tostring(why) .. ")") or ""))
+end
+F.EnsureAimOn = function(why)
+if T.AimOn then return end
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options.AimOn
+if op and op.Set then op:Set(true) end
+end)
+if not T.AimOn then F.AimSet(true, why or "附属项联动") end
 end
 F.CombatReport = function()
 local ch = F._combatNow
@@ -6492,6 +6547,10 @@ F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
+local wasOn = {}
+for k, v in pairs(T) do
+if v == true and not F.PANIC_KEEP[k] then wasOn[#wasOn + 1] = tostring(k) end
+end
 for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
@@ -6555,6 +6614,9 @@ end
 end
 end
 end)
+if #wasOn > 0 then
+F.Out("[急停] 本次关掉的功能: " .. table.concat(wasOn, ", ") .. " (自瞄也在其中 ⇒ 若你没按急停却出现这行, 就是浮钮被长按了)")
+end
 if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
 end
@@ -6662,6 +6724,104 @@ end
 end
 end
 end
+local function kickUpgradesGui()
+local g = PG
+pcall(function() g = LP:FindFirstChild("PlayerGui") or g end)
+return g and g:FindFirstChild("KickUpgrades") or nil
+end
+local function isBrainrotTool(t)
+local ok, r = pcall(function() return t:GetAttribute("Rarity") end)
+if ok and r ~= nil then return true end
+ok, r = pcall(function() return t:FindFirstChild("Rarity") end)
+return (ok and r ~= nil) and true or false
+end
+local function weightTool()
+local ch = LP.Character
+local bp = LP:FindFirstChild("Backpack")
+local containers = { ch, bp }
+for _, ct in ipairs(containers) do
+if ct then
+for _, t in ipairs(ct:GetChildren()) do
+if t:IsA("Tool") then
+local ok, ht = pcall(function() return t:HasTag("SquatTool") end)
+if ok and ht then return t end
+end
+end
+end
+end
+for _, ct in ipairs(containers) do
+if ct then
+for _, t in ipairs(ct:GetChildren()) do
+if t:IsA("Tool") and GYM_WEIGHT_NAMES[t.Name] and not isBrainrotTool(t) then return t end
+end
+end
+end
+for _, ct in ipairs(containers) do
+if ct then
+for _, t in ipairs(ct:GetChildren()) do
+if t:IsA("Tool") and not isBrainrotTool(t) then return t end
+end
+end
+end
+end
+local function guiClick(b)
+if not (b and b:IsA("GuiButton")) then return false end
+local did = false
+if type(getconnections) == "function" then
+for _, sig in ipairs({ b.InputBegan, b.MouseButton1Down, b.MouseButton1Up, b.MouseButton1Click, b.Activated }) do
+if sig then
+pcall(function()
+for _, c in ipairs(getconnections(sig) or {}) do
+pcall(function() c:Fire({ UserInputType = Enum.UserInputType.MouseButton1, UserInputState = Enum.UserInputState.Begin }) end)
+pcall(function() c:Fire() end)
+end
+end)
+end
+end
+end
+if firesignal then
+pcall(function() firesignal(b.MouseButton1Click) did = true end)
+pcall(function() firesignal(b.Activated) did = true end)
+end
+pcall(function()
+local cam = workspace.CurrentCamera
+local vp = (cam and cam.ViewportSize) or Vector2.new(800, 600)
+local ap, as = b.AbsolutePosition, b.AbsoluteSize
+local x = math.clamp(ap.X + as.X * 0.5, 2, math.max(3, vp.X - 2))
+local y = math.clamp(ap.Y + as.Y * 0.5, 2, math.max(3, vp.Y - 2))
+local vim = game:GetService("VirtualInputManager")
+vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
+vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
+did = true
+end)
+return did
+end
+local function clickBonusButtons(anyButton)
+local kupg = kickUpgradesGui()
+if not kupg then return 0, false end
+local n, sawBonus = 0, false
+for _, b in ipairs(kupg:GetChildren()) do
+if b:IsA("GuiButton") then
+local okv, vis = pcall(function() return b.Visible end)
+if okv and vis then
+local isBonus = (b.Name == "Bonus" or b.Name == "PopBonus")
+if isBonus then sawBonus = true end
+if (isBonus or anyButton) and guiClick(b) then n = n + 1 end
+end
+end
+end
+return n, sawBonus
+end
+local function trainTickOnce()
+local ch, hum = GC()
+if not (ch and hum) then return end
+local w = weightTool()
+if w then
+if w.Parent ~= ch then pcall(function() hum:EquipTool(w) end) end
+pcall(function() w:Activate() end)
+end
+clickBonusButtons(false)
+end
 local GymThread = nil
 local function liveMachines()
 local r = {}
@@ -6673,7 +6833,7 @@ end
 end
 return r
 end
-function F.AutoGymEnable()
+local function AutoGymLiftMachineLegacy()
 if GymThread then return end
 GymThread = task.spawn(function()
 while T.AutoGym do
@@ -6739,12 +6899,39 @@ end
 local TrainThread = nil
 function F.AutoTrainEnable()
 if TrainThread then return end
+F.Out("[训练] 已启动: 自动手持配重并 Activate (锻炼加成请同时开「自动锻炼(健身房)」)")
 TrainThread = task.spawn(function()
 while T.AutoTrain do
-equipSquatTool()
-task.wait(math.max(0.5, C.AutoTrainSec or 5))
+pcall(trainTickOnce)
+task.wait(math.max(0.3, tonumber(C.AutoTrainSec) or 1))
 end
 TrainThread = nil
+end)
+end
+local GymThread2 = nil
+function F.AutoGymEnable()
+if GymThread2 or GymThread then return end
+pcall(function()
+if kickUpgradesGui() then
+F.Out("[健身房] 已启动: 手持配重 + 自动点击 KickUpgrades 的 Bonus/PopBonus 锻炼弹窗")
+GymThread2 = task.spawn(function()
+local noGui = 0
+while T.AutoGym do
+pcall(trainTickOnce)
+if kickUpgradesGui() then noGui = 0 else noGui = noGui + 1 end
+if noGui >= 40 then
+F.Out("[健身房] 找不到 KickUpgrades ⇒ 退回旧的举铁机(LiftMachine)逻辑")
+break
+end
+task.wait(tonumber(C.AutoGymRate) or 0.12)
+end
+GymThread2 = nil
+if T.AutoGym then pcall(AutoGymLiftMachineLegacy) end
+end)
+else
+F.Out("[健身房] 本游戏没有 KickUpgrades 锻炼界面 ⇒ 走旧的举铁机(LiftMachine)逻辑")
+AutoGymLiftMachineLegacy()
+end
 end)
 end
 local function multiplierFromText(v)
@@ -6753,53 +6940,110 @@ if compact == "X2" or compact == "2X" then return 2
 elseif compact == "X5" or compact == "5X" then return 5
 elseif compact == "X10" or compact == "10X" then return 10 end
 end
-local function clickBtn(b)
-if not b or not b:IsA("GuiButton") or not b.Visible then return false end
-if firesignal then return pcall(firesignal, b.Activated) end
-return false
-end
-local function AutoBonusScan()
+local function scanMultiplierButtons()
 local roots = { PG, CoreGui }
-if gethui then table.insert(roots, gethui()) end
+if gethui then pcall(function() table.insert(roots, gethui()) end) end
+local n = 0
 for _, root in ipairs(roots) do
 if root then
-local ok, list = pcall(function() return F.walk(root) end)
+local ok, list = pcall(function() return F.walk(root, 20000) end)
 if ok and type(list) == "table" then
 for _, obj in ipairs(list) do
-if obj:IsA("GuiButton") and obj.Visible then
-local hit = false
-if obj:IsA("TextButton") and multiplierFromText(obj.Text) then hit = true end
+if obj:IsA("TextButton") then
+local okv, vis = pcall(function() return obj.Visible end)
+if okv and vis then
+local hit = multiplierFromText(obj.Text) and true or false
 if not hit then
-for _, child in ipairs(F.walk(obj, 50)) do
+for _, child in ipairs(F.walk(obj, 60)) do
 if (child:IsA("TextLabel") or child:IsA("TextButton")) and multiplierFromText(child.Text) then
 hit = true break
 end
 end
 end
-if hit then
-clickBtn(obj)
-task.delay(0.01, function() if T.AutoBonus then Fire("TaviMishkal") end end)
+if hit and guiClick(obj) then n = n + 1 end
 end
 end
 end
 end
 end
 end
+return n
+end
+local function collectCashOnce()
+local r = REvent("rev_B_Collect")
+if r then
+for i = 1, 12 do
+if not T.AutoBonus then break end
+pcall(function() r:FireServer(i) end)
+end
+end
+pcall(function()
+local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+local plots = WS:FindFirstChild("Plots")
+if not (hrp and plots and firetouchinterest) then return end
+for _, plot in ipairs(plots:GetChildren()) do
+local owner = nil
+pcall(function() owner = plot:GetAttribute("Owner") end)
+local btns = plot:FindFirstChild("Buttons")
+if owner == LP.Name and btns then
+for _, slot in ipairs(btns:GetChildren()) do
+pcall(function() firetouchinterest(hrp, slot, 0) end)
+pcall(function() firetouchinterest(hrp, slot, 1) end)
+end
+end
+end
+end)
 end
 local BonusThread = nil
 function F.AutoBonusEnable()
 if BonusThread and T.AutoBonus then return end
-if not F._bonusRemoteHooked then
-F._bonusRemoteHooked = true
-OnRemote("TaviMishkal", function()
-if T.AutoBonus then
-task.spawn(function() task.wait(0.03) AutoBonusScan() Fire("TaviMishkal") end)
-end
-end)
-end
+F.Out("[领奖] 已启动: 点 KickUpgrades 的 Bonus/PopBonus 奖励 + 收现金 rev_B_Collect + 触碰地盘收钱按钮")
 BonusThread = task.spawn(function()
-while T.AutoBonus do AutoBonusScan() task.wait(1) end
+local logAt, total = 0, 0
+while T.AutoBonus do
+pcall(function()
+local n, saw = clickBonusButtons(false)
+if not saw then n = n + scanMultiplierButtons() end
+collectCashOnce()
+if n > 0 then
+total = total + n
+if os.clock() - logAt > 20 then
+logAt = os.clock()
+F.Out("[领奖] 已点掉 " .. tostring(total) .. " 个奖励按钮")
+end
+end
 end)
+task.wait(math.max(0.1, tonumber(C.AutoBonusRate) or 0.5))
+end
+BonusThread = nil
+end)
+end
+F.GameCheck = function()
+local okName, nm = pcall(function()
+return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+end)
+F.Out("[诊断] 游戏 = " .. tostring(nm or "?") .. " · PlaceId = " .. tostring(game.PlaceId))
+local sh = RStorage:FindFirstChild("Shared")
+local pk = sh and sh:FindFirstChild("Packages")
+local net = pk and pk:FindFirstChild("Network")
+F.Out("[诊断] 网络容器 Shared.Packages.Network = " .. tostring(net)
+.. (net and (" (" .. tostring(#net:GetChildren()) .. " 个通道)") or ""))
+for _, n in ipairs({ "rev_KickEvent", "rev_B_Collect", "rev_B_Upgrade", "rev_Shop_Buy", "rev_SPEED_UPGRADE", "rev_RebirthRequest", "rev_KickZman", "rev_Transformed", "ref_B_SellAll" }) do
+local r = findRemote(n, "RemoteEvent") or findRemote(n, "RemoteFunction")
+F.Out("  " .. (r and "✓" or "✗") .. " " .. n)
+end
+local kupg = kickUpgradesGui()
+local list = ""
+if kupg then
+local names = {}
+for _, b in ipairs(kupg:GetChildren()) do
+names[#names + 1] = tostring(b.Name)
+if #names >= 12 then break end
+end
+list = " · 按钮: " .. table.concat(names, ",")
+end
+F.Out("[诊断] PlayerGui.KickUpgrades = " .. tostring(kupg) .. list)
+F.Out("[诊断] 结论说明: 锻炼=手持配重+点 Bonus/PopBonus; 领奖=点 Bonus + rev_B_Collect + 触碰地盘按钮")
 end
 do
 local CPS = {
@@ -8409,12 +8653,21 @@ sx, sy = i.Position.X, i.Position.Y
 bx, by = btn.Position.X.Offset, btn.Position.Y.Offset
 F._menuHoldAt = os.clock()
 F._menuHoldMoved = false
+local holdType = i.UserInputType
 task.delay(2.0, function()
-if F._menuHoldAt and not F._menuHoldMoved
-and (os.clock() - F._menuHoldAt) >= 1.9 then
-F._menuHoldAt = nil
-pcall(F.PanicKeyDisableAll)
+if not (F._menuHoldAt and not F._menuHoldMoved) then return end
+if (os.clock() - F._menuHoldAt) < 1.9 then return end
+local okProbe, stillDown = pcall(function()
+if holdType == Enum.UserInputType.Touch then
+local t = UIS:GetTouchesPressed()
+return ((type(t) == "table") and (#t > 0)) or false
 end
+return UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) == true
+end)
+if okProbe and not stillDown then F._menuHoldAt = nil return end
+F._menuHoldAt = nil
+F.Out("[急停] 浮钮被持续按住 1.9 秒 ⇒ 触发一键全关")
+pcall(F.PanicKeyDisableAll)
 end)
 end
 end)
@@ -10880,7 +11133,7 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果。本开关不落盘, 每次重载要重点一次", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
 Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "两种就是你说的那两种: 正面圈内锁 = 只锁屏幕正面那个圈里的(面对谁锁谁); 漏就锁 = 360°全身, 只要他身上有任何一个部位打得着(哪怕只露一条胳膊/一条腿)就锁", Values = {
 "漏就锁(360°全身 · 只要打得到就锁)",
 "正面圈内锁(只锁屏幕正面圈里的)",
@@ -10906,11 +11159,13 @@ T.AimTurnCamera = v
 T.AimTurnBody = not v
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定时转视角 = " .. (v and "开" or "关"))
+if v then F.EnsureAimOn("开转视角") end
 end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Default = true, Callback = function(v)
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Description = "勾它时会顺手把上面的「自瞄」也打开(否则它单独开没有任何作用)", Default = true, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
+if v then F.EnsureAimOn("开自动开火") end
 end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
 Tabs.Combat:AddSection("生存")
@@ -11145,21 +11400,22 @@ pcall(F.KickGuardDisable)
 end
 end })
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
-if v then F.AutoTrainEnable() end
+if v then F.AutoTrainEnable() else F.Out("[训练] 已停止") end
 end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击奖励", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击奖励(自动点 Bonus / 收现金)", Description = "① 点 PlayerGui.KickUpgrades 里 Visible 的 Bonus/PopBonus 按钮(就是那个 ×2 奖励) ② 发 rev_B_Collect 收现金 ③ 触碰自己地盘(Plots)上的收钱按钮", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
-if v then F.AutoBonusEnable() end
+if v then F.AutoBonusEnable() else F.Out("[领奖] 已停止") end
 end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Description = "这游戏的锻炼 = 手持配重 + 反复点 KickUpgrades 的 Bonus 弹窗(不是站在跑步机上)。开它只会在找得到该界面时工作; 找不到会自己退回旧的举铁机逻辑", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
-if v then F.AutoGymEnable() end
+if v then F.AutoGymEnable() else F.Out("[健身房] 已停止") end
 end })
+Tabs.AFK:AddButton({ Title = "★ 自助诊断(检查本游戏接口/按钮)", Callback = function() pcall(F.GameCheck) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
