@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:34 sha 54bbd827 bytes 423315'):format('2026-10-04 00:34','54bbd827',423315))
+print(('[CheatMenu] build 2026-10-04 00:45 sha 59537eb1 bytes 423225'):format('2026-10-04 00:45','59537eb1',423225))
 local F = {}
-F.VERSION = "v14.0.4"
+F.VERSION = "v14.0.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2942,7 +2942,6 @@ if ch:FindFirstChildOfClass("ForceField") then return nil, "无敌" end
 if hum.Health > hum.MaxHealth + 0.01 then return nil, "无敌" end
 if hum:GetAttribute("Invincible") == true then return nil, "无敌" end
 end
-if T.AimTeamCheck and LP.Team ~= nil and pl.Team == LP.Team then return nil, "队友" end
 local root = ch.PrimaryPart
 if not root then
 for _, n in ipairs(F.COMBAT_PARTS) do local p = ch:FindFirstChild(n) if p then root = p break end end
