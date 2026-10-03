@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-03 23:20 sha e40599d6 bytes 428896'):format('2026-10-03 23:20','e40599d6',428896))
+print(('[CheatMenu] build 2026-10-03 23:33 sha 20229e72 bytes 428873'):format('2026-10-03 23:33','20229e72',428873))
 local F = {}
 F.VERSION = "v14.0.0"
 F._flyDisabledInfJump = nil
@@ -5994,7 +5994,7 @@ if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
 if T.KillAura then pcall(F.KillAuraEnable) end
 if T.BodyHL then pcall(F.BodyHLEnable) end
 end
-T.AutoSave = true
+function F.CharPersistEnable() T.CharPersist = true end
 function F.CharPersistDisable() T.CharPersist = false end
 function F.ProtectGui()
 local targets = {}
@@ -11496,9 +11496,6 @@ pcall(UnloadAll)
 pcall(function() F.LogFlush("卸载") end)
 end)
 end })
-T.CharPersist = true
-T.AutoSave = true
-F.CharPersistEnable()
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
