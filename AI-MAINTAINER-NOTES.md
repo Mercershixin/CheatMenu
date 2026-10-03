@@ -3233,3 +3233,11 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ★★ **尺子自身的坑（下次先看这条）**：mask 函数若只「跳过」字符串而不写空格，会把全文件的中文都算成「代码区中文」（本次一次报 15+ 假警）；`C\.X` 统计赋值时要排除表构造续行；连接上下文别用 ±8 行（会跨到相邻函数）。
 - 判定为**假报**（已逐条 grep 复核，别照着改）：bug 审计 A6/B4/C3/G1/H6 + 接线审计 K3/L2/M19/P16；`gcinfo` 覆盖是伪装功能有意为之；`ViewBoost` / `C.AntiRagdollMode` 是「标签镜像」不是死开关；`F.WpSlotHook` 有 `F._wpHooked[i]==inst` 幂等守卫。
 - 结论：**24 个「只读不写」的 C 键全部有 `or 默认值` 兜底**（历史删控件时做对了）；词法层（中文/不可见字符/换行符/链式比较/非法十六进制/重复定义/`return` 后不可达）**全 0**；`while true` 无让出 0；未 pcall 的远程 0；隐性开关耦合 0。
+
+
+## 监听事件对照公开 FPS 脚本（2026-10-04 · 14.0.10）
+
+- 公开做法来源：`dev79kz/AimbotScript`（`ServiceConnections` 统一表 + `TextBoxFocused` 打字守卫 + `Camera:GetPartsObscuringTarget` 墙检）· `Acrozza/Fate_trigger` · `Stefanuk12/ROBLOX`(Anomic：`checkcaller()` + 转发 backup 的 `__namecall`) · Baobab One Tap 的可靠性清单（R6/R15 + CharacterAdded/Removing + workspace 后代检查 + 全 pcall + clean unload）。
+- 对照结论（**我们已达标**）：**R6/R15 已兼容**（`F.COMBAT_PARTS`/`F.HB_PARTS` 两套肢体名都列了）；**元方法钩子防重入做得对**（`box.alive`+`rec.alive` 双守卫、`newcclosure`、`checkcaller()`、钩子里只 `task.defer` 打日志）；连接禁用/恢复配对（`AC.ReenableDisabledConns` 在卸载与急停链里）；`WaitForChild` 仅 2 处且都带超时；`LP.Character`.x 无 nil 守卫的写法 0 处。
+- ★ **本轮补的真缺口**：`F.CombatTick` 每帧转相机 + 自动开火，**没给菜单和打字让路** ⇒ 菜单开着想点按钮时视角被抢、在聊天框打字会被锁视角并误开火。修法：监听 `UIS.TextBoxFocused` / `TextBoxFocusReleased` 置 `F._typing`，与 `F.MenuOpen()` 一起在 `CombatTick` 开头让路（同时还原 `AutoRotate`、清 `F._combatNow`）。
+- 评估后**不做**（收益低，非遗漏）：`LP.CharacterRemoving`（关键引用都有守卫或在新角色上重建）、`workspace.DescendantRemoving` 清理（`Disable` 时已遍历还原）。
