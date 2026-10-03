@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 19:21 sha 272803f1 bytes 445361'):format('2026-10-03 19:21','272803f1',445361))
+print(('[CheatMenu] build 2026-10-03 19:57 sha d39f57f6 bytes 445582'):format('2026-10-03 19:57','d39f57f6',445582))
 local F = {}
-F.VERSION = "v13.10.26"
+F.VERSION = "v13.10.27"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10698,6 +10698,8 @@ local e4 = rawErr(coroutine.wrap, nil)
 if cleanCErr(e4) then ok("coroutine.wrap", "报错无行号") else no("coroutine.wrap", "报错带行号") end
 local e5 = rawErr(function() return getfenv({}) end)
 if cleanCErr(e5) then ok("getfenv", "报错无行号") else no("getfenv", "报错带行号") end
+local e6 = rawErr(function() return coroutine.status("invalid") end)
+if cleanCErr(e6) then ok("coroutine.status", "报错无行号") else no("coroutine.status", "报错带行号 ⇒ 被 Hooks/CoroutineStatus 抓到") end
 local plvl = nil
 pcall(function() plvl = debug.info(2, "f") end)
 if plvl == pcall then ok("pcall 栈", "debug.info(2,'f') == pcall") else no("pcall 栈", "栈被插入东西 ⇒ 被 StackCheck/PcallStack 抓到") end
