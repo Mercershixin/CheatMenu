@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 15:15 sha 407828a9 bytes 464845'):format('2026-10-03 15:15','407828a9',464845))
+print(('[CheatMenu] build 2026-10-03 15:42 sha ddd30e0b bytes 468245'):format('2026-10-03 15:42','ddd30e0b',468245))
 local F = {}
-F.VERSION = "v13.7.0"
+F.VERSION = "v13.8.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7628,6 +7628,7 @@ for k in pairs(Trans.Cache) do
 if not Trans._ordSeen[k] then Trans._ordSeen[k] = true Trans.Order[#Trans.Order + 1] = k end
 end
 Trans._cnt = n
+Trans._dirty = false
 F.Out("[翻译] 已加载本地缓存 " .. n .. " 条" .. (fromBak and " (来自备份)" or ""))
 end
 Trans.BAK = "CheatMenu_TransCache.json.bak"
@@ -7651,21 +7652,43 @@ if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
 pcall(function() writefile(Trans.FILE, payload) end)
 return true
 end
+function Trans.Flush()
+Trans._dirtyOld = nil
+Trans._savedAt = os.clock()
+local body = nil
+pcall(function()
+body = HS:JSONEncode({ v = 2, c = Trans.Cache, o = Trans.Order or {} })
+end)
+if not body then Trans._dirty = true return false end
+local ok, r = pcall(Trans.SaveAtomic, body)
+local done = ok and (r ~= false)
+Trans._dirty = not done
+return done
+end
 function Trans.Save()
+Trans._dirty = true
 local now = os.clock()
 local last = Trans._savedAt or 0
 if now - last < 5 then
 Trans._dirtyOld = Trans._dirtyOld or now
 if now - Trans._dirtyOld < 25 then return end
 end
-Trans._dirtyOld = nil
-Trans._savedAt = now
-local body = nil
-pcall(function()
-body = HS:JSONEncode({ v = 2, c = Trans.Cache, o = Trans.Order or {} })
-end)
-if body then pcall(Trans.SaveAtomic, body) end
+Trans.Flush()
 end
+Trans.HeartbeatOn = function()
+if Trans._hbOn then return end
+Trans._hbOn = true
+task.spawn(function()
+while Trans._hbOn do
+task.wait(10)
+if not Trans._hbOn then break end
+if Trans._dirty and Trans._dirtyOld and (os.clock() - Trans._dirtyOld) >= 8 then
+pcall(Trans.Flush)
+end
+end
+end)
+end
+Trans.HeartbeatOff = function() Trans._hbOn = false end
 function Trans.Req()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
@@ -8165,13 +8188,30 @@ if not ok or type(res) ~= "table" then return false, "请求失败" end
 if (res.StatusCode or 0) ~= 200 then return false, "HTTP " .. tostring(res.StatusCode) end
 return true, tostring(res.Body or ""):sub(1, 120)
 end
+Trans.RestoreAll = function()
+if type(Trans.Reg) ~= "table" then return 0 end
+local n = 0
+for obj, r in pairs(Trans.Reg) do
+if typeof(obj) == "Instance" and obj.Parent and type(r.raw) == "string" then
+pcall(function()
+if obj.Text ~= r.raw then obj.Text = r.raw end
+end)
+n = n + 1
+end
+end
+Trans.Reg = setmetatable({}, { __mode = "k" })
+if n > 0 then F.Out("[翻译] 已关 · 界面还原成原文 " .. n .. " 个控件") end
+return n
+end
 function Trans.Disable()
 T.Translate = false
 pcall(Trans.WatchOff)
+Trans.HeartbeatOff()
 if Trans.Loop then Trans.Loop = nil end
 if T.ChatTranslate then F.ChatTranslateDisable() end
 if T.BubbleTranslate then F.BubbleTranslateDisable() end
-pcall(Trans.Save)
+pcall(Trans.RestoreAll)
+pcall(Trans.Flush)
 end
 function Trans.Enable()
 T.Translate = true
@@ -8180,10 +8220,11 @@ local ok, body = Trans.Health()
 if not ok then
 F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") —— 先双击「翻译模型开关.bat」, 或点本页的「启动指引」")
 end
-if Trans.Loop then return true end
+if Trans.Loop then Trans.HeartbeatOn() return true end
 Trans.Prewarm()
 Trans.Scan()
 Trans.WatchOn()
+Trans.HeartbeatOn()
 Trans.Loop = task.spawn(function()
 while T.Translate do
 task.wait(15)
@@ -8486,6 +8527,16 @@ go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end
 if T.CharPersist then pcall(F.CharPersistEnable) end
 if T.AutoSave then pcall(F.AutoSaveEnable) end
 if T.Session then pcall(F.LivePlayersEnable) end
+go(T.HidePlayer, F.HidePlayerEnable)
+go(T.FOV, FOVEnable)
+go(T.Zoom, ZoomEnable)
+go(T.CarryGuard, F.CarryGuardEnable)
+go(T.ACWriteTier, F.ACWriteTierApply, true)
+go(T.AntiFling or T.GuiProtect, function()
+if T.AntiFling then pcall(F.AntiFlingEnable) end
+if T.GuiProtect then pcall(F.ProtectGui) pcall(F.GuiProtectionEnable) end
+pcall(F.AuthorityGuard, true)
+end)
 local synced = F.CfgSyncUI()
 F.Out("[恢复] 已恢复 " .. n .. " 项" .. ((tonumber(synced) or 0) > 0 and (", 已同步 " .. synced .. " 个控件显示") or ""))
 pcall(F.LogFlush, "恢复存档功能")
@@ -11778,6 +11829,42 @@ F.Out("[翻译·富文本] 模式 = " .. tostring(v) .. " (缓存已清)")
 end })
 Tabs.Trans:AddButton({ Title = "把界面全部重译一遍(切完语言 / 改完词条后点这个)", Callback = function()
 task.spawn(function() pcall(Trans.RetranslateAll) end)
+end })
+Tabs.Trans:AddButton({ Title = "立即把译文缓存写进磁盘(不用等自动保存)", Callback = function()
+local ok, n = false, 0
+for _ in pairs(Trans.Cache) do n = n + 1 end
+pcall(function() ok = Trans.Flush() end)
+F.Out("[翻译] " .. (ok and "已写入磁盘" or "写入失败(执行器不支持 writefile?)") .. " · 共 " .. n .. " 条 ⇒ " .. Trans.FILE)
+Fluent:Notify({ Title = "翻译缓存", Content = (ok and ("已写入磁盘 · " .. n .. " 条") or "写入失败(执行器不支持 writefile)"), Duration = 6 })
+end })
+Tabs.Trans:AddButton({ Title = "缓存状态(内存条数 / 磁盘文件大小 / 上限)", Callback = function()
+local n, sz = 0, "无文件"
+for _ in pairs(Trans.Cache) do n = n + 1 end
+pcall(function()
+if type(isfile) == "function" and type(readfile) == "function" and isfile(Trans.FILE) then
+sz = tostring(math.floor(#readfile(Trans.FILE) / 1024)) .. " KB"
+end
+end)
+local msg = "内存 " .. n .. " 条 · 磁盘 " .. sz .. " · 上限 " .. tostring(Trans.CACHE_MAX or 5000) .. " 条"
+F.Out("[翻译] 缓存: " .. msg .. " · 文件 " .. Trans.FILE)
+Fluent:Notify({ Title = "翻译缓存", Content = msg, Duration = 6 })
+end })
+Tabs.Trans:AddButton({ Title = "清空译文缓存(内存 + 磁盘 · 下次全部重新翻译)", Callback = function()
+local n = 0
+for _ in pairs(Trans.Cache) do n = n + 1 end
+Trans.Cache, Trans.Order, Trans._cnt = {}, {}, 0
+Trans._dirty = false
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+local del = 0
+if type(delfile) == "function" then
+for _, f in ipairs({ Trans.FILE, Trans.BAK, Trans.TMP }) do
+pcall(function()
+if (type(isfile) ~= "function") or isfile(f) then delfile(f) del = del + 1 end
+end)
+end
+end
+F.Out("[翻译] 缓存已清空(内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件) · 下次会全部重新翻译")
+Fluent:Notify({ Title = "翻译缓存", Content = "已清空内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件", Duration = 6 })
 end })
 Tabs.Trans:AddButton({ Title = "体检: 统计带标签的文本控件 / 标签是否不配对", Callback = function() task.spawn(function() pcall(Trans.RT.Audit) end) end })
 Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
