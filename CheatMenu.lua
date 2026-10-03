@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:39 sha 1eb9addd bytes 438294'):format('2026-10-04 02:39','1eb9addd',438294))
+print(('[CheatMenu] build 2026-10-04 02:45 sha dace35b7 bytes 438830'):format('2026-10-04 02:45','dace35b7',438830))
 local F = {}
-F.VERSION = "v14.0.15"
+F.VERSION = "v14.0.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -547,6 +547,7 @@ return AC._nc
 end
 function AC.UninstallNamecallHook()
 if not AC._nc then return false end
+if T.HpBlock or T.RemoteBlock then return false end
 local ok = F.MetaUninstall("__namecall", "AC")
 AC._nc = false
 AC._ncLayer = nil
@@ -806,19 +807,27 @@ function AC.InstallIndexMask()
 if AC._idxMaskOn and F.MetaActive("game.__index", "ACIndexMask") then return true end
 local got = F.MetaInstall("game.__index", game, "ACIndexMask", function(box)
 return function(t, k)
-if (T.Spoof or T.SpeedMask or T.ACBypass or T.PropertyLock) and not checkcaller() and typeof(t) == "Instance" then
+if checkcaller() or typeof(t) ~= "Instance" then return box.orig(t, k) end
+if k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight" then
+if not (T.SpeedMask or T.ACBypass or T.Spoof) then return box.orig(t, k) end
 local _, hum = GC()
 if hum and t == hum then
 if k == "WalkSpeed" then return F.CMX_LegitWalk() end
 if k == "JumpPower" then return 50 end
 if k == "JumpHeight" then return 7.5 end
+end
+return box.orig(t, k)
+end
 if k == "MaxHealth" or k == "Health" then
+if not (T.Spoof or T.ACBypass) then return box.orig(t, k) end
+local _, hum = GC()
+if hum and t == hum then
 local v = (k == "MaxHealth") and hum.MaxHealth or hum.Health
 if type(v) == "number" and v > 100 then return 100 end
 end
+return box.orig(t, k)
 end
-if k == "GetFullName" and AC.isOwnChar(t) then return AC._HIDE_FAKE end
-end
+if k == "GetFullName" and T.PropertyLock and AC.isOwnChar(t) then return AC._HIDE_FAKE end
 return box.orig(t, k)
 end
 end)
@@ -11572,9 +11581,14 @@ T.AntiFling = false T.GuiProtect = false
 pcall(F.GuiProtectionDisable)
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
+if F._tierHpOwn then
+F._tierHpOwn = nil
+T.HpBlock = false
+F.Out("[防护档位] 已收回档位自己开的「拦受伤上报」")
+end
 pcall(F.MetaHookUninstall)
 pcall(F.CfgSyncUI)
-F.Out("[防护档位] 已关 —— 所有钩子已卸载(namecall/index/setmetatable/属性伪装), 最不暴露")
+F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(血量隔离/静默瞄准/锁血/无敌等)保持不动")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
 return
 end
@@ -11589,6 +11603,7 @@ if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
+if not T.HpBlock then F._tierHpOwn = true end
 T.HpBlock = true
 pcall(F.HpBlockSet, true)
 pcall(F.CMX_TierSync, 2)
