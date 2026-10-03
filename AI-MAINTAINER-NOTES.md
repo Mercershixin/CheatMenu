@@ -3296,3 +3296,15 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - **按用户「把不极端的下放」**：`ClockMask`（时钟伪装）/ `DebugMask`（调试名伪装）/ `InstNew`（Instance.new 伪装）**从③档下放到②档**；
   留在③档的是真激进的：`HookHard`（硬钩子）/ `RequireBlock`（require 拦截）/ `NeuterPlus`（getgc 中和）/ `HashFreeze` / `IdentityMask` / `FFlagPack`。
   ⇒ 现在 ①=只读钩 / ②=7 层 / ③=14 层全开, **包含关系 ①⊂②⊂③ 仍成立**。
+
+
+## 钩子归属隔离（2026-10-04 · 14.0.16）
+
+- 用户要求「开档位不能导致锁血、开锁血也不能带出档位效果；每个钩子要说清归谁」⇒ 逐层审计后修了**两处真越界**：
+  ① **`ACIndexMask` 是"一个标志触发 6 个属性伪装"** —— 只开「属性锁」也会**顺带**把 `Health` / `MaxHealth` 读数改成 100、把 `WalkSpeed` 读成合法值 ⇒ **按属性细分触发条件**：
+     速度三属性只认 `T.SpeedMask` / `T.ACBypass` / `T.Spoof`；血量读数只认 `T.Spoof` / `T.ACBypass`；`GetFullName` 只认 `T.PropertyLock`。
+  ② **`AC.UninstallNamecallHook` 无脑卸层** ⇒ 关档会把用户**独立开的**「拦受伤上报」一起卸掉（静默失效）⇒ 加保护：`T.HpBlock or T.RemoteBlock` 任一为真就不卸。
+- 新增 `F._tierHpOwn`：档位**自己开的** `HpBlock` 由档位自己收回；**用户手动开的**档位绝不碰（双向隔离）。
+- ★★★ **最要紧的结论（用户担心的两件事在代码层面都不成立）**：`锁血` / `无敌` / `回血` / `不死` **全部只用 `Heartbeat` / `Stepped` 本地写值、不装任何钩子** ⇒ 开档位不会让它们生效，它们也不会因档位关闭而失效。
+- 关档日志原来是错的（写"所有钩子已卸载"，实际只关 `KickGuardPaths`）⇒ 已改成准确描述。
+- 归属总表（"谁管什么"）：**心跳写值类** = 锁血/无敌/回血/不死；**`__index` 层** = 读伪装(`CMXSpoof`) / 速度与血量读数(`ACIndexMask`) / 血量隔离(`CMHealthLock`) / 静默瞄准(`CMSilent`)；**`__namecall` 层** = 拦反作弊上报(`RemoteBlock`) / 拦受伤上报(`HpBlock`) / 视图过滤(`CMXView`)；**`setmetatable` 层** = `T.ACBypass`。
