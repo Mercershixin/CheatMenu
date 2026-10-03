@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-03 23:17 sha 174669e4 bytes 428886'):format('2026-10-03 23:17','174669e4',428886))
+print(('[CheatMenu] build 2026-10-03 23:20 sha e40599d6 bytes 428896'):format('2026-10-03 23:20','e40599d6',428896))
 local F = {}
 F.VERSION = "v14.0.0"
 F._flyDisabledInfJump = nil
@@ -871,7 +871,7 @@ end
 AC._forceConnSignals = keepForce
 F._scavenging = keepScav
 AC._connDisabled = AC._connDisabled + out.disabled
-F.Out(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条(每一条都打了日志, 异常时用「游戏异常一键恢复」可全部还原)",
+F.Out(string.format("[CheatMenu] 连接清理: 扫描 %d 条, 禁用 %d 条(每一条都打了日志; 想全部还原就点「一键全关」或「卸载脚本」)",
 out.scanned, out.disabled))
 return out.disabled, out.scanned
 end
@@ -9691,7 +9691,7 @@ return
 end
 local p = F.CMX_ProfileGet()
 if not p then
-F.Out("[游戏档案] 这个游戏还没档案 ⇒ 你在本局调好的 档位/飞行通道/加速通道/传送方式 会被记住, 下次进来自动套用")
+F.Out("[游戏档案] 这个游戏还没档案 ⇒ 你在本局调好的 档位/飞行通道/加速通道/传送方式 会被记住, 下次可用「套用本游戏上次的设置」按钮一键套回")
 return
 end
 local n = 0
@@ -11425,7 +11425,6 @@ pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
 end })
-Tabs.AC:AddSection("自动开启")
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
 local changed = (T.Session ~= nil) and (T.Session ~= v)
