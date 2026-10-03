@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 13:43 sha 2908b27b bytes 448140'):format('2026-10-03 13:43','2908b27b',448140))
+print(('[CheatMenu] build 2026-10-03 14:08 sha f1ef6874 bytes 456964'):format('2026-10-03 14:08','f1ef6874',456964))
 local F = {}
-F.VERSION = "v13.3.0"
+F.VERSION = "v13.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7639,6 +7639,180 @@ if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then retur
 local msg = d.choices[1].message
 return msg and msg.content, nil
 end
+Trans.RT = { O1 = "\226\159\166", C1 = "\226\159\167" }
+Trans.RT.HasTags = function(s)
+return type(s) == "string" and s:find("<%a[^<>]*>") ~= nil or (type(s) == "string" and s:find("</%a") ~= nil)
+end
+Trans.RT.Strip = function(s)
+if type(s) ~= "string" then return s end
+return (s:gsub("<[^<>]->", ""))
+end
+Trans.RT.Tokenize = function(s)
+local tags = {}
+local core = s:gsub("<[^<>]->", function(t)
+tags[#tags + 1] = t
+return Trans.RT.O1 .. #tags .. Trans.RT.C1
+end)
+return core, tags
+end
+Trans.RT.Restore = function(s, tags)
+if type(s) ~= "string" or not tags or #tags == 0 then return s end
+local o, c = Trans.RT.O1, Trans.RT.C1
+local function put(i)
+local t = tags[tonumber(i)]
+return t or ""
+end
+s = s:gsub(o .. "%s*(%d+)%s*" .. c, put)
+s = s:gsub("[%[%(]%s*(%d+)%s*[%]%)]", put)
+return s
+end
+Trans.RT.Count = function(s)
+local n = 0
+if type(s) == "string" then for _ in s:gmatch("<[^<>]->") do n = n + 1 end end
+return n
+end
+Trans.RT.Audit = function()
+local broken, tagged, richOff = 0, 0, 0
+pcall(function()
+for _, g in ipairs(game:GetService("CoreGui"):GetDescendants()) do
+if (g:IsA("TextLabel") or g:IsA("TextButton")) and type(g.Text) == "string" then
+if Trans.RT.HasTags(g.Text) then
+tagged = tagged + 1
+if g.RichText ~= true then richOff = richOff + 1 end
+local o, c = Trans.RT.Count(g.Text:gsub("<[^<>]->", "")), 0
+if c > o then broken = broken + 1 end
+end
+end
+end
+end)
+F.Out("[翻译·富文本] 带标签的文本控件 " .. tostring(tagged) .. " 个, 其中 RichText 没开 " .. tostring(richOff)
+.. " 个(这些标签会当纯文本显示), 标签不配对 " .. tostring(broken) .. " 个")
+return tagged
+end
+Trans.GL = {}
+Trans.GL.PRESET = {
+["brainrot"] = "脑红", ["rebirth"] = "重生", ["pet"] = "宠物", ["pets"] = "宠物",
+["egg"] = "蛋", ["eggs"] = "蛋", ["cash"] = "现金", ["coins"] = "金币", ["coin"] = "金币",
+["gems"] = "宝石", ["gem"] = "宝石", ["plot"] = "基地", ["podium"] = "展台",
+["steal"] = "偷取", ["team"] = "队伍", ["round"] = "回合", ["shop"] = "商店",
+["inventory"] = "背包", ["upgrade"] = "升级", ["quest"] = "任务", ["reward"] = "奖励",
+["damage"] = "伤害", ["health"] = "生命值", ["server"] = "服务器",
+["leaderboard"] = "排行榜", ["trading"] = "交易", ["trade"] = "交易",
+["purchase"] = "购买", ["equip"] = "装备", ["unlock"] = "解锁", ["locked"] = "已锁定",
+["owned"] = "已拥有", ["equipped"] = "已装备", ["sell"] = "出售", ["buy"] = "购买",
+}
+Trans.GL.KEEP = {}
+Trans.GL.O1 = "\226\159\170"
+Trans.GL.C1 = "\226\159\171"
+Trans.GL.Ena = function()
+if C.TransUseGL == false then return false end
+return true
+end
+Trans.GL.CIPat = function(term)
+local parts = {}
+for i = 1, #term do
+local ch = term:sub(i, i)
+if ch:match("%a") then
+parts[#parts + 1] = "[" .. ch:lower() .. ch:upper() .. "]"
+else
+parts[#parts + 1] = ch:gsub("(%W)", "%%%1")
+end
+end
+return table.concat(parts)
+end
+Trans.GL.Sorted = function()
+local out = {}
+for k in pairs(Trans.GL.PRESET) do out[#out + 1] = k end
+for k in pairs(Trans.GL.KEEP) do out[#out + 1] = k end
+table.sort(out, function(a, b) return #a > #b end)
+return out
+end
+Trans.GL.Apply = function(text)
+if not Trans.GL.Ena() then return text, nil end
+local hits = {}
+local out = text
+local terms = Trans.GL.Sorted()
+for i = 1, #terms do
+local t = terms[i]
+if t ~= "" and out:lower():find(t, 1, true) then
+local want = Trans.GL.KEEP[t] or Trans.GL.PRESET[t]
+if want then
+local pat = "()(%f[%a]" .. Trans.GL.CIPat(t) .. "%f[%A])"
+out = out:gsub(pat, function()
+hits[#hits + 1] = want
+return Trans.GL.O1 .. #hits .. Trans.GL.C1
+end)
+end
+end
+end
+if #hits == 0 then return out, nil end
+return out, hits
+end
+Trans.GL.Restore = function(s, hits)
+if type(s) ~= "string" or not hits or #hits == 0 then return s end
+local o, c = Trans.GL.O1, Trans.GL.C1
+local function put(i)
+local w = hits[tonumber(i)]
+return w or ""
+end
+s = s:gsub(o .. "%s*(%d+)%s*" .. c, put)
+s = s:gsub("[%[%(]%s*(%d+)%s*[%]%)]", put)
+return s
+end
+Trans.GL.Add = function(term, want)
+term = tostring(term or ""):gsub("^%s+", ""):gsub("%s+$", "")
+if term == "" then return false end
+local k = term:lower()
+if want == nil or want == "" then
+Trans.GL.KEEP[k] = term
+else
+Trans.GL.KEEP[k] = nil
+Trans.GL.PRESET[k] = want
+end
+Trans.QUICK[k] = nil
+Trans.Cache = {}
+F.Out("[翻译·词条] 已加: " .. term .. " -> " .. tostring(Trans.GL.KEEP[k] or Trans.GL.PRESET[k]))
+return true
+end
+Trans.GL.Del = function(term)
+local k = tostring(term or ""):lower()
+local hadP, hadK = Trans.GL.PRESET[k] ~= nil, Trans.GL.KEEP[k] ~= nil
+Trans.GL.PRESET[k], Trans.GL.KEEP[k] = nil, nil
+Trans.Cache = {}
+F.Out("[翻译·词条] 已删: " .. tostring(term) .. (hadP or hadK and "" or " (本来就没有)"))
+return hadP or hadK
+end
+Trans.GL.Count = function()
+local n = 0
+for _ in pairs(Trans.GL.PRESET) do n = n + 1 end
+for _ in pairs(Trans.GL.KEEP) do n = n + 1 end
+return n
+end
+Trans.GL.AddAuto = function()
+local n = 0
+local name = nil
+pcall(function()
+if F.CMX_GameName then name = (F.CMX_GameName()) end
+end)
+if type(name) == "string" and #name >= 3 then
+if Trans.GL.Add(name, nil) then n = n + 1 end
+end
+local per = nil
+pcall(function()
+if F.CMX_GameDetectKeys then per = (F.CMX_GameDetectKeys()) end
+end)
+if type(per) == "table" then
+for i = 1, #per do
+local w = per[i]
+if type(w) == "string" and #w >= 5 and not w:find(" ") then
+if Trans.GL.Add(w, nil) then n = n + 1 end
+end
+end
+end
+F.Out("[翻译·词条] 自动加入 " .. tostring(n) .. " 条(游戏名 + 本游戏检测命名) —— 这些词保持原文不翻译"
+.. " · 当前词条共 " .. tostring(Trans.GL.Count()) .. " 条")
+return n
+end
 function Trans.Should(s)
 if type(s) ~= "string" then return false end
 s = s:gsub("^%s+", ""):gsub("%s+$", "")
@@ -7656,16 +7830,36 @@ function Trans.Translate(text, force)
 if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
 text = text:gsub("^%s+", ""):gsub("%s+$", "")
 if text == "" then return nil end
+if not force and not Trans.Should(Trans.RT.HasTags(text) and Trans.RT.Strip(text) or text) then return nil end
+local rtTags, rtMode = nil, tostring(C.TransRTMode or "\226\145\160")
+if Trans.RT.HasTags(text) then
+if rtMode:find("\226\145\161", 1, true) then
+text = Trans.RT.Strip(text)
+elseif rtMode:find("\226\145\162", 1, true) then
+local core
+core, rtTags = Trans.RT.Tokenize(text)
+text = core
+end
+end
+local glHits = nil
+local glossed
+glossed, glHits = Trans.GL.Apply(text)
+text = glossed
 if not force and not Trans.Should(text) then return nil end
-if Trans.Cache[text] then return Trans.Cache[text] end
+if Trans.Cache[text] then
+local hit0 = Trans.Cache[text]
+return Trans.RT.Restore(Trans.GL.Restore(hit0, glHits), rtTags)
+end
 local quick = Trans.QUICK[text:lower()]
 if quick then Trans.Cache[text] = quick return quick end
+if force then Trans._lastAt = 0 end
 local now = os.clock()
 if not force and (now - (Trans._lastAt or 0)) < (C.TransInterval or 0.15) then return nil end
 Trans._lastAt = now
 local r = Trans.Request(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
+r = r:gsub("^\s+", ""):gsub("\s+$", "")
 Trans.Cache[text] = r
 Trans.CACHE_MAX = Trans.CACHE_MAX or 5000
 local cnt = 0
@@ -7681,7 +7875,7 @@ end
 F.Out("[翻译] 缓存超过 " .. Trans.CACHE_MAX .. " 条, 已清理 " .. removed .. " 条")
 end
 Trans.Save()
-return r
+return Trans.RT.Restore(Trans.GL.Restore(r, glHits), rtTags)
 end
 return nil
 end
@@ -7717,6 +7911,9 @@ if not obj then return end
 if obj.Visible == false then return end
 if obj:IsA("TextLabel") or obj:IsA("TextButton") then
 local txt = obj.Text
+if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
+txt = Trans.RT.Strip(txt)
+end
 if txt and Trans.Should(txt) then
 Trans.Async(txt, function(tr)
 if obj.Parent and obj.Visible ~= false then obj.Text = tr end
@@ -11341,6 +11538,43 @@ end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v) C.TransLang = v end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
+Tabs.Trans:AddDropdown("TransRTMode", { Title = "富文本处理(<b>/<font>/<color> 这类标签怎么办)", Values = {
+"① 保标签(推荐) · 抽出标签→只译文字→原样塞回",
+"② 去标签 · 直接丢掉所有标签只译文字",
+"③ 关 · 不特殊处理(标签会被当普通文字送去翻译)",
+}, Default = "① 保标签(推荐) · 抽出标签→只译文字→原样塞回", Callback = function(v)
+C.TransRTMode = v
+if F._cfgSyncing then return end
+Trans.Cache = {}
+F.Out("[翻译·富文本] 模式 = " .. tostring(v) .. " (缓存已清)")
+end })
+Tabs.Trans:AddButton({ Title = "体检: 统计带标签的文本控件 / 标签是否不配对", Callback = function() task.spawn(function() pcall(Trans.RT.Audit) end) end })
+Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
+C.TransUseGL = v
+if F._cfgSyncing then return end
+Trans.Cache = {}
+F.Out("[翻译·词条] " .. (v and ("已开 · 当前 " .. tostring(Trans.GL.Count()) .. " 条") or "已关"))
+end })
+Tabs.Trans:AddInput("TransGLAdd", { Title = "加词条(格式: 原文=译法 · 只写原文=保持不翻 · 留空回车清空)", Placeholder = "brainrot=脑红 或 SteamPunk", Default = "", Callback = function(v)
+if F._cfgSyncing or type(v) ~= "string" or v == "" then return end
+local k, want = v:match("^%s*([^=]+)%s*=%s*(.-)%s*$")
+if k then
+Trans.GL.Add(k, want)
+else
+Trans.GL.Add(v, nil)
+end
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.TransGLAdd
+if o and o.Set then o:Set("") end
+end)
+end })
+Tabs.Trans:AddButton({ Title = "把当前游戏名 + 本游戏检测命名 自动加成词条(这些词保持原文)", Callback = function() task.spawn(function() pcall(Trans.GL.AddAuto) end) end })
+Tabs.Trans:AddSlider("TransConcurrency", { Title = "并发翻译数(同时发几个请求 · 调大出译文更快但更吃显存/服务槽位)", Min = 1, Max = 8, Default = 8, Rounding = 0, Callback = function(v)
+Trans.Max = v
+if F._cfgSyncing then return end
+F.Out("[翻译] 并发 = " .. tostring(v) .. " (服务端建议同步把槽位数 -np 设成同值)")
+end })
+Tabs.Trans:AddSlider("TransCacheMax", { Title = "译文缓存上限(条 · 满了会自动清掉最早的四分之一)", Min = 500, Max = 20000, Default = 5000, Rounding = 0, Callback = function(v) Trans.CACHE_MAX = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.ChatTranslate = v
