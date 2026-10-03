@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 22:48 sha 8982f81e bytes 440841'):format('2026-10-03 22:48','8982f81e',440841))
+print(('[CheatMenu] build 2026-10-03 22:54 sha 64c054e9 bytes 440848'):format('2026-10-03 22:54','64c054e9',440848))
 local F = {}
-F.VERSION = "v13.10.35"
+F.VERSION = "v13.10.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6727,7 +6727,7 @@ return did
 end
 F.CamReleaseSchedule = function()
 F.Out("[视角] 已关掉「加载即锁视角/锁鼠标」的所有路径 —— 若仍转不动: 按 F2, 或去「系统」页点「视角被锁了」按钮")
-task.delay(6, function() pcall(F.CamRelease, true, "加载后 6 秒") end)
+task.delay(6, function() pcall(F.CamRelease, false, "加载后 6 秒保底") end)
 local more = { 15, 30, 60 }
 for i = 1, #more do
 local t = more[i]
