@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:07 sha 42ef6188 bytes 452649'):format('2026-10-03 17:07','42ef6188',452649))
+print(('[CheatMenu] build 2026-10-03 17:08 sha 4bb391db bytes 452829'):format('2026-10-03 17:08','4bb391db',452829))
 local F = {}
-F.VERSION = "v13.10.3"
+F.VERSION = "v13.10.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8562,6 +8562,10 @@ T.CarryGuard = false
 pcall(F.CarryGuardDisable)
 F.Out("[恢复] 搬运守卫已复位 —— 它会咔住蛋; 需要时请站到蛋旁边再手动开")
 end
+if T.NoDrop then
+T.NoDrop = false
+F.Out("[恢复] 防掉蛋已复位为关 —— 它会导致被打掉后偷不了蛋; 需要时手动开")
+end
 g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
 g(T.AntiFling or T.GuiProtect, function()
 if T.AntiFling then pcall(F.AntiFlingEnable) end
@@ -11543,7 +11547,7 @@ T.CarryGuard = v
 if F._cfgSyncing or not changed then return end
 if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
 end })
-Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "拦下游戏'让蛋掉出去'的上报 —— 这是最实用的防掉蛋手段(陷阱本身由服务端判定, 客户端拦不掉, 但掉蛋这一步能拦)", Default = true, Callback = function(v)
+Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "⚠ 有副作用: 它会拦掉'蛋掉出去'的上报, 被打掉/被反击后服务器收不到 ⇒ 状态不同步, 可能再也偷不了蛋。默认关; 只在确实需要防掉蛋时才开", Default = false, Callback = function(v)
 local changed = (T.NoDrop ~= nil) and (T.NoDrop ~= v)
 T.NoDrop = v
 if F._cfgSyncing or not changed then return end
