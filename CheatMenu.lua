@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 03:17 sha 57479b04 bytes 435663'):format('2026-10-04 03:17','57479b04',435663))
+print(('[CheatMenu] build 2026-10-04 03:21 sha 89387a6a bytes 436494'):format('2026-10-04 03:21','89387a6a',436494))
 local F = {}
-F.VERSION = "v14.0.21"
+F.VERSION = "v14.0.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -83,6 +83,13 @@ F._logBuf[#F._logBuf + 1] = line
 if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
 pcall(F.LogFlush, "自动")
 end
+end
+function F.Try(name, fn, ...)
+local ok, err = pcall(fn, ...)
+if not ok then
+pcall(F.Out, "[×] " .. tostring(name) .. " 调用失败(已跳过, 其余功能不受影响): " .. tostring(err))
+end
+return ok
 end
 F.Out("[CheatMenu] ===== 加载开始 · " .. F.VERSION .. " =====")
 F.INSTANCE_KEY = "CM_Instance"
@@ -2435,7 +2442,7 @@ F.Out("[深度中和] 已关(还原 " .. tostring(n) .. " 个被改过的函数)
 end
 function F.MetaHookEnsure()
 if KG.mtHooked then return end
-pcall(F.KickGuardPathsEnable)
+F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
 end
 F._gcSweepSaved = {}
 F.AntiCheatGCSweep = function()
@@ -2841,7 +2848,7 @@ end
 function F.KickGuardEnable()
 if KG.hooked then return true end
 F.Out("[防踢] 正在装「Kick 三路径拦截」(会改写全局元表) —— 个别反作弊会因这层 hook 直接踢你; 平时建议关着, 挂机前再开")
-pcall(F.KickGuardPathsEnable)
+F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
 local kf = LP.Kick
 if type(kf) ~= "function" or not hookfunction then return false end
 local orig
@@ -2867,7 +2874,7 @@ task.wait(6)
 if not (T.KickProtect or T.KickGuard) then break end
 if not KG.kick or not KG.mtHooked then
 F.Out("[防踢] 检测到拦截层被摘掉 ⇒ 正在重装")
-pcall(F.KickGuardPathsEnable)
+F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
 F._kgHealFix = (F._kgHealFix or 0) + 1
 end
 end
@@ -3645,7 +3652,7 @@ return #scripts, #conns
 end
 function F.GuardSet(steady, hit, lock, trap, dodge, atp, strong, bypass)
 if steady or hit then
-pcall(F.CharEventsEnable)
+F.Try("CharEventsEnable", F.CharEventsEnable)
 pcall(F.MetaHookEnsure)
 else
 pcall(F.CharEventsDisable)
@@ -5633,9 +5640,9 @@ else
 T.GuardOn = true
 pcall(function() F.GuardSet(true, true, false, true, true, false) end)
 T.SpeedGuard = true
-pcall(F.SpeedGuardEnable)
+F.Try("SpeedGuardEnable", F.SpeedGuardEnable)
 T.Spoof = true
-pcall(F.SpoofEnable)
+F.Try("SpoofEnable", F.SpoofEnable)
 end
 if not wants.deep then
 T.DeepNeuter, T.AntiTPOn = false, false
@@ -5643,8 +5650,8 @@ pcall(F.DeepNeuterDisable)
 pcall(F.SpeedAntiTPDisable)
 else
 T.DeepNeuter, T.AntiTPOn = true, true
-pcall(F.SpeedAntiTPEnable)
-pcall(F.DeepNeuterEnable)
+F.Try("SpeedAntiTPEnable", F.SpeedAntiTPEnable)
+F.Try("DeepNeuterEnable", F.DeepNeuterEnable)
 end
 pcall(F.CMX_TierSync, F.CMX_TierLevel(v))
 pcall(F.CfgSyncUI)
@@ -5653,7 +5660,7 @@ end
 function F.SpeedGuardEnable()
 T.SpeedGuard = true
 T.BypassDetect = true
-pcall(F.BypassEnable)
+F.Try("BypassEnable", F.BypassEnable)
 pcall(F.MetaHookEnsure)
 F.Out("[反拉回] 已开(平时零干预, 被拉回才出手): 所有权被夺才抢 + 被回滚就用 0.3 秒脉冲顶回")
 end
@@ -5669,7 +5676,7 @@ F.CarryGuardEnable = function()
 if F._cgConn then return end
 F.EggLock()
 F._carry = F.CarryFind()
-pcall(F.CarryWatchEnable)
+F.Try("CarryWatchEnable", F.CarryWatchEnable)
 F._cgConn = RS.Heartbeat:Connect(function()
 if not T.CarryGuard then F.CarryGuardDisable() return end
 F.EggGuardTick()
@@ -5847,7 +5854,7 @@ F.II_SHOWN = game:GetService("ProximityPromptService").PromptShown:Connect(funct
 if T.InstantInteract then pcall(F.InstantInteractApply, pp) end
 end)
 end)
-pcall(F.InteractWatchEnable)
+F.Try("InteractWatchEnable", F.InteractWatchEnable)
 pcall(F.InstantInteractHeal)
 pcall(F.InstantInteractAutoLoop)
 F.Out("[瞬间交互] 已开启(长按→点一下就成 · 不要求看得见) — 本次处理 " .. tostring(n)
@@ -9313,7 +9320,7 @@ F.Out("[伪装·gcinfo] 已关: gcinfo 已还原")
 end
 F.CMX_SpoofIndexEnable = function()
 if F.CMX_SpoofOn then return false end
-pcall(F.CMX_GcinfoMaskEnable)
+F.Try("CMX_GcinfoMaskEnable", F.CMX_GcinfoMaskEnable)
 F.CMX_SpoofUseCount = 0
 F.CMX_SpoofGen = F.CMX_SpoofGen or 1
 F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
@@ -10519,7 +10526,7 @@ F.CMX_AntiDetectHide = function()
 F.Out("[反检测] 正在藏匿…")
 pcall(F.CMX_AntiDetectAudit)
 if not T.CMX_HookHard and type(F.CMX_G("newlclosure")) == "function" then
-pcall(F.CMX_HookHardApply)
+F.Try("CMX_HookHardApply", F.CMX_HookHardApply)
 end
 local moved = 0
 pcall(function()
@@ -10596,7 +10603,7 @@ pcall(function() AC.WatchNewRemotesDisable() end)
 F.Out("[防护·改写档] 已还原: 元表钩已卸, 不再改写游戏")
 end
 if deep then
-pcall(F.DeepNeuterEnable)
+F.Try("DeepNeuterEnable", F.DeepNeuterEnable)
 else
 pcall(F.DeepNeuterDisable)
 end
@@ -10842,7 +10849,7 @@ local sp = F.CMX_ScrubShape
 pcall(F.CMX_ArgScrubDisable)
 if sp then
 F.CMX_ShapeOverride = tostring(sp[1]) .. "," .. tostring(sp[2]) .. "," .. tostring(sp[3])
-pcall(F.CMX_ArgScrubEnable)
+F.Try("CMX_ArgScrubEnable", F.CMX_ArgScrubEnable)
 end
 F.CMX_ScrubHealFix = (F.CMX_ScrubHealFix or 0) + 1
 end
@@ -11186,7 +11193,7 @@ Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
 if steady or hit then
-pcall(F.CharEventsEnable)
+F.Try("CharEventsEnable", F.CharEventsEnable)
 pcall(F.MetaHookEnsure)
 else
 pcall(F.CharEventsDisable)
@@ -11203,17 +11210,17 @@ end
 Tabs.Move:AddToggle("SteadyOn", { Title = "稳身(不被击倒 / 不被甩飞)", Description = "只动本地状态: 禁掉 Ragdoll/FallingDown 两个状态 + 压异常上升速度; 不碰任何远程、不改碰撞属性。站在跑步机/移动平台上会自动让路", Default = false, Callback = function(v)
 T.SteadyOn = v
 if F._cfgSyncing then return end
-pcall(F.ProtectApply)
+F.Try("ProtectApply", F.ProtectApply)
 end })
 Tabs.Move:AddToggle("HitGuard", { Title = "反攻击 / 受击保护(被打不倒地、不被击飞)", Description = "状态法: 只在本地不让你进倒地/被击飞状态, 不打断游戏的远程 ⇒ 搬运动作不会被卡住。想更猛请去「系统」页把防护档位调到②/③", Default = false, Callback = function(v)
 T.HitGuard = v
 if F._cfgSyncing then return end
-pcall(F.ProtectApply)
+F.Try("ProtectApply", F.ProtectApply)
 end })
 Tabs.Move:AddToggle("TrapWarn", { Title = "反陷阱(踩上去也不触发 · 和反攻击一样不挪你)", Description = "只做『不触发』: 销毁陷阱的 TouchInterest + 断掉陷阱自身的 Touched 回调 + 拦陷阱触发上报。不挪你的位置、不关你身体的「可触碰」、不影响任何正常交互", Default = false, Callback = function(v)
 T.TrapWarn = v
 if F._cfgSyncing then return end
-pcall(F.ProtectApply)
+F.Try("ProtectApply", F.ProtectApply)
 end })
 Tabs.Move:AddToggle("SpeedAntiTP", { Title = "防拉回(清检测脚本 + 断检测连接 · 最招反作弊)", Description = "⚠ 会禁用命中的客户端检测脚本、断掉检测连接、中和检测函数 —— 只在真被拉回时开; 关掉后建议重进一次游戏恢复干净", Default = false, Callback = function(v)
 T.SpeedAntiTP = v
@@ -11380,8 +11387,8 @@ Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 �
 T.AntiAFK, T.KickGuard = v, v
 if F._cfgSyncing then return end
 if v then
-pcall(F.AntiAFKEnable)
-pcall(F.KickGuardEnable)
+F.Try("AntiAFKEnable", F.AntiAFKEnable)
+F.Try("KickGuardEnable", F.KickGuardEnable)
 else
 pcall(F.AntiAFKDisable)
 pcall(F.KickGuardDisable)
@@ -11463,12 +11470,12 @@ pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关
 return
 end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
-pcall(F.AntiFlingEnable)
+F.Try("AntiFlingEnable", F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
-pcall(F.GuiProtectionEnable)
-pcall(F.CharPersistEnable)
+F.Try("GuiProtectionEnable", F.GuiProtectionEnable)
+F.Try("CharPersistEnable", F.CharPersistEnable)
 T.CMX_SpoofIndex = true
-pcall(F.CMX_SpoofIndexEnable)
+F.Try("CMX_SpoofIndexEnable", F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(AC.InstallNamecallHook)
@@ -11477,14 +11484,14 @@ if not T.HpBlock then F._tierHpOwn = true end
 T.HpBlock = true
 pcall(F.HpBlockSet, true)
 pcall(F.CMX_TierSync, 2)
-pcall(F.LockFieldsInstall)
+F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 if lvl >= 3 then
 T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
 T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
 pcall(F.BypassTierApply, T.BypassTier)
-pcall(F.LockFieldsInstall)
+F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] = " .. v)
@@ -11518,8 +11525,8 @@ T.Session = v
 if F._cfgSyncing or not changed then return end
 if v then
 T.AutoSave, T.CharPersist = true, true
-pcall(F.AutoSaveEnable)
-pcall(F.LivePlayersEnable)
+F.Try("AutoSaveEnable", F.AutoSaveEnable)
+F.Try("LivePlayersEnable", F.LivePlayersEnable)
 F.Out("[会话保持] 已开: 自动存档 + 角色持续 + 实时玩家列表")
 else
 T.AutoSave, T.CharPersist = false, false
@@ -11847,6 +11854,6 @@ end)
 end)
 end)
 T.AntiAFK, T.KickGuard = true, true
-pcall(F.AntiAFKEnable)
-pcall(F.KickGuardEnable)
+F.Try("AntiAFKEnable", F.AntiAFKEnable)
+F.Try("KickGuardEnable", F.KickGuardEnable)
 F.Out("[挂机防踢] 默认已开(防挂机 + 防踢)")
