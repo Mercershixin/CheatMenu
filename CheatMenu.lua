@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:44 sha aedac05b bytes 454916'):format('2026-10-03 16:44','aedac05b',454916))
+print(('[CheatMenu] build 2026-10-03 16:50 sha 0a86f11c bytes 454913'):format('2026-10-03 16:50','0a86f11c',454913))
 local F = {}
-F.VERSION = "v13.9.9"
+F.VERSION = "v13.10.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5421,7 +5421,7 @@ function F.InstantInteractApply(pp)
 if not F.II_SAVED then return end
 if typeof(pp) ~= "Instance" or not pp:IsA("ProximityPrompt") then return end
 if F.II_SAVED[pp] then return end
-local lvl = tostring(C.IILevel or "①")
+local lvl = tostring(C.IILevel or "②")
 local snap = { E = pp.Enabled, H = pp.HoldDuration, R = pp.RequiresLineOfSight, M = pp.MaxActivationDistance }
 F.II_SAVED[pp] = snap
 pcall(function() pp.HoldDuration = 0 end)
@@ -5715,7 +5715,7 @@ F._spoofWalkBase, F._spoofJumpBase = nil, nil
 end
 function F.InstantInteractEnable()
 if F.II_SAVED then return end
-F.II_SAVED, F.II_COUNT = {}, 0
+F.II_SAVED, F.II_COUNT = setmetatable({}, { __mode = "k" }), 0
 local n = F.InstantInteractScan()
 pcall(function()
 F.II_CONN = workspace.DescendantAdded:Connect(function(d)
@@ -5757,7 +5757,7 @@ F.InstantInteractHeal = function()
 if F._iiHeal then return end
 F._iiHeal = task.spawn(function()
 while T.InstantInteract do
-task.wait(5)
+task.wait(30)
 if not T.InstantInteract then break end
 pcall(function()
 local _, n2 = F.InstantInteractScan()
@@ -11348,18 +11348,18 @@ F.InstantInteractAutoLoop = function()
 if F._iiAuto then return end
 F._iiAuto = task.spawn(function()
 while T.InstantInteract do
-local igap = 0.6
-if F.CMX_HumanizeOn then igap = F.CMX_Jitter(0.6, 0.3) end
+local igap = 2
+if F.CMX_HumanizeOn then igap = F.CMX_Jitter(2, 1) end
 task.wait(igap)
 if not T.InstantInteract then break end
-if tostring(C.IILevel or "①"):find("③", 1, true) then
+if tostring(C.IILevel or "②"):find("③", 1, true) then
 local _, _, root = GC()
 if root then
 pcall(function()
 local n = 0
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 6000 then break end
+if n > 1500 then break end
 if d:IsA("ProximityPrompt") and d.Enabled and d.Parent and d.Parent:IsA("BasePart") then
 if (d.Parent.Position - root.Position).Magnitude <= 60 then
 pcall(function()
@@ -11916,8 +11916,21 @@ if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
-Tabs.AC:AddButton({ Title = "★ 一键开启全部(防护 + 反封禁 + 全部绕过层 + 改写档③)", Description = "不想一项项点就按这个 —— 等于把下面所有和'不被抓/不被踢'相关的都开上; 想关掉点下面的「一键全关」", Callback = function()
+Tabs.AC:AddToggle("ACMaster", { Title = "★ 一键防护(一个开关全开 · 不用一项项点)", Description = "开: 反甩 + 护界面 + 权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③ 一次全上; 关: 全部还原。想细调的项在下面高级区还在", Default = false, Callback = function(v)
+if F._cfgSyncing then
+T.AntiFling = v T.GuiProtect = v T.CharPersist = true
+return
+end
+if v then
+T.AntiFling = true T.GuiProtect = true T.CharPersist = true
+pcall(F.AntiFlingEnable)
 task.spawn(function()
+local acName = nil
+pcall(function() acName = AC.DetectStrongAC(true) end)
+if acName then pcall(AC.SetQuiet, true) end
+pcall(F.ProtectGui)
+pcall(F.GuiProtectionEnable)
+pcall(F.AuthorityGuard, true)
 local n = 0
 local function go(fn, ...)
 if type(fn) ~= "function" then return end
@@ -11925,45 +11938,28 @@ if pcall(fn, ...) then n = n + 1 end
 end
 T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
 go(F.BypassTierApply, T.BypassTier)
-T.AntiFling, T.GuiProtect, T.CharPersist = true, true, true
-go(F.AntiFlingEnable)
-go(F.AuthorityGuard, true)
 T.CMX_AntiBanAll = true
 go(F.CMX_BanAllApply, true)
 T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
 go(F.ACWriteTierApply, T.ACWriteTier)
 pcall(F.CfgSyncUI)
-F.Out("[一键开启] 已开启 " .. tostring(n) .. " 组: 防护 + 反封禁全家桶 + 全部绕过层 + 改写档③")
-Fluent:Notify({ Title = "一键开启", Content = "已开启 " .. tostring(n) .. " 组 · 防护 + 反封禁 + 绕过层 + 改写档③", Duration = 8 })
-end)
-end })
-Tabs.AC:AddSection("反作弊")
-Tabs.AC:AddToggle("ACMaster", { Title = "防护(反甩[只清异常速度] + 护界面 + 权限守卫 · 不动你的碰撞/交互)", Default = false, Callback = function(v)
-if F._cfgSyncing then
-T.AntiFling = v T.GuiProtect = v T.CharPersist = true
-return
-end
-if v then
-T.AntiFling = true T.GuiProtect = true T.CharPersist = true
-F.AntiFlingEnable()
-task.spawn(function()
-local acName = AC.DetectStrongAC(true)
-if acName then AC.SetQuiet(true) end
-F.ProtectGui()
-pcall(F.GuiProtectionEnable)
-pcall(F.AuthorityGuard, true)
 Fluent:Notify({
-Title = "防护",
-Content = "已开启: 反甩(只清异常速度) + 界面保护 + 权限守卫 · 环境 " .. tostring(acName or "未识别")
-.. " · 已确保不动你的碰撞/触碰(跑步机与道具照常可用)",
-Duration = 8,
+Title = "一键防护",
+Content = "已全开 " .. tostring(n) .. " 组: 反甩 + 护界面 + 权限守卫 + 反封禁 + 全部绕过层 + 改写档③"
+.. " · 环境 " .. tostring(acName or "未识别"),
+Duration = 10,
 })
+F.Out("[一键防护] 已全开 " .. tostring(n) .. " 组 —— 反甩/护界面/权限守卫 + 反封禁全家桶 + 全部绕过层 + 改写档③")
 end)
 else
 T.AntiFling = false T.GuiProtect = false
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
-Fluent:Notify({ Title = "防护", Content = "已关闭", Duration = 3 })
+pcall(function() T.CMX_AntiBanAll = false F.CMX_BanAllApply(false) end)
+pcall(function() T.BypassTier = "① 默认: 防挂机(不动人物 · 不装钩子)" F.BypassTierApply(T.BypassTier) end)
+pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
+pcall(F.CfgSyncUI)
+Fluent:Notify({ Title = "一键防护", Content = "已全部关闭并还原", Duration = 4 })
 end
 end })
 Tabs.AC:AddToggle("CMX_NoPurchase", { Title = "★ 拦住 R 币购买弹窗(不弹窗 · 不扣钱 · 不打断游戏)", Description = "开: 游戏里任何'花 Robux 买'的提示都弹不出来(客户端弹的直接拦, 服务端发来的引擎弹窗一出现就清掉) ⇒ 你就算碰到了也不会扣钱; 关: 恢复正常", Default = true, Callback = function(v)
