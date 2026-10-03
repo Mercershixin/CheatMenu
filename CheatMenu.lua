@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:01 sha 5861ee91 bytes 421202'):format('2026-10-04 00:01','5861ee91',421202))
+print(('[CheatMenu] build 2026-10-04 00:11 sha e72b2b07 bytes 412383'):format('2026-10-04 00:11','e72b2b07',412383))
 local F = {}
-F.VERSION = "v14.0.1"
+F.VERSION = "v14.0.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2861,125 +2861,6 @@ if F._livePlAdded then F._livePlAdded:Disconnect() F._livePlAdded = nil end
 if F._livePlRemoved then F._livePlRemoved:Disconnect() F._livePlRemoved = nil end
 end
 F._aimConn = nil
-function F.AimPick()
-local cam = workspace.CurrentCamera
-if not cam then return nil end
-local vp = cam.ViewportSize
-local cx, cy = vp.X / 2, vp.Y / 2
-local fov = tonumber(C.AimFOV) or 200
-local function inTbl(t, nm)
-if type(t) ~= "table" then return false end
-for k, v in pairs(t) do
-if v == nm or k == nm then return true end
-end
-return false
-end
-local rp = RaycastParams.new()
-rp.FilterType = Enum.RaycastFilterType.Exclude
-local ex = {}
-if LP.Character then ex[#ex + 1] = LP.Character end
-local now = os.clock()
-if now - (F._crossScanAt or 0) > 1 then
-F._crossScanAt = now
-F._crossCands = {}
-local _, _, myRoot = GC()
-for _, hum in ipairs(workspace:GetDescendants()) do
-if hum:IsA("Humanoid") then
-local ch = hum.Parent
-if ch and ch:IsA("Model") and ch ~= LP.Character and not (myRoot and ch:IsDescendantOf(myRoot.Parent)) then
-F._crossCands[#F._crossCands + 1] = ch
-end
-end
-end
-end
-local best, bestScore = nil, nil
-local cands, seen = {}, {}
-local function push(ch, pl)
-if not ch or seen[ch] then return end
-seen[ch] = true
-cands[#cands + 1] = { ch = ch, pl = pl }
-end
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then push(pl.Character, pl) end
-end
-if F._crossCands then
-for i = 1, #F._crossCands do
-push(F._crossCands[i], nil)
-end
-end
-for i = 1, #cands do
-local c = cands[i]
-local ch, pl = c.ch, c.pl
-local hum = ch:FindFirstChildOfClass("Humanoid")
-local hrp = ch:FindFirstChild("HumanoidRootPart")
-if hrp and hum and hum.Health > 0 then
-local skip = false
-if not skip and T.AimTeamCheck and LP.Team ~= nil and pl then
-pcall(function()
-if pl.Team ~= nil and pl.Team == LP.Team then skip = true end
-if not skip and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then skip = true end
-end)
-end
-if not skip then
-local pts = {}
-local hp1 = ch:FindFirstChild("Head")
-local hp2 = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
-local hp3 = ch:FindFirstChild("LowerTorso") or hrp
-if hp1 then pts[#pts + 1] = hp1.Position end
-if hp2 then pts[#pts + 1] = hp2.Position end
-if hp3 then pts[#pts + 1] = hp3.Position end
-if #pts == 0 then pts[#pts + 1] = hrp.Position end
-local score = nil
-for pi = 1, #pts do
-local pp = pts[pi]
-if T.Aim360 then
-local d3 = (cam.CFrame.Position - pp).Magnitude
-if d3 <= fov and (not score or d3 < score) then score = d3 end
-else
-local sp, onScreen = cam:WorldToScreenPoint(pp)
-if onScreen then
-local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
-if d <= fov and (not score or d < score) then score = d end
-end
-end
-end
-if score then
-do
-if T.AimWallCheck then
-local chk = {}
-local w1 = ch:FindFirstChild("Head")
-local w2 = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
-if w1 then chk[#chk + 1] = w1.Position end
-if w2 then chk[#chk + 1] = w2.Position end
-if #chk == 0 then chk[#chk + 1] = hrp.Position end
-ex[#ex + 1] = ch
-rp.FilterDescendantsInstances = ex
-local vis = false
-for ci = 1, #chk do
-local hit = workspace:Raycast(cam.CFrame.Position, (chk[ci] - cam.CFrame.Position), rp)
-if not (hit and hit.Instance) then vis = true break end
-end
-ex[#ex] = nil
-if not vis then skip = true end
-end
-if not skip then
-local pname = pl and pl.Name or tostring(ch.Name)
-score = score - (inTbl(C.PriorityTargets, pname) and 1e6 or 0)
-if F._aimStick and ch == F._aimStick then score = score - 1e5 end
-pcall(function()
-local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
-score = score - (1 - hp) * 400
-end)
-if not bestScore or score < bestScore then best, bestScore = hrp, score end
-end
-end
-end
-end
-end
-end
-if best and best.Parent then F._aimStick = best.Parent end
-return best
-end
 F._fireAt = 0
 function F.FireOnce()
 local did = {}
@@ -3041,127 +2922,6 @@ end
 end)
 F._lastFireVia = table.concat(did, "+")
 return F._lastFireVia
-end
-function F.AutoFire(tgt)
-if not (T.AutoFire and tgt) then return end
-local now = os.clock()
-if now - (F._fireAt or 0) < (tonumber(C.AutoFireGap) or 0.1) then return end
-F._fireAt = now
-F.FireOnce()
-end
-function F.EnsureAimOn()
-if T.AimOn then return end
-T.AimOn = true
-pcall(function() F.AimSet(true) end)
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.AimOn
-if o and o.Set and o.Value ~= true then o:Set(true) end
-end)
-F.Out("[自瞄] 已顺手把「自瞄」一起打开 —— 它才是总开关；只勾 360°/自动开火 是没有任何效果的")
-end
-function F.CombatCheck()
-local cam = workspace.CurrentCamera
-if not cam then F.Out("[战斗体检] 还没有相机(角色没加载完), 稍后再点"); return end
-local vp = cam.ViewportSize
-local cx, cy = vp.X / 2, vp.Y / 2
-local fov = tonumber(C.AimFOV) or 200
-F.Out("════════ 战斗体检 ════════")
-local teamTxt = "关"
-if T.AimTeamCheck then
-teamTxt = "开(我的队伍=" .. tostring(LP.Team and LP.Team.Name or "无") .. ")"
-end
-F.Out("范围模式: " .. (T.Aim360 and "360°(按世界距离)" or "屏幕圈(按像素)")
-.. " · 范围值 " .. tostring(math.floor(fov)) .. (T.Aim360 and " 格" or " px")
-.. " · 墙壁检查=" .. (T.AimWallCheck and "开" or "关")
-.. " · 同队过滤=" .. teamTxt)
-F.Out(string.format("开关状态: 自瞄=%s · 自动开火=%s · 开火才锁=%s · 开火间隔=%.2fs · 平滑=%d",
-T.AimOn and "★开" or "✗关(这个不开, 下面全都不会动)", T.AutoFire and "开" or "关",
-T.AimFireOnly and "开" or "关", tonumber(C.AutoFireGap) or 0.1, tonumber(C.AimSmooth) or 5))
-if not T.AimOn then
-F.Out("⇒ 结论: 「自瞄」是关的 —— 360°/自动开火/FOV圈 都只是它的附属项, 先打开「自瞄」。")
-end
-local rp = RaycastParams.new()
-rp.FilterType = Enum.RaycastFilterType.Exclude
-local ex = {}
-if LP.Character then ex[#ex + 1] = LP.Character end
-local total, lockable, reasons = 0, 0, {}
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-total = total + 1
-local why = nil
-local ch = pl.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-local dist = hrp and (cam.CFrame.Position - hrp.Position).Magnitude or nil
-if not ch then
-why = "没有角色(还没加载/正在重生)"
-elseif not hrp then
-why = "没有 HumanoidRootPart"
-elseif not hum then
-why = "没有 Humanoid"
-elseif hum.Health <= 0 then
-why = "已死(血 " .. tostring(math.floor(hum.Health)) .. ")"
-else
-if T.AimTeamCheck and LP.Team ~= nil then
-local same = false
-pcall(function()
-if pl.Team ~= nil and pl.Team == LP.Team then same = true end
-if not same and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then same = true end
-end)
-if same then why = "同队(" .. tostring(pl.Team and pl.Team.Name or tostring(pl.TeamColor)) .. ") ⇒ 被同队过滤" end
-end
-if not why then
-if T.Aim360 then
-if dist and dist > fov then why = string.format("太远 %.0f 格 > %d 格", dist, math.floor(fov)) end
-else
-local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
-if not onScreen then
-why = "不在屏幕里(在背后/视野外) ⇒ 开「360°锁敌」"
-else
-local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
-if d > fov then why = string.format("在 FOV 圈外(%.0f px > %d px)", d, math.floor(fov)) end
-end
-end
-end
-if not why and T.AimWallCheck then
-ex[#ex + 1] = ch
-rp.FilterDescendantsInstances = ex
-local hint = workspace:Raycast(cam.CFrame.Position, (hrp.Position - cam.CFrame.Position), rp)
-ex[#ex] = nil
-if hint and hint.Instance then why = "被挡住: " .. hint.Instance:GetFullName() end
-end
-end
-if why then
-reasons[#reasons + 1] = why
-F.Out("  ✗ " .. pl.Name .. " · " .. why)
-else
-lockable = lockable + 1
-F.Out(string.format("  ✓ %s · 可锁 · %s", pl.Name,
-dist and string.format("%.0f 格", dist) or "?"))
-end
-end
-end
-F.Out(string.format("── 本局除我 %d 人 · 可锁 %d 人 ──", total, lockable))
-if total > 0 and lockable == 0 then
-local cnt, top, tv = {}, nil, 0
-for _, r in ipairs(reasons) do cnt[r] = (cnt[r] or 0) + 1 end
-for k, v in pairs(cnt) do if v > tv then top, tv = k, v end end
-F.Out(string.format("⇒ 一个都锁不到。最主要原因: %s (占 %d/%d) —— 按上面每行的说明处理即可", tostring(top), tv, total))
-end
-F.Out("── 开火链 ──")
-F.Out("  mouse1click: " .. (type(mouse1click) == "function" and "有(优先用它)" or "没有 ⇒ 用 VirtualUser 兜底"))
-local hasVu = false
-pcall(function() hasVu = (game:GetService("VirtualUser") ~= nil) end)
-F.Out("  VirtualUser: " .. (hasVu and "有" or "没有"))
-local tool = nil
-pcall(function()
-local ch = LP.Character
-if ch then tool = ch:FindFirstChildOfClass("Tool") end
-end)
-F.Out("  当前装备: " .. (tool and ("有 · " .. tool.Name) or "(空手) —— 近战/枪械必须拿着武器才会开火") )
-local via = F.FireOnce()
-F.Out("  试发一次: " .. (via and ("成功 · 走的是 " .. via) or "三条路都没成功(该执行器三条都不支持)") .. " · 没听到枪声/挥砍就说明游戏侧没收到这次输入")
-F.Out("══════════════════════")
 end
 function F.AimSet(on)
 T.AimOn = on and true or false
@@ -8438,7 +8198,6 @@ end
 end)
 end
 pcall(function() g:GetPropertyChangedSignal("Enabled"):Connect(rel) end)
-pcall(function() RS.Heartbeat:Connect(rel) end)
 end)
 pcall(function()
 if not _touch then return end
