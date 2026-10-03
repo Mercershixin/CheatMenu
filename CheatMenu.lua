@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 01:22 sha 4ad5bf2f bytes 431977'):format('2026-10-04 01:22','4ad5bf2f',431977))
+print(('[CheatMenu] build 2026-10-04 01:45 sha d1fd65cf bytes 431815'):format('2026-10-04 01:45','d1fd65cf',431815))
 local F = {}
-F.VERSION = "v14.0.8"
+F.VERSION = "v14.0.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -234,10 +234,6 @@ local r = REvent(n)
 if not r then return false end
 pcall(function(...) r:FireServer(...) end, ...)
 return true
-end
-local function OnRemote(n, cb)
-local r = REvent(n)
-if r then pcall(function() r.OnClientEvent:Connect(function(...) pcall(cb, ...) end) end) end
 end
 local SaveFile = "CheatMenu_Config_v1.json"
 local function SaveConfig()
@@ -3194,8 +3190,6 @@ apply()
 GodConn = RS.Stepped:Connect(apply)
 end
 F.KillAuraConn = nil
-F.lastAttack = 0
-F.KillAuraConn = nil
 function F.KillAuraEnable()
 T.KillAura = false
 F.Out("[自动攻击] 已移除 —— 战斗页只保留 FPS 自瞄 + 自动开火(锁定后自动扳机)")
@@ -4160,7 +4154,7 @@ hum.HealthDisplayDistance = 0
 end
 end)
 F._invConn = RS.Heartbeat:Connect(function()
-if not T.Invisible then return end
+if not T.Invisible then pcall(F.InvisibleDisable) return end
 local _, _, root = GC()
 if root and root.Transparency ~= 1 then pcall(function() root.Transparency = 1 end) end
 end)
@@ -7019,7 +7013,7 @@ BonusThread = nil
 end)
 end
 F.GameCheck = function()
-local okName, nm = pcall(function()
+local _, nm = pcall(function()
 return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
 end)
 F.Out("[诊断] 游戏 = " .. tostring(nm or "?") .. " · PlaceId = " .. tostring(game.PlaceId))
@@ -10235,7 +10229,7 @@ F.Out("[检测档案] 通用词库: 强命中 " .. tostring(#(F.CMX_GENKEYS and 
 end
 F.CMX_SelfDetect = function()
 F.Out("[自检·检测面] ===== 用已知反作弊检测手法自测(来自 pqr-692/Roblox-Detections) =====")
-local bad, warn = 0, 0
+local bad, warnN = 0, 0
 local function ok(name, detail)
 F.Out(string.format("[自检·检测面]   ✓ 安全      %-26s %s", name, detail or ""))
 end
@@ -10244,7 +10238,7 @@ bad = bad + 1
 F.Out(string.format("[自检·检测面]   ✗ 会被抓到  %-26s %s", name, detail or ""))
 end
 local function wk(name, detail)
-warn = warn + 1
+warnN = warnN + 1
 F.Out(string.format("[自检·检测面]   ⚠ 有风险    %-26s %s", name, detail or ""))
 end
 local function rawErr(fn, ...)
@@ -10321,7 +10315,7 @@ local mt = getrawmetatable and getrawmetatable(game)
 if mt and type(isreadonly) == "function" then ro = tostring(isreadonly(mt)) end
 end)
 if ro == "false" then no("元表只读状态", "game 元表处于解锁态 ⇒ isreadonly 一眼看出") else ok("元表只读状态", "readonly = " .. ro) end
-F.Out("[自检·检测面] 结果: 会被抓到 " .. tostring(bad) .. " 项 / 有风险 " .. tostring(warn) .. " 项")
+F.Out("[自检·检测面] 结果: 会被抓到 " .. tostring(bad) .. " 项 / 有风险 " .. tostring(warnN) .. " 项")
 if bad > 0 then
 F.Out("[自检·检测面] 处置: ① 确认「钩子加固」没开(它会把原生 API 换成 Lua 闭包, 报错带行号)")
 F.Out("[自检·检测面]      ② 关掉不用的绕过层(每多一层 __index/__namecall 多一份 gcinfo 开销)")
