@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 20:08 sha 434ccda2 bytes 445671'):format('2026-10-03 20:08','434ccda2',445671))
+print(('[CheatMenu] build 2026-10-03 20:11 sha 14f52858 bytes 446005'):format('2026-10-03 20:11','14f52858',446005))
 local F = {}
-F.VERSION = "v13.10.28"
+F.VERSION = "v13.10.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6513,7 +6513,16 @@ function F.FreecamEnable()
 if F._freecamConn then return end
 local cam = workspace.CurrentCamera
 if not cam then return end
-F._freecamSaved = { Type = cam.CameraType, Subject = cam.CameraSubject }
+local saveSubj = cam.CameraSubject
+pcall(function()
+local _, myHum = GC()
+if myHum and saveSubj and saveSubj ~= myHum and typeof(saveSubj) == "Instance" and saveSubj:IsA("Humanoid") then
+local owner = nil
+pcall(function() owner = Players:GetPlayerFromCharacter(saveSubj.Parent) end)
+if owner and owner ~= LP then saveSubj = myHum end
+end
+end)
+F._freecamSaved = { Type = cam.CameraType, Subject = saveSubj }
 local cf = cam.CFrame
 pcall(function()
 local _, hum = GC()
