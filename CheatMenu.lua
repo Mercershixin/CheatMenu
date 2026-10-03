@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:34 sha 5c95e0ac bytes 431356'):format('2026-10-03 12:34','5c95e0ac',431356))
+print(('[CheatMenu] build 2026-10-03 12:46 sha c7e67ffa bytes 437020'):format('2026-10-03 12:46','c7e67ffa',437020))
 local F = {}
-F.VERSION = "v12.8.0"
+F.VERSION = "v12.9.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8546,18 +8546,28 @@ F.Out("   半径12格内部件 " .. tostring(#parts) .. " 个 (可评估命中�
 end)
 end
 end
-F.CMX_SafeHook = function(f, wrapper)
+F.CMX_SafeHook = function(f, wrapper, wantLua)
 if type(f) ~= "function" or type(wrapper) ~= "function" then return nil end
 if type(hookfunction) ~= "function" then return nil end
 local box = wrapper
 local newl = F.CMX_G("newlclosure")
 local newc = F.CMX_G("newcclosure")
-if type(newl) == "function" then
+local prefLua = wantLua
+if prefLua == nil then
+prefLua = false
+pcall(function()
+if type(islclosure) == "function" then prefLua = islclosure(f) and true or false end
+end)
+end
+if prefLua and type(newl) == "function" then
 local okL, w = pcall(newl, wrapper)
 if okL and type(w) == "function" then box = w end
 elseif type(newc) == "function" then
 local okC, w = pcall(newc, wrapper)
 if okC and type(w) == "function" then box = w end
+elseif type(newl) == "function" then
+local okL2, w2 = pcall(newl, wrapper)
+if okL2 and type(w2) == "function" then box = w2 end
 end
 local orig = nil
 if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, box) end
@@ -9759,6 +9769,99 @@ end
 F.Out("[检测档案] 通用词库: 强命中 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.strong or {}))
 .. " 个 + 移动/加速/飞行专用 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.move or {})) .. " 个")
 end
+F.CMX_SelfDetect = function()
+F.Out("[自检·检测面] ===== 用已知反作弊检测手法自测(来自 pqr-692/Roblox-Detections) =====")
+local bad, warn = 0, 0
+local function ok(name, detail)
+F.Out(string.format("[自检·检测面]   ✓ 安全      %-26s %s", name, detail or ""))
+end
+local function no(name, detail)
+bad = bad + 1
+F.Out(string.format("[自检·检测面]   ✗ 会被抓到  %-26s %s", name, detail or ""))
+end
+local function wk(name, detail)
+warn = warn + 1
+F.Out(string.format("[自检·检测面]   ⚠ 有风险    %-26s %s", name, detail or ""))
+end
+local function rawErr(fn, ...)
+local ok2, e = pcall(fn, ...)
+if ok2 then return nil end
+e = tostring(e)
+return e
+end
+local function cleanCErr(e)
+return e ~= nil and not e:find(":", 1, true)
+end
+local e1 = rawErr(setmetatable, nil, {})
+if cleanCErr(e1) then ok("setmetatable 钩子", "报错无 Lua 行号") else no("setmetatable 钩子", "报错带行号 ⇒ 被 Hooks/SetMetatable 抓到") end
+local e2 = rawErr(Instance.new, nil)
+if cleanCErr(e2) then ok("Instance.new 钩子", "报错无 Lua 行号") else no("Instance.new 钩子", "报错带行号 ⇒ 被 Hooks/InstanceNew 抓到") end
+local e3 = rawErr(math.random, 10, 1)
+if cleanCErr(e3) then ok("math.random", "报错无行号") else no("math.random", "报错带行号") end
+local e4 = rawErr(coroutine.wrap, nil)
+if cleanCErr(e4) then ok("coroutine.wrap", "报错无行号") else no("coroutine.wrap", "报错带行号") end
+local e5 = rawErr(function() return getfenv({}) end)
+if cleanCErr(e5) then ok("getfenv", "报错无行号") else no("getfenv", "报错带行号") end
+local plvl = nil
+pcall(function() plvl = debug.info(2, "f") end)
+if plvl == pcall then ok("pcall 栈", "debug.info(2,'f') == pcall") else no("pcall 栈", "栈被插入东西 ⇒ 被 StackCheck/PcallStack 抓到") end
+local xlvl = nil
+xpcall(function() xlvl = debug.info(2, "f") end, function() end)
+if xlvl == xpcall then ok("xpcall 栈", "debug.info(2,'f') == xpcall") else no("xpcall 栈", "被 StackCheck/XpcallStack 抓到") end
+if type(gcinfo) == "function" then
+local part = nil
+pcall(function() part = workspace:FindFirstChildOfClass("Part") end)
+local function delta(f, n)
+local b = gcinfo()
+for _ = 1, n do pcall(f) end
+return gcinfo() - b
+end
+if part then
+local d1 = delta(function() local _ = part.Anchored end, 400)
+if d1 <= 0 then ok("__index 属性读(gcinfo)", "增量 " .. tostring(d1)) else no("__index 属性读(gcinfo)", "增量 " .. tostring(d1) .. " ⇒ 被 IndexCheck 抓到") end
+local d3 = delta(function() part.Anchored = part.Anchored end, 400)
+if d3 <= 0 then ok("__newindex 属性写(gcinfo)", "增量 " .. tostring(d3)) else no("__newindex 属性写(gcinfo)", "增量 " .. tostring(d3) .. " ⇒ 被 NewIndexCheck 抓到") end
+end
+local d2 = delta(function() game:IsA("DataModel") end, 400)
+if d2 <= 0 then ok("__namecall 方法调(gcinfo)", "增量 " .. tostring(d2)) else no("__namecall 方法调(gcinfo)", "增量 " .. tostring(d2) .. " ⇒ 被 NamecallLeak/GCHook 抓到") end
+end
+local layers = {}
+pcall(function()
+for slot, bucket in pairs(F.MetaLayers or {}) do
+local c = 0
+for _, rec in pairs(bucket) do if rec and rec.alive then c = c + 1 end end
+if c > 0 then layers[#layers + 1] = slot .. "×" .. tostring(c) end
+end
+end)
+if #layers == 0 then
+ok("元方法钩子层数", "当前 0 层")
+else
+local desc = table.concat(layers, " / ")
+local many = false
+for _, bucket in pairs(F.MetaLayers or {}) do
+local c = 0
+for _, rec in pairs(bucket) do if rec and rec.alive then c = c + 1 end end
+if c >= 2 then many = true end
+end
+if many then wk("元方法钩子层数", desc .. " ⇒ 同 slot 多层会让每个操作走多次 Lua, 更容易被 gcinfo 检测") else ok("元方法钩子层数", desc) end
+end
+local hasGenv = false
+pcall(function() hasGenv = (type(getgenv) == "function") end)
+if hasGenv then wk("getgenv 环境泄漏", "执行器自带 getgenv ⇒ 反作弊可逐层 getfenv 找它(XpcallEnvLeak)") else ok("getgenv 环境泄漏", "无 getgenv") end
+local ro = "?"
+pcall(function()
+local mt = getrawmetatable and getrawmetatable(game)
+if mt and type(isreadonly) == "function" then ro = tostring(isreadonly(mt)) end
+end)
+if ro == "false" then no("元表只读状态", "game 元表处于解锁态 ⇒ isreadonly 一眼看出") else ok("元表只读状态", "readonly = " .. ro) end
+F.Out("[自检·检测面] 结果: 会被抓到 " .. tostring(bad) .. " 项 / 有风险 " .. tostring(warn) .. " 项")
+if bad > 0 then
+F.Out("[自检·检测面] 处置: ① 确认「钩子加固」没开(它会把原生 API 换成 Lua 闭包, 报错带行号)")
+F.Out("[自检·检测面]      ② 关掉不用的绕过层(每多一层 __index/__namecall 多一份 gcinfo 开销)")
+F.Out("[自检·检测面]      ③ 点「一键全关」后元表只读会恢复")
+end
+return bad
+end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
 if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
@@ -10208,6 +10311,7 @@ pcall(F.ScanRemotes)
 pcall(F.ScanConnections)
 pcall(F.ScanClientChecks, true)
 pcall(F.CMX_ScanAutoHeal)
+pcall(F.CMX_SelfDetect)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
 end
@@ -11101,6 +11205,8 @@ F.CMX_Remember("CMX_HashFreeze", v)
 if v then F.CMX_HashFreezeEnable() else F.CMX_HashFreezeDisable() end
 end })
 Tabs.AC:AddButton({ Title = "列出 ReplicatedStorage 里像上报/封禁的远程(只读)", Callback = function() task.spawn(function() pcall(function() F.CMX_ScanReportRemotes(false) end) end) end })
+Tabs.AC:AddButton({ Title = "★ 检测面自检(29 种已知反作弊手法自测 · 看我们哪些会被抓到)", Callback = function() task.spawn(function() pcall(F.CMX_SelfDetect) end) end })
+Tabs.AC:AddToggle("CMX_SelfDetect", { Title = "一键全扫描时顺便跑检测面自检", Description = "默认关。开了之后点「一键全扫描」会附带一份「我们哪些地方会被反作弊抓到」的报告", Default = false, Callback = function(v) T.CMX_SelfDetect = v end })
 Tabs.AC:AddSection("★ 游戏档案(识别当前游戏 · 记住你为本游戏调好的设置)")
 Tabs.AC:AddButton({ Title = "当前是哪个游戏(打印识别结果 + 本游戏已存的档案)", Callback = function()
 task.spawn(function()
