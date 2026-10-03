@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 15:47 sha 53eb4bf9 bytes 470657'):format('2026-10-03 15:47','53eb4bf9',470657))
+print(('[CheatMenu] build 2026-10-03 15:59 sha beebb572 bytes 470639'):format('2026-10-03 15:59','beebb572',470639))
 local F = {}
-F.VERSION = "v13.9.0"
+F.VERSION = "v13.9.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8099,8 +8099,10 @@ end
 Trans.IsOurs = function(obj)
 local p, steps = obj, 0
 while p and steps < 16 do
+if p:IsA("ScreenGui") then
 local ok, v = pcall(function() return p:GetAttribute("CMOwned") end)
 if ok and v == true then return true end
+end
 p = p.Parent
 steps = steps + 1
 end
@@ -8216,7 +8218,6 @@ local pg = LP:FindFirstChild("PlayerGui")
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 local roots = { pg }
 if C.TransOfficial then roots[#roots + 1] = CoreGui end
-if gethui then table.insert(roots, gethui()) end
 for _, root in ipairs(roots) do
 if root then
 for _, obj in ipairs(F.walk(root)) do Trans.GuiEl(obj) end
