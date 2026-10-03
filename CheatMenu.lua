@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:15 sha 866ae2ec bytes 416045'):format('2026-10-03 12:15','866ae2ec',416045))
+print(('[CheatMenu] build 2026-10-03 12:22 sha 939c3517 bytes 426928'):format('2026-10-03 12:22','939c3517',426928))
 local F = {}
-F.VERSION = "v12.6.0"
+F.VERSION = "v12.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7944,6 +7944,10 @@ go(T.CMX_DebugMask, F.CMX_DebugMaskEnable)
 go(T.CMX_RequireBlock, F.CMX_RequireBlockEnable)
 go(T.CMX_ClockMask, F.CMX_ClockMaskEnable)
 go(T.CMX_HitFeed, F.CMX_HitFeedEnable)
+go(T.CMX_BlockReport, F.CMX_BlockReportEnable)
+go(T.CMX_CutLog, F.CMX_CutLogEnable)
+go(T.CMX_NeuterPlus, F.CMX_NeuterPlusEnable)
+go(T.CMX_HashFreeze, F.CMX_HashFreezeEnable)
 go(T.CMX_Bones, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
 go(T.CMX_Tracer, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
 go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
@@ -8081,7 +8085,8 @@ F.CMX_AnchorDisable, F.CMX_ArgScrubDisable, F.CMX_AutoScrubDisable,
 F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
 F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
 F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
-F.CMX_HitFeedDisable,
+F.CMX_HitFeedDisable, F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
+F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 }) do pcall(fn) end
 T.CMX_SpoofPos, T.CMX_AimPredict = false, false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
@@ -9257,6 +9262,10 @@ CMX_InstNew = { F.CMX_InstNewEnable, F.CMX_InstNewDisable },
 CMX_DebugMask = { F.CMX_DebugMaskEnable, F.CMX_DebugMaskDisable },
 CMX_IdentityMask = { F.CMX_IdentityMaskEnable, F.CMX_IdentityMaskDisable },
 CMX_FFlagPack = { F.CMX_FFlagApplyPack, F.CMX_FFlagRestore },
+CMX_BlockReport = { F.CMX_BlockReportEnable, F.CMX_BlockReportDisable },
+CMX_CutLog = { F.CMX_CutLogEnable, F.CMX_CutLogDisable },
+CMX_NeuterPlus = { F.CMX_NeuterPlusEnable, F.CMX_NeuterPlusDisable },
+CMX_HashFreeze = { F.CMX_HashFreezeEnable, F.CMX_HashFreezeDisable },
 }
 F.CMX_TierOwn = F.CMX_TierOwn or {}
 F.CMX_TierSync = function(level)
@@ -9273,10 +9282,12 @@ want.CMX_AutoScrub, want.CMX_SpoofIndex, want.CMX_ViewFilter = true, true, true
 end
 if lv >= 3 then
 want.CMX_HookHard, want.CMX_RequireBlock, want.CMX_ClockMask = true, true, true
+want.CMX_BlockReport, want.CMX_CutLog = true, true
 end
 if lv >= 4 then
 want.CMX_InstNew, want.CMX_DebugMask = true, true
 want.CMX_IdentityMask, want.CMX_FFlagPack = true, true
+want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true
 end
 local on, off = 0, 0
 for key, pair in pairs(map) do
@@ -9427,6 +9438,242 @@ if done then
 F.Out("[绕过·元表] 已把 game 元表恢复只读 —— 反作弊用 isreadonly 检查时看不出我们解锁过")
 end
 return done
+end
+F.CMX_BAN_KEYS = {
+"antikick", "anti-kick", "kick", "ban", "banplayer", "report", "reportban",
+"hash", "hashcheck", "exploit", "iy", "submit", "flag", "flagged",
+"logdetect", "logban", "punish", "detect", "detectionreport", "moderation",
+}
+F.CMX_ReportKeyHit = function(name)
+if type(name) ~= "string" then return nil end
+local low = name:lower()
+local L = AC.BLOCK_KEYS
+if type(L) == "table" then
+for i = 1, #L do if low:find(L[i], 1, true) then return L[i] end end
+end
+L = F.CMX_BAN_KEYS
+for i = 1, #L do if low:find(L[i], 1, true) then return L[i] end end
+return nil
+end
+F.CMX_ScanReportRemotes = function(quiet)
+local out, n = {}, 0
+local RS2 = game:GetService("ReplicatedStorage")
+pcall(function()
+for _, d in ipairs(RS2:GetDescendants()) do
+n = n + 1
+if n > 8000 then break end
+local cls = nil
+pcall(function() cls = d.ClassName end)
+if cls == "RemoteEvent" or cls == "UnreliableRemoteEvent" or cls == "RemoteFunction" then
+local hit = F.CMX_ReportKeyHit(d.Name)
+if hit then out[#out + 1] = { inst = d, key = hit } end
+end
+end
+end)
+if not quiet then
+F.Out("[反封禁·上报] ReplicatedStorage 里命中黑名单的远程: " .. tostring(#out) .. " 个")
+for i = 1, math.min(#out, 20) do
+F.Out("[反封禁·上报]   " .. tostring(out[i].inst.ClassName) .. "  " .. tostring(out[i].inst.Name)
+.. "  ← 关键词 " .. out[i].key)
+end
+end
+return out
+end
+F.CMX_BlockReportEnable = function()
+F.CMX_BanKeysMerged = true
+local found = F.CMX_ScanReportRemotes(false)
+if type(AC.BLOCK_KEYS) == "table" then
+local ex = {}
+for _, k in ipairs(AC.BLOCK_KEYS) do ex[k] = true end
+local add = 0
+for i = 1, #F.CMX_BAN_KEYS do
+if not ex[F.CMX_BAN_KEYS[i]] then
+AC.BLOCK_KEYS[#AC.BLOCK_KEYS + 1] = F.CMX_BAN_KEYS[i]
+add = add + 1
+end
+end
+if add > 0 then F.Out("[反封禁·上报] 黑名单已扩充 " .. tostring(add) .. " 个关键词") end
+end
+pcall(F.MetaHookEnsure)
+pcall(AC.InstallNamecallHook)
+T.RemoteBlock = true
+F.Out("[反封禁·上报] 已开: 反作弊想 FireServer 上报时, 只要远程名字命中黑名单就会被拦下"
+.. " · 名字里带 antikick/kick/ban/report/hash/flag/punish/detect 的一律进不去服务器")
+return true
+end
+F.CMX_BlockReportDisable = function()
+if not F.CMX_BanKeysMerged then return end
+F.CMX_BanKeysMerged = false
+if type(AC.BLOCK_KEYS) == "table" then
+for i = #AC.BLOCK_KEYS, 1, -1 do
+for j = 1, #F.CMX_BAN_KEYS do
+if AC.BLOCK_KEYS[i] == F.CMX_BAN_KEYS[j] then table.remove(AC.BLOCK_KEYS, i) break end
+end
+end
+end
+F.Out("[反封禁·上报] 已关(黑名单还原)")
+end
+F.CMX_CutLogEnable = function()
+if F.CMX_CutLogOn then return false end
+if type(getconnections) ~= "function" then
+T.CMX_CutLog = false
+F.Out("[反封禁·断日志] 本执行器没有 getconnections ⇒ 该层不可用")
+return false
+end
+local sigs = {}
+pcall(function() sigs[#sigs + 1] = { "ScriptContext.Error", game:GetService("ScriptContext").Error } end)
+pcall(function() sigs[#sigs + 1] = { "LogService.MessageOut", game:GetService("LogService").MessageOut } end)
+local n, kept = 0, 0
+F.CMX_CutLogSaved = {}
+for i = 1, #sigs do
+pcall(function()
+for _, c in ipairs(getconnections(sigs[i][2])) do
+local fn = nil
+pcall(function() fn = c.Function end)
+if fn == nil then pcall(function() fn = c.__function end) end
+local mine = false
+pcall(function() mine = (F.CMX_Own[fn] == true) end)
+if mine then
+kept = kept + 1
+else
+local was = nil
+pcall(function() was = c.Enabled end)
+F.CMX_CutLogSaved[#F.CMX_CutLogSaved + 1] = { c = c, was = was, n = sigs[i][1] }
+pcall(function() c:Disable() end)
+n = n + 1
+end
+end
+end)
+end
+F.CMX_CutLogOn = true
+F.Out("[反封禁·断日志] 已断 " .. tostring(n) .. " 条错误/日志通道(保留我们自己的 " .. tostring(kept)
+.. " 条) —— 反作弊靠 ScriptContext.Error 抓我们脚本的报错再上报, 这条直接掐掉")
+return true
+end
+F.CMX_CutLogDisable = function()
+if not F.CMX_CutLogOn then return end
+F.CMX_CutLogOn = false
+local n = 0
+for i = 1, #(F.CMX_CutLogSaved or {}) do
+local rec = F.CMX_CutLogSaved[i]
+if rec.was ~= false then
+pcall(function() rec.c:Enable() end)
+n = n + 1
+end
+end
+F.CMX_CutLogSaved = nil
+F.Out("[反封禁·断日志] 已还原 " .. tostring(n) .. " 条通道")
+end
+F.CMX_NeuterPlusEnable = function()
+if F.CMX_NPOn then return false end
+if type(getgc) ~= "function" then
+T.CMX_NeuterPlus = false
+F.Out("[反封禁·按名中和+] 本执行器没有 getgc ⇒ 该层不可用")
+return false
+end
+local NAMES = {
+"ban", "banPlayer", "report", "reportPlayer", "flag", "flagPlayer", "submit", "submitReport",
+"onDetect", "onFlag", "onBan", "logDetection", "logBan", "recordFlag",
+"antiKick", "antikick", "kickPlayer", "punishPlayer", "detectPlayer", "sendBan", "sendReport",
+}
+F.CMX_NPSaved = {}
+local n, seen = 0, 0
+pcall(function()
+for _, v in pairs(getgc(true)) do
+seen = seen + 1
+if seen > 60000 then break end
+if type(v) == "table" then
+for i = 1, #NAMES do
+local f = nil
+pcall(function() f = rawget(v, NAMES[i]) end)
+if type(f) == "function" then
+F.CMX_NPSaved[#F.CMX_NPSaved + 1] = { t = v, k = NAMES[i], f = f }
+pcall(function() v[NAMES[i]] = function() return end end)
+n = n + 1
+end
+end
+end
+end
+end)
+F.CMX_NPOn = true
+F.Out("[反封禁·按名中和+] 已扫 " .. tostring(seen) .. " 个表, 中和 " .. tostring(n)
+.. " 个封禁/举报/标记类函数(ban/report/flag/onDetect/antiKick…) · 关闭时逐个还原")
+return n > 0
+end
+F.CMX_NeuterPlusDisable = function()
+if not F.CMX_NPOn then return end
+F.CMX_NPOn = false
+local n = 0
+for i = 1, #(F.CMX_NPSaved or {}) do
+local rec = F.CMX_NPSaved[i]
+if rec and rec.t then
+pcall(function() rec.t[rec.k] = rec.f end)
+n = n + 1
+end
+end
+F.CMX_NPSaved = nil
+F.Out("[反封禁·按名中和+] 已还原 " .. tostring(n) .. " 个函数")
+end
+F.CMX_HashFreezeEnable = function()
+if F.CMX_HashOn then return false end
+if type(getgc) ~= "function" or type(hookfunction) ~= "function" then
+T.CMX_HashFreeze = false
+F.Out("[反封禁·哈希冻结] 需要 getgc + hookfunction ⇒ 该层不可用")
+return false
+end
+F.CMX_HashSaved = {}
+F.CMX_HashCache = {}
+local props = 0
+pcall(function()
+for _, f in pairs(getgc(true)) do
+props = props + 1
+if props > 60000 then break end
+if type(f) == "function" then
+local okL, isl = pcall(function() return islclosure(f) end)
+if okL and isl then
+local src, nm = "", ""
+pcall(function()
+local si = debug.info(f, "sln")
+src = tostring(si and si.source or "")
+nm = tostring(si and si.name or "")
+end)
+local low = (src .. " " .. nm):lower()
+if low:find("hash", 1, true) or low:find("digest", 1, true) or low:find("checksum", 1, true) then
+F.CMX_HashSaved[#F.CMX_HashSaved + 1] = f
+end
+end
+end
+end
+end)
+local n = 0
+for i = 1, #F.CMX_HashSaved do
+local f = F.CMX_HashSaved[i]
+local key = tostring(f)
+local o
+o = F.CMX_SafeHook(f, function(...)
+if F.CMX_HashOn and F.CMX_HashCache[key] ~= nil then return F.CMX_HashCache[key] end
+if type(o) ~= "function" then return nil end
+local r = o(...)
+if F.CMX_HashOn and type(r) == "string" and (#r == 32 or #r == 40 or #r == 64)
+and r:match("^%x+$") then
+F.CMX_HashCache[key] = r
+F.CMX_HashFreezeHits = (F.CMX_HashFreezeHits or 0) + 1
+end
+return r
+end)
+if o then n = n + 1 end
+end
+F.CMX_HashOn = true
+F.CMX_HashFreezeHits = 0
+F.Out("[反封禁·哈希冻结] 找到 " .. tostring(#F.CMX_HashSaved) .. " 个名字像哈希的闭包;"
+.. " 第一次算出的 32/40/64 位 hex 会被记住, 之后恒定返回同一个值 ⇒ 服务器看到客户端指纹一直没变")
+return #F.CMX_HashSaved > 0
+end
+F.CMX_HashFreezeDisable = function()
+if not F.CMX_HashOn then return end
+F.CMX_HashOn = false
+F.CMX_HashCache = {}
+F.Out("[反封禁·哈希冻结] 已关 · 本次冻结命中 " .. tostring(F.CMX_HashFreezeHits or 0) .. " 次")
 end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
@@ -9706,6 +9953,10 @@ CMX_DebugMask = function() F.CMX_DebugMaskEnable() end,
 CMX_RequireBlock = function() F.CMX_RequireBlockEnable() end,
 CMX_ClockMask = function() F.CMX_ClockMaskEnable() end,
 CMX_HitFeed = function() F.CMX_HitFeedEnable() end,
+CMX_BlockReport = function() F.CMX_BlockReportEnable() end,
+CMX_CutLog = function() F.CMX_CutLogEnable() end,
+CMX_NeuterPlus = function() F.CMX_NeuterPlusEnable() end,
+CMX_HashFreeze = function() F.CMX_HashFreezeEnable() end,
 }
 local n = 0
 for i = 1, #list do
@@ -10740,6 +10991,32 @@ Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", C
 Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
 T.ScanAutoFix = v
 end })
+Tabs.AC:AddSection("★ 反封禁 / 反踢(AntiCheat · AntiKick 对抗)")
+Tabs.AC:AddToggle("CMX_BlockReport", { Title = "① 拦上报/封禁远程(名字命中黑名单的 remote 一律发不出去)", Description = "扩充黑名单到 antikick/kick/ban/report/hash/flag/punish/submit/moderation 等, 并在打开时列出 ReplicatedStorage 里命中这些关键词的远程给你看", Default = false, Callback = function(v)
+T.CMX_BlockReport = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_BlockReport", v)
+if v then F.CMX_BlockReportEnable() else F.CMX_BlockReportDisable() end
+end })
+Tabs.AC:AddToggle("CMX_CutLog", { Title = "② 断错误/日志通道(ScriptContext.Error + LogService.MessageOut)", Description = "反作弊最爱监听 ScriptContext.Error 抓我们脚本的报错(报错里带执行器路径), 再上报。这条把那些连接断掉, 保留我们自己的", Default = false, Callback = function(v)
+T.CMX_CutLog = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_CutLog", v)
+if v then F.CMX_CutLogEnable() else F.CMX_CutLogDisable() end
+end })
+Tabs.AC:AddToggle("CMX_NeuterPlus", { Title = "③ 按名中和+(把 ban/report/flag/onDetect/antiKick 类函数变空)", Description = "扫 getgc 里所有表, 把名字是这些的成员函数替换成空函数; 关闭时逐个还原。比「深度中和」的关键词更全", Default = false, Callback = function(v)
+T.CMX_NeuterPlus = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_NeuterPlus", v)
+if v then F.CMX_NeuterPlusEnable() else F.CMX_NeuterPlusDisable() end
+end })
+Tabs.AC:AddToggle("CMX_HashFreeze", { Title = "④ 哈希冻结(把算出的 hex 指纹固定成第一次的值)", Description = "反作弊常把客户端状态算成 32/40/64 位 hex 哈希上报, 服务器比对发现变了就封。这条把结果冻住 ⇒ 服务器看到指纹一直没变。⚠ 只在执行器有 getgc 时可用; 找不到哈希函数会明确告诉你", Default = false, Callback = function(v)
+T.CMX_HashFreeze = v
+if F._cfgSyncing then return end
+F.CMX_Remember("CMX_HashFreeze", v)
+if v then F.CMX_HashFreezeEnable() else F.CMX_HashFreezeDisable() end
+end })
+Tabs.AC:AddButton({ Title = "列出 ReplicatedStorage 里像上报/封禁的远程(只读)", Callback = function() task.spawn(function() pcall(function() F.CMX_ScanReportRemotes(false) end) end) end })
 Tabs.AC:AddSection("★ 游戏档案(识别当前游戏 · 记住你为本游戏调好的设置)")
 Tabs.AC:AddButton({ Title = "当前是哪个游戏(打印识别结果 + 本游戏已存的档案)", Callback = function()
 task.spawn(function()
