@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 03:03 sha a9eb1f1c bytes 436446'):format('2026-10-04 03:03','a9eb1f1c',436446))
+print(('[CheatMenu] build 2026-10-04 03:13 sha 86ba363b bytes 433390'):format('2026-10-04 03:13','86ba363b',433390))
 local F = {}
-F.VERSION = "v14.0.19"
+F.VERSION = "v14.0.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3871,7 +3871,6 @@ end
 end)
 end
 end
-if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
 F.DROP_KEYS = { "dropheld", "droppet", "dropheldegg", "dropitem", "dropcarry", "releaseheld",
@@ -4089,85 +4088,6 @@ end
 end)
 end
 F.HitboxBackup = {}
-F.HB_PARTS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
-function F.HitboxApplyOne(pl, k)
-if not pl or pl == LP or not pl.Character then return end
-local target = tonumber(C.HitboxSize) or 10
-for pi = 1, #F.HB_PARTS do
-local part = pl.Character:FindFirstChild(F.HB_PARTS[pi])
-if part then
-local bak = F.HitboxBackup[part]
-if not bak then
-bak = {
-Size = part.Size,
-Transparency = part.Transparency,
-CanCollide = part.CanCollide,
-Massless = part.Massless,
-}
-F.HitboxBackup[part] = bak
-end
-local nx = bak.Size.X + (math.max(bak.Size.X, target) - bak.Size.X) * k
-local ny = bak.Size.Y + (math.max(bak.Size.Y, target) - bak.Size.Y) * k
-local nz = bak.Size.Z + (math.max(bak.Size.Z, target) - bak.Size.Z) * k
-pcall(function()
-part.Size = Vector3.new(nx, ny, nz)
-part.Transparency = 1
-part.CanCollide = false
-part.Massless = true
-end)
-end
-end
-end
-function F.HitboxExpandEnable()
-F._hbGen = (F._hbGen or 0) + 1
-local myGen = F._hbGen
-F._hbProg = task.spawn(function()
-for step = 1, 4 do
-if not T.HitboxExpand or myGen ~= F._hbGen then break end
-local k = step / 4
-for _, pl in ipairs(Players:GetPlayers()) do
-F.HitboxApplyOne(pl, k)
-end
-task.wait(0.15)
-end
-if myGen == F._hbGen then F._hbProg = nil end
-end)
-F._hbExPlConns = F._hbExPlConns or {}
-local function bindHb(pl)
-if pl == LP or F._hbExPlConns[pl] then return end
-F._hbExPlConns[pl] = pl.CharacterAdded:Connect(function()
-task.wait(0.4)
-if not T.HitboxExpand then return end
-F.HitboxApplyOne(pl, 1)
-end)
-end
-if not F._hbExAddedConn then
-F._hbExAddedConn = Players.PlayerAdded:Connect(function(pl)
-bindHb(pl)
-task.wait(0.4)
-if T.HitboxExpand then F.HitboxApplyOne(pl, 1) end
-end)
-end
-for _, pl in ipairs(Players:GetPlayers()) do bindHb(pl) end
-end
-function F.HitboxExpandDisable()
-for part, bak in pairs(F.HitboxBackup) do
-if typeof(part) == "Instance" and part.Parent then
-pcall(function()
-part.Size = bak.Size
-part.Transparency = bak.Transparency
-part.CanCollide = bak.CanCollide
-part.Massless = bak.Massless
-end)
-end
-end
-F.HitboxBackup = {}
-F._hbGen = (F._hbGen or 0) + 1
-F._hbProg = nil
-if F._hbExAddedConn then pcall(function() F._hbExAddedConn:Disconnect() end) F._hbExAddedConn = nil end
-for pl, c in pairs(F._hbExPlConns or {}) do pcall(function() c:Disconnect() end) end
-F._hbExPlConns = {}
-end
 F._authorityServer = nil
 F._authorityMode = nil
 function F.AuthorityGuard(verbose)
@@ -6133,7 +6053,6 @@ if T.LockHealth then pcall(LockHealthEnable) end
 if T.AntiRagdoll then pcall(F.AntiRagdollEnable) end
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
 if T.Translate then pcall(F.TranslateEnable) end
-if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
 if T.KillAura then pcall(F.KillAuraEnable) end
 if T.BodyHL then pcall(F.BodyHLEnable) end
 if T.HealthIsolate then pcall(F.HealthIsolateApply) end
@@ -6776,7 +6695,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -8717,7 +8636,7 @@ F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
-F.GuiProtectionDisable, F.HitboxExpandDisable,
+F.GuiProtectionDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
@@ -10748,8 +10667,33 @@ end
 end
 F.Out("[扫描·监听] 共 " .. tostring(total) .. " 条连接 · 可疑 " .. tostring(susp) .. " 条")
 end
+F.ScanNearbyInteract = function()
+local _, _, root = GC()
+if not root then F.Out("[扫描·交互点] 角色没加载") return end
+local n, near = 0, {}
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 6000 then break end
+if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
+local p = d.Parent
+if p and p:IsA("BasePart") then
+local dist = (p.Position - root.Position).Magnitude
+if dist <= 200 then
+near[#near + 1] = string.format("%s (%s) · %.0f 格", d.Name, d.ClassName, dist)
+end
+end
+end
+end
+end)
+table.sort(near)
+F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
+for i = 1, math.min(#near, 30) do F.Out("   · " .. near[i]) end
+if #near > 30 then F.Out("   ... 其余 " .. tostring(#near - 30) .. " 个已省略") end
+end
 F.CMX_ScanAll = function()
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
+pcall(F.ScanNearbyInteract)
 pcall(F.CMX_ScanBypassSurface)
 pcall(F.CMX_ScanACFamily)
 pcall(F.CMX_ScanListeners)
@@ -11171,12 +11115,6 @@ if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
 end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "命中盒扩展(更容易打到别人)", Description = "把其他玩家的判定盒放大 ⇒ 你更容易击中。只改本地判定盒; 服务端若自己做命中判定则可能无效", Default = false, Callback = function(v)
-T.HitboxExpand = v
-if F._cfgSyncing then return end
-if v then pcall(F.HitboxExpandEnable) else pcall(F.HitboxExpandDisable) end
-F.Out("[命中盒] " .. (v and "已开(判定盒放大)" or "已关"))
-end })
 Tabs.Combat:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.HealthShowSet(v)
@@ -11511,33 +11449,6 @@ if F._cfgSyncing then return end
 F.HpBlockSet(v)
 end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
-Tabs.AC:AddButton({ Title = "扫描附近可交互点(点击器 / 交互提示 · 纯只读)", Callback = function()
-task.spawn(function()
-local _, _, root = GC()
-if not root then F.Out("[扫描·交互点] 角色没加载") return end
-local n, near = 0, {}
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-n = n + 1
-if n > 6000 then break end
-if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
-local p = d.Parent
-if p and p:IsA("BasePart") then
-local dist = (p.Position - root.Position).Magnitude
-if dist <= 200 then
-near[#near + 1] = string.format("%s (%s) · %.0f 格", d.Name, d.ClassName, dist)
-end
-end
-end
-end
-end)
-table.sort(near)
-F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
-for i = 1, math.min(#near, 40) do F.Out("   · " .. near[i]) end
-if #near > 40 then F.Out("   ... 其余 " .. tostring(#near - 40) .. " 个已省略") end
-pcall(F.LogFlush, "交互点扫描")
-end)
-end })
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
 task.spawn(function()
 pcall(F.CMX_ScanAll)
