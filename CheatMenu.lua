@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:22 sha 939c3517 bytes 426928'):format('2026-10-03 12:22','939c3517',426928))
+print(('[CheatMenu] build 2026-10-03 12:34 sha 5c95e0ac bytes 431356'):format('2026-10-03 12:34','5c95e0ac',431356))
 local F = {}
-F.VERSION = "v12.7.0"
+F.VERSION = "v12.8.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9377,9 +9377,16 @@ if n > 0 then F.Out("[游戏档案] 已套用本游戏专属设置 " .. tostring
 end
 F.CMX_ScanDetectors = function()
 F.Out("[扫描·检测器] ===== 名字像检测器的对象 / 脚本 =====")
-local keys = { "detector", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack",
+local keys = {}
+pcall(function()
+local all = F.CMX_AllDetectKeys and F.CMX_AllDetectKeys()
+if type(all) == "table" then keys = all end
+end)
+if #keys == 0 then
+keys = { "detector", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack",
 "integrity", "checksum", "watchdog", "sentinel", "clientcheck", "positioncheck",
 "speedcheck", "flycheck", "bancheck", "flagged", "moderation", "exploitlog" }
+end
 local n = 0
 local function sweep(root, label)
 if not root then return end
@@ -9481,6 +9488,19 @@ return out
 end
 F.CMX_BlockReportEnable = function()
 F.CMX_BanKeysMerged = true
+local all, per = nil, nil
+pcall(function() all, per = F.CMX_AllDetectKeys() end)
+local extra = {}
+if type(all) == "table" then for i = 1, #all do extra[#extra + 1] = all[i] end end
+if type(per) == "table" and #per > 0 then
+F.Out("[反封禁·上报] 本游戏检测档案命中 " .. tostring(#per) .. " 个命名, 已并入拦截名单:")
+for i = 1, math.min(#per, 12) do F.Out("[反封禁·上报]   · " .. tostring(per[i])) end
+end
+for i = 1, #extra do
+local dup = false
+for j = 1, #F.CMX_BAN_KEYS do if F.CMX_BAN_KEYS[j] == extra[i] then dup = true break end end
+if not dup then F.CMX_BAN_KEYS[#F.CMX_BAN_KEYS + 1] = extra[i] end
+end
 local found = F.CMX_ScanReportRemotes(false)
 if type(AC.BLOCK_KEYS) == "table" then
 local ex = {}
@@ -9576,6 +9596,15 @@ local NAMES = {
 "onDetect", "onFlag", "onBan", "logDetection", "logBan", "recordFlag",
 "antiKick", "antikick", "kickPlayer", "punishPlayer", "detectPlayer", "sendBan", "sendReport",
 }
+pcall(function()
+local all = F.CMX_AllDetectKeys and F.CMX_AllDetectKeys()
+if type(all) == "table" then
+for i = 1, #all do
+local w = all[i]
+if type(w) == "string" and #w >= 5 then NAMES[#NAMES + 1] = w end
+end
+end
+end)
 F.CMX_NPSaved = {}
 local n, seen = 0, 0
 pcall(function()
@@ -9674,6 +9703,61 @@ if not F.CMX_HashOn then return end
 F.CMX_HashOn = false
 F.CMX_HashCache = {}
 F.Out("[反封禁·哈希冻结] 已关 · 本次冻结命中 " .. tostring(F.CMX_HashFreezeHits or 0) .. " 次")
+end
+F.CMX_GAMEDETECT_RAW = "2753915549=blacklist,BlacklistTime,purgeBlacklist,HealthCheck,BlacklistedQuestIds,BANEXPLOIT,NOEXPLOIT,PositionChecker|6516141723=AnticheatDisabled,Exploits_Remove,ArchivesChairAC_LagbackConns,DistanceBlacklist,ArchivesChairAC_LagbackDisabled,Anti-Cheat Bypass,DisableAnticheat,Exploits_Audio,lagback,ArchivesChairAC_SetLagbackBlocked,ESPBlacklist,LagbackFixer|89469502395769=LAGBACK|94217045453265=reportedOrigin|292439477=RageBot_WallPenetrationDetection,Extras_HopOnVotekick,PenetrationDetection,startvotekick,undetected,Votekick,Wall Penetration Detection,Hop On Votekick|5130598377=hasReported,TeleportCheck|16279732176=hasReported,TeleportCheck"
+F.CMX_GENKEYS = {
+strong = { "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack", "anti-hack", "cheatdetect", "exploitdetect", "injected", "injection", "detected", "detection", "detector", "moderation", "honeypot", "canary", "integrity", "checksum", "watchdog", "sentinel", "guardian", "banplayer", "banhammer", "banned", "banlog", "punish", "blacklist", "votekick", "antikick", "anti-kick", "kickplayer", "flagplayer", "flagged", "flaglog", "reportplayer", "reportlog", "reported", "hashcheck", "clienthash", "fingerprint", "tokencheck", "purgeblacklist", "blacklisttime", "anticheatdisabled", "lagbackconns" },
+move = { "speedcheck", "flycheck", "velocitycheck", "positioncheck", "movementcheck", "noclipcheck", "walkcheck", "teleportcheck", "distancecheck", "gravitycheck", "jumpcheck", "godcheck", "lagback", "rollback", "damper", "speeddetect", "flydetect", "antigravity", "nospeed", "nofly", "antiteleport", "anticlip" },
+}
+F.CMX_GameDetectMap = nil
+F.CMX_GameDetectKeys = function()
+local _, pid = F.CMX_GameName()
+if not pid or pid == "" then return nil end
+if not F.CMX_GameDetectMap then
+F.CMX_GameDetectMap = {}
+for seg in string.gmatch(F.CMX_GAMEDETECT_RAW or "", "([^|]+)") do
+local k, v = seg:match("^(%d+)=(.*)$")
+if k then
+local list = {}
+for w in string.gmatch(v, "([^,]+)") do
+w = w:gsub("^%s+", ""):gsub("%s+$", "")
+if w ~= "" then list[#list + 1] = w end
+end
+F.CMX_GameDetectMap[k] = list
+end
+end
+end
+return F.CMX_GameDetectMap[pid], pid
+end
+F.CMX_AllDetectKeys = function()
+local out, seen = {}, {}
+local function push(t)
+if type(t) ~= "table" then return end
+for i = 1, #t do
+local w = t[i]
+if type(w) == "string" and not seen[w] then
+seen[w] = true
+out[#out + 1] = w
+end
+end
+end
+push(F.CMX_GENKEYS and F.CMX_GENKEYS.strong)
+push(F.CMX_GENKEYS and F.CMX_GENKEYS.move)
+local per = F.CMX_GameDetectKeys()
+push(per)
+return out, per
+end
+F.CMX_ShowGameDetect = function()
+F.Out("[检测档案] 当前游戏: " .. F.CMX_GameLabel())
+local per, pid = F.CMX_GameDetectKeys()
+if per and #per > 0 then
+F.Out("[检测档案] 本游戏已知的检测命名(从公开脚本里挖出来的, " .. tostring(#per) .. " 个):")
+for i = 1, #per do F.Out("[检测档案]   · " .. tostring(per[i])) end
+else
+F.Out("[检测档案] 这个游戏没有预置档案(公开脚本里没挖到它的检测命名)")
+end
+F.Out("[检测档案] 通用词库: 强命中 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.strong or {}))
+.. " 个 + 移动/加速/飞行专用 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.move or {})) .. " 个")
 end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
@@ -11030,6 +11114,9 @@ F.Out("[游戏档案] 本游戏还没档案")
 end
 end)
 end)
+end })
+Tabs.AC:AddButton({ Title = "本游戏已知的检测命名(从公开脚本挖出来的 · 只读)", Callback = function()
+task.spawn(function() pcall(F.CMX_ShowGameDetect) end)
 end })
 Tabs.AC:AddToggle("CMX_GameProfile", { Title = "按游戏自动套用档案(档位/飞行通道/加速通道/传送方式)", Description = "你在某个游戏里调好的这几项会被记住; 下次进同一个游戏自动套用。识别靠 game.PlaceId(内置 300 个热门游戏名)", Default = true, Callback = function(v)
 T.CMX_GameProfile = v
