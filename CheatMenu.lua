@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:33 sha de7dc9e0 bytes 440330'):format('2026-10-03 18:33','de7dc9e0',440330))
+print(('[CheatMenu] build 2026-10-03 18:40 sha d9bfd21a bytes 442519'):format('2026-10-03 18:40','d9bfd21a',442519))
 local F = {}
-F.VERSION = "v13.10.18"
+F.VERSION = "v13.10.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2877,15 +2877,26 @@ if not skip and pl.TeamColor ~= nil and pl.TeamColor == LP.TeamColor then skip =
 end)
 end
 if not skip then
+local pts = {}
+local hp1 = ch:FindFirstChild("Head")
+local hp2 = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
+local hp3 = ch:FindFirstChild("LowerTorso") or hrp
+if hp1 then pts[#pts + 1] = hp1.Position end
+if hp2 then pts[#pts + 1] = hp2.Position end
+if hp3 then pts[#pts + 1] = hp3.Position end
+if #pts == 0 then pts[#pts + 1] = hrp.Position end
 local score = nil
+for pi = 1, #pts do
+local pp = pts[pi]
 if T.Aim360 then
-local d3 = (cam.CFrame.Position - hrp.Position).Magnitude
-if d3 <= fov then score = d3 end
+local d3 = (cam.CFrame.Position - pp).Magnitude
+if d3 <= fov and (not score or d3 < score) then score = d3 end
 else
-local sp, onScreen = cam:WorldToScreenPoint(hrp.Position)
+local sp, onScreen = cam:WorldToScreenPoint(pp)
 if onScreen then
 local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
-if d <= fov then score = d end
+if d <= fov and (not score or d < score) then score = d end
+end
 end
 end
 if score then
@@ -2900,6 +2911,7 @@ end
 if not skip then
 local pname = pl and pl.Name or tostring(ch.Name)
 score = score - (inTbl(C.PriorityTargets, pname) and 1e6 or 0)
+if F._aimStick and ch == F._aimStick then score = score - 1e5 end
 if not bestScore or score < bestScore then best, bestScore = hrp, score end
 end
 end
@@ -2907,21 +2919,76 @@ end
 end
 end
 end
+if best and best.Parent then F._aimStick = best.Parent end
 return best
 end
 F._fireAt = 0
+F.SilentAimEnable = function()
+if F._silentOn then return end
+local cam = workspace.CurrentCamera
+if not cam then F.Out("[静默自瞄] 相机还没就绪, 稍后再开"); T.SilentAim = false return end
+local fn = nil
+pcall(function() fn = cam.ViewportPointToRay end)
+if type(fn) ~= "function" then
+F.Out("[静默自瞄] 拿不到相机射线方法 ⇒ 该执行器不可用")
+T.SilentAim = false
+return
+end
+local function makeBox(orig)
+return function(self, x, y, ...)
+local ray = orig(self, x, y, ...)
+if T.SilentAim and not F.CMX_IsCaller() then
+local tgt = F.AimPick()
+if tgt then
+local d = tgt.Position - ray.Origin
+if d.Magnitude > 0.01 then return Ray.new(ray.Origin, d.Unit * 1000) end
+end
+end
+return ray
+end
+end
+local ok = pcall(function()
+if type(hookfunction) == "function" and type(newcclosure) == "function" then
+hookfunction(fn, newcclosure(makeBox(fn)))
+else
+local orig = fn
+cam.ViewportPointToRay = makeBox(orig)
+end
+end)
+F._silentOn = ok and true or false
+if F._silentOn then
+F.Out("[静默自瞄] 已开: 视角完全自由, 只在开火时把子弹方向悄悄改向目标")
+else
+F.Out("[静默自瞄] 安装失败(执行器不支持 hook 相机方法) ⇒ 该模式不可用")
+T.SilentAim = false
+end
+end
+F.SilentAimDisable = function()
+F._silentOn = false
+F.Out("[静默自瞄] 已关(相机射线恢复)")
+end
 function F.FireOnce()
-local viaVIM = nil
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
+local did = {}
 local cam = workspace.CurrentCamera
 local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
 vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
 vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
-viaVIM = "VirtualInputManager(不抢鼠标)"
+did[#did + 1] = "VIM"
 end)
-if viaVIM then return viaVIM end
-local viaBtn = nil
+pcall(function()
+local ch = LP.Character
+local tool = ch and ch:FindFirstChildOfClass("Tool")
+if tool then tool:Activate() did[#did + 1] = "tool" end
+end)
+pcall(function()
+local vu = game:GetService("VirtualUser")
+vu:CaptureController()
+vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
+pcall(function() vu:ReleaseController() end)
+did[#did + 1] = "VirtualUser"
+end)
 pcall(function()
 local b = F._fireBtn
 if not (b and b.Parent and b.Visible) then
@@ -2944,38 +3011,22 @@ end
 if b then
 if type(firesignal) == "function" then
 pcall(firesignal, b.MouseButton1Click)
-viaBtn = "屏幕按钮:" .. tostring(b.Name)
+did[#did + 1] = "屏幕按钮"
 elseif type(getconnections) == "function" then
 for _, c in ipairs(getconnections(b.MouseButton1Click)) do
 pcall(function() c:Fire() end)
-viaBtn = "屏幕按钮:" .. tostring(b.Name)
+did[#did + 1] = "屏幕按钮"
 end
 end
 end
 end)
-if viaBtn then return viaBtn end
+pcall(function()
 if type(mouse1click) == "function" then
-if pcall(mouse1click) then return "mouse1click()" end
+if pcall(mouse1click) then did[#did + 1] = "mouse1click" end
 end
-local viaTool = nil
-pcall(function()
-local ch = LP.Character
-local tool = ch and ch:FindFirstChildOfClass("Tool")
-if tool then tool:Activate() viaTool = "tool:Activate()" end
 end)
-if viaTool then return viaTool end
-local viaVu = nil
-pcall(function()
-local vu = game:GetService("VirtualUser")
-local cam = workspace.CurrentCamera
-local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
-vu:CaptureController()
-vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
-pcall(function() vu:ReleaseController() end)
-viaVu = "VirtualUser(屏幕中心)"
-end)
-if viaVu then return viaVu end
-return nil
+F._lastFireVia = table.concat(did, "+")
+return F._lastFireVia
 end
 function F.AutoFire(tgt)
 if not (T.AutoFire and tgt) then return end
@@ -3129,10 +3180,12 @@ local tgt = F.AimPick()
 if not (cam and tgt) then return end
 local aimPos = tgt.Position
 if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
+if not T.SilentAim then
 local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
 local lerpK = 1 / math.max(1, tonumber(C.AimSmooth) or 5)
 if T.Aim360 then lerpK = math.min(lerpK, 0.12) end
 cam.CFrame = cam.CFrame:Lerp(want, lerpK)
+end
 F.AutoFire(tgt)
 end)
 end
@@ -11442,6 +11495,11 @@ if F._cfgSyncing then return end
 if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
 end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
+Tabs.Combat:AddToggle("SilentAim", { Title = "★ 静默自瞄(视角完全自由 · 子弹自动打向目标)", Description = "开: 相机完全归你(鼠标自由转视角), 只在开火那一刻把子弹方向悄悄改向目标 —— 不影响你看别处。⚠ 需要执行器支持 hook 相机方法; 开了它会自动接管「瞄准模式」的转视角", Default = false, Callback = function(v)
+T.SilentAim = v
+if F._cfgSyncing then return end
+if v then pcall(F.SilentAimEnable) else pcall(F.SilentAimDisable) end
+end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "★ 不打隔墙(墙后的敌人不锁)", Description = "开: 自瞄先从相机到目标打一条射线, 中间有墙/障碍物就不锁他 —— 不会隔着墙开枪露位置", Default = false, Callback = function(v) T.AimWallCheck = v F.Out("[自瞄] 不打隔墙 = " .. (v and "开" or "关")) end })
 Tabs.Combat:AddDropdown("AimTarget", { Title = "★ 目标选择", Values = {
 "所有人(无阵营时自动)",
