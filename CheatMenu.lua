@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:49 sha 6cf453ba bytes 443174'):format('2026-10-03 17:49','6cf453ba',443174))
+print(('[CheatMenu] build 2026-10-03 17:54 sha c86ab5ca bytes 437976'):format('2026-10-03 17:54','c86ab5ca',437976))
 local F = {}
-F.VERSION = "v13.10.12"
+F.VERSION = "v13.10.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3069,7 +3069,13 @@ end
 function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
-if not T.AimOn then return end
+if not T.AimOn then
+T.FovCircle = false
+pcall(F.FovCircleDisable)
+return
+end
+T.FovCircle = true
+pcall(F.FovCircleEnable)
 F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
@@ -4418,61 +4424,9 @@ F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测
 local got = false
 pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
-F.SafeSpotPush = function()
-local _, hum, root = GC()
-if not (hum and root) then return end
-local ok = false
-pcall(function()
-local params = RaycastParams.new()
-if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
-pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
-end
-if LP.Character then params.FilterDescendantsInstances = { LP.Character } end
-local hip = tonumber(hum.HipHeight) or 2
-if hip ~= hip or hip < 0 then hip = 2 end
-local half = root.Size.Y / 2
-local down = math.max(hip + half + 0.4, 2)
-local hit = workspace:Raycast(root.Position, Vector3.new(0, -down, 0), params)
-ok = hit ~= nil
-end)
-if ok then
-local p = root.Position
-F._safeSpot = { x = p.X, y = p.Y + 3, z = p.Z, at = os.clock() }
-end
-return ok
-end
 F.bypassConn = RS.Heartbeat:Connect(function()
 if not T.BypassDetect then F.BypassDisable() return end
 local now = os.clock()
-if now - (F._safeAt or 0) > 0.5 then
-F._safeAt = now
-pcall(F.SafeSpotPush)
-end
-local _, _, rt = GC()
-if rt and F._safeSpot then
-local far = (Vector3.new(rt.Position.X, 0, rt.Position.Z)
-- Vector3.new(F._safeSpot.x, 0, F._safeSpot.z)).Magnitude
-local fell = rt.Position.Y < -120
-local prev = F._safePrevPos
-F._safePrevPos = rt.Position
-local jumped = prev and (rt.Position - prev).Magnitude > 300
-local idle = (not T.SpeedOn) and (not T.FlyOn)
-if fell or (jumped and idle) then
-local dest = CFrame.new(Vector3.new(F._safeSpot.x, F._safeSpot.y, F._safeSpot.z))
-pcall(function() rt:PivotTo(dest) end)
-pcall(function()
-rt.AssemblyLinearVelocity = Vector3.zero
-rt.AssemblyAngularVelocity = Vector3.zero
-end)
-F.DropIntent()
-F._safeBack = (F._safeBack or 0) + 1
-if now - (F._safeLogAt or 0) > 3 then
-F._safeLogAt = now
-F.Out("[安全点] " .. (fell and "掉出地图" or "静止时被瞬间挪走 " .. string.format("%.0f", far) .. " 格")
-.. " ⇒ 已回到最近的安全地面点 (第 " .. tostring(F._safeBack) .. " 次)")
-end
-end
-end
 if now - (F._bypassOwnAt or 0) > 1.2 then
 F._bypassOwnAt = now
 if T.SpeedOn or T.FlyOn then
@@ -4488,11 +4442,10 @@ end
 end
 end)
 F.Out("[绕过] 网络所有权回读: " .. (got and "本地(拿到)" or "仍非本地 ⇒ 这游戏持续抢回, 靠「被拉回就续跑」硬顶"))
-F.Out("[绕过] 已开启: 所有权**只在被夺走时**才抢(平时零干预) + 被拉回才顶回 + 安全点回滚")
+F.Out("[绕过] 已开启: 所有权**只在被夺走时**才抢(平时零干预) + 被拉回才顶回")
 end
 function F.BypassDisable()
 if F.bypassConn then pcall(function() F.bypassConn:Disconnect() end) F.bypassConn = nil end
-F._safeSpot, F._safeBack, F._safePrevPos = nil, 0, nil
 if F.DropIntent then pcall(F.DropIntent) end
 F._bypassOwnAt = nil
 if F._bypassAtp then
@@ -8480,7 +8433,6 @@ go(T.HitboxExpand, F.HitboxExpandEnable)
 go(T.KillAura, F.KillAuraEnable)
 go(T.BodyHL, F.BodyHLEnable)
 go(T.AimOn, F.AimSet, true)
-go(T.FovCircle, F.FovCircleEnable)
 go(T.Hud, F.HudEnable)
 go(T.Crosshair, F.CrosshairEnable)
 go(T.LockCam, F.LockCamEnable)
@@ -11437,7 +11389,6 @@ C.AimTarget = v
 T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
-Tabs.Combat:AddButton({ Title = "★ 自瞄/开火体检(没锁到人 / 没开火 ⇒ 点这个, 原因逐条列出来)", Callback = function() F.CombatCheck() end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
@@ -11476,13 +11427,11 @@ T.LockHealth = v
 if F._cfgSyncing then return end
 if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
 end })
-Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血目标值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
 Tabs.Combat:AddToggle("Regen", { Title = "回血(按下面速率持续补血)", Default = false, Callback = function(v)
 T.Regen = v
 if F._cfgSyncing then return end
 if v then pcall(RegenEnable) else pcall(RegenDisable) end
 end })
-Tabs.Combat:AddSlider("RegenRate", { Title = "回血速率(每 0.2 秒补多少血)", Min = 1, Max = 200, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
 Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
 T.NoDeath = v
 if F._cfgSyncing then return end
@@ -11493,7 +11442,6 @@ T.HitboxExpand = v
 if F._cfgSyncing then return end
 if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
 end })
-Tabs.Combat:AddSlider("HitboxSize", { Title = "Hitbox 扩展大小", Min = 2, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then pcall(F.HitboxExpandEnable) end end })
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
 T.KillAura = v
@@ -11629,11 +11577,6 @@ end })
 end
 do
 Tabs.World:AddSection("★ 补强 · 方框 / 骨骼 / 追踪线 / 血量条")
-Tabs.World:AddToggle("CMX_AdornBehind", { Title = "方框ESP · 隔墙区别(Adornment 版 · 隔墙淡框 / 可见实框)", Description = "开: 隔墙时只看到淡的警示色框, 看得见时是队伍色实框 —— 一眼分清谁在墙后。关: 单层(现状)。需要同时开下面「方框ESP · BoxHandleAdornment」", Default = false, Callback = function(v)
-T.CMX_AdornBehind = v
-if F._cfgSyncing then return end
-F.Out("[补强·AdornmentESP] 隔墙区别 = " .. (v and "开" or "关"))
-end })
 Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
 T.CMX_BoxESP = v
 if F._cfgSyncing then return end
@@ -11653,11 +11596,6 @@ Tabs.World:AddToggle("CMX_HealthBar", { Title = "血量条(左边竖条 · 绿�
 T.CMX_HealthBar = v
 if F._cfgSyncing then return end
 if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
-end })
-Tabs.World:AddToggle("CMX_AdornESP", { Title = "方框ESP · BoxHandleAdornment(不需要 Drawing 库)", Default = false, Callback = function(v)
-T.CMX_AdornESP = v
-if F._cfgSyncing then return end
-if v then F.CMX_AdornESPEnable() else F.CMX_AdornESPDisable() end
 end })
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收藏点位 全部适用)", Values = {
@@ -11716,24 +11654,6 @@ end })
 Tabs.AFK:AddSection("脑红 / 现金")
 Tabs.AFK:AddButton({ Title = "★ 一键收起脑红(全部槽位, 最多 30)", Callback = function() F.WithdrawAll(30) end })
 Tabs.AFK:AddButton({ Title = "一键收钱(全部槽位)", Callback = function() F.CollectAll(30) end })
-Tabs.AFK:AddDropdown("BaseView", { Title = "只读查看(选完自动复位, 不改动任何东西)", Values = {
-"关闭", "会卖哪些(除限定)", "基地数据(金币/踢力/精通/速度/重生)", "升级性价比(先升哪个最划算)",
-}, Default = "关闭", Callback = function(v)
-if v == "关闭" then return end
-task.spawn(function()
-if v == "会卖哪些(除限定)" then
-pcall(F.PreviewSell)
-elseif v == "基地数据(金币/踢力/精通/速度/重生)" then
-pcall(F.ReadBase)
-else
-pcall(F.UpgradeAdvice)
-end
-task.defer(function()
-local op = Fluent and Fluent.Options and Fluent.Options.BaseView
-if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
-end)
-end)
-end })
 Tabs.AFK:AddButton({ Title = "卖光(除限定/独家: 一次卖完可算出的脑红)", Callback = function() F.SellAll() end })
 Tabs.AFK:AddInput("SellMinCPSTxt", { Title = "卖出门槛(可写 80m / 500K / 数字)", Default = "100K",
 Placeholder = "低于它就卖掉", Callback = function(v)
@@ -11746,18 +11666,10 @@ elseif v ~= "" then
 Fluent:Notify({ Title = "门槛格式", Content = "认不出「" .. tostring(v) .. "」—— 请写 500K / 1.5m / 100000", Duration = 6 })
 end
 end })
-Tabs.AFK:AddSlider("SellLvMul", { Title = "等级乘数(估算 CPS 用, 1.25 = 每级 ×1.25)", Min = 1, Max = 2, Default = 1.25, Rounding = 2,
-Callback = function(v) C.SellLvMul = v end })
 Tabs.AFK:AddToggle("AutoSell", { Title = "按 CPS 卖出(走到蒂米身边卖 · 卖完自动关)", Default = false, Callback = function(v)
 T.AutoSell = v
 if F._cfgSyncing then return end
 if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已停止(当前这一轮会跑完)") end
-end })
-Tabs.AFK:AddSection("★ 补强 · 挂机(鼠标抖动 / 按键注入 / 自动点击)")
-Tabs.AFK:AddToggle("CMX_ClickSpam", { Title = "自动点击采集(遍历附近 ClickDetector / 提示并触发)", Default = false, Callback = function(v)
-T.CMX_ClickSpam = v
-if F._cfgSyncing then return end
-if v then F.CMX_ClickSpamEnable() else F.CMX_ClickSpamDisable() end
 end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
@@ -11861,12 +11773,7 @@ pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "点下面「复制扫描结果」直接给我", Duration = 8 })
 end)
 end })
-Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", Callback = function() task.spawn(function() pcall(F.CMX_ScanExport) end) end })
-Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
-T.ScanAutoFix = v
-end })
 Tabs.AC:AddSection("自动开启")
-Tabs.AC:AddSlider("CMX_AutoDelay", { Title = "自动开启延迟(秒 · 让游戏先加载完, 避免同一帧装一堆钩子被踢)", Min = 0, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.CMX_AutoDelay = v end })
 Tabs.AC:AddToggle("CMX_AutoAll", { Title = "★ 加载后自动开启(恢复你上次开着的全部功能 · 含玩法与绕过)", Description = "默认开。关掉它就退回「只恢复绕过层, 玩法不自动开」", Default = true, Callback = function(v)
 T.CMX_AutoAll = v
 if F._cfgSyncing then return end
