@@ -3215,3 +3215,12 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 
 
+
+
+## 踢一个幸运方块 (Kick a Lucky Block, PlaceId 89469502395769) — 2026-10-04 核实自公开明文脚本
+- 网络容器 `ReplicatedStorage.Shared.Packages.Network`；`rev_*`=RemoteEvent / `ref_*`=RemoteFunction。
+- 已核实：`rev_KickEvent` · `rev_B_Collect(i)` · `rev_B_Upgrade(i)` · `rev_Shop_Buy` · `rev_SPEED_UPGRADE` · `rev_RebirthRequest` · `ref_B_SellAll` · `rev_CollectShard(name)`。
+- ★ 锻炼真机制 = `PlayerGui.KickUpgrades` 里名为 **`Bonus`/`PopBonus`** 的 ImageButton，**Visible 就点** + 手里拿配重 Tool（**无 `Rarity` 属性**的才算配重）；不是站在 `LiftMachine` 机器上 ⇒ 旧实现"tp 过去没效果"。
+- ★ 领奖 = 点同一个 Bonus + `rev_B_Collect` 刷 1..12 槽 + 对自己 `workspace.Plots`(Owner==自己) 的 `Buttons` 子物体 `firetouchinterest(hrp,slot,0/1)`。⛔ 旧的 `TaviMishkal` 是**不存在的假 remote**（公开仓库 0 命中）。
+- 点击三路并用：`getconnections(btn.MouseButton1Click/InputBegan/Activated):Fire()` ∪ `firesignal` ∪ `VirtualInputManager:SendMouseButtonEvent(按钮中心)`。
+- 参考明文仓库：`matpatz/luau` · `stokompetgacor23-dotcom/pinathub-kick-a-lucky-block` · `NickolasFrutuoso/Roblox-Script` · `fartez127-design/FARTEZHUB` · `evanbackup1256-ship-it/kick`。
