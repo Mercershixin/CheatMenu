@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:25 sha 3f642fce bytes 468909'):format('2026-10-03 16:25','3f642fce',468909))
+print(('[CheatMenu] build 2026-10-03 16:32 sha e108d8a4 bytes 469280'):format('2026-10-03 16:32','e108d8a4',469280))
 local F = {}
-F.VERSION = "v13.9.5"
+F.VERSION = "v13.9.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8555,7 +8555,11 @@ end
 g(T.HidePlayer, F.HidePlayerEnable)
 g(T.FOV, FOVEnable)
 g(T.Zoom, ZoomEnable)
-g(T.CarryGuard, F.CarryGuardEnable)
+if T.CarryGuard then
+T.CarryGuard = false
+pcall(F.CarryGuardDisable)
+F.Out("[恢复] 搬运守卫已复位 —— 它会咔住蛋; 需要时请站到蛋旁边再手动开")
+end
 g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
 g(T.AntiFling or T.GuiProtect, function()
 if T.AntiFling then pcall(F.AntiFlingEnable) end
@@ -11360,20 +11364,16 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
-Tabs.Combat:AddButton({ Title = "★ 自瞄/开火体检(没锁到人 / 没开火 ⇒ 点这个, 原因逐条列出来)", Callback = function() F.CombatCheck() end })
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关 · 每帧把镜头转向最近目标)", Default = false, Callback = function(v) F.AimSet(v) end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "自瞄范围(屏幕像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
-Tabs.Combat:AddSlider("AimSmooth", { Title = "平滑度(越大越慢)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 锁上就开火(自动开火 · 会自动带上「自瞄」)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddToggle("Aim360", { Title = "360°锁敌(背后也能锁 · 范围改按格算)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) F.AimSet(v) end })
+Tabs.Combat:AddSlider("AimFOV", { Title = "★ 范围(屏幕像素 · 360°模式下单位=格)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
+Tabs.Combat:AddToggle("Aim360", { Title = "★ 360°全方位(背后也能锁)", Default = false, Callback = function(v)
 T.Aim360 = v
 if v then F.EnsureAimOn() end
-F.Out("[自瞄] 360° = " .. (v and "开(不看朝向, 按世界距离; 「自瞄范围」此模式下单位=格)" or "关(只锁屏幕内 FOV 圈里)"))
+F.Out("[自瞄] 360° = " .. (v and "开(不看朝向, 按世界距离; 「范围」此模式下单位=格)" or "关(只锁屏幕内 FOV 圈里)"))
 end })
-Tabs.Combat:AddDropdown("AimTarget", { Title = "目标选择(乱斗/无阵营 ⇒ 选「所有人」)", Values = {
+Tabs.Combat:AddDropdown("AimTarget", { Title = "★ 目标选择", Values = {
 "所有人(无阵营时自动)",
 "仅敌对阵营(有阵营时)",
 }, Default = "所有人(无阵营时自动)", Callback = function(v)
@@ -11381,6 +11381,10 @@ C.AimTarget = v
 T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
+Tabs.Combat:AddSection("自瞄 · 高级(默认一般就够 · 不用动)")
+Tabs.Combat:AddSlider("AimSmooth", { Title = "瞄准平滑度(越大越慢越像手)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
+Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v if v then F.EnsureAimOn() end end })
+Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = false, Callback = function(v) T.AimWallCheck = v end })
 Tabs.Combat:AddToggle("CMX_AimPredict", { Title = "弹道预判(打移动目标时提前量 · 打枪战/弓箭必备)", Description = "对移动中的目标按「距离 ÷ 弹速」算出提前量再瞄。打瞬发武器(近战/射线枪)请关掉", Default = false, Callback = function(v)
 T.CMX_AimPredict = v
@@ -11389,16 +11393,17 @@ if v then F.Out("[自瞄] 弹道预判已开 · 当前弹速 " .. tostring(C.CMX
 end })
 Tabs.Combat:AddSlider("CMX_ProjSpeed", { Title = "弹速(格/秒 · 枪一般 200~600, 弓箭 100~200)", Min = 30, Max = 2000, Default = 300, Rounding = 0, Callback = function(v) C.CMX_ProjSpeed = v end })
 Tabs.Combat:AddToggle("CMX_ProjDrop", { Title = "弹道预判 · 补下落(远距离抛物线)", Default = false, Callback = function(v) T.CMX_ProjDrop = v C.CMX_ProjDrop = v end })
+Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈(把范围画出来)", Default = false, Callback = function(v)
+T.FovCircle = v
+if F._cfgSyncing then return end
+if v then F.FovCircleEnable() else F.FovCircleDisable() end
+end })
 Tabs.Combat:AddToggle("CMX_HitFeed", { Title = "命中提示(视野内玩家掉血/被击杀 → 屏幕滚动提示 + 日志)", Default = false, Callback = function(v)
 T.CMX_HitFeed = v
 if F._cfgSyncing then return end
 if v then F.CMX_HitFeedEnable() else F.CMX_HitFeedDisable() end
 end })
-Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈", Default = false, Callback = function(v)
-T.FovCircle = v
-if F._cfgSyncing then return end
-if v then F.FovCircleEnable() else F.FovCircleDisable() end
-end })
+Tabs.Combat:AddButton({ Title = "★ 自瞄/开火体检(没锁到人 / 没开火 ⇒ 点这个, 原因逐条列出来)", Callback = function() F.CombatCheck() end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
@@ -11913,6 +11918,28 @@ T.BubbleTranslate = v
 if F._cfgSyncing then return end
 if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
+Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
+Tabs.AC:AddButton({ Title = "★ 一键开启全部(防护 + 反封禁 + 全部绕过层 + 改写档③)", Description = "不想一项项点就按这个 —— 等于把下面所有和'不被抓/不被踢'相关的都开上; 想关掉点下面的「一键全关」", Callback = function()
+task.spawn(function()
+local n = 0
+local function go(fn, ...)
+if type(fn) ~= "function" then return end
+if pcall(fn, ...) then n = n + 1 end
+end
+T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
+go(F.BypassTierApply, T.BypassTier)
+T.AntiFling, T.GuiProtect, T.CharPersist = true, true, true
+go(F.AntiFlingEnable)
+go(F.AuthorityGuard, true)
+T.CMX_AntiBanAll = true
+go(F.CMX_BanAllApply, true)
+T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
+go(F.ACWriteTierApply, T.ACWriteTier)
+pcall(F.CfgSyncUI)
+F.Out("[一键开启] 已开启 " .. tostring(n) .. " 组: 防护 + 反封禁全家桶 + 全部绕过层 + 改写档③")
+Fluent:Notify({ Title = "一键开启", Content = "已开启 " .. tostring(n) .. " 组 · 防护 + 反封禁 + 绕过层 + 改写档③", Duration = 8 })
+end)
+end })
 Tabs.AC:AddSection("反作弊")
 Tabs.AC:AddToggle("ACMaster", { Title = "防护(反甩[只清异常速度] + 护界面 + 权限守卫 · 不动你的碰撞/交互)", Default = false, Callback = function(v)
 if F._cfgSyncing then
@@ -12160,27 +12187,6 @@ Tabs.AC:AddDropdown("ACWriteTier", { Title = "主开关注入的改写强度(叠
 T.ACWriteTier = v
 if F._cfgSyncing then return end
 pcall(F.ACWriteTierApply, v)
-end })
-Tabs.AC:AddSection("采集与导出")
-Tabs.AC:AddToggle("CaptureOn", { Title = "采集 remote 上行(边玩边记, 导出看结果)", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v then
-local ok = F.CaptureEnable()
-Fluent:Notify({ Title = "采集", Content = ok and "已开始记录上行 remote 参数 —— 玩一会儿后点「一键全量导出」" or "开启失败(执行器不支持 hookmetamethod)", Duration = 8 })
-else
-Fluent:Notify({ Title = "采集", Content = "已停止, 共记录 " .. tostring(F.CaptureDisable()) .. " 条", Duration = 5 })
-end
-end })
-Tabs.AC:AddButton({ Title = "一键全量导出(内容复制到剪贴板)", Callback = function()
-task.spawn(function()
-local txt = F.DumpAll()
-pcall(F.LogDump, txt, "全量导出")
-Fluent:Notify({
-Title = "全量导出",
-Content = "已生成 " .. tostring(#txt) .. " 字符; 已尝试复制到剪贴板, 直接粘贴即可。含服务端判定输入面(上行 remote 参数)",
-Duration = 10,
-})
-end)
 end })
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
