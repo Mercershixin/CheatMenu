@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:20 sha ff4e927b bytes 469138'):format('2026-10-03 16:20','ff4e927b',469138))
+print(('[CheatMenu] build 2026-10-03 16:25 sha 3f642fce bytes 468909'):format('2026-10-03 16:25','3f642fce',468909))
 local F = {}
-F.VERSION = "v13.9.4"
+F.VERSION = "v13.9.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8224,7 +8224,7 @@ T.Translate = true
 Trans.Load()
 local ok, body = Trans.Health()
 if not ok then
-F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") —— 先双击「翻译模型开关.bat」, 或点本页的「启动指引」")
+F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ 双击打开「翻译模型开关.bat」把服务起起来, 再点翻译页的「翻译诊断」确认")
 end
 if Trans.Loop then Trans.HeartbeatOn() return true end
 Trans.Prewarm()
@@ -11827,14 +11827,8 @@ end })
 Tabs.Trans:AddButton({ Title = "把界面全部重译一遍(切完语言 / 改完词条后点这个)", Callback = function()
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
-Tabs.Trans:AddButton({ Title = "立即把译文缓存写进磁盘(不用等自动保存)", Callback = function()
-local ok, n = false, 0
-for _ in pairs(Trans.Cache) do n = n + 1 end
-pcall(function() ok = Trans.Flush() end)
-F.Out("[翻译] " .. (ok and "已写入磁盘" or "写入失败(执行器不支持 writefile?)") .. " · 共 " .. n .. " 条 ⇒ " .. Trans.FILE)
-Fluent:Notify({ Title = "翻译缓存", Content = (ok and ("已写入磁盘 · " .. n .. " 条") or "写入失败(执行器不支持 writefile)"), Duration = 6 })
-end })
-Tabs.Trans:AddButton({ Title = "缓存状态(内存条数 / 磁盘文件大小 / 上限)", Callback = function()
+Tabs.Trans:AddButton({ Title = "翻译诊断(一键: 服务状态 · 缓存 · 跳过统计 · 标签配对)", Description = "不用一项项点 —— 一下把本地服务通不通、缓存多少条、这轮扫描跳过了什么、富文本标签配不配对全打出来", Callback = function()
+task.spawn(function()
 local n, sz = 0, "无文件"
 for _ in pairs(Trans.Cache) do n = n + 1 end
 pcall(function()
@@ -11842,9 +11836,21 @@ if type(isfile) == "function" and type(readfile) == "function" and isfile(Trans.
 sz = tostring(math.floor(#readfile(Trans.FILE) / 1024)) .. " KB"
 end
 end)
-local msg = "内存 " .. n .. " 条 · 磁盘 " .. sz .. " · 上限 " .. tostring(Trans.CACHE_MAX or 5000) .. " 条"
-F.Out("[翻译] 缓存: " .. msg .. " · 文件 " .. Trans.FILE)
-Fluent:Notify({ Title = "翻译缓存", Content = msg, Duration = 6 })
+local okH, bodyH = false, "?"
+pcall(function() okH, bodyH = Trans.Health() end)
+Trans._skip = { ours = 0, official = 0, invisible = 0 }
+pcall(Trans.Scan)
+local s = Trans._skip or {}
+pcall(function() Trans.RT.Audit() end)
+F.Out("[翻译诊断] 服务: " .. (okH and "在线 ✓" or ("没起来 ✗ " .. tostring(bodyH))) .. " (没起来就双击「翻译模型开关.bat」)")
+F.Out("[翻译诊断] 缓存: 内存 " .. n .. " 条 · 磁盘 " .. sz .. " · 上限 " .. tostring(Trans.CACHE_MAX or 5000) .. " 条 · 文件 " .. Trans.FILE)
+F.Out("[翻译诊断] 本轮扫描跳过: 隐形文字 " .. tostring(s.invisible or 0) .. " · 官方界面 " .. tostring(s.official or 0)
+.. " · 自己的界面 " .. tostring(s.ours or 0) .. " · 已登记 " .. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个")
+Fluent:Notify({ Title = "翻译诊断",
+Content = (okH and "服务在线 ✓" or "服务未启动 ✗") .. " · 缓存 " .. n .. " 条 · 已登记 "
+.. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个控件 · 细节见控制台 F9",
+Duration = 8 })
+end)
 end })
 Tabs.Trans:AddButton({ Title = "清空译文缓存(内存 + 磁盘 · 下次全部重新翻译)", Callback = function()
 local n = 0
@@ -11870,17 +11876,6 @@ Trans._skip = { ours = 0, official = 0, invisible = 0 }
 F.Out("[翻译] Roblox 官方界面 = " .. (v and "开(官方顶栏/系统菜单也会翻 · 官方按钮多为图标, 可能显示异常)" or "关(推荐 · 只翻游戏自己的界面)"))
 task.spawn(function() pcall(Trans.Scan) end)
 end })
-Tabs.Trans:AddButton({ Title = "翻译体检 · 看跳过了什么(隐形文字 / 官方界面 / 自己的界面)", Callback = function()
-task.spawn(function()
-pcall(Trans.Scan)
-local s = Trans._skip or {}
-local msg = "跳过: 隐形文字 " .. tostring(s.invisible or 0) .. " · 官方界面 " .. tostring(s.official or 0)
-.. " · 自己的界面 " .. tostring(s.ours or 0) .. " · 已登记 " .. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个"
-F.Out("[翻译体检] " .. msg)
-Fluent:Notify({ Title = "翻译体检", Content = msg, Duration = 8 })
-end)
-end })
-Tabs.Trans:AddButton({ Title = "体检: 统计带标签的文本控件 / 标签是否不配对", Callback = function() task.spawn(function() pcall(Trans.RT.Audit) end) end })
 Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
 C.TransUseGL = v
 if F._cfgSyncing then return end
