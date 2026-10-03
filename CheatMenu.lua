@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 20:38 sha 0e6a1961 bytes 448088'):format('2026-10-03 20:38','0e6a1961',448088))
+print(('[CheatMenu] build 2026-10-03 21:57 sha d9dc3bea bytes 450646'):format('2026-10-03 21:57','d9dc3bea',450646))
 local F = {}
-F.VERSION = "v13.10.32"
+F.VERSION = "v13.10.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1899,7 +1899,6 @@ local ok, kids = pcall(function() return F.walk(r) end)
 if ok and kids then
 for j = 1, #kids do
 note(kids[j], nm, nm)
-n = n + 1
 if n >= CAP then break end
 end
 end
@@ -3180,7 +3179,18 @@ if cam.CameraSubject ~= myHum then cam.CameraSubject = myHum end
 end)
 end
 local GodConn = nil
-local function GodDisable() if GodConn then GodConn:Disconnect() GodConn = nil end end
+local function GodDisable()
+if GodConn then GodConn:Disconnect() GodConn = nil end
+pcall(function()
+local _, hum = GC()
+if hum then
+local o = F._orig or {}
+local mh = hum.MaxHealth
+if type(mh) ~= "number" or mh > 1000 or mh ~= mh then hum.MaxHealth = o.maxHealth or 100 end
+hum.Health = math.min(hum.Health, hum.MaxHealth)
+end
+end)
+end
 local function GodEnable()
 if GodConn then return end
 local function apply()
@@ -5824,6 +5834,7 @@ F.Out("[瞬间交互] 已关闭 — 已还原 " .. tostring(n) .. " 个交互点
 end
 local mutedVolumes = nil
 local function MuteEnable()
+if mutedVolumes then return end
 mutedVolumes = {}
 for _, s in ipairs(F.walk(workspace)) do
 if s:IsA("Sound") then
@@ -6692,7 +6703,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
@@ -8438,6 +8449,8 @@ end)
 if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
 end,
 MuteDisable, FOVDisable, ZoomDisable,
+F.InvisibleDisable, AntilagDisable, GodDisable, RegenDisable, NoDeathDisable, LockHealthDisable,
+F.AntiCheatGCRestore, F.CMX_DisableAll, F.LightWatchDisable, F.MetaHookUninstall,
 }
 local okN, badN = 0, 0
 for i = 1, #disables do
@@ -8499,6 +8512,7 @@ end)
 end
 function F.RestoreSavedFeatures()
 if not T then return end
+F.Out("[恢复] 会接管视角/鼠标的(自瞄/锁相机/自由视角/锁鼠标)已跳过自动恢复, 需要请手动开")
 F.Out("[恢复] 按存档恢复你上次主动开启的功能(没开过的不会自动开)")
 local n = 0
 local function go(v, fn, ...)
@@ -8522,11 +8536,8 @@ go(T.BubbleTranslate, F.BubbleTranslateEnable)
 go(T.HitboxExpand, F.HitboxExpandEnable)
 go(T.KillAura, F.KillAuraEnable)
 go(T.BodyHL, F.BodyHLEnable)
-go(T.AimOn, F.AimSet, true)
 go(T.Hud, F.HudEnable)
 go(T.Crosshair, F.CrosshairEnable)
-go(T.LockCam, F.LockCamEnable)
-go(T.Freecam and not UIS.TouchEnabled, F.FreecamEnable)
 go(T.BringPlayer, F.BringPlayerEnable)
 go(T.FreezePlayer, F.FreezePlayerEnable)
 go(T.AutoTrain, F.AutoTrainEnable)
@@ -8540,7 +8551,6 @@ go(T.NoFog, F.NoFogEnable)
 if T.FullBright or T.NightVision or T.NoFog then pcall(F.LightWatchEnable) end
 go(T.Antilag, AntilagEnable)
 go(T.Mute, MuteEnable)
-go(T.TPMouse, function() F._tpMouseOn = true end)
 go(T.CMX_Gravity, F.CMX_GravityEnable)
 go(T.CMX_Anchor, F.CMX_AnchorEnable)
 go(T.PetItemESP, F.PetESPEnable)
@@ -9365,15 +9375,18 @@ pcall(function()
 if type(islclosure) == "function" then prefLua = islclosure(f) and true or false end
 end)
 end
+local made = false
 if prefLua and type(newl) == "function" then
 local okL, w = pcall(newl, wrapper)
-if okL and type(w) == "function" then box = w end
-elseif type(newc) == "function" then
+if okL and type(w) == "function" then box = w made = true end
+end
+if not made and type(newc) == "function" then
 local okC, w = pcall(newc, wrapper)
-if okC and type(w) == "function" then box = w end
-elseif type(newl) == "function" then
+if okC and type(w) == "function" then box = w made = true end
+end
+if not made and type(newl) == "function" then
 local okL2, w2 = pcall(newl, wrapper)
-if okL2 and type(w2) == "function" then box = w2 end
+if okL2 and type(w2) == "function" then box = w2 made = true end
 end
 local orig = nil
 if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, box) end
@@ -9390,8 +9403,24 @@ seen = seen + 1
 if seen > 60000 then break end
 if type(f) == "function" and (not islclosure or islclosure(f)) then
 local ops, ocs = nil, nil
-pcall(function() ops = debug.getupvalues(f) end)
-pcall(function() ocs = debug.getconstants(f) end)
+if dbgGetUpvalues then pcall(function() ops = dbgGetUpvalues(f) end) end
+if dbgGetConstants then pcall(function() ocs = dbgGetConstants(f) end) end
+if type(ops) ~= "table" and type(debug) == "table" and type(debug.getupvalue) == "function" then
+ops = {}
+for i = 1, 64 do
+local nm, v = debug.getupvalue(f, i)
+if nm == nil then break end
+ops[i] = v
+end
+end
+if type(ocs) ~= "table" and type(debug) == "table" and type(debug.getconstant) == "function" then
+ocs = {}
+for i = 1, 512 do
+local v = debug.getconstant(f, i)
+if v == nil then break end
+ocs[i] = v
+end
+end
 if ops and ocs and #ops == nups and #ocs == nconsts then
 found = f
 break
@@ -9411,7 +9440,18 @@ local shapes = {
 }
 for i = 1, #shapes do
 local ok, r = pcall(fg, "function", shapes[i][1], shapes[i][2])
-if ok and type(r) == "function" then
+if ok and type(r) == "table" then
+for k = 1, #r do
+local cand = r[k]
+if type(cand) == "function" then
+local fp = nil
+pcall(function() fp = F.FnFingerprint(cand) end)
+if fp and fp.nups == nups and fp.nconsts == nconsts then
+return cand, -1, true
+end
+end
+end
+elseif ok and type(r) == "function" then
 local fp = nil
 pcall(function() fp = F.FnFingerprint(r) end)
 if fp and fp.nups == nups and fp.nconsts == nconsts then
@@ -9433,7 +9473,15 @@ end
 F.Out("[绕过·常量] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 命中"
 .. (fast and " · filtergc 加速" or (" · 全扫 " .. tostring(seen) .. " 个")))
 local consts = nil
-pcall(function() consts = debug.getconstants(f) end)
+if dbgGetConstants then pcall(function() consts = dbgGetConstants(f) end) end
+if type(consts) ~= "table" and type(debug) == "table" and type(debug.getconstant) == "function" then
+consts = {}
+for i = 1, 512 do
+local v = debug.getconstant(f, i)
+if v == nil then break end
+consts[i] = v
+end
+end
 consts = consts or {}
 local shown = 0
 for i = 1, #consts do
@@ -9603,7 +9651,7 @@ if ms and F._npOrig and type(hookfunction) == "function" then
 for nm, orig in pairs(F._npOrig) do
 local cur = nil
 pcall(function() cur = ms[nm] end)
-if type(cur) == "function" and type(orig) == "function" then
+if type(cur) == "function" and type(orig) == "function" and cur ~= orig then
 pcall(hookfunction, cur, orig)
 end
 end
@@ -10445,6 +10493,7 @@ end
 return out
 end
 F.CMX_BlockReportEnable = function()
+if F.CMX_BanKeysMerged then return true end
 F.CMX_BanKeysMerged = true
 local all, per = nil, nil
 pcall(function() all, per = F.CMX_AllDetectKeys() end)
@@ -10496,14 +10545,14 @@ if F.CMX_BAN_KEYS[j] == k then table.remove(F.CMX_BAN_KEYS, j) break end
 end
 end
 end
-F.CMX_BanKeysAdded = nil
-end
 if type(AC.BLOCK_KEYS) == "table" then
+local added = {}
+for _, k in ipairs(F.CMX_BanKeysAdded) do added[k] = true end
 for i = #AC.BLOCK_KEYS, 1, -1 do
-for j = 1, #F.CMX_BAN_KEYS do
-if AC.BLOCK_KEYS[i] == F.CMX_BAN_KEYS[j] then table.remove(AC.BLOCK_KEYS, i) break end
+if added[AC.BLOCK_KEYS[i]] then table.remove(AC.BLOCK_KEYS, i) end
 end
 end
+F.CMX_BanKeysAdded = nil
 end
 F.Out("[反封禁·上报] 已关(黑名单还原)")
 end
@@ -10754,7 +10803,8 @@ e = tostring(e)
 return e
 end
 local function cleanCErr(e)
-return e ~= nil and not e:find(":", 1, true)
+if e == nil then return true end
+return not e:find(":", 1, true)
 end
 local e1 = rawErr(setmetatable, nil, {})
 if cleanCErr(e1) then ok("setmetatable 钩子", "报错无 Lua 行号") else no("setmetatable 钩子", "报错带行号 ⇒ 被 Hooks/SetMetatable 抓到") end
@@ -11184,7 +11234,12 @@ F.CMX_ShapeDefault = "19,15,2"
 F.CMX_ScrubParse = function(txt)
 if txt == nil then txt = F.CMX_ShapeOverride end
 if txt == nil then txt = F.CMX_ShapeDefault end
-local a, b, c = tostring(txt or ""):match("^%s*(%d+)%s*[,%s]%s*(%d+)%s*[,%s]%s*(%d+)%s*$")
+local txt2 = tostring(txt or "")
+local a, b, c = txt2:match("^%s*(%d+)%s*[,%s]%s*(%d+)%s*[,%s]%s*(%d+)%s*$")
+if not a then
+a, b = txt2:match("^%s*(%d+)%s*[,%s]%s*(%d+)%s*$")
+c = 2
+end
 if a and b then return tonumber(a), tonumber(b), tonumber(c) or 2 end
 return 19, 15, 2
 end
@@ -11417,7 +11472,8 @@ sig = tostring(si and si.source or "?") .. "#" .. tostring(si and si.linedefined
 end)
 F.CMX_ScrubSig = sig
 if not F.CMX_ScrubHeal then
-F.CMX_ScrubHeal = task.spawn(function()
+local holder = { thread = nil, done = false }
+holder.thread = task.spawn(function()
 while F.CMX_ScrubOn do
 task.wait(8)
 if not F.CMX_ScrubOn then break end
@@ -11437,8 +11493,10 @@ end
 F.CMX_ScrubHealFix = (F.CMX_ScrubHealFix or 0) + 1
 end
 end
-F.CMX_ScrubHeal = nil
+holder.done = true
+if F.CMX_ScrubHeal == holder.thread then F.CMX_ScrubHeal = nil end
 end)
+if holder.done then F.CMX_ScrubHeal = nil else F.CMX_ScrubHeal = holder.thread end
 end
 F.Out("[绕过·参数清洗] 已开: 形状(" .. tostring(nups) .. "," .. tostring(nconsts)
 .. ") 的第 " .. tostring(upidx) .. " 个 upvalue 已挂钩 · 参数表元表会被抹成空表(反指纹检测)")
@@ -11560,8 +11618,17 @@ end
 F.Out("[绕过·定位] 形状(" .. tostring(a) .. "," .. tostring(b) .. ") 命中 · 开始逐层展开 upvalue:")
 local n = 0
 pcall(function()
-local ops = debug.getupvalues(f)
-if ops then
+local ops = nil
+if dbgGetUpvalues then pcall(function() ops = dbgGetUpvalues(f) end) end
+if type(ops) ~= "table" and type(debug) == "table" and type(debug.getupvalue) == "function" then
+ops = {}
+for i = 1, 64 do
+local nm, v = debug.getupvalue(f, i)
+if nm == nil then break end
+ops[i] = v
+end
+end
+if type(ops) == "table" then
 for i = 1, #ops do
 local v = ops[i]
 n = n + 1
@@ -11952,6 +12019,11 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不动人物 · 掐掉挂机检测连接)", Description = "不写人物任何属性, 只把游戏挂在 Idled 上的检测连接断掉 + 每 15 秒写一次心跳属性", Default = false, Callback = function(v)
+T.AntiAFK = v
+if F._cfgSyncing then return end
+if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
+end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -12030,6 +12102,8 @@ pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.Bypas
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
+T.AntiAFK = false
+pcall(F.AntiAFKDisable)
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 pcall(F.MetaHookUninstall)
@@ -12040,6 +12114,8 @@ end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
 pcall(F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
+T.AntiAFK = true
+pcall(F.AntiAFKEnable)
 T.CMX_SpoofIndex = true
 pcall(F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
@@ -12365,4 +12441,3 @@ F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .
 end)
 end)
 end)
-F.Out("[CheatMenu] 已应用 FIX-1 … FIX-8, FIX-10 … FIX-14 (FIX-9 已复查为非 bug, 跳过)")
