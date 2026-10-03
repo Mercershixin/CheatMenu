@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 15:42 sha ddd30e0b bytes 468245'):format('2026-10-03 15:42','ddd30e0b',468245))
+print(('[CheatMenu] build 2026-10-03 15:47 sha 53eb4bf9 bytes 470657'):format('2026-10-03 15:47','53eb4bf9',470657))
 local F = {}
-F.VERSION = "v13.8.0"
+F.VERSION = "v13.9.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8096,6 +8096,49 @@ if ok and r then Trans.Cache["warmup"] = r end
 F.Out("[翻译] 服务预热完成(system prompt 的 KV 缓存已就绪)")
 end)
 end
+Trans.IsOurs = function(obj)
+local p, steps = obj, 0
+while p and steps < 16 do
+local ok, v = pcall(function() return p:GetAttribute("CMOwned") end)
+if ok and v == true then return true end
+p = p.Parent
+steps = steps + 1
+end
+return false
+end
+Trans.IsOfficial = function(obj)
+local cg = nil
+pcall(function() cg = game:GetService("CoreGui") end)
+if not cg then return false end
+local p, steps = obj, 0
+while p and steps < 16 do
+p = p.Parent
+steps = steps + 1
+if p == cg then return true end
+end
+return false
+end
+Trans._skip = { ours = 0, official = 0, invisible = 0 }
+Trans.SkipEl = function(obj)
+if obj.TextVisible == false then
+Trans._skip.invisible = Trans._skip.invisible + 1
+return "TextVisible=false"
+end
+local tt = obj.TextTransparency
+if type(tt) == "number" and tt >= 0.95 then
+Trans._skip.invisible = Trans._skip.invisible + 1
+return "文字不可见"
+end
+if Trans.IsOurs(obj) then
+Trans._skip.ours = Trans._skip.ours + 1
+return "我们自己的界面"
+end
+if not C.TransOfficial and Trans.IsOfficial(obj) then
+Trans._skip.official = Trans._skip.official + 1
+return "Roblox 官方界面"
+end
+return nil
+end
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.RegCount = function()
 local n = 0
@@ -8105,6 +8148,7 @@ end
 Trans.GuiElNoReg = function(obj)
 if not obj or obj.Visible == false then return end
 if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
+if Trans.SkipEl(obj) then return end
 local txt = obj.Text
 if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
 txt = Trans.RT.Strip(txt)
@@ -8143,7 +8187,9 @@ end
 function Trans.GuiEl(obj)
 if not obj then return end
 if obj.Visible == false then return end
-if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
+if Trans.SkipEl(obj) then return end
+do
 local txt = obj.Text
 if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
 txt = Trans.RT.Strip(txt)
@@ -8167,7 +8213,9 @@ end
 end
 function Trans.Scan()
 local pg = LP:FindFirstChild("PlayerGui")
-local roots = { pg, CoreGui }
+Trans._skip = { ours = 0, official = 0, invisible = 0 }
+local roots = { pg }
+if C.TransOfficial then roots[#roots + 1] = CoreGui end
 if gethui then table.insert(roots, gethui()) end
 for _, root in ipairs(roots) do
 if root then
@@ -11865,6 +11913,23 @@ end
 end
 F.Out("[翻译] 缓存已清空(内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件) · 下次会全部重新翻译")
 Fluent:Notify({ Title = "翻译缓存", Content = "已清空内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件", Duration = 6 })
+end })
+Tabs.Trans:AddToggle("TransOfficial", { Title = "翻译 Roblox 官方界面(顶栏 / 设置 / 举报 这些系统按钮 · 默认关)", Default = false, Callback = function(v)
+C.TransOfficial = v
+if F._cfgSyncing then return end
+Trans._skip = { ours = 0, official = 0, invisible = 0 }
+F.Out("[翻译] Roblox 官方界面 = " .. (v and "开(官方顶栏/系统菜单也会翻 · 官方按钮多为图标, 可能显示异常)" or "关(推荐 · 只翻游戏自己的界面)"))
+task.spawn(function() pcall(Trans.Scan) end)
+end })
+Tabs.Trans:AddButton({ Title = "翻译体检 · 看跳过了什么(隐形文字 / 官方界面 / 自己的界面)", Callback = function()
+task.spawn(function()
+pcall(Trans.Scan)
+local s = Trans._skip or {}
+local msg = "跳过: 隐形文字 " .. tostring(s.invisible or 0) .. " · 官方界面 " .. tostring(s.official or 0)
+.. " · 自己的界面 " .. tostring(s.ours or 0) .. " · 已登记 " .. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个"
+F.Out("[翻译体检] " .. msg)
+Fluent:Notify({ Title = "翻译体检", Content = msg, Duration = 8 })
+end)
 end })
 Tabs.Trans:AddButton({ Title = "体检: 统计带标签的文本控件 / 标签是否不配对", Callback = function() task.spawn(function() pcall(Trans.RT.Audit) end) end })
 Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
