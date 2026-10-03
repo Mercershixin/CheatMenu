@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 20:32 sha e509fdfe bytes 447443'):format('2026-10-03 20:32','e509fdfe',447443))
+print(('[CheatMenu] build 2026-10-03 20:38 sha 0e6a1961 bytes 448088'):format('2026-10-03 20:38','0e6a1961',448088))
 local F = {}
-F.VERSION = "v13.10.31"
+F.VERSION = "v13.10.32"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2172,14 +2172,21 @@ local n = 0
 pcall(function()
 if type(getconnections) ~= "function" then return end
 for _, c in ipairs(getconnections(LP.Idled) or {}) do
-local nm = ""
+local fn = nil
+pcall(function() fn = c.Function end)
+if fn == nil then pcall(function() fn = c.__function end) end
+local nm, srcPath = "", ""
+if type(fn) == "function" and type(debug) == "table" and type(debug.getinfo) == "function" then
 pcall(function()
-local sc = c.script
-if sc then nm = tostring(sc.Name):lower() end
+local info = debug.getinfo(fn, "Sln")
+nm = tostring(info and info.name or ""):lower()
+srcPath = tostring(info and info.source or ""):lower()
 end)
-if nm:find("afk") or nm:find("idle") or nm:find("timeout") or nm:find("anticheat")
-or nm:find("detect") or nm:find("anti") or nm:find("guard") or nm:find("kick")
-or nm:find("boot") then
+end
+local bag = nm .. " " .. srcPath
+if bag:find("afk") or bag:find("idle") or bag:find("timeout") or bag:find("anticheat")
+or bag:find("detect") or bag:find("anti") or bag:find("guard") or bag:find("kick")
+or bag:find("boot") then
 pcall(function() c:Disable() end)
 F._afkDisabledConns[#F._afkDisabledConns + 1] = c
 n = n + 1
@@ -4336,7 +4343,7 @@ r.AssemblyAngularVelocity = Vector3.zero
 end)
 end
 F.SuicideNow = function()
-local _, hum, ch = GC()
+local ch, hum, root = GC()
 if not (hum and ch) then
 F.Out("[自杀] 没有角色, 现在不能重置")
 return
@@ -8016,7 +8023,7 @@ Trans._lastAt = now
 local r = Trans.Request(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
-r = r:gsub("^\s+", ""):gsub("\s+$", "")
+r = r:gsub("^%s+", ""):gsub("%s+$", "")
 if Trans.Cache[text] == nil then
 Trans.Order = Trans.Order or {}
 Trans.Order[#Trans.Order + 1] = text
@@ -9699,7 +9706,10 @@ F.CMX_SpoofIndexEnable = function()
 if F.CMX_SpoofOn then return false end
 pcall(F.CMX_GcinfoMaskEnable)
 F.CMX_SpoofUseCount = 0
-F.CMX_SpoofLast = nil
+F.CMX_SpoofGen = F.CMX_SpoofGen or 1
+F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofMiss  = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofLast  = setmetatable({}, { __mode = "k" })
 local got = F.MetaInstall("game.__index", game, "CMXSpoof", function(box)
 return function(t, k)
 if not F.CMX_SpoofOn then return box.orig(t, k) end
@@ -9765,7 +9775,9 @@ if not F.CMX_SpoofOn then return end
 F.CMX_SpoofOn = false
 pcall(function() F.MetaUninstall("game.__index", "CMXSpoof") end)
 if F._spoofCharConn then pcall(function() F._spoofCharConn:Disconnect() end) F._spoofCharConn = nil end
-F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofMiss  = setmetatable({}, { __mode = "k" })
+F.CMX_SpoofLast  = setmetatable({}, { __mode = "k" })
 F.Out("[绕过·属性伪装] 已关 · 本次共伪装 " .. tostring(F.CMX_SpoofUseCount or 0) .. " 次属性读取")
 end
 F.CMX_ViewFilterEnable = function()
@@ -12353,4 +12365,4 @@ F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .
 end)
 end)
 end)
-F.Out("[CheatMenu] 已应用 FIX-1 … FIX-8, FIX-10 (FIX-9 已复查为非 bug, 跳过)")
+F.Out("[CheatMenu] 已应用 FIX-1 … FIX-8, FIX-10 … FIX-14 (FIX-9 已复查为非 bug, 跳过)")
