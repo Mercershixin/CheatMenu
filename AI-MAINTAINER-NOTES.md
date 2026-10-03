@@ -3252,3 +3252,14 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ③ **`sed -n 'A,Bp;C,Dp'` 的多段拼接输出会让人把后一段的代码当成前一段的** —— 本轮据此误判「敌我识别接错成准星」，实际那段是「准星」自己的控件。**核代码必须单段精确读**。
 - 复核后**确认假报**：`F.ProtectApply`（内部对稳身/反攻击/反陷阱/防拉回逐个成对 enable/disable，本就有还原+日志）、`F.EnsureAimOn`（联动首选，最终走 `F.AimSet`，在链里）、`F._tpMouseOn`（布尔字段不是函数）、`Trans.Enable`（日志在被调函数里）。
 - 结论：67 个控件**全部有「世界改动 → 还原」闭环或本身就是纯设置项**；「callback 调的函数与开关 id 语义不符」14 条**全部合理**（功能复用 / 联动 / 按钮类）。
+
+
+## 反作弊档位审计 + 静默瞄准（2026-10-04 · 14.0.12）
+
+- ★★★ **最严重发现**：`F.MetaInstall` 直接判 `mt[slot]`，而调用点传的是 `"game.__index"` ⇒ `mt["game.__index"]` 恒为 nil ⇒ **`ACIndexMask`（属性读回伪装）与 `CMXSpoof` 两层从来没装上过**（静默 `return nil`）。修法：新增 `MetaSlotOf` 取 slot 最后一段，`MetaInstall` / `MetaUninstall` / `MetaActive` 三处统一归一化。★ 装上后默认**零行为变化**（`T.Spoof` 等默认关，wrapper 直接转发）。
+- ★★ **档位包含关系（用户问的）**：`ProtectTier` 用 `lvl>=2` / `lvl>=3` 累积 ⇒ **轻 ⊆ 中 ⊆ 重 正确**；`ACWriteTier` ②⊂③ 正确；`BypassTier` 的 guard/deep 正确。**结构没问题。**
+- ★★ **档位真缺口（已修）**：①档注释承诺 5 项、实际只启用 2 项 ⇒ 补 `F.GuiProtectionEnable` / `F.CharPersistEnable` / `F.AntiAFKEnable`。★ 关键认知：**`T.GuiProtect` 全项目无人读**（光设标志完全无效）、`T.CharPersist` 靠 `F.OnCharacter` 读 ⇒「设标志 ≠ 启用」，档位里必须**真的调 Enable**。
+  `F.BypassTierApply` 里 `wants.afk` / `wants.kick` **算了不用** ⇒ 补上（③④档现在真的带防挂机 / 防踢）。
+- ⚠ **待用户裁定**：另有 **14 个 CMX 检测面伪装层**（HookHard / IdentityMask / ArgScrub / AutoScrub / ViewFilter / InstNew / DebugMask / GcinfoMask / ClockMask / RequireBlock / HitFeed / Humanize / NoPurchase / ClickSpam）**既无 UI 入口、也不被任何档位引用**（死能力）⇒「高档覆盖全部」目前**不成立**，是否纳入③档待定（会改变行为）。
+- 新增**静默瞄准**：`F.SilentAimSet` / `F.SilentAimDisable` 走 `F.MetaInstall("game.__index", game, "CMSilent", …)` 分层栈，只改写 `mouse.Hit` / `mouse.Target`；`checkcaller()` 保护 + 只读缓存部件（每帧零开销）；锁定目标 `Died` 立刻清缓存。诚实边界：**只在游戏用「鼠标命中」判定时有效**。
+- 自瞄「让路」按用户要求**静默化**：菜单/打字时让路照旧生效，但**不显示专属文案、不做成独立开关**（跟着自瞄一起开/关）。
