@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:45 sha 59537eb1 bytes 423225'):format('2026-10-04 00:45','59537eb1',423225))
+print(('[CheatMenu] build 2026-10-04 00:56 sha d6a95221 bytes 423008'):format('2026-10-04 00:56','d6a95221',423008))
 local F = {}
-F.VERSION = "v14.0.5"
+F.VERSION = "v14.0.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6720,6 +6720,27 @@ if (root.Position - target).Magnitude > 2.5 then
 root.CFrame = CFrame.new(target)
 root.AssemblyLinearVelocity = Vector3.zero
 end
+pcall(function() equipSquatTool() end)
+local _, hum2 = GC()
+for _i = 1, 5 do
+if not T.AutoGym then break end
+pcall(function() root.CFrame = CFrame.new(target) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+if hum2 then pcall(function() hum2:Move(Vector3.new(0, 0, -1), false) end) end
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+task.wait(0.15)
+vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+end)
+task.wait(0.15)
+end
+local lv2 = tonumber(LP:GetAttribute("liftMachine")) or 0
+if lv2 ~= (F._gymLv or -1) then
+F._gymLv = lv2
+F.Out("[健身房] 已站上机器 · liftMachine=" .. tostring(lv2)
+.. (lv2 > 0 and " (在涨 ⇒ 效果吃上了)" or " (还是 0 ⇒ 游戏没判定你在锻炼, 把这条发我)"))
+end
 end
 else equipSquatTool() end
 end
@@ -11132,7 +11153,7 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("★ 挂机防踢")
-Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值), 反作弊或服务端踢你时本地拦下", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值), 反作弊或服务端踢你时本地拦下", Default = true, Callback = function(v)
 T.AntiAFK, T.KickGuard = v, v
 if F._cfgSyncing then return end
 if v then
@@ -11149,7 +11170,7 @@ T.AutoTrain = v
 if F._cfgSyncing then return end
 if v then F.AutoTrainEnable() end
 end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击距离", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击奖励", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
 if v then F.AutoBonusEnable() end
@@ -11158,26 +11179,6 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Default = fal
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() end
-end })
-Tabs.AFK:AddSection("脑红 / 现金")
-Tabs.AFK:AddButton({ Title = "★ 一键收起脑红(全部槽位, 最多 30)", Callback = function() F.WithdrawAll(30) end })
-Tabs.AFK:AddButton({ Title = "一键收钱(全部槽位)", Callback = function() F.CollectAll(30) end })
-Tabs.AFK:AddButton({ Title = "卖光(除限定/独家: 一次卖完可算出的脑红)", Callback = function() F.SellAll() end })
-Tabs.AFK:AddInput("SellMinCPSTxt", { Title = "卖出门槛(可写 80m / 500K / 数字)", Default = "100K",
-Placeholder = "低于它就卖掉", Callback = function(v)
-local n = F.ParseCPS(v)
-if n then
-C.SellMinCPS = n
-C.SellMinCPSTxt = v
-F.Out("[售卖] 门槛已设为 " .. F.FmtNum(n))
-elseif v ~= "" then
-Fluent:Notify({ Title = "门槛格式", Content = "认不出「" .. tostring(v) .. "」—— 请写 500K / 1.5m / 100000", Duration = 6 })
-end
-end })
-Tabs.AFK:AddToggle("AutoSell", { Title = "按 CPS 卖出(走到蒂米身边卖 · 卖完自动关)", Default = false, Callback = function(v)
-T.AutoSell = v
-if F._cfgSyncing then return end
-if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已停止(当前这一轮会跑完)") end
 end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
@@ -11601,3 +11602,7 @@ F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .
 end)
 end)
 end)
+T.AntiAFK, T.KickGuard = true, true
+pcall(F.AntiAFKEnable)
+pcall(F.KickGuardEnable)
+F.Out("[挂机防踢] 默认已开(防挂机 + 防踢)")
