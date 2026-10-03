@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:49 sha 8e2f9b2f bytes 440491'):format('2026-10-03 18:49','8e2f9b2f',440491))
+print(('[CheatMenu] build 2026-10-03 18:55 sha 21fe2b84 bytes 441690'):format('2026-10-03 18:55','21fe2b84',441690))
 local F = {}
-F.VERSION = "v13.10.22"
+F.VERSION = "v13.10.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2907,11 +2907,21 @@ end
 if score then
 do
 if T.AimWallCheck then
+local chk = {}
+local w1 = ch:FindFirstChild("Head")
+local w2 = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
+if w1 then chk[#chk + 1] = w1.Position end
+if w2 then chk[#chk + 1] = w2.Position end
+if #chk == 0 then chk[#chk + 1] = hrp.Position end
 ex[#ex + 1] = ch
 rp.FilterDescendantsInstances = ex
-local hit = workspace:Raycast(cam.CFrame.Position, (hrp.Position - cam.CFrame.Position), rp)
+local vis = false
+for ci = 1, #chk do
+local hit = workspace:Raycast(cam.CFrame.Position, (chk[ci] - cam.CFrame.Position), rp)
+if not (hit and hit.Instance) then vis = true break end
+end
 ex[#ex] = nil
-if hit and hit.Instance then skip = true end
+if not vis then skip = true end
 end
 if not skip then
 local pname = pl and pl.Name or tostring(ch.Name)
@@ -9498,8 +9508,44 @@ st.p = real
 end
 return st.p
 end
+F.CMX_GcinfoMaskEnable = function()
+if F._gcMaskOn then return end
+if type(gcinfo) ~= "function" then return end
+local orig = gcinfo
+local base = nil
+pcall(function() base = orig() end)
+local ok = false
+pcall(function()
+local box
+if type(newcclosure) == "function" then
+box = newcclosure(function()
+if F.CMX_IsCaller() then return orig() end
+return base
+end)
+else
+box = function()
+if F.CMX_IsCaller() then return orig() end
+return base
+end
+end
+if type(hookfunction) == "function" then
+hookfunction(gcinfo, box)
+else
+gcinfo = box
+end
+ok = true
+end)
+F._gcMaskOn = ok and true or false
+if F._gcMaskOn then
+F.Out("[伪装·gcinfo] 已开: 反作弊用 gcinfo 量增量只会拿到恒定值(增量 0) ⇒ 查不出我们的钩子")
+end
+end
+F.CMX_GcinfoMaskDisable = function()
+F._gcMaskOn = false
+end
 F.CMX_SpoofIndexEnable = function()
 if F.CMX_SpoofOn then return false end
+pcall(F.CMX_GcinfoMaskEnable)
 F.CMX_SpoofUseCount = 0
 F.CMX_SpoofLast = nil
 local got = F.MetaInstall("game.__index", game, "CMXSpoof", function(box)
@@ -9562,6 +9608,7 @@ F.Out("[绕过·属性伪装] 已开: 别人读你角色的 速度/角速度/位
 return true
 end
 F.CMX_SpoofIndexDisable = function()
+pcall(F.CMX_GcinfoMaskDisable)
 if not F.CMX_SpoofOn then return end
 F.CMX_SpoofOn = false
 pcall(function() F.MetaUninstall("game.__index", "CMXSpoof") end)
