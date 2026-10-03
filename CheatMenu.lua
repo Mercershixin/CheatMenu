@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 11:42 sha 4409eb51 bytes 414826'):format('2026-10-03 11:42','4409eb51',414826))
+print(('[CheatMenu] build 2026-10-03 12:09 sha 6b46cea6 bytes 415057'):format('2026-10-03 12:09','6b46cea6',415057))
 local F = {}
-F.VERSION = "v12.4.0"
+F.VERSION = "v12.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9762,6 +9762,7 @@ pcall(F.CMX_ScanHookLedger)
 pcall(F.CMX_ScanExposure)
 pcall(F.CMX_ScanStack)
 pcall(F.CMX_ScanHidden)
+pcall(F.CMX_ScanDetectors)
 end
 F.CMX_ScanACFamily = function()
 pcall(F.CMX_ScanShapes)
@@ -10664,13 +10665,12 @@ end })
 Tabs.AC:AddSection("★ 扫描 / 收集(全自动 · 无参数 · 结果直接导出给我)")
 Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行(选完自动复位)", Values = {
 "关闭",
-"① 绕过面扫描(能力清单 + 钩子台账 + 曝光面 + 调用栈 + 空实例)",
+"① 绕过面扫描(能力清单 + 钩子台账 + 曝光面 + 调用栈 + 空实例 + 检测器命名)",
 "② 反作弊函数族扫描(常见形状自动找 + 逐条列常量)",
 "③ 监听来源扫描(谁在监听你的角色 / 相机 / 玩家)",
 "④ 脚本与模块扫描(可疑脚本名 + 已加载模块 + 远程)",
 "⑤ 客户端检测扫描(检测名 + 连接来源)",
-"⑥ 一键全扫描(上面全部跑一遍 + 自动导出)",
-"⑦ 检测器命名扫描(找名字像 检测器/反作弊 的对象与脚本)",
+"⑥ 一键全扫描(上面全部 + 脚本/模块/远程/检测 + 检测器命名, 一次跑完)",
 }, Default = "关闭", Callback = function(v)
 if v == "关闭" then return end
 local which = v
@@ -10688,8 +10688,6 @@ elseif which:find("⑤", 1, true) then
 pcall(F.ScanClientChecks, true) pcall(F.ScanConnections)
 elseif which:find("⑥", 1, true) then
 F.CMX_ScanAll()
-elseif which:find("⑦", 1, true) then
-F.CMX_ScanDetectors()
 end
 end)
 pcall(F.LogFlush, "扫描")
@@ -10698,6 +10696,12 @@ task.defer(function()
 local op = Fluent and Fluent.Options and Fluent.Options.AdvScan
 if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
 end)
+end)
+end })
+Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
+task.spawn(function()
+pcall(F.CMX_ScanAll)
+Fluent:Notify({ Title = "全扫描完成", Content = "点下面「复制扫描结果」直接给我", Duration = 8 })
 end)
 end })
 Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", Callback = function() task.spawn(function() pcall(F.CMX_ScanExport) end) end })
