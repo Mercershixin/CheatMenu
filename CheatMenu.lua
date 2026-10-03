@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 13:27 sha c70c2e33 bytes 447249'):format('2026-10-03 13:27','c70c2e33',447249))
+print(('[CheatMenu] build 2026-10-03 13:43 sha 2908b27b bytes 448140'):format('2026-10-03 13:43','2908b27b',448140))
 local F = {}
-F.VERSION = "v13.2.0"
+F.VERSION = "v13.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10920,7 +10920,7 @@ Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
 Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
 Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(冻结/隐藏/拉过来共用)", Values = F.PlayerNames(), Default = nil })
-Tabs.Combat:AddToggle("FreezePlayer", { Title = "冻结目标(不能移动)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("FreezePlayer", { Title = "本地冻结目标(只有你看到 · 对方不受影响)", Description = "它改的是**对方**角色的位置 —— 那些部件的网络所有权属于对方/服务端, 所以改动不会复制出去: 只有你屏幕上他被钉住, 而且下一帧物理同步可能把你按住的位置顶回。想真影响别人做不到(客户端能力边界)。", Default = false, Callback = function(v)
 T.FreezePlayer = v
 if F._cfgSyncing then return end
 if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end
@@ -10930,7 +10930,7 @@ T.HidePlayer = v
 if F._cfgSyncing then return end
 if v then F.HidePlayerEnable() else F.HidePlayerDisable() end
 end })
-Tabs.Combat:AddToggle("BringPlayer", { Title = "把目标拉过来", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("BringPlayer", { Title = "本地把目标拉过来(只有你看到 · 对方不受影响)", Description = "同「本地冻结」: 改对方角色位置不会复制到服务端, 只有你屏幕上他贴到你面前, 且可能被物理同步拉回。", Default = false, Callback = function(v)
 T.BringPlayer = v
 if F._cfgSyncing then return end
 if v then F.BringPlayerEnable() else F.BringPlayerDisable() end
@@ -10966,7 +10966,7 @@ T.NoDeath = v
 if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(改本地的对方模型 · 只在客户端判定命中的游戏有效)", Description = "它把**对方**角色的部件尺寸改大 —— 这个改动只在你的客户端生效(对方部件不归你所有, 不会复制)。所以: 游戏若在客户端做命中判定(打中后上报), 有效; 游戏若在服务端按自己的部件尺寸判定, 无效。", Default = false, Callback = function(v)
 T.HitboxExpand = v
 if F._cfgSyncing then return end
 if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
