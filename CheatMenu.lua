@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 11:34 sha 41b2ab6f bytes 399160'):format('2026-10-03 11:34','41b2ab6f',399160))
+print(('[CheatMenu] build 2026-10-03 11:42 sha 4409eb51 bytes 414826'):format('2026-10-03 11:42','4409eb51',414826))
 local F = {}
-F.VERSION = "v12.3.0"
+F.VERSION = "v12.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9296,6 +9296,106 @@ F.Out("[档位·绕过层] 档位 " .. tostring(lv) .. " ⇒ 绕过层 开 " .. 
 .. " 层 / 关 " .. tostring(off) .. " 层(只动档位带起来的那些, 你手动开的不受影响)")
 end
 end
+F.CMX_PLACEMAP_RAW = "107778070777162=Steal An Egg|124216119978534=[⌛] Ride A Pet|109983668079237=[🥚] Steal a Brainrot|121864768012064=[👾UPD] Fish It! 🐟|113290951185459=[⚙️UPD 6] Anime Dice|16732694052=Fisch 🐟 [RACING]|114326934417838=Break and Steal an Egg|77108422251420=[SKINS 🐮] Search For The Needl|15532962292=Sol's RNG [ Summer Event 🏖️]|6961824067=Fling Things and People|104320321984431=Paint to Get Rich 🎨|123720558354386=Build the Pyramid!|8737899170=⛏️ [MINE] Pet Simulator 99! 🌌|71704434889758=(BETA) Drive A Kukirin!|3351674303=Driving Empire [2X CASH]|1537690962=Bee Swarm Simulator|76841016201110=💭Dream Car Collection [LUCK EV|105011592530400=Build and Kill Zombies|111543903102439=+1 Stone Skipping|79480724066456=[🛥️Boats🛥️] Southern Mudding 🚜|122245938604556=[🔮UPDATE!] +1 Tongue Escape 😛|87740422849523=Steal A Car|78490532994307=Build An Ant Empire|537413528=Build A Boat For Treasure|80242821185181=+1 Wings For Eggs|89469502395769=[🍭] Kick a Lucky Block|126884695634066=[🐿️] Grow a Garden 🌶️|98610101874791=+1 Strength for Eggs|122278212262864=Race for Eggs|98800969324557=[⛏️] Storage Hunters: Open Wor|109928390521457=Anime Breaker [🛠️CRAFT]|120475074479690=[😇] Steal From The Rich!|107164765081465=[BOSS] Steal A Verity!|132767904294856=[⚽] Blue Lock Farm|137228775845999=Ghost Driver [ALPHA]|102072869879193=[GUILDS] Anime Astral Simulato|119048529960596=[🛵] Restaurant Tycoon 3|114697347887839=🐒 +1 Speed Monkey Escape|4639625707=War Tycoon|13822889=🌳 Lumber Tycoon 2|76943966208523=Clone to Steal Eggs|7305309231=Taxi Boss 🚖|103429966174263=+1 Paint Keyboard Adventure|82081400078378=Steal ASMR!|138686218420016=[🗻] Mine Antarctica|74629631798007=[🎣UPD!] Pets Universe! 🐾|131346454575416=[💥] Mini War|128784467030899=[UPD☢️] Merge a Nuke!|88047783411976=Open Sea For Animals!|70906625936847=Gym Star Simulator 🏋️|95409544559668=Military Army Tycoon|77843161404023=Run a Restaurant!|92648272637932=[W3] +1 Mog Evolution|99679692310083=Steal Animal Egg|121831322352666=Dig For Eggs|4924922222=Brookhaven 🏡RP|920587237=[24H🎃] Adopt Me!|15101393044=Dress To Impress ⭐|13967668166=LifeTogether 🏠 RP|8481844229=Berry Avenue 🏠 RP|5233782396=✨ Creatures of Sonaria 📜 Survi|74395953411817=Dreamville 🏡 RP [Multiple Kids|122485613019196=Dubai 🏡 RP [Multiple Kids! 👶]|185655149=[🍂] Welcome to Bloxburg|7711635737=Emergency Hamburg|136020512003847=San Diego Roleplay|5289509545=Gacha Online ✨ RP|12985361032=Metro Life 🏡 City RP|97577741629233=⭐Catalog Avatar Runway|735030788=Royale🎃High|2534724415=[🗺️] Emergency Response: Liber|16625391970=NewSmith 🏡 RP|6989310863=Wild Horse Islands|8704997000=[🧪] Maple Hospital 🍂|3663340706=Warrior Cats: Ultimate Edition|891852901=Greenville RP (⭐AUDI + SHELBY |1365404657=Feather Family 🎃 [Burrowing Ow|192800=🍕Work at a Pizza Place|135717153770519=Toilet World Roleplay 2|15768329004=IT GIRL 🏝️|6698800091=[MOBILE!📱]Prior Extinction - D|96796259580891=Kingdom World|18753889337=Main Street 🏡RP|106568491289620=[将] Shogun's Reign|18214855317=Savannah Life|12716055617=Emergency Emden|17192092512=Deermont 🏡RP|71599043035739=SCP MORPH|3457390032=Club Roblox RP 💗 [👶 NEEDS]|8369888266=Redcliff City 🏡RP|6737970321=Livetopia 🏡 RP|5712833750=Animal Simulator|6377740507=[Stickers] Miraculous™ RP: Lad|5593925613=Countryball World 🌎|135571353544108=Love Letter: Roleplay ( YANWEE|104841616983113=San Aurie|13473615074=Boxywood 🏠🌴 RP|11862502039=Seaside RP🏡🌴 City RP|112333343527957=Highschool Experience RP|15182389440=[ 🍂 🏍️ 🎣 BikeLife ] Northline |71174733280934=Palmhaven City Life RP🏡|16962279458=☀️ KOYA DANCE STUDIO|18537079992=Армия Роблокса РП|5041144419=SCP: Roleplay|75178747054941=LCS: EQuest|79886695267825=Steal The Show! 🎤⭐|3631820248=[🎉6th Anniversary!] Stevos Gem|81223687051453=PRISON RP|373513488=FNAF RP - TPRR [🐻FB3 EVENT📺]|118447215156914=Prism Runway Show💎|102917792916356=Apocalyptic Titans Roleplay|142823291=Murder Mystery 2|79546208627805=99 Nights in the Forest 🔦|18687417158=[✨BONUS] Forsaken|93978595733734=[CURE] Violence District|78515283254292=Animal Hospital (Anomaly) 🧪|9872472334=Evade|4623386862=Piggy [SEASON 9 - FRIGHT NIGHT|893973440=Flee the Facility|116802325837172=7 Days Cat-Sitting|70411440483149=100 Days At Sea|124061247871628=Animal Daycare (Anomaly)|2768379856=3008 [2.75]|113481077323469=Scream And Run|70923197964305=⚔️ Killer's Arena|115668616082195=WHO FARTED?|85967844112283=Last Stop [Beta]|117713779364528=Lethal Ape Experience|78453398695059=THRESHOLD [HORROR] [UPD 1.5]|92122513197996=⛏️Dig to Escape|189707=Natural Disaster Survival|82591391194183=MM2 of The Locust|97793725257596=MMZ👽|90148635862803=[UPD] 🧟 Survive the Apocalypse|139020444733179=Survive Deep in the Woods|82457571485380=Zombie Rush Survival 🧟‍♂️|96168869671905=💎 ROB IT|6205205961=Escape Running Head|121165298854655=[CREATURE] DON'T LET HIM IN|14608970270=(ANNIVERSARY) Outcome Memories|15318113891=Lethal Ape|140553375004913=this underrated game (flamingo|137826330724902=Scary Shawarma Kiosk: the ANOM|129626004396080=just a sniper game|127877871885165=he ate them. [HORROR]|114204398207377=[FACTIONS] Survive Zombie Aren|18666738837=Death Order: Simon Says|128263975853774=🛠️Build and Survive|12931609417=Color or Die 🎨|127380660530951=Survive Overnight in a Mega St|87468080405188=[UPDATE] Home Alone: Anomalies|18199615050=[UPD] Demonology🕯️|7336302630=Project Delta|135889880932940=Survive 7 Days In Desert 🌵|120951586797306=🙈 Killer or Innocent|100227226022278=Survive The Swarm[2x loot]|6382584061=Build to Survive 🛠️|98894876188248=Cheating During Testing [BETA]|116070952245255=[💪] Build Base to Survive VERI|123393202531499=Build and Hide to Survive VERI|4580204640=🔪Survive the Killer!|74716719697996=[⏰SOON]🚪Survive Verity in Area|109423220190564=[UPDATE] Backrooms Company|82531308645115=Plunder [UPD]|124338404742585=Keep the Door Locked🔒|5118969548=Spider|108645230905176=Mrbeast Island Escape|119004860768199=[UPD]BreakDoor|2753915549=Blox Fruits|16205713724=Slayers 2|1730877806=[🍬HALLOWEEN PT 1] Grand Piece |13379208636=Attack on Titan Revolution|2809202155=[CDR & DD] Your Bizarre Advent|77649408247578=[2X LUCK] Dungeon Quest Reborn|111097829542198=[🦋] Legacy Piece|128451689942376=[🎞️ PROJECTION] Jujutsu: Zero|4520749081=King Legacy|117533937949084=Iron Soul: Dungeon|104761395312874=[🐲Goku & Castorice🟣] Lineage P|114574503491412=Anime Zero [RELEASE] 🎉|4616652839=Shindo Life [250]|90860390610142=Clover Legends|106484206883664=⚔️ Dungeon Lootr|4111023553=Deepwoken|80734098185936=An Average Campaign [Alpha v0.|18172550962=[CLASSES] Pixel Blade|8075399143=[✨Ashura Update] Ninja Time|9096881148=Peroxide [Update!]|93934100402512=Clover Time [BETA RELEASE]|71315343=[PARASITE 🌀] Dragon Ball Rage|125503525638054=The Veil|5571328985=[🐢] Bloodlines|2727067538=World // Zero ⚔️ Anime RPG|120704669141193=[V13] Blox Loot|140409475718339=[YUTA!] Anime Apocalypse|10260193230=[UPDATE 4] Meme Sea|10450270085=[⚖️JUDGEMAN] Jujutsu Infinite|5130598377=A Universal Time|119091355492870=[UPDATE 1.75]Rock Fruit|6918802270=Haze Seas|11729688377=Booga Booga [QUESTS! 📜]|10912405603=[3 YEARS!] Clover Retribution|15014439457=Demon Blade|3177438863=[🎃EVENT] Dragon Blox|122003435349029=The Portal [MMORPG]|10595058975=[Withered Grove 🧿] Arcane Line|3016661674=Rogue Lineage|14067600077=TYPE://SOUL|6728870912=World of Stands|5116869569=🌴 Doodle World! [BEACH EVENT]|139150436440482=[⚔️COMBAT] Ninja: Legacy [RP]|914010731=Ro-Ghoul [ALPHA]|116276659864007=Project Mirror Labyrinth|6938803436=[⭐2X] Anime Dimensions Simulat|6298464951=Roblox Is Unbreakable|102829972707814=civilization survival game|132044122002338=[Update 11 🔥] Chaos Fruits|118582391303761=UNTITLED RPG GAME|114581778828030=Soul RPG|100283815455755=Vagrant Survival [0.9]|15167153398=✨Someday City 2.0 ✨|5870869755=HEROES: Infinite 2|18923620224=[🗼 UPDATE 5.0] Anime Warriors |1087852616=CATASTROPHIA ☢️ Survive ☢️|134931730875913=[BETA] Crazy Odyssey: A New Jo|4622037906=Sans Fight Simulator|17625359962=RIVALS|112731528776884=KNIFE DUELS|90568084448279=[FPS] One Tap|122446657157717=[🔥NEW SNIPER] Sniper Arena|13687899540=Cold War [VIETNAM]|120851538706364=Murder Duels|114234929420007=BloxStrike|84556640895285=Deagle Arena|12334109280=Guts & Blackpowder|113506071094099=[🌴] SHARP|10165583746=Examination|93091759101123=FPS🔥AirDrop Arena [S5]🔥|72920620366355=[SEASON 3] Operation One|79393329652220=[🧤] Defusal|130404059693601=Strike: Warfare|3678761576=[🗣️CALLOUT🗣️] ENTRENCHED 🥀|120189115846709=TTK Testing [CUSTOMIZATION]|129253568870286=Bonk & Block [5v5]|102871156420149=The Lost Front|109397169461300=SNIPER DUELS|21532277=Notoriety: A PAYDAY® Experienc|118367369949006=Ground War|13955927965=Blood Zone 🎃|90184287580174=(SEASON 2) KILLSTREAK|286090429=Arsenal|136801880565837=[FPS] Flick|18259975825=Grave/Digger|13429790955=📚 Murderers vs Sheriffs 2|123873483242204=Anime Finals|3891618314=⚓ Harbor Havoc|119214646022567=Top sniper [5.0]|5286116071=Hunting Season [BETA]|15694891095=[CLANS] Combat Arena|94590879393563=Weird Gun Game [UPDATE!]|301549746=Counter Blox|130490210702949=Blood Debt Gun System|99342262733194=[SUMMER] Randomizer: Redux|14313259147=FORTLINE|104856666707760=Killstreak Battle Royale|3214114884=[💰2x] Flag Wars!|99001115434148=Fluxo PVP [MATCHMAKING]|94987506187454=[🤝 TRADING] REDLINER|115286378269814=Protect The House From Monster|13438553315=Decaying Winter|4991214437=town|13794093709=SCORCHED EARTH 🔊|106605940421527=BetterEH|443406476=Project Lazarus: 💀 ZOMBIES 💀|14518422161=Gunfight Arena|2778230703=Reminiscence Zombies|112757576021097=Defuse Division|111267397030523=CQB Hell [NEW MODES]|328028363=Typical Colors 2|71607575632633=[🎃] Zone Defense RNG|131558436575033=[REALISTIC] SevenM Hood Testin|9391468976=[SKY ASSASSIN] Jujutsu Shenani|10449761463=The Strongest Battlegrounds|135856908115931=[🌌DUELS] Murderers VS Sheriffs|13772394625=Blade Ball|104715542330896=BlockSpin 🔪 [WEATHER]|6872265039=BedWars [🎣RERELEASE🪤]|101770480176177=[X2 XP] Command An Army|1458767429=ABA|120700541929930=Knife VS Gun DUELS|127403135954624=[ Halloween ] Kaiju Alpha|118418618261207=RUNAWAYS [beta]|108567435288296=Anime Ability Arena|72105128013629=Kidnap And Jail|6403373529=[UPDATE🏴‍☠️] Slap Battles👏|110175021189594=Ability Arena 💥|94217045453265=Dueling Grounds ⚔️|606849621=Jailbreak|13621938427=[DEIMOS👹] untitled boxing game|128119795963270=Murder Mystery DUELS"
+F.CMX_PlaceMap = nil
+F.CMX_GameName = function()
+local pid = tostring(game.PlaceId or "")
+if not F.CMX_PlaceMap then
+F.CMX_PlaceMap = {}
+for seg in string.gmatch(F.CMX_PLACEMAP_RAW or "", "([^|]+)") do
+local k, v = seg:match("^(%d+)=(.*)$")
+if k then F.CMX_PlaceMap[k] = v end
+end
+end
+return F.CMX_PlaceMap[pid], pid
+end
+F.CMX_GameLabel = function()
+local nm, pid = F.CMX_GameName()
+if nm then return nm .. "  (PlaceId " .. pid .. ")" end
+return "未知游戏  (PlaceId " .. pid .. " / GameId " .. tostring(game.GameId or "?") .. ")"
+end
+F.CMX_ProfileGet = function()
+local _, pid = F.CMX_GameName()
+if not pid or pid == "" then return nil end
+C.CMX_GameProfiles = C.CMX_GameProfiles or {}
+return C.CMX_GameProfiles[pid]
+end
+F.CMX_ProfilePut = function(field, value)
+local _, pid = F.CMX_GameName()
+if not pid or pid == "" or value == nil then return end
+C.CMX_GameProfiles = C.CMX_GameProfiles or {}
+local p = C.CMX_GameProfiles[pid]
+if not p then p = {} C.CMX_GameProfiles[pid] = p end
+p[field] = value
+end
+F.CMX_ProfileApply = function()
+F.Out("[游戏档案] 当前游戏: " .. F.CMX_GameLabel())
+if T.CMX_GameProfile == false then
+F.Out("[游戏档案] 你关掉了「按游戏自动套用」⇒ 只显示游戏名, 不套用")
+return
+end
+local p = F.CMX_ProfileGet()
+if not p then
+F.Out("[游戏档案] 这个游戏还没档案 ⇒ 你在本局调好的 档位/飞行通道/加速通道/传送方式 会被记住, 下次进来自动套用")
+return
+end
+local n = 0
+if p.tier and T.BypassTier ~= p.tier then
+T.BypassTier = p.tier
+pcall(F.BypassTierApply, p.tier)
+n = n + 1
+end
+if p.fly and C.FlyDrive ~= p.fly then
+C.FlyDrive = p.fly
+n = n + 1
+if T.FlyOn then pcall(function() F.FlySet(true) end) end
+end
+if p.speed and C.SpeedDrive ~= p.speed then
+C.SpeedDrive = p.speed
+n = n + 1
+if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
+end
+if p.tpstep and C.TPStep ~= p.tpstep then C.TPStep = p.tpstep n = n + 1 end
+if p.flydrive_pos ~= nil and T.CMX_SpoofPos ~= p.flydrive_pos then T.CMX_SpoofPos = p.flydrive_pos n = n + 1 end
+if n > 0 then F.Out("[游戏档案] 已套用本游戏专属设置 " .. tostring(n) .. " 项(档位/通道)") end
+end
+F.CMX_ScanDetectors = function()
+F.Out("[扫描·检测器] ===== 名字像检测器的对象 / 脚本 =====")
+local keys = { "detector", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack",
+"integrity", "checksum", "watchdog", "sentinel", "clientcheck", "positioncheck",
+"speedcheck", "flycheck", "bancheck", "flagged", "moderation", "exploitlog" }
+local n = 0
+local function sweep(root, label)
+if not root then return end
+local cnt = 0
+pcall(function()
+for _, d in ipairs(root:GetDescendants()) do
+cnt = cnt + 1
+if cnt > 8000 then break end
+local nm = nil
+pcall(function() nm = d.Name end)
+if type(nm) == "string" then
+local low = nm:lower()
+for i = 1, #keys do
+if low:find(keys[i], 1, true) then
+n = n + 1
+if n <= 30 then
+F.Out(string.format("[扫描·检测器]   %-14s %-16s %s", label, tostring(d.ClassName), nm))
+end
+break
+end
+end
+end
+end
+end)
+end
+sweep(workspace, "workspace")
+pcall(function() sweep(LP:FindFirstChild("PlayerScripts"), "PlayerScripts") end)
+pcall(function() sweep(game:GetService("ReplicatedStorage"), "ReplicatedStorage") end)
+pcall(function() sweep(game:GetService("ReplicatedFirst"), "ReplicatedFirst") end)
+F.Out("[扫描·检测器] 共命中 " .. tostring(n) .. " 个(名字像检测器的对象)")
+return n
+end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
 if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
@@ -10176,6 +10276,7 @@ Tabs.Move:AddDropdown("FlyDrive", { Title = "飞行驱动方式(改完立刻生�
 }, Default = "速度驱动(LinearVelocity · 现状: 快、稳)", Callback = function(v)
 C.FlyDrive = v
 if F._cfgSyncing then return end
+pcall(F.CMX_ProfilePut, "fly", v)
 if T.FlyOn then F.FlySet(true) end
 end })
 Tabs.Move:AddSection("加速")
@@ -10187,6 +10288,7 @@ Tabs.Move:AddDropdown("SpeedDrive", { Title = "加速驱动方式(改完立刻�
 }, Default = "速度驱动(直接写线性速度 · 现状: 快)", Callback = function(v)
 C.SpeedDrive = v
 if F._cfgSyncing then return end
+pcall(F.CMX_ProfilePut, "speed", v)
 if T.SpeedOn then F.SpeedSet(true) end
 end })
 Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
@@ -10200,6 +10302,7 @@ local changed = (T.BypassTier ~= nil) and (T.BypassTier ~= v)
 T.BypassTier = v
 if F._cfgSyncing or not changed then return end
 pcall(F.BypassTierApply, v)
+pcall(F.CMX_ProfilePut, "tier", v)
 end })
 Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
 local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
@@ -10385,6 +10488,7 @@ Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收�
 }, Default = "分步瞬移(现状 · 每步抢网络所有权, 最稳)", Callback = function(v)
 C.TPStep = v
 if F._cfgSyncing then return end
+pcall(F.CMX_ProfilePut, "tpstep", v)
 end })
 Tabs.TP:AddSlider("TweenDur", { Title = "补间传送时长(秒 · 只在上面选「补间步进」时生效)", Min = 0.1, Max = 5, Default = 0.8, Rounding = 1, Callback = function(v) C.TweenDur = v end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
@@ -10566,6 +10670,7 @@ Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行(选完自动复位)", 
 "④ 脚本与模块扫描(可疑脚本名 + 已加载模块 + 远程)",
 "⑤ 客户端检测扫描(检测名 + 连接来源)",
 "⑥ 一键全扫描(上面全部跑一遍 + 自动导出)",
+"⑦ 检测器命名扫描(找名字像 检测器/反作弊 的对象与脚本)",
 }, Default = "关闭", Callback = function(v)
 if v == "关闭" then return end
 local which = v
@@ -10583,6 +10688,8 @@ elseif which:find("⑤", 1, true) then
 pcall(F.ScanClientChecks, true) pcall(F.ScanConnections)
 elseif which:find("⑥", 1, true) then
 F.CMX_ScanAll()
+elseif which:find("⑦", 1, true) then
+F.CMX_ScanDetectors()
 end
 end)
 pcall(F.LogFlush, "扫描")
@@ -10596,6 +10703,25 @@ end })
 Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", Callback = function() task.spawn(function() pcall(F.CMX_ScanExport) end) end })
 Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
 T.ScanAutoFix = v
+end })
+Tabs.AC:AddSection("★ 游戏档案(识别当前游戏 · 记住你为本游戏调好的设置)")
+Tabs.AC:AddButton({ Title = "当前是哪个游戏(打印识别结果 + 本游戏已存的档案)", Callback = function()
+task.spawn(function()
+pcall(function()
+F.Out("[游戏档案] 当前游戏: " .. F.CMX_GameLabel())
+local p = F.CMX_ProfileGet()
+if p then
+for k, v in pairs(p) do F.Out("[游戏档案]   " .. tostring(k) .. " = " .. tostring(v)) end
+else
+F.Out("[游戏档案] 本游戏还没档案")
+end
+end)
+end)
+end })
+Tabs.AC:AddToggle("CMX_GameProfile", { Title = "按游戏自动套用档案(档位/飞行通道/加速通道/传送方式)", Description = "你在某个游戏里调好的这几项会被记住; 下次进同一个游戏自动套用。识别靠 game.PlaceId(内置 300 个热门游戏名)", Default = true, Callback = function(v)
+T.CMX_GameProfile = v
+if F._cfgSyncing then return end
+if v then pcall(F.CMX_ProfileApply) else F.Out("[游戏档案] 已关: 只显示游戏名, 不再自动套用") end
 end })
 Tabs.AC:AddSection("★ 绕过(能实际生效的层 · 自己开 · 也可由档位统一带)")
 Tabs.AC:AddToggle("CMX_TierLink", { Title = "档位联动绕过层(推荐开 · 上调「★ 绕过/防护档位」时自动带上对应绕过层)", Description = "开: ②档带 参数清洗+读回伪装+视图过滤; ③档再带 钩子加固+模块拦截+时钟粗化; ④档再带 自产登记+栈伪装+身份+FFlag。关: 档位只管原有防护, 绕过层全靠你手动点。降档时只关「档位带起来的」, 手动开的不动", Default = true, Callback = function(v)
@@ -10813,6 +10939,7 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 end)
 RestoreFeatures()
 pcall(F.CMX_LoadAutoEnable)
+task.delay(5, function() pcall(F.CMX_ProfileApply) end)
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
