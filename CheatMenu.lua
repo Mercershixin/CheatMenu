@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:22 sha abc92438 bytes 441191'):format('2026-10-04 02:22','abc92438',441191))
+print(('[CheatMenu] build 2026-10-04 02:29 sha 247a27a5 bytes 438907'):format('2026-10-04 02:29','247a27a5',438907))
 local F = {}
-F.VERSION = "v14.0.13"
+F.VERSION = "v14.0.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5647,14 +5647,6 @@ pcall(F.SpeedGuardEnable)
 T.Spoof = true
 pcall(F.SpoofEnable)
 end
-if wants.afk then
-T.AntiAFK = true
-pcall(F.AntiAFKEnable)
-end
-if wants.kick then
-T.KickGuard = true
-pcall(F.KickGuardEnable)
-end
 if not wants.deep then
 T.DeepNeuter, T.AntiTPOn = false, false
 pcall(F.DeepNeuterDisable)
@@ -9321,80 +9313,6 @@ local w = tonumber(F._orig and F._orig.walk) or tonumber(F._preSpeed)
 if not w or w <= 0 or w > 40 then w = 16 end
 return w
 end
-F.CMX_NoPurchaseN = 0
-F.CMX_NoPurchaseEnable = function()
-if F._npOn then return true end
-local ms = nil
-pcall(function() ms = game:GetService("MarketplaceService") end)
-if type(ms) ~= "table" and type(ms) ~= "userdata" then
-F.Out("[反购买] 拿不到 MarketplaceService ⇒ 该功能不可用")
-T.CMX_NoPurchase = false
-return false
-end
-F._npOn = true
-F._npOrig = {}
-local names = { "PromptProductPurchase", "PromptGamePassPurchase", "PromptPurchase",
-"PromptBundlePurchase", "PromptPremiumPurchase" }
-local hooked = 0
-for i = 1, #names do
-local nm = names[i]
-local raw = ms[nm]
-if type(raw) == "function" then
-local o
-o = F.CMX_SafeHook(raw, function(self, a, b, c, ...)
-if F.CMX_IsCaller() then return o(self, a, b, c, ...) end
-F.CMX_NoPurchaseN = (F.CMX_NoPurchaseN or 0) + 1
-F.Out("[反购买] 已拦下 " .. nm .. " (第 " .. tostring(F.CMX_NoPurchaseN) .. " 次) —— 没弹窗, 也没扣钱")
-return nil
-end)
-if o then
-F._npOrig[nm] = raw
-hooked = hooked + 1
-end
-end
-end
-F._npConns = {}
-local function kill(d)
-pcall(function()
-local n = tostring(d.Name)
-if n:sub(1, 8) == "Purchase" or n == "BuyRobux" then
-F.Out("[反购买] 清掉官方购买弹窗: " .. n)
-task.defer(function() pcall(function() d:Destroy() end) end)
-end
-end)
-end
-local cg = nil
-pcall(function() cg = game:GetService("CoreGui") end)
-if cg then
-pcall(function() F._npConns[#F._npConns + 1] = cg.DescendantAdded:Connect(kill) end)
-pcall(function()
-for _, d in ipairs(cg:GetDescendants()) do kill(d) end
-end)
-end
-F.Out("[反购买] 已开: 堵了 " .. tostring(hooked) .. " 个购买入口 + 盯住官方弹窗(一出现就清)")
-return true
-end
-F.CMX_NoPurchaseDisable = function()
-if not F._npOn then return end
-F._npOn = false
-local ms = nil
-pcall(function() ms = game:GetService("MarketplaceService") end)
-if ms and F._npOrig and type(hookfunction) == "function" then
-for nm, orig in pairs(F._npOrig) do
-local cur = nil
-pcall(function() cur = ms[nm] end)
-if type(cur) == "function" and type(orig) == "function" and cur ~= orig then
-pcall(hookfunction, cur, orig)
-end
-end
-end
-F._npOrig = nil
-if F._npConns then
-for i = 1, #F._npConns do pcall(function() F._npConns[i]:Disconnect() end) end
-end
-F._npConns = nil
-F.Out("[反购买] 已关: 购买提示恢复正常")
-end
 F.CMX_IsCaller = function()
 if type(checkcaller) ~= "function" then return true end
 local ok, r = pcall(checkcaller)
@@ -9958,6 +9876,7 @@ end
 if lv >= 3 then
 want.CMX_HookHard, want.CMX_RequireBlock = true, true
 want.CMX_CutLog, want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true, true
+want.CMX_ClockMask = true
 end
 if lv >= 4 then
 want.CMX_InstNew, want.CMX_DebugMask = true, true
@@ -11719,16 +11638,15 @@ pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关
 return
 end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
-T.AntiAFK = true
 pcall(F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
 pcall(F.GuiProtectionEnable)
 pcall(F.CharPersistEnable)
-pcall(F.AntiAFKEnable)
 T.CMX_SpoofIndex = true
 pcall(F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
 T.CMX_AntiBanAll = true
+pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
 end
 if lvl >= 3 then
@@ -11743,9 +11661,9 @@ pcall(function() Fluent:Notify({ Title = "防护档位", Content = v, Duration =
 end
 Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻越稳)", Values = {
 "关(什么都不开)",
-"① 轻 · 反甩+护界面(不装钩子 · 最稳)",
-"② 中 · +反封禁全家桶(装元表钩 · 一般够用)",
-"③ 重 · +深度中和+全部绕过层(最激进 · 枪战服慎用)",
+"① 轻 · 反甩+护界面+权限守卫+属性读伪装(只装 __index 只读钩)",
+"② 中 · +namecall 钩(拦上报)+反封禁全家桶(断日志/按名中和+/哈希冻结)",
+"③ 重 · +setmetatable 钩+深度中和+14 层绕过层(最激进 · 枪战服慎用)",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
