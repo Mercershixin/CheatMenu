@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:20 sha fc5c688d bytes 444674'):format('2026-10-03 17:20','fc5c688d',444674))
+print(('[CheatMenu] build 2026-10-03 17:30 sha 271052b8 bytes 444075'):format('2026-10-03 17:30','271052b8',444075))
 local F = {}
-F.VERSION = "v13.10.7"
+F.VERSION = "v13.10.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8487,9 +8487,6 @@ go(T.LockCam, F.LockCamEnable)
 go(T.Freecam and not UIS.TouchEnabled, F.FreecamEnable)
 go(T.BringPlayer, F.BringPlayerEnable)
 go(T.FreezePlayer, F.FreezePlayerEnable)
-go(T.KickProtect or T.KickGuard, F.KickGuardEnable)
-go(T.KickProtect or T.AntiAFK, F.AntiAFKEnable)
-go(T.KickProtect or T.KickRejoin, F.KickRejoinEnable)
 go(T.AutoTrain, F.AutoTrainEnable)
 go(T.AutoBonus, F.AutoBonusEnable)
 go(T.AutoGym, F.AutoGymEnable)
@@ -11512,6 +11509,19 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞�
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
+local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
+T.CarryGuard = v
+if F._cfgSyncing or not changed then return end
+if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
+end })
+Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "⚠ 会拦掉'蛋掉出去'的上报, 被打掉后可能状态不同步 ⇒ 默认关; 只在需要防掉蛋时才开", Default = false, Callback = function(v)
+local changed = (T.NoDrop ~= nil) and (T.NoDrop ~= v)
+T.NoDrop = v
+if F._cfgSyncing or not changed then return end
+pcall(F.MetaHookEnsure)
+F.Out(v and "[防掉蛋] 已开(被夹/被抓后不掉蛋)" or "[防掉蛋] 已关(会正常掉蛋)")
+end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
@@ -11689,31 +11699,6 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AntiAFKAll", { Title = "★ 挂机防踢(一个开关: 防挂机 + 防踢 + 被踢自动重进)", Description = "开: 掐掉挂机检测 + 拦 Kick + 被踢自动重进 一次全上; 关: 全部还原。防挂机具体方式用下面那个下拉选。⚠ 防踢会改写全局元表, 个别反作弊会因此踢你 —— 平时可只开防挂机", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v then
-T.AntiAFK = true T.KickGuard = true T.KickRejoin = true T.KickProtect = true
-pcall(F.AntiAFKEnable)
-pcall(F.KickGuardEnable)
-pcall(F.KickRejoinEnable)
-Fluent:Notify({ Title = "挂机防踢", Content = "已开: 防挂机 + 防踢 + 被踢自动重进", Duration = 6 })
-else
-T.AntiAFK = false T.KickGuard = false T.KickRejoin = false T.KickProtect = false
-pcall(F.AntiAFKDisable)
-pcall(F.KickGuardDisable)
-pcall(F.KickRejoinDisable)
-Fluent:Notify({ Title = "挂机防踢", Content = "已关", Duration = 4 })
-end
-end })
-Tabs.AFK:AddDropdown("AFKMode", { Title = "防挂机方式(改完立刻生效)", Values = {
-"不动人物(现状 · 只掐检测连接 + 写心跳属性)",
-"上面 + 鼠标抖动(不按键、不碰人物)",
-"上面 + 鼠标抖动 + 按键注入(空格 / 虚拟点击)",
-}, Default = "不动人物(现状 · 只掐检测连接 + 写心跳属性)", Callback = function(v)
-C.AFKMode = v
-if F._cfgSyncing then return end
-if T.AntiAFK then F.AntiAFKDisable() F.AntiAFKEnable() end
-end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
