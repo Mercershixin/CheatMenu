@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:52 sha 39fd6d32 bytes 439103'):format('2026-10-03 12:52','39fd6d32',439103))
+print(('[CheatMenu] build 2026-10-03 13:01 sha 9308869a bytes 438740'):format('2026-10-03 13:01','9308869a',438740))
 local F = {}
-F.VERSION = "v12.10.0"
+F.VERSION = "v13.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10877,7 +10877,7 @@ end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下深度(studs)", Min = 1, Max = 50, Default = 8, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
-Tabs.Move:AddSection("★ 补强 · 抄自近30天公开脚本")
+Tabs.Move:AddSection("★ 补强 · 移动强化(低重力 / 自身锚定)")
 Tabs.Move:AddToggle("CMX_Gravity", { Title = "低重力场(改 workspace.Gravity · 关时还原)", Default = false, Callback = function(v)
 T.CMX_Gravity = v
 if F._cfgSyncing then return end
@@ -10970,7 +10970,7 @@ if v then F.LockCamEnable() else F.LockCamDisable() end
 end })
 end
 do
-Tabs.World:AddSection("★ 补强 · 方框 ESP(抄自近30天公开脚本)")
+Tabs.World:AddSection("★ 补强 · 方框 / 骨骼 / 追踪线 / 血量条")
 Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
 T.CMX_BoxESP = v
 if F._cfgSyncing then return end
@@ -11036,7 +11036,6 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.TP:AddSection("★ 补强 · 平滑传送(抄自近30天公开脚本)")
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddDropdown("AFKMode", { Title = "防挂机方式(改完立刻生效)", Values = {
 "不动人物(现状 · 只掐检测连接 + 写心跳属性)",
@@ -11103,7 +11102,7 @@ T.AutoSell = v
 if F._cfgSyncing then return end
 if v then pcall(F.SellLowCPS) elseif not F._sellFinish then F.Out("[售卖] 已停止(当前这一轮会跑完)") end
 end })
-Tabs.AFK:AddSection("★ 补强 · 挂机(抄自近30天公开脚本)")
+Tabs.AFK:AddSection("★ 补强 · 挂机(鼠标抖动 / 按键注入 / 自动点击)")
 Tabs.AFK:AddToggle("CMX_ClickSpam", { Title = "自动点击采集(遍历附近 ClickDetector / 提示并触发)", Default = false, Callback = function(v)
 T.CMX_ClickSpam = v
 if F._cfgSyncing then return end
@@ -11255,7 +11254,6 @@ if v then F.CMX_HashFreezeEnable() else F.CMX_HashFreezeDisable() end
 end })
 Tabs.AC:AddButton({ Title = "列出 ReplicatedStorage 里像上报/封禁的远程(只读)", Callback = function() task.spawn(function() pcall(function() F.CMX_ScanReportRemotes(false) end) end) end })
 Tabs.AC:AddButton({ Title = "★ 检测面自检(29 种已知反作弊手法自测 · 看我们哪些会被抓到)", Callback = function() task.spawn(function() pcall(F.CMX_SelfDetect) end) end })
-Tabs.AC:AddToggle("CMX_SelfDetect", { Title = "一键全扫描时顺便跑检测面自检", Description = "默认关。开了之后点「一键全扫描」会附带一份「我们哪些地方会被反作弊抓到」的报告", Default = false, Callback = function(v) T.CMX_SelfDetect = v end })
 Tabs.AC:AddSection("★ 游戏档案(识别当前游戏 · 记住你为本游戏调好的设置)")
 Tabs.AC:AddButton({ Title = "当前是哪个游戏(打印识别结果 + 本游戏已存的档案)", Callback = function()
 task.spawn(function()
@@ -11442,7 +11440,7 @@ end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能; 要强制重下用上面的诊断下拉)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
-Tabs.Setting:AddSection("★ 补强 · 诊断(抄自近30天公开脚本)")
+Tabs.Setting:AddSection("★ 补强 · 诊断与工具")
 Tabs.Setting:AddButton({ Title = "网络所有权只读诊断(本机/相机/其他玩家的归属 · 不改任何东西)", Callback = function() task.spawn(function() pcall(F.CMX_NetOwnerReport) end) end })
 Tabs.Setting:AddButton({ Title = "包围盒只读诊断(角色精确包围盒 + 半径内部件数)", Callback = function() task.spawn(function() pcall(F.CMX_BBReport) end) end })
 Tabs.Setting:AddButton({ Title = "★ 补强功能一键全关(只关本轮新增的那些)", Callback = function() task.spawn(function() pcall(F.CMX_DisableAll) end) end })
