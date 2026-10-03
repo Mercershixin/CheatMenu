@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:07 sha bf49d0aa bytes 470822'):format('2026-10-03 16:07','bf49d0aa',470822))
+print(('[CheatMenu] build 2026-10-03 16:14 sha 328d88c3 bytes 471349'):format('2026-10-03 16:14','328d88c3',471349))
 local F = {}
-F.VERSION = "v13.9.2"
+F.VERSION = "v13.9.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11635,11 +11635,23 @@ for _, pl in ipairs(Players:GetPlayers()) do pcall(F.BodyHLAdd, pl) end
 pcall(F.BodyHLRefresh)
 F.Out("[身体高亮] 隔墙区别方式 = " .. tostring(v))
 end })
-Tabs.Visual:AddColorPicker("CMX_HLWallColor", { Title = "隔墙警示色(②③ 模式用)", Default = Color3.fromRGB(255, 190, 0), Callback = function(v)
+do
+local vt = Tabs.Visual
+local cpfn = vt.AddColorpicker or vt.AddColorPicker
+if type(cpfn) == "function" then
+local okCP, errCP = pcall(cpfn, vt, "CMX_HLWallColor", {
+Title = "隔墙警示色(②③ 模式用)", Default = Color3.fromRGB(255, 190, 0),
+Callback = function(v)
 C.CMX_HLWallColor = v
 if F._cfgSyncing then return end
 pcall(F.BodyHLRefresh)
-end })
+end,
+})
+if not okCP then F.Out("[UI] 隔墙警示色控件创建失败(已跳过, 不影响其它): " .. tostring(errCP)) end
+else
+F.Out("[UI] 这个 Fluent 版本没有颜色选择器 ⇒ 跳过「隔墙警示色」, 隔墙色用默认橙")
+end
+end
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
 local changed = (T.TeamColorHL ~= nil) and (T.TeamColorHL ~= v)
 T.TeamColorHL = v
@@ -12470,9 +12482,12 @@ if k > 0 then F.Out("[清理] 建界面前已清掉 " .. tostring(k) .. " 个残
 end
 end)
 F._cfgSyncing = true
-local okBuild = pcall(buildMenu)
+local okBuild, buildErr = pcall(buildMenu)
 F._cfgSyncing = false
-if not okBuild then F.Out("[CheatMenu] 菜单构建期出错(已兜住)") end
+if not okBuild then
+F.Out("[UI] ⚠ 菜单构建中断 ⇒ 断点之后的控件全都没建出来! 原因: " .. tostring(buildErr))
+F.Out("[UI] 把上面这一行发出来, 就能立刻定位是哪个控件把菜单带塌的")
+end
 task.defer(function() F._cfgSyncing = false end)
 task.spawn(function()
 local wasOpen = F.MenuOpen()
