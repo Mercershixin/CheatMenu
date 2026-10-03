@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:06 sha a9ac2485 bytes 433524'):format('2026-10-04 02:06','a9ac2485',433524))
+print(('[CheatMenu] build 2026-10-04 02:14 sha 59ee957e bytes 436403'):format('2026-10-04 02:14','59ee957e',436403))
 local F = {}
-F.VERSION = "v14.0.11"
+F.VERSION = "v14.0.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -416,9 +416,14 @@ return a ~= false and a ~= nil
 end
 F.MetaLayers = {}
 F.MetaTargets = {}
+local function MetaSlotOf(s)
+local k = tostring(s or ""):match("([^%.]+)$")
+return k or tostring(s or "")
+end
 function F.MetaInstall(slot, target, id, wrapperFactory)
 if not (hookmetamethod and newcclosure and getrawmetatable) then return nil end
 if type(slot) ~= "string" or type(id) ~= "string" or target == nil then return nil end
+slot = MetaSlotOf(slot)
 if F.MetaTargets[slot] == nil then
 F.MetaTargets[slot] = target
 elseif F.MetaTargets[slot] ~= target then
@@ -456,6 +461,7 @@ bucket[id] = rec
 return wrapped
 end
 function F.MetaUninstall(slot, id)
+slot = MetaSlotOf(slot)
 local bucket = F.MetaLayers[slot]
 if not bucket then return false end
 local rec = bucket[id]
@@ -477,6 +483,7 @@ end
 return true
 end
 function F.MetaActive(slot, id)
+slot = MetaSlotOf(slot)
 local b = F.MetaLayers[slot]
 return (b and b[id] and b[id].alive) and true or false
 end
@@ -3098,13 +3105,14 @@ F._aimFacing = nil
 pcall(function() local _, h0 = GC() if h0 then h0.AutoRotate = true end end)
 end
 F._combatNow = nil
-F.CombatHudSet("锁定: 菜单/打字中已暂停(关掉菜单自动恢复)")
+F._silentPart = nil
 return
 end
 local _, hum, root = GC()
 if not (hum and root) then return end
 local ch, part = F.CombatPick()
 if not (ch and part) then
+F._silentPart = nil
 if F._aimFacing then
 F._aimFacing = nil
 pcall(function() hum.AutoRotate = true end)
@@ -3114,6 +3122,23 @@ return
 end
 local pl = nil
 pcall(function() pl = Players:GetPlayerFromCharacter(ch) end)
+if T.SilentAim then
+F._silentPart = part
+if F._silentCh ~= ch then
+F._silentCh = ch
+local okd, humT = pcall(function() return ch:FindFirstChildOfClass("Humanoid") end)
+if okd and humT then
+pcall(function()
+if F._silentDied then F._silentDied:Disconnect() F._silentDied = nil end
+F._silentDied = humT.Died:Connect(function()
+F._silentPart, F._silentCh, F._combatNow = nil, nil, nil
+end)
+end)
+end
+end
+else
+F._silentPart = nil
+end
 local dist = (part.Position - root.Position).Magnitude
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
 .. (T.AutoFire and " · 自动开火中" or ""))
@@ -3148,6 +3173,7 @@ local _, hum = GC()
 if hum and F._aimFacing then hum.AutoRotate = true end
 end)
 F._aimFacing, F._combatNow = nil, nil
+F._silentPart, F._silentCh = nil, nil
 F.CombatHudHide()
 F._aimWatch = false
 F._aimWatchId = (F._aimWatchId or 0) + 1
@@ -3167,6 +3193,51 @@ local op = Fluent and Fluent.Options and Fluent.Options.AimOn
 if op and op.Set then op:Set(true) end
 end)
 if not T.AimOn then F.AimSet(true, why or "附属项联动") end
+end
+F._silentOn, F._silentPart = false, nil
+F.SilentAimSet = function(on)
+T.SilentAim = on and true or false
+F._silentPart = nil
+if not T.SilentAim then
+F._silentOn = false
+pcall(function() F.MetaUninstall("game.__index", "CMSilent") end)
+F.Out("[静默瞄准] 已关(改写层已卸下)")
+return
+end
+local got = F.MetaInstall("game.__index", game, "CMSilent", function(box)
+return function(t, k)
+if not checkcaller() and F._silentOn and (k == "Hit" or k == "Target") then
+local p = F._silentPart
+if p and p.Parent then
+local okM, isMouse = pcall(function() return t:IsA("Mouse") end)
+if okM and isMouse then
+if k == "Target" then return p end
+local okP, pos = pcall(function() return p.Position end)
+if okP and pos then return CFrame.new(pos) end
+end
+end
+end
+return box.orig(t, k)
+end
+end)
+if got then
+F._silentOn = true
+F.Out("[静默瞄准] 已开: 改写 mouse.Hit / mouse.Target 指向锁定目标(不动你的视角)")
+F.Out("[静默瞄准] 边界: 只在游戏用「鼠标命中」判定时有效; 若游戏用视线射线/服务端校验则可能无效 —— 这是原理限制, 不是开关没开")
+F.EnsureAimOn("静默瞄准")
+else
+F.Out("[静默瞄准] ⚠ 本执行器装不上 __index 改写层 ⇒ 该功能不可用(其它功能不受影响)")
+T.SilentAim = false
+end
+end
+F.SilentAimDisable = function()
+T.SilentAim = false
+F._silentOn = false
+F._silentPart = nil
+if F._silentDied then pcall(function() F._silentDied:Disconnect() end) F._silentDied = nil end
+F._silentCh = nil
+pcall(function() F.MetaUninstall("game.__index", "CMSilent") end)
+F.Out("[静默瞄准] 已关闭")
 end
 F.CombatReport = function()
 local ch = F._combatNow
@@ -5454,6 +5525,14 @@ pcall(F.SpeedGuardEnable)
 T.Spoof = true
 pcall(F.SpoofEnable)
 end
+if wants.afk then
+T.AntiAFK = true
+pcall(F.AntiAFKEnable)
+end
+if wants.kick then
+T.KickGuard = true
+pcall(F.KickGuardEnable)
+end
 if not wants.deep then
 T.DeepNeuter, T.AntiTPOn = false, false
 pcall(F.DeepNeuterDisable)
@@ -6566,7 +6645,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -8512,7 +8591,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -11166,6 +11245,10 @@ C.CombatMode = tostring(v)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定模式 = " .. tostring(v))
 end })
+Tabs.Combat:AddToggle("SilentAim", { Title = "静默瞄准(不动你视角也能命中)", Description = "改写 mouse.Hit / mouse.Target 指向锁定目标。只在游戏用「鼠标命中」判定时有效; 游戏若用视线射线或服务端校验则可能无效(原理限制)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.SilentAimSet(v)
+end })
 Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格)", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
 Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小(像素 · 只有正面圈内锁用)", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
 Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(默认开)", Description = "从相机到目标打射线, 中间被墙/建筑挡住就不锁(所以不会隔着墙打)", Default = true, Callback = function(v)
@@ -11495,6 +11578,7 @@ pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.Bypas
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
+pcall(F.GuiProtectionDisable)
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 pcall(F.MetaHookUninstall)
@@ -11504,8 +11588,12 @@ pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关
 return
 end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
+T.AntiAFK = true
 pcall(F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
+pcall(F.GuiProtectionEnable)
+pcall(F.CharPersistEnable)
+pcall(F.AntiAFKEnable)
 T.CMX_SpoofIndex = true
 pcall(F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
