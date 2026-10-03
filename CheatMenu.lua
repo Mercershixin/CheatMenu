@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:44 sha 4600a4fb bytes 443221'):format('2026-10-03 17:44','4600a4fb',443221))
+print(('[CheatMenu] build 2026-10-03 17:49 sha 6cf453ba bytes 443174'):format('2026-10-03 17:49','6cf453ba',443174))
 local F = {}
-F.VERSION = "v13.10.11"
+F.VERSION = "v13.10.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8491,7 +8491,6 @@ go(T.AutoTrain, F.AutoTrainEnable)
 go(T.AutoBonus, F.AutoBonusEnable)
 go(T.AutoGym, F.AutoGymEnable)
 go(T.AutoSell, F.SellLowCPS)
-go(T.InstantInteract, F.InstantInteractEnable)
 go(T.Invisible, F.InvisibleEnable)
 go(T.FullBright, F.FullBrightEnable)
 go(T.NightVision, F.NightVisionEnable)
