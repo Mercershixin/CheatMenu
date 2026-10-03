@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 15:05 sha 9adf80ac bytes 462875'):format('2026-10-03 15:05','9adf80ac',462875))
+print(('[CheatMenu] build 2026-10-03 15:15 sha 407828a9 bytes 464845'):format('2026-10-03 15:15','407828a9',464845))
 local F = {}
-F.VERSION = "v13.6.0"
+F.VERSION = "v13.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7859,6 +7859,7 @@ end
 Trans.QUICK[k] = nil
 Trans.Cache = {}
 if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+task.spawn(function() pcall(Trans.RetranslateAll) end)
 F.Out("[翻译·词条] 已加: " .. term .. " -> " .. tostring(Trans.GL.KEEP[k] or Trans.GL.PRESET[k]))
 return true
 end
@@ -7868,6 +7869,7 @@ local hadP, hadK = Trans.GL.PRESET[k] ~= nil, Trans.GL.KEEP[k] ~= nil
 Trans.GL.PRESET[k], Trans.GL.KEEP[k] = nil, nil
 Trans.Cache = {}
 if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+task.spawn(function() pcall(Trans.RetranslateAll) end)
 F.Out("[翻译·词条] 已删: " .. tostring(term) .. (hadP or hadK and "" or " (本来就没有)"))
 return hadP or hadK
 end
@@ -8071,6 +8073,50 @@ if ok and r then Trans.Cache["warmup"] = r end
 F.Out("[翻译] 服务预热完成(system prompt 的 KV 缓存已就绪)")
 end)
 end
+Trans.Reg = setmetatable({}, { __mode = "k" })
+Trans.RegCount = function()
+local n = 0
+for o in pairs(Trans.Reg) do if typeof(o) == "Instance" and o.Parent then n = n + 1 end end
+return n
+end
+Trans.GuiElNoReg = function(obj)
+if not obj or obj.Visible == false then return end
+if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
+local txt = obj.Text
+if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
+txt = Trans.RT.Strip(txt)
+end
+if txt and Trans.Should(txt) then
+Trans.Async(txt, function(tr)
+if obj.Parent and obj.Visible ~= false then
+local r = Trans.Reg[obj]
+if r then r.last = tr end
+obj.Text = tr
+end
+end)
+end
+end
+Trans.RetranslateAll = function()
+local items = {}
+for obj, r in pairs(Trans.Reg) do
+if typeof(obj) == "Instance" and obj.Parent and type(r.raw) == "string" then
+items[#items + 1] = { o = obj, raw = r.raw }
+else
+Trans.Reg[obj] = nil
+end
+end
+if #items == 0 then
+F.Out("[翻译] 还没有登记过任何界面控件(先让它扫一遍界面)")
+return 0
+end
+for i = 1, #items do
+local it = items[i]
+pcall(function() it.o.Text = it.raw end)
+pcall(Trans.GuiElNoReg, it.o)
+end
+F.Out("[翻译] 已把 " .. tostring(#items) .. " 个控件还原成原文并重新翻译(切语言/改词条后用这个)")
+return #items
+end
 function Trans.GuiEl(obj)
 if not obj then return end
 if obj.Visible == false then return end
@@ -8080,8 +8126,18 @@ if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
 txt = Trans.RT.Strip(txt)
 end
 if txt and Trans.Should(txt) then
+local r = Trans.Reg[obj]
+if r == nil then
+Trans.Reg[obj] = { raw = txt, last = nil }
+elseif r.last ~= nil and txt ~= r.last then
+r.raw = txt
+end
 Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false then obj.Text = tr end
+if obj.Parent and obj.Visible ~= false then
+local rec = Trans.Reg[obj]
+if rec then rec.last = tr end
+obj.Text = tr
+end
 end)
 end
 end
@@ -11705,6 +11761,9 @@ Default = "zh", Callback = function(v)
 C.TransLang = v
 if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
 Trans.Cache = {}
+if F._cfgSyncing then return end
+F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面全部重译一遍")
+task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddDropdown("TransRTMode", { Title = "富文本处理(<b>/<font>/<color> 这类标签怎么办)", Values = {
@@ -11716,6 +11775,9 @@ C.TransRTMode = v
 if F._cfgSyncing then return end
 Trans.Cache = {}
 F.Out("[翻译·富文本] 模式 = " .. tostring(v) .. " (缓存已清)")
+end })
+Tabs.Trans:AddButton({ Title = "把界面全部重译一遍(切完语言 / 改完词条后点这个)", Callback = function()
+task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddButton({ Title = "体检: 统计带标签的文本控件 / 标签是否不配对", Callback = function() task.spawn(function() pcall(Trans.RT.Audit) end) end })
 Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
