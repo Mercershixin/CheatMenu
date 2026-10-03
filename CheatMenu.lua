@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 02:40 sha 2094d4c6 bytes 396115'):format('2026-10-03 02:40','2094d4c6',396115))
+print(('[CheatMenu] build 2026-10-03 11:34 sha 41b2ab6f bytes 399160'):format('2026-10-03 11:34','41b2ab6f',399160))
 local F = {}
-F.VERSION = "v12.2.0"
+F.VERSION = "v12.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5524,6 +5524,7 @@ T.DeepNeuter, T.AntiTPOn = true, true
 pcall(F.SpeedAntiTPEnable)
 pcall(F.DeepNeuterEnable)
 end
+pcall(F.CMX_TierSync, F.CMX_TierLevel(v))
 F.Out("[绕过防护] 档位 = " .. v)
 end
 function F.SpeedGuardEnable()
@@ -9233,6 +9234,68 @@ if F._hitGui then pcall(function() F._hitGui:Destroy() end) F._hitGui = nil end
 F._hitLines, F._hitPrev = nil, nil
 F.Out("[命中提示] 已关")
 end
+F.CMX_TierLevel = function(v)
+local t = tostring(v or "")
+if t:find("④", 1, true) then return 4 end
+if t:find("③", 1, true) then return 3 end
+if t:find("②", 1, true) then return 2 end
+return 1
+end
+F.CMX_TierMap = {
+CMX_AutoScrub = { F.CMX_AutoScrubEnable, F.CMX_AutoScrubDisable },
+CMX_SpoofIndex = { F.CMX_SpoofIndexEnable, F.CMX_SpoofIndexDisable },
+CMX_ViewFilter = { F.CMX_ViewFilterEnable, F.CMX_ViewFilterDisable },
+CMX_HookHard = { F.CMX_HookHardApply, F.CMX_HookHardRestore },
+CMX_RequireBlock = { F.CMX_RequireBlockEnable, F.CMX_RequireBlockDisable },
+CMX_ClockMask = { F.CMX_ClockMaskEnable, F.CMX_ClockMaskDisable },
+CMX_InstNew = { F.CMX_InstNewEnable, F.CMX_InstNewDisable },
+CMX_DebugMask = { F.CMX_DebugMaskEnable, F.CMX_DebugMaskDisable },
+CMX_IdentityMask = { F.CMX_IdentityMaskEnable, F.CMX_IdentityMaskDisable },
+CMX_FFlagPack = { F.CMX_FFlagApplyPack, F.CMX_FFlagRestore },
+}
+F.CMX_TierOwn = F.CMX_TierOwn or {}
+F.CMX_TierSync = function(level)
+local map = F.CMX_TierMap
+if type(map) ~= "table" then return end
+if T.CMX_TierLink == false then
+F.Out("[档位·绕过层] 你关掉了「档位联动绕过层」⇒ 档位只管原有的防护, 绕过层保持你的手动设置")
+return
+end
+local lv = tonumber(level) or 1
+local want = {}
+if lv >= 2 then
+want.CMX_AutoScrub, want.CMX_SpoofIndex, want.CMX_ViewFilter = true, true, true
+end
+if lv >= 3 then
+want.CMX_HookHard, want.CMX_RequireBlock, want.CMX_ClockMask = true, true, true
+end
+if lv >= 4 then
+want.CMX_InstNew, want.CMX_DebugMask = true, true
+want.CMX_IdentityMask, want.CMX_FFlagPack = true, true
+end
+local on, off = 0, 0
+for key, pair in pairs(map) do
+if want[key] then
+if not T[key] then
+T[key] = true
+F.CMX_TierOwn[key] = true
+pcall(pair[1])
+on = on + 1
+end
+else
+if F.CMX_TierOwn[key] and T[key] then
+T[key] = false
+F.CMX_TierOwn[key] = nil
+pcall(pair[2])
+off = off + 1
+end
+end
+end
+if on > 0 or off > 0 then
+F.Out("[档位·绕过层] 档位 " .. tostring(lv) .. " ⇒ 绕过层 开 " .. tostring(on)
+.. " 层 / 关 " .. tostring(off) .. " 层(只动档位带起来的那些, 你手动开的不受影响)")
+end
+end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
 if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
@@ -10129,9 +10192,9 @@ end })
 Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
 "关(什么都不开)",
 "① 默认: 防挂机(不动人物 · 不装钩子)",
-"② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)",
-"③ + 防踢(拦 Kick · 抢重进 · 会装元表钩子)",
-"④ 全部: + 防拉回档 + 深度中和(最激进 · 慎用)",
+"② + 防护/反拉回/伪装 ｜ 绕过层: 参数清洗+读回伪装+视图过滤",
+"③ + 防踢(拦 Kick · 抢重进) ｜ 绕过层: 再+钩子加固+模块拦截+时钟粗化",
+"④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)",
 }, Default = "① 默认: 防挂机(不动人物 · 不装钩子)", Callback = function(v)
 local changed = (T.BypassTier ~= nil) and (T.BypassTier ~= v)
 T.BypassTier = v
@@ -10534,7 +10597,17 @@ Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", C
 Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
 T.ScanAutoFix = v
 end })
-Tabs.AC:AddSection("★ 绕过(能实际生效的层 · 自己开)")
+Tabs.AC:AddSection("★ 绕过(能实际生效的层 · 自己开 · 也可由档位统一带)")
+Tabs.AC:AddToggle("CMX_TierLink", { Title = "档位联动绕过层(推荐开 · 上调「★ 绕过/防护档位」时自动带上对应绕过层)", Description = "开: ②档带 参数清洗+读回伪装+视图过滤; ③档再带 钩子加固+模块拦截+时钟粗化; ④档再带 自产登记+栈伪装+身份+FFlag。关: 档位只管原有防护, 绕过层全靠你手动点。降档时只关「档位带起来的」, 手动开的不动", Default = true, Callback = function(v)
+T.CMX_TierLink = v
+if F._cfgSyncing then return end
+if v then
+F.Out("[档位·绕过层] 联动已开 ⇒ 立刻按当前档位同步一次")
+pcall(F.CMX_TierSync, F.CMX_TierLevel(T.BypassTier))
+else
+F.Out("[档位·绕过层] 联动已关 ⇒ 档位不再管绕过层(已开的层保持现状)")
+end
+end })
 Tabs.AC:AddToggle("CMX_AutoScrub", { Title = "① 参数清洗(全自动 · 免填形状)", Description = "自动试常见形状 → 命中就挂钩 → 每次调用把反作弊回调的参数表元表抹成空表 → 带自愈", Default = false, Callback = function(v)
 T.CMX_AutoScrub = v
 if F._cfgSyncing then return end
