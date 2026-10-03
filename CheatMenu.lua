@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:55 sha 21fe2b84 bytes 441690'):format('2026-10-03 18:55','21fe2b84',441690))
+print(('[CheatMenu] build 2026-10-03 19:04 sha 67832284 bytes 443875'):format('2026-10-03 19:04','67832284',443875))
 local F = {}
-F.VERSION = "v13.10.23"
+F.VERSION = "v13.10.24"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8513,6 +8513,7 @@ go(T.Mute, MuteEnable)
 go(T.TPMouse, function() F._tpMouseOn = true end)
 go(T.CMX_Gravity, F.CMX_GravityEnable)
 go(T.CMX_Anchor, F.CMX_AnchorEnable)
+go(T.PetItemESP, F.PetESPEnable)
 go(T.CMX_BoxESP, F.CMX_BoxESPEnable)
 go(T.CMX_AdornESP, F.CMX_AdornESPEnable)
 go(T.CMX_ClickSpam, F.CMX_ClickSpamEnable)
@@ -8964,6 +8965,64 @@ pcall(function() it[k]:Remove() end)
 end
 if it.bones then for i = 1, #it.bones do pcall(function() it.bones[i]:Remove() end) end end
 F.CMX_BoxESPItems[pl] = nil
+end
+F.PetESPKeys = { "egg", "pet", "brainrot", "animal", "item", "coin", "gem", "crate", "chest", "brain" }
+F.PetESPScan = function()
+local seen = {}
+for _, d in ipairs(workspace:GetDescendants()) do
+if typeof(d) == "Instance" and (d:IsA("Model") or d:IsA("BasePart")) then
+local nm = tostring(d.Name):lower()
+local hit = false
+for i = 1, #F.PetESPKeys do
+if nm:find(F.PetESPKeys[i], 1, true) then hit = true break end
+end
+if hit then
+seen[d] = true
+if not F._petHLs[d] then
+local hl = Instance.new("Highlight")
+hl.Name = "CM_PetHL"
+hl.Adornee = d
+hl.FillColor = Color3.fromRGB(255, 200, 0)
+hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+hl.FillTransparency = 0.55
+hl.OutlineTransparency = 0
+pcall(function() hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop end)
+pcall(function() hl.Parent = d end)
+F._petHLs[d] = hl
+end
+end
+end
+end
+for obj, hl in pairs(F._petHLs) do
+if not seen[obj] or not obj.Parent then
+pcall(function() hl:Destroy() end)
+F._petHLs[obj] = nil
+end
+end
+end
+F.PetESPEnable = function()
+if F._petHLs then return end
+F._petHLs = {}
+T.PetItemESP = true
+F._petScanAt = 0
+pcall(F.PetESPScan)
+F._petConn = RS.Heartbeat:Connect(function()
+if not T.PetItemESP then F.PetESPDisable() return end
+local now = os.clock()
+if now - (F._petScanAt or 0) < 0.5 then return end
+F._petScanAt = now
+pcall(F.PetESPScan)
+end)
+F.Out("[宠物/物品ESP] 已开: 金色高亮场景里名字带 egg/pet/brainrot/animal/item 等的模型")
+end
+F.PetESPDisable = function()
+T.PetItemESP = false
+if F._petConn then pcall(function() F._petConn:Disconnect() end) F._petConn = nil end
+if F._petHLs then
+for _, hl in pairs(F._petHLs) do pcall(function() hl:Destroy() end) end
+F._petHLs = nil
+end
+F.Out("[宠物/物品ESP] 已关")
 end
 F.CMX_BoxESPEnable = function()
 if F.CMX_BoxESPOn then return end
@@ -11699,6 +11758,10 @@ end })
 end
 do
 Tabs.World:AddSection("★ 补强 · 方框 / 骨骼 / 追踪线 / 血量条")
+Tabs.World:AddToggle("PetItemESP", { Title = "★ 宠物 / 物品 ESP(高亮地图上的蛋 / 宠物 / 物品)", Description = "开: 扫场景里名字带 egg/pet/brainrot/animal/item/coin/gem/crate/chest 的模型, 给它们套金色高亮(隔墙可见) ⇒ 一眼看到哪有好东西", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+if v then pcall(F.PetESPEnable) else pcall(F.PetESPDisable) end
+end })
 Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
 T.CMX_BoxESP = v
 if F._cfgSyncing then return end
