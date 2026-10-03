@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 20:11 sha 14f52858 bytes 446005'):format('2026-10-03 20:11','14f52858',446005))
+print(('[CheatMenu] build 2026-10-03 20:16 sha 9ca21f9e bytes 445995'):format('2026-10-03 20:16','9ca21f9e',445995))
 local F = {}
-F.VERSION = "v13.10.29"
+F.VERSION = "v13.10.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11771,9 +11771,9 @@ if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 end })
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
-local changed = (T.TeamColorHL ~= nil) and (T.TeamColorHL ~= v)
 T.TeamColorHL = v
-F.BodyHLRefresh()
+if F._cfgSyncing then return end
+if T.BodyHL then F.BodyHLRefresh() end
 end })
 Tabs.World:AddSection("画面增强")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮+夜视+去雾)", Default = false, Callback = function(v)
