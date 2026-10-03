@@ -3224,3 +3224,12 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ★ 领奖 = 点同一个 Bonus + `rev_B_Collect` 刷 1..12 槽 + 对自己 `workspace.Plots`(Owner==自己) 的 `Buttons` 子物体 `firetouchinterest(hrp,slot,0/1)`。⛔ 旧的 `TaviMishkal` 是**不存在的假 remote**（公开仓库 0 命中）。
 - 点击三路并用：`getconnections(btn.MouseButton1Click/InputBegan/Activated):Fire()` ∪ `firesignal` ∪ `VirtualInputManager:SendMouseButtonEvent(按钮中心)`。
 - 参考明文仓库：`matpatz/luau` · `stokompetgacor23-dotcom/pinathub-kick-a-lucky-block` · `NickolasFrutuoso/Roblox-Script` · `fartez127-design/FARTEZHUB` · `evanbackup1256-ship-it/kick`。
+
+
+## 全量 bug 审计（2026-10-04 · 14.0.9）
+
+- 手段：`luau-analyze` 全量 + 三个自建只读审计（`.workbuddy/build/_audit_bugs.py` / `_audit_wiring.py` / `_audit_cfg.py`），可随时重跑复核。
+- **真问题 5 处（已修）**：① `local bad, warn = 0, 0` 遮蔽全局 `warn`（改名 `warnN`）② `OnRemote` 变孤儿函数（删）③ `local okName` 未使用 ④ KillAura 残留 `F.lastAttack` + 重复的 `F.KillAuraConn = nil` ⑤ 隐身循环自停只 `return`、不调 `InvisibleDisable`（改自灭火）。
+- ★★ **尺子自身的坑（下次先看这条）**：mask 函数若只「跳过」字符串而不写空格，会把全文件的中文都算成「代码区中文」（本次一次报 15+ 假警）；`C\.X` 统计赋值时要排除表构造续行；连接上下文别用 ±8 行（会跨到相邻函数）。
+- 判定为**假报**（已逐条 grep 复核，别照着改）：bug 审计 A6/B4/C3/G1/H6 + 接线审计 K3/L2/M19/P16；`gcinfo` 覆盖是伪装功能有意为之；`ViewBoost` / `C.AntiRagdollMode` 是「标签镜像」不是死开关；`F.WpSlotHook` 有 `F._wpHooked[i]==inst` 幂等守卫。
+- 结论：**24 个「只读不写」的 C 键全部有 `or 默认值` 兜底**（历史删控件时做对了）；词法层（中文/不可见字符/换行符/链式比较/非法十六进制/重复定义/`return` 后不可达）**全 0**；`while true` 无让出 0；未 pcall 的远程 0；隐性开关耦合 0。
