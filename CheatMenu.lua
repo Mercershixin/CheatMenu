@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 21:57 sha d9dc3bea bytes 450646'):format('2026-10-03 21:57','d9dc3bea',450646))
+print(('[CheatMenu] build 2026-10-03 22:17 sha 0627e22a bytes 432172'):format('2026-10-03 22:17','0627e22a',432172))
 local F = {}
-F.VERSION = "v13.10.33"
+F.VERSION = "v13.10.34"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2793,9 +2793,7 @@ end)
 return true
 end
 C.PriorityTargets = {}
-C.Blacklist = {}
 function F.AddPriorityTarget(name) C.PriorityTargets[name] = true end
-function F.AddBlacklist(name) C.Blacklist[name] = true end
 function F.PlayerNames()
 local n = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -2805,7 +2803,7 @@ table.sort(n)
 if #n == 0 then n[1] = "(无人)" end
 return n
 end
-F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "BlacklistTarget", "FlingTarget" }
+F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "FlingTarget" }
 function F.RefreshPlayerDropdowns()
 local names = F.PlayerNames()
 pcall(function()
@@ -2882,7 +2880,6 @@ local hum = ch:FindFirstChildOfClass("Humanoid")
 local hrp = ch:FindFirstChild("HumanoidRootPart")
 if hrp and hum and hum.Health > 0 then
 local skip = false
-if pl and inTbl(C.Blacklist, pl.Name) then skip = true end
 if not skip and T.AimTeamCheck and LP.Team ~= nil and pl then
 pcall(function()
 if pl.Team ~= nil and pl.Team == LP.Team then skip = true end
@@ -3071,15 +3068,7 @@ why = "没有 Humanoid"
 elseif hum.Health <= 0 then
 why = "已死(血 " .. tostring(math.floor(hum.Health)) .. ")"
 else
-local bl = false
-if type(C.Blacklist) == "table" then
-for k, v in pairs(C.Blacklist) do
-if v == pl.Name or k == pl.Name then bl = true end
-end
-end
-if bl then
-why = "在你的黑名单里"
-elseif T.AimTeamCheck and LP.Team ~= nil then
+if T.AimTeamCheck and LP.Team ~= nil then
 local same = false
 pcall(function()
 if pl.Team ~= nil and pl.Team == LP.Team then same = true end
@@ -5529,13 +5518,6 @@ or string.find(v, "④", 1, true) ~= nil,
 kick = string.find(v, "③", 1, true) ~= nil or string.find(v, "④", 1, true) ~= nil,
 deep = string.find(v, "④", 1, true) ~= nil,
 }
-if not wants.afk then
-T.AntiAFK = false
-pcall(F.AntiAFKDisable)
-else
-T.AntiAFK = true
-pcall(F.AntiAFKEnable)
-end
 if not wants.guard then
 T.GuardOn, T.SpeedGuard, T.Spoof = false, false, false
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
@@ -5548,15 +5530,6 @@ T.SpeedGuard = true
 pcall(F.SpeedGuardEnable)
 T.Spoof = true
 pcall(F.SpoofEnable)
-end
-if not wants.kick then
-T.KickProtect, T.KickGuard, T.KickRejoin = false, false, false
-pcall(F.KickGuardDisable)
-pcall(F.KickRejoinDisable)
-else
-T.KickProtect, T.KickGuard, T.KickRejoin = true, true, true
-pcall(F.KickGuardEnable)
-pcall(F.KickRejoinEnable)
 end
 if not wants.deep then
 T.DeepNeuter, T.AntiTPOn = false, false
@@ -6597,30 +6570,6 @@ cam.CameraSubject = F._freecamSaved.Subject
 F._freecamSaved = nil
 end
 end
-F._freezeConn = nil
-function F.FreezePlayerEnable()
-if F._freezeConn then return end
-F._freezeConn = RS.Heartbeat:Connect(function()
-if not T.FreezePlayer then F.FreezePlayerDisable() return end
-local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
-local pl = name and Players:FindFirstChild(name)
-local ch = pl and pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-if hrp then
-if F._freezeWho ~= name or F._freezeChar ~= ch then
-F._freezeWho = name
-F._freezeChar = ch
-F._freezeCF = nil
-end
-F._freezeCF = F._freezeCF or hrp.CFrame
-pcall(function() hrp.CFrame = F._freezeCF hrp.AssemblyLinearVelocity = Vector3.zero end)
-end
-end)
-end
-function F.FreezePlayerDisable()
-if F._freezeConn then F._freezeConn:Disconnect() F._freezeConn = nil end
-F._freezeCF, F._freezeChar = nil, nil
-end
 F._hiddenPlayers = nil
 function F.HidePlayerEnable()
 F._hiddenPlayers = F._hiddenPlayers or {}
@@ -6664,22 +6613,6 @@ for pl, c in pairs(F._hidePlConns) do pcall(function() c:Disconnect() end) end
 F._hidePlConns = {}
 end
 end
-F._bringConn = nil
-function F.BringPlayerEnable()
-if F._bringConn then return end
-F._bringConn = RS.Heartbeat:Connect(function()
-if not T.BringPlayer then F.BringPlayerDisable() return end
-local _, _, root = GC()
-if not root then return end
-local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
-local pl = name and Players:FindFirstChild(name)
-local hrp = pl and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
-if hrp then pcall(function() hrp.CFrame = root.CFrame * CFrame.new(0, 0, -3) end) end
-end)
-end
-function F.BringPlayerDisable()
-if F._bringConn then F._bringConn:Disconnect() F._bringConn = nil end
-end
 F._lockCamConn = nil
 function F.LockCamEnable()
 if F._lockCamConn then return end
@@ -6704,7 +6637,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.FreezePlayerDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable, F.BringPlayerDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -8416,9 +8349,9 @@ local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FreecamDisable, F.FreezePlayerDisable,
+F.FreecamDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
-F.BringPlayerDisable, F.LockCamDisable,
+F.LockCamDisable,
 F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -8538,8 +8471,6 @@ go(T.KillAura, F.KillAuraEnable)
 go(T.BodyHL, F.BodyHLEnable)
 go(T.Hud, F.HudEnable)
 go(T.Crosshair, F.CrosshairEnable)
-go(T.BringPlayer, F.BringPlayerEnable)
-go(T.FreezePlayer, F.FreezePlayerEnable)
 go(T.AutoTrain, F.AutoTrainEnable)
 go(T.AutoBonus, F.AutoBonusEnable)
 go(T.AutoGym, F.AutoGymEnable)
@@ -8553,9 +8484,6 @@ go(T.Antilag, AntilagEnable)
 go(T.Mute, MuteEnable)
 go(T.CMX_Gravity, F.CMX_GravityEnable)
 go(T.CMX_Anchor, F.CMX_AnchorEnable)
-go(T.PetItemESP, F.PetESPEnable)
-go(T.CMX_BoxESP, F.CMX_BoxESPEnable)
-go(T.CMX_AdornESP, F.CMX_AdornESPEnable)
 go(T.CMX_ClickSpam, F.CMX_ClickSpamEnable)
 go(T.CMX_AutoScrub, F.CMX_AutoScrubEnable)
 go(T.CMX_HookHard, F.CMX_HookHardApply)
@@ -8574,9 +8502,6 @@ go(T.CMX_CutLog, F.CMX_CutLogEnable)
 go(T.CMX_NeuterPlus, F.CMX_NeuterPlusEnable)
 go(T.CMX_HashFreeze, F.CMX_HashFreezeEnable)
 if T.CMX_AntiBanAll then pcall(F.CMX_BanAllApply, true) end
-go(T.CMX_Bones, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
-go(T.CMX_Tracer, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
-go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
 if T.CharPersist then pcall(F.CharPersistEnable) end
 if T.AutoSave then pcall(F.AutoSaveEnable) end
 if T.Session then pcall(F.LivePlayersEnable) end
@@ -8736,7 +8661,7 @@ return nil
 end
 F.CMX_DisableAll = function()
 for _, fn in ipairs({
-F.CMX_GravityDisable, F.CMX_ClickSpamDisable, F.CMX_BoxESPDisable, F.CMX_AdornESPDisable,
+F.CMX_GravityDisable, F.CMX_ClickSpamDisable,
 F.CMX_AnchorDisable, F.CMX_ArgScrubDisable, F.CMX_AutoScrubDisable,
 F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
 F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
@@ -8845,414 +8770,6 @@ pcall(function() if cd.Parent then cd.MaxActivationDistance = md end end)
 end
 F.CMX_ClickSaved = nil
 F.Out("[补强·点击采集] 已关: 已还原 " .. tostring(n) .. " 个点击器的触发距离")
-end
-F.CMX_BoxESPBuild = function(pl)
-local D = F.CMX_BoxESPD
-if not D then return nil end
-local ok, it = pcall(function()
-local o = {
-box = D.new("Square"),
-name = D.new("Text"),
-dist = D.new("Text"),
-tracer = D.new("Line"),
-hpo = D.new("Square"),
-hpb = D.new("Square"),
-bones = {},
-}
-for i = 1, 15 do
-local ln = D.new("Line")
-if ln then o.bones[i] = ln end
-end
-return o
-end)
-if not ok or not it then
-F.CMX_BoxESPOn = false
-T.CMX_BoxESP = false
-F.Out("[补强·方框ESP] Drawing.new 失败 ⇒ 已自动停用, 请改用 Adornment 方框ESP")
-return nil
-end
-it.box.Filled = false
-it.box.Thickness = 1
-it.box.Color = Color3.fromRGB(255, 60, 60)
-it.box.Visible = false
-it.name.Center = true
-it.name.Outline = true
-it.name.Size = 14
-it.name.Color = Color3.fromRGB(255, 255, 255)
-it.name.Visible = false
-it.dist.Center = true
-it.dist.Outline = true
-it.dist.Size = 12
-it.dist.Color = Color3.fromRGB(255, 235, 120)
-it.dist.Visible = false
-it.tracer.Thickness = 1
-it.tracer.Visible = false
-it.hpo.Filled = true
-it.hpo.Thickness = 1
-it.hpo.Color = Color3.fromRGB(15, 15, 15)
-it.hpo.Transparency = 0.35
-it.hpo.Visible = false
-it.hpb.Filled = true
-it.hpb.Thickness = 1
-it.hpb.Visible = false
-for i = 1, #it.bones do
-local ln = it.bones[i]
-ln.Thickness = 1
-ln.Transparency = 0.15
-ln.Visible = false
-end
-return it
-end
-F.CMX_BoxESPStep = function()
-local cam = workspace.CurrentCamera
-if not cam then return end
-local D = F.CMX_BoxESPD
-local store = F.CMX_BoxESPItems
-if not D or not store then return end
-local vh = cam.ViewportSize.Y
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hrp and hum and hum.Health > 0 then
-local it = store[pl]
-if not it then
-it = F.CMX_BoxESPBuild(pl)
-store[pl] = it
-end
-if it then
-local top = hrp.Position + Vector3.new(0, 2.6, 0)
-local bot = hrp.Position - Vector3.new(0, 2.9, 0)
-local p1, o1 = cam:WorldToViewportPoint(top)
-local p2, o2 = cam:WorldToViewportPoint(bot)
-if o1 or o2 then
-local h = math.abs(p2.Y - p1.Y)
-local w = h * 0.55
-local x = (p1.X + p2.X) * 0.5 - w * 0.5
-local y = math.min(p1.Y, p2.Y)
-it.box.Position = Vector2.new(x, y)
-it.box.Size = Vector2.new(w, h)
-it.box.Visible = true
-it.name.Position = Vector2.new(x + w * 0.5, y - 16)
-it.name.Text = pl.Name
-it.name.Visible = true
-local root = GC()
-local d = 0
-if root then d = math.floor((hrp.Position - root.Position).Magnitude) end
-it.dist.Position = Vector2.new(x + w * 0.5, y + h + 8)
-it.dist.Text = tostring(d) .. "m"
-it.dist.Visible = true
-if T.CMX_Bones then
-pcall(F.CMX_DrawBones, it, ch, cam)
-else
-pcall(F.CMX_HideBones, it)
-end
-if T.CMX_Tracer then
-local vs = cam.ViewportSize
-local ox, oy = vs.X * 0.5, vs.Y - 4
-if C.CMX_TracerFrom == "屏幕中心" then ox, oy = vs.X * 0.5, vs.Y * 0.5 end
-it.tracer.From = Vector2.new(ox, oy)
-it.tracer.To = Vector2.new(x + w * 0.5, y + h)
-it.tracer.Color = it.box.Color
-it.tracer.Visible = true
-else
-it.tracer.Visible = false
-end
-if T.CMX_HealthBar and hum then
-local pct = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
-it.hpo.Position = Vector2.new(x - 7, y - 1)
-it.hpo.Size = Vector2.new(6, h + 2)
-it.hpo.Visible = true
-it.hpb.Position = Vector2.new(x - 6, y + (h - h * pct))
-it.hpb.Size = Vector2.new(4, math.max(1, h * pct))
-it.hpb.Color = Color3.fromRGB(70, 220, 90):Lerp(Color3.fromRGB(255, 70, 70), 1 - pct)
-it.hpb.Visible = true
-else
-it.hpo.Visible = false
-it.hpb.Visible = false
-end
-else
-it.box.Visible = false
-it.name.Visible = false
-it.dist.Visible = false
-pcall(F.CMX_HideBones, it)
-it.tracer.Visible = false
-it.hpo.Visible = false
-it.hpb.Visible = false
-end
-end
-else
-local it = store[pl]
-if it then
-pcall(function() it.box.Visible = false end)
-pcall(function() it.name.Visible = false end)
-pcall(function() it.dist.Visible = false end)
-pcall(function() it.tracer.Visible = false end)
-pcall(function() it.hpo.Visible = false end)
-pcall(function() it.hpb.Visible = false end)
-pcall(F.CMX_HideBones, it)
-end
-end
-end
-end
-end
-F.CMX_BoxESPDisableOne = function(pl)
-local it = F.CMX_BoxESPItems and F.CMX_BoxESPItems[pl]
-if not it then return end
-for _, k in ipairs({ "box", "name", "dist", "tracer", "hpo", "hpb" }) do
-pcall(function() it[k]:Remove() end)
-end
-if it.bones then for i = 1, #it.bones do pcall(function() it.bones[i]:Remove() end) end end
-F.CMX_BoxESPItems[pl] = nil
-end
-F.PetESPKeys = { "egg", "pet", "brainrot", "animal", "item", "coin", "gem", "crate", "chest", "brain" }
-F.PetESPScan = function()
-local seen = {}
-local scanned = 0
-for _, d in ipairs(workspace:GetDescendants()) do
-scanned = scanned + 1
-if scanned > 30000 then break end
-if typeof(d) == "Instance" and (d:IsA("Model") or d:IsA("BasePart")) then
-local nm = tostring(d.Name):lower()
-local hit = false
-for i = 1, #F.PetESPKeys do
-if nm:find(F.PetESPKeys[i], 1, true) then hit = true break end
-end
-if hit then
-seen[d] = true
-if not F._petHLs[d] then
-local hl = Instance.new("Highlight")
-hl.Name = "CM_PetHL"
-hl.Adornee = d
-hl.FillColor = Color3.fromRGB(255, 200, 0)
-hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-hl.FillTransparency = 0.55
-hl.OutlineTransparency = 0
-pcall(function() hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop end)
-pcall(function() hl.Parent = d end)
-F._petHLs[d] = hl
-pcall(function()
-local bb = Instance.new("BillboardGui")
-bb.Name = "CM_PetTag"
-bb.Adornee = d
-bb.Size = UDim2.new(0, 150, 0, 16)
-bb.StudsOffset = Vector3.new(0, 3, 0)
-bb.AlwaysOnTop = true
-bb.MaxDistance = 400
-local tl = Instance.new("TextLabel")
-tl.Size = UDim2.new(1, 0, 1, 0)
-tl.BackgroundTransparency = 1
-tl.TextColor3 = Color3.fromRGB(255, 220, 80)
-tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-tl.TextStrokeTransparency = 0
-tl.TextScaled = true
-tl.Font = Enum.Font.GothamBold
-tl.Text = tostring(d.Name)
-tl.Parent = bb
-bb.Parent = d
-F._petTags = F._petTags or {}
-F._petTags[d] = bb
-end)
-end
-end
-end
-end
-for obj, hl in pairs(F._petHLs) do
-if not seen[obj] or not obj.Parent then
-pcall(function() hl:Destroy() end)
-F._petHLs[obj] = nil
-if F._petTags and F._petTags[obj] then
-pcall(function() F._petTags[obj]:Destroy() end)
-F._petTags[obj] = nil
-end
-else
-if F._petTags and F._petTags[obj] then
-pcall(function()
-local _, _, root = GC()
-if not root then return end
-local pos = nil
-if obj:IsA("BasePart") then pos = obj.Position
-else local hrp = obj:FindFirstChild("HumanoidRootPart") if hrp then pos = hrp.Position end end
-if pos then
-local tl = F._petTags[obj]:FindFirstChildOfClass("TextLabel")
-if tl then
-tl.Text = tostring(obj.Name) .. "  " .. tostring(math.floor((pos - root.Position).Magnitude)) .. "m"
-end
-end
-end)
-end
-end
-end
-end
-F.PetESPEnable = function()
-if F._petHLs then return end
-F._petHLs = {}
-T.PetItemESP = true
-F._petScanAt = 0
-pcall(F.PetESPScan)
-F._petConn = RS.Heartbeat:Connect(function()
-if not T.PetItemESP then F.PetESPDisable() return end
-local now = os.clock()
-if now - (F._petScanAt or 0) < 1 then return end
-F._petScanAt = now
-pcall(F.PetESPScan)
-end)
-F.Out("[宠物/物品ESP] 已开: 金色高亮场景里名字带 egg/pet/brainrot/animal/item 等的模型")
-end
-F.PetESPDisable = function()
-T.PetItemESP = false
-if F._petConn then pcall(function() F._petConn:Disconnect() end) F._petConn = nil end
-if F._petHLs then
-for _, hl in pairs(F._petHLs) do pcall(function() hl:Destroy() end) end
-F._petHLs = nil
-end
-if F._petTags then
-for _, bb in pairs(F._petTags) do pcall(function() bb:Destroy() end) end
-F._petTags = nil
-end
-F.Out("[宠物/物品ESP] 已关")
-end
-F.CMX_BoxESPEnable = function()
-if F.CMX_BoxESPOn then return end
-local D = F.CMX_G("Drawing")
-if type(D) ~= "table" or type(D.new) ~= "function" then
-T.CMX_BoxESP = false
-F.Out("[补强·方框ESP] 本执行器没有 Drawing 库 ⇒ 改用「Adornment 方框ESP」")
-return false
-end
-F.CMX_BoxESPD = D
-F.CMX_BoxESPItems = {}
-F.CMX_BoxESPOn = true
-pcall(function()
-F._boxLeaver = Players.PlayerRemoving:Connect(function(pl)
-if F.CMX_BoxESPItems and F.CMX_BoxESPItems[pl] then
-pcall(function()
-if F.CMX_BoxESPDisableOne then F.CMX_BoxESPDisableOne(pl) end
-end)
-end
-end)
-end)
-F.CMX_BoxESPConn = RS.RenderStepped:Connect(function() pcall(F.CMX_BoxESPStep) end)
-F.Out("[补强·方框ESP] 已开(Drawing 线框 + 名字 + 距离)")
-return true
-end
-F.CMX_BoxESPDisable = function()
-if not F.CMX_BoxESPOn then return end
-F.CMX_BoxESPOn = false
-if F.CMX_BoxESPConn then pcall(function() F.CMX_BoxESPConn:Disconnect() end) end
-F.CMX_BoxESPConn = nil
-if F._boxLeaver then pcall(function() F._boxLeaver:Disconnect() end) F._boxLeaver = nil end
-local store = F.CMX_BoxESPItems or {}
-for _, it in pairs(store) do
-for _, k in ipairs({ "box", "name", "dist", "tracer", "hpo", "hpb" }) do
-pcall(function() it[k]:Remove() end)
-end
-if it.bones then
-for i = 1, #it.bones do pcall(function() it.bones[i]:Remove() end) end
-end
-end
-F.CMX_BoneCache = setmetatable({}, { __mode = "k" })
-F.CMX_BoxESPItems = nil
-F.CMX_BoxESPD = nil
-F.Out("[补强·方框ESP] 已关")
-end
-F.CMX_AdornApply = function(pl)
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-if not hrp then return end
-local store = F.CMX_AdornItems
-if not store then return end
-local rec = store[pl]
-if type(rec) == "Instance" then
-pcall(function() rec:Destroy() end)
-rec, store[pl] = nil, nil
-end
-if rec and rec.top and rec.top.Parent ~= hrp then
-pcall(function() rec.top:Destroy() end)
-if rec.occ then pcall(function() rec.occ:Destroy() end) end
-rec, store[pl] = nil, nil
-end
-if not rec then
-local top = Instance.new("BoxHandleAdornment")
-top.Name = "CMX_Adorn"
-top.Adornee = hrp
-top.AlwaysOnTop = true
-top.ZIndex = 5
-top.Transparency = 0.55
-top.Color3 = Color3.fromRGB(255, 70, 70)
-top.Size = hrp.Size
-top.Parent = hrp
-rec = { top = top, occ = nil }
-store[pl] = rec
-end
-local team = F.CMX_HLTeamColor(pl)
-local warn = F.CMX_HLWarnColor()
-if T.CMX_AdornBehind == true then
-if not rec.occ or rec.occ.Parent ~= hrp then
-if rec.occ then pcall(function() rec.occ:Destroy() end) end
-local b = Instance.new("BoxHandleAdornment")
-b.Name = "CMX_AdornBehind"
-b.Adornee = hrp
-b.AlwaysOnTop = false
-b.ZIndex = 4
-b.Transparency = 0.3
-b.Color3 = team
-b.Size = hrp.Size
-b.Parent = hrp
-rec.occ = b
-end
-pcall(function()
-rec.top.AlwaysOnTop = true
-rec.top.Transparency = 0.82
-rec.top.Color3 = warn
-rec.occ.AlwaysOnTop = false
-rec.occ.Transparency = 0.3
-rec.occ.Color3 = team
-end)
-else
-if rec.occ then pcall(function() rec.occ:Destroy() end) rec.occ = nil end
-pcall(function()
-rec.top.AlwaysOnTop = true
-rec.top.Transparency = 0.55
-rec.top.Color3 = Color3.fromRGB(255, 70, 70)
-end)
-end
-pcall(function()
-rec.top.Adornee = hrp
-rec.top.Size = hrp.Size
-if rec.occ then rec.occ.Adornee = hrp rec.occ.Size = hrp.Size end
-end)
-end
-F.CMX_AdornStep = function()
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then pcall(F.CMX_AdornApply, pl) end
-end
-end
-F.CMX_AdornESPEnable = function()
-if F.CMX_AdornOn then return end
-F.CMX_AdornItems = {}
-F.CMX_AdornOn = true
-F.CMX_AdornConn = RS.Heartbeat:Connect(function() pcall(F.CMX_AdornStep) end)
-pcall(F.CMX_AdornStep)
-F.Out("[补强·AdornmentESP] 已开(方框跟随) ")
-return true
-end
-F.CMX_AdornESPDisable = function()
-if not F.CMX_AdornOn then return end
-F.CMX_AdornOn = false
-if F.CMX_AdornConn then pcall(function() F.CMX_AdornConn:Disconnect() end) end
-F.CMX_AdornConn = nil
-for _, rec in pairs(F.CMX_AdornItems or {}) do
-if type(rec) == "table" then
-if rec.top then pcall(function() rec.top:Destroy() end) end
-if rec.occ then pcall(function() rec.occ:Destroy() end) end
-else
-pcall(function() rec:Destroy() end)
-end
-end
-F.CMX_AdornItems = nil
-F.Out("[补强·AdornmentESP] 已关")
 end
 F.CMX_AnchorEnable = function()
 if F.CMX_AnchorOn then return end
@@ -9870,16 +9387,6 @@ F.CMX_MarkOwn(F._flyAo)
 F.CMX_MarkOwn(F._flyAp)
 F.CMX_MarkOwn(F._flyBv)
 F.CMX_MarkOwn(F._flyBg)
-if F.CMX_AdornItems then
-for _, rec in pairs(F.CMX_AdornItems) do
-if type(rec) == "table" then
-F.CMX_MarkOwn(rec.top)
-F.CMX_MarkOwn(rec.occ)
-else
-F.CMX_MarkOwn(rec)
-end
-end
-end
 end)
 F.Out("[绕过·视图过滤] 已开: 反作弊遍历你的角色时, 看不见我们挂上去的东西(飞行约束/附件/方框)"
 .. " · 我们自己的遍历不受影响")
@@ -10075,60 +9582,6 @@ F.CMX_ClockOn = false
 if F.CMX_ClockOrig then pcall(function() hookfunction(os.clock, F.CMX_ClockOrig) end) end
 F.CMX_ClockOrig = nil
 F.Out("[绕过·时钟粗化] 已关 · 本次粗化 " .. tostring(F.CMX_ClockMaskCount or 0) .. " 次取时")
-end
-F.CMX_BONES_R15 = {
-{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
-{ "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
-{ "UpperTorso", "RightUpperArm" }, { "RightUpperArm", "RightLowerArm" }, { "RightLowerArm", "RightHand" },
-{ "LowerTorso", "LeftUpperLeg" }, { "LeftUpperLeg", "LeftLowerLeg" }, { "LeftLowerLeg", "LeftFoot" },
-{ "LowerTorso", "RightUpperLeg" }, { "RightUpperLeg", "RightLowerLeg" }, { "RightLowerLeg", "RightFoot" },
-}
-F.CMX_BONES_R6 = {
-{ "Head", "Torso" }, { "Torso", "Left Arm" }, { "Torso", "Right Arm" },
-{ "Torso", "Left Leg" }, { "Torso", "Right Leg" },
-}
-F.CMX_BoneCache = setmetatable({}, { __mode = "k" })
-F.CMX_GetBones = function(ch)
-local got = F.CMX_BoneCache[ch]
-if got then return got end
-local map = ch:FindFirstChild("UpperTorso") and F.CMX_BONES_R15 or F.CMX_BONES_R6
-local list = {}
-for i = 1, #map do
-local a = ch:FindFirstChild(map[i][1])
-local b = ch:FindFirstChild(map[i][2])
-if a and b then list[#list + 1] = { a, b } end
-end
-if #list > 0 then F.CMX_BoneCache[ch] = list end
-return list
-end
-F.CMX_DrawBones = function(it, ch, cam)
-local bones = F.CMX_GetBones(ch)
-if not it.bones then return end
-local lines = it.bones
-for i = 1, #bones do
-local ln = lines[i]
-if ln then
-local pa, va = cam:WorldToViewportPoint(bones[i][1].Position)
-local pb, vb = cam:WorldToViewportPoint(bones[i][2].Position)
-if va and vb then
-ln.From = Vector2.new(pa.X, pa.Y)
-ln.To = Vector2.new(pb.X, pb.Y)
-ln.Color = Color3.fromRGB(255, 255, 255)
-ln.Visible = true
-else
-ln.Visible = false
-end
-end
-end
-for i = #bones + 1, #lines do
-if lines[i] then lines[i].Visible = false end
-end
-end
-F.CMX_HideBones = function(it)
-if not it or not it.bones then return end
-for i = 1, #it.bones do
-if it.bones[i] then it.bones[i].Visible = false end
-end
 end
 F.CMX_AimLead = function(part, cam)
 local pos = part.Position
@@ -11770,24 +11223,13 @@ F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" o
 end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
-Tabs.Combat:AddDropdown("BlacklistTarget", { Title = "黑名单玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddBlacklist(v) end end })
-Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(冻结/隐藏/拉过来共用)", Values = F.PlayerNames(), Default = nil })
-Tabs.Combat:AddToggle("FreezePlayer", { Title = "本地冻结目标(只有你看到 · 对方不受影响)", Description = "它改的是**对方**角色的位置 —— 那些部件的网络所有权属于对方/服务端, 所以改动不会复制出去: 只有你屏幕上他被钉住, 而且下一帧物理同步可能把你按住的位置顶回。想真影响别人做不到(客户端能力边界)。", Default = false, Callback = function(v)
-T.FreezePlayer = v
-if F._cfgSyncing then return end
-if v then F.FreezePlayerEnable() else F.FreezePlayerDisable() end
-end })
+Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(隐藏共用)", Values = F.PlayerNames(), Default = nil })
 Tabs.Combat:AddToggle("HidePlayer", { Title = "隐藏目标(只本地)", Default = false, Callback = function(v)
 T.HidePlayer = v
 if F._cfgSyncing then return end
 if v then F.HidePlayerEnable() else F.HidePlayerDisable() end
 end })
-Tabs.Combat:AddToggle("BringPlayer", { Title = "本地把目标拉过来(只有你看到 · 对方不受影响)", Description = "同「本地冻结」: 改对方角色位置不会复制到服务端, 只有你屏幕上他贴到你面前, 且可能被物理同步拉回。", Default = false, Callback = function(v)
-T.BringPlayer = v
-if F._cfgSyncing then return end
-if v then F.BringPlayerEnable() else F.BringPlayerDisable() end
-end })
-Tabs.Combat:AddButton({ Title = "清除优先级/黑名单", Callback = function() C.PriorityTargets = {} C.Blacklist = {} end })
+Tabs.Combat:AddButton({ Title = "清除优先级", Callback = function() C.PriorityTargets = {} end })
 Tabs.Combat:AddSection("生存 / 防御")
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
@@ -11955,31 +11397,6 @@ if v then F.LockCamEnable() else F.LockCamDisable() end
 end })
 end
 do
-Tabs.World:AddSection("★ 补强 · 方框 / 骨骼 / 追踪线 / 血量条")
-Tabs.World:AddToggle("PetItemESP", { Title = "★ 宠物 / 物品 ESP(高亮地图上的蛋 / 宠物 / 物品)", Description = "开: 扫场景里名字带 egg/pet/brainrot/animal/item/coin/gem/crate/chest 的模型, 给它们套金色高亮(隔墙可见) ⇒ 一眼看到哪有好东西", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v then pcall(F.PetESPEnable) else pcall(F.PetESPDisable) end
-end })
-Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
-T.CMX_BoxESP = v
-if F._cfgSyncing then return end
-if v then F.CMX_BoxESPEnable() else F.CMX_BoxESPDisable() end
-end })
-Tabs.World:AddToggle("CMX_Bones", { Title = "骨骼 ESP(头-身-四肢连线 · R15/R6 自动)", Default = false, Callback = function(v)
-T.CMX_Bones = v
-if F._cfgSyncing then return end
-if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
-end })
-Tabs.World:AddToggle("CMX_Tracer", { Title = "追踪线(从屏幕下方 / 中心连到目标)", Default = false, Callback = function(v)
-T.CMX_Tracer = v
-if F._cfgSyncing then return end
-if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
-end })
-Tabs.World:AddToggle("CMX_HealthBar", { Title = "血量条(左边竖条 · 绿→红)", Default = false, Callback = function(v)
-T.CMX_HealthBar = v
-if F._cfgSyncing then return end
-if v and not T.CMX_BoxESP then T.CMX_BoxESP = true pcall(F.CMX_BoxESPEnable) end
-end })
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收藏点位 全部适用)", Values = {
 "分步瞬移(现状 · 每步抢网络所有权, 最稳)",
@@ -12018,12 +11435,18 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddSection("★ 挂机 / 防踢")
 Tabs.AFK:AddToggle("AntiAFK", { Title = "防挂机(不动人物 · 掐掉挂机检测连接)", Description = "不写人物任何属性, 只把游戏挂在 Idled 上的检测连接断掉 + 每 15 秒写一次心跳属性", Default = false, Callback = function(v)
 T.AntiAFK = v
 if F._cfgSyncing then return end
 if v then F.AntiAFKEnable() else F.AntiAFKDisable() end
 end })
+Tabs.AFK:AddToggle("KickGuard", { Title = "防踢(拦本地 Kick · 反作弊踢你时本地拦下)", Description = "钩住 LocalPlayer:Kick 与全局 __namecall 的 Kick 路径, 反作弊/服务端踢你时本地吞掉", Default = false, Callback = function(v)
+T.KickGuard = v
+if F._cfgSyncing then return end
+if v then F.KickGuardEnable() else F.KickGuardDisable() end
+end })
+Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -12102,8 +11525,6 @@ pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.Bypas
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
-T.AntiAFK = false
-pcall(F.AntiAFKDisable)
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 pcall(F.MetaHookUninstall)
@@ -12114,8 +11535,6 @@ end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
 pcall(F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
-T.AntiAFK = true
-pcall(F.AntiAFKEnable)
 T.CMX_SpoofIndex = true
 pcall(F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
@@ -12225,6 +11644,13 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 end)
 RestoreFeatures()
 pcall(F.CMX_LoadAutoEnable)
+task.delay(6, function()
+pcall(F.LockCamDisable)
+pcall(F.FreecamDisable)
+if T.AimOn then T.AimOn = false pcall(function() F.AimSet(false) end) end
+pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
+F.Out("[视角] 已强制释放相机/鼠标(锁相机/自由视角/自瞄 需手动开, 加载不再锁视角)")
+end)
 task.delay(5, function() pcall(F.CMX_ProfileApply) end)
 pcall(function()
 local ex = "?"
