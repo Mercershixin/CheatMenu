@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:46 sha c7e67ffa bytes 437020'):format('2026-10-03 12:46','c7e67ffa',437020))
+print(('[CheatMenu] build 2026-10-03 12:52 sha 39fd6d32 bytes 439103'):format('2026-10-03 12:52','39fd6d32',439103))
 local F = {}
-F.VERSION = "v12.9.0"
+F.VERSION = "v12.10.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7948,6 +7948,7 @@ go(T.CMX_BlockReport, F.CMX_BlockReportEnable)
 go(T.CMX_CutLog, F.CMX_CutLogEnable)
 go(T.CMX_NeuterPlus, F.CMX_NeuterPlusEnable)
 go(T.CMX_HashFreeze, F.CMX_HashFreezeEnable)
+if T.CMX_AntiBanAll then pcall(F.CMX_BanAllApply, true) end
 go(T.CMX_Bones, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
 go(T.CMX_Tracer, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
 go(T.CMX_HealthBar, function() if T.CMX_BoxESP then F.CMX_BoxESPEnable() end end)
@@ -9290,14 +9291,16 @@ local want = {}
 if lv >= 2 then
 want.CMX_AutoScrub, want.CMX_SpoofIndex, want.CMX_ViewFilter = true, true, true
 end
+if lv >= 2 then
+want.CMX_BlockReport = true
+end
 if lv >= 3 then
 want.CMX_HookHard, want.CMX_RequireBlock, want.CMX_ClockMask = true, true, true
-want.CMX_BlockReport, want.CMX_CutLog = true, true
+want.CMX_CutLog, want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true, true
 end
 if lv >= 4 then
 want.CMX_InstNew, want.CMX_DebugMask = true, true
 want.CMX_IdentityMask, want.CMX_FFlagPack = true, true
-want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true
 end
 local on, off = 0, 0
 for key, pair in pairs(map) do
@@ -9862,6 +9865,27 @@ F.Out("[自检·检测面]      ③ 点「一键全关」后元表只读会恢�
 end
 return bad
 end
+F.CMX_BanAllApply = function(on)
+local items = {
+{ "CMX_BlockReport", F.CMX_BlockReportEnable, F.CMX_BlockReportDisable, "拦上报/封禁远程" },
+{ "CMX_CutLog", F.CMX_CutLogEnable, F.CMX_CutLogDisable, "断错误/日志通道" },
+{ "CMX_NeuterPlus", F.CMX_NeuterPlusEnable, F.CMX_NeuterPlusDisable, "按名中和+" },
+{ "CMX_HashFreeze", F.CMX_HashFreezeEnable, F.CMX_HashFreezeDisable, "哈希冻结" },
+}
+local n = 0
+for i = 1, #items do
+local it = items[i]
+T[it[1]] = on and true or false
+if on then
+if pcall(it[2]) then n = n + 1 end
+else
+pcall(it[3])
+end
+end
+F.Out("[反封禁·全家桶] " .. (on and ("已开 " .. tostring(n) .. "/4 层: 拦上报 · 断日志 · 按名中和+ · 哈希冻结")
+or "已关(四层全部还原)"))
+return n
+end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
 if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
@@ -10311,6 +10335,26 @@ pcall(F.ScanRemotes)
 pcall(F.ScanConnections)
 pcall(F.ScanClientChecks, true)
 pcall(F.CMX_ScanAutoHeal)
+pcall(function()
+local found = F.CMX_ScanReportRemotes(true) or {}
+if #found > 0 then
+local keys = {}
+for i = 1, #found do keys[#keys + 1] = tostring(found[i].inst.Name) end
+F.Out("[扫描·自动处置] 扫到 " .. tostring(#found) .. " 个像上报/封禁的远程, 已并入拦截名单: "
+.. table.concat(keys, ", "):sub(1, 160))
+if not T.CMX_BlockReport then
+if T.ScanAutoFix then
+T.CMX_BlockReport = true
+pcall(F.CMX_BlockReportEnable)
+F.Out("[扫描·自动处置] 「扫描后自动处置」开着 ⇒ 已自动启用「拦上报/封禁远程」")
+else
+F.Out("[扫描·自动处置] 想自动拦它们: 开「★ 反封禁全家桶」或「扫描后自动处置」")
+end
+end
+else
+F.Out("[扫描·自动处置] 没扫到名字像上报/封禁的远程")
+end
+end)
 pcall(F.CMX_SelfDetect)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
@@ -11180,6 +11224,11 @@ Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · �
 T.ScanAutoFix = v
 end })
 Tabs.AC:AddSection("★ 反封禁 / 反踢(AntiCheat · AntiKick 对抗)")
+Tabs.AC:AddToggle("CMX_AntiBanAll", { Title = "★ 反封禁全家桶(一个开关顶下面四层 · 不用一层层点)", Description = "开=同时开启「拦上报/封禁远程 + 断错误日志通道 + 按名中和+ + 哈希冻结」四层; 关=四层全部还原。也可以直接上调「★ 绕过/防护档位」到 ③, 会自动带上这四层", Default = false, Callback = function(v)
+T.CMX_AntiBanAll = v
+if F._cfgSyncing then return end
+F.CMX_BanAllApply(v)
+end })
 Tabs.AC:AddToggle("CMX_BlockReport", { Title = "① 拦上报/封禁远程(名字命中黑名单的 remote 一律发不出去)", Description = "扩充黑名单到 antikick/kick/ban/report/hash/flag/punish/submit/moderation 等, 并在打开时列出 ReplicatedStorage 里命中这些关键词的远程给你看", Default = false, Callback = function(v)
 T.CMX_BlockReport = v
 if F._cfgSyncing then return end
