@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:54 sha c86ab5ca bytes 437976'):format('2026-10-03 17:54','c86ab5ca',437976))
+print(('[CheatMenu] build 2026-10-03 18:02 sha aee1e113 bytes 438428'):format('2026-10-03 18:02','aee1e113',438428))
 local F = {}
-F.VERSION = "v13.10.13"
+F.VERSION = "v13.10.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2882,20 +2882,6 @@ return best
 end
 F._fireAt = 0
 function F.FireOnce()
-if type(mouse1click) == "function" then
-if pcall(mouse1click) then return "mouse1click()" end
-end
-local viaVu = nil
-pcall(function()
-local vu = game:GetService("VirtualUser")
-local cam = workspace.CurrentCamera
-local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
-vu:CaptureController()
-vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
-pcall(function() vu:ReleaseController() end)
-viaVu = "VirtualUser(屏幕中心)"
-end)
-if viaVu then return viaVu end
 local viaTool = nil
 pcall(function()
 local ch = LP.Character
@@ -2935,7 +2921,33 @@ end
 end
 end
 end)
-return viaBtn
+if viaBtn then return viaBtn end
+local viaVIM = nil
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+local cam = workspace.CurrentCamera
+local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+task.wait(0.05)
+vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+viaVIM = "VirtualInputManager(不抢鼠标)"
+end)
+if viaVIM then return viaVIM end
+if type(mouse1click) == "function" then
+if pcall(mouse1click) then return "mouse1click()" end
+end
+local viaVu = nil
+pcall(function()
+local vu = game:GetService("VirtualUser")
+local cam = workspace.CurrentCamera
+local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+vu:CaptureController()
+vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
+pcall(function() vu:ReleaseController() end)
+viaVu = "VirtualUser(屏幕中心)"
+end)
+if viaVu then return viaVu end
+return nil
 end
 function F.AutoFire(tgt)
 if not (T.AutoFire and tgt) then return end
