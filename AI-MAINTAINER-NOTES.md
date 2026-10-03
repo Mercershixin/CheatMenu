@@ -3318,3 +3318,29 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ⇒ 这正是「用钩子替代心跳」的落点：把 `__newindex` 纳入分层栈后，可给 **加速 / 无敌 / 锁血 / 穿墙 / 无限跳 / 隐身** 做「游戏改我值 → 我改写回去」的锁定。
 - 顺手修正死函数里的一处**硬编码基准**：`__newindex` 改写 WalkSpeed 时原用 `(F._baseWalk or 16) * 2`（≈32）会把用户设的 300 压回 32 ⇒ 改成 `tonumber(C.SpeedValue)`（用户真实设定值）。
 - 模式设计（待用户批准）：**普通模式**（不开档位）= 心跳维持，现状不变；**档位模式**（②③）= 叠加 `__newindex` 锁定层 ⇒「心跳维持 + 钩子锁定」双保险，**关档位即回到普通模式**。
+
+
+## 服务端权威 vs 客户端执行：哪些拦截"真的有效"（2026-10-04 研究结论）
+
+- ★★★ **核心判据（一句话）**：**"引擎收到的值改不了，但游戏脚本读到的值我们能改。"** 客户端**无法拒绝接收**服务端复制的属性（复制在引擎 C++ 层，Lua hook 挂不上）；
+  能做的只有 ① `__index` 伪装读数 ② 断 `HealthChanged` / `GetPropertyChangedSignal` 连接 ③ 拦"客户端→服务端"的上报。
+- **服务端裁决类（本地只能骗自己）**：血量 / 死亡 / 真正的位置速度（`AuthorityMode=Server`）/ 资源数量 ⇒ "真不死 / 真不被拉回"**做不到**，服务端照样重生你。
+  ⇒ 唯一例外：游戏若是「客户端算伤害/命中后 `FireServer` 上报」⇒ **拦上报有效**（`T.HpBlock` 就是干这个，判据看日志有没有 `[拦受伤上报]`）。
+- **客户端执行类（本地拦截"真的有效"）**：击退/布娃娃 / 陷阱触发 / 搬运物掉落 ⇒ 这些是**你自己的客户端在执行**，拦了就是真拦住了。
+- **现状 vs 公开做法（一致，且我们更保守）**：`防击倒` = 禁 `Ragdoll`/`FallingDown` + `RunningNoPhysics` + 修 `Motor6D`；`反陷阱` = `getconnections` 断陷阱的 `Touched` + 关 `CanTouch`；`防掉落` = Heartbeat 轮询 + 焊点重焊。
+  ★ 我们**不用**公开作品那种硬 `Disconnect`/断 `RigSync`（会卡"拿起逃跑"状态），一律 `Disable` 可还原（见「战斗与移动」记忆）。
+- **可增强项（待用户批准）**：① 把 `AC.HP_KEYS` 扩到"命中/攻击上报"类（hit / attack / hitplayer / damageplayer）⇒ 对「客户端判定命中」的游戏有效；② `__newindex` 锁定层（见上一节）；③ 防掉落改成事件驱动（现在心跳有 ~50ms 延迟）。
+
+
+## 废弃代码清理 + 归档库（2026-10-04 · 14.0.18）
+
+- ★★ **新建废弃代码归档库**：`Mercershixin/CheatMenu-Deprecated`（private）—— **移除的东西先归档到这里再从主脚本删**，既保持主脚本干净又不丢能力。
+  ★ 权限坑：GitHub MCP 连接器**只有 contents 权限**（建仓库 403 `Resource not accessible by integration`）⇒ 建仓库必须用 `.workbuddy/publish.token` 直接打 `POST /user/repos`。
+  ⛔ 主仓库仍固定 4 个发布文件（历史不进主仓库，这是既有约定）。
+- **本轮归档并删除 4 项**（主脚本 −2117 字节）：`F.AddPriorityTarget`（孤儿）、`eggTP`（孤儿）、
+  `AC.InstallPropertyLock` + `UninstallPropertyLock` + `_propLockOn/_propLockOld`（整条死链，0 调用）、`T.CMX_AimPredict`（死标志）。
+  ⇒ **删函数必须同时删"链里的悬空引用"**：`AC.UninstallPropertyLock` 原本挂在急停链与卸载链上，只删定义会留下 `pcall(nil)`（本轮已一并清掉）。
+- **死代码扫描的三个判据坑（都踩过，别再犯）**：① 统计"引用"必须**先挖掉定义行**，否则每个函数都算有引用；
+  ② 判"标志是否能被置真"必须覆盖 `= want` / `T.A, T.B = v, v` / `T[key] = true`（动态键）这些写法，只认 `= true/v` 会误报一大堆；
+  ③ `T.CMX_*` 那批是 `F.CMX_TierSync` 里 `T[key] = true` **动态置真**的，静态扫描必然假报。
+- **仍保留待定**（报给用户）：`T.ACBypass`（与 `ACIndexMask` 分支耦合）、`T.CMX_ClickSpam` / `T.HitboxExpand`（实现完整但**无 UI 入口**）、`T.CMX_GameProfile` / `T.ScanAutoFix`（死标志，开关没接）。
