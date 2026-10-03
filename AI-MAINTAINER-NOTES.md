@@ -3102,7 +3102,7 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ★ 对比方法: 对 12 类功能各搜公开脚本并抓 4~7 份实现, 统计它们常用的 API, 再与我们逐项比对. 结论(已对齐的): 速度/飞行(LinearVelocity 6·BodyVelocity 4·PlatformStand 4)✓我们用速度驱动; 防踢/反作弊(getgc 4/4·hookfunction·getconnections)✓全有; 视觉(Highlight 5·BillboardGui 3)✓全有; 瞬间交互(fireproximityprompt 7)✓有; 搬运(WeldConstraint)✓有; 隐身(Transparency)✓有; 防击飞(hookmetamethod·AlignPosition)✓有. **差异及原因**: ① 防挂机公开脚本用 Idled+VirtualUser(5/5), 我们**故意不用 VirtualUser**(你要求'挂机不动人物') ⇒ 保持; ② 瞬间交互公开脚本还用 InputHoldBegin(6) 做'直接触发', 我们只做'把长按改成点一下'(更保守, 需玩家操作) ⇒ 保持; ③ **独家**: 传送带'抢所有权+分步瞬移'(公开脚本少见), 翻译(本地 llama 服务)公开脚本没有. 另修 2 处(死码扫描发现): **关闭瞬间交互时没断掉 PromptTriggered 监听**(会残留) 已补; 删掉无人调用的死函数 F.IsOurs. 体检: 编译 0 错 / 门禁 8 项全绿 / 死码仅剩'只写不读的记录字段'(无害)
 
-## 13.10.35：视角/鼠标被锁的根治 + 防护开关找回 + 三处"改写游戏"的风险收口
+## 13.10.36：视角/鼠标被锁的根治 + 防护开关找回 + 三处"改写游戏"的风险收口
 
 - **用户**: "为什么加载后我的视角不能动了 右键移动没反应了 修复一下，然后我的飞行和加速的正身(稳身)反陷阱 反攻击 功能区哪了 修复找回下"
 
@@ -3125,7 +3125,8 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
    开头还会把这 4 个 T 标志直接清零, 保证界面显示与实现一致。
 2. **视角保底 + 逃生门**: 新增 `F.CamRelease(force, why)`(卸自瞄/锁相机/自由视角 + Scriptable→Custom +
    相机目标还原成自己 Humanoid + MouseBehavior=Default)、`F.CamReleaseToggleOff`(静默把 4 个开关回填成关)、
-   `F.CamReleaseSchedule()`(加载后 6/15/30/60 秒各保底一次, **只在用户没主动开时**才动手) + **F2 热键**;
+   `F.CamReleaseSchedule()`(加载后 6/15/30/60 秒各保底一次, **全部是非破坏性的**: 一旦发现用户自己开了自瞄/锁相机/自由视角就直接让开 ——
+  避免"用户刚点开自瞄又被 6 秒保底关掉"这种自作聪明) + **F2 热键**(手动按钮/F2 才是强制档);
    系统页新增两个按钮:「★ 视角/鼠标被锁住了?点这里」与「★ 游戏异常(视角/交互/卡死)?点这里一键恢复」
    (后者额外做 `AC.ReenableDisabledConns` + 卸掉全部"会改写游戏"的层)。
 3. **连接清理变成可审计 / 可还原**: 每禁一条都打日志(`[连接清理] 已禁用: 信号 ← 函数名 @ 来源脚本`)并记入
@@ -3146,6 +3147,6 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 ### 验证 / 发版
 - `luau-compile --binary` 0 错; 门禁 8 项全绿(编译 / 局部 94 / 源根先用后声明 0 / 裸引用 0 / 消毒 print=1 / 文本自检 / 等价性 / 未定义全局 0);
-- v13.10.34 → **v13.10.35**(patch), 源码 `CheatMenu-13.10.35.lua`, 产物 `dist/repo/CheatMenu.lua`。
+- v13.10.34 → **v13.10.36**(patch), 源码 `CheatMenu-13.10.36.lua`, 产物 `dist/repo/CheatMenu.lua`。
 
 
