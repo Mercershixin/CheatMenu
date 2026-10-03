@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:32 sha e108d8a4 bytes 469280'):format('2026-10-03 16:32','e108d8a4',469280))
+print(('[CheatMenu] build 2026-10-03 16:37 sha 827b9a8a bytes 455500'):format('2026-10-03 16:37','827b9a8a',455500))
 local F = {}
-F.VERSION = "v13.9.6"
+F.VERSION = "v13.9.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11381,28 +11381,6 @@ C.AimTarget = v
 T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
 F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
 end })
-Tabs.Combat:AddSection("自瞄 · 高级(默认一般就够 · 不用动)")
-Tabs.Combat:AddSlider("AimSmooth", { Title = "瞄准平滑度(越大越慢越像手)", Min = 1, Max = 20, Default = 5, Rounding = 0, Callback = function(v) C.AimSmooth = v end })
-Tabs.Combat:AddToggle("AimFireOnly", { Title = "开火才锁(按住左键才生效)", Default = false, Callback = function(v) T.AimFireOnly = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.02, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddToggle("AimWallCheck", { Title = "墙壁检查", Default = false, Callback = function(v) T.AimWallCheck = v end })
-Tabs.Combat:AddToggle("CMX_AimPredict", { Title = "弹道预判(打移动目标时提前量 · 打枪战/弓箭必备)", Description = "对移动中的目标按「距离 ÷ 弹速」算出提前量再瞄。打瞬发武器(近战/射线枪)请关掉", Default = false, Callback = function(v)
-T.CMX_AimPredict = v
-if F._cfgSyncing then return end
-if v then F.Out("[自瞄] 弹道预判已开 · 当前弹速 " .. tostring(C.CMX_ProjSpeed or 300) .. " 格/秒") end
-end })
-Tabs.Combat:AddSlider("CMX_ProjSpeed", { Title = "弹速(格/秒 · 枪一般 200~600, 弓箭 100~200)", Min = 30, Max = 2000, Default = 300, Rounding = 0, Callback = function(v) C.CMX_ProjSpeed = v end })
-Tabs.Combat:AddToggle("CMX_ProjDrop", { Title = "弹道预判 · 补下落(远距离抛物线)", Default = false, Callback = function(v) T.CMX_ProjDrop = v C.CMX_ProjDrop = v end })
-Tabs.Combat:AddToggle("FovCircle", { Title = "FOV 圈(把范围画出来)", Default = false, Callback = function(v)
-T.FovCircle = v
-if F._cfgSyncing then return end
-if v then F.FovCircleEnable() else F.FovCircleDisable() end
-end })
-Tabs.Combat:AddToggle("CMX_HitFeed", { Title = "命中提示(视野内玩家掉血/被击杀 → 屏幕滚动提示 + 日志)", Default = false, Callback = function(v)
-T.CMX_HitFeed = v
-if F._cfgSyncing then return end
-if v then F.CMX_HitFeedEnable() else F.CMX_HitFeedDisable() end
-end })
 Tabs.Combat:AddButton({ Title = "★ 自瞄/开火体检(没锁到人 / 没开火 ⇒ 点这个, 原因逐条列出来)", Callback = function() F.CombatCheck() end })
 Tabs.Combat:AddSection("目标管理")
 Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
@@ -11985,42 +11963,7 @@ Duration = 8,
 })
 end)
 end })
-Tabs.AC:AddSection("★ 扫描 / 收集(全自动 · 无参数 · 结果直接导出给我)")
-Tabs.AC:AddDropdown("AdvScan", { Title = "选一项执行(选完自动复位)", Values = {
-"关闭",
-"① 绕过面扫描(能力清单 + 钩子台账 + 曝光面 + 调用栈 + 空实例 + 检测器命名)",
-"② 反作弊函数族扫描(常见形状自动找 + 逐条列常量)",
-"③ 监听来源扫描(谁在监听你的角色 / 相机 / 玩家)",
-"④ 脚本与模块扫描(可疑脚本名 + 已加载模块 + 远程)",
-"⑤ 客户端检测扫描(检测名 + 连接来源)",
-"⑥ 一键全扫描(上面全部 + 脚本/模块/远程/检测 + 检测器命名, 一次跑完)",
-}, Default = "关闭", Callback = function(v)
-if v == "关闭" then return end
-local which = v
-task.spawn(function()
-pcall(function()
-if which:find("①", 1, true) then
-F.CMX_ScanBypassSurface()
-elseif which:find("②", 1, true) then
-F.CMX_ScanACFamily()
-elseif which:find("③", 1, true) then
-F.CMX_ScanListeners()
-elseif which:find("④", 1, true) then
-pcall(F.ScanScripts) pcall(F.ScanGameModules) pcall(F.ScanRemotes)
-elseif which:find("⑤", 1, true) then
-pcall(F.ScanClientChecks, true) pcall(F.ScanConnections)
-elseif which:find("⑥", 1, true) then
-F.CMX_ScanAll()
-end
-end)
-pcall(F.LogFlush, "扫描")
-Fluent:Notify({ Title = "扫描完成", Content = "结果已进控制台(F9)与日志 · 点下面「复制扫描结果」直接给我", Duration = 8 })
-task.defer(function()
-local op = Fluent and Fluent.Options and Fluent.Options.AdvScan
-if op and op.Value ~= "关闭" then pcall(function() op:Set("关闭") end) end
-end)
-end)
-end })
+Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
 task.spawn(function()
 pcall(F.CMX_ScanAll)
@@ -12031,61 +11974,19 @@ Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", C
 Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
 T.ScanAutoFix = v
 end })
-Tabs.AC:AddSection("★ 反封禁 / 反踢(AntiCheat · AntiKick 对抗)")
-Tabs.AC:AddToggle("CMX_AntiBanAll", { Title = "★ 反封禁全家桶(一个开关顶下面四层 · 不用一层层点)", Description = "开=同时开启「拦上报/封禁远程 + 断错误日志通道 + 按名中和+ + 哈希冻结」四层; 关=四层全部还原。也可以直接上调「★ 绕过/防护档位」到 ③, 会自动带上这四层", Default = false, Callback = function(v)
+Tabs.AC:AddSection("反封禁 / 反踢")
+Tabs.AC:AddToggle("CMX_AntiBanAll", { Title = "★ 反封禁(一键: 拦上报 + 断日志 + 按名中和 + 哈希冻结)", Description = "开=同时开启「拦上报/封禁远程 + 断错误日志通道 + 按名中和+ + 哈希冻结」四层; 关=四层全部还原。也可以直接上调「★ 绕过/防护档位」到 ③, 会自动带上这四层", Default = false, Callback = function(v)
 T.CMX_AntiBanAll = v
 if F._cfgSyncing then return end
 F.CMX_BanAllApply(v)
 end })
-Tabs.AC:AddToggle("CMX_BlockReport", { Title = "① 拦上报/封禁远程(名字命中黑名单的 remote 一律发不出去)", Description = "扩充黑名单到 antikick/kick/ban/report/hash/flag/punish/submit/moderation 等, 并在打开时列出 ReplicatedStorage 里命中这些关键词的远程给你看", Default = false, Callback = function(v)
-T.CMX_BlockReport = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_BlockReport", v)
-if v then F.CMX_BlockReportEnable() else F.CMX_BlockReportDisable() end
-end })
-Tabs.AC:AddToggle("CMX_CutLog", { Title = "② 断错误/日志通道(ScriptContext.Error + LogService.MessageOut)", Description = "反作弊最爱监听 ScriptContext.Error 抓我们脚本的报错(报错里带执行器路径), 再上报。这条把那些连接断掉, 保留我们自己的", Default = false, Callback = function(v)
-T.CMX_CutLog = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_CutLog", v)
-if v then F.CMX_CutLogEnable() else F.CMX_CutLogDisable() end
-end })
-Tabs.AC:AddToggle("CMX_NeuterPlus", { Title = "③ 按名中和+(把 ban/report/flag/onDetect/antiKick 类函数变空)", Description = "扫 getgc 里所有表, 把名字是这些的成员函数替换成空函数; 关闭时逐个还原。比「深度中和」的关键词更全", Default = false, Callback = function(v)
-T.CMX_NeuterPlus = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_NeuterPlus", v)
-if v then F.CMX_NeuterPlusEnable() else F.CMX_NeuterPlusDisable() end
-end })
-Tabs.AC:AddToggle("CMX_HashFreeze", { Title = "④ 哈希冻结(把算出的 hex 指纹固定成第一次的值)", Description = "反作弊常把客户端状态算成 32/40/64 位 hex 哈希上报, 服务器比对发现变了就封。这条把结果冻住 ⇒ 服务器看到指纹一直没变。⚠ 只在执行器有 getgc 时可用; 找不到哈希函数会明确告诉你", Default = false, Callback = function(v)
-T.CMX_HashFreeze = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_HashFreeze", v)
-if v then F.CMX_HashFreezeEnable() else F.CMX_HashFreezeDisable() end
-end })
-Tabs.AC:AddButton({ Title = "列出 ReplicatedStorage 里像上报/封禁的远程(只读)", Callback = function() task.spawn(function() pcall(function() F.CMX_ScanReportRemotes(false) end) end) end })
-Tabs.AC:AddButton({ Title = "★ 检测面自检(29 种已知反作弊手法自测 · 看我们哪些会被抓到)", Callback = function() task.spawn(function() pcall(F.CMX_SelfDetect) end) end })
-Tabs.AC:AddSection("★ 游戏档案(识别当前游戏 · 记住你为本游戏调好的设置)")
-Tabs.AC:AddButton({ Title = "当前是哪个游戏(打印识别结果 + 本游戏已存的档案)", Callback = function()
-task.spawn(function()
-pcall(function()
-F.Out("[游戏档案] 当前游戏: " .. F.CMX_GameLabel())
-local p = F.CMX_ProfileGet()
-if p then
-for k, v in pairs(p) do F.Out("[游戏档案]   " .. tostring(k) .. " = " .. tostring(v)) end
-else
-F.Out("[游戏档案] 本游戏还没档案")
-end
-end)
-end)
-end })
-Tabs.AC:AddButton({ Title = "本游戏已知的检测命名(从公开脚本挖出来的 · 只读)", Callback = function()
-task.spawn(function() pcall(F.CMX_ShowGameDetect) end)
-end })
+Tabs.AC:AddSection("游戏档案(记住你为本游戏调好的设置)")
 Tabs.AC:AddToggle("CMX_GameProfile", { Title = "按游戏自动套用档案(档位/飞行通道/加速通道/传送方式)", Description = "你在某个游戏里调好的这几项会被记住; 下次进同一个游戏自动套用。识别靠 game.PlaceId(内置 300 个热门游戏名)", Default = true, Callback = function(v)
 T.CMX_GameProfile = v
 if F._cfgSyncing then return end
 if v then pcall(F.CMX_ProfileApply) else F.Out("[游戏档案] 已关: 只显示游戏名, 不再自动套用") end
 end })
-Tabs.AC:AddSection("★ 绕过(能实际生效的层 · 自己开 · 也可由档位统一带)")
+Tabs.AC:AddSection("绕过(由「一键开启全部」或「绕过档位」统一带)")
 Tabs.AC:AddToggle("CMX_TierLink", { Title = "档位联动绕过层(推荐开 · 上调「★ 绕过/防护档位」时自动带上对应绕过层)", Description = "开: ②档带 参数清洗+读回伪装+视图过滤; ③档再带 钩子加固+模块拦截+时钟粗化; ④档再带 自产登记+栈伪装+身份+FFlag。关: 档位只管原有防护, 绕过层全靠你手动点。降档时只关「档位带起来的」, 手动开的不动", Default = true, Callback = function(v)
 T.CMX_TierLink = v
 if F._cfgSyncing then return end
@@ -12095,82 +11996,6 @@ pcall(F.CMX_TierSync, F.CMX_TierLevel(T.BypassTier))
 else
 F.Out("[档位·绕过层] 联动已关 ⇒ 档位不再管绕过层(已开的层保持现状)")
 end
-end })
-Tabs.AC:AddToggle("CMX_AutoScrub", { Title = "① 参数清洗(全自动 · 免填形状)", Description = "自动试常见形状 → 命中就挂钩 → 每次调用把反作弊回调的参数表元表抹成空表 → 带自愈", Default = false, Callback = function(v)
-T.CMX_AutoScrub = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_AutoScrub", v)
-if v then F.CMX_AutoScrubEnable() else F.CMX_AutoScrubDisable() end
-end })
-Tabs.AC:AddToggle("CMX_HookHard", { Title = "② 钩子加固(newlclosure · 让我们的钩子看起来还是普通 Lua 函数)", Description = "反作弊用 islclosure 自检「这函数是不是被换成 C 闭包了」; 开了之后所有元方法钩子(含防踢/远程拦截)重建成 LClosure 形态", Default = false, Callback = function(v)
-T.CMX_HookHard = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_HookHard", v)
-if v then F.CMX_HookHardApply() else F.CMX_HookHardRestore() end
-end })
-Tabs.AC:AddToggle("CMX_IdentityMask", { Title = "③ 线程身份伪装(提到 8 · 关时还原)", Default = false, Callback = function(v)
-T.CMX_IdentityMask = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_IdentityMask", v)
-if v then F.CMX_IdentityMaskEnable() else F.CMX_IdentityMaskDisable() end
-end })
-Tabs.AC:AddToggle("CMX_FFlagPack", { Title = "④ FFlag 反检测包(预设: 遥测关闭 + 帧率上限)", Default = false, Callback = function(v)
-T.CMX_FFlagPack = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_FFlagPack", v)
-if v then F.CMX_FFlagApplyPack() else F.CMX_FFlagRestore() end
-end })
-Tabs.AC:AddToggle("CMX_SpoofIndex", { Title = "⑤ 属性读回伪装(别人读你的 速度/角速度/位置/CFrame → 按合法速度平滑后的值)", Description = "防御方语料里出现最多的检测就是「读位置(207份)/读线性速度(20份)」。开了之后反作弊读到你角色的速度会被压到合法值、位置会按合法速度平滑推进; 我们自己(加速/飞行/传送)读到的仍是真值", Default = false, Callback = function(v)
-T.CMX_SpoofIndex = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_SpoofIndex", v)
-if v then F.CMX_SpoofIndexEnable() else F.CMX_SpoofIndexDisable() end
-end })
-Tabs.AC:AddToggle("CMX_SpoofPos", { Title = "⑤b 位置/CFrame 也伪装(默认关 · 会扰乱游戏自己的区域/门窗/NPC 判定, 慎开)", Description = "只开⑤时: 反作弊读你的速度/角速度会被压到合法值, 但读到的位置是真的。开了这一项位置也会被平滑 ⇒ 更隐蔽, 但游戏自己按位置判定的机制(传送带/触发区/NPC 索敌)会跟着不准", Default = false, Callback = function(v)
-T.CMX_SpoofPos = v
-if F._cfgSyncing then return end
-F.Out("[绕过·属性伪装] 位置/CFrame 伪装 = " .. (v and "开(注意游戏判定可能异常)" or "关(只伪装速度和角速度)"))
-end })
-Tabs.AC:AddToggle("CMX_ViewFilter", { Title = "⑥ 视图过滤(反作弊遍历你的角色时, 看不见我们挂的约束/附件/方框)", Description = "反作弊常用 GetChildren/GetDescendants 找角色里的异常实例(飞行约束、附件、方框)。开了之后这类遍历看不到我们的东西; 我们自己的遍历不受影响", Default = false, Callback = function(v)
-T.CMX_ViewFilter = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_ViewFilter", v)
-if v then F.CMX_ViewFilterEnable() else F.CMX_ViewFilterDisable() end
-end })
-Tabs.AC:AddToggle("CMX_Humanize", { Title = "⑦ 自动化去机械化(自动点击/自动交互/挂机注入 的间隔加随机抖动)", Description = "固定间隔会被统计检测抓(官方给的规避建议第一条就是加随机)。开了之后这些循环的等待时间变成 0.7~1.3 倍随机", Default = false, Callback = function(v)
-T.CMX_Humanize = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_Humanize", v)
-if v then F.CMX_HumanizeEnable() else F.CMX_HumanizeDisable() end
-end })
-Tabs.AC:AddToggle("CMX_InstNew", { Title = "⑧ 自产登记(钩 Instance.new · 我们自己建的东西自动隐身)", Description = "开了之后凡是**我们**创建的实例(约束/附件/方框/临时件)自动登记; 配合⑥的视图过滤, 反作弊遍历时不用再靠名字就能看不见它们。游戏自己创建的不受影响", Default = false, Callback = function(v)
-T.CMX_InstNew = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_InstNew", v)
-if v then F.CMX_InstNewEnable() else F.CMX_InstNewDisable() end
-end })
-Tabs.AC:AddToggle("CMX_DebugMask", { Title = "⑨ 栈取证伪装(反作弊用 debug.info 查栈时, 我们的代码显示成官方脚本)", Description = "反作弊做栈取证时会看到调用来源是执行器加载的脚本 —— 这是最硬的证据之一。开了之后, 反作弊查到的 source 会显示成 @game/PlayerScripts/PlayerModule/ControlModule; 我们自己查栈拿到的仍是真信息", Default = false, Callback = function(v)
-T.CMX_DebugMask = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_DebugMask", v)
-if v then F.CMX_DebugMaskEnable() else F.CMX_DebugMaskDisable() end
-end })
-Tabs.AC:AddToggle("CMX_RequireBlock", { Title = "⑩ 模块拦截(名字带 anticheat/detector/integrity/checksum 的模块加载被拦下)", Description = "部分反作弊把检测逻辑放在 ModuleScript 里, 靠 require 加载。开了之后这类模块加载失败(返回空模块), 反作弊那部分逻辑直接不启动", Default = false, Callback = function(v)
-T.CMX_RequireBlock = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_RequireBlock", v)
-if v then F.CMX_RequireBlockEnable() else F.CMX_RequireBlockDisable() end
-end })
-Tabs.AC:AddSlider("CMX_ClockStep", { Title = "时钟粗化步长(秒 · 别人量到的时间是这个值的整数倍)", Min = 0.02, Max = 0.5, Default = 0.1, Rounding = 2, Callback = function(v)
-C.CMX_ClockStep = v
-if F._cfgSyncing then return end
-if T.CMX_ClockMask then pcall(F.CMX_ClockMaskEnable) end
-end })
-Tabs.AC:AddToggle("CMX_ClockMask", { Title = "⑪ 时钟粗化(别人量时间只能拿到 0.1 秒整数倍)", Description = "反作弊靠 os.clock 算「两次动作间隔」来判断你是不是机器(10ms 一次必是人不可能做到)。开了之后别人量到的时间被粗化到 0.1 秒整数倍, 量不出我们的节奏; 我们自己量时间仍精确", Default = false, Callback = function(v)
-T.CMX_ClockMask = v
-if F._cfgSyncing then return end
-F.CMX_Remember("CMX_ClockMask", v)
-if v then F.CMX_ClockMaskEnable() else F.CMX_ClockMaskDisable() end
 end })
 Tabs.AC:AddSlider("CMX_AutoDelay", { Title = "自动开启延迟(秒 · 让游戏先加载完, 避免同一帧装一堆钩子被踢)", Min = 0, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.CMX_AutoDelay = v end })
 Tabs.AC:AddToggle("CMX_AutoAll", { Title = "★ 加载后自动开启(恢复你上次开着的全部功能 · 含玩法与绕过)", Description = "默认开。关掉它就退回「只恢复绕过层, 玩法不自动开」", Default = true, Callback = function(v)
@@ -12230,13 +12055,10 @@ elseif string.find(v, "强制重载", 1, true) then
 pcall(F.HotReload, true)
 end
 end })
-Tabs.Setting:AddButton({ Title = "★ 热加载(已是最新就不动 · 保留已开功能; 要强制重下用上面的诊断下拉)", Callback = function() F.HotReload(false) end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已是最新就不动)", Callback = function() F.HotReload(false) end })
+Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
 Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
-Tabs.Setting:AddSection("★ 补强 · 诊断与工具")
-Tabs.Setting:AddButton({ Title = "网络所有权只读诊断(本机/相机/其他玩家的归属 · 不改任何东西)", Callback = function() task.spawn(function() pcall(F.CMX_NetOwnerReport) end) end })
-Tabs.Setting:AddButton({ Title = "包围盒只读诊断(角色精确包围盒 + 半径内部件数)", Callback = function() task.spawn(function() pcall(F.CMX_BBReport) end) end })
-Tabs.Setting:AddButton({ Title = "★ 补强功能一键全关(只关本轮新增的那些)", Callback = function() task.spawn(function() pcall(F.CMX_DisableAll) end) end })
 F.UnloadAll = UnloadAll
 pcall(function()
 local g = getgenv and getgenv()
