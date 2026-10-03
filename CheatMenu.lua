@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 01:45 sha d1fd65cf bytes 431815'):format('2026-10-04 01:45','d1fd65cf',431815))
+print(('[CheatMenu] build 2026-10-04 01:57 sha 7e59e463 bytes 432263'):format('2026-10-04 01:57','7e59e463',432263))
 local F = {}
-F.VERSION = "v14.0.9"
+F.VERSION = "v14.0.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3085,8 +3085,22 @@ end
 end
 end)
 end
+F._typing = false
+pcall(function()
+UIS.TextBoxFocused:Connect(function() F._typing = true end)
+UIS.TextBoxFocusReleased:Connect(function() F._typing = false end)
+end)
 F.CombatTick = function()
 if not T.AimOn then return end
+if F._typing or (F.MenuOpen and F.MenuOpen()) then
+if F._aimFacing then
+F._aimFacing = nil
+pcall(function() local _, h0 = GC() if h0 then h0.AutoRotate = true end end)
+end
+F._combatNow = nil
+F.CombatHudSet("锁定: 菜单/打字中已暂停(关掉菜单自动恢复)")
+return
+end
 local _, hum, root = GC()
 if not (hum and root) then return end
 local ch, part = F.CombatPick()
