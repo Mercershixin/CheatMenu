@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:14 sha 59ee957e bytes 436403'):format('2026-10-04 02:14','59ee957e',436403))
+print(('[CheatMenu] build 2026-10-04 02:22 sha abc92438 bytes 441191'):format('2026-10-04 02:22','abc92438',441191))
 local F = {}
-F.VERSION = "v14.0.12"
+F.VERSION = "v14.0.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3140,8 +3140,15 @@ else
 F._silentPart = nil
 end
 local dist = (part.Position - root.Position).Magnitude
+local hpTxt = ""
+if T.HealthShow or T.HealthIsolate then
+pcall(function()
+local hT = ch:FindFirstChildOfClass("Humanoid")
+if hT then hpTxt = string.format(" · 血 %.0f/%.0f", hT.Health, hT.MaxHealth) end
+end)
+end
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
-.. (T.AutoFire and " · 自动开火中" or ""))
+.. hpTxt .. (T.AutoFire and " · 自动开火中" or ""))
 local dir = part.Position - root.Position
 if T.AimTurnBody == true then
 local flat = Vector3.new(dir.X, 0, dir.Z)
@@ -3174,7 +3181,7 @@ if hum and F._aimFacing then hum.AutoRotate = true end
 end)
 F._aimFacing, F._combatNow = nil, nil
 F._silentPart, F._silentCh = nil, nil
-F.CombatHudHide()
+if not T.HealthShow then F.CombatHudHide() end
 F._aimWatch = false
 F._aimWatchId = (F._aimWatchId or 0) + 1
 F.Out("[战斗] 自瞄已关闭" .. (why and (" (" .. tostring(why) .. ")") or ""))
@@ -3238,6 +3245,121 @@ if F._silentDied then pcall(function() F._silentDied:Disconnect() end) F._silent
 F._silentCh = nil
 pcall(function() F.MetaUninstall("game.__index", "CMSilent") end)
 F.Out("[静默瞄准] 已关闭")
+end
+F._hpShowOn = false
+F.HealthShowSet = function(on)
+T.HealthShow = on and true or false
+if not T.HealthShow then
+F._hpShowOn = false
+if not T.AimOn then F.CombatHudHide() end
+F.Out("[血量显示] 已关")
+return
+end
+F.CombatHudShow()
+if not F._hpShowOn then
+F._hpShowOn = true
+task.spawn(function()
+while F._hpShowOn and T.HealthShow do
+pcall(function()
+if not T.AimOn then
+local _, hum = GC()
+if hum then
+F.CombatHudSet(string.format("血量: 我 %.0f/%.0f", hum.Health, hum.MaxHealth))
+else
+F.CombatHudSet("血量: (角色没加载)")
+end
+end
+end)
+task.wait(0.25)
+end
+F._hpShowOn = false
+end)
+end
+F.Out("[血量显示] 已开(用屏幕上方那条 HUD; 自瞄开着时显示的是锁定目标的血量)")
+end
+F._hpIsoOn, F._hpIsoConns = false, {}
+F._hpIsoKill = function(sig)
+if not (sig and type(getconnections) == "function") then return 0 end
+local ok, conns = pcall(getconnections, sig)
+if not (ok and type(conns) == "table") then return 0 end
+local n = 0
+for _, c in ipairs(conns) do
+local fn = nil
+pcall(function() fn = c.Function end)
+if fn == nil then pcall(function() fn = c.__function end) end
+local own = false
+pcall(function() own = AC.isOwnConn(fn) end)
+if not own then
+if pcall(function() c:Disable() end) then
+F._hpIsoConns[#F._hpIsoConns + 1] = c
+n = n + 1
+end
+end
+end
+return n
+end
+F.HealthIsolateApply = function()
+local mx, n = 100, 0
+pcall(function()
+local _, hum = GC()
+if hum then
+pcall(function()
+local v = hum.MaxHealth
+if type(v) == "number" and v == v and v > 0 and v < 1e6 then mx = v end
+end)
+n = n + F._hpIsoKill(hum.HealthChanged)
+n = n + F._hpIsoKill(hum:GetPropertyChangedSignal("Health"))
+n = n + F._hpIsoKill(hum:GetPropertyChangedSignal("MaxHealth"))
+end
+end)
+F._myMaxHP = mx
+return n
+end
+F.HealthIsolateSet = function(on)
+T.HealthIsolate = on and true or false
+if not T.HealthIsolate then
+F._hpIsoOn = false
+for i = 1, #F._hpIsoConns do pcall(function() F._hpIsoConns[i]:Enable() end) end
+F._hpIsoConns = {}
+pcall(function() F.MetaUninstall("game.__index", "CMHealthLock") end)
+F.Out("[血量隔离] 已关: 读伪装已卸下, 之前断开的血量监听已全部接回")
+return
+end
+local got = F.MetaInstall("game.__index", game, "CMHealthLock", function(box)
+return function(t, k)
+if not checkcaller() and F._hpIsoOn and (k == "Health" or k == "MaxHealth") then
+local _, hum = GC()
+if hum and t == hum then
+local mx = F._myMaxHP
+if type(mx) == "number" and mx == mx and mx > 0 and mx < 1e6 then return mx end
+return 100
+end
+end
+return box.orig(t, k)
+end
+end)
+if not got then
+F.Out("[血量隔离] ⚠ 本执行器装不上读伪装层 ⇒ 该功能不可用(其它功能不受影响)")
+T.HealthIsolate = false
+return
+end
+F._hpIsoOn = true
+local n = F.HealthIsolateApply()
+local mode = select(1, F.AuthorityGuard(false))
+F.Out("[血量隔离] 已开: 外部读 humanoid.Health 只会读到满血; 已断开 " .. tostring(n) .. " 条游戏的血量变化监听")
+if tostring(mode or ""):lower():find("server", 1, true) then
+F.Out("[血量隔离] ⚠ 本游戏 AuthorityMode=Server(血量服务端裁决) ⇒ 这是「本地看起来不掉血」, 服务端仍可能判你死亡并重生 —— 不是开关没生效")
+else
+F.Out("[血量隔离] 本游戏血量不是服务端权威 ⇒ 本地不掉血大概率能成立")
+end
+end
+F.HealthIsolateDisable = function()
+T.HealthIsolate = false
+F._hpIsoOn = false
+for i = 1, #F._hpIsoConns do pcall(function() F._hpIsoConns[i]:Enable() end) end
+F._hpIsoConns = {}
+pcall(function() F.MetaUninstall("game.__index", "CMHealthLock") end)
+F.Out("[血量隔离] 已关闭")
 end
 F.CombatReport = function()
 local ch = F._combatNow
@@ -6005,6 +6127,7 @@ if T.Translate then pcall(F.TranslateEnable) end
 if T.HitboxExpand then pcall(F.HitboxExpandEnable) end
 if T.KillAura then pcall(F.KillAuraEnable) end
 if T.BodyHL then pcall(F.BodyHLEnable) end
+if T.HealthIsolate then pcall(F.HealthIsolateApply) end
 end
 function F.CharPersistEnable() T.CharPersist = true end
 function F.CharPersistDisable() T.CharPersist = false end
@@ -6645,7 +6768,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -8591,7 +8714,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -11306,6 +11429,14 @@ T.NoDeath = v
 if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
+end })
+Tabs.Combat:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.HealthShowSet(v)
+end })
+Tabs.Combat:AddToggle("HealthIsolate", { Title = "血量隔离(本地不掉血 · 读伪装+断血量监听)", Description = "把「外部读到的血量」固定成满血, 并断开游戏自己的血量变化监听 ⇒ 本地不会再看到掉血。⚠ 不是真无敌: 游戏若为服务端裁决血量(AuthorityMode=Server), 服务端仍会判你死亡并重生 —— 开关日志里会直接告诉你本游戏吃不吃这套", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.HealthIsolateSet(v)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
