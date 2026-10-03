@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:54 sha 08b33467 bytes 455883'):format('2026-10-03 16:54','08b33467',455883))
+print(('[CheatMenu] build 2026-10-03 17:00 sha c224bd5a bytes 453321'):format('2026-10-03 17:00','c224bd5a',453321))
 local F = {}
-F.VERSION = "v13.10.1"
+F.VERSION = "v13.10.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3590,7 +3590,7 @@ if T.HitLock then pcall(function() hum.Health = hum.MaxHealth end) end
 end)
 end
 F.DROP_KEYS = { "dropheld", "droppet", "dropheldegg", "dropitem", "dropcarry", "releaseheld",
-"dropbrainrot", "drop" }
+"dropbrainrot" }
 F.BLOCK_REMOTE_KEYS = {
 "trap", "snare", "cage", "stun", "mousetrap", "beartrap", "ratstrap",
 "caught", "arrested", "handcuff", "jailed", "wanted", "guardcatch", "guardhit", "securityhit",
@@ -12010,44 +12010,12 @@ Tabs.AC:AddButton({ Title = "复制扫描结果到剪贴板(直接粘给我)", C
 Tabs.AC:AddToggle("ScanAutoFix", { Title = "扫描后自动处置(默认关 · 开了扫描就会动手: 藏界面 + 断可疑监听)", Default = false, Callback = function(v)
 T.ScanAutoFix = v
 end })
-Tabs.AC:AddSection("反封禁 / 反踢")
-Tabs.AC:AddToggle("CMX_AntiBanAll", { Title = "★ 反封禁(一键: 拦上报 + 断日志 + 按名中和 + 哈希冻结)", Description = "开=同时开启「拦上报/封禁远程 + 断错误日志通道 + 按名中和+ + 哈希冻结」四层; 关=四层全部还原。也可以直接上调「★ 绕过/防护档位」到 ③, 会自动带上这四层", Default = false, Callback = function(v)
-T.CMX_AntiBanAll = v
-if F._cfgSyncing then return end
-F.CMX_BanAllApply(v)
-end })
-Tabs.AC:AddSection("游戏档案(记住你为本游戏调好的设置)")
-Tabs.AC:AddToggle("CMX_GameProfile", { Title = "按游戏自动套用档案(档位/飞行通道/加速通道/传送方式)", Description = "你在某个游戏里调好的这几项会被记住; 下次进同一个游戏自动套用。识别靠 game.PlaceId(内置 300 个热门游戏名)", Default = true, Callback = function(v)
-T.CMX_GameProfile = v
-if F._cfgSyncing then return end
-if v then pcall(F.CMX_ProfileApply) else F.Out("[游戏档案] 已关: 只显示游戏名, 不再自动套用") end
-end })
-Tabs.AC:AddSection("绕过(由「一键开启全部」或「绕过档位」统一带)")
-Tabs.AC:AddToggle("CMX_TierLink", { Title = "档位联动绕过层(推荐开 · 上调「★ 绕过/防护档位」时自动带上对应绕过层)", Description = "开: ②档带 参数清洗+读回伪装+视图过滤; ③档再带 钩子加固+模块拦截+时钟粗化; ④档再带 自产登记+栈伪装+身份+FFlag。关: 档位只管原有防护, 绕过层全靠你手动点。降档时只关「档位带起来的」, 手动开的不动", Default = true, Callback = function(v)
-T.CMX_TierLink = v
-if F._cfgSyncing then return end
-if v then
-F.Out("[档位·绕过层] 联动已开 ⇒ 立刻按当前档位同步一次")
-pcall(F.CMX_TierSync, F.CMX_TierLevel(T.BypassTier))
-else
-F.Out("[档位·绕过层] 联动已关 ⇒ 档位不再管绕过层(已开的层保持现状)")
-end
-end })
+Tabs.AC:AddSection("自动开启")
 Tabs.AC:AddSlider("CMX_AutoDelay", { Title = "自动开启延迟(秒 · 让游戏先加载完, 避免同一帧装一堆钩子被踢)", Min = 0, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.CMX_AutoDelay = v end })
 Tabs.AC:AddToggle("CMX_AutoAll", { Title = "★ 加载后自动开启(恢复你上次开着的全部功能 · 含玩法与绕过)", Description = "默认开。关掉它就退回「只恢复绕过层, 玩法不自动开」", Default = true, Callback = function(v)
 T.CMX_AutoAll = v
 if F._cfgSyncing then return end
 F.Out("[自动开启] " .. (v and "已开: 下次加载会自动恢复上次开着的全部功能" or "已关: 加载后只恢复绕过层"))
-end })
-Tabs.AC:AddSection("★ 防护 · 改写档(把「反作弊主开关」也接上会改游戏的手段)")
-Tabs.AC:AddDropdown("ACWriteTier", { Title = "主开关注入的改写强度(叠加在「防护」开关之上)", Values = {
-"① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)",
-"② + 元表钩(拦 remote / 属性读回伪装) + 断可疑监听",
-"③ + 深度中和(按名中和检测函数 · 最激进)",
-}, Default = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)", Callback = function(v)
-T.ACWriteTier = v
-if F._cfgSyncing then return end
-pcall(F.ACWriteTierApply, v)
 end })
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
