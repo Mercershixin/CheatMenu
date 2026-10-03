@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:47 sha 15950ce0 bytes 438834'):format('2026-10-04 02:47','15950ce0',438834))
+print(('[CheatMenu] build 2026-10-04 02:56 sha 42ef5b2f bytes 437206'):format('2026-10-04 02:56','42ef5b2f',437206))
 local F = {}
-F.VERSION = "v14.0.17"
+F.VERSION = "v14.0.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -717,48 +717,6 @@ end
 function AC.WatchNewRemotesDisable()
 if AC._watchConn then AC._watchConn:Disconnect() AC._watchConn = nil end
 end
-AC._propLockOn = false
-AC._propLockOld = nil
-function AC.InstallPropertyLock()
-if AC._propLockOn then return true end
-if not (hookmetamethod and newcclosure) then return false end
-local ok, res = pcall(function()
-return hookmetamethod(game, "__newindex", newcclosure(function(t, k, v)
-if (T.ACBypass or T.PropertyLock) and not checkcaller() then
-if typeof(t) == "Instance" then
-local isHum = false
-pcall(function() isHum = t:IsA("Humanoid") end)
-if isHum and (k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight") then
-local _, hum = GC()
-if hum and t == hum then
-if k == "WalkSpeed" then
-if T.SpeedOn then v = tonumber(C.SpeedValue) or v end
-elseif k == "JumpPower" then
-if T.InfiniteJump or T.SpeedOn then v = 50 end
-elseif k == "JumpHeight" then
-if T.InfiniteJump then v = 7.5 end
-end
-end
-end
-end
-end
-return AC._propLockOld(t, k, v)
-end))
-end)
-if ok and type(res) == "function" then
-AC._propLockOld = res
-AC._propLockOn = true
-return true
-end
-return false
-end
-function AC.UninstallPropertyLock()
-if AC._propLockOn and hookmetamethod and AC._propLockOld then
-pcall(function() hookmetamethod(game, "__newindex", AC._propLockOld) end)
-end
-AC._propLockOn = false
-AC._propLockOld = nil
-end
 AC._ownFns = setmetatable({}, { __mode = "k" })
 AC._mySrc = nil
 pcall(function()
@@ -827,7 +785,7 @@ if type(v) == "number" and v > 100 then return 100 end
 end
 return box.orig(t, k)
 end
-if k == "GetFullName" and T.PropertyLock and AC.isOwnChar(t) then return AC._HIDE_FAKE end
+if k == "GetFullName" and AC.isOwnChar(t) then return AC._HIDE_FAKE end
 return box.orig(t, k)
 end
 end)
@@ -2875,7 +2833,6 @@ end)
 return true
 end
 C.PriorityTargets = {}
-function F.AddPriorityTarget(name) C.PriorityTargets[name] = true end
 function F.PlayerNames()
 local n = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -4491,16 +4448,6 @@ end
 end
 end
 end
-end
-local function eggTP(cf)
-local _, _, r = GC()
-if not r or not cf then return end
-if F.DropIntent then pcall(F.DropIntent) end
-pcall(function() r:PivotTo(cf) end)
-pcall(function()
-r.AssemblyLinearVelocity = Vector3.zero
-r.AssemblyAngularVelocity = Vector3.zero
-end)
 end
 F.SuicideNow = function()
 local ch, hum, root = GC()
@@ -6806,7 +6753,7 @@ F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -8744,7 +8691,7 @@ F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
-AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
+AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable, F.HitboxExpandDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
 F.NoClipDisable,
@@ -8979,7 +8926,7 @@ F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
 F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
 F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 }) do pcall(fn) end
-T.CMX_SpoofPos, T.CMX_AimPredict = false, false
+T.CMX_SpoofPos = false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
 task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
 end
