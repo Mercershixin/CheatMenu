@@ -3102,3 +3102,50 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 
 - ★ 对比方法: 对 12 类功能各搜公开脚本并抓 4~7 份实现, 统计它们常用的 API, 再与我们逐项比对. 结论(已对齐的): 速度/飞行(LinearVelocity 6·BodyVelocity 4·PlatformStand 4)✓我们用速度驱动; 防踢/反作弊(getgc 4/4·hookfunction·getconnections)✓全有; 视觉(Highlight 5·BillboardGui 3)✓全有; 瞬间交互(fireproximityprompt 7)✓有; 搬运(WeldConstraint)✓有; 隐身(Transparency)✓有; 防击飞(hookmetamethod·AlignPosition)✓有. **差异及原因**: ① 防挂机公开脚本用 Idled+VirtualUser(5/5), 我们**故意不用 VirtualUser**(你要求'挂机不动人物') ⇒ 保持; ② 瞬间交互公开脚本还用 InputHoldBegin(6) 做'直接触发', 我们只做'把长按改成点一下'(更保守, 需玩家操作) ⇒ 保持; ③ **独家**: 传送带'抢所有权+分步瞬移'(公开脚本少见), 翻译(本地 llama 服务)公开脚本没有. 另修 2 处(死码扫描发现): **关闭瞬间交互时没断掉 PromptTriggered 监听**(会残留) 已补; 删掉无人调用的死函数 F.IsOurs. 体检: 编译 0 错 / 门禁 8 项全绿 / 死码仅剩'只写不读的记录字段'(无害)
 
+## 13.10.35：视角/鼠标被锁的根治 + 防护开关找回 + 三处"改写游戏"的风险收口
+
+- **用户**: "为什么加载后我的视角不能动了 右键移动没反应了 修复一下，然后我的飞行和加速的正身(稳身)反陷阱 反攻击 功能区哪了 修复找回下"
+
+### 诊断(用真实存档 + 日志定案, 不是猜)
+- 现场证据: 执行器存档 `<executor workspace>/CheatMenu_Config_v1.json`(Real 执行器) + `CheatMenu_Logs/*.txt`。
+  存档里 `AimOn / LockCam / Freecam / TPMouse` **全是 false** ⇒ 不是"自瞄/锁相机/自由视角"在锁视角(前两轮都是往这上面修, 所以治不好)。
+- 当时真正在跑的是 **③ 重档全套**: `ACMaster ③` + `BypassTier ④` + 反封禁 4 层 + CMX 绕过 9 层
+  (元表钩 namecall/index/setmetatable、深度中和、断连接、拦 remote、自产登记、视图过滤、栈伪装、身份 8、FFlag、**时钟粗化**、Instance.new/require 钩)。
+- ★★ 这十层里有几层**是全局改写游戏运行时**的: `os.clock`(时钟粗化)、`require`、`Instance.new`、`debug.info`,
+  以及**把角色信号上"所有不属于我们"的连接一律 Disable**(force 模式)。游戏的相机/角色/UI 逻辑被掐掉后,
+  表现出来正是"人还能走, 但视角/右键转不动、交互发死" —— 而且**没有任何日志和报错**。
+- ★★★ **结论(方法论)**: "视角被锁"至少有三种成因 —— ① 我们主动接管相机(LockCam/Freecam/Aim);
+  ② **全局 API 钩子把游戏的时间步/模块加载/实例创建搞坏**; ③ **无差别禁用游戏连接**。
+  以后排查视角/交互"没反应", 三条都要看, 不能只盯 ①。
+
+### 修法
+1. **堵死"加载把视角锁上"的所有回填路径**: 新增 `F.CFG_NOSYNC = { AimOn, LockCam, Freecam, TPMouse }` ——
+   `CfgSyncUI` **永不同步这 4 个控件**。以前存档里它们是 true 时, `CfgSyncUI` 会 `opt:Set(true)` → 触发 Callback →
+   `F.AimSet`/`FreecamEnable` ⇒ **删掉"自动恢复"也照样锁**(这就是前两轮修不干净的真因); 现在 `RestoreSavedFeatures`
+   开头还会把这 4 个 T 标志直接清零, 保证界面显示与实现一致。
+2. **视角保底 + 逃生门**: 新增 `F.CamRelease(force, why)`(卸自瞄/锁相机/自由视角 + Scriptable→Custom +
+   相机目标还原成自己 Humanoid + MouseBehavior=Default)、`F.CamReleaseToggleOff`(静默把 4 个开关回填成关)、
+   `F.CamReleaseSchedule()`(加载后 6/15/30/60 秒各保底一次, **只在用户没主动开时**才动手) + **F2 热键**;
+   系统页新增两个按钮:「★ 视角/鼠标被锁住了?点这里」与「★ 游戏异常(视角/交互/卡死)?点这里一键恢复」
+   (后者额外做 `AC.ReenableDisabledConns` + 卸掉全部"会改写游戏"的层)。
+3. **连接清理变成可审计 / 可还原**: 每禁一条都打日志(`[连接清理] 已禁用: 信号 ← 函数名 @ 来源脚本`)并记入
+   `AC._disabledConns`; 新增 `AC.ReenableDisabledConns()`(已接入 panic 链与卸载链);
+   **不再 force 禁用 `Humanoid.Changed / StateChanged / Health / MaxHealth`**(游戏的相机与角色逻辑就挂在这些信号上),
+   force 只保留在速度/位置类(`WalkSpeed / JumpPower / JumpHeight / root.CFrame / root.Position`)。
+4. **时钟粗化不再随加载自动开**: `os.clock` 被全局粗化后, 任何"按 dt 做插值/平滑"的游戏逻辑(含视角)都会发死。
+   三个入口(恢复清单 / `CMX_AutoRestoreApply` 映射 / `CMX_TierSync` 的 ③ 档)全部摘掉;
+   加载时若存档里是开的会主动关掉并写明原因。要开请手动。
+5. **remote 黑名单不再误伤玩法**: 新增 `F.CMX_KeyIsolate` —— **长度 ≤4 的关键词必须"独立成词"**
+   (以前 `ban` 会命中 `rev_ARENA_BANNER`、`kick` 会命中 `rev_KickEvent/Collect/Data` ⇒ 把**游戏自己的玩法 remote** 拦了);
+   `AC.InstallNamecallHook` 也改用同一套判定, 拦截时打节流日志(2~3 秒一条)写明"拦了哪个 remote / 命中哪个关键词 / 累计几次"。
+6. **防护开关找回(用户第二个诉求)**: 「移动」页 飞行/加速 下面新增分区「★ 防护(稳身 / 反攻击 / 反陷阱)」——
+   `SteadyOn`(稳身) / `HitGuard`(反攻击·受击保护) / `TrapWarn`(反陷阱) / `SpeedAntiTP`(防拉回) 四个开关
+   (底层 `F.SteadyEnable/TrapGuardEnable/HitGuardEnable/SpeedAntiTPEnable` 一直在, 只是被 ACMaster 下拉藏起来了);
+   统一走新增的 `F.ProtectApply()`(按 T 标志重算 CharEvents/MetaHook + 四项 Enable/Disable);
+   `F.ProtectTierApply` / `F.BypassTierApply` 末尾补 `F.CfgSyncUI()` ⇒ 改档位后开关显示跟着走。
+
+### 验证 / 发版
+- `luau-compile --binary` 0 错; 门禁 8 项全绿(编译 / 局部 94 / 源根先用后声明 0 / 裸引用 0 / 消毒 print=1 / 文本自检 / 等价性 / 未定义全局 0);
+- v13.10.34 → **v13.10.35**(patch), 源码 `CheatMenu-13.10.35.lua`, 产物 `dist/repo/CheatMenu.lua`。
+
+
