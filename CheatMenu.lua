@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 19:57 sha d39f57f6 bytes 445582'):format('2026-10-03 19:57','d39f57f6',445582))
+print(('[CheatMenu] build 2026-10-03 20:08 sha 434ccda2 bytes 445671'):format('2026-10-03 20:08','434ccda2',445671))
 local F = {}
-F.VERSION = "v13.10.27"
+F.VERSION = "v13.10.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3136,6 +3136,11 @@ function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
 if not T.AimOn then
+pcall(function()
+local cam = workspace.CurrentCamera
+local _, myHum = GC()
+if cam and myHum then cam.CameraSubject = myHum end
+end)
 return
 end
 F._aimConn = true
@@ -3148,18 +3153,21 @@ local md = hum and hum.MoveDirection
 if md and md.Magnitude > 0.1 then firing = false else firing = true end
 end
 if T.AimFireOnly and not T.AutoFire and not firing then return end
-local _, hum = GC()
-if not hum then return end
+local _, myHum = GC()
+if not myHum then return end
 local cam = workspace.CurrentCamera
+if not cam then return end
 local tgt = F.AimPick()
-if not (cam and tgt) then return end
-local aimPos = tgt.Position
-if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
-local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
-local lerpK = 1 / math.max(1, tonumber(C.AimSmooth) or 5)
-if T.Aim360 then lerpK = math.min(lerpK, 0.12) end
-cam.CFrame = cam.CFrame:Lerp(want, lerpK)
+if tgt then
+local th = nil
+pcall(function() th = tgt.Parent and tgt.Parent:FindFirstChildOfClass("Humanoid") end)
+if th and th.Health > 0 then
+if cam.CameraSubject ~= th then cam.CameraSubject = th end
 F.AutoFire(tgt)
+return
+end
+end
+if cam.CameraSubject ~= myHum then cam.CameraSubject = myHum end
 end)
 end
 local GodConn = nil
