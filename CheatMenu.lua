@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 01:57 sha 7e59e463 bytes 432263'):format('2026-10-04 01:57','7e59e463',432263))
+print(('[CheatMenu] build 2026-10-04 02:06 sha a9ac2485 bytes 433524'):format('2026-10-04 02:06','a9ac2485',433524))
 local F = {}
-F.VERSION = "v14.0.10"
+F.VERSION = "v14.0.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6566,7 +6566,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.HitboxExpandDisable,  F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallPropertyLock, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6916,6 +6916,11 @@ end
 TrainThread = nil
 end)
 end
+function F.AutoTrainDisable()
+T.AutoTrain = false
+TrainThread = nil
+F.Out("[训练] 已停止")
+end
 local GymThread2 = nil
 function F.AutoGymEnable()
 if GymThread2 or GymThread then return end
@@ -6941,6 +6946,11 @@ F.Out("[健身房] 本游戏没有 KickUpgrades 锻炼界面 ⇒ 走旧的举铁
 AutoGymLiftMachineLegacy()
 end
 end)
+end
+function F.AutoGymDisable()
+T.AutoGym = false
+GymThread2 = nil
+F.Out("[健身房] 已停止")
 end
 local function multiplierFromText(v)
 local compact = tostring(v or ""):upper():gsub("%s+", ""):gsub("×", "X")
@@ -7025,6 +7035,11 @@ task.wait(math.max(0.1, tonumber(C.AutoBonusRate) or 0.5))
 end
 BonusThread = nil
 end)
+end
+function F.AutoBonusDisable()
+T.AutoBonus = false
+BonusThread = nil
+F.Out("[领奖] 已停止")
 end
 F.GameCheck = function()
 local _, nm = pcall(function()
@@ -8497,6 +8512,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -11188,21 +11204,25 @@ Tabs.Combat:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端�
 T.God = v
 if F._cfgSyncing then return end
 if v then pcall(GodEnable) else pcall(GodDisable) end
+F.Out("[无敌] " .. (v and "已开(血量拉到无穷; 服务端若校验会拉回)" or "已关"))
 end })
 Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定)", Default = false, Callback = function(v)
 T.LockHealth = v
 if F._cfgSyncing then return end
 if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
+F.Out("[锁血] " .. (v and "已开(血量恒定)" or "已关"))
 end })
 Tabs.Combat:AddToggle("Regen", { Title = "回血", Default = false, Callback = function(v)
 T.Regen = v
 if F._cfgSyncing then return end
 if v then pcall(RegenEnable) else pcall(RegenDisable) end
+F.Out("[回血] " .. (v and "已开" or "已关"))
 end })
 Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
 T.NoDeath = v
 if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
+F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
@@ -11279,11 +11299,13 @@ local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
 if F._cfgSyncing or not changed then return end
 if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end
+F.Out("[无限跳] " .. (v and "已开" or "已关"))
 end })
 Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
 if F._cfgSyncing then return end
 if v then F.NoClipEnable() else F.NoClipDisable() end
+F.Out("[穿墙] " .. (v and "已开" or "已关"))
 end })
 Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
 T.Hide = v
@@ -11297,11 +11319,13 @@ Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到
 T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
+F.Out("[高亮] 身体高亮 = " .. (v and "开(隔墙可见 · 队友绿/敌人红看下面的敌我识别)" or "关"))
 end })
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
 T.TeamColorHL = v
 if F._cfgSyncing then return end
 if T.BodyHL then F.BodyHLRefresh() end
+F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
 end })
 Tabs.World:AddSection("画面增强")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮+夜视+去雾)", Default = false, Callback = function(v)
@@ -11314,16 +11338,19 @@ Tabs.World:AddToggle("ViewBoost", { Title = "视角增强(FOV+无限缩放)", De
 T.FOV = v T.Zoom = v
 if F._cfgSyncing then return end
 if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
+F.Out("[视角] 视角增强 = " .. (v and "开(FOV+无限缩放)" or "关"))
 end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
 T.Mute = v
 if F._cfgSyncing then return end
 if v then MuteEnable() else MuteDisable() end
+F.Out("[静音] " .. (v and "已开" or "已关"))
 end })
 Tabs.World:AddToggle("Antilag", { Title = "降画质", Default = false, Callback = function(v)
 T.Antilag = v
 if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
+F.Out("[降画质] " .. (v and "已开" or "已关"))
 end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
@@ -11354,6 +11381,7 @@ Tabs.World:AddToggle("LockCam", { Title = "锁相机", Default = false, Callback
 T.LockCam = v
 if F._cfgSyncing then return end
 if v then F.LockCamEnable() else F.LockCamDisable() end
+F.Out("[锁相机] " .. (v and "已开(相机锁在当前朝向)" or "已关"))
 end })
 end
 do
@@ -11411,17 +11439,17 @@ Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
-if v then F.AutoTrainEnable() else F.Out("[训练] 已停止") end
+if v then F.AutoTrainEnable() else F.AutoTrainDisable() end
 end })
 Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击奖励(自动点 Bonus / 收现金)", Description = "① 点 PlayerGui.KickUpgrades 里 Visible 的 Bonus/PopBonus 按钮(就是那个 ×2 奖励) ② 发 rev_B_Collect 收现金 ③ 触碰自己地盘(Plots)上的收钱按钮", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
-if v then F.AutoBonusEnable() else F.Out("[领奖] 已停止") end
+if v then F.AutoBonusEnable() else F.AutoBonusDisable() end
 end })
 Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Description = "这游戏的锻炼 = 手持配重 + 反复点 KickUpgrades 的 Bonus 弹窗(不是站在跑步机上)。开它只会在找得到该界面时工作; 找不到会自己退回旧的举铁机逻辑", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
-if v then F.AutoGymEnable() else F.Out("[健身房] 已停止") end
+if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddButton({ Title = "★ 自助诊断(检查本游戏接口/按钮)", Callback = function() pcall(F.GameCheck) end })
 Tabs.Trans:AddSection("本地翻译服务")
