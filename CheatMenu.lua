@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 19:04 sha 67832284 bytes 443875'):format('2026-10-03 19:04','67832284',443875))
+print(('[CheatMenu] build 2026-10-03 19:12 sha e28e37da bytes 445289'):format('2026-10-03 19:12','e28e37da',445289))
 local F = {}
-F.VERSION = "v13.10.24"
+F.VERSION = "v13.10.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2927,6 +2927,10 @@ if not skip then
 local pname = pl and pl.Name or tostring(ch.Name)
 score = score - (inTbl(C.PriorityTargets, pname) and 1e6 or 0)
 if F._aimStick and ch == F._aimStick then score = score - 1e5 end
+pcall(function()
+local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+score = score - (1 - hp) * 400
+end)
 if not bestScore or score < bestScore then best, bestScore = hrp, score end
 end
 end
@@ -8989,6 +8993,28 @@ hl.OutlineTransparency = 0
 pcall(function() hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop end)
 pcall(function() hl.Parent = d end)
 F._petHLs[d] = hl
+pcall(function()
+local bb = Instance.new("BillboardGui")
+bb.Name = "CM_PetTag"
+bb.Adornee = d
+bb.Size = UDim2.new(0, 150, 0, 16)
+bb.StudsOffset = Vector3.new(0, 3, 0)
+bb.AlwaysOnTop = true
+bb.MaxDistance = 400
+local tl = Instance.new("TextLabel")
+tl.Size = UDim2.new(1, 0, 1, 0)
+tl.BackgroundTransparency = 1
+tl.TextColor3 = Color3.fromRGB(255, 220, 80)
+tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+tl.TextStrokeTransparency = 0
+tl.TextScaled = true
+tl.Font = Enum.Font.GothamBold
+tl.Text = tostring(d.Name)
+tl.Parent = bb
+bb.Parent = d
+F._petTags = F._petTags or {}
+F._petTags[d] = bb
+end)
 end
 end
 end
@@ -8997,6 +9023,26 @@ for obj, hl in pairs(F._petHLs) do
 if not seen[obj] or not obj.Parent then
 pcall(function() hl:Destroy() end)
 F._petHLs[obj] = nil
+if F._petTags and F._petTags[obj] then
+pcall(function() F._petTags[obj]:Destroy() end)
+F._petTags[obj] = nil
+end
+else
+if F._petTags and F._petTags[obj] then
+pcall(function()
+local _, _, root = GC()
+if not root then return end
+local pos = nil
+if obj:IsA("BasePart") then pos = obj.Position
+else local hrp = obj:FindFirstChild("HumanoidRootPart") if hrp then pos = hrp.Position end end
+if pos then
+local tl = F._petTags[obj]:FindFirstChildOfClass("TextLabel")
+if tl then
+tl.Text = tostring(obj.Name) .. "  " .. tostring(math.floor((pos - root.Position).Magnitude)) .. "m"
+end
+end
+end)
+end
 end
 end
 end
@@ -9021,6 +9067,10 @@ if F._petConn then pcall(function() F._petConn:Disconnect() end) F._petConn = ni
 if F._petHLs then
 for _, hl in pairs(F._petHLs) do pcall(function() hl:Destroy() end) end
 F._petHLs = nil
+end
+if F._petTags then
+for _, bb in pairs(F._petTags) do pcall(function() bb:Destroy() end) end
+F._petTags = nil
 end
 F.Out("[宠物/物品ESP] 已关")
 end
