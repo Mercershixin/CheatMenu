@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:14 sha 328d88c3 bytes 471349'):format('2026-10-03 16:14','328d88c3',471349))
+print(('[CheatMenu] build 2026-10-03 16:20 sha ff4e927b bytes 469138'):format('2026-10-03 16:20','ff4e927b',469138))
 local F = {}
-F.VERSION = "v13.9.3"
+F.VERSION = "v13.9.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6247,62 +6247,27 @@ return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 140, 255), k), d
 end
 F.CMX_HLApply = function(pl, rec)
 if not rec or not rec.top then return end
-local top, occ = rec.top, rec.occ
-local mode = F.CMX_HLMode()
-if mode:find("④", 1, true) then
-local c = F.CMX_HLDistColor(pl)
-pcall(function()
-top.OutlineColor = c top.FillColor = c
-top.FillTransparency = 1 top.OutlineTransparency = 0
-end)
-if occ then pcall(function() occ.FillTransparency = 0.55 occ.OutlineTransparency = 1 end) end
-return
-end
 local team = F.CMX_HLTeamColor(pl)
-if mode:find("②", 1, true) then
 pcall(function()
-top.OutlineColor = F.CMX_HLWarnColor()
-top.FillColor = F.CMX_HLWarnColor()
-top.FillTransparency = 0.72
-top.OutlineTransparency = 0
+rec.top.FillColor = team
+rec.top.OutlineColor = team
+rec.top.FillTransparency = 0.45
+rec.top.OutlineTransparency = 0
+rec.top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 end)
-if occ then
-pcall(function()
-occ.FillColor = team occ.OutlineColor = team
-occ.FillTransparency = 0.42 occ.OutlineTransparency = 1
-end)
-end
-elseif mode:find("③", 1, true) then
-pcall(function()
-top.OutlineColor = F.CMX_HLWarnColor()
-top.FillTransparency = 1
-top.OutlineTransparency = 0
-end)
-if occ then
-pcall(function()
-occ.FillColor = team occ.OutlineColor = team
-occ.FillTransparency = 0.35 occ.OutlineTransparency = 0.15
-end)
-end
-else
-pcall(function()
-top.OutlineColor = team top.FillColor = team
-top.FillTransparency = 1 top.OutlineTransparency = 0
-end)
-if occ then pcall(function() occ.FillTransparency = 0.55 occ.OutlineTransparency = 1 end) end
+F.CMX_HLSimple = true
+if rec.occ then
+pcall(function() rec.occ:Destroy() end)
+rec.occ = nil
 end
 end
 function F.BodyHLAdd(pl)
 if not T.BodyHL or pl == LP then return end
 local ch = pl.Character
 if not ch then return end
-local mode = F.CMX_HLMode()
-local needOcc = true
-F.CMX_HLSeen = true
 local rec = F._hlObjs[pl]
-if type(rec) == "table" and rec.top and rec.top.Parent == ch
-and ((needOcc and rec.occ ~= nil and rec.occ.Parent == ch) or (not needOcc)) then
-if not needOcc and rec.occ then pcall(function() rec.occ:Destroy() end) rec.occ = nil end
+if type(rec) == "table" and rec.top and rec.top.Parent == ch then
+if rec.occ then pcall(function() rec.occ:Destroy() end) rec.occ = nil end
 return
 end
 if rec then
@@ -6315,20 +6280,11 @@ end
 end
 local top = Instance.new("Highlight")
 top.Name = "BodyMark"
-top.FillTransparency = 1
 top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+top.FillTransparency = 0.45
+top.OutlineTransparency = 0
 top.Parent = ch
-local occ = nil
-if needOcc then
-pcall(function()
-occ = Instance.new("Highlight")
-occ.Name = "BodyMarkBehind"
-occ.DepthMode = Enum.HighlightDepthMode.Occluded
-occ.FillTransparency = 0.5
-occ.Parent = ch
-end)
-end
-F._hlObjs[pl] = { top = top, occ = occ, ch = ch }
+F._hlObjs[pl] = { top = top, occ = nil, ch = ch }
 F.CMX_HLApply(pl, F._hlObjs[pl])
 end
 function F.BodyHLRefresh()
@@ -11618,40 +11574,11 @@ if F._cfgSyncing then return end
 if v then F.CMX_AnchorEnable() else F.CMX_AnchorDisable() end
 end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
-Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(下面可选隔墙区别方式)", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到别人 · 半透明色块 + 外框)", Description = "用的是通用做法: 一个 Highlight, 填充半透明 + 描边 + 始终显示在最上层 ⇒ 隔着墙也看得见。队友绿、敌人红(配合下面的敌我识别)", Default = false, Callback = function(v)
 T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 end })
-Tabs.Visual:AddDropdown("BodyHLMode", { Title = "身体高亮 · 隔墙区别方式", Values = {
-"① 单色 · 只描边(现状)",
-"② 隔墙变色 · 可见=队伍色实心 / 隔墙=警示色",
-"③ 隔墙只描边 · 可见=实心+描边 / 隔墙=空框",
-"④ 距离变色 · 近=红 / 远=蓝",
-}, Default = "① 单色 · 只描边(现状)", Callback = function(v)
-C.BodyHLMode = v
-if F._cfgSyncing then return end
-for _, pl in ipairs(Players:GetPlayers()) do pcall(F.BodyHLAdd, pl) end
-pcall(F.BodyHLRefresh)
-F.Out("[身体高亮] 隔墙区别方式 = " .. tostring(v))
-end })
-do
-local vt = Tabs.Visual
-local cpfn = vt.AddColorpicker or vt.AddColorPicker
-if type(cpfn) == "function" then
-local okCP, errCP = pcall(cpfn, vt, "CMX_HLWallColor", {
-Title = "隔墙警示色(②③ 模式用)", Default = Color3.fromRGB(255, 190, 0),
-Callback = function(v)
-C.CMX_HLWallColor = v
-if F._cfgSyncing then return end
-pcall(F.BodyHLRefresh)
-end,
-})
-if not okCP then F.Out("[UI] 隔墙警示色控件创建失败(已跳过, 不影响其它): " .. tostring(errCP)) end
-else
-F.Out("[UI] 这个 Fluent 版本没有颜色选择器 ⇒ 跳过「隔墙警示色」, 隔墙色用默认橙")
-end
-end
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
 local changed = (T.TeamColorHL ~= nil) and (T.TeamColorHL ~= v)
 T.TeamColorHL = v
