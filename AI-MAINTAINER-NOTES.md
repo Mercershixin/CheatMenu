@@ -3360,3 +3360,13 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - **③档下放评估结论**：③档剩余 6 层（HookHard / RequireBlock / NeuterPlus / HashFreeze / IdentityMask / FFlagPack）**全是激进手段**（硬钩子 / getgc 扫描 / 身份伪装 / FFlag 包），**没有再能下放的** ⇒ 按用户「都是激进那就算」保持现状。
 - **公开技术对照（本轮搜索）**：`Securedlinks/Bypass.com`（8 项，我们全有）；`xiaomao8090/Adonis-Bypass-Framework` 提到 **GetGC 速率限制**（我们暂无，可考虑）；
   ⚠ `onefishit/anticheat-luau`（Sentinel）的 `Config.SuspiciousNames = {exploit, inject, cheat, hack, dex, saveinstance, bypass, crack, scriptware}` —— **服务端反作弊会按这些词找脚本/GUI 名** ⇒ **我们的变量与 GUI 命名要避开这 9 个词**（当前 GUI 名 `CM_*` / `CheatMenu` 不在其中，但新增命名时要留意）。
+
+
+## 删命中盒 + 扫描能力全并入一键扫描（2026-10-04 · 14.0.20）
+
+- **命中盒扩展整条链归档删除**（用户明确不要）：`F.HB_PARTS` / `F.HitboxApplyOne` / `F.HitboxExpandEnable` / `F.HitboxExpandDisable` + UI 开关 + 3 处引用（`OnCharacter` / 急停链 / 卸载链）。
+- ★ **"命中盒的另一个功能"查明是 `T.HitLock`（命中锁血）**：它是 `F.GuardSet(steady, hit, lock, ...)` 的 `lock` 参数，
+  但**全项目从来没有任何调用点传 `lock = true`** ⇒ 那个 `if T.HitLock then 血量回满 end` 是**死的** ⇒ 已删该分支（保留 `GuardSet` 签名，避免动所有调用点）。
+- ★★ **扫描能力全部并入「一键全扫描」**：先确认 `F.CMX_ScanBypassSurface` 内部已经把 `ScanCapabilities / ScanHookLedger / ScanExposure / ScanStack / ScanHidden / ScanDetectors / ScanShapes` 全调了一遍
+  ⇒ 那 7 个**本来就在一键扫描里**，无需再并。只把「附近可交互点」从**独立按钮**改成 `F.ScanNearbyInteract()` 并进 `CMX_ScanAll`（纯只读，只列清单不点任何东西）。
+- 原则固化：**扫描页 = 只扫描、只列清单**；任何"扫完自动动手"一律不做（自动点击 / 自动处置已全部归档）。
