@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 13:01 sha 9308869a bytes 438740'):format('2026-10-03 13:01','9308869a',438740))
+print(('[CheatMenu] build 2026-10-03 13:16 sha 9761d9e6 bytes 444961'):format('2026-10-03 13:16','9761d9e6',444961))
 local F = {}
-F.VERSION = "v13.0.0"
+F.VERSION = "v13.1.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6223,26 +6223,124 @@ F.TPMouse()
 end)
 end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
+F.CMX_HLMode = function() return tostring(C.BodyHLMode or "①") end
+F.CMX_HLTeamColor = function(pl)
+local same = false
+pcall(function() same = (pl.Team ~= nil and pl.Team == LP.Team) end)
+if T.TeamColorHL == false then return Color3.fromRGB(0, 200, 255) end
+return same and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 60, 60)
+end
+F.CMX_HLWarnColor = function()
+local c = C.CMX_HLWallColor
+if typeof(c) == "Color3" then return c end
+return Color3.fromRGB(255, 190, 0)
+end
+F.CMX_HLDistColor = function(pl)
+local _, _, root = GC()
+local d = 0
+pcall(function()
+local h = pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
+if h and root then d = (h.Position - root.Position).Magnitude end
+end)
+local k = math.clamp(d / 300, 0, 1)
+return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 140, 255), k), d
+end
+F.CMX_HLApply = function(pl, rec)
+if not rec or not rec.top then return end
+local top, occ = rec.top, rec.occ
+local mode = F.CMX_HLMode()
+if mode:find("④", 1, true) then
+local c = F.CMX_HLDistColor(pl)
+pcall(function()
+top.OutlineColor = c top.FillColor = c
+top.FillTransparency = 1 top.OutlineTransparency = 0
+end)
+if occ then pcall(function() occ.FillTransparency = 1 occ.OutlineTransparency = 1 end) end
+return
+end
+local team = F.CMX_HLTeamColor(pl)
+if mode:find("②", 1, true) then
+pcall(function()
+top.OutlineColor = F.CMX_HLWarnColor()
+top.FillColor = F.CMX_HLWarnColor()
+top.FillTransparency = 0.72
+top.OutlineTransparency = 0
+end)
+if occ then
+pcall(function()
+occ.FillColor = team occ.OutlineColor = team
+occ.FillTransparency = 0.42 occ.OutlineTransparency = 1
+end)
+end
+elseif mode:find("③", 1, true) then
+pcall(function()
+top.OutlineColor = F.CMX_HLWarnColor()
+top.FillTransparency = 1
+top.OutlineTransparency = 0
+end)
+if occ then
+pcall(function()
+occ.FillColor = team occ.OutlineColor = team
+occ.FillTransparency = 0.35 occ.OutlineTransparency = 0.15
+end)
+end
+else
+pcall(function()
+top.OutlineColor = team top.FillColor = team
+top.FillTransparency = 1 top.OutlineTransparency = 0
+end)
+if occ then pcall(function() occ.FillTransparency = 1 occ.OutlineTransparency = 1 end) end
+end
+end
 function F.BodyHLAdd(pl)
 if not T.BodyHL or pl == LP then return end
 local ch = pl.Character
 if not ch then return end
-if F._hlObjs[pl] and F._hlObjs[pl].Parent == ch then return end
-if F._hlObjs[pl] then pcall(function() F._hlObjs[pl]:Destroy() end) end
-local hl = Instance.new("Highlight")
-hl.Name = "BodyMark"
-hl.FillTransparency = 1
-hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-hl.Parent = ch
-F._hlObjs[pl] = hl
+local mode = F.CMX_HLMode()
+local needOcc = (mode:find("②", 1, true) ~= nil) or (mode:find("③", 1, true) ~= nil)
+local rec = F._hlObjs[pl]
+if type(rec) == "table" and rec.top and rec.top.Parent == ch
+and ((needOcc and rec.occ ~= nil and rec.occ.Parent == ch) or (not needOcc)) then
+if not needOcc and rec.occ then pcall(function() rec.occ:Destroy() end) rec.occ = nil end
+return
+end
+if rec then
+if type(rec) == "table" then
+if rec.top then pcall(function() rec.top:Destroy() end) end
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+else
+pcall(function() rec:Destroy() end)
+end
+end
+local top = Instance.new("Highlight")
+top.Name = "BodyMark"
+top.FillTransparency = 1
+top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+top.Parent = ch
+local occ = nil
+if needOcc then
+pcall(function()
+occ = Instance.new("Highlight")
+occ.Name = "BodyMarkBehind"
+occ.DepthMode = Enum.HighlightDepthMode.Occluded
+occ.FillTransparency = 0.5
+occ.Parent = ch
+end)
+end
+F._hlObjs[pl] = { top = top, occ = occ, ch = ch }
+F.CMX_HLApply(pl, F._hlObjs[pl])
 end
 function F.BodyHLRefresh()
-for pl, hl in pairs(F._hlObjs) do
+for pl, rec in pairs(F._hlObjs) do
+if type(rec) == "table" and rec.top then
+pcall(F.CMX_HLApply, pl, rec)
+elseif typeof(rec) == "Instance" then
 local same = false
 pcall(function() same = (pl.Team ~= nil and pl.Team == LP.Team) end)
 local c = Color3.fromRGB(0, 200, 255)
 if T.TeamColorHL ~= false then c = same and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 60, 60) end
-pcall(function() hl.OutlineColor = c hl.FillColor = c end)
+pcall(function() rec.OutlineColor = c rec.FillColor = c end)
+end
 end
 end
 function F.BodyHLEnable()
@@ -6250,8 +6348,14 @@ for _, pl in ipairs(Players:GetPlayers()) do F.BodyHLAdd(pl) end
 F.BodyHLRefresh()
 if not F._hlRConn then
 F._hlRConn = Players.PlayerRemoving:Connect(function(pl)
-if F._hlObjs[pl] then
-pcall(function() F._hlObjs[pl]:Destroy() end)
+local rec = F._hlObjs[pl]
+if rec then
+if type(rec) == "table" then
+if rec.top then pcall(function() rec.top:Destroy() end) end
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+else
+pcall(function() rec:Destroy() end)
+end
 F._hlObjs[pl] = nil
 end
 end)
@@ -6265,7 +6369,9 @@ if not F._hlLoop then
 F._hlLoop = RS.Heartbeat:Connect(function()
 if not T.BodyHL then F.BodyHLDisable() return end
 local now = os.clock()
-if now - (F._hlAt or 0) < 2 then return end
+local gap = 2
+if F.CMX_HLMode():find("④", 1, true) then gap = 0.25 end
+if now - (F._hlAt or 0) < gap then return end
 F._hlAt = now
 for _, pl in ipairs(Players:GetPlayers()) do F.BodyHLAdd(pl) end
 F.BodyHLRefresh()
@@ -6275,7 +6381,14 @@ end
 function F.BodyHLDisable()
 if F._hlAdded then F._hlAdded:Disconnect() F._hlAdded = nil end
 if F._hlLoop then F._hlLoop:Disconnect() F._hlLoop = nil end
-for _, hl in pairs(F._hlObjs) do pcall(function() hl:Destroy() end) end
+for _, rec in pairs(F._hlObjs) do
+if type(rec) == "table" then
+if rec.top then pcall(function() rec.top:Destroy() end) end
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+else
+pcall(function() rec:Destroy() end)
+end
+end
 F._hlObjs = {}
 if F._hlRConn then F._hlRConn:Disconnect() F._hlRConn = nil end
 end
@@ -8400,21 +8513,67 @@ local ch = pl.Character
 local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 if not hrp then return end
 local store = F.CMX_AdornItems
-local a = store[pl]
-if not a or not a.Parent then
-a = Instance.new("BoxHandleAdornment")
-a.Name = "CMX_Adorn"
-a.Adornee = hrp
-a.AlwaysOnTop = true
-a.ZIndex = 5
-a.Transparency = 0.55
-a.Color3 = Color3.fromRGB(255, 70, 70)
-a.Size = hrp.Size
-a.Parent = hrp
-store[pl] = a
+if not store then return end
+local rec = store[pl]
+if type(rec) == "Instance" then
+pcall(function() rec:Destroy() end)
+rec, store[pl] = nil, nil
 end
-a.Adornee = hrp
-a.Size = hrp.Size
+if rec and rec.top and rec.top.Parent ~= hrp then
+pcall(function() rec.top:Destroy() end)
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+rec, store[pl] = nil, nil
+end
+if not rec then
+local top = Instance.new("BoxHandleAdornment")
+top.Name = "CMX_Adorn"
+top.Adornee = hrp
+top.AlwaysOnTop = true
+top.ZIndex = 5
+top.Transparency = 0.55
+top.Color3 = Color3.fromRGB(255, 70, 70)
+top.Size = hrp.Size
+top.Parent = hrp
+rec = { top = top, occ = nil }
+store[pl] = rec
+end
+local team = F.CMX_HLTeamColor(pl)
+local warn = F.CMX_HLWarnColor()
+if T.CMX_AdornBehind == true then
+if not rec.occ or rec.occ.Parent ~= hrp then
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+local b = Instance.new("BoxHandleAdornment")
+b.Name = "CMX_AdornBehind"
+b.Adornee = hrp
+b.AlwaysOnTop = false
+b.ZIndex = 4
+b.Transparency = 0.3
+b.Color3 = team
+b.Size = hrp.Size
+b.Parent = hrp
+rec.occ = b
+end
+pcall(function()
+rec.top.AlwaysOnTop = true
+rec.top.Transparency = 0.82
+rec.top.Color3 = warn
+rec.occ.AlwaysOnTop = false
+rec.occ.Transparency = 0.3
+rec.occ.Color3 = team
+end)
+else
+if rec.occ then pcall(function() rec.occ:Destroy() end) rec.occ = nil end
+pcall(function()
+rec.top.AlwaysOnTop = true
+rec.top.Transparency = 0.55
+rec.top.Color3 = Color3.fromRGB(255, 70, 70)
+end)
+end
+pcall(function()
+rec.top.Adornee = hrp
+rec.top.Size = hrp.Size
+if rec.occ then rec.occ.Adornee = hrp rec.occ.Size = hrp.Size end
+end)
 end
 F.CMX_AdornStep = function()
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -8435,7 +8594,14 @@ if not F.CMX_AdornOn then return end
 F.CMX_AdornOn = false
 if F.CMX_AdornConn then pcall(function() F.CMX_AdornConn:Disconnect() end) end
 F.CMX_AdornConn = nil
-for _, a in pairs(F.CMX_AdornItems or {}) do pcall(function() a:Destroy() end) end
+for _, rec in pairs(F.CMX_AdornItems or {}) do
+if type(rec) == "table" then
+if rec.top then pcall(function() rec.top:Destroy() end) end
+if rec.occ then pcall(function() rec.occ:Destroy() end) end
+else
+pcall(function() rec:Destroy() end)
+end
+end
 F.CMX_AdornItems = nil
 F.Out("[补强·AdornmentESP] 已关")
 end
@@ -8885,7 +9051,14 @@ F.CMX_MarkOwn(F._flyAp)
 F.CMX_MarkOwn(F._flyBv)
 F.CMX_MarkOwn(F._flyBg)
 if F.CMX_AdornItems then
-for _, a in pairs(F.CMX_AdornItems) do F.CMX_MarkOwn(a) end
+for _, rec in pairs(F.CMX_AdornItems) do
+if type(rec) == "table" then
+F.CMX_MarkOwn(rec.top)
+F.CMX_MarkOwn(rec.occ)
+else
+F.CMX_MarkOwn(rec)
+end
+end
 end
 end)
 F.Out("[绕过·视图过滤] 已开: 反作弊遍历你的角色时, 看不见我们挂上去的东西(飞行约束/附件/方框)"
@@ -10894,10 +11067,27 @@ if F._cfgSyncing then return end
 if v then F.CMX_AnchorEnable() else F.CMX_AnchorDisable() end
 end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
-Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(只描边不糊本体)", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮(下面可选隔墙区别方式)", Default = false, Callback = function(v)
 T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
+end })
+Tabs.Visual:AddDropdown("BodyHLMode", { Title = "身体高亮 · 隔墙区别方式", Values = {
+"① 单色 · 只描边(现状)",
+"② 隔墙变色 · 可见=队伍色实心 / 隔墙=警示色",
+"③ 隔墙只描边 · 可见=实心+描边 / 隔墙=空框",
+"④ 距离变色 · 近=红 / 远=蓝",
+}, Default = "① 单色 · 只描边(现状)", Callback = function(v)
+C.BodyHLMode = v
+if F._cfgSyncing then return end
+for _, pl in ipairs(Players:GetPlayers()) do pcall(F.BodyHLAdd, pl) end
+pcall(F.BodyHLRefresh)
+F.Out("[身体高亮] 隔墙区别方式 = " .. tostring(v))
+end })
+Tabs.Visual:AddColorPicker("CMX_HLWallColor", { Title = "隔墙警示色(②③ 模式用)", Default = Color3.fromRGB(255, 190, 0), Callback = function(v)
+C.CMX_HLWallColor = v
+if F._cfgSyncing then return end
+pcall(F.BodyHLRefresh)
 end })
 Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Default = false, Callback = function(v)
 local changed = (T.TeamColorHL ~= nil) and (T.TeamColorHL ~= v)
@@ -10971,6 +11161,11 @@ end })
 end
 do
 Tabs.World:AddSection("★ 补强 · 方框 / 骨骼 / 追踪线 / 血量条")
+Tabs.World:AddToggle("CMX_AdornBehind", { Title = "方框ESP · 隔墙区别(Adornment 版 · 隔墙淡框 / 可见实框)", Description = "开: 隔墙时只看到淡的警示色框, 看得见时是队伍色实框 —— 一眼分清谁在墙后。关: 单层(现状)。需要同时开下面「方框ESP · BoxHandleAdornment」", Default = false, Callback = function(v)
+T.CMX_AdornBehind = v
+if F._cfgSyncing then return end
+F.Out("[补强·AdornmentESP] 隔墙区别 = " .. (v and "开" or "关"))
+end })
 Tabs.World:AddToggle("CMX_BoxESP", { Title = "方框ESP · Drawing 线框 + 名字 + 距离", Default = false, Callback = function(v)
 T.CMX_BoxESP = v
 if F._cfgSyncing then return end
