@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:08 sha 4bb391db bytes 452829'):format('2026-10-03 17:08','4bb391db',452829))
+print(('[CheatMenu] build 2026-10-03 17:13 sha f17605ef bytes 447768'):format('2026-10-03 17:13','f17605ef',447768))
 local F = {}
-F.VERSION = "v13.10.4"
+F.VERSION = "v13.10.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8224,9 +8224,11 @@ T.Translate = true
 Trans.Load()
 local ok, body = Trans.Health()
 if not ok then
-F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ 双击打开「翻译模型开关.bat」把服务起起来, 再点翻译页的「翻译诊断」确认")
+F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ 双击打开「翻译模型开关.bat」把服务起起来再开翻译")
 end
 if Trans.Loop then Trans.HeartbeatOn() return true end
+pcall(Trans.GL.AddAuto)
+C.TransOfficial = false
 Trans.Prewarm()
 Trans.Scan()
 Trans.WatchOn()
@@ -11835,85 +11837,6 @@ if F._cfgSyncing then return end
 F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面全部重译一遍")
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
-Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
-Tabs.Trans:AddButton({ Title = "把界面全部重译一遍(切完语言 / 改完词条后点这个)", Callback = function()
-task.spawn(function() pcall(Trans.RetranslateAll) end)
-end })
-Tabs.Trans:AddButton({ Title = "翻译诊断(一键: 服务状态 · 缓存 · 跳过统计 · 标签配对)", Description = "不用一项项点 —— 一下把本地服务通不通、缓存多少条、这轮扫描跳过了什么、富文本标签配不配对全打出来", Callback = function()
-task.spawn(function()
-local n, sz = 0, "无文件"
-for _ in pairs(Trans.Cache) do n = n + 1 end
-pcall(function()
-if type(isfile) == "function" and type(readfile) == "function" and isfile(Trans.FILE) then
-sz = tostring(math.floor(#readfile(Trans.FILE) / 1024)) .. " KB"
-end
-end)
-local okH, bodyH = false, "?"
-pcall(function() okH, bodyH = Trans.Health() end)
-Trans._skip = { ours = 0, official = 0, invisible = 0 }
-pcall(Trans.Scan)
-local s = Trans._skip or {}
-pcall(function() Trans.RT.Audit() end)
-F.Out("[翻译诊断] 服务: " .. (okH and "在线 ✓" or ("没起来 ✗ " .. tostring(bodyH))) .. " (没起来就双击「翻译模型开关.bat」)")
-F.Out("[翻译诊断] 缓存: 内存 " .. n .. " 条 · 磁盘 " .. sz .. " · 上限 " .. tostring(Trans.CACHE_MAX or 5000) .. " 条 · 文件 " .. Trans.FILE)
-F.Out("[翻译诊断] 本轮扫描跳过: 隐形文字 " .. tostring(s.invisible or 0) .. " · 官方界面 " .. tostring(s.official or 0)
-.. " · 自己的界面 " .. tostring(s.ours or 0) .. " · 已登记 " .. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个")
-Fluent:Notify({ Title = "翻译诊断",
-Content = (okH and "服务在线 ✓" or "服务未启动 ✗") .. " · 缓存 " .. n .. " 条 · 已登记 "
-.. tostring(Trans.RegCount and Trans.RegCount() or 0) .. " 个控件 · 细节见控制台 F9",
-Duration = 8 })
-end)
-end })
-Tabs.Trans:AddButton({ Title = "清空译文缓存(内存 + 磁盘 · 下次全部重新翻译)", Callback = function()
-local n = 0
-for _ in pairs(Trans.Cache) do n = n + 1 end
-Trans.Cache, Trans.Order, Trans._cnt = {}, {}, 0
-Trans._dirty = false
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
-local del = 0
-if type(delfile) == "function" then
-for _, f in ipairs({ Trans.FILE, Trans.BAK, Trans.TMP }) do
-pcall(function()
-if (type(isfile) ~= "function") or isfile(f) then delfile(f) del = del + 1 end
-end)
-end
-end
-F.Out("[翻译] 缓存已清空(内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件) · 下次会全部重新翻译")
-Fluent:Notify({ Title = "翻译缓存", Content = "已清空内存 " .. n .. " 条 · 磁盘 " .. del .. " 个文件", Duration = 6 })
-end })
-Tabs.Trans:AddToggle("TransOfficial", { Title = "翻译 Roblox 官方界面(顶栏 / 设置 / 举报 这些系统按钮 · 默认关)", Default = false, Callback = function(v)
-C.TransOfficial = v
-if F._cfgSyncing then return end
-Trans._skip = { ours = 0, official = 0, invisible = 0 }
-F.Out("[翻译] Roblox 官方界面 = " .. (v and "开(官方顶栏/系统菜单也会翻 · 官方按钮多为图标, 可能显示异常)" or "关(推荐 · 只翻游戏自己的界面)"))
-task.spawn(function() pcall(Trans.Scan) end)
-end })
-Tabs.Trans:AddToggle("TransUseGL", { Title = "词条生效(术语强制: 命中的词不让模型翻, 直接换成你指定的译法)", Default = true, Callback = function(v)
-C.TransUseGL = v
-if F._cfgSyncing then return end
-Trans.Cache = {}
-F.Out("[翻译·词条] " .. (v and ("已开 · 当前 " .. tostring(Trans.GL.Count()) .. " 条") or "已关"))
-end })
-Tabs.Trans:AddInput("TransGLAdd", { Title = "加词条(格式: 原文=译法 · 只写原文=保持不翻 · 留空回车清空)", Placeholder = "brainrot=脑红 或 SteamPunk", Default = "", Callback = function(v)
-if F._cfgSyncing or type(v) ~= "string" or v == "" then return end
-local k, want = v:match("^%s*([^=]+)%s*=%s*(.-)%s*$")
-if k then
-Trans.GL.Add(k, want)
-else
-Trans.GL.Add(v, nil)
-end
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.TransGLAdd
-if o and o.Set then o:Set("") end
-end)
-end })
-Tabs.Trans:AddButton({ Title = "把当前游戏名 + 本游戏检测命名 自动加成词条(这些词保持原文)", Callback = function() task.spawn(function() pcall(Trans.GL.AddAuto) end) end })
-Tabs.Trans:AddSlider("TransConcurrency", { Title = "并发翻译数(同时发几个请求 · 调大出译文更快但更吃显存/服务槽位)", Min = 1, Max = 8, Default = 8, Rounding = 0, Callback = function(v)
-Trans.Max = v
-if F._cfgSyncing then return end
-F.Out("[翻译] 并发 = " .. tostring(v) .. " (服务端建议同步把槽位数 -np 设成同值)")
-end })
-Tabs.Trans:AddSlider("TransCacheMax", { Title = "译文缓存上限(条 · 满了会自动清掉最早的四分之一)", Min = 500, Max = 20000, Default = 5000, Rounding = 0, Callback = function(v) Trans.CACHE_MAX = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.ChatTranslate = v
