@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 13:16 sha 9761d9e6 bytes 444961'):format('2026-10-03 13:16','9761d9e6',444961))
+print(('[CheatMenu] build 2026-10-03 13:27 sha c70c2e33 bytes 447249'):format('2026-10-03 13:27','c70c2e33',447249))
 local F = {}
-F.VERSION = "v13.1.0"
+F.VERSION = "v13.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -756,10 +756,10 @@ function AC.InstallIndexMask()
 if AC._idxMaskOn and F.MetaActive("game.__index", "ACIndexMask") then return true end
 local got = F.MetaInstall("game.__index", game, "ACIndexMask", function(box)
 return function(t, k)
-if (T.SpeedMask or T.ACBypass or T.PropertyLock) and not checkcaller() and typeof(t) == "Instance" then
+if (T.Spoof or T.SpeedMask or T.ACBypass or T.PropertyLock) and not checkcaller() and typeof(t) == "Instance" then
 local _, hum = GC()
 if hum and t == hum then
-if k == "WalkSpeed" then return F._baseWalk or 16 end
+if k == "WalkSpeed" then return F.CMX_LegitWalk() end
 if k == "JumpPower" then return 50 end
 if k == "JumpHeight" then return 7.5 end
 if k == "MaxHealth" or k == "Health" then
@@ -10320,7 +10320,7 @@ F.Out("[反检测] 已藏匿: 界面挪进隐藏容器 " .. tostring(moved) .. "
 .. " 个 · game 元表恢复只读 " .. (roFixed and "是" or "否(还有活着的钩子层, 不能恢复)"))
 end
 F.CMX_AutoRestoreApply = function()
-if not T.CMX_AutoRestore then return end
+if T.CMX_AutoAll ~= false then return end
 local list = C.CMX_BypassOn
 if type(list) ~= "table" or #list == 0 then return end
 local map = {
@@ -10943,11 +10943,35 @@ T.AntiRagdoll, T.AntiKnockdown = v, v
 if F._cfgSyncing then return end
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
 if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
-end })Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v)
+end })
+Tabs.Combat:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端若校验血量会拉回)", Default = false, Callback = function(v)
+T.God = v
+if F._cfgSyncing then return end
+if v then pcall(GodEnable) else pcall(GodDisable) end
+end })
+Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定 · 不改 MaxHealth)", Default = false, Callback = function(v)
+T.LockHealth = v
+if F._cfgSyncing then return end
+if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
+end })
+Tabs.Combat:AddSlider("LockHealthValue", { Title = "锁血目标值", Min = 1, Max = 1000, Default = 100, Rounding = 0, Callback = function(v) C.LockHealthValue = v end })
+Tabs.Combat:AddToggle("Regen", { Title = "回血(按下面速率持续补血)", Default = false, Callback = function(v)
+T.Regen = v
+if F._cfgSyncing then return end
+if v then pcall(RegenEnable) else pcall(RegenDisable) end
+end })
+Tabs.Combat:AddSlider("RegenRate", { Title = "回血速率(每 0.2 秒补多少血)", Min = 1, Max = 200, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
+Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
+T.NoDeath = v
+if F._cfgSyncing then return end
+if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
+end })
+Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展", Default = false, Callback = function(v)
 T.HitboxExpand = v
 if F._cfgSyncing then return end
 if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
 end })
+Tabs.Combat:AddSlider("HitboxSize", { Title = "Hitbox 扩展大小", Min = 2, Max = 60, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v if T.HitboxExpand then pcall(F.HitboxExpandEnable) end end })
 Tabs.Combat:AddSection("自动攻击")
 Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
 T.KillAura = v
@@ -11129,6 +11153,7 @@ if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 end })
 Tabs.World:AddSection("相机 / 准星")
+Tabs.World:AddSlider("FreecamSpeed", { Title = "Freecam 速度(格/秒 · Shift 加速 3 倍)", Min = 5, Max = 500, Default = 50, Rounding = 0, Callback = function(v) C.FreecamSpeed = v end })
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v and UIS.TouchEnabled then
@@ -11315,6 +11340,7 @@ end
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v) C.TransLang = v end })
+Tabs.Trans:AddSlider("TransInterval", { Title = "翻译节流(秒 · 两次翻译的最小间隔 · 越小越实时越费算力)", Min = 0, Max = 2, Default = 0.15, Rounding = 2, Callback = function(v) C.TransInterval = v end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
 T.ChatTranslate = v
@@ -11546,6 +11572,11 @@ T.CMX_RequireBlock = v
 if F._cfgSyncing then return end
 F.CMX_Remember("CMX_RequireBlock", v)
 if v then F.CMX_RequireBlockEnable() else F.CMX_RequireBlockDisable() end
+end })
+Tabs.AC:AddSlider("CMX_ClockStep", { Title = "时钟粗化步长(秒 · 别人量到的时间是这个值的整数倍)", Min = 0.02, Max = 0.5, Default = 0.1, Rounding = 2, Callback = function(v)
+C.CMX_ClockStep = v
+if F._cfgSyncing then return end
+if T.CMX_ClockMask then pcall(F.CMX_ClockMaskEnable) end
 end })
 Tabs.AC:AddToggle("CMX_ClockMask", { Title = "⑪ 时钟粗化(别人量时间只能拿到 0.1 秒整数倍)", Description = "反作弊靠 os.clock 算「两次动作间隔」来判断你是不是机器(10ms 一次必是人不可能做到)。开了之后别人量到的时间被粗化到 0.1 秒整数倍, 量不出我们的节奏; 我们自己量时间仍精确", Default = false, Callback = function(v)
 T.CMX_ClockMask = v
