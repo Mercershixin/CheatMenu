@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 03:13 sha 86ba363b bytes 433390'):format('2026-10-04 03:13','86ba363b',433390))
+print(('[CheatMenu] build 2026-10-04 03:17 sha 57479b04 bytes 435663'):format('2026-10-04 03:17','57479b04',435663))
 local F = {}
-F.VERSION = "v14.0.20"
+F.VERSION = "v14.0.21"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -492,6 +492,52 @@ function F.MetaActive(slot, id)
 slot = MetaSlotOf(slot)
 local b = F.MetaLayers[slot]
 return (b and b[id] and b[id].alive) and true or false
+end
+F._LOCK_KEYS = {
+WalkSpeed = true, JumpPower = true, JumpHeight = true, PlatformStand = true,
+CanCollide = true, Health = true, MaxHealth = true,
+}
+F.LockFieldsInstall = function()
+if F.MetaActive("__newindex", "CMLockFields") then return true end
+local got = F.MetaInstall("__newindex", game, "CMLockFields", function(box)
+return function(t, k, v)
+if checkcaller() then return box.orig(t, k, v) end
+if not F._LOCK_KEYS[k] then return box.orig(t, k, v) end
+if typeof(t) ~= "Instance" then return box.orig(t, k, v) end
+local ch, hum = GC()
+if ch and hum and t == hum then
+if k == "WalkSpeed" and T.SpeedOn then
+v = tonumber(C.SpeedValue) or v
+elseif k == "JumpPower" and (T.InfiniteJump or T.SpeedOn) then
+v = 50
+elseif k == "JumpHeight" and T.InfiniteJump then
+v = 7.5
+elseif k == "PlatformStand" and T.FlyOn then
+v = true
+elseif k == "MaxHealth" and T.God then
+v = 1e9
+elseif k == "Health" then
+if T.God then v = 1e9
+elseif T.LockHealth then v = tonumber(C.LockHealthValue) or 100
+elseif T.NoDeath and tonumber(v) and tonumber(v) <= 0 then v = 1 end
+end
+elseif k == "CanCollide" and T.NoClip and ch then
+local mine = false
+pcall(function() mine = t:IsDescendantOf(ch) end)
+if mine then v = false end
+end
+return box.orig(t, k, v)
+end
+end)
+if got and not F._lockLogged then
+F._lockLogged = true
+F.Out("[属性锁定] 已装 __newindex 层: 游戏想改你的 速度/跳跃/飞行/血量/碰撞 时会被按你开着的功能改写回去")
+end
+return got ~= nil
+end
+F.LockFieldsUninstall = function()
+F._lockLogged = nil
+return F.MetaUninstall("__newindex", "CMLockFields")
 end
 function AC.InstallNamecallHook()
 if AC._nc then return true end
@@ -3777,7 +3823,10 @@ F.Out(string.format("[防拉回] 已清理 %d 个客户端检测脚本 · 禁用
 dead, conns, neutered))
 end
 F.HIT_KEYS = { "rigsync", "knockback", "knock", "ragdoll", "combatservice", "useitem",
-"stun", "tumble", "pushed", "fling", "blown", "launch" }
+"stun", "tumble", "pushed", "fling", "blown", "launch",
+"damage", "hit", "attack", "punch", "slap", "strike", "melee", "shoot", "bullet",
+"projectile", "shove", "impulse", "explode", "blast", "yeet", "swing", "slash",
+"hitplayer", "hurt", "takedamage", "dealdamage", "applyforce" }
 F.HIT_STATES = { "Ragdoll", "FallingDown", "Physics" }
 F._hitConn = nil
 function F.HitGuardScan(verbose)
@@ -3951,7 +4000,11 @@ end
 end
 F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", "cage", "jail",
 "net", "hook", "poison", "lava", "saw", "trapdoor", "shock", "taser", "tnt",
-"mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise" }
+"mousetrap", "rats", "stun", "web", "tangle", "glue", "pitfall", "spring", "clamp", "vise",
+"hazard", "damage", "killbrick", "killzone", "deadly", "deathzone", "void", "abyss",
+"flame", "burn", "acid", "electric", "laser", "blade", "crusher", "press", "pendulum",
+"dart", "arrow", "bomb", "explosive", "grenade", "freeze", "ice", "sticky", "quicksand",
+"vine", "rope", "chain", "prison", "cell", "trapzone", "deathplane", "instakill" }
 F._trapConn = nil
 function F.TrapGuardDisable()
 pcall(F.TrapTagWatch, false)
@@ -6696,7 +6749,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -8642,7 +8695,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
 F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -11402,6 +11455,7 @@ F._tierHpOwn = nil
 T.HpBlock = false
 F.Out("[防护档位] 已收回档位自己开的「拦受伤上报」")
 end
+pcall(F.LockFieldsUninstall)
 pcall(F.MetaHookUninstall)
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(血量隔离/静默瞄准/锁血/无敌等)保持不动")
@@ -11423,12 +11477,14 @@ if not T.HpBlock then F._tierHpOwn = true end
 T.HpBlock = true
 pcall(F.HpBlockSet, true)
 pcall(F.CMX_TierSync, 2)
+pcall(F.LockFieldsInstall)
 end
 if lvl >= 3 then
 T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
 T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
 pcall(F.BypassTierApply, T.BypassTier)
+pcall(F.LockFieldsInstall)
 end
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] = " .. v)
