@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 12:09 sha 6b46cea6 bytes 415057'):format('2026-10-03 12:09','6b46cea6',415057))
+print(('[CheatMenu] build 2026-10-03 12:15 sha 866ae2ec bytes 416045'):format('2026-10-03 12:15','866ae2ec',416045))
 local F = {}
-F.VERSION = "v12.5.0"
+F.VERSION = "v12.6.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -473,6 +473,7 @@ bucket[id] = nil
 local mt = getrawmetatable(rec.target)
 if type(mt) == "table" and mt[slot] == rec.wrapper then
 local ok = pcall(function() hookmetamethod(rec.target, slot, rec.box.orig) end)
+pcall(F.CMX_RestoreRO)
 return ok
 end
 for _, other in pairs(bucket) do
@@ -2384,6 +2385,7 @@ if type(getrawmetatable) ~= "function" then return end
 local mt = getrawmetatable(game)
 if type(mt) ~= "table" then return end
 pcall(function() if setreadonly then setreadonly(mt, false) end end)
+F._roUnlocked = true
 local oldNC, oldIX, oldNIX = mt.__namecall, mt.__index, mt.__newindex
 if type(oldNC) ~= "function" then return end
 local function wrap(fn)
@@ -2710,6 +2712,7 @@ end)
 end
 KG.mtHooked, KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = nil, nil, nil, nil, nil
 KG.lastReport = nil
+pcall(F.CMX_RestoreRO)
 end
 function F.KickGuardEnable()
 if KG.hooked then return true end
@@ -8081,6 +8084,8 @@ F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
 F.CMX_HitFeedDisable,
 }) do pcall(fn) end
 T.CMX_SpoofPos, T.CMX_AimPredict = false, false
+F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
+task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
 end
 F.CMX_GravityApply = function()
 if not F.CMX_GravityOn then return end
@@ -9395,6 +9400,33 @@ pcall(function() sweep(game:GetService("ReplicatedStorage"), "ReplicatedStorage"
 pcall(function() sweep(game:GetService("ReplicatedFirst"), "ReplicatedFirst") end)
 F.Out("[扫描·检测器] 共命中 " .. tostring(n) .. " 个(名字像检测器的对象)")
 return n
+end
+F.CMX_RestoreRO = function(force)
+if not F._roUnlocked then return false end
+if not force then
+for _, bucket in pairs(F.MetaLayers or {}) do
+for _, rec in pairs(bucket) do
+if rec and rec.alive then return false end
+end
+end
+if KG and (KG.mtHooked or KG.hooked) then return false end
+if F.CMX_SpoofOn or F.CMX_ViewOn or F.CMX_InstNewOn then return false end
+end
+local done = false
+pcall(function()
+local mt = getrawmetatable and getrawmetatable(game)
+if type(mt) == "table" and type(setreadonly) == "function" then
+setreadonly(mt, true)
+if type(isreadonly) == "function" and isreadonly(mt) then
+done = true
+F._roUnlocked = false
+end
+end
+end)
+if done then
+F.Out("[绕过·元表] 已把 game 元表恢复只读 —— 反作弊用 isreadonly 检查时看不出我们解锁过")
+end
+return done
 end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
 F.CMX_Remember = function(key, on)
