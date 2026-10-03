@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 00:20 sha 4eaa1e1d bytes 424091'):format('2026-10-04 00:20','4eaa1e1d',424091))
+print(('[CheatMenu] build 2026-10-04 00:34 sha 54bbd827 bytes 423315'):format('2026-10-04 00:34','54bbd827',423315))
 local F = {}
-F.VERSION = "v14.0.3"
+F.VERSION = "v14.0.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2923,12 +2923,12 @@ end)
 F._lastFireVia = table.concat(did, "+")
 return F._lastFireVia
 end
-F.COMBAT_PARTS = { "HumanoidRootPart", "UpperTorso", "LowerTorso", "Torso", "Head" }
-F.CombatNewRay = function(ignoreList)
+F.COMBAT_PARTS = { "Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg" }
+F.CombatNewRay = function(ignore)
 local p = RaycastParams.new()
 pcall(function() p.FilterType = Enum.RaycastFilterType.Exclude end)
-pcall(function() if p.FilterType ~= Enum.RaycastFilterType.Exclude then p.FilterType = Enum.RaycastFilterType.Blacklist end end)
-p.FilterDescendantsInstances = ignoreList or {}
+if p.FilterType ~= Enum.RaycastFilterType.Exclude then pcall(function() p.FilterType = Enum.RaycastFilterType.Blacklist end) end
+p.FilterDescendantsInstances = ignore or {}
 return p
 end
 F.CombatAlive = function(pl)
@@ -2938,93 +2938,136 @@ if not ch or not ch.Parent then return nil end
 local hum = ch:FindFirstChildOfClass("Humanoid")
 if not hum or hum.Health <= 0 then return nil end
 if T.CombatSkipInvincible ~= false then
-if ch:FindFirstChildOfClass("ForceField") then return nil end
-if hum.Health > hum.MaxHealth + 0.01 then return nil end
-if hum:GetAttribute("Invincible") == true then return nil end
+if ch:FindFirstChildOfClass("ForceField") then return nil, "无敌" end
+if hum.Health > hum.MaxHealth + 0.01 then return nil, "无敌" end
+if hum:GetAttribute("Invincible") == true then return nil, "无敌" end
 end
-if T.AimTeamCheck and LP.Team ~= nil and pl.Team == LP.Team then return nil end
+if T.AimTeamCheck and LP.Team ~= nil and pl.Team == LP.Team then return nil, "队友" end
 local root = ch.PrimaryPart
 if not root then
-for _, n in ipairs(F.COMBAT_PARTS) do
-local p = ch:FindFirstChild(n)
-if p then root = p break end
+for _, n in ipairs(F.COMBAT_PARTS) do local p = ch:FindFirstChild(n) if p then root = p break end end
 end
-end
-if not root then return nil end
+if not root then return nil, "没模型" end
 return ch, hum, root
 end
-F.CombatLos = function(ch, fromPos)
-if T.CombatWallCheck == false then return true end
+F.CombatVisible = function(ch, fromPos)
+if T.CombatWallCheck == false then
+local r = ch.PrimaryPart
+return r and r.Position or nil
+end
 local ignore = {}
 if LP.Character then ignore[#ignore + 1] = LP.Character end
 pcall(function() ignore[#ignore + 1] = workspace.CurrentCamera end)
-local ch2 = GC()
-if ch2 and ch2 ~= ch then ignore[#ignore + 1] = ch2 end
 local params = F.CombatNewRay(ignore)
-local hit = workspace:Raycast(fromPos, ch.PrimaryPart and (ch.PrimaryPart.Position - fromPos) or Vector3.zero, params)
-if not hit then return true end
-return hit.Instance:IsDescendantOf(ch)
+local best, bestD = nil, math.huge
+for _, n in ipairs(F.COMBAT_PARTS) do
+local part = ch:FindFirstChild(n)
+if part and part:IsA("BasePart") then
+local hit = workspace:Raycast(fromPos, part.Position - fromPos, params)
+if (not hit) or hit.Instance:IsDescendantOf(ch) then
+local d = (part.Position - fromPos).Magnitude
+if d < bestD then best, bestD = part, d end
+end
+end
+end
+return best
 end
 F.CombatPick = function()
-local ch0, hum0, root0 = GC()
-if not root0 then return nil, "没有角色" end
+local _, hum0, root0 = GC()
+if not root0 then return nil, nil, "没有角色" end
 local cam = workspace.CurrentCamera
 local from = cam and cam.CFrame.Position or root0.Position
 local range = tonumber(C.CombatRange) or 300
-local fovpx = tonumber(C.AimFOV) or 300
-local mode360 = (T.Aim360 ~= false)
+local fovpx = tonumber(C.CombatFOV) or 300
+local pov = (tostring(C.CombatMode or ""):find("正面", 1, true) ~= nil)
 local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
 local cur = F._combatNow
-local best, bestRoot, bestScore, blocked = nil, nil, math.huge, 0
+local best, bestPart, bestScore, blocked, why = nil, nil, math.huge, 0, "没有敌人"
 for _, pl in ipairs(Players:GetPlayers()) do
 if pl ~= LP then
-local ch, hum, root = F.CombatAlive(pl)
+local ch, h, root = F.CombatAlive(pl)
 if ch then
 local dist = (root.Position - root0.Position).Magnitude
 if dist <= range then
-local onScreen, sx, sy = false, 0, 0
-if cam then
-local sp, os = cam:WorldToViewportPoint(root.Position)
-onScreen, sx, sy = os, sp.X, sp.Y
-end
 local score = nil
-if mode360 then
-score = dist
-else
-local dx, dy = sx - vp.X / 2, sy - vp.Y / 2
+if pov and cam then
+local sp, os = cam:WorldToViewportPoint(root.Position)
+local dx, dy = sp.X - vp.X / 2, sp.Y - vp.Y / 2
 local off = math.sqrt(dx * dx + dy * dy)
-if onScreen and off <= fovpx then score = off end
+if os and off <= fovpx then score = off end
+if not score then why = "不在正面圈里" end
+else
+score = dist
 end
 if score then
 if pl == cur then score = score - 1e6 end
-if F.CombatLos(ch, from) then
-if score < bestScore then best, bestRoot, bestScore = ch, root, score end
+local part = F.CombatVisible(ch, from)
+if part then
+if score < bestScore then best, bestPart, bestScore = ch, part, score end
 else
 blocked = blocked + 1
+why = "被墙挡住"
+end
+end
+else
+why = "超出锁定距离"
 end
 end
 end
 end
+F._combatNow, F._combatBlocked, F._combatWhy = best, blocked, why
+if best then return best, bestPart end
+return nil, nil, why
 end
+F.CombatHudSet = function(text)
+if not F._combatHud then return end
+pcall(function() F._combatHud.Text = text end)
 end
-F._combatNow = best
-F._combatBlocked = blocked
-if best then return best, bestRoot end
-return nil, "没有可锁目标"
+F.CombatHudShow = function()
+if F._combatHud then return end
+pcall(function()
+local gui = Instance.new("ScreenGui")
+gui.Name = "CM_CombatHud"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+pcall(function() gui:SetAttribute("CMOwned", true) end)
+gui.Parent = gethui and gethui() or game:GetService("CoreGui")
+local t = Instance.new("TextLabel")
+t.Size = UDim2.fromOffset(420, 30)
+t.Position = UDim2.new(0.5, -210, 0, 60)
+t.BackgroundTransparency = 0.45
+t.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+t.TextColor3 = Color3.fromRGB(255, 255, 255)
+t.TextSize = 16
+t.Font = Enum.Font.GothamBold
+t.Text = "锁定: 搜索中…"
+t.Parent = gui
+F._combatHud, F._combatHudGui = t, gui
+end)
+end
+F.CombatHudHide = function()
+if F._combatHudGui then pcall(function() F._combatHudGui:Destroy() end) end
+F._combatHud, F._combatHudGui = nil, nil
 end
 F.CombatTick = function()
 if not T.AimOn then return end
 local _, hum, root = GC()
 if not (hum and root) then return end
-local ch, tgt = F.CombatPick()
-if not (ch and tgt) then
+local ch, part = F.CombatPick()
+if not (ch and part) then
 if F._aimFacing then
 F._aimFacing = nil
 pcall(function() hum.AutoRotate = true end)
 end
+F.CombatHudSet("锁定: 无目标 (" .. tostring(F._combatWhy or "搜索中") .. ")")
 return
 end
-local dir = tgt.Position - root.Position
+local pl = nil
+pcall(function() pl = Players:GetPlayerFromCharacter(ch) end)
+local dist = (part.Position - root.Position).Magnitude
+F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
+.. (T.AutoFire and " · 自动开火中" or ""))
+local dir = part.Position - root.Position
 if T.AimTurnBody ~= false then
 local flat = Vector3.new(dir.X, 0, dir.Z)
 if flat.Magnitude > 0.05 then
@@ -3035,7 +3078,7 @@ end
 end
 if T.AimTurnCamera then
 local cam = workspace.CurrentCamera
-if cam then pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, tgt.Position) end) end
+if cam then pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, part.Position) end) end
 end
 if T.AutoFire then
 local now = os.clock()
@@ -3047,36 +3090,32 @@ end
 end
 function F.AimSet(on)
 T.AimOn = on and true or false
-if F._aimBind then
-pcall(function() RS:UnbindFromRenderStep("CM_Combat") end)
-F._aimBind = nil
-end
+if F._aimBind then pcall(function() RS:UnbindFromRenderStep("CM_Combat") end) F._aimBind = nil end
 if not T.AimOn then
 pcall(function()
 local _, hum = GC()
 if hum and F._aimFacing then hum.AutoRotate = true end
 end)
-F._aimFacing = nil
-F._combatNow = nil
+F._aimFacing, F._combatNow = nil, nil
+F.CombatHudHide()
 return
 end
+F.CombatHudShow()
 F._aimBind = true
 RS:BindToRenderStep("CM_Combat", Enum.RenderPriority.Camera.Value + 1, function() F.CombatTick() end)
 end
 F.CombatReport = function()
-local ch, tgt = F._combatNow, nil
+local ch = F._combatNow
+local name = "(无)"
 if ch and ch.Parent then
-local hum = ch:FindFirstChildOfClass("Humanoid")
-pcall(function() tgt = Players:GetPlayerFromCharacter(ch) end)
-F.Out("[战斗] 当前锁定: " .. tostring(tgt and tgt.Name or ch.Name)
-.. (hum and (" · 血量 " .. tostring(math.floor(hum.Health)) .. "/" .. tostring(math.floor(hum.MaxHealth))) or "")
-.. " · 被墙挡住没锁的 " .. tostring(F._combatBlocked or 0) .. " 个")
-else
-F.Out("[战斗] 当前没有锁定目标 (被墙挡住没锁的 " .. tostring(F._combatBlocked or 0) .. " 个)")
+pcall(function() name = (Players:GetPlayerFromCharacter(ch) or {}).Name or ch.Name end)
+if name == nil then name = ch.Name end
 end
-F.Out("[战斗] 设置: 模式=" .. (T.Aim360 ~= false and "360°" or "屏幕内") .. " · 范围=" .. tostring(C.CombatRange or 300)
-.. " · 不打隔墙=" .. tostring(T.CombatWallCheck ~= false) .. " · 不打无敌/出生保护=" .. tostring(T.CombatSkipInvincible ~= false)
-.. " · 转身锁人=" .. tostring(T.AimTurnBody ~= false) .. " · 自动开火=" .. tostring(T.AutoFire == true))
+F.Out("[战斗] 当前锁定 = " .. tostring(name) .. " · 原因/状态 = " .. tostring(F._combatWhy or "-")
+.. " · 被墙挡住 " .. tostring(F._combatBlocked or 0) .. " 个")
+F.Out("[战斗] 模式=" .. tostring(C.CombatMode or "?") .. " · 距离=" .. tostring(C.CombatRange or 300)
+.. " · 圈=" .. tostring(C.CombatFOV or 300) .. " · 不打隔墙=" .. tostring(T.CombatWallCheck ~= false)
+.. " · 不打无敌=" .. tostring(T.CombatSkipInvincible ~= false) .. " · 自动开火=" .. tostring(T.AutoFire == true))
 end
 local GodConn = nil
 local function GodDisable()
@@ -10834,69 +10873,46 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
-Tabs.Combat:AddSection("目标选择(锁谁)")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 每帧自动挑一个敌人并锁住。锁定方式见下面「锁定方式」——默认只转人物朝向, 不动你的视角", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
-Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定范围怎么算", Description = "360° = 按世界距离选最近的(背后的人也能锁, 范围单位=格) · 屏幕内 = 只在准星周围一圈里选(范围单位=像素)", Values = {
-"360°·按世界距离(推荐 · 背后也能锁)",
-"屏幕内·按准星附近",
-}, Default = "360°·按世界距离(推荐 · 背后也能锁)", Callback = function(v)
-T.Aim360 = (tostring(v):find("360", 1, true) ~= nil)
+Tabs.Combat:AddSection("自瞄")
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
+Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "两种就是你说的那两种: 正面圈内锁 = 只锁屏幕正面那个圈里的(面对谁锁谁); 漏就锁 = 360°全身, 只要他身上有任何一个部位打得着(哪怕只露一条胳膊/一条腿)就锁", Values = {
+"漏就锁(360°全身 · 只要打得到就锁)",
+"正面圈内锁(只锁屏幕正面圈里的)",
+}, Default = "漏就锁(360°全身 · 只要打得到就锁)", Callback = function(v)
+C.CombatMode = tostring(v)
 if F._cfgSyncing then return end
-F.Out("[战斗] 锁定范围算法 = " .. tostring(v))
+F.Out("[战斗] 锁定模式 = " .. tostring(v))
 end })
-Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格 · 360°模式用)", Min = 5, Max = 2000, Default = 300, Rounding = 0, Callback = function(v) C.CombatRange = v end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "准星圈半径(像素 · 屏幕内模式用)", Min = 50, Max = 1200, Default = 300, Rounding = 0, Callback = function(v) C.AimFOV = v end })
-Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(视线检测)", Description = "开: 从相机到目标打一条射线, 中间被墙/建筑挡住就不锁他(默认开, 就是你要的『不隔墙打』)", Default = true, Callback = function(v)
+Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格)", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
+Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小(像素 · 只有正面圈内锁用)", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
+Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(默认开)", Description = "从相机到目标打射线, 中间被墙/建筑挡住就不锁(所以不会隔着墙打)", Default = true, Callback = function(v)
 T.CombatWallCheck = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打隔墙 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("CombatSkipInvincible", { Title = "不打无敌/出生保护的人", Description = "开: 目标身上有 ForceField(出生保护/无敌护盾)、血量超过上限、或带 Invincible 属性的, 一律跳过(默认开)", Default = true, Callback = function(v)
+Tabs.Combat:AddToggle("CombatSkipInvincible", { Title = "不打无敌/出生保护的人(默认开)", Description = "目标身上有 ForceField(出生保护)、血量超过上限、或带 Invincible 属性的一律跳过", Default = true, Callback = function(v)
 T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AimTeamCheck", { Title = "只打敌对阵营(有阵营的游戏)", Description = "只在游戏本身有阵营(Team)时生效; 无阵营的游戏照常按所有人处理", Default = false, Callback = function(v)
-T.AimTeamCheck = v
-if F._cfgSyncing then return end
-F.Out("[战斗] 只打敌对阵营 = " .. (v and "开" or "关"))
-end })
-Tabs.Combat:AddSection("锁定方式")
-Tabs.Combat:AddToggle("AimTurnBody", { Title = "转身锁人(人物朝向锁在目标身上)", Description = "开: 每帧把你的角色转向目标(命中靠人物朝向的游戏直接生效), 但不碰你的视角/鼠标", Default = true, Callback = function(v)
-T.AimTurnBody = v
-if F._cfgSyncing then return end
-if v and T.AimTurnCamera then
-T.AimTurnCamera = false
-local o = Fluent and Fluent.Options and Fluent.Options.AimTurnCamera
-if o and o.Set then pcall(function() o:Set(false) end) end
-end
-F.Out("[战斗] 转身锁人 = " .. (v and "开" or "关"))
-end })
-Tabs.Combat:AddToggle("AimTurnCamera", { Title = "锁定时同时把视角转过去(默认关)", Description = "开: 锁到人时连你的视角一起转过去(适合按『相机方向』判定弹道的枪战游戏); 关: 视角完全归你。两个都关就等于只锁不开火, 没有意义", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AimTurnCamera", { Title = "锁定时把视角也转过去(默认关)", Description = "关: 只转你的人物朝向, 视角完全归你(适合踢/打类游戏); 开: 连相机一起转过去(适合按相机方向判定弹道的枪战游戏)", Default = false, Callback = function(v)
 T.AimTurnCamera = v
+T.AimTurnBody = not v
 if F._cfgSyncing then return end
-if v and T.AimTurnBody then
-T.AimTurnBody = false
-local o = Fluent and Fluent.Options and Fluent.Options.AimTurnBody
-if o and o.Set then pcall(function() o:Set(false) end) end
-end
 F.Out("[战斗] 锁定时转视角 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "锁定后自动开火", Description = "锁到人后按下面间隔自动开火(走鼠标左键 / 工具激活三条路, 总有一条能开)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AutoFire", { Title = "锁定后自动开火", Default = false, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddSlider("AutoFireGap", { Title = "自动开火间隔(秒)", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddSection("自动攻击(范围)")
-Tabs.Combat:AddToggle("CombatAura", { Title = "自动攻击范围内敌人(和自瞄独立)", Description = "不用锁人, 范围内一有人就按下面的攻速自动开火; 同样会跳过死人/无敌/隔墙的人", Default = false, Callback = function(v)
+Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
+Tabs.Combat:AddToggle("CombatAura", { Title = "自动攻击(范围内有人就打 · 和自瞄独立)", Default = false, Callback = function(v)
 T.CombatAura = v
 if F._cfgSyncing then return end
 if v then pcall(F.KillAuraEnable) else pcall(F.KillAuraDisable) end
 end })
 Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围(格)", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
-Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
-Tabs.Combat:AddButton({ Title = "★ 体检: 打印当前锁定目标 / 各项设置到日志", Callback = function() pcall(F.CombatReport) end })
 Tabs.Combat:AddSection("生存")
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
@@ -10910,12 +10926,12 @@ T.God = v
 if F._cfgSyncing then return end
 if v then pcall(GodEnable) else pcall(GodDisable) end
 end })
-Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定 · 不改 MaxHealth)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定)", Default = false, Callback = function(v)
 T.LockHealth = v
 if F._cfgSyncing then return end
 if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
 end })
-Tabs.Combat:AddToggle("Regen", { Title = "回血(按下面速率持续补血)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("Regen", { Title = "回血", Default = false, Callback = function(v)
 T.Regen = v
 if F._cfgSyncing then return end
 if v then pcall(RegenEnable) else pcall(RegenDisable) end
@@ -10924,11 +10940,6 @@ Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", D
 T.NoDeath = v
 if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
-end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(改本地的对方模型 · 只在客户端判定命中的游戏有效)", Description = "把对方的部件尺寸改大 —— 只在你的客户端生效(不会复制给服务端)。客户端判命中的游戏有效, 服务端判命中的无效", Default = false, Callback = function(v)
-T.HitboxExpand = v
-if F._cfgSyncing then return end
-if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
