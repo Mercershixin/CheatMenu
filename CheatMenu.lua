@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 16:50 sha 0a86f11c bytes 454913'):format('2026-10-03 16:50','0a86f11c',454913))
+print(('[CheatMenu] build 2026-10-03 16:54 sha 08b33467 bytes 455883'):format('2026-10-03 16:54','08b33467',455883))
 local F = {}
-F.VERSION = "v13.10.0"
+F.VERSION = "v13.10.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11727,6 +11727,22 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddToggle("AntiAFKAll", { Title = "★ 挂机防踢(一个开关: 防挂机 + 防踢 + 被踢自动重进)", Description = "开: 掐掉挂机检测 + 拦 Kick + 被踢自动重进 一次全上; 关: 全部还原。防挂机具体方式用下面那个下拉选。⚠ 防踢会改写全局元表, 个别反作弊会因此踢你 —— 平时可只开防挂机", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+if v then
+T.AntiAFK = true T.KickGuard = true T.KickRejoin = true T.KickProtect = true
+pcall(F.AntiAFKEnable)
+pcall(F.KickGuardEnable)
+pcall(F.KickRejoinEnable)
+Fluent:Notify({ Title = "挂机防踢", Content = "已开: 防挂机 + 防踢 + 被踢自动重进", Duration = 6 })
+else
+T.AntiAFK = false T.KickGuard = false T.KickRejoin = false T.KickProtect = false
+pcall(F.AntiAFKDisable)
+pcall(F.KickGuardDisable)
+pcall(F.KickRejoinDisable)
+Fluent:Notify({ Title = "挂机防踢", Content = "已关", Duration = 4 })
+end
+end })
 Tabs.AFK:AddDropdown("AFKMode", { Title = "防挂机方式(改完立刻生效)", Values = {
 "不动人物(现状 · 只掐检测连接 + 写心跳属性)",
 "上面 + 鼠标抖动(不按键、不碰人物)",
