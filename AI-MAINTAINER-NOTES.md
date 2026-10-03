@@ -3344,3 +3344,19 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ② 判"标志是否能被置真"必须覆盖 `= want` / `T.A, T.B = v, v` / `T[key] = true`（动态键）这些写法，只认 `= true/v` 会误报一大堆；
   ③ `T.CMX_*` 那批是 `F.CMX_TierSync` 里 `T[key] = true` **动态置真**的，静态扫描必然假报。
 - **仍保留待定**（报给用户）：`T.ACBypass`（与 `ACIndexMask` 分支耦合）、`T.CMX_ClickSpam` / `T.HitboxExpand`（实现完整但**无 UI 入口**）、`T.CMX_GameProfile` / `T.ScanAutoFix`（死标志，开关没接）。
+
+
+## 反作弊上报「熔断」+ 扫描页只做扫描（2026-10-04 · 14.0.19）
+
+- ★★★ **反作弊高频上报 ⇒ 熔断（学自公开明文 `tsbgscript` 的 SAB AC Bypass）**：它那招是 `hookfunction(remote.FireServer, function(...) if 命中 then return task.wait(9e9) end end)`
+  —— **直接把调用协程永久挂起**，比"返回 nil 拦下"更彻底：拦下它还会再发，**挂起它连循环都卡住**。
+  ⇒ 我们的 `AC` namecall 钩子两处（拦反作弊上报 / 拦受伤上报）都加了熔断：**同一 remote 命中 3 次后 `task.wait(9e9)`**，并打一条 `[拦 remote·熔断]` 日志。
+  ★ 这就是用户要的「避免一直发导致卡顿」的正解 —— 不发出去 = 零网络开销。
+- ★★ **扫描页只做扫描，绝不自动动手**（用户明确要求）：归档 `F.CMX_ClickScan/ClickSpamStep/ClickSpamEnable/ClickSpamDisable`（自动点击）、`F.CMX_ScanAutoHeal` + `CMX_ScanAll` 里的「扫描后自动处置」分支 + `T.ScanAutoFix`。
+  ⇒ 新增「扫描附近可交互点（点击器/交互提示 · **纯只读**）」按钮，扫出来只列表，由用户决定处理。
+- `F.HitboxExpand` **实现一直完整、只差一个开关**（全项目只有 `OnCharacter` 里读它）⇒ 补上战斗页开关。
+- `F.CMX_ProfileGet` 里的 `T.CMX_GameProfile == false` 是**死判断**（该标志全项目从未被赋值）⇒ 归档（行为等价于默认启用）。
+- ★ 删函数**必须复扫悬空引用**：本轮删 `F.CMX_ScanAutoHeal` 时，`F.CMX_ScanAll` 里还留着一行 `pcall(F.CMX_ScanAutoHeal)` ⇒ 编译能过、但会静默失效。**删完必须 grep 一次名字**。
+- **③档下放评估结论**：③档剩余 6 层（HookHard / RequireBlock / NeuterPlus / HashFreeze / IdentityMask / FFlagPack）**全是激进手段**（硬钩子 / getgc 扫描 / 身份伪装 / FFlag 包），**没有再能下放的** ⇒ 按用户「都是激进那就算」保持现状。
+- **公开技术对照（本轮搜索）**：`Securedlinks/Bypass.com`（8 项，我们全有）；`xiaomao8090/Adonis-Bypass-Framework` 提到 **GetGC 速率限制**（我们暂无，可考虑）；
+  ⚠ `onefishit/anticheat-luau`（Sentinel）的 `Config.SuspiciousNames = {exploit, inject, cheat, hack, dex, saveinstance, bypass, crack, scriptware}` —— **服务端反作弊会按这些词找脚本/GUI 名** ⇒ **我们的变量与 GUI 命名要避开这 9 个词**（当前 GUI 名 `CM_*` / `CheatMenu` 不在其中，但新增命名时要留意）。
