@@ -3308,3 +3308,13 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ★★★ **最要紧的结论（用户担心的两件事在代码层面都不成立）**：`锁血` / `无敌` / `回血` / `不死` **全部只用 `Heartbeat` / `Stepped` 本地写值、不装任何钩子** ⇒ 开档位不会让它们生效，它们也不会因档位关闭而失效。
 - 关档日志原来是错的（写"所有钩子已卸载"，实际只关 `KickGuardPaths`）⇒ 已改成准确描述。
 - 归属总表（"谁管什么"）：**心跳写值类** = 锁血/无敌/回血/不死；**`__index` 层** = 读伪装(`CMXSpoof`) / 速度与血量读数(`ACIndexMask`) / 血量隔离(`CMHealthLock`) / 静默瞄准(`CMSilent`)；**`__namecall` 层** = 拦反作弊上报(`RemoteBlock`) / 拦受伤上报(`HpBlock`) / 视图过滤(`CMXView`)；**`setmetatable` 层** = `T.ACBypass`。
+
+
+## 全功能 × 钩子可行性评估（2026-10-04 · 14.0.17）
+
+- 手段：新增 `_audit_hooks.py`（71 个控件 × 426 个函数体，按"钩子/心跳/写属性/远程/模拟输入/连接拦截"分类）。
+- **公开做法对照**（`Securedlinks/Bypass.com` 的 8 项 + memoryhackers/devforum 的 `__newindex` 与 `__index` 伪装）：属性伪装 / 拦可疑 remote / debug 伪装 / 禁反作弊连接 / 中和反作弊函数 / 隐藏 GUI / 新脚本监控 / 安全输入 —— **8 项我们全部已有实现**。
+- ★★ **唯一结构性缺口**：`__newindex`（属性写入拦截）**没进 `F.MetaLayers` 分层栈**（`AC.InstallPropertyLock` 用的是裸 `hookmetamethod`），而且 **`AC.InstallPropertyLock` 是死函数（0 调用）、`T.PropertyLock` / `T.ACBypass` 从未置 true** ⇒ 这条"锁定层"整条是死的。
+  ⇒ 这正是「用钩子替代心跳」的落点：把 `__newindex` 纳入分层栈后，可给 **加速 / 无敌 / 锁血 / 穿墙 / 无限跳 / 隐身** 做「游戏改我值 → 我改写回去」的锁定。
+- 顺手修正死函数里的一处**硬编码基准**：`__newindex` 改写 WalkSpeed 时原用 `(F._baseWalk or 16) * 2`（≈32）会把用户设的 300 压回 32 ⇒ 改成 `tonumber(C.SpeedValue)`（用户真实设定值）。
+- 模式设计（待用户批准）：**普通模式**（不开档位）= 心跳维持，现状不变；**档位模式**（②③）= 叠加 `__newindex` 锁定层 ⇒「心跳维持 + 钩子锁定」双保险，**关档位即回到普通模式**。
