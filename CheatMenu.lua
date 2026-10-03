@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 02:29 sha 247a27a5 bytes 438907'):format('2026-10-04 02:29','247a27a5',438907))
+print(('[CheatMenu] build 2026-10-04 02:39 sha 1eb9addd bytes 438294'):format('2026-10-04 02:39','1eb9addd',438294))
 local F = {}
-F.VERSION = "v14.0.14"
+F.VERSION = "v14.0.15"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -327,6 +327,12 @@ AC.BLOCK_KEYS = {
 "movementcheck", "noclipcheck", "godcheck", "integrity", "checksum",
 "reportabuse", "adminabuse", "punishplayer", "banplayer", "flagplayer",
 }
+AC.HP_KEYS = {
+"applydamage", "dealdamage", "takedamage", "sethp", "sethealth", "sethpvalue",
+"damage", "hurt", "injured", "wound",
+"death", "died", "die", "dead", "killed", "killme", "respawnrequest",
+"ragdoll", "knockback", "stunned",
+}
 AC.SUS_KEYS = {
 "iac", "anticheat", "anti-cheat", "antiexploit", "anti-exploit", "detect",
 "ban", "kick", "flag", "report", "exploit", "cheat", "x-15", "x-16",
@@ -512,6 +518,26 @@ return nil
 end
 end
 end
+if (method == "FireServer" or method == "InvokeServer") and T.HpBlock and not checkcaller() then
+local hname = tostring(self and self.Name or ""):lower()
+for _, kw in ipairs(AC.HP_KEYS) do
+local hit = false
+if type(F.CMX_KeyIsolate) == "function" then hit = F.CMX_KeyIsolate(hname, kw)
+else hit = hname:find(kw, 1, true) ~= nil end
+if hit then
+AC._hpBlocked = (AC._hpBlocked or 0) + 1
+local now2 = os.clock()
+if now2 - (AC._hpLogAt or 0) > 3 then
+AC._hpLogAt = now2
+local m2 = "[拦受伤上报] " .. tostring(hname) .. " ← 关键词 " .. tostring(kw)
+.. " (累计 " .. tostring(AC._hpBlocked) .. " 次) ⇒ 服务端收不到这条, 它就不知道你受伤/死了"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, m2) end)
+else pcall(F.Out, m2) end
+end
+return nil
+end
+end
+end
 return box.orig(self, ...)
 end
 end)
@@ -525,6 +551,16 @@ local ok = F.MetaUninstall("__namecall", "AC")
 AC._nc = false
 AC._ncLayer = nil
 return ok
+end
+F.HpBlockSet = function(on)
+T.HpBlock = on and true or false
+if T.HpBlock then
+pcall(AC.InstallNamecallHook)
+F.Out("[拦受伤上报] 已开: 客户端发出的「受伤/死亡」类 remote 会被本地拦下 ⇒ 服务端收不到这条")
+F.Out("[拦受伤上报] 生效条件: 游戏必须是「客户端算伤害再上报」; 若是服务端算伤害, 拦了也没用(服务端早就知道了)。日志会列出实际拦到了什么, 游戏变卡就说明误伤, 关掉即恢复")
+else
+F.Out("[拦受伤上报] 已关(已不再拦, 未卸载公共钩子)")
+end
 end
 AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
 function AC.isRemoteLike(inst)
@@ -8931,7 +8967,7 @@ F.CMX_ClickSpamDisable,
 F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
 F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
 F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
-F.CMX_HitFeedDisable, F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
+F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
 F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 }) do pcall(fn) end
 T.CMX_SpoofPos, T.CMX_AimPredict = false, false
@@ -9739,101 +9775,6 @@ end
 F.CMX_LeadT = t
 return lead
 end
-F.CMX_HitFeedShow = function(text, col)
-if not F._hitGui then return end
-if not F._hitLines then return end
-F._hitIdx = (F._hitIdx or 0) + 1
-local slot = (F._hitIdx - 1) % 6 + 1
-local lbl = F._hitLines[slot]
-if not lbl then return end
-lbl.Text = text
-lbl.TextColor3 = col or Color3.fromRGB(255, 240, 160)
-lbl.Visible = true
-F._hitAt = F._hitAt or {}
-F._hitAt[slot] = os.clock()
-end
-F.CMX_HitFeedEnable = function()
-if F._hitConn then return end
-local host = nil
-pcall(function() host = gethui and gethui() end)
-if not host then pcall(function() host = game:GetService("CoreGui") end) end
-if host and not F._hitGui then
-pcall(function()
-local sg = Instance.new("ScreenGui")
-sg.Name = "CM_HitFeed"
-pcall(function() sg:SetAttribute("CMOwned", true) end)
-sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true
-sg.Parent = host
-F._hitGui = sg
-F._hitLines = {}
-for i = 1, 6 do
-local t = Instance.new("TextLabel")
-t.Size = UDim2.new(0, 220, 0, 18)
-t.Position = UDim2.new(0.5, -110, 0, 60 + (i - 1) * 18)
-t.BackgroundTransparency = 1
-t.Font = Enum.Font.Code
-t.TextSize = 14
-t.TextStrokeTransparency = 0.35
-t.Text = ""
-t.Visible = false
-t.Parent = sg
-F._hitLines[i] = t
-end
-end)
-end
-F._hitPrev = {}
-F._hitIdx = 0
-F._hitConn = RS.Heartbeat:Connect(function()
-if not T.CMX_HitFeed then F.CMX_HitFeedDisable() return end
-local now = os.clock()
-if now - (F._hitScanAt or 0) < 0.15 then return end
-F._hitScanAt = now
-local seen = {}
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hum then
-seen[pl] = true
-local prev = F._hitPrev[pl]
-local hp, mx = hum.Health, math.max(hum.MaxHealth, 1)
-if prev then
-if hp < prev.h - 0.5 and prev.h > 0 then
-local lost = prev.h - hp
-F.CMX_HitFeedShow(string.format("%s  -%d  (剩 %d)", pl.Name, math.floor(lost + 0.5), math.floor(hp)),
-Color3.fromRGB(255, 170, 90))
-F.Out(string.format("[命中] %s 掉血 %d (剩 %d/%d)", pl.Name, math.floor(lost + 0.5), math.floor(hp), math.floor(mx)))
-end
-if hp <= 0 and prev.h > 0 then
-F.CMX_HitFeedShow("★ 击杀 " .. pl.Name, Color3.fromRGB(255, 90, 90))
-F.Out("[命中] ★ 击杀 " .. pl.Name)
-end
-end
-F._hitPrev[pl] = { h = hp }
-end
-end
-end
-for pl in pairs(F._hitPrev) do
-if not seen[pl] then F._hitPrev[pl] = nil end
-end
-if F._hitLines then
-for i = 1, #F._hitLines do
-local at = F._hitAt and F._hitAt[i] or 0
-if F._hitLines[i].Visible and now - at > 5 then
-F._hitLines[i].Visible = false
-end
-end
-end
-end)
-F.Out("[命中提示] 已开: 视野内玩家掉血/被击杀会在屏幕上滚动提示(并写日志)")
-end
-F.CMX_HitFeedDisable = function()
-if F._hitConn then pcall(function() F._hitConn:Disconnect() end) F._hitConn = nil end
-if F._hitGui then pcall(function() F._hitGui:Destroy() end) F._hitGui = nil end
-F._hitLines, F._hitPrev = nil, nil
-F.Out("[命中提示] 已关")
-end
 F.CMX_TierLevel = function(v)
 local t = tostring(v or "")
 if t:find("④", 1, true) then return 4 end
@@ -9872,11 +9813,11 @@ want.CMX_AutoScrub, want.CMX_SpoofIndex, want.CMX_ViewFilter = true, true, true
 end
 if lv >= 2 then
 want.CMX_BlockReport = true
+want.CMX_ClockMask, want.CMX_DebugMask, want.CMX_InstNew = true, true, true
 end
 if lv >= 3 then
 want.CMX_HookHard, want.CMX_RequireBlock = true, true
 want.CMX_CutLog, want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true, true
-want.CMX_ClockMask = true
 end
 if lv >= 4 then
 want.CMX_InstNew, want.CMX_DebugMask = true, true
@@ -11648,6 +11589,9 @@ if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
+T.HpBlock = true
+pcall(F.HpBlockSet, true)
+pcall(F.CMX_TierSync, 2)
 end
 if lvl >= 3 then
 T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
@@ -11662,12 +11606,16 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻越稳)", Values = {
 "关(什么都不开)",
 "① 轻 · 反甩+护界面+权限守卫+属性读伪装(只装 __index 只读钩)",
-"② 中 · +namecall 钩(拦上报)+反封禁全家桶(断日志/按名中和+/哈希冻结)",
-"③ 重 · +setmetatable 钩+深度中和+14 层绕过层(最激进 · 枪战服慎用)",
+"② 中 · +namecall 拦上报+拦受伤上报+反封禁4层+温和绕过层(时钟/调试名/Instance)",
+"③ 重 · +硬钩子/require拦截/getgc中和+哈希冻结+身份伪装+FFlag ⇒ 14层全开(最激进)",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
+end })
+Tabs.AC:AddToggle("HpBlock", { Title = "拦受伤/死亡上报(让服务端以为你还活着)", Description = "把客户端发给服务端的「受伤/死亡」类 remote 本地拦下 ⇒ 服务端收不到。⚠ 只在游戏用「客户端上报受伤」时有效; 服务端算伤害的游戏拦了没用。日志会列出实际拦到什么, 游戏变卡说明误伤, 关掉即恢复", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.HpBlockSet(v)
 end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
