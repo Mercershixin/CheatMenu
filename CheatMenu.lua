@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:40 sha d9bfd21a bytes 442519'):format('2026-10-03 18:40','d9bfd21a',442519))
+print(('[CheatMenu] build 2026-10-03 18:45 sha 55b8e89a bytes 441589'):format('2026-10-03 18:45','55b8e89a',441589))
 local F = {}
-F.VERSION = "v13.10.19"
+F.VERSION = "v13.10.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2937,7 +2937,7 @@ end
 local function makeBox(orig)
 return function(self, x, y, ...)
 local ray = orig(self, x, y, ...)
-if T.SilentAim and not F.CMX_IsCaller() then
+if T.AimOn and not F.CMX_IsCaller() then
 local tgt = F.AimPick()
 if tgt then
 local d = tgt.Position - ray.Origin
@@ -3163,6 +3163,7 @@ if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._ai
 if not T.AimOn then
 return
 end
+if not F._silentOn then pcall(F.SilentAimEnable) end
 F._aimConn = true
 RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
 if not T.AimOn then F.AimSet(false) return end
@@ -3180,7 +3181,7 @@ local tgt = F.AimPick()
 if not (cam and tgt) then return end
 local aimPos = tgt.Position
 if T.CMX_AimPredict then pcall(function() aimPos = F.CMX_AimLead(tgt, cam) end) end
-if not T.SilentAim then
+if not F._silentOn then
 local want = CFrame.lookAt(cam.CFrame.Position, aimPos)
 local lerpK = 1 / math.max(1, tonumber(C.AimSmooth) or 5)
 if T.Aim360 then lerpK = math.min(lerpK, 0.12) end
@@ -8578,6 +8579,7 @@ local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
 if T.BypassTier == nil then T.BypassTier = "关(什么都不开)" end
+if T.Aim360 == nil then T.Aim360 = true end
 task.defer(function()
 task.wait(1.5)
 pcall(F.BypassTierApply, T.BypassTier)
@@ -11495,11 +11497,6 @@ if F._cfgSyncing then return end
 if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
 end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddToggle("SilentAim", { Title = "★ 静默自瞄(视角完全自由 · 子弹自动打向目标)", Description = "开: 相机完全归你(鼠标自由转视角), 只在开火那一刻把子弹方向悄悄改向目标 —— 不影响你看别处。⚠ 需要执行器支持 hook 相机方法; 开了它会自动接管「瞄准模式」的转视角", Default = false, Callback = function(v)
-T.SilentAim = v
-if F._cfgSyncing then return end
-if v then pcall(F.SilentAimEnable) else pcall(F.SilentAimDisable) end
-end })
 Tabs.Combat:AddToggle("AimWallCheck", { Title = "★ 不打隔墙(墙后的敌人不锁)", Description = "开: 自瞄先从相机到目标打一条射线, 中间有墙/障碍物就不锁他 —— 不会隔着墙开枪露位置", Default = false, Callback = function(v) T.AimWallCheck = v F.Out("[自瞄] 不打隔墙 = " .. (v and "开" or "关")) end })
 Tabs.Combat:AddDropdown("AimTarget", { Title = "★ 目标选择", Values = {
 "所有人(无阵营时自动)",
@@ -11834,6 +11831,7 @@ pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.Bypas
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
+T.CMX_SpoofIndex = false
 F.Out("[防护档位] 已关(什么都不开)")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
 return
@@ -11841,6 +11839,8 @@ end
 T.AntiFling = true T.GuiProtect = true T.CharPersist = true
 pcall(F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
+T.CMX_SpoofIndex = true
+pcall(F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(F.CMX_BanAllApply, true)
@@ -11863,11 +11863,6 @@ Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻�
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
-end })
-Tabs.AC:AddToggle("CMX_SpoofIndex", { Title = "★ 属性读回伪装(让反作弊/服务端读到的 速度/位置 是合法值)", Description = "开: 别人(反作弊/服务端)读你角色的 线性速度/角速度/位置 时, 拿到的是按合法行走速度压过的值 ⇒ 从源头让服务端不来纠正你(比硬刚稳得多, 不会被判定异常); 我们自己读仍是真值", Default = false, Callback = function(v)
-T.CMX_SpoofIndex = v
-if F._cfgSyncing then return end
-if v then pcall(F.CMX_SpoofIndexEnable) else pcall(F.CMX_SpoofIndexDisable) end
 end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
