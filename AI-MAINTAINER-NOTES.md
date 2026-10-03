@@ -3274,3 +3274,13 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
 - ★★★ **差点埋下的重入炸弹（已避免）**：`__index` wrapper 里**绝不能读同一个 key**（`hum.MaxHealth`）—— 外部调用链里再读会**再次进入 wrapper** ⇒ 无限递归 ⇒ 爆栈闪退。
   ⇒ 改为只读缓存 `F._myMaxHP`（在**我们自己的线程**里刷新，`checkcaller()=true` 天然安全）。这就是记忆里那条坑的又一次现身。
 - 同类**只有「读取伪装」这条路可推广**（`ACIndexMask` 已覆盖 WalkSpeed / JumpPower / MaxHealth / Health）；**服务端权威的实质状态（真位移 / 真伤害 / 真资源）本地改不了**，别承诺。
+
+
+## 档位收敛 + 删反R币 + ③档补齐（2026-10-04 · 14.0.14）
+
+- **防挂机从档位里摘掉**（用户已把它独立成「挂机防踢」）：删掉 ①档与 `BypassTier` 里我上轮加的 `F.AntiAFKEnable` / `wants.afk` / `wants.kick`。现在 `F.AntiAFKEnable` **只剩两条调用路径**：`AFKKickGuard` 开关 + 脚本加载默认 ⇒ 不再与档位重复。
+- **反R币购买删净**：整段（`F.CMX_NoPurchaseEnable/Disable` + `_npOn` / `_npOrig` / `_npConns` + 注释）删除，−3495 字节，`NoPurchase` 0 残留。
+- ★★ **③档补齐到「14 层全覆盖」**：`F.CMX_TierMap` 正好 14 层，但 `F.CMX_TierSync` 的 want 表**漏了 `CMX_ClockMask`**（真死层）⇒ 已补进 `lv>=3`。
+  ★ 另确认 `CMX_GcinfoMask` / `CMX_ArgScrub` **不是死层** —— 它们由 `CMXSpoof` / `CMX_AutoScrub` **内部配套调用**（我的「死能力」审计漏看了这层间接引用，属假报）。
+- ★★ **②档的「拦上报」原本是空承诺**：它依赖 `__namecall` 钩子，而只有③档才装 ⇒ ②档补 `AC.InstallNamecallHook()`，现在②档 = ①档 + namecall 拦上报 + 断日志 + 按名中和+ + 哈希冻结。
+- **三档描述原来是错的**（①档写「不装钩子」，实际装了 `__index` 读钩子）⇒ 三条文案按实现改写准确（文案与实现一致是用户明确要求）。
