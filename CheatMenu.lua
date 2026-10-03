@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:13 sha f17605ef bytes 447768'):format('2026-10-03 17:13','f17605ef',447768))
+print(('[CheatMenu] build 2026-10-03 17:17 sha 3638cac2 bytes 445656'):format('2026-10-03 17:17','3638cac2',445656))
 local F = {}
-F.VERSION = "v13.10.5"
+F.VERSION = "v13.10.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8554,20 +8554,6 @@ local function g(v, fn, ...)
 if not v then return end
 if pcall(fn, ...) then done = done + 1 end
 end
-if T.CMX_NoPurchase == nil then T.CMX_NoPurchase = true end
-if T.CMX_NoPurchase then pcall(F.CMX_NoPurchaseEnable) end
-g(T.HidePlayer, F.HidePlayerEnable)
-g(T.FOV, FOVEnable)
-g(T.Zoom, ZoomEnable)
-if T.CarryGuard then
-T.CarryGuard = false
-pcall(F.CarryGuardDisable)
-F.Out("[恢复] 搬运守卫已复位 —— 它会咔住蛋; 需要时请站到蛋旁边再手动开")
-end
-if T.NoDrop then
-T.NoDrop = false
-F.Out("[恢复] 防掉蛋已复位为关 —— 它会导致被打掉后偷不了蛋; 需要时手动开")
-end
 g(T.ACWriteTier, F.ACWriteTierApply, T.ACWriteTier)
 g(T.AntiFling or T.GuiProtect, function()
 if T.AntiFling then pcall(F.AntiFlingEnable) end
@@ -11543,19 +11529,6 @@ if F._cfgSyncing or not changed then return end
 pcall(F.BypassTierApply, v)
 pcall(F.CMX_ProfilePut, "tier", v)
 end })
-Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
-local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
-T.CarryGuard = v
-if F._cfgSyncing or not changed then return end
-if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
-end })
-Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "⚠ 有副作用: 它会拦掉'蛋掉出去'的上报, 被打掉/被反击后服务器收不到 ⇒ 状态不同步, 可能再也偷不了蛋。默认关; 只在确实需要防掉蛋时才开", Default = false, Callback = function(v)
-local changed = (T.NoDrop ~= nil) and (T.NoDrop ~= v)
-T.NoDrop = v
-if F._cfgSyncing or not changed then return end
-pcall(F.MetaHookEnsure)
-F.Out(v and "[防掉蛋] 已开(被夹/被抓后不掉蛋)" or "[防掉蛋] 已关(会正常掉蛋)")
-end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
@@ -11897,11 +11870,6 @@ pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 
 pcall(F.CfgSyncUI)
 Fluent:Notify({ Title = "一键防护", Content = "已全部关闭并还原", Duration = 4 })
 end
-end })
-Tabs.AC:AddToggle("CMX_NoPurchase", { Title = "★ 拦住 R 币购买弹窗(不弹窗 · 不扣钱 · 不打断游戏)", Description = "开: 游戏里任何'花 Robux 买'的提示都弹不出来(客户端弹的直接拦, 服务端发来的引擎弹窗一出现就清掉) ⇒ 你就算碰到了也不会扣钱; 关: 恢复正常", Default = true, Callback = function(v)
-T.CMX_NoPurchase = v
-if F._cfgSyncing then return end
-if v then pcall(F.CMX_NoPurchaseEnable) else pcall(F.CMX_NoPurchaseDisable) end
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
 task.spawn(function()
