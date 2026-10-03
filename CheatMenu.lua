@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 14:08 sha f1ef6874 bytes 456964'):format('2026-10-03 14:08','f1ef6874',456964))
+print(('[CheatMenu] build 2026-10-03 14:43 sha 1fc42223 bytes 460745'):format('2026-10-03 14:43','1fc42223',460745))
 local F = {}
-F.VERSION = "v13.4.0"
+F.VERSION = "v13.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7580,16 +7580,75 @@ return "Translate the following game UI text into " .. lang
 .. ". Output ONLY the translation: no explanation, no quotes, no extra words."
 .. " Keep numbers, emoji, URLs and player names unchanged."
 end
-function Trans.Load()
-pcall(function()
-if not (type(readfile) == "function" and isfile and isfile(Trans.FILE)) then return end
-local d = HS:JSONDecode(readfile(Trans.FILE))
-if type(d) == "table" then
-local n = 0
-for k, v in pairs(d) do Trans.Cache[k] = v n = n + 1 end
-F.Out("[翻译] 已加载本地缓存 " .. n .. " 条")
+Trans.LoadOne = function(file)
+if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
+local ex = false
+pcall(function() ex = isfile(file) end)
+if not ex then return nil end
+local raw, d = nil, nil
+pcall(function() raw = readfile(file) end)
+if type(raw) ~= "string" or raw == "" then return nil end
+pcall(function() d = HS:JSONDecode(raw) end)
+if type(d) ~= "table" then return nil end
+return d
 end
-end)
+function Trans.Load()
+Trans.Order = Trans.Order or {}
+local d, fromBak = Trans.LoadOne(Trans.FILE), false
+if d == nil then
+d = Trans.LoadOne(Trans.BAK)
+fromBak = d ~= nil
+if fromBak then
+F.Out("[翻译] ⚠ 缓存主文件损坏/读不出 ⇒ 已从备份 .bak 恢复(可能少了最近几条)")
+else
+local ex = false
+pcall(function() ex = (type(isfile)=="function") and isfile(Trans.FILE) end)
+if ex then F.Out("[翻译] ⚠ 缓存文件损坏且没有可用备份 ⇒ 本次从空缓存开始") end
+return
+end
+end
+local n = 0
+local cache, order = nil, nil
+if type(d.c) == "table" then cache, order = d.c, d.o else cache = d end
+for k, v in pairs(cache) do
+if type(k) == "string" and type(v) == "string" then Trans.Cache[k] = v n = n + 1 end
+end
+Trans._ordSeen = {}
+if type(order) == "table" then
+for i = 1, #order do
+local k = order[i]
+if type(k) == "string" and Trans.Cache[k] and not Trans._ordSeen[k] then
+Trans._ordSeen[k] = true
+Trans.Order[#Trans.Order + 1] = k
+end
+end
+end
+for k in pairs(Trans.Cache) do
+if not Trans._ordSeen[k] then Trans._ordSeen[k] = true Trans.Order[#Trans.Order + 1] = k end
+end
+Trans._cnt = n
+F.Out("[翻译] 已加载本地缓存 " .. n .. " 条" .. (fromBak and " (来自备份)" or ""))
+end
+Trans.BAK = "CheatMenu_TransCache.json.bak"
+Trans.TMP = "CheatMenu_TransCache.json.tmp"
+Trans.SaveAtomic = function(payload)
+if type(writefile) ~= "function" then return false end
+local had = false
+if type(isfile) == "function" and type(readfile) == "function" then
+pcall(function() had = isfile(Trans.FILE) end)
+end
+if type(renamefile) == "function" then
+if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
+local ok = pcall(function() writefile(Trans.TMP, payload) end)
+if not ok then return false end
+local ok2 = pcall(function() renamefile(Trans.TMP, Trans.FILE) end)
+if ok2 then return true end
+pcall(function() writefile(Trans.FILE, payload) end)
+return true
+end
+if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
+pcall(function() writefile(Trans.FILE, payload) end)
+return true
 end
 function Trans.Save()
 local now = os.clock()
@@ -7600,10 +7659,11 @@ if now - Trans._dirtyOld < 25 then return end
 end
 Trans._dirtyOld = nil
 Trans._savedAt = now
+local body = nil
 pcall(function()
-if type(writefile) ~= "function" then return end
-writefile(Trans.FILE, HS:JSONEncode(Trans.Cache))
+body = HS:JSONEncode({ v = 2, c = Trans.Cache, o = Trans.Order or {} })
 end)
+if body then pcall(Trans.SaveAtomic, body) end
 end
 function Trans.Req()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
@@ -7665,6 +7725,32 @@ end
 s = s:gsub(o .. "%s*(%d+)%s*" .. c, put)
 s = s:gsub("[%[%(]%s*(%d+)%s*[%]%)]", put)
 return s
+end
+Trans.RT.CleanResidue = function(s)
+if type(s) ~= "string" then return s end
+local o, c = Trans.RT.O1, Trans.RT.C1
+local go, gc = Trans.GL.O1, Trans.GL.C1
+s = s:gsub(o .. "%s*%d+%s*" .. c, "")
+s = s:gsub(go .. "%s*%d+%s*" .. gc, "")
+s = s:gsub(o, ""):gsub(c, "")
+s = s:gsub(go, ""):gsub(gc, "")
+s = (s:gsub("[%[%(]%s*%d+%s*[%]%)]", ""))
+return s
+end
+Trans.RT.RestoreChecked = function(translated, tags)
+if type(translated) ~= "string" then return nil end
+if not tags or #tags == 0 then return translated end
+local out = Trans.RT.Restore(translated, tags)
+local miss = 0
+for i = 1, #tags do
+if not out:find(tags[i], 1, true) then miss = miss + 1 end
+end
+if miss > 0 then
+F.Out("[翻译·富文本] 标签校验不过(缺 " .. tostring(miss) .. "/" .. tostring(#tags)
+.. " 个) ⇒ 放弃本次译文, 界面保留原文(绝不写坏富文本)")
+return nil
+end
+return Trans.RT.CleanResidue(out)
 end
 Trans.RT.Count = function(s)
 local n = 0
@@ -7848,7 +7934,13 @@ text = glossed
 if not force and not Trans.Should(text) then return nil end
 if Trans.Cache[text] then
 local hit0 = Trans.Cache[text]
-return Trans.RT.Restore(Trans.GL.Restore(hit0, glHits), rtTags)
+local f0 = Trans.GL.Restore(hit0, glHits)
+if rtTags and #rtTags > 0 then
+local c0 = Trans.RT.RestoreChecked(f0, rtTags)
+if c0 ~= nil then return c0 end
+else
+return Trans.RT.CleanResidue(f0)
+end
 end
 local quick = Trans.QUICK[text:lower()]
 if quick then Trans.Cache[text] = quick return quick end
@@ -7860,22 +7952,44 @@ local r = Trans.Request(text)
 if r and r ~= "" and r ~= text then
 r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
 r = r:gsub("^\s+", ""):gsub("\s+$", "")
+if Trans.Cache[text] == nil then
+Trans.Order = Trans.Order or {}
+Trans.Order[#Trans.Order + 1] = text
+Trans._cnt = (Trans._cnt or 0) + 1
+end
 Trans.Cache[text] = r
 Trans.CACHE_MAX = Trans.CACHE_MAX or 5000
-local cnt = 0
-for _ in pairs(Trans.Cache) do cnt = cnt + 1 end
-if cnt > Trans.CACHE_MAX then
+if Trans._cnt > Trans.CACHE_MAX * 1.1 then
+local real = 0
+for _ in pairs(Trans.Cache) do real = real + 1 end
+Trans._cnt = real
+if real > Trans.CACHE_MAX then
 local target = math.floor(Trans.CACHE_MAX / 4)
 local removed = 0
-for k in pairs(Trans.Cache) do
+local ord = Trans.Order or {}
+for i = 1, #ord do
+local k = ord[i]
+if Trans.Cache[k] ~= nil then
 Trans.Cache[k] = nil
 removed = removed + 1
 if removed >= target then break end
 end
-F.Out("[翻译] 缓存超过 " .. Trans.CACHE_MAX .. " 条, 已清理 " .. removed .. " 条")
+end
+local keep = {}
+for k in pairs(Trans.Cache) do keep[#keep + 1] = k end
+Trans.Order = keep
+Trans._cnt = #keep
+F.Out("[翻译] 缓存超过 " .. Trans.CACHE_MAX .. " 条, 已按最早顺序清理 " .. removed .. " 条")
+end
 end
 Trans.Save()
-return Trans.RT.Restore(Trans.GL.Restore(r, glHits), rtTags)
+local fin = Trans.GL.Restore(r, glHits)
+if rtTags and #rtTags > 0 then
+local checked = Trans.RT.RestoreChecked(fin, rtTags)
+if checked == nil then return nil end
+return checked
+end
+return Trans.RT.CleanResidue(fin)
 end
 return nil
 end
