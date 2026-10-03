@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 18:23 sha 0904f842 bytes 439059'):format('2026-10-03 18:23','0904f842',439059))
+print(('[CheatMenu] build 2026-10-03 18:26 sha 64073f13 bytes 439631'):format('2026-10-03 18:26','64073f13',439631))
 local F = {}
-F.VERSION = "v13.10.16"
+F.VERSION = "v13.10.17"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11785,6 +11785,11 @@ Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻�
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
+end })
+Tabs.AC:AddToggle("CMX_SpoofIndex", { Title = "★ 属性读回伪装(让反作弊/服务端读到的 速度/位置 是合法值)", Description = "开: 别人(反作弊/服务端)读你角色的 线性速度/角速度/位置 时, 拿到的是按合法行走速度压过的值 ⇒ 从源头让服务端不来纠正你(比硬刚稳得多, 不会被判定异常); 我们自己读仍是真值", Default = false, Callback = function(v)
+T.CMX_SpoofIndex = v
+if F._cfgSyncing then return end
+if v then pcall(F.CMX_SpoofIndexEnable) else pcall(F.CMX_SpoofIndexDisable) end
 end })
 Tabs.AC:AddButton({ Title = "一键扫描(能力+脚本+远程+监听+连接清理)", Callback = function()
 task.spawn(function()
