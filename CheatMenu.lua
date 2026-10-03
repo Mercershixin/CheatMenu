@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 17:17 sha 3638cac2 bytes 445656'):format('2026-10-03 17:17','3638cac2',445656))
+print(('[CheatMenu] build 2026-10-03 17:20 sha fc5c688d bytes 444674'):format('2026-10-03 17:20','fc5c688d',444674))
 local F = {}
-F.VERSION = "v13.10.6"
+F.VERSION = "v13.10.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5474,10 +5474,6 @@ if string.find(t, "②", 1, true) or string.find(t, "③", 1, true) or string.fi
 T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
 F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 自动把档位升到 ②(反拉回+伪装), 免得被服务端拉回/换位置")
 pcall(F.BypassTierApply, T.BypassTier)
-pcall(function()
-local op = Fluent and Fluent.Options and Fluent.Options.BypassTier
-if op and op.Set then op:Set(T.BypassTier) end
-end)
 end)
 end
 F.BypassTierApply = function(v)
@@ -8542,7 +8538,7 @@ end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
-if T.BypassTier == nil then T.BypassTier = "① 默认: 防挂机(不动人物 · 不装钩子)" end
+if T.BypassTier == nil then T.BypassTier = "关(什么都不开)" end
 task.defer(function()
 task.wait(1.5)
 pcall(F.BypassTierApply, T.BypassTier)
@@ -11516,19 +11512,6 @@ Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞�
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddDropdown("BypassTier", { Title = "★ 绕过 / 防护 档位(加速/飞行不被拉回就靠它)", Values = {
-"关(什么都不开)",
-"① 默认: 防挂机(不动人物 · 不装钩子)",
-"② + 防护/反拉回/伪装 ｜ 绕过层: 参数清洗+读回伪装+视图过滤",
-"③ + 防踢(拦 Kick · 抢重进) ｜ 绕过层: 再+钩子加固+模块拦截+时钟粗化",
-"④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)",
-}, Default = "① 默认: 防挂机(不动人物 · 不装钩子)", Callback = function(v)
-local changed = (T.BypassTier ~= nil) and (T.BypassTier ~= v)
-T.BypassTier = v
-if F._cfgSyncing or not changed then return end
-pcall(F.BypassTierApply, v)
-pcall(F.CMX_ProfilePut, "tier", v)
-end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间交互(长按 → 点一下就成 · 免视线)", Description = "开箱、机关这类要按住一会儿的交互一律变「点一下就完成」", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
@@ -11865,7 +11848,7 @@ T.AntiFling = false T.GuiProtect = false
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
 pcall(function() T.CMX_AntiBanAll = false F.CMX_BanAllApply(false) end)
-pcall(function() T.BypassTier = "① 默认: 防挂机(不动人物 · 不装钩子)" F.BypassTierApply(T.BypassTier) end)
+pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 pcall(F.CfgSyncUI)
 Fluent:Notify({ Title = "一键防护", Content = "已全部关闭并还原", Duration = 4 })
