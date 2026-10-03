@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 23:33 sha 20229e72 bytes 428873'):format('2026-10-03 23:33','20229e72',428873))
+print(('[CheatMenu] build 2026-10-04 00:01 sha 5861ee91 bytes 421202'):format('2026-10-04 00:01','5861ee91',421202))
 local F = {}
-F.VERSION = "v14.0.0"
+F.VERSION = "v14.0.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3166,52 +3166,6 @@ end
 function F.AimSet(on)
 T.AimOn = on and true or false
 if F._aimConn then pcall(function() RS:UnbindFromRenderStep("CM_Aim") end) F._aimConn = nil end
-if not T.AimOn then
-if F._aimFacing then
-F._aimFacing = nil
-pcall(function()
-local _, hum = GC()
-if hum then hum.AutoRotate = true end
-end)
-end
-pcall(function()
-local cam = workspace.CurrentCamera
-local _, myHum = GC()
-if cam and myHum and typeof(cam.CameraSubject) == "Instance"
-and cam.CameraSubject:IsA("Humanoid") and cam.CameraSubject ~= myHum then
-cam.CameraSubject = myHum
-end
-end)
-return
-end
-F._aimConn = true
-RS:BindToRenderStep("CM_Aim", Enum.RenderPriority.Camera.Value + 1, function()
-if not T.AimOn then F.AimSet(false) return end
-local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-if not firing and UIS.TouchEnabled and F._touchDown then
-local _, hum0 = GC()
-local md = hum0 and hum0.MoveDirection
-if md and md.Magnitude > 0.1 then firing = false else firing = true end
-end
-if T.AimFireOnly and not T.AutoFire and not firing then return end
-local _, hum, root = GC()
-if not (hum and root) then return end
-local tgt = F.AimPick()
-if not tgt then return end
-local th = nil
-pcall(function() th = tgt.Parent and tgt.Parent:FindFirstChildOfClass("Humanoid") end)
-if not (th and th.Health > 0) then return end
-local dir = tgt.Position - root.Position
-local flat = Vector3.new(dir.X, 0, dir.Z)
-if flat.Magnitude > 0.05 then
-F._aimFacing = true
-pcall(function() hum.AutoRotate = false end)
-pcall(function()
-root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit)
-end)
-end
-F.AutoFire(tgt)
-end)
 end
 local GodConn = nil
 local function GodDisable()
@@ -6617,40 +6571,6 @@ end)
 end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
-end
-F.CamRelease = function()
-if T.Freecam or T.LockCam or T.AimOn then return nil end
-local did = {}
-if F._aimConn then pcall(function() F.AimSet(false) end) did[#did + 1] = "自瞄" end
-if F._lockCamConn then pcall(F.LockCamDisable) did[#did + 1] = "锁相机" end
-if F._freecamConn then pcall(F.FreecamDisable) did[#did + 1] = "自由视角" end
-local cam = workspace.CurrentCamera
-if cam then
-if cam.CameraType == Enum.CameraType.Scriptable then
-pcall(function() cam.CameraType = Enum.CameraType.Custom end)
-did[#did + 1] = "相机类型"
-end
-local _, hum = GC()
-if hum and cam.CameraSubject ~= hum then
-local other = false
-pcall(function()
-other = typeof(cam.CameraSubject) == "Instance" and cam.CameraSubject:IsA("Humanoid")
-and Players:GetPlayerFromCharacter(cam.CameraSubject.Parent) ~= nil
-end)
-if cam.CameraSubject == nil or other then
-pcall(function() cam.CameraSubject = hum end)
-did[#did + 1] = "相机目标"
-end
-end
-end
-pcall(function()
-if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
-UIS.MouseBehavior = Enum.MouseBehavior.Default
-did[#did + 1] = "鼠标"
-end
-end)
-if #did > 0 then F.Out("[视角] 已释放: " .. table.concat(did, " · ")) end
-return did
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
 function F.PanicKeyDisableAll()
@@ -11011,7 +10931,6 @@ F._afkInput = nil
 end)
 end
 local Tabs = {
-Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
@@ -11023,82 +10942,6 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
-Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(自动锁在目标身上 · 不抢视角/不抢鼠标)", Description = "锁定方式 = 每帧把你的人物朝向锁在目标身上(自动转身对准) + 可选自动开火; 相机和鼠标始终归你, 视角一动不动。注: 若某游戏是按『相机方向』判定弹道, 只转身不保证命中(那属于改弹道, 你之前明确不要)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v) end })
-Tabs.Combat:AddDropdown("AimMode", { Title = "★ 瞄准模式(二选一)", Values = {
-"360°全方位(背后也锁 · 范围单位=格 · 推荐)",
-"正面(只锁屏幕圈内 · 范围单位=像素)",
-}, Default = "360°全方位(背后也锁 · 范围单位=格 · 推荐)", Callback = function(v)
-T.Aim360 = (string.find(v, "360", 1, true) ~= nil)
-if T.AimOn then pcall(F.EnsureAimOn) end
-F.Out("[自瞄] 模式 = " .. tostring(v))
-end })
-Tabs.Combat:AddSlider("AimFOV", { Title = "★ 范围(360°模式=格 / 正面模式=像素)", Min = 50, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.AimFOV = v end })
-Tabs.Combat:AddToggle("FovCircleShow", { Title = "显示范围圈(把「范围」画成屏幕上的圈)", Description = "开: 屏幕中间画一个跟随「范围」大小的圈, 方便看清锁多远; 「正面」模式下最直观(360°模式按格算)", Default = false, Callback = function(v)
-T.FovCircle = v
-if F._cfgSyncing then return end
-if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
-end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动扳机(锁上就开火)", Default = false, Callback = function(v) T.AutoFire = v if v then F.EnsureAimOn() end end })
-Tabs.Combat:AddToggle("AimWallCheck", { Title = "★ 不打隔墙(墙后的敌人不锁)", Description = "开: 自瞄先从相机到目标打一条射线, 中间有墙/障碍物就不锁他 —— 不会隔着墙开枪露位置", Default = false, Callback = function(v) T.AimWallCheck = v F.Out("[自瞄] 不打隔墙 = " .. (v and "开" or "关")) end })
-Tabs.Combat:AddDropdown("AimTarget", { Title = "★ 目标选择", Values = {
-"所有人(无阵营时自动)",
-"仅敌对阵营(有阵营时)",
-}, Default = "所有人(无阵营时自动)", Callback = function(v)
-C.AimTarget = v
-T.AimTeamCheck = (v == "仅敌对阵营(有阵营时)")
-F.Out("[自瞄] 目标 = " .. tostring(v) .. (LP.Team and " (本服有阵营)" or " (本服无阵营 ⇒ 按所有人)"))
-end })
-Tabs.Combat:AddSection("目标管理")
-Tabs.Combat:AddDropdown("PriorityTarget", { Title = "优先目标玩家", Values = F.PlayerNames(), Default = nil, Callback = function(v) if v and v ~= "(无人)" then F.AddPriorityTarget(v) end end })
-Tabs.Combat:AddDropdown("FlingTarget", { Title = "目标玩家(隐藏共用)", Values = F.PlayerNames(), Default = nil })
-Tabs.Combat:AddToggle("HidePlayer", { Title = "隐藏目标(只本地)", Default = false, Callback = function(v)
-T.HidePlayer = v
-if F._cfgSyncing then return end
-if v then F.HidePlayerEnable() else F.HidePlayerDisable() end
-end })
-Tabs.Combat:AddButton({ Title = "清除优先级", Callback = function() C.PriorityTargets = {} end })
-Tabs.Combat:AddSection("生存 / 防御")
-Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
-C.AntiRagdollMode = v and "全部开启" or "关闭"
-T.AntiRagdoll, T.AntiKnockdown = v, v
-if F._cfgSyncing then return end
-F.AntiRagdollDisable() F.AntiKnockdownDisable()
-if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
-end })
-Tabs.Combat:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端若校验血量会拉回)", Default = false, Callback = function(v)
-T.God = v
-if F._cfgSyncing then return end
-if v then pcall(GodEnable) else pcall(GodDisable) end
-end })
-Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定 · 不改 MaxHealth)", Default = false, Callback = function(v)
-T.LockHealth = v
-if F._cfgSyncing then return end
-if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
-end })
-Tabs.Combat:AddToggle("Regen", { Title = "回血(按下面速率持续补血)", Default = false, Callback = function(v)
-T.Regen = v
-if F._cfgSyncing then return end
-if v then pcall(RegenEnable) else pcall(RegenDisable) end
-end })
-Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
-T.NoDeath = v
-if F._cfgSyncing then return end
-if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
-end })
-Tabs.Combat:AddToggle("HitboxExpand", { Title = "Hitbox 扩展(改本地的对方模型 · 只在客户端判定命中的游戏有效)", Description = "它把**对方**角色的部件尺寸改大 —— 这个改动只在你的客户端生效(对方部件不归你所有, 不会复制)。所以: 游戏若在客户端做命中判定(打中后上报), 有效; 游戏若在服务端按自己的部件尺寸判定, 无效。", Default = false, Callback = function(v)
-T.HitboxExpand = v
-if F._cfgSyncing then return end
-if v then F.HitboxExpandEnable() else F.HitboxExpandDisable() end
-end })
-Tabs.Combat:AddSection("自动攻击")
-Tabs.Combat:AddToggle("KillAura", { Title = "自动攻击(范围内敌人)", Default = false, Callback = function(v)
-T.KillAura = v
-if F._cfgSyncing then return end
-if v then F.KillAuraEnable() else F.KillAuraDisable() end
-end })
-Tabs.Combat:AddSlider("KillAuraRange", { Title = "自动攻击范围", Min = 5, Max = 100, Default = 20, Rounding = 0, Callback = function(v) C.KillAuraRange = v end })
-Tabs.Combat:AddSlider("KillAuraSpeed", { Title = "自动攻击攻速(次/秒)", Min = 1, Max = 25, Default = 10, Rounding = 0, Callback = function(v) C.KillAuraSpeed = v end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
@@ -11521,7 +11364,6 @@ F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " �
 .. " · writefile:" .. _wf .. " —— 标“无”的项只影响依赖它的子功能, 不会让整个脚本失效")
 end)
 RestoreFeatures()
-task.delay(6, function() pcall(F.CamRelease) end)
 F.Out("[加载] 没有任何功能会被自动开启 —— 要用什么点什么")
 pcall(function()
 local ex = "?"
@@ -11529,6 +11371,28 @@ pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
 F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writefile=%s · gethui=%s · 触屏=%s",
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
+end)
+pcall(function()
+task.spawn(function()
+local mine = tostring(F.VERSION or ""):gsub("^v", "")
+local urls = F.REMOTE_URLS
+local best = nil
+if type(urls) == "table" then
+for i = 1, math.min(#urls, 3) do
+local v = F.GetRemoteVersion(urls[i])
+if v and (not best or F.VerNum(v) > F.VerNum(best)) then best = v end
+end
+end
+if not best then return end
+if F.VerNum(best) > F.VerNum(mine) then
+F.Out("[版本] ⚠ 这次加载的是 v" .. mine .. ", 远端最新是 v" .. best
+.. " ⇒ 你跑的是旧副本(执行器缓存/旧脚本), 新版修复不会生效")
+pcall(function() Fluent:Notify({ Title = "⚠ 你加载的是旧版本", Content = "本地 v" .. mine
+.. " · 远端 v" .. best .. " —— 请点「★ 强制重载」或重新跑网络加载器", Duration = 20 }) end)
+else
+F.Out("[版本] 已是最新: v" .. mine .. " (远端 v" .. best .. ")")
+end
+end)
 end)
 F.Out("[CheatMenu] ✅ 加载完成 " .. F.VERSION)
 end
