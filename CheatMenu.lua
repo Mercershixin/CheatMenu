@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-03 20:16 sha 9ca21f9e bytes 445995'):format('2026-10-03 20:16','9ca21f9e',445995))
+print(('[CheatMenu] build 2026-10-03 20:32 sha e509fdfe bytes 447443'):format('2026-10-03 20:32','e509fdfe',447443))
 local F = {}
-F.VERSION = "v13.10.30"
+F.VERSION = "v13.10.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1832,11 +1832,15 @@ function F.ScanScripts()
 local keep = F._scavenging
 F._scavenging = true
 local byKey, list = {}, {}
-local seenInst = {}
+local seenInst, seenPath = {}, {}
+local n = 0
 local function note(inst, tag, where)
 if typeof(inst) ~= "Instance" or seenInst[inst] then return end
 if not (inst:IsA("ModuleScript") or inst:IsA("LocalScript") or inst:IsA("Script")) then return end
 seenInst[inst] = true
+local fullName = nil
+pcall(function() fullName = inst:GetFullName() end)
+if fullName and not seenPath[fullName] then seenPath[fullName] = true n = n + 1 end
 local src, hash = "", "?"
 pcall(function() src = tostring(inst.Source or "") end)
 if type(getscripthash) == "function" then pcall(function() hash = tostring(getscripthash(inst)):sub(1, 12) end) end
@@ -1857,17 +1861,16 @@ end
 end
 end
 F.Out("[脚本扫描] ===== 客户端可见的脚本 / 模块（按源码去重）=====")
-local n = 0
 if type(getloadedmodules) == "function" then
 local ok, mods = pcall(getloadedmodules)
 if ok and type(mods) == "table" then
-for i = 1, #mods do n = n + 1 note(mods[i], "已加载模块", "getloadedmodules") end
+for i = 1, #mods do note(mods[i], "已加载模块", "getloadedmodules") end
 end
 end
 if type(getnilinstances) == "function" then
 local ok, arr = pcall(getnilinstances)
 if ok and type(arr) == "table" then
-for i = 1, #arr do n = n + 1 note(arr[i], "隐藏(Parent=nil)", "getnilinstances") end
+for i = 1, #arr do note(arr[i], "隐藏(Parent=nil)", "getnilinstances") end
 end
 end
 if type(getinstances) == "function" then
@@ -1876,7 +1879,6 @@ if ok and type(arr) == "table" then
 for i = 1, #arr do
 if i % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
 if i > F.LIMITS.SCAN_SCRIPT_CAP then break end
-n = n + 1
 note(arr[i], "游离实例", "getinstances")
 end
 end
@@ -9214,8 +9216,8 @@ F.CMX_AdornESPEnable = function()
 if F.CMX_AdornOn then return end
 F.CMX_AdornItems = {}
 F.CMX_AdornOn = true
-F.CMX_AdornStep()
 F.CMX_AdornConn = RS.Heartbeat:Connect(function() pcall(F.CMX_AdornStep) end)
+pcall(F.CMX_AdornStep)
 F.Out("[补强·AdornmentESP] 已开(方框跟随) ")
 return true
 end
@@ -9590,9 +9592,13 @@ if not F._npOn then return end
 F._npOn = false
 local ms = nil
 pcall(function() ms = game:GetService("MarketplaceService") end)
-if ms and F._npOrig then
-for nm, raw in pairs(F._npOrig) do
-pcall(function() ms[nm] = raw end)
+if ms and F._npOrig and type(hookfunction) == "function" then
+for nm, orig in pairs(F._npOrig) do
+local cur = nil
+pcall(function() cur = ms[nm] end)
+if type(cur) == "function" and type(orig) == "function" then
+pcall(hookfunction, cur, orig)
+end
 end
 end
 F._npOrig = nil
@@ -9641,6 +9647,8 @@ F.CMX_GcinfoMaskEnable = function()
 if F._gcMaskOn then return end
 if type(gcinfo) ~= "function" then return end
 local orig = gcinfo
+F._gcMaskOrig = orig
+F._gcMaskByAssign = nil
 local base = nil
 pcall(function() base = orig() end)
 local ok = false
@@ -9648,11 +9656,13 @@ pcall(function()
 local box
 if type(newcclosure) == "function" then
 box = newcclosure(function()
+if not F._gcMaskOn then return orig() end
 if F.CMX_IsCaller() then return orig() end
 return base
 end)
 else
 box = function()
+if not F._gcMaskOn then return orig() end
 if F.CMX_IsCaller() then return orig() end
 return base
 end
@@ -9661,6 +9671,7 @@ if type(hookfunction) == "function" then
 hookfunction(gcinfo, box)
 else
 gcinfo = box
+F._gcMaskByAssign = true
 end
 ok = true
 end)
@@ -9670,7 +9681,19 @@ F.Out("[伪装·gcinfo] 已开: 反作弊用 gcinfo 量增量只会拿到恒定�
 end
 end
 F.CMX_GcinfoMaskDisable = function()
+pcall(function()
+if F._gcMaskOrig then
+if F._gcMaskByAssign then
+gcinfo = F._gcMaskOrig
+elseif type(hookfunction) == "function" then
+hookfunction(gcinfo, F._gcMaskOrig)
+end
+end
+end)
+F._gcMaskOrig = nil
+F._gcMaskByAssign = nil
 F._gcMaskOn = false
+F.Out("[伪装·gcinfo] 已关: gcinfo 已还原")
 end
 F.CMX_SpoofIndexEnable = function()
 if F.CMX_SpoofOn then return false end
@@ -9752,7 +9775,7 @@ return function(self, ...)
 local m = getnamecallmethod and getnamecallmethod() or ""
 if (m == "GetChildren" or m == "GetDescendants" or m == "FindFirstChild"
 or m == "FindFirstChildOfClass" or m == "FindFirstChildWhichIsA")
-and (F.CMX_HiddenCount or 0) > 0 and not F.CMX_IsCaller() then
+and not F.CMX_IsCaller() then
 local res = box.orig(self, ...)
 if m == "GetChildren" or m == "GetDescendants" then
 if type(res) == "table" then
@@ -10419,11 +10442,16 @@ if type(per) == "table" and #per > 0 then
 F.Out("[反封禁·上报] 本游戏检测档案命中 " .. tostring(#per) .. " 个命名, 已并入拦截名单:")
 for i = 1, math.min(#per, 12) do F.Out("[反封禁·上报]   · " .. tostring(per[i])) end
 end
+local banAdded = {}
 for i = 1, #extra do
 local dup = false
 for j = 1, #F.CMX_BAN_KEYS do if F.CMX_BAN_KEYS[j] == extra[i] then dup = true break end end
-if not dup then F.CMX_BAN_KEYS[#F.CMX_BAN_KEYS + 1] = extra[i] end
+if not dup then
+F.CMX_BAN_KEYS[#F.CMX_BAN_KEYS + 1] = extra[i]
+banAdded[#banAdded + 1] = extra[i]
 end
+end
+F.CMX_BanKeysAdded = banAdded
 local found = F.CMX_ScanReportRemotes(false)
 if type(AC.BLOCK_KEYS) == "table" then
 local ex = {}
@@ -10447,6 +10475,17 @@ end
 F.CMX_BlockReportDisable = function()
 if not F.CMX_BanKeysMerged then return end
 F.CMX_BanKeysMerged = false
+if type(F.CMX_BanKeysAdded) == "table" then
+for i = 1, #F.CMX_BanKeysAdded do
+local k = F.CMX_BanKeysAdded[i]
+if type(F.CMX_BAN_KEYS) == "table" then
+for j = #F.CMX_BAN_KEYS, 1, -1 do
+if F.CMX_BAN_KEYS[j] == k then table.remove(F.CMX_BAN_KEYS, j) break end
+end
+end
+end
+F.CMX_BanKeysAdded = nil
+end
 if type(AC.BLOCK_KEYS) == "table" then
 for i = #AC.BLOCK_KEYS, 1, -1 do
 for j = 1, #F.CMX_BAN_KEYS do
@@ -10923,6 +10962,12 @@ return false
 end
 if F.CMX_FFlagOn then return false end
 local gf = F.CMX_G("getfflag")
+if type(gf) ~= "function" then
+T.CMX_FFlagPack = false
+F.CMX_FFlagOn = false
+F.Out("[绕过·FFlag] 本执行器没有 getfflag ⇒ 为避免写了没法还原, 已跳过 FFlag 写入")
+return false
+end
 F.CMX_FFlagSaved = {}
 local n = 0
 for i = 1, #F.CMX_FFlagPreset do
@@ -11185,7 +11230,7 @@ local sigs = {}
 local function add(n, s) if s then sigs[#sigs + 1] = { n, s } end end
 add("LocalPlayer.Idled", LP.Idled)
 add("LocalPlayer.CharacterAdded", LP.CharacterAdded)
-add("LocalPlayer.OnTeleport", game:GetService("TeleportService").TeleportInitFailed)
+add("TeleportService.TeleportInitFailed", game:GetService("TeleportService").TeleportInitFailed)
 add("RunService.Heartbeat", RS.Heartbeat)
 add("RunService.Stepped", RS.Stepped)
 add("RunService.RenderStepped", RS.RenderStepped)
@@ -11528,18 +11573,20 @@ F.InstantInteractAutoLoop = function()
 if F._iiAuto then return end
 F._iiAuto = task.spawn(function()
 while T.InstantInteract do
-local igap = 2
-if F.CMX_HumanizeOn then igap = F.CMX_Jitter(2, 1) end
+local igap = 4
+if F.CMX_HumanizeOn then igap = F.CMX_Jitter(4, 1.5) end
 task.wait(igap)
 if not T.InstantInteract then break end
-if tostring(C.IILevel or "①"):find("③", 1, true) then
+if not (F.II_SAVED and next(F.II_SAVED)) then
+task.wait(10)
+elseif tostring(C.IILevel or "①"):find("③", 1, true) then
 local _, _, root = GC()
 if root then
 pcall(function()
 local n = 0
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 1500 then break end
+if n > 800 then break end
 if d:IsA("ProximityPrompt") and d.Enabled and d.Parent and d.Parent:IsA("BasePart") then
 if (d.Parent.Position - root.Position).Magnitude <= 60 then
 pcall(function()
@@ -12306,3 +12353,4 @@ F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .
 end)
 end)
 end)
+F.Out("[CheatMenu] 已应用 FIX-1 … FIX-8, FIX-10 (FIX-9 已复查为非 bug, 跳过)")
