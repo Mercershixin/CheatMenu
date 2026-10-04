@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:33 sha a9d880f3 bytes 475987'):format('2026-10-04 19:33','a9d880f3',475987))
+print(('[CheatMenu] build 2026-10-04 19:35 sha 1166725e bytes 477347'):format('2026-10-04 19:35','1166725e',477347))
 local F = {}
-F.VERSION = "v14.0.113"
+F.VERSION = "v14.0.114"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6382,9 +6382,43 @@ F.SpeedFreeDisable = function()
 T.SpeedFree = false
 if F._sfConn then pcall(function() F._sfConn:Disconnect() end) F._sfConn = nil end
 end
+F.PosSrcProbeOn = function()
+if F.MetaActive("__newindex", "CMPosSrc") then return end
+F._posLuaWrites, F._posLuaWho = 0, "?"
+pcall(function()
+F.MetaInstall("__newindex", game, "CMPosSrc", function(box)
+return function(t, k, v)
+if checkcaller() then return box.orig(t, k, v) end
+if k == "CFrame" or k == "Position" then
+local _, _, r = GC()
+if r and t == r then
+F._posLuaWrites = (F._posLuaWrites or 0) + 1
+pcall(function()
+if type(debug) == "table" and type(debug.info) == "function" then
+local src = debug.info(2, "s")
+if src then F._posLuaWho = tostring(src):sub(1, 90) end
+end
+end)
+end
+end
+return box.orig(t, k, v)
+end
+end)
+end)
+task.delay(30, function()
+pcall(function() F.MetaUninstall("__newindex", "CMPosSrc") end)
+F.Out("[防护·位置来源] 体检 30 秒结束(钩子已自动卸掉, 不再占性能) ⇒ Lua 写入 " .. tostring(F._posLuaWrites or 0)
+.. " 次 · 最近来源: " .. tostring(F._posLuaWho or "?")
+.. ((F._posLuaWrites or 0) == 0 and " ⇒ 位置不是游戏脚本改的(是引擎复制), 客户端拦不到" or " ⇒ 有脚本在写位置, 可以拦"))
+end)
+end
+F.PosSrcProbeOff = function()
+pcall(function() F.MetaUninstall("__newindex", "CMPosSrc") end)
+end
 F.NoPullEnable = function()
 if F._npConn then return end
 T.NoPull = true
+pcall(F.PosSrcProbeOn)
 F._npAt, F._npPos, F._npHits, F._npBack, F._npLog = 0, nil, 0, 0, 0
 F._npConn = RS.RenderStepped:Connect(function()
 if not T.NoPull then return end
@@ -6410,6 +6444,7 @@ F._npOwnFail = (F._npOwnFail or 0) + noN
 if now - (F._npOwnLog or 0) > 5 then
 F._npOwnLog = now
 F.Out("[防护·反回拉] 所有权: 抢到 " .. tostring(F._npOwn or 0) .. " 次 · 被拒 " .. tostring(F._npOwnFail or 0) .. " 次"
+.. " · 位置被挪 " .. tostring(F._npHits or 0) .. " 次(其中 Lua 写入 " .. tostring(F._posLuaWrites or 0) .. " 次)"
 .. ((F._npOwnFail or 0) > 0 and " ⇒ 被拒说明服务端锁了所有权, 那种情况下只能靠下面的『续跑』兜着" or ""))
 end
 end
@@ -6443,6 +6478,7 @@ end
 F.NoPullDisable = function()
 T.NoPull = false
 if F._npConn then pcall(function() F._npConn:Disconnect() end) F._npConn = nil end
+pcall(F.PosSrcProbeOff)
 end
 function F.AllInOneDisableAll()
 pcall(F.SpeedGuardDisable)
