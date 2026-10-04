@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:28 sha 2d62cf6f bytes 465460'):format('2026-10-04 18:28','2d62cf6f',465460))
+print(('[CheatMenu] build 2026-10-04 18:46 sha 0e0d8f6e bytes 466316'):format('2026-10-04 18:46','0e0d8f6e',466316))
 local F = {}
-F.VERSION = "v14.0.102"
+F.VERSION = "v14.0.103"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12091,10 +12091,25 @@ F.HealthShowSet(v)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Min = 10, Max = 30000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddDropdown("SpeedTier", { Title = "★ 速度档位(飞行 + 加速 共用)", Description = "选一档 = 飞行速度与加速速度一起设成该值; 5000 起步, 每档 +5000, 最高 30000。要更细仍可用下面的滑块微调", Values = { "5000", "10000", "15000", "20000", "25000", "30000" }, Default = "5000", Callback = function(v)
+local n = tonumber(tostring(v)) or 5000
+C.SpeedValue, C.FlyValue = n, n
+if F._cfgSyncing then return end
+pcall(function()
+local op = Fluent and Fluent.Options
+if op then
+if op.SpeedValue and op.SpeedValue.Set then op.SpeedValue:Set(n) end
+if op.FlyValue and op.FlyValue.Set then op.FlyValue:Set(n) end
+end
+end)
+if T.SpeedOn then pcall(F.SpeedApply) end
+if T.FlyOn then pcall(function() F.FlySet(true) end) end
+F.Out("[速度档位] 飞行 / 加速 一起设为 " .. tostring(n) .. " 格/秒")
+end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 30000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.GuardAll = v
