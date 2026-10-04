@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:03 sha fc5d091c bytes 459339'):format('2026-10-04 15:03','fc5d091c',459339))
+print(('[CheatMenu] build 2026-10-04 15:08 sha e1ac712c bytes 461649'):format('2026-10-04 15:08','e1ac712c',461649))
 local F = {}
-F.VERSION = "v14.0.73"
+F.VERSION = "v14.0.74"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -78,9 +78,30 @@ if #s > 300 then s = s:sub(1, 300) .. "…(" .. #s .. "字)" end
 parts[i] = s
 end
 local line = table.concat(parts, " ")
+local now = os.clock()
+if line == F._outLast then
+F._outRep = (F._outRep or 0) + 1
+if now - (F._outRepAt or 0) < 3 then return end
+F._outRepAt = now
+if F._outRep > 1 then line = line .. "  ×" .. tostring(F._outRep) .. " 次(同一条重复已自动折叠)" end
+F._outRep = 0
+else
+if (F._outRep or 0) > 1 and F._outLast then
+local tail = F._outLast .. "  ×" .. tostring(F._outRep) .. " 次(同一条重复已自动折叠)"
+print(tail)
+F._logBuf[#F._logBuf + 1] = tail
+end
+F._outRep = 0
+F._outLast = line
+end
 print(line)
 F._logBuf[#F._logBuf + 1] = line
-if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX then
+if #F._logBuf > 4000 then
+local keep = {}
+for i = #F._logBuf - 1999, #F._logBuf do keep[#keep + 1] = F._logBuf[i] end
+F._logBuf = keep
+end
+if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX and (now - (F._logFlushAt or 0) >= 2) then
 pcall(F.LogFlush, "自动")
 end
 end
@@ -1695,6 +1716,7 @@ end
 function F.LogFlush(tag)
 if #F._logBuf == 0 then return nil end
 if F._logFlushing then return nil end
+F._logFlushAt = os.clock()
 F._logFlushing = true
 local ts = os.date("%Y-%m-%d %H:%M:%S")
 local body = "[" .. ts .. "] " .. table.concat(F._logBuf, "\n") .. "\n"
@@ -5783,18 +5805,51 @@ return
 end
 F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)。每 0.05 秒检查一次, 掉了立刻重拿/重新装备")
 if F._eggUnEq then pcall(function() F._eggUnEq:Disconnect() end) F._eggUnEq = nil end
+if F._eggCharConn then pcall(function() F._eggCharConn:Disconnect() end) F._eggCharConn = nil end
+if F._eggUnEqList then
+for _, c in ipairs(F._eggUnEqList) do pcall(function() c:Disconnect() end) end
+end
+F._eggUnEqList = {}
+F._eggHookedTools = {}
+F._eggUnEqHits = 0
+F._eggUnEqWin = os.clock()
+F._eggUnEqAt = 0
+F._eggBreakUntil = 0
+F._eggPollAt = 0
+F._eggTries = 0
+F._eggTryWin = os.clock()
 pcall(function()
 local ch = GC()
 if ch then
 local function hookTool(tool)
+if F._eggHookedTools[tool] then return end
+F._eggHookedTools[tool] = true
 pcall(function()
-F._eggUnEq2 = tool.Unequipped:Connect(function()
+local c = tool.Unequipped:Connect(function()
 if not T.MyEgg then return end
-task.wait()
+local now = os.clock()
+if now - (F._eggUnEqWin or 0) > 5 then F._eggUnEqWin = now F._eggUnEqHits = 0 end
+F._eggUnEqHits = (F._eggUnEqHits or 0) + 1
+if F._eggUnEqHits > 10 then
+F._eggBreakUntil = now + 6
+F._eggUnEqHits = 0
+F._eggUnEqWin = now
+if now - (F._eggBreakLog or 0) > 6 then
+F._eggBreakLog = now
+F.Out("[护蛋] 服务器在反复卸下你的蛋(5秒内超10次) ⇒ 已自动停手 6 秒, 不再死循环抢装(之前就是这里把你卡死的)")
+end
+return
+end
+if now < (F._eggBreakUntil or 0) then return end
+if now - (F._eggUnEqAt or 0) < 0.5 then return end
+F._eggUnEqAt = now
+task.spawn(function()
+task.wait(0.1)
 local ch2, hum2 = GC()
-pcall(function() if ch2 and hum2 and tool.Parent then hum2:EquipTool(tool) end end)
-F.Out("[护蛋] 蛋被卸下 ⇒ 已立刻重新装上(不等下一拍)")
+pcall(function() if ch2 and hum2 and tool.Parent == LP:FindFirstChildOfClass("Backpack") then hum2:EquipTool(tool) end end)
 end)
+end)
+table.insert(F._eggUnEqList, c)
 end)
 end
 local cur = ch:FindFirstChildOfClass("Tool")
@@ -5857,7 +5912,9 @@ do
 local ch2, hum2 = GC()
 if ch2 and hum2 then
 local equipped = ch2:FindFirstChildOfClass("Tool")
-if not equipped then
+local now = os.clock()
+if not equipped and now >= (F._eggBreakUntil or 0) and now - (F._eggPollAt or 0) >= 0.25 then
+F._eggPollAt = now
 local bp = LP:FindFirstChildOfClass("Backpack")
 local want = F._myEgg
 local pickTool = nil
@@ -5875,11 +5932,23 @@ end
 end)
 end
 if pickTool then
+if now - (F._eggTryWin or 0) > 5 then F._eggTryWin = now F._eggTries = 0 end
+F._eggTries = (F._eggTries or 0) + 1
+if F._eggTries > 10 then
+F._eggBreakUntil = now + 6
+F._eggTries = 0
+F._eggTryWin = now
+if now - (F._eggBreakLog2 or 0) > 6 then
+F._eggBreakLog2 = now
+F.Out("[护蛋] 装回去马上又被卸下(5秒内超10次) ⇒ 已自动停手 6 秒, 不再死循环(避免卡死)")
+end
+else
 pcall(function() hum2:EquipTool(pickTool) end)
 F._myEgg = pickTool
-if os.clock() - (F._eggEquipAt or 0) > 3 then
-F._eggEquipAt = os.clock()
+if now - (F._eggEquipAt or 0) > 3 then
+F._eggEquipAt = now
 F.Out("[护蛋] 蛋被卸下了 ⇒ 已立刻重新装备「" .. tostring(pickTool.Name) .. "」")
+end
 end
 end
 end
@@ -5922,7 +5991,7 @@ end)
 end
 end
 end
-task.wait(0.05)
+task.wait(F._myEgg and 0.05 or 0.25)
 end
 F._eggLoop = nil
 end)
