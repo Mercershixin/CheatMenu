@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 20:02 sha 8560dfca bytes 486602'):format('2026-10-04 20:02','8560dfca',486602))
+print(('[CheatMenu] build 2026-10-04 20:05 sha 3cf33928 bytes 484491'):format('2026-10-04 20:05','3cf33928',484491))
 local F = {}
-F.VERSION = "v14.0.120"
+F.VERSION = "v14.0.121"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12366,51 +12366,6 @@ end)
 F.Out("[动他] 已把「" .. pl.Name .. "」扔到上方 400 格")
 end
 end
-F.FlingPlayer = function()
-local pl, err = F.GetTargetPlayer()
-if not pl then F.Out("[搞飞] " .. tostring(err)) return end
-local tp = pl.Character
-local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
-if not tRoot then F.Out("[搞飞] 目标没有 HumanoidRootPart") return end
-local ok, why = F.GrabOwner(tRoot)
-F.Out("[搞飞] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功 ⇒ 直接把他推上天" or ("失败 ⇒ " .. tostring(why) .. " · 改用公开同款『自己当炮弹撞他』")))
-if ok then
-task.spawn(function()
-for _ = 1, 6 do
-if not (tRoot and tRoot.Parent) then break end
-pcall(function()
-tRoot.AssemblyLinearVelocity = Vector3.new(0, 9e4, 0)
-tRoot.AssemblyAngularVelocity = Vector3.new(9e7, 9e7, 9e7)
-end)
-task.wait(0.06)
-end
-F.Out("[搞飞] 已把他甩出去(他那边会真的飞起来)")
-end)
-else
-task.spawn(function()
-local ang = 0
-for i = 1, 16 do
-local _, _, myRoot = GC()
-if not (myRoot and myRoot.Parent and tRoot and tRoot.Parent) then break end
-ang = ang + 100
-pcall(function()
-myRoot.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0, ((i % 2 == 0) and 1.5 or -1.5), 0) * CFrame.Angles(math.rad(ang), 0, 0)
-myRoot.AssemblyLinearVelocity = Vector3.new(9e7, 9e8, 9e7)
-myRoot.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
-end)
-task.wait(0.05)
-end
-pcall(function()
-local _, _, myRoot = GC()
-if myRoot then
-myRoot.AssemblyLinearVelocity = Vector3.zero
-myRoot.AssemblyAngularVelocity = Vector3.zero
-end
-end)
-F.Out("[搞飞] 撞完了 —— 没飞就再来一次(贴近他、或从他上方撞更有效)")
-end)
-end
-end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -12425,19 +12380,6 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
-Tabs.Combat:AddSection("针对玩家(用「传送」页选中的目标 · 真影响他, 不是本地假象)")
-Tabs.Combat:AddButton({ Title = "★ 把目标拉到我身边(拖动)", Description = "先抢他的网络所有权, 再把他一点点拖过来 —— 真动他(所有人都会看到他过来)。抢不到会明确报出来", Callback = function()
-task.spawn(function() pcall(F.PullPlayer) end)
-end })
-Tabs.Combat:AddButton({ Title = "★ 把目标瞬移到我面前(一次到位)", Description = "和解拖是同一原理, 但一步到位: 抢到他所有权后直接把他 CFrame 放到你面前", Callback = function()
-task.spawn(function() pcall(F.TPMovePlayer, "front") end)
-end })
-Tabs.Combat:AddButton({ Title = "★ 把目标扔到天上(400 格)", Description = "抢到他所有权后直接把他连人带位置抛到上方 400 格", Callback = function()
-task.spawn(function() pcall(F.TPMovePlayer, "up") end)
-end })
-Tabs.Combat:AddButton({ Title = "★ 把目标搞飞(甩出去)", Description = "先试『抢所有权 → 直接推他上天』; 抢不到就用公开脚本同款『把自己当炮弹高速撞他』兜底", Callback = function()
-task.spawn(function() pcall(F.FlingPlayer) end)
-end })
 Tabs.Combat:AddSection("自瞄")
 Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果。本开关不落盘, 每次重载要重点一次", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
 Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "两种就是你说的那两种: 正面圈内锁 = 只锁屏幕正面那个圈里的(面对谁锁谁); 漏就锁 = 360°全身, 只要他身上有任何一个部位打得着(哪怕只露一条胳膊/一条腿)就锁", Values = {
@@ -12651,6 +12593,13 @@ Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真�
 T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
+end })
+Tabs.Move:AddSection("针对玩家(先在「传送」页选目标 · 真影响他)")
+Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权, 再一点点把他拖到你身边 —— 真动他(所有人都会看到他过来)。抢不到会直接告诉你「本服不支持」", Callback = function()
+task.spawn(function() pcall(F.PullPlayer) end)
+end })
+Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "同样先抢所有权, 然后一次到位把他挪到你面前(比上面的拖更瞬移)。抢不到就是本服不给", Callback = function()
+task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
 Tabs.Move:AddSection("位移(无限跳 / 穿墙 / 藏地下)")
 Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
