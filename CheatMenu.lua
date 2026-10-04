@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:32 sha 3a59527a bytes 446638'):format('2026-10-04 13:32','3a59527a',446638))
+print(('[CheatMenu] build 2026-10-04 13:37 sha 81bbdc14 bytes 447850'):format('2026-10-04 13:37','81bbdc14',447850))
 local F = {}
-F.VERSION = "v14.0.42"
+F.VERSION = "v14.0.43"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7585,25 +7585,56 @@ F._scanLabel.Visible = true
 task.delay(15, function() pcall(function() if F._scanLabel then F._scanLabel.Visible = false end end) end)
 end)
 end
+F.SlotOfTool = function(t)
+local ok, sl = pcall(function() return t:GetAttribute("slot") or t:GetAttribute("Slot") or t:GetAttribute("Index") end)
+if ok and sl ~= nil then return tonumber(sl) end
+local n = tonumber(tostring(t.Name):match("(%d+)"))
+return n
+end
 F.SellByThreshold = function()
 local r = F.SellScanStats()
 if not r then return end
 task.spawn(function()
+local low, all = collectLists()
+local want = {}
+for _, it in ipairs(all) do
+if it.Known and not it.Ex and it.CPS <= r.n then
+local sl = F.SlotOfTool(it.Tool)
+if sl then want[#want + 1] = sl end
+end
+end
+F.Out("[卖出] 门槛 ≤ " .. F.FmtNum(r.n) .. " · 要处理 " .. tostring(#want) .. " 个槽位: " .. table.concat(want, ","))
+if #want == 0 then
+pcall(function() Fluent:Notify({ Title = "卖出", Content = "没有低于门槛的(或槽号读不出)", Duration = 8 }) end)
+return
+end
 local node = game:GetService("ReplicatedStorage")
-for _, seg in ipairs({ "Shared", "Packages", "Network", "ref_B_Sell" }) do
-local ok, ch = pcall(function() return node:WaitForChild(seg, 5) end)
-if not (ok and ch) then F.Out("[卖出] 路径断了: " .. tostring(seg)) return end
-node = ch
+local function w(path)
+local cur = node
+for _, seg in ipairs(path) do
+local ok, ch = pcall(function() return cur:WaitForChild(seg, 3) end)
+if not (ok and ch) then return nil end
+cur = ch
 end
-local n = 0
-for i = 1, 30 do
+return cur
+end
+local base = { "Shared", "Packages", "Network" }
+local take = nil
+for _, name in ipairs({ "rev_B_Place", "rev_B_Take", "rev_S_Place", "rev_B_Unbox", "rev_S_Interact" }) do
+local x = w({ base[1], base[2], base[3], name })
+if x then take = x F.Out("[卖出] 取出接口 = " .. name) break end
+end
+local sell = w({ base[1], base[2], base[3], "ref_B_Sell" })
+if not sell then F.Out("[卖出] 找不到 ref_B_Sell, 停止") return end
+for _, sl in ipairs(want) do
+if take then pcall(function() take:FireServer(sl) end) task.wait(0.3) end
 pcall(function()
-if node.InvokeServer then node:InvokeServer(i) else node:FireServer(i) end
+if sell.InvokeServer then sell:InvokeServer(sl) else sell:FireServer(sl) end
 end)
-n = n + 1
-task.wait(0.15)
+task.wait(0.25)
 end
-F.Out("[卖出] 已按门槛逐个槽位发送 ref_B_Sell(共 " .. tostring(n) .. " 次)")
+F.Out("[卖出] 已完成 " .. tostring(#want) .. " 个槽位(先取出再卖)" .. (take and "" or " · ⚠ 没找到『取出』接口, 只发了卖出"))
+pcall(function() Fluent:Notify({ Title = "卖出", Content = "已处理 " .. tostring(#want) .. " 个低于门槛的槽位", Duration = 8 }) end)
 end)
 end
 F.SellScanStats = function()
@@ -11838,9 +11869,7 @@ local n = F.ParseCPS(v)
 if n then C.SellMinCPS, C.SellMinCPSTxt = n, v F.Out("[售卖] 门槛 = " .. F.FmtNum(n))
 elseif tostring(v) ~= "" then pcall(function() Fluent:Notify({ Title = "格式", Content = "例: 80m / 500k / 1.5b / 2q", Duration = 6 }) end) end
 end })
-Tabs.AFK:AddButton({ Title = "① 手动统计(点一下看一次)", Description = "不自动刷新", Callback = function() pcall(F.ScanSellUI) end })
-Tabs.AFK:AddInput("SellScanResult", { Title = "符合门槛的个数(手动统计后显示)", Default = "(点①统计)", Callback = function() end })
-Tabs.AFK:AddButton({ Title = "② 按门槛卖出(只卖 ≤ 门槛的)", Callback = function() pcall(F.SellByThreshold) end })
+Tabs.AFK:AddButton({ Title = "② 卖出低于门槛的(自动取出→卖出)", Description = "不用你手动拿: 自己把低于门槛的脑红取出来再卖掉", Callback = function() pcall(F.SellByThreshold) end })
 Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(1~30 槽)", Description = "接口 rev_B_Collect · FireServer(槽位)", Callback = function() pcall(F.CollectTP, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
