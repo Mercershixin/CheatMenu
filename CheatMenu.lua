@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:19 sha e988f914 bytes 435074'):format('2026-10-04 12:19','e988f914',435074))
+print(('[CheatMenu] build 2026-10-04 12:24 sha 76da09fb bytes 436000'):format('2026-10-04 12:24','76da09fb',436000))
 local F = {}
-F.VERSION = "v14.0.26"
+F.VERSION = "v14.0.27"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -246,6 +246,19 @@ if not r then return false end
 pcall(function(...) r:FireServer(...) end, ...)
 return true
 end
+local function FireAny(names, ...)
+for i = 1, #names do
+local r = REvent(names[i])
+if r then
+pcall(function(...) r:FireServer(...) end, ...)
+return names[i]
+end
+end
+return false
+end
+F.PLACE_KEYS = { "S_Interact", "B_Interact", "S_Place", "B_Place", "B_PutEgg", "S_PutEgg",
+"PlaceEgg", "PlaceBrainrot", "PlaceItem", "Deploy", "SetPlot", "S_Put", "B_Put", "Interact" }
+F.COLLECT_KEYS = { "B_Collect", "S_Collect", "Collect", "S_Interact", "B_CollectCash", "CollectCash" }
 local SaveFile = "CheatMenu_Config_v1.json"
 local function SaveConfig()
 pcall(function() if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end end)
@@ -1375,7 +1388,7 @@ local seen, n = {}, 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 n = n + 1
-if n > 6000 then break end
+if n > 60000 then break end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local oki, info = pcall(debug.getinfo, obj, "nS")
 local nm = (oki and info and info.name) or ""
@@ -7566,7 +7579,18 @@ task.wait(0.08)
 pcall(function() hum:EquipTool(tool) end)
 task.wait(0.2)
 if tool.Parent == ch then
-if Fire("S_Interact", i) then done = done + 1 else failed = failed + 1 end
+local used = FireAny(F.PLACE_KEYS, i)
+if used then
+done = done + 1
+F._placeRemote = used
+else
+failed = failed + 1
+if not F._placeWarned then
+F._placeWarned = true
+F.Out("[收起] ⚠ 本游戏没有名字匹配的「放置」接口 ⇒ 收起无法生效(这不是开关问题)")
+F.Out("[收起] 请点「一键全扫描」把 remote 清单发我, 我按你这个游戏的真实接口适配")
+end
+end
 else
 failed = failed + 1
 end
@@ -7587,11 +7611,17 @@ CollectThread = task.spawn(function()
 local ok, err = pcall(function()
 maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
 local n = 0
+local usedAny = nil
 for i = 1, maxSlot do
-if Fire("B_Collect", i) then n = n + 1 end
+local used = FireAny(F.COLLECT_KEYS, i)
+if used then n = n + 1 usedAny = used end
 task.wait(0.06)
 end
-F.Out(string.format("[收钱] 完成 · 触发 %d 个槽位", n))
+if usedAny then
+F.Out(string.format("[收钱] 完成 · 触发 %d 个槽位(接口 %s)", n, tostring(usedAny)))
+else
+F.Out("[收钱] ⚠ 没找到可用的收集接口 ⇒ 本游戏可能不用 remote 收钱(点地盘上的金币按钮更直接)")
+end
 pcall(F.LogFlush, "收钱")
 end)
 CollectThread = nil
@@ -8499,6 +8529,7 @@ end
 function Trans.Disable()
 T.Translate = false
 pcall(Trans.WatchOff)
+pcall(F.ChatIMEBoxDisable)
 Trans.HeartbeatOff()
 if Trans.Loop then Trans.Loop = nil end
 if T.ChatTranslate then F.ChatTranslateDisable() end
@@ -8519,6 +8550,7 @@ C.TransOfficial = false
 Trans.Prewarm()
 Trans.Scan()
 Trans.WatchOn()
+pcall(F.ChatIMEBoxEnable)
 Trans.HeartbeatOn()
 Trans.Loop = task.spawn(function()
 while T.Translate do
@@ -10618,8 +10650,7 @@ end
 end)
 table.sort(list)
 F.Out("[扫描·玩家] 同服其它玩家 " .. tostring(n) .. " 人:")
-for i = 1, math.min(#list, 25) do F.Out("   · " .. list[i]) end
-if #list > 25 then F.Out("   ... 其余 " .. tostring(#list - 25) .. " 人已省略") end
+for i = 1, #list do F.Out("   · " .. list[i]) end
 end
 F.ScanInventory = function()
 local bag, list = 0, {}
@@ -10644,10 +10675,9 @@ table.sort(arr, function(a, b)
 if a.c ~= b.c then return a.c > b.c end
 return a.nm < b.nm
 end)
-for i = 1, math.min(#arr, 30) do
+for i = 1, #arr do
 list[#list + 1] = string.format("背包: %s ×%d", arr[i].nm, arr[i].c)
 end
-if #arr > 30 then list[#list + 1] = "... 其余 " .. tostring(#arr - 30) .. " 种已省略" end
 end
 end)
 F.Out("[扫描·物品] 手持/背包(共 " .. tostring(bag) .. " 件, 按种类聚合):")
@@ -10663,7 +10693,7 @@ local _, _, root = GC()
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 9000 then break end
+if n > 90000 then break end
 if d:IsA("BasePart") then
 local nm = string.lower(d.Name)
 for _, k in ipairs(KEYS) do
@@ -10671,7 +10701,7 @@ if string.find(nm, k, 1, true) then
 local key = d.Name .. "|" .. d.ClassName
 if not seen[key] then
 seen[key] = true
-if #list < 40 then
+if #list < 4000 then
 local dist = root and string.format(" %.0f格", (d.Position - root.Position).Magnitude) or ""
 list[#list + 1] = d.Name .. " (" .. d.ClassName .. ")" .. dist
 end
@@ -10710,7 +10740,7 @@ local function walk(root, tag)
 pcall(function()
 for _, d in ipairs(root:GetChildren()) do
 if d:IsA("ScreenGui") and d.Enabled and not noisy(d.Name) and hasContent(d) then
-if #list < 25 then list[#list + 1] = tag .. ": " .. d.Name end
+list[#list + 1] = tag .. ": " .. d.Name
 end
 if d:IsA("GuiObject") then walk(d, tag) end
 end
@@ -10757,7 +10787,7 @@ local n, near = 0, {}
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 6000 then break end
+if n > 60000 then break end
 if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
 local p = d.Parent
 if p and p:IsA("BasePart") then
@@ -10771,25 +10801,38 @@ end
 end)
 table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
-for i = 1, math.min(#near, 30) do F.Out("   · " .. near[i]) end
-if #near > 30 then F.Out("   ... 其余 " .. tostring(#near - 30) .. " 个已省略") end
+for i = 1, #near do F.Out("   · " .. near[i]) end
 end
 F.CMX_ScanAll = function()
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
 pcall(F.ScanNearbyInteract)
+task.wait()
 pcall(F.ScanPlayers)
+task.wait()
 pcall(F.ScanInventory)
+task.wait()
 pcall(F.ScanMapPoints)
+task.wait()
 pcall(F.ScanGuiState)
+task.wait()
 pcall(F.ScanNetStats)
+task.wait()
 pcall(F.ScanHUD)
+task.wait()
 pcall(F.CMX_ScanBypassSurface)
+task.wait()
 pcall(F.CMX_ScanACFamily)
+task.wait()
 pcall(F.CMX_ScanListeners)
+task.wait()
 pcall(F.ScanScripts)
+task.wait()
 pcall(F.ScanGameModules)
+task.wait()
 pcall(F.ScanRemotes)
+task.wait()
 pcall(F.ScanConnections)
+task.wait()
 pcall(F.ScanClientChecks, true)
 pcall(function()
 local found = F.CMX_ScanReportRemotes(true) or {}
