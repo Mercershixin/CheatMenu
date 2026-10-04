@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:53 sha d9a23fc6 bytes 469095'):format('2026-10-04 18:53','d9a23fc6',469095))
+print(('[CheatMenu] build 2026-10-04 18:57 sha e424b10a bytes 469403'):format('2026-10-04 18:57','e424b10a',469403))
 local F = {}
-F.VERSION = "v14.0.105"
+F.VERSION = "v14.0.106"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11639,7 +11639,7 @@ end)
 F.Out("[扫描·远程] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 名字可疑(掉蛋/收回/速度/守卫类) " .. tostring(sus) .. " 个")
 end
 F.ScanGameAPI = function()
-F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/任务」脚本, 摘出它怎么调远程(只读) =====")
+F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/放置/任务」脚本(含 ReplicatedStorage 的 Controllers/Shared), 摘出它怎么调远程(只读) =====")
 local KEY = { "egg", "claim", "place", "steal", "drop", "quest", "mission", "task", "rebirth" }
 local n, shown = 0, 0
 pcall(function()
@@ -11648,6 +11648,13 @@ local pg = LP:FindFirstChild("PlayerGui")
 local ps = LP:FindFirstChild("PlayerScripts")
 if pg then roots[#roots + 1] = pg end
 if ps then roots[#roots + 1] = ps end
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+for _, nm in ipairs({ "Controllers", "Shared", "DataModules", "Modules", "Services", "ServerScriptService" }) do
+local m = rs:FindFirstChild(nm)
+if m then roots[#roots + 1] = m end
+end
+end)
 for ri = 1, #roots do
 local seen = 0
 for _, d in ipairs(roots[ri]:GetDescendants()) do
