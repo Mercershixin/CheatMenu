@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:30 sha 2f993cc6 bytes 474939'):format('2026-10-04 19:30','2f993cc6',474939))
+print(('[CheatMenu] build 2026-10-04 19:33 sha a9d880f3 bytes 475987'):format('2026-10-04 19:33','a9d880f3',475987))
 local F = {}
-F.VERSION = "v14.0.112"
+F.VERSION = "v14.0.113"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5359,19 +5359,28 @@ F.Out("[藏地下] 检测到重生 ⇒ 已按新位置重置基准高度")
 end)
 end)
 end
-F.HideConn = RS.RenderStepped:Connect(function()
+F.HideConn = RS.RenderStepped:Connect(function(dt)
 if not T.Hide then F.HideDisable() return end
-local _, _, r = GC()
-if not r then return end
+local _, hum, r = GC()
+if not (hum and r) then return end
 local depth = math.min(math.max(tonumber(C.HideDepth) or 5, -60), 60)
 local ty = F.HideBaseY - depth
-pcall(function()
-local v = r.AssemblyLinearVelocity
-if math.abs(v.Y) > 0.1 then r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z) end
-end)
-if math.abs(r.Position.Y - ty) > 0.35 then
-r.CFrame = CFrame.new(r.Position.X, ty, r.Position.Z)
+local dir = hum.MoveDirection
+local spd = tonumber(hum.WalkSpeed) or 16
+if spd < 1 then spd = 1 end
+if spd > 5000 then spd = 5000 end
+local cur = r.Position
+local nx, nz = cur.X, cur.Z
+if dir.Magnitude > 0.05 then
+if type(dt) ~= "number" or dt <= 0 or dt > 0.5 then dt = 1 / 60 end
+nx = cur.X + dir.X * spd * dt
+nz = cur.Z + dir.Z * spd * dt
 end
+r.CFrame = CFrame.new(nx, ty, nz)
+pcall(function()
+r.AssemblyLinearVelocity = Vector3.zero
+r.AssemblyAngularVelocity = Vector3.zero
+end)
 local cam = workspace.CurrentCamera
 if cam then
 local cp = cam.CFrame.Position
@@ -6380,9 +6389,29 @@ F._npAt, F._npPos, F._npHits, F._npBack, F._npLog = 0, nil, 0, 0, 0
 F._npConn = RS.RenderStepped:Connect(function()
 if not T.NoPull then return end
 local now = os.clock()
-if (T.SpeedOn or T.FlyOn) and now - (F._npAt or 0) > 0.5 then
+if (T.SpeedOn or T.FlyOn or T.Hide) and now - (F._npAt or 0) > 0.1 then
 F._npAt = now
-pcall(F.TakeAllOwnership)
+local okN, noN = 0, 0
+pcall(function()
+local ch = LP.Character
+local r0 = ch and ch:FindFirstChild("HumanoidRootPart")
+if not r0 then return end
+local can = true
+pcall(function() if r0.CanSetNetworkOwnership then can = r0:CanSetNetworkOwnership() end end)
+if can then
+local okS = pcall(function() r0:SetNetworkOwner(LP) end)
+if okS then okN = okN + 1 else noN = noN + 1 end
+else
+noN = noN + 1
+end
+end)
+F._npOwn = (F._npOwn or 0) + okN
+F._npOwnFail = (F._npOwnFail or 0) + noN
+if now - (F._npOwnLog or 0) > 5 then
+F._npOwnLog = now
+F.Out("[防护·反回拉] 所有权: 抢到 " .. tostring(F._npOwn or 0) .. " 次 · 被拒 " .. tostring(F._npOwnFail or 0) .. " 次"
+.. ((F._npOwnFail or 0) > 0 and " ⇒ 被拒说明服务端锁了所有权, 那种情况下只能靠下面的『续跑』兜着" or ""))
+end
 end
 local _, _, r = GC()
 if not r then return end
@@ -6403,7 +6432,7 @@ F._npLog = now
 F.Out("[防护·反回拉] 位置被外部挪动 " .. string.format("%.0f", d) .. " 格(正常一帧最多 " .. string.format("%.0f", thr) .. ") ⇒ 已拉回原位 · 累计 " .. tostring(F._npHits) .. " 次")
 end
 if (F._npBack or 0) <= now then
-F._npBack = now + 0.2
+F._npBack = now + 0.05
 pcall(function() r.CFrame = CFrame.new(last) end)
 F._npPos = last
 end
