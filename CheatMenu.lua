@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:14 sha b9e41781 bytes 449338'):format('2026-10-04 14:14','b9e41781',449338))
+print(('[CheatMenu] build 2026-10-04 14:17 sha 5fcff1e8 bytes 450940'):format('2026-10-04 14:17','5fcff1e8',450940))
 local F = {}
-F.VERSION = "v14.0.57"
+F.VERSION = "v14.0.58"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5752,6 +5752,28 @@ F.Out("[护蛋] 已关")
 return
 end
 F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)。每 0.05 秒检查一次, 掉了立刻重拿/重新装备")
+if F._eggUnEq then pcall(function() F._eggUnEq:Disconnect() end) F._eggUnEq = nil end
+pcall(function()
+local ch = GC()
+if ch then
+local function hookTool(tool)
+pcall(function()
+F._eggUnEq2 = tool.Unequipped:Connect(function()
+if not T.MyEgg then return end
+task.wait()
+local ch2, hum2 = GC()
+pcall(function() if ch2 and hum2 and tool.Parent then hum2:EquipTool(tool) end end)
+F.Out("[护蛋] 蛋被卸下 ⇒ 已立刻重新装上(不等下一拍)")
+end)
+end)
+end
+local cur = ch:FindFirstChildOfClass("Tool")
+if cur then hookTool(cur) end
+F._eggCharConn = ch.ChildAdded:Connect(function(c)
+if c:IsA("Tool") then hookTool(c) end
+end)
+end
+end)
 F._eggLoop = true
 task.spawn(function()
 while T.MyEgg and F._eggLoop do
@@ -5788,6 +5810,30 @@ end)
 if best then
 F._myEgg = best
 F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
+end
+end
+do
+local egg0 = F._myEgg
+if egg0 and egg0.Parent then
+local part0 = egg0:IsA("Model") and (egg0.PrimaryPart or egg0:FindFirstChildWhichIsA("BasePart")) or (egg0:IsA("BasePart") and egg0) or (egg0:IsA("Tool") and egg0:FindFirstChildWhichIsA("BasePart")) or nil
+local hand0 = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand") or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm")
+if part0 and hand0 then
+local pinned = false
+pcall(function() pinned = (F._eggWeld and F._eggWeld.Parent and F._eggWeld.Part1 == part0) end)
+if not pinned then
+pcall(function() if F._eggWeld then F._eggWeld:Destroy() end end)
+pcall(function()
+local w = Instance.new("WeldConstraint")
+w.Name = "CM_EggHold"
+w.Part0, w.Part1 = hand0, part0
+w.Parent = part0
+F._eggWeld = w
+end)
+end
+pcall(function() if not part0.Anchored then part0.CFrame = hand0.CFrame end end)
+end
+elseif F._eggWeld then
+pcall(function() F._eggWeld:Destroy() end) F._eggWeld = nil
 end
 end
 do
