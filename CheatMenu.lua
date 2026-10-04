@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:25 sha f5cc3bc8 bytes 451499'):format('2026-10-04 14:25','f5cc3bc8',451499))
+print(('[CheatMenu] build 2026-10-04 14:28 sha 07faf608 bytes 450891'):format('2026-10-04 14:28','07faf608',450891))
 local F = {}
-F.VERSION = "v14.0.60"
+F.VERSION = "v14.0.61"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5841,24 +5841,6 @@ pcall(function() F._eggWeld:Destroy() end) F._eggWeld = nil
 end
 end
 do
-local egg1 = F._myEgg
-if egg1 and egg1.Parent and egg1.Parent ~= ch then
-local part1 = egg1:IsA("Model") and (egg1.PrimaryPart or egg1:FindFirstChildWhichIsA("BasePart")) or (egg1:IsA("BasePart") and egg1) or nil
-local hand1 = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand") or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm")
-if part1 and hand1 then
-pcall(function()
-egg1.Parent = ch
-part1.CFrame = hand1.CFrame
-end)
-F._eggGrabBack = (F._eggGrabBack or 0) + 1
-if os.clock() - (F._eggGbAt or 0) > 3 then
-F._eggGbAt = os.clock()
-F.Out("[护蛋] 蛋被抢走/换父级 ⇒ 已拎回手上(累计 " .. tostring(F._eggGrabBack) .. " 次)")
-end
-end
-end
-end
-do
 local ch2, hum2 = GC()
 if ch2 and hum2 then
 local equipped = ch2:FindFirstChildOfClass("Tool")
@@ -7352,16 +7334,16 @@ elseif best:IsA("BasePart") then pos = best.Position end
 if pos then
 local target = pos + Vector3.new(0, 3, 0)
 if (root.Position - target).Magnitude > 2.5 then
-root.CFrame = CFrame.new(target)
-root.AssemblyLinearVelocity = Vector3.zero
+if os.clock() - (F._gymNote or 0) > 8 then
+F._gymNote = os.clock()
+F.Out("[健身房] 检测到机器在 " .. string.format("%.0f", (root.Position - target).Magnitude) .. " 格外 —— 已不再自动把你吸上机器, 你自己站上去(站着+手持配重就会算锻炼)")
+end
 end
 pcall(function() equipSquatTool() end)
 local _, hum2 = GC()
 for _i = 1, 5 do
 if not T.AutoGym then break end
-pcall(function() root.CFrame = CFrame.new(target) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-if hum2 then pcall(function() hum2:Move(Vector3.new(0, 0, -1), false) end) end
+if hum2 then pcall(function() hum2:Move(Vector3.zero, false) end) end
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
 vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
