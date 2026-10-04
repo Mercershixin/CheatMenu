@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:57 sha 64a3c023 bytes 445542'):format('2026-10-04 13:57','64a3c023',445542))
+print(('[CheatMenu] build 2026-10-04 13:58 sha 4949b3d3 bytes 445392'):format('2026-10-04 13:58','4949b3d3',445392))
 local F = {}
-F.VERSION = "v14.0.49"
+F.VERSION = "v14.0.50"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5661,6 +5661,7 @@ pcall(F.BypassTierApply, T.BypassTier)
 end)
 end
 F.BypassTierApply = function(v)
+pcall(F.HookFuse, true)
 v = tostring(v or "")
 local wants = {
 afk = string.find(v, "防挂机", 1, true) ~= nil,
@@ -11795,6 +11796,7 @@ if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
+pcall(F.HookFuse, true)
 v = tostring(v or "")
 local lvl = 0
 if v:find("①", 1, true) then lvl = 1 end
@@ -11887,8 +11889,8 @@ end)
 local conns = #(AC._disabledConns or {})
 return { layers = layers, ids = ids, hooked = hooked, readonly = ro, conns = conns }
 end
-F.HookFuse = function()
-F.Out("【熔断】① 开始卸掉所有钩子")
+F.HookFuse = function(quiet)
+if not quiet then F.Out("【熔断】① 开始卸掉所有钩子") end
 local steps = {
 function() for slot, bucket in pairs(F.MetaLayers or {}) do for id in pairs(bucket) do pcall(F.MetaUninstall, slot, id) end end end,
 function() pcall(F.KickGuardPathsDisable) end,
@@ -11919,12 +11921,12 @@ function() pcall(AC.UnblockRemotes) end,
 }
 for _ = 1, #steps do pcall(steps[_]) end
 task.wait(0.35)
-F.Out("【熔断】② 残留体检")
+if not quiet then F.Out("【熔断】② 残留体检") end
 local r = F.HookResidue()
 F.Out(string.format("【熔断】残留: 元表层 %d 个%s · 被 hookfunction 的函数 %d 个 · game 元表 readonly=%s · 被禁连接 %d 条",
 r.layers, (#r.ids > 0 and ("(" .. table.concat(r.ids, ",") .. ")") or ""), r.hooked, tostring(r.readonly), r.conns))
 if r.layers > 0 or r.hooked > 0 or r.conns > 0 then
-F.Out("【熔断】③ 还有残留 ⇒ 再清一遍")
+if not quiet then F.Out("【熔断】③ 还有残留 ⇒ 再清一遍") end
 for _ = 1, #steps do pcall(steps[_]) end
 task.wait(0.35)
 local r2 = F.HookResidue()
@@ -11941,7 +11943,6 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 end
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddButton({ Title = "★ 熔断(卸掉所有钩子 → 残留体检 → 再清一次)", Description = "一键把元表钩/hookfunction/断连接全部卸掉并复检; 钩子出问题(闪退/卡死)就点它", Callback = function() pcall(F.HookFuse) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
