@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:54 sha ad0f2174 bytes 443231'):format('2026-10-04 13:54','ad0f2174',443231))
+print(('[CheatMenu] build 2026-10-04 13:57 sha 64a3c023 bytes 445542'):format('2026-10-04 13:57','64a3c023',445542))
 local F = {}
-F.VERSION = "v14.0.48"
+F.VERSION = "v14.0.49"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5709,6 +5709,68 @@ T.BypassDetect = false
 pcall(F.PinDisable)
 pcall(F.BypassDisable)
 F.Out("[反拉回] 已关")
+end
+F._pinConn, F._pinned = nil, nil
+F.CarryPinFind = function()
+local ch, _, root = GC()
+if not (ch and root) then return nil end
+local KEYS = { "egg", "brainrot", "cash", "carry", "crate", "loot", "pet", "drop", "box", "bag", "item", "蛋", "脑红" }
+local best, bestD = nil, 14
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("Model") or d:IsA("BasePart") then
+local nm = tostring(d.Name):lower()
+local hit = false
+for _, k in ipairs(KEYS) do if nm:find(k, 1, true) then hit = true break end end
+if hit then
+local part = nil
+if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
+if part then
+local dd = (part.Position - root.Position).Magnitude
+if dd < bestD then best, bestD = part, dd end
+end
+end
+end
+end
+end)
+local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
+or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm") or root
+if not best then return nil end
+return best, hand
+end
+F.CarryPinSet = function(on)
+T.CarryPin = on and true or false
+if F._pinConn then pcall(function() F._pinConn:Disconnect() end) F._pinConn = nil end
+if not on then
+if F._pinned then pcall(function() if F._pinned.Weld then F._pinned.Weld:Destroy() end end) end
+F._pinned = nil
+F.Out("[蛋守卫] 已关")
+return
+end
+F.Out("[蛋守卫] 已开: 不依赖焊点 —— 每帧把身边的搬运物钉到手上, 掉了也拉回来")
+F._pinConn = RS.Heartbeat:Connect(function()
+if not T.CarryPin then F.CarryPinSet(false) return end
+local ch, _, root = GC()
+if not (ch and root) then return end
+local part, hand = F.CarryPinFind()
+if not (part and hand) then return end
+if F._pinned and F._pinned.Part ~= part then
+pcall(function() if F._pinned.Weld then F._pinned.Weld:Destroy() end end)
+F._pinned = nil
+end
+if not F._pinned then
+local ok, w = pcall(function()
+local w2 = Instance.new("WeldConstraint")
+w2.Name = "CM_CarryPin"
+w2.Part0, w2.Part1 = hand, part
+w2.Parent = part
+return w2
+end)
+F._pinned = { Part = part, Weld = (ok and w) or nil }
+F.Out("[蛋守卫] 已把「" .. tostring(part.Parent and part.Parent.Name or part.Name) .. "」钉在手上(无焊点也能守)")
+end
+pcall(function() if not part.Anchored then part.CFrame = hand.CFrame end end)
+end)
 end
 F.CarryGuardEnable = function()
 if F._cgConn then return end
@@ -11503,11 +11565,13 @@ T.SpeedAntiTP, T.CarryGuard, T.NoDrop = v, v, v
 if F._cfgSyncing then return end
 if v then
 pcall(F.SpeedAntiTPEnable)
+pcall(F.CarryPinSet, true)
 pcall(F.CarryGuardEnable)
 pcall(F.MetaHookEnsure)
 else
 pcall(F.SpeedAntiTPDisable)
 pcall(F.CarryGuardDisable)
+pcall(F.CarryPinSet, false)
 end
 F.Out("[合并] 反拉回/搬运守卫/防掉蛋 = " .. (v and "开" or "关"))
 end })
