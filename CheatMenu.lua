@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:02 sha 9dd4e45d bytes 471858'):format('2026-10-04 19:02','9dd4e45d',471858))
+print(('[CheatMenu] build 2026-10-04 19:07 sha e3163f1b bytes 473665'):format('2026-10-04 19:07','e3163f1b',473665))
 local F = {}
-F.VERSION = "v14.0.107"
+F.VERSION = "v14.0.108"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11694,6 +11694,54 @@ end
 end
 end)
 F.Out("[扫描·游戏接口] 命中 " .. tostring(n) .. " 个脚本 · 摘出 " .. tostring(shown) .. " 行调用")
+pcall(function()
+local PRI = { "eggplacement", "placement", "eggcontroller", "areaegg", "claimcontroller", "eggnet" }
+local roots = {}
+local pg = LP:FindFirstChild("PlayerGui")
+local ps = LP:FindFirstChild("PlayerScripts")
+if pg then roots[#roots + 1] = pg end
+if ps then roots[#roots + 1] = ps end
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+for _, nm in ipairs({ "Controllers", "Shared" }) do
+local m = rs:FindFirstChild(nm)
+if m then roots[#roots + 1] = m end
+end
+end)
+local dumped = 0
+F.Out("[扫描·游戏接口] ---- 优先整段摘录(名字像 蛋/放置/认领 的脚本) ----")
+for ri = 1, #roots do
+if dumped >= 6 then break end
+local seen = 0
+for _, d in ipairs(roots[ri]:GetDescendants()) do
+if dumped >= 6 then break end
+seen = seen + 1
+if seen % 300 == 0 then task.wait() end
+local cls = d.ClassName
+if (cls == "ModuleScript" or cls == "LocalScript" or cls == "Script") then
+local low = tostring(d.Name):lower()
+local pri = false
+for i = 1, #PRI do if low:find(PRI[i], 1, true) then pri = true break end end
+if pri then
+local code = nil
+pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
+if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end) end
+if type(code) == "string" and #code >= 8 then
+dumped = dumped + 1
+F.Out("[扫描·游戏接口·整段] ▸ " .. tostring(d:GetFullName()):sub(1, 110))
+local ln = 0
+for line in tostring(code):gmatch("[^\n]+") do
+ln = ln + 1
+if ln > 110 then F.Out("      ...(只摘前 110 行)"); break end
+F.Out("      L" .. tostring(ln) .. ": " .. tostring(line):gsub("^%s+", ""):sub(1, 160))
+end
+end
+end
+end
+end
+end
+F.Out("[扫描·游戏接口·整段] 共整段摘出 " .. tostring(dumped) .. " 个脚本")
+end)
 end
 F.CMX_ScanAll = function()
 pcall(F.RemoteList)
