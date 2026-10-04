@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:50 sha 52f521cf bytes 467210'):format('2026-10-04 18:50','52f521cf',467210))
+print(('[CheatMenu] build 2026-10-04 18:53 sha d9a23fc6 bytes 469095'):format('2026-10-04 18:53','d9a23fc6',469095))
 local F = {}
-F.VERSION = "v14.0.104"
+F.VERSION = "v14.0.105"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11638,6 +11638,53 @@ end
 end)
 F.Out("[扫描·远程] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 名字可疑(掉蛋/收回/速度/守卫类) " .. tostring(sus) .. " 个")
 end
+F.ScanGameAPI = function()
+F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/任务」脚本, 摘出它怎么调远程(只读) =====")
+local KEY = { "egg", "claim", "place", "steal", "drop", "quest", "mission", "task", "rebirth" }
+local n, shown = 0, 0
+pcall(function()
+local roots = {}
+local pg = LP:FindFirstChild("PlayerGui")
+local ps = LP:FindFirstChild("PlayerScripts")
+if pg then roots[#roots + 1] = pg end
+if ps then roots[#roots + 1] = ps end
+for ri = 1, #roots do
+local seen = 0
+for _, d in ipairs(roots[ri]:GetDescendants()) do
+seen = seen + 1
+if seen % 400 == 0 then task.wait() end
+local cls = d.ClassName
+if cls == "LocalScript" or cls == "ModuleScript" or cls == "Script" then
+local full = ""
+pcall(function() full = d:GetFullName() end)
+local low = (tostring(d.Name) .. " " .. full):lower()
+local hit = false
+for i = 1, #KEY do if low:find(KEY[i], 1, true) then hit = true break end end
+if hit then
+local code = nil
+pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
+if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end) end
+if type(code) == "string" and #code >= 8 then
+n = n + 1
+local lines = {}
+for line in tostring(code):gmatch("[^\n]+") do
+if #lines < 25 and (line:find("InvokeServer", 1, true) or line:find("FireServer", 1, true)
+or line:find("ClaimArea", 1, true) or line:find("claim", 1, true)) then
+lines[#lines + 1] = tostring(line):gsub("^%s+", ""):sub(1, 170)
+end
+end
+if #lines > 0 then
+F.Out("[扫描·游戏接口] ▸ " .. full:sub(1, 110))
+for i = 1, #lines do F.Out("      " .. lines[i]) shown = shown + 1 end
+end
+end
+end
+end
+end
+end
+end)
+F.Out("[扫描·游戏接口] 命中 " .. tostring(n) .. " 个脚本 · 摘出 " .. tostring(shown) .. " 行调用")
+end
 F.CMX_ScanAll = function()
 pcall(F.RemoteList)
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
@@ -11670,6 +11717,9 @@ task.wait()
 pcall(F.ScanConnections)
 task.wait()
 pcall(F.ScanClientChecks, true)
+task.wait()
+pcall(F.ScanGameAPI)
+task.wait()
 pcall(function()
 local found = F.CMX_ScanReportRemotes(true) or {}
 if #found > 0 then
