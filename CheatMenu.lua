@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 20:15 sha c2a3d471 bytes 485604'):format('2026-10-04 20:15','c2a3d471',485604))
+print(('[CheatMenu] build 2026-10-04 22:01 sha 72298ca1 bytes 481660'):format('2026-10-04 22:01','72298ca1',481660))
 local F = {}
-F.VERSION = "v14.0.123"
+F.VERSION = "v14.1.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7034,7 +7034,7 @@ circle.AnchorPoint = Vector2.new(0.5, 0.5)
 circle.Position = UDim2.fromScale(0.5, 0.5)
 circle.BackgroundTransparency = 1
 circle.BorderSizePixel = 0
-circle.Size = UDim2.fromOffset((tonumber(C.AimFOV) or 200) * 2, (tonumber(C.AimFOV) or 200) * 2)
+circle.Size = UDim2.fromOffset((tonumber(C.CombatFOV) or 200) * 2, (tonumber(C.CombatFOV) or 200) * 2)
 circle.Parent = sg
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(1, 0)
@@ -7055,12 +7055,12 @@ end
 local lastFov = -1
 F._fovConn = RS.RenderStepped:Connect(function()
 if not T.FovCircle then F.FovCircleDisable() return end
-local fov = tonumber(C.AimFOV) or 200
+local fov = tonumber(C.CombatFOV) or 200
 if fov == lastFov then return end
 lastFov = fov
 pcall(function() F._fovRing.Size = UDim2.fromOffset(fov * 2, fov * 2) end)
 end)
-F.Out("[准星] FOV 圈已开(直径 " .. tostring((tonumber(C.AimFOV) or 200) * 2) .. " px)")
+F.Out("[准星] FOV 圈已开(直径 " .. tostring((tonumber(C.CombatFOV) or 200) * 2) .. " px)")
 end
 function F.FovCircleDisable()
 if F._fovConn then F._fovConn:Disconnect() F._fovConn = nil end
@@ -7068,20 +7068,40 @@ if F._fovGui then pcall(function() F._fovGui:Destroy() end) F._fovGui = nil end
 F._fovRing = nil
 end
 F._menuOpen = false
+F.MenuWin = function()
+local w = getgenv and getgenv().CM_Window
+if not w and type(Window) == "table" then w = Window end
+return w
+end
 function F.MenuOpen()
-local ok, v = pcall(function() return Fluent and Fluent.GUI and Fluent.GUI.Enabled end)
-if ok and v ~= nil then return v and true or false end
+local w = F.MenuWin()
+if w then
+local ok, vis = pcall(function() return w.Root and w.Root.Visible end)
+if ok and vis ~= nil then return vis and true or false end
+local ok2, mz = pcall(function() return w.Minimized end)
+if ok2 and mz ~= nil then return (not mz) and true or false end
+end
 return F._menuOpen and true or false
 end
 pcall(function()
-UIS.InputBegan:Connect(function(input, processed)
-if processed then return end
-if input.KeyCode ~= Enum.KeyCode.G then return end
-F._menuOpen = not F._menuOpen
-if F._menuOpen then
+local w = F.MenuWin()
+local root = w and w.Root
+if root then
+local was = root.Visible
+root:GetPropertyChangedSignal("Visible"):Connect(function()
+local now = root.Visible
+F._menuOpen = now and true or false
+if was and not now then pcall(F.CloseDropdowns) end
+was = now
+end)
+end
+end)
+pcall(function()
+RS.RenderStepped:Connect(function()
+if F.MenuOpen() then
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-else
-pcall(F.CloseDropdowns)
+end
 end
 end)
 end)
@@ -7358,75 +7378,6 @@ pcall(chunk)
 end)
 return true
 end
-F._freecamConn = nil
-function F.FreecamEnable()
-if F._freecamConn then return end
-local cam = workspace.CurrentCamera
-if not cam then return end
-local saveSubj = cam.CameraSubject
-pcall(function()
-local _, myHum = GC()
-if myHum and saveSubj and saveSubj ~= myHum and typeof(saveSubj) == "Instance" and saveSubj:IsA("Humanoid") then
-local owner = nil
-pcall(function() owner = Players:GetPlayerFromCharacter(saveSubj.Parent) end)
-if owner and owner ~= LP then saveSubj = myHum end
-end
-end)
-F._freecamSaved = { Type = cam.CameraType, Subject = saveSubj }
-local cf = cam.CFrame
-pcall(function()
-local _, hum = GC()
-if hum then F._freecamWalk = hum.WalkSpeed hum.WalkSpeed = 0 end
-end)
-local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z)
-local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
-cam.CameraType = Enum.CameraType.Scriptable
-if (not F.MenuOpen()) and (not UIS.TouchEnabled) then pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end) end
-F._freecamConn = RS.RenderStepped:Connect(function(dt)
-if not T.Freecam then F.FreecamDisable() return end
-local c = workspace.CurrentCamera
-if not c then return end
-if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
-local locked = (UIS.MouseBehavior == Enum.MouseBehavior.LockCenter)
-if not locked then F._mouseFreeAt = os.clock() end
-if F.MenuOpen() or UIS.TouchEnabled or (os.clock() - (F._mouseFreeAt or 0) < 0.8) then
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-elseif not locked then
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end)
-end
-local delta = UIS:GetMouseDelta()
-yaw = yaw - delta.X * 0.003
-pitch = math.clamp(pitch - delta.Y * 0.003, -1.45, 1.45)
-local rot = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0)
-local dir = Vector3.zero
-if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + rot.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - rot.LookVector end
-if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - rot.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + rot.RightVector end
-if UIS:IsKeyDown(Enum.KeyCode.E) then dir = dir + Vector3.new(0, 1, 0) end
-if UIS:IsKeyDown(Enum.KeyCode.Q) then dir = dir - Vector3.new(0, 1, 0) end
-local sp = C.FreecamSpeed or 50
-if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then sp = sp * 3 end
-local pos = c.CFrame.Position
-if dir.Magnitude > 0 then pos = pos + dir.Unit * sp * math.min(dt, 0.1) end
-c.CFrame = CFrame.new(pos) * rot
-end)
-end
-function F.FreecamDisable()
-if F._freecamConn then F._freecamConn:Disconnect() F._freecamConn = nil end
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-pcall(function()
-local _, hum = GC()
-if hum and F._freecamWalk then hum.WalkSpeed = F._freecamWalk end
-end)
-F._freecamWalk = nil
-local cam = workspace.CurrentCamera
-if cam and F._freecamSaved then
-cam.CameraType = F._freecamSaved.Type or Enum.CameraType.Custom
-cam.CameraSubject = F._freecamSaved.Subject
-F._freecamSaved = nil
-end
-end
 F._hiddenPlayers = nil
 function F.HidePlayerEnable()
 F._hiddenPlayers = F._hiddenPlayers or {}
@@ -7470,20 +7421,6 @@ for pl, c in pairs(F._hidePlConns) do pcall(function() c:Disconnect() end) end
 F._hidePlConns = {}
 end
 end
-F._lockCamConn = nil
-function F.LockCamEnable()
-if F._lockCamConn then return end
-local cam = workspace.CurrentCamera
-F._lockCamCF = cam and cam.CFrame or CFrame.new()
-F._lockCamConn = RS.RenderStepped:Connect(function()
-if not T.LockCam then F.LockCamDisable() return end
-local c = workspace.CurrentCamera
-if c then pcall(function() c.CFrame = F._lockCamCF end) end
-end)
-end
-function F.LockCamDisable()
-if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
-end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, KickGuard = true, GuardOn = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true }
@@ -7500,7 +7437,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -9650,9 +9587,7 @@ local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FreecamDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
-F.LockCamDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -9666,8 +9601,7 @@ F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoP
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
-F.InfiniteJumpDisable, F.KickRejoinDisable, F.LockCamDisable,
-F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
+F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
 F._dumpText = nil
@@ -12679,27 +12613,6 @@ if v then F.CrosshairEnable() else F.CrosshairDisable() end
 end })
 end
 do
-Tabs.World:AddSection("相机(自由视角 / 锁相机 · 会接管相机, 一般别开)")
-Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v and UIS.TouchEnabled then
-T.Freecam = false
-pcall(function()
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "Freecam", Content = "手机端不支持(需要鼠标/键盘), 已自动关闭", Duration = 5 })
-end
-end)
-return
-end
-T.Freecam = v
-if v then F.FreecamEnable() else F.FreecamDisable() end
-end })
-Tabs.World:AddToggle("LockCam", { Title = "锁相机", Default = false, Callback = function(v)
-T.LockCam = v
-if F._cfgSyncing then return end
-if v then F.LockCamEnable() else F.LockCamDisable() end
-F.Out("[锁相机] " .. (v and "已开(相机锁在当前朝向)" or "已关"))
-end })
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
@@ -13178,7 +13091,7 @@ if wasOpen and not now then pcall(F.CloseDropdowns) end
 wasOpen = now
 end
 end)
-F.CFG_NOSYNC = { AimOn = true, LockCam = true, Freecam = true, TPMouse = true }
+F.CFG_NOSYNC = { AimOn = true, TPMouse = true }
 F.CFG_APPLY_SKIP = { TransLang = true, TransScope = true }
 F.ApplySavedOn = function(quiet)
 if F._applyingSaved then return 0 end
