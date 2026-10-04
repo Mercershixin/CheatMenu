@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:17 sha bd0693fa bytes 461741'):format('2026-10-04 15:17','bd0693fa',461741))
+print(('[CheatMenu] build 2026-10-04 15:38 sha 3a61968a bytes 461655'):format('2026-10-04 15:38','3a61968a',461655))
 local F = {}
-F.VERSION = "v14.0.75"
+F.VERSION = "v14.0.76"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7122,7 +7122,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -9251,7 +9251,7 @@ F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDis
 F.FreecamDisable,
 F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.LockCamDisable,
-F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable,
+F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
@@ -12340,7 +12340,6 @@ function() pcall(F.KickGuardPathsDisable) end,
 function() pcall(AC.UninstallNamecallHook) end,
 function() pcall(AC.UninstallIndexMask) end,
 function() pcall(AC.UninstallSetmetatableHook) end,
-function() pcall(AC.UninstallPropertyLock) end,
 function() pcall(AC.UninstallAntiTP) end,
 function() pcall(AC.WatchNewScriptsDisable) end,
 function() pcall(AC.WatchNewRemotesDisable) end,
