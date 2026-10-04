@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:17 sha 0e189937 bytes 459555'):format('2026-10-04 17:17','0e189937',459555))
+print(('[CheatMenu] build 2026-10-04 17:21 sha 43d9cf2f bytes 459948'):format('2026-10-04 17:21','43d9cf2f',459948))
 local F = {}
-F.VERSION = "v14.0.87"
+F.VERSION = "v14.0.88"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -101,6 +101,13 @@ F._logBuf = keep
 end
 if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX and (now - (F._logFlushAt or 0) >= 2) then
 pcall(F.LogFlush, "自动")
+end
+local crit = (line:find("防护档位", 1, true) or line:find("防护·改写档", 1, true)
+or line:find("【熔断】", 1, true) or line:find("深度中和", 1, true)
+or line:find("热加载", 1, true) or line:find("已干净卸载", 1, true)
+or line:find("切档", 1, true) or line:find("[卸载]", 1, true))
+if crit and F.LogFlush and not F._logFlushing and (now - (F._logFlushAt or 0) >= 0.8) then
+pcall(F.LogFlush, "关键")
 end
 end
 function F.Try(name, fn, ...)
@@ -3600,7 +3607,9 @@ local function GodEnable()
 if GodConn then return end
 local function apply()
 local _, hum = GC()
-if hum then hum.MaxHealth = 1e6 hum.Health = 1e6 end
+if not hum then return end
+if hum.MaxHealth ~= 1e6 then pcall(function() hum.MaxHealth = 1e6 end) end
+if hum.Health ~= 1e6 then pcall(function() hum.Health = 1e6 end) end
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
@@ -6196,14 +6205,12 @@ pcall(F.GuardOnDisable)
 pcall(F.SpoofDisable)
 end
 function F.SpoofEnable()
-if F._spoofConn then return end
+if F._spoofOn then return end
 T.Spoof = true
+F._spoofOn = true
 F._spoofWalkBase = tonumber(F._preSpeed) or nil
 F._spoofJumpBase = nil
 pcall(F.MetaHookEnsure)
-F._spoofConn = RS.Heartbeat:Connect(function()
-if not T.Spoof then F.SpoofDisable() return end
-end)
 local rw = false
 pcall(function()
 if type(gethiddenproperty) ~= "function" or type(sethiddenproperty) ~= "function" then return end
@@ -6238,7 +6245,7 @@ F.Out("[伪装] 已开: 游戏侧读你的 WalkSpeed/JumpPower 拿到的是原�
 end
 function F.SpoofDisable()
 T.Spoof = false
-if F._spoofConn then pcall(function() F._spoofConn:Disconnect() end) F._spoofConn = nil end
+F._spoofOn = nil
 F._spoofWalkBase, F._spoofJumpBase = nil, nil
 end
 function F.InstantInteractEnable()
