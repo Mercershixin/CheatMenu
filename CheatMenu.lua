@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:46 sha 38172845 bytes 480841'):format('2026-10-04 19:46','38172845',480841))
+print(('[CheatMenu] build 2026-10-04 19:48 sha d791eb09 bytes 480768'):format('2026-10-04 19:48','d791eb09',480768))
 local F = {}
-F.VERSION = "v14.0.117"
+F.VERSION = "v14.0.118"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -580,6 +580,12 @@ F._LOCK_KEYS = {
 WalkSpeed = true, JumpPower = true, JumpHeight = true, PlatformStand = true,
 CanCollide = true, Health = true, MaxHealth = true,
 }
+F.OptSet = function(o, v)
+if type(o) ~= "table" then return false end
+if type(o.SetValue) == "function" then return (pcall(function() o:SetValue(v) end)) end
+if type(o.Set) == "function" then return (pcall(function() o:Set(v) end)) end
+return false
+end
 F.LockFieldsInstall = function()
 if F.MetaActive("__newindex", "CMLockFields") then return true end
 local got = F.MetaInstall("__newindex", game, "CMLockFields", function(box)
@@ -3413,7 +3419,7 @@ F.EnsureAimOn = function(why)
 if T.AimOn then return end
 pcall(function()
 local op = Fluent and Fluent.Options and Fluent.Options.AimOn
-if op and op.Set then op:Set(true) end
+F.OptSet(op, true)
 end)
 if not T.AimOn then F.AimSet(true, why or "附属项联动") end
 end
@@ -7208,11 +7214,11 @@ pcall(function()
 if not (Fluent and Fluent.Options) then return end
 local fop = Fluent.Options.FlyOn
 if fop and type(T.FlyOn) == "boolean" and fop.Value ~= T.FlyOn then
-pcall(function() fop:Set(T.FlyOn) end)
+F.OptSet(fop, T.FlyOn)
 end
 local sop = Fluent.Options.SpeedOn
 if sop and type(T.SpeedOn) == "boolean" and sop.Value ~= T.SpeedOn then
-pcall(function() sop:Set(T.SpeedOn) end)
+F.OptSet(sop, T.SpeedOn)
 end
 end)
 end
@@ -7535,7 +7541,7 @@ if type(ty) ~= "string" then
 if type(opt.Value) == "boolean" then ty = "Toggle" end
 end
 if (ty == "Toggle" or ty == "toggle") and type(opt.Set) == "function" then
-pcall(function() opt:Set(false) end)
+F.OptSet(opt, false)
 end
 end
 end
@@ -8402,7 +8408,7 @@ if total > 0 and T.AutoSell then
 F._sellFinish = true
 T.AutoSell = false
 local op = Fluent and Fluent.Options and Fluent.Options.AutoSell
-if op and op.Value then pcall(function() op:Set(false) end) end
+if op and op.Value then F.OptSet(op, false) end
 F._sellFinish = nil
 F.Out("[售卖] 本轮已卖完 ⇒ 自动关闭「按 CPS 卖出」(要再卖请重新打开)")
 end
@@ -12395,16 +12401,16 @@ if n > hi then n = hi end
 n = math.floor(n)
 if kind == "fly" then
 C.FlyValue = n
-if o and o.Set then pcall(function() o:Set(n) end) end
+F.OptSet(o, n)
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 else
 C.SpeedValue = n
-if o and o.Set then pcall(function() o:Set(n) end) end
+F.OptSet(o, n)
 if T.SpeedOn then pcall(F.SpeedApply) end
 end
 F._slInGuard = true
 local ib = op and op[((kind == "fly") and "FlyValueIn" or "SpeedValueIn")]
-if ib and ib.Set then pcall(function() ib:Set(tostring(n)) end) end
+F.OptSet(ib, tostring(n))
 F._slInGuard = false
 F.Out("[速度] " .. ((kind == "fly") and "飞行" or "加速") .. " 已设为 " .. tostring(n) .. " 格/秒 (范围 " .. tostring(math.floor(lo)) .. "~" .. tostring(math.floor(hi)) .. ")")
 end
@@ -12414,7 +12420,7 @@ local op = Fluent and Fluent.Options
 local ib = op and op[((kind == "fly") and "FlyValueIn" or "SpeedValueIn")]
 if ib and ib.Set and tonumber(v) then
 F._slInGuard = true
-pcall(function() ib:Set(tostring(math.floor(tonumber(v)))) end)
+F.OptSet(ib, tostring(math.floor(tonumber(v))))
 F._slInGuard = false
 end
 end
@@ -12440,7 +12446,7 @@ opt.Min, opt.Max = lo, hi
 local cur = tonumber(opt.Value) or lo
 if cur < lo then cur = lo end
 if cur > hi then cur = hi end
-if type(opt.Set) == "function" then pcall(function() opt:Set(cur) end) end
+F.OptSet(opt, cur)
 end
 if op then rerange(op.SpeedValue) rerange(op.FlyValue) end
 local cur = tonumber(C.SpeedValue) or lo
@@ -13093,8 +13099,8 @@ local ok = false
 if type(cb) == "function" then
 ok = pcall(cb, want)
 else
-if type(want) == "boolean" then pcall(function() opt:Set(not want) end) end
-ok = pcall(function() opt:Set(want) end)
+if type(want) == "boolean" then F.OptSet(opt, not want) end
+ok = F.OptSet(opt, want)
 end
 if ok then
 applied = applied + 1
@@ -13161,7 +13167,7 @@ end
 end)
 end
 end
-if ok and pcall(function() opt:Set(want) end) then n = n + 1 end
+if ok and F.OptSet(opt, want) then n = n + 1 end
 end
 end
 end
