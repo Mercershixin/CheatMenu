@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 22:12 sha dad4cc1d bytes 487678'):format('2026-10-04 22:12','dad4cc1d',487678))
+print(('[CheatMenu] build 2026-10-04 22:19 sha daa2e728 bytes 489009'):format('2026-10-04 22:19','daa2e728',489009))
 local F = {}
-F.VERSION = "v14.2.0"
+F.VERSION = "v14.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7202,7 +7202,8 @@ lb.Font = Enum.Font.GothamBold
 lb.TextStrokeTransparency = 0.3
 lb.Text = "-"
 lb.Parent = g
-g.Parent = head
+g.Adornee = head
+g.Parent = host
 pcall(function() g:SetAttribute("CMOwned", true) end)
 F._roleTags[pl] = g
 end
@@ -7277,13 +7278,37 @@ end)
 local k = math.clamp(d / 300, 0, 1)
 return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 140, 255), k), d
 end
+F.CMX_HLOccluded = function(pl)
+local ch = pl.Character
+if not ch then return false end
+local tgt = ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("Head")
+local cam = workspace.CurrentCamera
+if not (tgt and cam) then return false end
+local origin = cam.CFrame.Position
+local dir = tgt.Position - origin
+if dir.Magnitude < 0.5 then return false end
+local ok, hit = pcall(function()
+local rp = RaycastParams.new()
+rp.FilterType = Enum.RaycastFilterType.Exclude
+local ex = { ch, cam }
+if LP.Character then ex[#ex + 1] = LP.Character end
+rp.FilterDescendantsInstances = ex
+rp.IgnoreWater = true
+return workspace:Raycast(origin, dir, rp)
+end)
+if ok and hit then return true end
+return false
+end
 F.CMX_HLApply = function(pl, rec)
 if not rec or not rec.top then return end
 local team = F.CMX_HLTeamColor(pl)
+local wall = F.CMX_HLOccluded(pl)
+rec.wall = wall
+local fill = wall and 1 or 0.45
 pcall(function()
 rec.top.FillColor = team
 rec.top.OutlineColor = team
-rec.top.FillTransparency = 0.45
+rec.top.FillTransparency = fill
 rec.top.OutlineTransparency = 0
 rec.top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 end)
@@ -7354,6 +7379,23 @@ F._hlAdded = Players.PlayerAdded:Connect(function(pl)
 pl.CharacterAdded:Connect(function() task.wait(0.4) F.BodyHLAdd(pl) F.BodyHLRefresh() end)
 end)
 end
+if not F._hlWallLoop then
+F._hlWallLoop = RS.Heartbeat:Connect(function()
+if not T.BodyHL then return end
+local now = os.clock()
+if now - (F._hlWallAt or 0) < 0.12 then return end
+F._hlWallAt = now
+for pl, rec in pairs(F._hlObjs) do
+if type(rec) == "table" and rec.top and rec.top.Parent then
+local wall = F.CMX_HLOccluded(pl)
+if rec.wall ~= wall then
+rec.wall = wall
+pcall(function() rec.top.FillTransparency = wall and 1 or 0.45 end)
+end
+end
+end
+end)
+end
 if not F._hlLoop then
 F._hlLoop = RS.Heartbeat:Connect(function()
 if not T.BodyHL then F.BodyHLDisable() return end
@@ -7370,6 +7412,7 @@ end
 function F.BodyHLDisable()
 if F._hlAdded then F._hlAdded:Disconnect() F._hlAdded = nil end
 if F._hlLoop then F._hlLoop:Disconnect() F._hlLoop = nil end
+if F._hlWallLoop then F._hlWallLoop:Disconnect() F._hlWallLoop = nil end
 for _, rec in pairs(F._hlObjs) do
 if type(rec) == "table" then
 if rec.top then pcall(function() rec.top:Destroy() end) end
