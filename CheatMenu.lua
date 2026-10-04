@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:35 sha 4bf1fef0 bytes 515725'):format('2026-10-05 01:35','4bf1fef0',515725))
+print(('[CheatMenu] build 2026-10-05 01:36 sha 7aafd24d bytes 515473'):format('2026-10-05 01:36','7aafd24d',515473))
 local F = {}
-F.VERSION = "v15.7.0"
+F.VERSION = "v15.8.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3373,15 +3373,8 @@ else
 F._silentPart = nil
 end
 local dist = (part.Position - root.Position).Magnitude
-local hpTxt = ""
-if T.HealthShow or T.HealthIsolate then
-pcall(function()
-local hT = ch:FindFirstChildOfClass("Humanoid")
-if hT then hpTxt = string.format(" · 血 %.0f/%.0f", hT.Health, hT.MaxHealth) end
-end)
-end
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
-.. hpTxt .. (T.AutoFire and " · 自动开火中" or ""))
+.. (T.AutoFire and " · 自动开火中" or ""))
 local dir = part.Position - root.Position
 if T.AimTurnBody == true then
 local flat = Vector3.new(dir.X, 0, dir.Z)
@@ -3414,7 +3407,7 @@ if hum and F._aimFacing then hum.AutoRotate = true end
 end)
 F._aimFacing, F._combatNow = nil, nil
 F._silentPart, F._silentCh = nil, nil
-if not T.HealthShow then F.CombatHudHide() end
+F.CombatHudHide()
 F._aimWatch = false
 F._aimWatchId = (F._aimWatchId or 0) + 1
 F.Out("[战斗] 自瞄已关闭" .. (why and (" (" .. tostring(why) .. ")") or ""))
