@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:45 sha 8876fbce bytes 441230'):format('2026-10-04 12:45','8876fbce',441230))
+print(('[CheatMenu] build 2026-10-04 12:57 sha ae2d3ea1 bytes 439543'):format('2026-10-04 12:57','ae2d3ea1',439543))
 local F = {}
-F.VERSION = "v14.0.32"
+F.VERSION = "v14.0.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -305,18 +305,6 @@ F.PLACE_KEYS = { "S_Interact", "B_Interact", "S_Place", "B_Place", "B_PutEgg", "
 "PlaceEgg", "PlaceBrainrot", "PlaceItem", "Deploy", "SetPlot", "S_Put", "B_Put", "Interact" }
 F.COLLECT_KEYS = { "B_Collect", "S_Collect", "Collect", "S_Interact", "B_CollectCash", "CollectCash" }
 local SaveFile = "CheatMenu_Config_v1.json"
-local function SaveConfig()
-pcall(function() if writefile then writefile(SaveFile, HS:JSONEncode({ T = T, C = C })) end end)
-end
-local function LoadConfig()
-pcall(function()
-if not readfile or not isfile or not isfile(SaveFile) then return end
-local d = HS:JSONDecode(readfile(SaveFile))
-if type(d) == "table" and type(d.C) == "table" then
-for k, v in pairs(d.C) do C[k] = v end
-end
-end)
-end
 local Fluent = nil
 local FLUENT_SOURCES = {
 "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
@@ -5393,7 +5381,7 @@ z = tonumber(string.format("%.2f", p.Z)),
 yaw = tonumber(string.format("%.4f", math.atan2(-lv.X, -lv.Z))),
 }
 F.WaypointRefreshUI()
-pcall(SaveConfig)
+do end
 F.Out(string.format("[点位] 已保存「%s」 → (%.0f, %.0f, %.0f)", nm, p.X, p.Y, p.Z))
 pcall(function() Fluent:Notify({ Title = "点位", Content = "已保存「" .. nm .. "」", Duration = 4 }) end)
 return true
@@ -5473,7 +5461,7 @@ function F.WpClear()
 local n = #F.WaypointList()
 C.Waypoints = {}
 F.WaypointRefreshUI()
-pcall(SaveConfig)
+do end
 F.Out("[点位] 已清空 " .. tostring(n) .. " 个点位")
 return n
 end
@@ -5525,7 +5513,7 @@ if type(it) == "table" and tostring(it.name) == name then table.remove(list, i) 
 end
 F.WaypointRefreshUI()
 if n > 0 then
-pcall(SaveConfig)
+do end
 F.Out("[点位] 已删除「" .. name .. "」")
 else
 F.Out("[点位] 没找到「" .. name .. "」, 没删任何东西")
@@ -6924,21 +6912,6 @@ end
 return ok2
 end
 F._saveThread = nil
-function F.AutoSaveEnable()
-if F._saveThread then return end
-T.AutoSave = true
-F._saveThread = task.spawn(function()
-while T.AutoSave do
-task.wait(5)
-if T.AutoSave then pcall(SaveConfig) end
-end
-F._saveThread = nil
-end)
-end
-function F.AutoSaveDisable()
-T.AutoSave = false
-F._saveThread = nil
-end
 F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
@@ -7166,6 +7139,60 @@ TrainThread = nil
 F.Out("[训练] 已停止")
 end
 local GymThread2 = nil
+F.GymRetrigger = function()
+local _, hum, root = GC()
+if not root then return end
+pcall(function()
+local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
+if tool then tool:Activate() end
+end)
+pcall(function() mouse1click() end)
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+task.wait(0.05)
+vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+end)
+F.Out("[健身房] 已重新开始锻炼(激活手上配重 + 触发一次动作)")
+end
+F.FindCurrencyPart = function(i)
+local want = tostring(i)
+local best = nil
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("BasePart") then
+local nm = tostring(d.Name):lower()
+if nm:find(want, 1, true) or tostring(d:GetAttribute("slot")) == want then
+for _, k in ipairs({ "cash", "coin", "money", "currency", "drop", "loot", "pickup", "collect", "现金", "钱" }) do
+if nm:find(k, 1, true) then best = d break end
+end
+end
+if best then break end
+end
+end
+end)
+return best
+end
+F.CollectTP = function(maxSlot)
+task.spawn(function()
+local _, _, root = GC()
+if not root then F.Out("[收集] 没有角色, 稍后再点") return end
+local n = 0
+for i = 1, (maxSlot or 30) do
+if not root.Parent then break end
+local part = F.FindCurrencyPart(i)
+if part then
+pcall(function() root.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 0)) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+task.wait(0.25)
+end
+pcall(F.CollectAll, i)
+n = n + 1
+task.wait(0.12)
+end
+F.Out("[收集] 已按槽位 1~" .. tostring(maxSlot or 30) .. " 逐个 TP 过去再收集(共 " .. tostring(n) .. " 次)")
+end)
+end
 function F.AutoGymEnable()
 if GymThread2 or GymThread then return end
 pcall(function()
@@ -7180,6 +7207,7 @@ if noGui >= 40 then
 F.Out("[健身房] 找不到 KickUpgrades ⇒ 退回旧的举铁机(LiftMachine)逻辑")
 break
 end
+pcall(F.GymRetrigger)
 task.wait(tonumber(C.AutoGymRate) or 0.12)
 end
 GymThread2 = nil
@@ -7514,19 +7542,8 @@ if not e.Known then nUnknown = nUnknown + 1
 elseif e.Ex then nKeep = nKeep + 1
 elseif e.CPS < th then nSell = nSell + 1 end
 end
-F.Out(string.format("[预览] 手持+背包实体工具 %d 个 · 门槛 %s", #all, fmtNum(th)))
-F.Out(string.format("[预览] 会卖 %d · 限定/独家保留 %d · 无法估算(不卖) %d", nSell, nKeep, nUnknown))
-local shown = 0
-for _, e in ipairs(all) do
-if shown >= 15 then break end
-local tag = "保留(限定)"
-if not e.Known then tag = "不卖(算不出)"
-elseif not e.Ex and e.CPS < th then tag = "会卖" end
-F.Out(string.format("[预览]  %-10s %-24s CPS≈%-9s %s", tag, e.Name, fmtNum(e.CPS), describe(e.Tool)))
-shown = shown + 1
-end
-if #all == 0 then F.Out("[预览] 没找到实体工具(脑红)") end
-pcall(F.LogFlush, "售卖预览")
+F.Out(string.format("[统计] 门槛 %s ⇒ 符合门槛、可卖 %d 个(实体脑红共 %d 个; 限定保留 %d, 算不出 %d)",
+fmtNum(th), nSell, #all, nKeep, nUnknown))
 end)
 end
 function F.SellLowCPS(force)
@@ -7665,11 +7682,51 @@ WithdrawThread = nil
 if not ok then F.Out("[收起] 出错: " .. tostring(err)) end
 end)
 end
+F.TpToMyPlot = function()
+local _, _, root = GC()
+if not root then F.Out("[收钱] 无角色, 无法过去") return false end
+local target, where = nil, nil
+pcall(function()
+local me = tostring(LP.Name)
+local dn = tostring(LP.DisplayName or "")
+for _, d in ipairs(workspace:GetDescendants()) do
+if (d:IsA("Model") or d:IsA("BasePart")) and d ~= LP.Character then
+local s = tostring(d.Name)
+if s == me or (dn ~= "" and s == dn) or s:find(me, 1, true) then
+local pt = d:IsA("Model") and (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart", true)) or d
+if pt then target = pt.Position where = s break end
+end
+end
+end
+end)
+if not target then
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("BasePart") and d.Name == "PlotOwner" then
+target = d.Position where = "PlotOwner" break
+end
+end
+end)
+end
+if not target then
+F.Out("[收钱] ⚠ 找不到你的地盘(名字里没有你的名字, 也没发现 PlotOwner 部件) ⇒ 请手动走过去再点")
+return false
+end
+pcall(function()
+root.CFrame = CFrame.new(target + Vector3.new(0, 4, 0))
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+F.Out("[收钱] 已传送到你的地盘附近(" .. tostring(where) .. ")")
+return true
+end
 function F.CollectAll(maxSlot)
 if CollectThread then return end
 CollectThread = task.spawn(function()
 local ok, err = pcall(function()
 maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
+pcall(F.TpToMyPlot)
+task.wait(0.45)
 local n = 0
 local usedAny = nil
 for i = 1, maxSlot do
@@ -8900,7 +8957,6 @@ if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
 if T.Aim360 == nil then T.Aim360 = true end
 end
-LoadConfig()
 pcall(function()
 local sid = tostring(game.PlaceId) .. "/" .. tostring(game.JobId)
 if C.WpServer ~= sid then
@@ -8910,7 +8966,7 @@ C.Waypoints = {}
 F.Out("[点位] 换服 / 重进游戏 ⇒ 已自动清空上次的 " .. tostring(had) .. " 个收藏点位")
 end
 C.WpServer = sid
-pcall(SaveConfig)
+do end
 end
 end)
 local _touch = (UIS.TouchEnabled == true)
@@ -11597,12 +11653,12 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("卖 CPS / 收集货币 / 收起脑红(按实测接口直发)")
-Tabs.AFK:AddSlider("SellMinCPS", { Title = "卖出门槛(CPS 低于此值的脑红会被卖)", Min = 0, Max = 1000000000, Default = 100000, Rounding = 0, Callback = function(v) C.SellMinCPS = v end })
-Tabs.AFK:AddButton({ Title = "① 预览: 会卖哪些(只看不卖)", Description = "列出会卖/保留/算不出的清单, 不执行任何操作", Callback = function() pcall(F.PreviewSell) end })
+Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(CPS 低于此值会卖 · 手动填数字)", Description = "自己输入 CPS 门槛, 例如 100000000 = 1亿", Default = "100000000", Callback = function(v) C.SellMinCPS = tonumber(v) or 100000 end })
+Tabs.AFK:AddButton({ Title = "① 统计: 有多少个符合我设的门槛", Description = "只报数量, 不列清单、不执行", Callback = function() pcall(F.PreviewSell) end })
 Tabs.AFK:AddButton({ Title = "② ★ 按门槛卖出(只卖低于门槛的)", Description = "接口 ref_B_Sell (RemoteFunction · InvokeServer)。会先走到商人身边再逐个装备卖出", Callback = function() pcall(F.SellLowCPS, true) end })
 Tabs.AFK:AddButton({ Title = "③ 全部卖出(除限定脑红)", Description = "忽略门槛, 把能算出 CPS 的非限定脑红全部卖掉", Callback = function() pcall(F.SellAll) end })
-Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(1~30 槽)", Description = "接口 rev_B_Collect · FireServer(槽位)", Callback = function() pcall(F.CollectAll, 30) end })
-Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(1~30 槽)", Description = "接口 rev_S_Interact · FireServer(槽位)。把放出的脑红收回背包", Callback = function() pcall(F.WithdrawAll, 30) end })
+Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectTP, 30) end })
+Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -11711,76 +11767,6 @@ Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文�
 end)
 end })
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddToggle("Session", { Title = "会话保持(自动存档 + 角色持续 + 实时玩家列表)", Description = "把原来三个点不到的功能合成一个: 定时自动存配置 / 角色重生后保持设置 / 实时刷新玩家列表", Default = false, Callback = function(v)
-local changed = (T.Session ~= nil) and (T.Session ~= v)
-T.Session = v
-if F._cfgSyncing or not changed then return end
-if v then
-T.AutoSave, T.CharPersist = true, true
-F.Try("AutoSaveEnable", F.AutoSaveEnable)
-F.Try("LivePlayersEnable", F.LivePlayersEnable)
-F.Out("[会话保持] 已开: 自动存档 + 角色持续 + 实时玩家列表")
-else
-T.AutoSave, T.CharPersist = false, false
-pcall(F.AutoSaveDisable)
-pcall(F.LivePlayersDisable)
-pcall(F.CharPersistDisable)
-F.Out("[会话保持] 已关")
-end
-end })
-Tabs.Setting:AddButton({ Title = "保存配置", Callback = function() SaveConfig() Fluent:Notify({ Title = "配置", Content = "已保存", Duration = 2 }) end })
-Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已是最新就不动)", Callback = function() F.HotReload(false) end })
-Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
-Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
-Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
-F.DumpFeatureList = function()
-local op = Fluent and Fluent.Options
-if type(op) ~= "table" then F.Out("[清单] 界面还没建好, 稍后再点"); return end
-local names = {}
-for k in pairs(op) do names[#names + 1] = tostring(k) end
-table.sort(names)
-local n = 0
-F.Out("[清单] ===== 功能总览(控件名 · 类型 · 当前值 · 含义) =====")
-for i = 1, #names do
-local o = op[names[i]]
-if type(o) == "table" then
-local ty = "其它"
-if type(o.Type) == "string" then ty = o.Type
-elseif type(o.Value) == "boolean" then ty = "开关"
-elseif type(o.Value) == "number" then ty = "滑块"
-elseif type(o.Value) == "table" then ty = "下拉" end
-local val = o.Value
-if type(val) == "boolean" then val = val and "开" or "关"
-elseif type(val) == "table" then val = "(多选列表)" end
-local desc = o.Description
-if type(desc) ~= "string" then desc = "" end
-n = n + 1
-F.Out(string.format("[清单] %-24s %-4s %-8s %s", names[i], ty, tostring(val), desc))
-end
-end
-F.Out("[清单] 共 " .. tostring(n) .. " 项 —— 这份清单同时写进日志文件, 直接发给我就行")
-end
-Tabs.Setting:AddButton({ Title = "★ 打印功能清单(每个功能的含义与当前状态 → 日志)", Callback = function() pcall(F.DumpFeatureList) end })
-Tabs.Setting:AddButton({ Title = "套用本游戏上次的设置(档位 / 飞行·加速通道 / 传送方式)", Callback = function() pcall(F.CMX_ProfileApply) end })
-F.UnloadAll = UnloadAll
-pcall(function()
-local g = getgenv and getgenv()
-if type(g) ~= "table" then return end
-F._inst = {
-version = F.VERSION,
-unload = function() pcall(UnloadAll) end,
-gui = (Fluent and Fluent.GUI) or nil,
-handles = {},
-}
-g[F.INSTANCE_KEY] = F._inst
-end)
-Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function()
-pcall(function() Fluent:Notify({ Title = "卸载", Content = "正在卸载…界面会消失; 日志里会有 [卸载] 复核结果", Duration = 2 }) end)
-task.defer(function()
-pcall(UnloadAll)
-pcall(function() F.LogFlush("卸载") end)
-end)
-end })
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
