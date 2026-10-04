@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:21 sha 0d2cbdd0 bytes 493704'):format('2026-10-04 23:21','0d2cbdd0',493704))
+print(('[CheatMenu] build 2026-10-05 01:13 sha f649663f bytes 496128'):format('2026-10-05 01:13','f649663f',496128))
 local F = {}
-F.VERSION = "v15.1.0"
+F.VERSION = "v15.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7136,11 +7136,11 @@ end)
 end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
 F.CMX_HLMode = function() return tostring(C.BodyHLMode or "①") end
-F.ROLE_KILLER = { "knife","sword","blade","dagger","murder","killer","assassin","reaper","scythe","刀","杀手","匕首" }
-F.ROLE_SHERIFF = { "gun","pistol","revolver","sheriff","cop","police","marshal","deputy","枪","警长","警察" }
+F.ROLE_KILLER = { "knife","dagger","murder","assassin","刀","杀手" }
+F.ROLE_SHERIFF = { "gun","pistol","revolver","sheriff","枪","警长" }
 F.ROLE_ATTRS = { "Role","role","RoleName","rolename","Alignment","alignment","Job","job","Class","class","TeamName","teamname" }
 F.ROLE_NAME = { killer = "杀手", sheriff = "警长" }
-F.ROLE_COLOR = { killer = Color3.fromRGB(255, 45, 45), sheriff = Color3.fromRGB(255, 210, 0), none = Color3.fromRGB(120, 230, 130) }
+F.ROLE_COLOR = { killer = Color3.fromRGB(255, 45, 45), sheriff = Color3.fromRGB(255, 210, 0), none = Color3.fromRGB(0, 220, 255) }
 F.RoleMatch = function(v)
 if type(v) ~= "string" or v == "" then return nil end
 local t = string.lower(v)
@@ -7179,10 +7179,11 @@ if not c then return nil end
 local kids = c:GetChildren()
 for i = 1, #kids do
 local d = kids[i]
+local isTool = false
+pcall(function() isTool = d:IsA("Tool") end)
+if isTool then
 local rr = F.RoleMatch(d.Name)
-if rr then
-if d:IsA("Tool") then return rr, "工具 " .. d.Name end
-return rr, "角色内 " .. d.Name
+if rr then return rr, "工具 " .. d.Name end
 end
 end
 return nil
@@ -7200,9 +7201,93 @@ if r == "killer" then return F.ROLE_NAME.killer, F.ROLE_COLOR.killer, r end
 if r == "sheriff" then return F.ROLE_NAME.sheriff, F.ROLE_COLOR.sheriff, r end
 return "平民", F.ROLE_COLOR.none, nil
 end
-F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","target","mob","bot","guard","soldier","boss","creature","animal","undead","skeleton","ghost","training" }
+F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin" }
 F.NPC_EXCLUDE = {}
-F.NPC_COLOR = Color3.fromRGB(0, 220, 255)
+F.NPC_COLOR = Color3.fromRGB(170, 110, 55)
+F.IA_COLOR = Color3.fromRGB(255, 190, 60)
+F._iaObjs, F._iaLoop, F._iaAdded = {}, nil, nil
+F.IsInteractable = function(o)
+if o == nil then return false end
+local ok, isP = pcall(function() return o:IsA("BasePart") or o:IsA("Model") end)
+if not ok or not isP then return false end
+local a, b = false, false
+pcall(function() a = o:FindFirstChildOfClass("ProximityPrompt") ~= nil end)
+pcall(function() b = o:FindFirstChildOfClass("ClickDetector") ~= nil end)
+return a or b
+end
+F.IAAdd = function(o)
+if F._iaObjs[o] then return end
+local h = Instance.new("Highlight")
+h.Name = "CMIaMark"
+h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+h.FillColor = F.IA_COLOR
+h.OutlineColor = F.IA_COLOR
+h.FillTransparency = 0.62
+h.OutlineTransparency = 0.15
+h.Parent = o
+pcall(function() h:SetAttribute("CMOwned", true) end)
+F._iaObjs[o] = h
+end
+F.IAScan = function()
+local n = 0
+local list = {}
+pcall(function() list = workspace:GetChildren() end)
+for i = 1, #list do
+local o = list[i]
+if F.IsInteractable(o) then F.IAAdd(o) n = n + 1 end
+end
+local kids = {}
+pcall(function()
+for i = 1, #list do
+local o = list[i]
+local okf = false
+pcall(function() okf = o:IsA("Folder") end)
+if okf then
+local c = o:GetChildren()
+for j = 1, #c do kids[#kids + 1] = c[j] end
+end
+end
+end)
+for i = 1, #kids do
+local o = kids[i]
+if F.IsInteractable(o) then F.IAAdd(o) n = n + 1 end
+end
+F._iaScanned = n
+return n
+end
+F.IAClear = function()
+for _, h in pairs(F._iaObjs) do pcall(function() h:Destroy() end) end
+F._iaObjs = {}
+end
+F.IASet = function(on)
+T.InteractHL = on and true or false
+if F._iaLoop then pcall(function() F._iaLoop:Disconnect() end) F._iaLoop = nil end
+if F._iaAdded then pcall(function() F._iaAdded:Disconnect() end) F._iaAdded = nil end
+if not T.InteractHL then
+F.IAClear()
+F.Out("[可交互高亮] 已关")
+return
+end
+local n = F.IAScan()
+F.Out("[可交互高亮] 已开(金色) · 扫到 " .. tostring(n) .. " 个")
+pcall(function()
+F._iaAdded = workspace.DescendantAdded:Connect(function(o)
+if not T.InteractHL then return end
+task.wait(0.3)
+if F.IsInteractable(o) then F.IAAdd(o) end
+end)
+end)
+F._iaLoop = RS.Heartbeat:Connect(function()
+if not T.InteractHL then F.IASet(false) return end
+local now = os.clock()
+if now - (F._iaAt or 0) < 3 then return end
+F._iaAt = now
+F.IAScan()
+for o, h in pairs(F._iaObjs) do
+if not o.Parent then pcall(function() h:Destroy() end) F._iaObjs[o] = nil end
+end
+end)
+end
 F._npcObjs = {}
 F._npcLoop, F._npcAdded, F._npcWallLoop = nil, nil, nil
 F.IsNPC = function(o)
@@ -7438,9 +7523,16 @@ end
 F.CMX_HLTeamColor = function(pl)
 local _, col, key = F.RolePretty(pl)
 if key then return col end
+if T.TeamColorHL == false then return F.ROLE_COLOR.none end
 local same = false
-pcall(function() same = (pl.Team ~= nil and pl.Team == LP.Team) end)
-if T.TeamColorHL == false then return Color3.fromRGB(0, 200, 255) end
+local hasTeam = false
+pcall(function()
+if pl.Team ~= nil then
+hasTeam = true
+same = (pl.Team == LP.Team)
+end
+end)
+if not hasTeam then return F.ROLE_COLOR.none end
 return same and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 60, 60)
 end
 F.CMX_HLWarnColor = function()
@@ -7549,6 +7641,7 @@ end
 end
 function F.BodyHLEnable()
 F.NpcHLSet(true)
+pcall(F.IASet, true)
 for _, pl in ipairs(Players:GetPlayers()) do F.BodyHLAdd(pl) end
 F.BodyHLRefresh()
 if not F._hlRConn then
@@ -7617,6 +7710,7 @@ end
 end
 F._hlObjs = {}
 F.NpcHLSet(false)
+pcall(F.IASet, false)
 if F._hlRConn then F._hlRConn:Disconnect() F._hlRConn = nil end
 end
 function F.SyncMoveUI()
@@ -7817,7 +7911,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
