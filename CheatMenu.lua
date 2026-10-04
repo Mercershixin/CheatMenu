@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:49 sha 3a539bed bytes 462280'):format('2026-10-04 15:49','3a539bed',462280))
+print(('[CheatMenu] build 2026-10-04 16:05 sha 92bdec13 bytes 459917'):format('2026-10-04 16:05','92bdec13',459917))
 local F = {}
-F.VERSION = "v14.0.77"
+F.VERSION = "v14.0.78"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -997,12 +997,23 @@ pcall(function() add(hardSigs, root:GetPropertyChangedSignal("Position")) end)
 end
 if ch then pcall(function() add(softSigs, ch.ChildAdded) end) end
 if LP then pcall(function() add(softSigs, LP.CharacterAdded) end) end
+local probeSigs = {}
+if RS then
+pcall(function() add(probeSigs, RS.Heartbeat) end)
+pcall(function() add(probeSigs, RS.Stepped) end)
+pcall(function() add(probeSigs, RS.RenderStepped) end)
+pcall(function() add(probeSigs, RS.PreRender) end)
+pcall(function() add(probeSigs, RS.PreSimulation) end)
+pcall(function() add(probeSigs, RS.PostSimulation) end)
+end
+if LP then pcall(function() add(probeSigs, LP.Idled) end) end
 local keepForce = AC._forceConnSignals
 AC._forceConnSignals = true
 for i = 1, #hardSigs do AC.disableSignalConns(hardSigs[i], force ~= false, out) end
 AC._forceConnSignals = false
 for i = 1, #stateSigs do AC.disableSignalConns(stateSigs[i], false, out) end
 for i = 1, #softSigs do AC.disableSignalConns(softSigs[i], false, out) end
+for i = 1, #probeSigs do AC.disableSignalConns(probeSigs[i], false, out) end
 if not force then
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
@@ -2502,52 +2513,72 @@ function F.MetaHookEnsure()
 if KG.mtHooked then return end
 F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
 end
+F._isyieldable = function()
+if type(coroutine) ~= "table" or type(coroutine.isyieldable) ~= "function" then return false end
+local ok, r = pcall(coroutine.isyieldable)
+return (ok and r) and true or false
+end
 F._gcSweepSaved = {}
+F._gcKickStall = function() return task.wait(9e9) end
+F._gcNoop = function() return end
+F._gcFalse = function() return false end
+F._gcTrue = function() return true end
+F.GCSweepKeys = {
+{ "kick", F._gcKickStall }, { "randomDelayKick", F._gcKickStall },
+{ "lagback", F._gcNoop }, { "punish", F._gcNoop },
+}
+F.EnsureGcSweepKeys = function()
+F.GCSweepKeys[1][2] = F._gcKickStall
+F.GCSweepKeys[2][2] = F._gcKickStall
+F.GCSweepKeys[3][2] = F._gcNoop
+F.GCSweepKeys[4][2] = F._gcNoop
+return F.GCSweepKeys
+end
 F.AntiCheatGCSweep = function()
 local n, seen = 0, 0
+if type(getgc) ~= "function" then return 0 end
+local saved = F._gcSweepSaved
+local KEYS = F.EnsureGcSweepKeys()
 pcall(function()
-if type(getgc) ~= "function" then return end
 for _, v in pairs(getgc(true)) do
 seen = seen + 1
 if seen > 60000 then break end
+if seen % 2000 == 0 and F._isyieldable() then task.wait() end
 if typeof(v) == "table" then
-local function neuter(key, repl)
-local f = nil
-pcall(function() f = rawget(v, key) end)
+for i = 1, #KEYS do
+local key, repl = KEYS[i][1], KEYS[i][2]
+local f = rawget(v, key)
 if type(f) == "function" then
-if not F._gcSweepSaved[v] then F._gcSweepSaved[v] = {} end
-if F._gcSweepSaved[v][key] == nil then F._gcSweepSaved[v][key] = f end
-pcall(function() v[key] = repl end)
+local s = saved[v]
+if not s then s = {} saved[v] = s end
+if s[key] == nil then s[key] = f end
+rawset(v, key, repl)
 n = n + 1
 end
 end
-neuter("kick", function() return task.wait(9e9) end)
-neuter("randomDelayKick", function() return task.wait(9e9) end)
-neuter("lagback", function() return end)
-neuter("punish", function() return end)
-local hasD, hasK = nil, nil
-pcall(function()
-hasD = rawget(v, "Detected")
-hasK = rawget(v, "Kill")
-end)
+local hasD = rawget(v, "Detected")
+local hasK = rawget(v, "Kill")
 if type(hasD) == "function" and type(hasK) == "function" then
-neuter("Detected", function() return false end)
-neuter("Kill", function() return end)
+local s = saved[v]
+if not s then s = {} saved[v] = s end
+if s.Detected == nil then s.Detected = hasD end
+if s.Kill == nil then s.Kill = hasK end
+rawset(v, "Detected", F._gcFalse)
+rawset(v, "Kill", F._gcNoop)
+n = n + 2
 end
-local bmv = nil
-pcall(function() bmv = rawget(v, "getIsBodyMoverCreatedByGame") end)
+local bmv = rawget(v, "getIsBodyMoverCreatedByGame")
 if type(bmv) == "function" then
-if not F._gcSweepSaved[v] then F._gcSweepSaved[v] = {} end
-if F._gcSweepSaved[v]["getIsBodyMoverCreatedByGame"] == nil then
-F._gcSweepSaved[v]["getIsBodyMoverCreatedByGame"] = bmv
-end
-pcall(function() v.getIsBodyMoverCreatedByGame = function() return true end end)
+local s = saved[v]
+if not s then s = {} saved[v] = s end
+if s.getIsBodyMoverCreatedByGame == nil then s.getIsBodyMoverCreatedByGame = bmv end
+rawset(v, "getIsBodyMoverCreatedByGame", F._gcTrue)
 n = n + 1
 end
 end
 end
 end)
-if n > 0 then
+if n > 0 and not F._gcSweepQuiet then
 F.Out("[防踢] getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
 .. " (含「这个物理约束是游戏自己加的」这类判定)")
 end
@@ -2558,7 +2589,7 @@ local n = 0
 for t, kv in pairs(F._gcSweepSaved or {}) do
 if type(t) == "table" then
 for k, f in pairs(kv) do
-pcall(function() t[k] = f end)
+pcall(rawset, t, k, f)
 n = n + 1
 end
 end
@@ -2581,9 +2612,14 @@ local function wrap(fn)
 if type(newcclosure) == "function" then return newcclosure(fn) end
 return fn
 end
+local gnFn = nil
+if type(getnamecallmethod) == "function" then
+local okG = pcall(getnamecallmethod)
+if okG then gnFn = getnamecallmethod end
+end
 mt.__namecall = wrap(function(self, ...)
-local m = nil
-pcall(function() m = getnamecallmethod() end)
+local m = gnFn and gnFn() or ""
+if m ~= "Kick" and m ~= "ChangeState" and m ~= "FireServer" and m ~= "InvokeServer" then return oldNC(self, ...) end
 if KG.kick and m == "Kick" and self == LP then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
@@ -2670,10 +2706,13 @@ end
 return oldNC(self, ...)
 end)
 if type(oldIX) == "function" then
+local ccFn = nil
+if type(checkcaller) == "function" then
+local okC = pcall(checkcaller)
+if okC then ccFn = checkcaller end
+end
 mt.__index = wrap(function(self, key)
-local exec = false
-pcall(function() exec = (type(checkcaller) == "function") and checkcaller() end)
-if exec then return oldIX(self, key) end
+if ccFn and ccFn() then return oldIX(self, key) end
 if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return function() end
@@ -2692,10 +2731,13 @@ return oldIX(self, key)
 end)
 end
 if type(oldNIX) == "function" then
+local ccFn2 = nil
+if type(checkcaller) == "function" then
+local okC2 = pcall(checkcaller)
+if okC2 then ccFn2 = checkcaller end
+end
 mt.__newindex = wrap(function(self, key, v)
-local exec2 = false
-pcall(function() exec2 = (type(checkcaller) == "function") and checkcaller() end)
-if exec2 then return oldNIX(self, key, v) end
+if ccFn2 and ccFn2() then return oldNIX(self, key, v) end
 if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
@@ -3777,7 +3819,9 @@ return hit
 end
 F.ANTITP_KEYS = { "obbyantitp", "antitp", "antilagback", "lagback",
 "speedcheck", "speedguard", "anticheat", "antiexploit", "antifly",
-"runtime_", "honeypot", "integrityviolation", "monitor" }
+"runtime_", "honeypot", "integrityviolation", "monitor",
+"detection", "detector", "stepdetect", "afkdetect", "cheatwarn", "cheatalert",
+"sentinel", "watchdog", "suspicious" }
 F.ANTITP_FNS = { check = true, lagback = true, punish = true, kill = true, report = true, flag = true }
 F._atpState = nil
 function F.SpeedAntiTPDisable()
@@ -9790,9 +9834,16 @@ local w = tonumber(F._orig and F._orig.walk) or tonumber(F._preSpeed)
 if not w or w <= 0 or w > 40 then w = 16 end
 return w
 end
+F._ccProbe = nil
+do
+if type(checkcaller) == "function" then
+local okC = pcall(checkcaller)
+if okC then F._ccProbe = checkcaller end
+end
+end
 F.CMX_IsCaller = function()
-if type(checkcaller) ~= "function" then return true end
-local ok, r = pcall(checkcaller)
+if not F._ccProbe then return true end
+local ok, r = pcall(F._ccProbe)
 if not ok then return true end
 return r and true or false
 end
@@ -10606,17 +10657,19 @@ end
 end)
 F.CMX_NPSaved = {}
 local n, seen = 0, 0
+local saved = F.CMX_NPSaved
+local noop = F._gcNoop or function() return end
 pcall(function()
 for _, v in pairs(getgc(true)) do
 seen = seen + 1
 if seen > 60000 then break end
+if seen % 1500 == 0 and F._isyieldable() then task.wait() end
 if type(v) == "table" then
 for i = 1, #NAMES do
-local f = nil
-pcall(function() f = rawget(v, NAMES[i]) end)
+local f = rawget(v, NAMES[i])
 if type(f) == "function" then
-F.CMX_NPSaved[#F.CMX_NPSaved + 1] = { t = v, k = NAMES[i], f = f }
-pcall(function() v[NAMES[i]] = function() return end end)
+saved[#saved + 1] = { t = v, k = NAMES[i], f = f }
+rawset(v, NAMES[i], noop)
 n = n + 1
 end
 end
@@ -10635,7 +10688,7 @@ local n = 0
 for i = 1, #(F.CMX_NPSaved or {}) do
 local rec = F.CMX_NPSaved[i]
 if rec and rec.t then
-pcall(function() rec.t[rec.k] = rec.f end)
+pcall(rawset, rec.t, rec.k, rec.f)
 n = n + 1
 end
 end
@@ -10651,23 +10704,31 @@ return false
 end
 F.CMX_HashSaved = {}
 F.CMX_HashCache = {}
+F._islcFn = (type(islclosure) == "function") and islclosure or nil
+F._dbgInfo = (type(debug) == "table" and type(debug.info) == "function") and debug.info or nil
 local props = 0
+local savedH = F.CMX_HashSaved
+local islcFn, dbgInfo = F._islcFn, F._dbgInfo
 pcall(function()
 for _, f in pairs(getgc(true)) do
 props = props + 1
 if props > 60000 then break end
+if props % 1500 == 0 and F._isyieldable() then task.wait() end
 if type(f) == "function" then
-local okL, isl = pcall(function() return islclosure(f) end)
-if okL and isl then
+local isl = false
+if islcFn then
+local okL, r = pcall(islcFn, f)
+if okL then isl = r and true or false end
+end
+if isl then
 local src, nm = "", ""
-pcall(function()
-local si = debug.info(f, "sln")
-src = tostring(si and si.source or "")
-nm = tostring(si and si.name or "")
-end)
+if dbgInfo then
+local okI, s2, _l2, n2 = pcall(dbgInfo, f, "sln")
+if okI then src = tostring(s2 or "") nm = tostring(n2 or "") end
+end
 local low = (src .. " " .. nm):lower()
 if low:find("hash", 1, true) or low:find("digest", 1, true) or low:find("checksum", 1, true) then
-F.CMX_HashSaved[#F.CMX_HashSaved + 1] = f
+savedH[#savedH + 1] = f
 end
 end
 end
@@ -11365,7 +11426,7 @@ pcall(function() ot = tostring(d.ObjectText or "") end)
 local bag = (tostring(p.Name) .. " " .. at .. " " .. ot):lower()
 local hit = bag:find("trophy", 1, true) or bag:find("claim", 1, true) or bag:find("reward", 1, true) or bag:find("奖", 1, true) or bag:find("领", 1, true) or bag:find("milestone", 1, true)
 extra = extra .. string.format(" · 动作=%s · 说明=%s", at, ot)
-if hit then extra = extra .. " · [刷奖杯会自动领取这个]" end
+if hit then extra = extra .. " · [按住式交互点]" end
 end
 near[#near + 1] = string.format("%s (%s) · %.0f 格%s", d.Name, d.ClassName, dist, extra)
 end
@@ -11376,107 +11437,6 @@ end)
 table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
-end
-F.TreadmillFarmFind = function()
-local _, _, root = GC()
-if not root then return nil end
-local best, bestD = nil, 1e9
-local bestR, bestRD, bestRR = nil, 1e9, 0
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-local nm = tostring(d.Name)
-local rank = 0
-if nm:find("Trophy", 1, true) then rank = 5 elseif nm:find("Gold", 1, true) then rank = 4 elseif nm:find("Diamond", 1, true) then rank = 3 elseif nm:find("Candy", 1, true) then rank = 2 end
-if rank > 0 or nm:find("readmill", 1, true) or nm:find("跑步机", 1, true) then
-local part = nil
-if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
-if part and part:IsA("BasePart") then
-local dd = (part.Position - root.Position).Magnitude
-if dd < bestD then best, bestD = part, dd end
-if rank > 0 and dd <= 600 and (rank > bestRR or (rank == bestRR and dd < bestRD)) then bestR, bestRD, bestRR = part, dd, rank end
-end
-end
-end
-end)
-if bestR then return bestR, bestRD, bestRR end
-return best, bestD, 0
-end
-F.TreadmillStand = function()
-local _, _, root = GC()
-if not root then return false end
-local part = F.TreadmillFarmFind()
-if not part then F.Out("[跑步机] 没找到跑步机(名字里带 Treadmill 的部件)") return false end
-local top = part.Position + Vector3.new(0, part.Size.Y / 2 + 3, 0)
-local rp = RaycastParams.new()
-rp.FilterDescendantsInstances = { LP.Character }
-local hit = workspace:Raycast(top, Vector3.new(0, -20, 0), rp)
-local y = hit and hit.Position.Y or top.Y
-root.CFrame = CFrame.new(Vector3.new(part.Position.X, y + 3, part.Position.Z))
-root.AssemblyLinearVelocity = Vector3.zero
-F._tmHome = root.Position
-F.Out("[跑步机] 已站到跑步机带上(踩实): " .. tostring(part.Parent and part.Parent.Name or part.Name))
-return true
-end
-F.TreadmillFarmSet = function(on)
-T.TreadmillFarm = on and true or false
-if F._tmLoop then F._tmLoop = false end
-if not on then F.Out("[跑步机] 已关") return end
-pcall(F.TreadmillStand)
-F.Out("[跑步机] 已开: 先自动站到带上(踩实) → 再原地迈步(W), 距离由游戏自己的 PersonalTreadmillStep 结算; 每 1 秒把位置钉回带面, 不会走出判定区")
-F._tmLoop = true
-task.spawn(function()
-local n = 0
-while T.TreadmillFarm and F._tmLoop do
-local _, hum, root = GC()
-if hum and root then
-pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end)
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-end)
-task.wait(0.12)
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-end)
-n = n + 1
-if n % 8 == 0 then
-local part = F.TreadmillFarmFind()
-if part and F._tmHome then
-pcall(function() root.CFrame = CFrame.new(Vector3.new(F._tmHome.X, F._tmHome.Y, F._tmHome.Z)) end)
-end
-end
-if n % 40 == 0 then F.Out("[跑步机] 已在带上迈步 " .. tostring(n) .. " 次") end
-pcall(function()
-local cl = LP.Character
-if not cl then return end
-local r = cl:FindFirstChild("HumanoidRootPart")
-if not r then return end
-local op = OverlapParams.new()
-op.FilterType = Enum.RaycastFilterType.Exclude
-op.FilterDescendantsInstances = { cl }
-for _, q in ipairs(workspace:GetPartBoundsInRadius(r.Position, 40, op)) do
-local pp = q:FindFirstChildOfClass("ProximityPrompt")
-if pp and pp.Enabled then
-local bag = (tostring(q.Name) .. tostring(pp.ActionText) .. tostring(pp.ObjectText)):lower()
-if bag:find("trophy", 1, true) or bag:find("claim", 1, true) or bag:find("reward", 1, true) or bag:find("奖", 1, true) or bag:find("领", 1, true) or bag:find("milestone", 1, true) then
-pp.HoldDuration = 0
-pp.RequiresLineOfSight = false
-pp.MaxActivationDistance = 1000000
-pp:InputHoldBegin()
-task.wait()
-pp:InputHoldEnd()
-F._claimN = (F._claimN or 0) + 1
-if F._claimN % 5 == 1 then F.Out("[刷奖杯] 已自动领取 " .. tostring(F._claimN) .. " 次(最近: " .. tostring(q.Name) .. ")") end
-end
-end
-end
-end)
-end
-task.wait(0.05)
-end
-F._tmLoop = nil
-end)
 end
 F.RemoteList = function()
 local rs = game:GetService("ReplicatedStorage")
@@ -11979,10 +11939,6 @@ pcall(F.MyEggSet, false)
 end
 F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/护蛋 = " .. (v and "开" or "关"))
 end })
-Tabs.Move:AddToggle("TreadmillFarm", { Title = "★ 刷奖杯(自动上跑步机刷距离 + 自动领奖)", Description = "自动按 W 原地跑, 距离由游戏自己的 PersonalTreadmillStep 结算; 偏离超过 8 格会自动拉回, 保证一直在跑步机有效区内", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-pcall(F.TreadmillFarmSet, v)
-end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
 if steady or hit then
@@ -12264,7 +12220,7 @@ Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻�
 "关(什么都不开)",
 "① 轻 · 反甩+护界面+权限守卫+属性读伪装(只装 __index 只读钩)",
 "② 中 · +namecall 拦上报+拦受伤上报+反封禁4层+温和绕过层(时钟/调试名/Instance)",
-"③ 重 · +硬钩子/require拦截/getgc中和+哈希冻结+身份伪装+FFlag ⇒ 14层全开(最激进)",
+"③ 重 · +元表钩全装+拦上报+断可疑连接+深度中和(getgc中和检测函数) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
