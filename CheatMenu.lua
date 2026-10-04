@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:22 sha ca081a95 bytes 475093'):format('2026-10-04 18:22','ca081a95',475093))
+print(('[CheatMenu] build 2026-10-04 18:27 sha c943ef34 bytes 475003'):format('2026-10-04 18:27','c943ef34',475003))
 local F = {}
-F.VERSION = "v14.0.100"
+F.VERSION = "v14.0.101"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12009,7 +12009,12 @@ local nm = tostring(d.Name)
 local low = nm:lower()
 local hit = false
 for i = 1, #F.QUEST_API_SCRIPTS do if nm == F.QUEST_API_SCRIPTS[i] then hit = true break end end
-if not hit then hit = (low:find("task", 1, true) ~= nil) or (low:find("mission", 1, true) ~= nil) or (low:find("rebirth", 1, true) ~= nil) end
+if not hit then
+local full = ""
+pcall(function() full = tostring(d:GetFullName()) end)
+local inGame = (full:find("PlayerGui", 1, true) ~= nil) or (full:find("PlayerScripts", 1, true) ~= nil)
+hit = inGame and ((low:find("task", 1, true) ~= nil) or (low:find("mission", 1, true) ~= nil) or (low:find("rebirth", 1, true) ~= nil))
+end
 if hit then
 local code = nil
 pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
@@ -12032,26 +12037,7 @@ end
 end)
 F.Out("[接口探测·只读] 共 " .. tostring(n) .. " 个脚本 —— 把上面这些发我, 我按真实参数把「自动任务」接对")
 end
-F.CLAIM_REMOTES = { "RequestClaimTask", "RequestClaimReward", "DailyLoginRewards_Claim", "VIPReward_Claim", "GroupReward_Claim", "Codes_Claim" }
-F.ClaimAll = function()
-local okc, skip, hit = 0, 0, 0
-local detail = {}
-for i = 1, #F.CLAIM_REMOTES do
-local nm = F.CLAIM_REMOTES[i]
-local r = nil
-pcall(function() r = RFunction(nm) end)
-if not r then
-skip = skip + 1
-else
-hit = hit + 1
-local good = false
-pcall(function() r:InvokeServer() good = true end)
-if good then okc = okc + 1 detail[#detail + 1] = nm .. "=OK" else detail[#detail + 1] = nm .. "=失败" end
-end
-end
-F.Out("[一键领奖] 找到 " .. tostring(hit) .. " 个领取接口 · 调用成功 " .. tostring(okc)
-.. " · 本游戏没有的 " .. tostring(skip) .. (#detail > 0 and (" [" .. table.concat(detail, ", ") .. "]") or ""))
-end
+F.MISSION_ARG_CANDIDATES = { "Easy", "Normal", "Hard", "easy", "normal", "hard", "EASY", "NORMAL", "HARD", 1, 2, 3, "1", "2", "3" }
 F.AutoRebirthSet = function(on)
 T.AutoRebirth = on and true or false
 if not on then
@@ -12168,12 +12154,18 @@ end
 F.AutoTaskSet = function(on)
 T.AutoTask = on and true or false
 if not on then F.Out("[自动任务] 已关") return end
-F.Out("[自动任务] 已开: 自动点「开始」→ 依次传送到任务点位 → 完成后自动领奖。第一次运行会把任务状态写进日志, 有问题把它发我")
-local dumped = false
-local lastClaim = 0
+F.Out("[自动任务] 已开: ① 自动试出 Mission_Start 的难度参数 ② 自动找任务点位并逐个传送 ③ 完成后调 Mission_Claim() 领奖")
+local dumped, argIdx, lastClaim, lastHint = false, nil, 0, 0
 task.spawn(function()
 while T.AutoTask do
-if not F.MissionActive() then pcall(F.MissionClickStart, tonumber(C.MissionPick) or 1) end
+local mg = F.MissionPanel()
+if (not mg) or (not mg.Enabled) then
+local n0 = os.clock()
+if n0 - lastHint > 20 then
+lastHint = n0
+F.Out("[自动任务] 请先打开游戏的任务面板(那个「任务」界面) —— 面板没开它不会动")
+end
+else
 if not dumped then
 dumped = true
 pcall(function()
@@ -12185,16 +12177,35 @@ local s = "?"
 pcall(function() s = tostring(res) end)
 F.Out("[自动任务·探测] Mission_GetState() ⇒ " .. tostring(s):sub(1, 300))
 end
-F.Out("[自动任务·探测] 任务面板文字 ⇒ " .. tostring(F.MissionState()):sub(1, 300))
+F.Out("[自动任务·探测] 面板文字 ⇒ " .. tostring(F.MissionState()):sub(1, 300))
 end)
+end
+if not F.MissionActive() then
+if argIdx == nil then
+local r = RFunction("Mission_Start")
+if r then
+for i = 1, #F.MISSION_ARG_CANDIDATES do
+if not T.AutoTask then break end
+pcall(function() r:InvokeServer(F.MISSION_ARG_CANDIDATES[i]) end)
+task.wait(0.35)
+if F.MissionActive() then
+argIdx = i
+F.Out("[自动任务] 难度参数试出来了 ⇒ Mission_Start(" .. tostring(F.MISSION_ARG_CANDIDATES[i]) .. ") 有效")
+break
+end
+end
+if argIdx == nil then F.Out("[自动任务] ⚠ 候选参数全试完都没启动任务 —— 把日志发我, 我按真实参数接") end
+end
+else
+pcall(F.MissionClickStart, tonumber(C.MissionPick) or 1)
+end
 end
 local pts = F.MissionPoints()
 if #pts > 0 then
 F.Out("[自动任务] 发现 " .. tostring(#pts) .. " 个候选点位, 开始逐个传送")
 for i = 1, #pts do
 if not T.AutoTask then break end
-local p = pts[i]
-pcall(function() F.HardTP(p.CFrame + Vector3.new(0, 3, 0)) end)
+pcall(function() F.HardTP(pts[i].CFrame + Vector3.new(0, 3, 0)) end)
 task.wait(0.4)
 end
 end
@@ -12202,7 +12213,7 @@ local now = os.clock()
 if now - lastClaim > 5 then
 lastClaim = now
 pcall(function() local r = RFunction("Mission_Claim") if r then r:InvokeServer() end end)
-pcall(function() local r = RFunction("RequestClaimTask") if r then r:InvokeServer() end end)
+end
 end
 task.wait(0.6)
 end
@@ -12500,10 +12511,7 @@ Tabs.Test:AddToggle("AutoTask", { Title = "★ 自动任务(自动点开始 → 
 if F._cfgSyncing then return end
 pcall(F.AutoTaskSet, v)
 end })
-Tabs.Test:AddButton({ Title = "★ 一键领奖(任务/奖励/每日/VIP/群组/兑换码 · 全试一遍)", Description = "把本游戏存在的领取接口逐个调用; 每个都单独保护, 缺哪个会自动跳过并在日志写明", Callback = function()
-task.spawn(function() pcall(F.ClaimAll) end)
-end })
-Tabs.Test:AddButton({ Title = "★ 导出「任务/重生」接口调用方式(只读)", Description = "只读反编译游戏的任务/重生客户端脚本, 摘出它自己是怎么调这些远程的(含参数)", Callback = function()
+Tabs.Test:AddButton({ Title = "★ 导出「任务/重生」接口调用方式(只读)", Description = "只读反编译本游戏的任务/重生客户端脚本, 摘出它自己是怎么调这些远程的(含参数)", Callback = function()
 task.spawn(function() pcall(F.APIProbe) end)
 end })
 Tabs.AFK:AddSection("自动化")
