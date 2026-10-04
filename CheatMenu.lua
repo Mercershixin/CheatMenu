@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:57 sha 4feecf91 bytes 523410'):format('2026-10-05 01:57','4feecf91',523410))
+print(('[CheatMenu] build 2026-10-05 02:02 sha 9ce31f53 bytes 531727'):format('2026-10-05 02:02','9ce31f53',531727))
 local F = {}
-F.VERSION = "v16.3.0"
+F.VERSION = "v16.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3437,7 +3437,18 @@ end
 end
 if T.AimTurnCamera ~= false then
 local cam = workspace.CurrentCamera
-if cam then pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, part.Position) end) end
+if cam then
+local sm = tonumber(C.AimSmooth) or 0
+if sm > 0 then
+local goal = CFrame.lookAt(cam.CFrame.Position, part.Position)
+pcall(function()
+local a = math.clamp(1 / math.max(sm, 1), 0.05, 1)
+cam.CFrame = cam.CFrame:Lerp(goal, a)
+end)
+else
+pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, part.Position) end)
+end
+end
 end
 if T.AutoFire then
 local now = os.clock()
@@ -7222,15 +7233,39 @@ pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
 sg.Parent = host
-local function bar(w, h)
+local col = Color3.fromRGB(0, 255, 120)
+pcall(function()
+local cc = C.CrosshairColor
+if typeof(cc) == "Color3" then col = cc end
+end)
+local scale = tonumber(C.CrosshairSize) or 14
+local style = tostring(C.CrosshairStyle or "十字(默认)")
+local function bar(w, h, ox, oy)
 local f = Instance.new("Frame")
 f.Size = UDim2.fromOffset(w, h)
-f.Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2)
-f.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+f.Position = UDim2.new(0.5, -w / 2 + (ox or 0), 0.5, -h / 2 + (oy or 0))
+f.BackgroundColor3 = col
 f.BorderSizePixel = 0
 f.Parent = sg
 end
-bar(2, 14) bar(14, 2)
+if style == "点(小圆点)" then
+bar(4, 4)
+elseif style == "圆(空心圈)" then
+local ring = Instance.new("Frame")
+ring.Size = UDim2.fromOffset(scale, scale)
+ring.Position = UDim2.new(0.5, -scale / 2, 0.5, -scale / 2)
+ring.BackgroundTransparency = 1
+ring.BorderSizePixel = 1
+ring.BorderColor3 = col
+pcall(function()
+local ui = Instance.new("UICorner")
+ui.CornerRadius = UDim.new(1, 0)
+ui.Parent = ring
+end)
+ring.Parent = sg
+else
+bar(2, scale, 0, 0) bar(scale, 2, 0, 0)
+end
 F._crossGui = sg
 end
 function F.CrosshairDisable()
@@ -8021,6 +8056,131 @@ end
 end
 end
 end
+F._chams = {}
+F.ChamsAdd = function(pl)
+if not T.Chams then return end
+if F._chams[pl] then return end
+local ch = pl.Character
+if not ch then return end
+local h = Instance.new("Highlight")
+h.Name = "CMChams"
+h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+h.FillTransparency = 0
+h.OutlineTransparency = 0
+pcall(function() h:SetAttribute("CMOwned", true) end)
+h.Parent = ch
+F._chams[pl] = { h = h, ch = ch }
+end
+F.ChamsClear = function()
+for _, rec in pairs(F._chams) do
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+end
+F._chams = {}
+end
+F.ChamsTick = function()
+if not T.Chams then return end
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local rec = F._chams[pl]
+local ch = pl.Character
+if ch then
+if rec == nil or rec.ch ~= ch then
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+F._chams[pl] = nil
+F.ChamsAdd(pl)
+end
+local r2 = F._chams[pl]
+if r2 and r2.h then
+local col = Color3.fromRGB(255, 255, 255)
+pcall(function() col = F.CMX_HLTeamColor(pl) end)
+pcall(function()
+r2.h.FillColor = col
+r2.h.OutlineColor = col
+r2.h.FillTransparency = 0
+end)
+end
+else
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+F._chams[pl] = nil
+end
+end
+end
+end
+F.ChamsSet = function(on)
+T.Chams = on and true or false
+if not T.Chams then
+F.ChamsClear()
+F.Out("[Chams] 已关")
+return
+end
+F.ChamsTick()
+F.Out("[Chams] 已开(纯色覆盖 · 隔墙可见)")
+end
+F._hitMarkGui, F._hitMarkConn = nil, nil
+F.HitMarkFlash = function(ok)
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then return end
+if not F._hitMarkGui or not F._hitMarkGui.Parent then
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMHitMark"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 1000
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.Parent = host
+F._hitMarkGui = sg
+end
+local lbl = Instance.new("TextLabel")
+lbl.Size = UDim2.fromOffset(44, 44)
+lbl.Position = UDim2.new(0.5, -22, 0.5, -22)
+lbl.BackgroundTransparency = 1
+lbl.Text = ok and "X" or "·"
+lbl.TextScaled = true
+lbl.Font = Enum.Font.GothamBold
+lbl.TextColor3 = ok and Color3.fromRGB(255, 70, 70) or Color3.fromRGB(230, 230, 230)
+lbl.TextStrokeTransparency = 0.4
+lbl.Parent = F._hitMarkGui
+task.spawn(function()
+task.wait(0.22)
+pcall(function() lbl:Destroy() end)
+end)
+end
+F.HitMarkEnable = function()
+if F._hitMarkConn then return end
+F._hitMarkHp = {}
+F._hitMarkConn = RS.Heartbeat:Connect(function()
+if not T.HitMark then F.HitMarkDisable() return end
+local now = os.clock()
+if now - (F._hitMarkAt or 0) < 0.05 then return end
+F._hitMarkAt = now
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+if hum then
+local last = F._hitMarkHp[pl]
+local cur = hum.Health
+if last ~= nil and cur < last and cur >= 0 and (last - cur) > 0.01 then
+local isKill = (cur <= 0)
+pcall(F.HitMarkFlash, isKill)
+end
+F._hitMarkHp[pl] = cur
+else
+F._hitMarkHp[pl] = nil
+end
+end
+end
+end)
+F.Out("[命中标记] 已开(打到人时屏幕中心闪 X · 击杀闪红)")
+end
+F.HitMarkDisable = function()
+if F._hitMarkConn then pcall(function() F._hitMarkConn:Disconnect() end) F._hitMarkConn = nil end
+F._hitMarkHp = {}
+if F._hitMarkGui then pcall(function() F._hitMarkGui:Destroy() end) F._hitMarkGui = nil end
+F.Out("[命中标记] 已关")
+end
 F.ESP_BONES = {
 { "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
 { "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
@@ -8053,6 +8213,52 @@ rec.lines[i] = f
 end
 F._espBones[pl] = rec
 return rec
+end
+F.KEY_ACTIONS = {
+{ key = Enum.KeyCode.X, label = "自瞄", get = function() return T.AimOn end,
+set = function(on) pcall(F.AimSet, on, "快捷键") end },
+{ key = Enum.KeyCode.V, label = "飞行", get = function() return T.Fly end,
+set = function(on) pcall(F.FlySet, on) end },
+{ key = Enum.KeyCode.B, label = "加速", get = function() return T.Speed end,
+set = function(on) pcall(F.SpeedSet, on) end },
+{ key = Enum.KeyCode.C, label = "穿墙", get = function() return T.NoClip end,
+set = function(on) end },
+{ key = Enum.KeyCode.N, label = "上帝模式", get = function() return T.GodMode end,
+set = function(on) pcall(F.GodModeSet, on) end },
+{ key = Enum.KeyCode.H, label = "身体高亮", get = function() return T.BodyHL end,
+set = function(on) pcall(F.BodyHLEnable) if not on then pcall(F.BodyHLDisable) end end },
+{ key = Enum.KeyCode.J, label = "ESP", get = function() return T.EspOn end,
+set = function(on) pcall(F.EspSet, on) end },
+}
+F._keyBindConn = nil
+F.KeyBindEnable = function()
+if F._keyBindConn then return end
+F._keyBindConn = UIS.InputBegan:Connect(function(input, processed)
+if processed then return end
+if not T.KeyBind then return end
+local code = input.KeyCode
+for i = 1, #F.KEY_ACTIONS do
+local a = F.KEY_ACTIONS[i]
+if a.key == code then
+local cur = false
+pcall(function() cur = a.get() end)
+local want = (not cur) and true or false
+pcall(a.set, want)
+pcall(function() F.Out("[快捷键] " .. a.label .. " = " .. (want and "开" or "关")) end)
+if Fluent and Fluent.Notify then
+pcall(function()
+Fluent:Notify({ Title = "快捷键", Content = a.label .. " → " .. (want and "开" or "关"), Duration = 2 })
+end)
+end
+break
+end
+end
+end)
+F.Out("[快捷键] 已开 · X=自瞄 V=飞行 B=加速 C=穿墙 N=上帝模式 H=高亮 J=ESP (按一下切换)")
+end
+F.KeyBindDisable = function()
+if F._keyBindConn then pcall(function() F._keyBindConn:Disconnect() end) F._keyBindConn = nil end
+F.Out("[快捷键] 已关")
 end
 F.EspBoneClear = function()
 for pl, rec in pairs(F._espBones) do
@@ -8244,6 +8450,7 @@ if T.EspBone then
 local cam2 = workspace.CurrentCamera
 if cam2 then pcall(F.EspBoneDraw, cam2) end
 end
+if T.Chams then pcall(F.ChamsTick) end
 if now - (F._espObjAt or 0) > 1.5 then
 F._espObjAt = now
 pcall(F.EspObjScan)
@@ -8729,7 +8936,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -13648,6 +13855,14 @@ Tabs.Combat:AddToggle("SilentAim", { Title = "静默瞄准(不动你视角也能
 if F._cfgSyncing then return end
 F.SilentAimSet(v)
 end })
+Tabs.Combat:AddToggle("HitMark", { Title = "命中标记(打到人时屏幕中心闪 X · 击杀闪红)", Default = false, Callback = function(v)
+T.HitMark = v
+if F._cfgSyncing then return end
+if v then pcall(F.HitMarkEnable) else pcall(F.HitMarkDisable) end
+end })
+Tabs.Combat:AddSlider("AimSmooth", { Title = "自瞄平滑(0=瞬转 · 越大越像人手动)", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v)
+C.AimSmooth = v
+end })
 Tabs.Combat:AddDropdown("AimPart", { Title = "瞄准点(锁定的部位)", Values = {
 "最近部位(推荐 · 打得到哪就打哪)",
 "头(爆头用 · 可能被墙挡住)",
@@ -13865,6 +14080,10 @@ Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = 
 Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
 Tabs.Visual:AddToggle("EspTracer", { Title = "追踪线(屏幕底到目标)", Default = false, Callback = function(v) T.EspTracer = v end })
 Tabs.Visual:AddToggle("EspBone", { Title = "骨骼描线(头-躯干-四肢连线)", Default = false, Callback = function(v) T.EspBone = v end })
+Tabs.Visual:AddToggle("Chams", { Title = "Chams 纯色覆盖(整个人填满单色 · 隔墙可见)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.ChamsSet(v)
+end })
 Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = false, Callback = function(v) T.EspNpc = v end })
 Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
 Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
@@ -13928,6 +14147,21 @@ Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback 
 T.Crosshair = v
 if F._cfgSyncing then return end
 if v then F.CrosshairEnable() else F.CrosshairDisable() end
+end })
+Tabs.World:AddDropdown("CrosshairStyle", { Title = "准星样式", Values = { "十字(默认)", "点(小圆点)", "圆(空心圈)" }, Default = "十字(默认)", Callback = function(v)
+C.CrosshairStyle = tostring(v)
+if F._cfgSyncing then return end
+if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
+end })
+Tabs.World:AddSlider("CrosshairSize", { Title = "准星大小(像素)", Min = 6, Max = 40, Default = 14, Rounding = 0, Callback = function(v)
+C.CrosshairSize = v
+if F._cfgSyncing then return end
+if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
+end })
+Tabs.World:AddColorPicker("CrosshairColor", { Title = "准星颜色", Default = Color3.fromRGB(0, 255, 120), Callback = function(v)
+C.CrosshairColor = v
+if F._cfgSyncing then return end
+if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
 end })
 end
 do
@@ -14199,6 +14433,12 @@ Tabs.Setting:AddToggle("LockLog", { Title = "护日志(拦 LogService:ClearOutpu
 T.LockLog = v
 if F._cfgSyncing then return end
 pcall(F.LockLogClear, v)
+end })
+Tabs.Setting:AddSection("快捷键")
+Tabs.Setting:AddToggle("KeyBind", { Title = "★ 快捷键(不开菜单直接按键切功能)", Description = "X=自瞄 · V=飞行 · B=加速 · C=穿墙 · N=上帝模式 · H=高亮 · J=ESP(按一下切换)", Default = false, Callback = function(v)
+T.KeyBind = v
+if F._cfgSyncing then return end
+if v then pcall(F.KeyBindEnable) else pcall(F.KeyBindDisable) end
 end })
 Tabs.Setting:AddSection("配置存档")
 Tabs.Setting:AddButton({ Title = "保存当前设置到本地", Callback = function()
