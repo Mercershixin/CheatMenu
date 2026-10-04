@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:25 sha ea4a4947 bytes 462307'):format('2026-10-04 17:25','ea4a4947',462307))
+print(('[CheatMenu] build 2026-10-04 17:30 sha de59eafb bytes 464753'):format('2026-10-04 17:30','de59eafb',464753))
 local F = {}
-F.VERSION = "v14.0.90"
+F.VERSION = "v14.0.91"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4124,6 +4124,34 @@ depth = depth + 1
 end
 return false
 end
+F.TRAP_ALLOW_KEYS = { "safe", "coin", "cash", "money", "collect", "pickup", "loot", "item", "egg",
+"drop", "reward", "gift", "checkpoint", "checkp", "portal", "teleport", "button", "door", "shop",
+"chest", "hatch", "spawn", "buff", "boost", "star", "gem", "token", "badge", "quest", "npc", "sign",
+"prompt", "base", "plot", "sell", "treadmill", "seat", "vehicle", "car", "boat", "flag" }
+F.TrapAllowed = function(part)
+local node, depth = part, 0
+while node and depth < 4 do
+local nm = tostring(node.Name):lower()
+for _, k in ipairs(F.TRAP_ALLOW_KEYS) do
+if nm:find(k, 1, true) then return true end
+end
+node = node.Parent
+depth = depth + 1
+end
+return false
+end
+F.TrapUniversal = function()
+local v = tostring(C.TrapScope or "")
+if v == "" then return true end
+return v:find("通用", 1, true) ~= nil
+end
+F.TrapIsMine = function(part)
+local ok, r = pcall(function()
+local ch = LP.Character
+return ch ~= nil and (part == ch or part:IsDescendantOf(ch))
+end)
+return (ok and r) and true or false
+end
 F.TrapKillTouch = function(part)
 if not part or typeof(part) ~= "Instance" then return false end
 F._trapTouchKilled = F._trapTouchKilled or {}
@@ -4230,14 +4258,32 @@ if not F._trapAddConn then
 pcall(function()
 F._trapAddConn = workspace.DescendantAdded:Connect(function(d)
 if not T.TrapWarn then return end
-if not d:IsA("BasePart") then return end
-if not (F.TrapNameHit(d) or F.TrapTagged(d)) then return end
+local part = nil
+if d:IsA("TouchTransmitter") then
+part = d.Parent
+if not part or not part:IsA("BasePart") then return end
+elseif d:IsA("BasePart") then
+part = d
+else
+return
+end
+if F.TrapIsMine(part) then return end
+if F.TrapUniversal() then
+if F.TrapAllowed(part) then return end
+if not d:IsA("TouchTransmitter") then
+local ti = part:FindFirstChild("TouchInterest")
+if not ti then ti = part:FindFirstChildWhichIsA("TouchTransmitter") end
+if not ti then return end
+end
+else
+if not (F.TrapNameHit(part) or F.TrapTagged(part)) then return end
+end
 task.defer(function()
-pcall(function() F.TrapKillTouch(d) end)
-if d.CanTouch then
+pcall(function() F.TrapKillTouch(part) end)
+if part.CanTouch then
 F._trapBak = F._trapBak or {}
-F._trapBak[d] = { touch = d.CanTouch }
-pcall(function() d.CanTouch = false end)
+F._trapBak[part] = { touch = part.CanTouch }
+pcall(function() part.CanTouch = false end)
 end
 end)
 end)
@@ -4256,7 +4302,14 @@ local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
 if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
 for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 22, op)) do
-local isTrap = (F.TrapNameHit(pt) or F.TrapTagged(pt))
+local isTrap
+if F.TrapUniversal() then
+local ti = pt:FindFirstChild("TouchInterest")
+if not ti then ti = pt:FindFirstChildWhichIsA("TouchTransmitter") end
+isTrap = (ti ~= nil) and (not F.TrapAllowed(pt)) and (not F.TrapIsMine(pt))
+else
+isTrap = (F.TrapNameHit(pt) or F.TrapTagged(pt))
+end
 if isTrap then
 hits = hits + 1
 if pt.CanTouch then
@@ -12011,6 +12064,16 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
+Tabs.Move:AddDropdown("TrapScope", { Title = "反陷阱范围(夹子名字各游戏不同, 用这个覆盖)", Values = {
+"通用: 附近所有『带触碰(TouchInterest)』的物件都解除(各种游戏通用 · 默认)",
+"保守: 只处理名字/父级名像陷阱的",
+}, Default = "通用: 附近所有『带触碰(TouchInterest)』的物件都解除(各种游戏通用 · 默认)", Callback = function(v)
+C.TrapScope = v
+if F._cfgSyncing then return end
+F.Out("[反陷阱] 范围切到「" .. tostring(v) .. "」"
+.. ((tostring(v):find("通用", 1, true) and " —— 除白名单(金币/拾取/蛋/传送门/按钮…)+你自己的角色外, 附近任何『可被碰触』的零件都会解除触碰")
+or " —— 只按名字/父级名匹配"))
+end })
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
