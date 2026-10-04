@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:50 sha 9a5c3b36 bytes 455098'):format('2026-10-04 14:50','9a5c3b36',455098))
+print(('[CheatMenu] build 2026-10-04 14:54 sha e65fa133 bytes 456712'):format('2026-10-04 14:54','e65fa133',456712))
 local F = {}
-F.VERSION = "v14.0.70"
+F.VERSION = "v14.0.71"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11300,6 +11300,43 @@ table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
+F.TreadmillFarmSet = function(on)
+T.TreadmillFarm = on and true or false
+if F._tmLoop then F._tmLoop = false end
+if not on then
+F.Out("[跑步机] 已关")
+return
+end
+local _, _, root0 = GC()
+F._tmHome = root0 and root0.Position or nil
+F.Out("[跑步机] 已开: 站在跑步机带上原地跑(自动按 W), 距离由游戏自己的 PersonalTreadmillStep 计算; 每 1 秒检查一次, 偏离超过 8 格会把你拉回原位, 保证一直在有效区")
+F._tmLoop = true
+task.spawn(function()
+local n = 0
+while T.TreadmillFarm and F._tmLoop do
+local _, hum, root = GC()
+if hum and root then
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+end)
+task.wait(0.12)
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+end)
+n = n + 1
+if F._tmHome and (root.Position - F._tmHome).Magnitude > 8 then
+pcall(function() root.CFrame = CFrame.new(F._tmHome) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+end
+if n % 40 == 0 then F.Out("[跑步机] 已在带上原地跑 " .. tostring(n) .. " 次按键(距离要看游戏自己的计数)") end
+end
+task.wait(0.05)
+end
+F._tmLoop = nil
+end)
+end
 F.RemoteList = function()
 local rs = game:GetService("ReplicatedStorage")
 local KEYS = { "egg", "drop", "carry", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick", "treadmill", "guard", "speed" }
@@ -11800,6 +11837,10 @@ pcall(F.SpeedAntiTPDisable)
 pcall(F.MyEggSet, false)
 end
 F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/护蛋 = " .. (v and "开" or "关"))
+end })
+Tabs.Move:AddToggle("TreadmillFarm", { Title = "★ 跑步机刷距离(站在带上原地跑)", Description = "自动按 W 原地跑, 距离由游戏自己的 PersonalTreadmillStep 结算; 偏离超过 8 格会自动拉回, 保证一直在跑步机有效区内", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+pcall(F.TreadmillFarmSet, v)
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
