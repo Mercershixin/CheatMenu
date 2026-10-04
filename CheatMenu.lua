@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:39 sha 6445c27e bytes 452521'):format('2026-10-04 14:39','6445c27e',452521))
+print(('[CheatMenu] build 2026-10-04 14:42 sha 2d6a6b35 bytes 452437'):format('2026-10-04 14:42','2d6a6b35',452437))
 local F = {}
-F.VERSION = "v14.0.65"
+F.VERSION = "v14.0.66"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11728,10 +11728,10 @@ F.HealthShowSet(v)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
