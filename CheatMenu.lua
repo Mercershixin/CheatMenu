@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:57 sha e424b10a bytes 469403'):format('2026-10-04 18:57','e424b10a',469403))
+print(('[CheatMenu] build 2026-10-04 19:02 sha 9dd4e45d bytes 471858'):format('2026-10-04 19:02','9dd4e45d',471858))
 local F = {}
-F.VERSION = "v14.0.106"
+F.VERSION = "v14.0.107"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11673,10 +11673,13 @@ pcall(function() if type(decompile) == "function" then code = decompile(d) end e
 if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end) end
 if type(code) == "string" and #code >= 8 then
 n = n + 1
+local KW = { "InvokeServer", "FireServer", ":fire(", ":Fire(", ":invoke(", ":Invoke(",
+"ClaimArea", "claim", "Net.", "Remo", "placeEgg", "PlaceEgg", "getClaimArea" }
 local lines = {}
 for line in tostring(code):gmatch("[^\n]+") do
-if #lines < 25 and (line:find("InvokeServer", 1, true) or line:find("FireServer", 1, true)
-or line:find("ClaimArea", 1, true) or line:find("claim", 1, true)) then
+local keep = false
+for i = 1, #KW do if line:find(KW[i], 1, true) then keep = true break end end
+if keep and #lines < 30 then
 lines[#lines + 1] = tostring(line):gsub("^%s+", ""):sub(1, 170)
 end
 end
@@ -12328,6 +12331,46 @@ Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
+end })
+Tabs.TP:AddInput("TPXYZ", { Title = "★ 坐标传送(X Y Z 用空格分隔)", Description = "填三个数字直接过去。中间的 Y 就是高度/深度: 数越大越高(负数就是往下)。可以先点下面「取当前坐标」再改一个数", Default = "", Placeholder = "例如: 120 35 -400", Callback = function(v) C.TPXYZ = v end })
+Tabs.TP:AddButton({ Title = "▶ 传送到这个坐标", Callback = function()
+local s = tostring(C.TPXYZ or "")
+local x, y, z = s:match("(-?%d+%.?%d*)[%s,]+(-?%d+%.?%d*)[%s,]+(-?%d+%.?%d*)")
+if not x then F.Out("[坐标传送] 格式不对 — 要三个数字, 例如: 120 35 -400") return end
+local pos = Vector3.new(tonumber(x), tonumber(y), tonumber(z))
+F.Out("[坐标传送] 目标 " .. string.format("%.0f %.0f %.0f", pos.X, pos.Y, pos.Z))
+task.spawn(function()
+local ok = pcall(function() return F.HardTP(CFrame.new(pos)) end)
+task.wait(0.6)
+local _, _, r = GC()
+if r then
+F.Out("[坐标传送] 结果: 现在在 " .. string.format("%.0f %.0f %.0f", r.Position.X, r.Position.Y, r.Position.Z)
+.. " (差 " .. string.format("%.0f", (r.Position - pos).Magnitude) .. " 格)")
+end
+end)
+end })
+Tabs.TP:AddButton({ Title = "取当前坐标(填进上面的框, 再改数字)", Callback = function()
+local _, _, r = GC()
+if not r then return end
+local p = r.Position
+local s = string.format("%.0f %.0f %.0f", p.X, p.Y, p.Z)
+C.TPXYZ = s
+pcall(function() if Fluent.Options.TPXYZ and Fluent.Options.TPXYZ.Set then Fluent.Options.TPXYZ:Set(s) end end)
+F.Out("[坐标传送] 已填入当前坐标: " .. s)
+end })
+Tabs.TP:AddButton({ Title = "原地往上升 50 格", Description = "不动 X/Z, 只把高度 +50(离开地面/楼层用)", Callback = function()
+local _, _, r = GC()
+if not r then return end
+local p = r.Position + Vector3.new(0, 50, 0)
+task.spawn(function() pcall(function() F.HardTP(CFrame.new(p)) end) end)
+F.Out("[坐标传送] 上移 50 ⇒ Y=" .. string.format("%.0f", p.Y))
+end })
+Tabs.TP:AddButton({ Title = "原地往下沉 50 格", Description = "不动 X/Z, 只把高度 -50(往下/进地下室用)", Callback = function()
+local _, _, r = GC()
+if not r then return end
+local p = r.Position - Vector3.new(0, 50, 0)
+task.spawn(function() pcall(function() F.HardTP(CFrame.new(p)) end) end)
+F.Out("[坐标传送] 下移 50 ⇒ Y=" .. string.format("%.0f", p.Y))
 end })
 Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "开: 游戏里按 T 直接瞬移到鼠标指的地方(指着天空就送到正前方) / 关: T 键无效", Default = false, Callback = function(v)
 T.TPMouse = v
