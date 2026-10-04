@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:57 sha ae2d3ea1 bytes 439543'):format('2026-10-04 12:57','ae2d3ea1',439543))
+print(('[CheatMenu] build 2026-10-04 13:01 sha 3a362193 bytes 441689'):format('2026-10-04 13:01','3a362193',441689))
 local F = {}
-F.VERSION = "v14.0.33"
+F.VERSION = "v14.0.34"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7433,6 +7433,55 @@ if v >= 1e3 then return string.format("%.1fK", v / 1e3) end
 return tostring(math.floor(v))
 end
 F.FmtNum = fmtNum
+F.ScanHud = function(msg)
+pcall(function()
+if not F._scanGui then
+local gui = Instance.new("ScreenGui")
+gui.Name = "CM_ScanHud"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+pcall(function() gui:SetAttribute("CMOwned", true) end)
+gui.Parent = gethui and gethui() or game:GetService("CoreGui")
+local t = Instance.new("TextLabel")
+t.Size = UDim2.fromOffset(640, 42)
+t.Position = UDim2.new(0.5, -320, 0, 104)
+t.BackgroundTransparency = 0.3
+t.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+t.TextColor3 = Color3.fromRGB(255, 226, 120)
+t.TextSize = 18
+t.Font = Enum.Font.GothamBold
+t.Text = ""
+t.Parent = gui
+F._scanGui, F._scanLabel = gui, t
+end
+F._scanLabel.Text = msg
+F._scanLabel.Visible = true
+task.delay(15, function() pcall(function() if F._scanLabel then F._scanLabel.Visible = false end end) end)
+end)
+end
+F.ScanSellUI = function()
+local raw = nil
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.SellMinCPS
+if o and o.Value ~= nil and tostring(o.Value) ~= "" then raw = o.Value end
+end)
+if raw == nil then raw = C.SellMinCPSTxt end
+local n = F.ParseCPS(raw)
+if not n then
+pcall(function() Fluent:Notify({ Title = "门槛没看懂", Content = "请写 80m / 500k / 1.5b / 2q, 或纯数字", Duration = 8 }) end)
+return
+end
+C.SellMinCPS = n
+local picks, all = collectLists()
+local hit, sum = 0, 0
+for _, it in ipairs(all) do
+if it.Known and not it.Ex and it.CPS <= n then hit = hit + 1 sum = sum + it.CPS end
+end
+local msg = string.format("门槛 ≤ %s: 符合 %d 个 / 总共 %d 个可卖(限定不算)", F.FmtNum(n), hit, #all)
+F.Out("[扫描] " .. msg)
+pcall(function() Fluent:Notify({ Title = "扫描结果(只统计, 不卖)", Content = msg, Duration = 12 }) end)
+F.ScanHud(msg)
+end
 function F.ParseCPS(s)
 if type(s) == "number" then return s end
 if type(s) ~= "string" then return nil end
@@ -11653,8 +11702,17 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("卖 CPS / 收集货币 / 收起脑红(按实测接口直发)")
-Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(CPS 低于此值会卖 · 手动填数字)", Description = "自己输入 CPS 门槛, 例如 100000000 = 1亿", Default = "100000000", Callback = function(v) C.SellMinCPS = tonumber(v) or 100000 end })
-Tabs.AFK:AddButton({ Title = "① 统计: 有多少个符合我设的门槛", Description = "只报数量, 不列清单、不执行", Callback = function() pcall(F.PreviewSell) end })
+Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(支持 k / m / b / q, 例: 80m = 只卖 80m 及以下)", Description = "填 80m 就是只卖 CPS ≤ 80,000,000 的(刚好 80m 的也卖); 也支持 500k / 1.5b / 2q / 纯数字", Default = "100k", Placeholder = "80m / 500k / 1.5b / 2q", Callback = function(v)
+local n = F.ParseCPS(v)
+if n then
+C.SellMinCPS = n
+C.SellMinCPSTxt = v
+F.Out("[售卖] 门槛已设为 " .. F.FmtNum(n) .. " (你填的是 " .. tostring(v) .. ")")
+elseif tostring(v) ~= "" then
+pcall(function() Fluent:Notify({ Title = "门槛格式", Content = "认不出「" .. tostring(v) .. "」—— 请写 80m / 500k / 1.5b / 2q", Duration = 8 }) end)
+end
+end })
+Tabs.AFK:AddButton({ Title = "① 统计: 有多少个符合我设的门槛", Description = "只报数量, 不列清单、不执行", Callback = function() pcall(F.ScanSellUI) end })
 Tabs.AFK:AddButton({ Title = "② ★ 按门槛卖出(只卖低于门槛的)", Description = "接口 ref_B_Sell (RemoteFunction · InvokeServer)。会先走到商人身边再逐个装备卖出", Callback = function() pcall(F.SellLowCPS, true) end })
 Tabs.AFK:AddButton({ Title = "③ 全部卖出(除限定脑红)", Description = "忽略门槛, 把能算出 CPS 的非限定脑红全部卖掉", Callback = function() pcall(F.SellAll) end })
 Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectTP, 30) end })
