@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:07 sha e3163f1b bytes 473665'):format('2026-10-04 19:07','e3163f1b',473665))
+print(('[CheatMenu] build 2026-10-04 19:12 sha 525dce43 bytes 471990'):format('2026-10-04 19:12','525dce43',471990))
 local F = {}
-F.VERSION = "v14.0.108"
+F.VERSION = "v14.0.109"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5363,12 +5363,19 @@ F.HideConn = RS.RenderStepped:Connect(function()
 if not T.Hide then F.HideDisable() return end
 local _, _, r = GC()
 if not r then return end
-local depth = math.min(math.max(C.HideDepth or 5, 1), 30)
-r.CFrame = CFrame.new(r.Position.X, F.HideBaseY - depth, r.Position.Z)
+local depth = math.min(math.max(tonumber(C.HideDepth) or 5, -60), 60)
+local ty = F.HideBaseY - depth
+pcall(function()
+local v = r.AssemblyLinearVelocity
+if math.abs(v.Y) > 0.1 then r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z) end
+end)
+if math.abs(r.Position.Y - ty) > 0.35 then
+r.CFrame = CFrame.new(r.Position.X, ty, r.Position.Z)
+end
 local cam = workspace.CurrentCamera
 if cam then
 local cp = cam.CFrame.Position
-if cp.Y < F.HideBaseY - 0.5 then
+if cp.Y < F.HideBaseY - 2 then
 cam.CFrame = CFrame.new(cp.X, F.HideBaseY, cp.Z) * (cam.CFrame - cam.CFrame.Position)
 end
 end
@@ -12295,11 +12302,12 @@ if F._cfgSyncing then return end
 if v then F.NoClipEnable() else F.NoClipDisable() end
 F.Out("[穿墙] " .. (v and "已开" or "已关"))
 end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("Hide", { Title = "藏地下(开了仍可自由水平移动 · 深度用下面的滑块调)", Default = false, Callback = function(v)
 T.Hide = v
 if F._cfgSyncing then return end
 if v then F.HideEnable() else F.HideDisable() end
 end })
+Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度(正数=往下钻 · 负数=往上藏)", Description = "相对你开这个功能那一刻所站的高度。例: 5 = 钻到地面下 5 格; 20 = 下 20 格; -20 = 升到上方 20 格。改完立刻生效, 不用重开", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
@@ -12379,46 +12387,6 @@ Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if name then TeleportToPlayer(Players:FindFirstChild(name)) end
-end })
-Tabs.TP:AddInput("TPXYZ", { Title = "★ 坐标传送(X Y Z 用空格分隔)", Description = "填三个数字直接过去。中间的 Y 就是高度/深度: 数越大越高(负数就是往下)。可以先点下面「取当前坐标」再改一个数", Default = "", Placeholder = "例如: 120 35 -400", Callback = function(v) C.TPXYZ = v end })
-Tabs.TP:AddButton({ Title = "▶ 传送到这个坐标", Callback = function()
-local s = tostring(C.TPXYZ or "")
-local x, y, z = s:match("(-?%d+%.?%d*)[%s,]+(-?%d+%.?%d*)[%s,]+(-?%d+%.?%d*)")
-if not x then F.Out("[坐标传送] 格式不对 — 要三个数字, 例如: 120 35 -400") return end
-local pos = Vector3.new(tonumber(x), tonumber(y), tonumber(z))
-F.Out("[坐标传送] 目标 " .. string.format("%.0f %.0f %.0f", pos.X, pos.Y, pos.Z))
-task.spawn(function()
-local ok = pcall(function() return F.HardTP(CFrame.new(pos)) end)
-task.wait(0.6)
-local _, _, r = GC()
-if r then
-F.Out("[坐标传送] 结果: 现在在 " .. string.format("%.0f %.0f %.0f", r.Position.X, r.Position.Y, r.Position.Z)
-.. " (差 " .. string.format("%.0f", (r.Position - pos).Magnitude) .. " 格)")
-end
-end)
-end })
-Tabs.TP:AddButton({ Title = "取当前坐标(填进上面的框, 再改数字)", Callback = function()
-local _, _, r = GC()
-if not r then return end
-local p = r.Position
-local s = string.format("%.0f %.0f %.0f", p.X, p.Y, p.Z)
-C.TPXYZ = s
-pcall(function() if Fluent.Options.TPXYZ and Fluent.Options.TPXYZ.Set then Fluent.Options.TPXYZ:Set(s) end end)
-F.Out("[坐标传送] 已填入当前坐标: " .. s)
-end })
-Tabs.TP:AddButton({ Title = "原地往上升 50 格", Description = "不动 X/Z, 只把高度 +50(离开地面/楼层用)", Callback = function()
-local _, _, r = GC()
-if not r then return end
-local p = r.Position + Vector3.new(0, 50, 0)
-task.spawn(function() pcall(function() F.HardTP(CFrame.new(p)) end) end)
-F.Out("[坐标传送] 上移 50 ⇒ Y=" .. string.format("%.0f", p.Y))
-end })
-Tabs.TP:AddButton({ Title = "原地往下沉 50 格", Description = "不动 X/Z, 只把高度 -50(往下/进地下室用)", Callback = function()
-local _, _, r = GC()
-if not r then return end
-local p = r.Position - Vector3.new(0, 50, 0)
-task.spawn(function() pcall(function() F.HardTP(CFrame.new(p)) end) end)
-F.Out("[坐标传送] 下移 50 ⇒ Y=" .. string.format("%.0f", p.Y))
 end })
 Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "开: 游戏里按 T 直接瞬移到鼠标指的地方(指着天空就送到正前方) / 关: T 键无效", Default = false, Callback = function(v)
 T.TPMouse = v
