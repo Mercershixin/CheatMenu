@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:36 sha 7aafd24d bytes 515473'):format('2026-10-05 01:36','7aafd24d',515473))
+print(('[CheatMenu] build 2026-10-05 01:40 sha f3540dca bytes 516952'):format('2026-10-05 01:40','f3540dca',516952))
 local F = {}
-F.VERSION = "v15.8.0"
+F.VERSION = "v15.9.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5405,6 +5405,32 @@ end
 end)
 end
 F.savedLight = nil
+F._logClearHook, F._logClearOrig = nil, nil
+F.LockLogClear = function(on)
+local ls = nil
+pcall(function() ls = game:GetService("LogService") end)
+if not ls then return false end
+if on then
+if F._logClearHook then return true end
+if type(hookfunction) ~= "function" then return false end
+local ok = pcall(function()
+local orig = ls.ClearOutput
+F._logClearOrig = orig
+hookfunction(orig, function(...) return nil end)
+F._logClearHook = true
+end)
+if F._logClearHook then F.Out("[反封禁·护日志] 已拦 LogService:ClearOutput(反作弊清掉日志的通道)") end
+return F._logClearHook
+else
+if not F._logClearHook then return false end
+pcall(function()
+if F._logClearOrig then restorefunction(F._logClearOrig) end
+end)
+F._logClearHook, F._logClearOrig = nil, nil
+F.Out("[反封禁·护日志] 已还原")
+return true
+end
+end
 F._godLoop, F._godAt = nil, 0
 F.GodKillDied = function(hum)
 if not hum then return 0 end
@@ -5440,6 +5466,16 @@ pcall(function() if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth e
 pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
 pcall(function() if hum.BreakJointsOnDeath then hum.BreakJointsOnDeath = false end end)
 pcall(function() if hum.RequiresNeck then hum.RequiresNeck = false end end)
+pcall(function()
+if type(hookfunction) == "function" and not F._godTDHook then
+local orig = hum.TakeDamage
+if type(orig) == "function" then
+F._godTDOrig = orig
+hookfunction(orig, function(self, amount) return nil end)
+F._godTDHook = true
+end
+end
+end)
 pcall(function() F.GodKillDied(hum) end)
 end)
 end
@@ -5541,6 +5577,12 @@ pcall(NoDeathDisable)
 pcall(F.AntiRagdollDisable)
 pcall(function() F.HealthIsolateSet(false) end)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
+pcall(function()
+if F._godTDHook and F._godTDOrig and type(restorefunction) == "function" then
+restorefunction(F._godTDOrig)
+end
+end)
+F._godTDHook, F._godTDOrig = nil, nil
 F.Out("[上帝模式] 已关")
 end
 end
@@ -13956,6 +13998,11 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 F._fusing = false
 end
+Tabs.Setting:AddToggle("LockLog", { Title = "护日志(拦 LogService:ClearOutput · 防反作弊抹证据)", Default = false, Callback = function(v)
+T.LockLog = v
+if F._cfgSyncing then return end
+pcall(F.LockLogClear, v)
+end })
 Tabs.Setting:AddSection("配置存档")
 Tabs.Setting:AddButton({ Title = "保存当前设置到本地", Callback = function()
 if not F.Once("cfg_save", 1.5) then return end
