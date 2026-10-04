@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:46 sha 1284a14e bytes 465446'):format('2026-10-04 16:46','1284a14e',465446))
+print(('[CheatMenu] build 2026-10-04 16:51 sha ee77479a bytes 465750'):format('2026-10-04 16:51','ee77479a',465750))
 local F = {}
-F.VERSION = "v14.0.82"
+F.VERSION = "v14.0.83"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2827,6 +2827,7 @@ end)
 end
 KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = mt, oldNC, oldIX, oldNIX
 KG.mtHooked = true
+F._kgHealFix = 0
 pcall(function()
 if type(debug) ~= "table" or type(debug.getinfo) ~= "function" then return end
 if KG.oldGetInfo then return end
@@ -2994,9 +2995,13 @@ while T.KickProtect or T.KickGuard do
 task.wait(6)
 if not (T.KickProtect or T.KickGuard) then break end
 if not KG.kick or not KG.mtHooked then
-F.Out("[防踢] 检测到拦截层被摘掉 ⇒ 正在重装")
-F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
 F._kgHealFix = (F._kgHealFix or 0) + 1
+if F._kgHealFix <= 3 then
+F.Out("[防踢] 检测到拦截层被摘掉 ⇒ 正在重装(第 " .. tostring(F._kgHealFix) .. " 次)")
+F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
+elseif F._kgHealFix == 4 then
+F.Out("[防踢] ⚠ 元表钩反复装不上(本执行器/本游戏可能禁止改写全局元表) ⇒ 已停止重试, 也不再刷日志; 依赖元表钩的拦截层本次不可用")
+end
 end
 end
 F._kgHeal = nil
