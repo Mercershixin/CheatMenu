@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:02 sha bb68f2e7 bytes 445570'):format('2026-10-04 14:02','bb68f2e7',445570))
+print(('[CheatMenu] build 2026-10-04 14:05 sha 25b0d1c0 bytes 445844'):format('2026-10-04 14:05','25b0d1c0',445844))
 local F = {}
-F.VERSION = "v14.0.52"
+F.VERSION = "v14.0.54"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3045,6 +3045,7 @@ F._lastFireVia = table.concat(did, "+")
 return F._lastFireVia
 end
 F.COMBAT_PARTS = { "Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg" }
+F.COMBAT_LOS_PARTS = { "Head", "UpperTorso", "LowerTorso", "HumanoidRootPart" }
 F.CombatNewRay = function(ignore)
 local p = RaycastParams.new()
 pcall(function() p.FilterType = Enum.RaycastFilterType.Exclude end)
@@ -3080,7 +3081,7 @@ if LP.Character then ignore[#ignore + 1] = LP.Character end
 pcall(function() ignore[#ignore + 1] = workspace.CurrentCamera end)
 local params = F.CombatNewRay(ignore)
 local best, bestD = nil, math.huge
-for _, n in ipairs(F.COMBAT_PARTS) do
+for _, n in ipairs(F.COMBAT_LOS_PARTS) do
 local part = ch:FindFirstChild(n)
 if part and part:IsA("BasePart") then
 local hit = workspace:Raycast(fromPos, part.Position - fromPos, params)
@@ -3509,7 +3510,7 @@ local function GodEnable()
 if GodConn then return end
 local function apply()
 local _, hum = GC()
-if hum then hum.MaxHealth = 1e9 hum.Health = 1e9 end
+if hum then hum.MaxHealth = 1e6 hum.Health = 1e6 end
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
@@ -3859,7 +3860,7 @@ if not F._atpState then return end
 pcall(function()
 local nm = tostring(inst.Name):lower()
 for _, k in ipairs(F.ANTITP_KEYS) do
-if nm:find(k, 1, true) then task.defer(F.SpeedAntiTPKillScripts) break end
+if nm:find(k, 1, true) then if os.clock() - (F._atpAddAt or 0) > 2 then F._atpAddAt = os.clock() task.defer(F.SpeedAntiTPKillScripts) end break end
 end
 end)
 end)
@@ -11617,7 +11618,7 @@ T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
-Tabs.Move:AddSection("其他移动")
+Tabs.Move:AddSection("位移(无限跳 / 穿墙 / 藏地下)")
 Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
@@ -11678,6 +11679,19 @@ if v then AntilagEnable() else AntilagDisable() end
 F.Out("[降画质] " .. (v and "已开" or "已关"))
 end })
 Tabs.World:AddSection("相机 / 准星")
+Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
+T.Hud = v
+if F._cfgSyncing then return end
+if v then F.HudEnable() else F.HudDisable() end
+end })
+Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback = function(v)
+T.Crosshair = v
+if F._cfgSyncing then return end
+if v then F.CrosshairEnable() else F.CrosshairDisable() end
+end })
+end
+do
+Tabs.World:AddSection("相机(自由视角 / 锁相机 · 会接管相机, 一般别开)")
 Tabs.World:AddToggle("Freecam", { Title = "自由视角 Freecam(手机不可用)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v and UIS.TouchEnabled then
@@ -11692,24 +11706,12 @@ end
 T.Freecam = v
 if v then F.FreecamEnable() else F.FreecamDisable() end
 end })
-Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
-T.Hud = v
-if F._cfgSyncing then return end
-if v then F.HudEnable() else F.HudDisable() end
-end })
-Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback = function(v)
-T.Crosshair = v
-if F._cfgSyncing then return end
-if v then F.CrosshairEnable() else F.CrosshairDisable() end
-end })
 Tabs.World:AddToggle("LockCam", { Title = "锁相机", Default = false, Callback = function(v)
 T.LockCam = v
 if F._cfgSyncing then return end
 if v then F.LockCamEnable() else F.LockCamDisable() end
 F.Out("[锁相机] " .. (v and "已开(相机锁在当前朝向)" or "已关"))
 end })
-end
-do
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收藏点位 全部适用)", Values = {
 "分步瞬移(现状 · 每步抢网络所有权, 最稳)",
