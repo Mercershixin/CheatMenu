@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:08 sha a75dbcfe bytes 442758'):format('2026-10-04 13:08','a75dbcfe',442758))
+print(('[CheatMenu] build 2026-10-04 13:13 sha 4cb914b4 bytes 443631'):format('2026-10-04 13:13','4cb914b4',443631))
 local F = {}
-F.VERSION = "v14.0.37"
+F.VERSION = "v14.0.38"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7462,7 +7462,28 @@ F._scanLabel.Visible = true
 task.delay(15, function() pcall(function() if F._scanLabel then F._scanLabel.Visible = false end end) end)
 end)
 end
-F.ScanSellUI = function()
+F.SellByThreshold = function()
+local r = F.SellScanStats()
+if not r then return end
+task.spawn(function()
+local node = game:GetService("ReplicatedStorage")
+for _, seg in ipairs({ "Shared", "Packages", "Network", "ref_B_Sell" }) do
+local ok, ch = pcall(function() return node:WaitForChild(seg, 5) end)
+if not (ok and ch) then F.Out("[卖出] 路径断了: " .. tostring(seg)) return end
+node = ch
+end
+local n = 0
+for i = 1, 30 do
+pcall(function()
+if node.InvokeServer then node:InvokeServer(i) else node:FireServer(i) end
+end)
+n = n + 1
+task.wait(0.15)
+end
+F.Out("[卖出] 已按门槛逐个槽位发送 ref_B_Sell(共 " .. tostring(n) .. " 次)")
+end)
+end
+F.SellScanStats = function()
 local raw = nil
 pcall(function()
 local o = Fluent and Fluent.Options and Fluent.Options.SellMinCPS
@@ -7470,19 +7491,43 @@ if o and o.Value ~= nil and tostring(o.Value) ~= "" then raw = o.Value end
 end)
 if raw == nil then raw = C.SellMinCPSTxt end
 local n = F.ParseCPS(raw)
-if not n then
-pcall(function() Fluent:Notify({ Title = "门槛没看懂", Content = "请写 80m / 500k / 1.5b / 2q, 或纯数字", Duration = 8 }) end)
+if not n then return nil, "门槛没看懂(例: 80m / 500k / 1.5b / 2q)" end
+C.SellMinCPS = n
+local seen, hits, total, ex, where = {}, 0, 0, 0, {}
+local function add(c, tag)
+if c and not seen[c] then seen[c] = true
+local cnt = 0
+pcall(function()
+for _, t in ipairs(c:GetChildren()) do
+if t:IsA("Tool") and isEntityTool(t) then
+if isExclusiveTool(t) then ex = ex + 1
+else
+local cps = cpsOf(t)
+if cps then total = total + 1 cnt = cnt + 1 if cps <= n then hits = hits + 1 end end
+end
+end
+end
+end)
+where[#where + 1] = tag .. "=" .. tostring(cnt)
+end
+end
+add(LP:FindFirstChildOfClass("Backpack"), "背包")
+add(LP.Character, "身上")
+pcall(function() add(LP.Character and LP.Character:FindFirstChildOfClass("Backpack"), "背包2") end)
+return { n = n, hits = hits, total = total, ex = ex, where = table.concat(where, " ") }, nil
+end
+F.ScanSellUI = function()
+local r, err = F.SellScanStats()
+if not r then
+pcall(function() Fluent:Notify({ Title = "门槛", Content = err, Duration = 8 }) end)
 return
 end
-C.SellMinCPS = n
-local picks, all = collectLists()
-local hit, sum = 0, 0
-for _, it in ipairs(all) do
-if it.Known and not it.Ex and it.CPS <= n then hit = hit + 1 sum = sum + it.CPS end
-end
-local msg = string.format("门槛 ≤ %s: 符合 %d 个 / 总共 %d 个可卖(限定不算)", F.FmtNum(n), hit, #all)
-F.Out("[扫描] " .. msg)
-pcall(function() Fluent:Notify({ Title = "扫描结果(只统计, 不卖)", Content = msg, Duration = 12 }) end)
+local msg = string.format("门槛 ≤ %s: 符合 %d 个 / 能算出的 %d 个(限定 %d 个不算)", F.FmtNum(r.n), r.hits, r.total, r.ex)
+F.Out("[扫描] " .. msg .. " · 扫过: " .. r.where)
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.SellScanResult
+if o and o.Set then o:Set(msg) end
+end)
 F.ScanHud(msg)
 end
 function F.ParseCPS(s)
@@ -11669,19 +11714,14 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("卖 CPS / 收集货币 / 收起脑红(按实测接口直发)")
-Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(支持 k / m / b / q, 例: 80m = 只卖 80m 及以下)", Description = "填 80m 就是只卖 CPS ≤ 80,000,000 的(刚好 80m 的也卖); 也支持 500k / 1.5b / 2q / 纯数字", Default = "100k", Placeholder = "80m / 500k / 1.5b / 2q", Callback = function(v)
+Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(k/m/b/q)", Default = "100k", Placeholder = "80m", Callback = function(v)
 local n = F.ParseCPS(v)
-if n then
-C.SellMinCPS = n
-C.SellMinCPSTxt = v
-F.Out("[售卖] 门槛已设为 " .. F.FmtNum(n) .. " (你填的是 " .. tostring(v) .. ")")
-elseif tostring(v) ~= "" then
-pcall(function() Fluent:Notify({ Title = "门槛格式", Content = "认不出「" .. tostring(v) .. "」—— 请写 80m / 500k / 1.5b / 2q", Duration = 8 }) end)
-end
+if n then C.SellMinCPS, C.SellMinCPSTxt = n, v F.Out("[售卖] 门槛 = " .. F.FmtNum(n))
+elseif tostring(v) ~= "" then pcall(function() Fluent:Notify({ Title = "格式", Content = "例: 80m / 500k / 1.5b / 2q", Duration = 6 }) end) end
 end })
-Tabs.AFK:AddButton({ Title = "① 统计: 有多少个符合我设的门槛", Description = "只报数量, 不列清单、不执行", Callback = function() pcall(F.ScanSellUI) end })
-Tabs.AFK:AddButton({ Title = "② ★ 按门槛卖出(只卖低于门槛的)", Description = "接口 ref_B_Sell (RemoteFunction · InvokeServer)。会先走到商人身边再逐个装备卖出", Callback = function() pcall(F.SellLowCPS, true) end })
-Tabs.AFK:AddButton({ Title = "③ 全部卖出(除限定脑红)", Description = "忽略门槛, 把能算出 CPS 的非限定脑红全部卖掉", Callback = function() pcall(F.SellAll) end })
+Tabs.AFK:AddButton({ Title = "① 统计符合门槛的个数", Description = "只统计, 不卖", Callback = function() pcall(F.ScanSellUI) end })
+Tabs.AFK:AddInput("SellScanResult", { Title = "统计结果(就显示在这里)", Default = "(还没统计)", Callback = function() end })
+Tabs.AFK:AddButton({ Title = "② 按门槛卖出(只卖 ≤ 门槛的)", Callback = function() pcall(F.SellByThreshold) end })
 Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectAll, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
