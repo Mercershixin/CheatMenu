@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:59 sha 6dbc4ed1 bytes 485062'):format('2026-10-04 19:59','6dbc4ed1',485062))
+print(('[CheatMenu] build 2026-10-04 20:02 sha 8560dfca bytes 486602'):format('2026-10-04 20:02','8560dfca',486602))
 local F = {}
-F.VERSION = "v14.0.119"
+F.VERSION = "v14.0.120"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12340,6 +12340,32 @@ end
 F.Out("[拉人] 结束 —— 人没过来就是本服抢不到他的所有权(说明这个游戏不支持)")
 end)
 end
+F.TPMovePlayer = function(mode)
+local pl, err = F.GetTargetPlayer()
+if not pl then F.Out("[动他] " .. tostring(err)) return end
+local tp = pl.Character
+local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
+if not tRoot then F.Out("[动他] 目标没有 HumanoidRootPart") return end
+local ok, why = F.GrabOwner(tRoot)
+F.Out("[动他] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
+if not ok then return end
+if mode == "front" then
+local _, _, myRoot = GC()
+if not myRoot then return end
+local dest = myRoot.CFrame * CFrame.new(0, 0, -4)
+pcall(function()
+tRoot.AssemblyLinearVelocity = Vector3.zero
+tRoot.CFrame = dest
+end)
+F.Out("[动他] 已把「" .. pl.Name .. "」瞬移到你面前(所有人都会看到他过来了)")
+elseif mode == "up" then
+pcall(function()
+tRoot.CFrame = CFrame.new(tRoot.Position + Vector3.new(0, 400, 0))
+tRoot.AssemblyLinearVelocity = Vector3.new(0, 3e4, 0)
+end)
+F.Out("[动他] 已把「" .. pl.Name .. "」扔到上方 400 格")
+end
+end
 F.FlingPlayer = function()
 local pl, err = F.GetTargetPlayer()
 if not pl then F.Out("[搞飞] " .. tostring(err)) return end
@@ -12400,8 +12426,14 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("针对玩家(用「传送」页选中的目标 · 真影响他, 不是本地假象)")
-Tabs.Combat:AddButton({ Title = "★ 把目标拉到我身边", Description = "先抢他的网络所有权, 再把他拖过来 —— 这是真动他(所有人都会看到他过来了)。抢不到会明确告诉你: 那种游戏不支持直接动别人", Callback = function()
+Tabs.Combat:AddButton({ Title = "★ 把目标拉到我身边(拖动)", Description = "先抢他的网络所有权, 再把他一点点拖过来 —— 真动他(所有人都会看到他过来)。抢不到会明确报出来", Callback = function()
 task.spawn(function() pcall(F.PullPlayer) end)
+end })
+Tabs.Combat:AddButton({ Title = "★ 把目标瞬移到我面前(一次到位)", Description = "和解拖是同一原理, 但一步到位: 抢到他所有权后直接把他 CFrame 放到你面前", Callback = function()
+task.spawn(function() pcall(F.TPMovePlayer, "front") end)
+end })
+Tabs.Combat:AddButton({ Title = "★ 把目标扔到天上(400 格)", Description = "抢到他所有权后直接把他连人带位置抛到上方 400 格", Callback = function()
+task.spawn(function() pcall(F.TPMovePlayer, "up") end)
 end })
 Tabs.Combat:AddButton({ Title = "★ 把目标搞飞(甩出去)", Description = "先试『抢所有权 → 直接推他上天』; 抢不到就用公开脚本同款『把自己当炮弹高速撞他』兜底", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
