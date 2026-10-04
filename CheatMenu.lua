@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:08 sha e1ac712c bytes 461649'):format('2026-10-04 15:08','e1ac712c',461649))
+print(('[CheatMenu] build 2026-10-04 15:17 sha bd0693fa bytes 461741'):format('2026-10-04 15:17','bd0693fa',461741))
 local F = {}
-F.VERSION = "v14.0.74"
+F.VERSION = "v14.0.75"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -87,9 +87,7 @@ if F._outRep > 1 then line = line .. "  ×" .. tostring(F._outRep) .. " 次(同�
 F._outRep = 0
 else
 if (F._outRep or 0) > 1 and F._outLast then
-local tail = F._outLast .. "  ×" .. tostring(F._outRep) .. " 次(同一条重复已自动折叠)"
-print(tail)
-F._logBuf[#F._logBuf + 1] = tail
+line = F._outLast .. "  ×" .. tostring(F._outRep) .. " 次(同一条重复已自动折叠)\n" .. line
 end
 F._outRep = 0
 F._outLast = line
@@ -5784,7 +5782,7 @@ local part = nil
 if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
 if part then
 local dd = (part.Position - root.Position).Magnitude
-if (rank or 0) > (F._tmRank or 0) or ((rank or 0) == (F._tmRank or 0) and dd < bestD) then best, bestD, F._tmRank = part, dd, rank end
+if dd < bestD then best, bestD = part, dd end
 end
 end
 end
@@ -11373,22 +11371,25 @@ F.TreadmillFarmFind = function()
 local _, _, root = GC()
 if not root then return nil end
 local best, bestD = nil, 1e9
+local bestR, bestRD, bestRR = nil, 1e9, 0
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 local nm = tostring(d.Name)
 local rank = 0
-if nm:find("Gold", 1, true) then rank = 4 elseif nm:find("Diamond", 1, true) then rank = 3 elseif nm:find("Candy", 1, true) then rank = 2 elseif nm:find("Trophy", 1, true) then rank = 5 end
+if nm:find("Trophy", 1, true) then rank = 5 elseif nm:find("Gold", 1, true) then rank = 4 elseif nm:find("Diamond", 1, true) then rank = 3 elseif nm:find("Candy", 1, true) then rank = 2 end
 if rank > 0 or nm:find("readmill", 1, true) or nm:find("跑步机", 1, true) then
 local part = nil
 if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
 if part and part:IsA("BasePart") then
 local dd = (part.Position - root.Position).Magnitude
 if dd < bestD then best, bestD = part, dd end
+if rank > 0 and dd <= 600 and (rank > bestRR or (rank == bestRR and dd < bestRD)) then bestR, bestRD, bestRR = part, dd, rank end
 end
 end
 end
 end)
-return best, bestD
+if bestR then return bestR, bestRD, bestRR end
+return best, bestD, 0
 end
 F.TreadmillStand = function()
 local _, _, root = GC()
