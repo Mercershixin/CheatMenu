@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:42 sha 2d6a6b35 bytes 452437'):format('2026-10-04 14:42','2d6a6b35',452437))
+print(('[CheatMenu] build 2026-10-04 14:43 sha 090090a2 bytes 452831'):format('2026-10-04 14:43','090090a2',452831))
 local F = {}
-F.VERSION = "v14.0.66"
+F.VERSION = "v14.0.67"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3712,7 +3712,17 @@ trap and "拦截(只做不触发)" or "关", atp and "开" or "关", bypass and 
 end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
 F._floorLast = {}
-function F.OnMovingFloor()
+F._floorCacheT, F._floorCacheV = 0, false
+F.OnMovingFloorC = function()
+local now = os.clock()
+if now - (F._floorCacheT or 0) < 0.5 then return F._floorCacheV end
+F._floorCacheT = now
+local v = false
+pcall(function() v = F.OnMovingFloorC() end)
+F._floorCacheV = v and true or false
+return F._floorCacheV
+end
+function F.OnMovingFloorC()
 local _, _, root = GC()
 if not root then return false end
 local hit = false
@@ -3949,7 +3959,7 @@ pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], false) end)
 end
 local st = nil
 pcall(function() st = hum:GetState() end)
-if F.OnMovingFloor() and st ~= Enum.HumanoidStateType.Ragdoll
+if F.OnMovingFloorC() and st ~= Enum.HumanoidStateType.Ragdoll
 and st ~= Enum.HumanoidStateType.FallingDown and st ~= Enum.HumanoidStateType.Physics then
 return
 end
@@ -4164,14 +4174,14 @@ F._steadySetFor, F._steadySetAt = hum, os.clock()
 pcall(function() F.SteadyStates(false) end)
 end
 end
-if F.OnMovingFloor() then
+if F.OnMovingFloorC() then
 if not F._steadyFloorLog then
 F._steadyFloorLog = true
-F.Out("[稳身] 检测到跑步机/移动平台 ⇒ 本项暂时让路(免得把你甩下来)")
+if not F._floorLoggedNow then F._floorLoggedNow = true F.Out("[稳身] 检测到跑步机/移动平台 ⇒ 本项暂时让路(免得把你甩下来)") end
 end
 return
 end
-F._steadyFloorLog = nil
+F._steadyFloorLog = nil F._floorLoggedNow = nil
 local st = nil
 pcall(function() st = hum:GetState() end)
 if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll then
