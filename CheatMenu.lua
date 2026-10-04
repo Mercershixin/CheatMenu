@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:12 sha 525dce43 bytes 471990'):format('2026-10-04 19:12','525dce43',471990))
+print(('[CheatMenu] build 2026-10-04 19:21 sha 6725a366 bytes 473381'):format('2026-10-04 19:21','6725a366',473381))
 local F = {}
-F.VERSION = "v14.0.109"
+F.VERSION = "v14.0.110"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6339,10 +6339,43 @@ end
 function F.GuardOnDisable()
 pcall(function() F.GuardSet(false, false, false, false, false, false) end)
 end
+F.SpeedFreeEnable = function()
+if F._sfConn then return end
+T.SpeedFree = true
+F._sfHits, F._sfAt = 0, 0
+F._sfConn = RS.Heartbeat:Connect(function()
+if not T.SpeedFree then return end
+local now = os.clock()
+if now - (F._sfAt or 0) < 0.2 then return end
+F._sfAt = now
+local _, hum = GC()
+if not hum then return end
+local holding = false
+pcall(function()
+local ch = LP.Character
+holding = (ch ~= nil) and (ch:FindFirstChildOfClass("Tool") ~= nil)
+end)
+if not holding then return end
+if hum.WalkSpeed < 16 then
+pcall(function() hum.WalkSpeed = 16 end)
+F._sfHits = (F._sfHits or 0) + 1
+if now - (F._sfLog or 0) > 5 then
+F._sfLog = now
+F.Out("[防护·速度] 游戏想在你拿着东西时把你压慢 ⇒ 已挡回(保持 16 正常速度) · 累计 " .. tostring(F._sfHits) .. " 次")
+end
+end
+end)
+F.Out("[防护·速度] 已开: 你拿着东西时, 游戏把速度压到 16 以下会被自动挡回 ⇒ 搬东西不会被减速, 服务端看到的仍是正常速度(所以判定不受影响)")
+end
+F.SpeedFreeDisable = function()
+T.SpeedFree = false
+if F._sfConn then pcall(function() F._sfConn:Disconnect() end) F._sfConn = nil end
+end
 function F.AllInOneDisableAll()
 pcall(F.SpeedGuardDisable)
 pcall(F.CarryGuardDisable)
 pcall(F.GuardOnDisable)
+pcall(F.SpeedFreeDisable)
 pcall(F.SpoofDisable)
 end
 function F.SpoofEnable()
@@ -7305,7 +7338,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
@@ -9468,7 +9501,7 @@ F.GuiProtectionDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
-F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
+F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
@@ -12244,7 +12277,7 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
-Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 防减速 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 防减速=拿着一东西时游戏想把速度压慢会被挡回(保持正常速度, 服务端判定不受影响) · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 T.SpeedAntiTP, T.MyEgg = v, v
@@ -12252,12 +12285,14 @@ if F._cfgSyncing then return end
 pcall(F.ProtectApply)
 if v then
 pcall(F.SpeedAntiTPEnable)
+pcall(F.SpeedFreeEnable)
 pcall(F.MyEggSet, true)
 else
 pcall(F.SpeedAntiTPDisable)
+pcall(F.SpeedFreeDisable)
 pcall(F.MyEggSet, false)
 end
-F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/护蛋 = " .. (v and "开" or "关"))
+F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/护蛋 = " .. (v and "开" or "关"))
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
