@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:05 sha 25b0d1c0 bytes 445844'):format('2026-10-04 14:05','25b0d1c0',445844))
+print(('[CheatMenu] build 2026-10-04 14:08 sha 8f9faed2 bytes 447098'):format('2026-10-04 14:08','8f9faed2',447098))
 local F = {}
-F.VERSION = "v14.0.54"
+F.VERSION = "v14.0.55"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5742,6 +5742,44 @@ local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
 or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm") or root
 if not best then return nil end
 return best, hand
+end
+F.AutoGrabSet = function(on)
+T.AutoGrab = on and true or false
+if F._grabLoop then F._grabLoop = false end
+if not on then F.Out("[抢蛋] 已关") return end
+F.Out("[抢蛋] 已开: 身边 22 格内有能拿的蛋/箱(包括刚掉地的), 就立刻瞬间偷回手里")
+F._grabLoop = true
+task.spawn(function()
+while T.AutoGrab and F._grabLoop do
+local _, _, root = GC()
+if root then
+pcall(function()
+local op = OverlapParams.new()
+op.FilterType = Enum.RaycastFilterType.Exclude
+if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
+local parts = workspace:GetPartBoundsInRadius(root.Position, 22, op)
+local n = 0
+for _, part in ipairs(parts) do
+n = n + 1
+if n > 40 then break end
+local pp = part:FindFirstChildOfClass("ProximityPrompt")
+if pp and pp.Enabled then
+pcall(function() pp.HoldDuration = 0 end)
+pcall(function() pp.RequiresLineOfSight = false end)
+pcall(function() pp.MaxActivationDistance = 1000000 end)
+pcall(function() pp:InputHoldBegin() end)
+task.wait()
+pcall(function() pp:InputHoldEnd() end)
+end
+local cd = part:FindFirstChildOfClass("ClickDetector")
+if cd and type(fireclickdetector) == "function" then pcall(fireclickdetector, cd) end
+end
+end)
+end
+task.wait(0.15)
+end
+F._grabLoop = nil
+end)
 end
 F.CarryPinSet = function(on)
 T.CarryPin = on and true or false
@@ -11575,20 +11613,15 @@ T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 if F._cfgSyncing then return end
 pcall(F.ProtectApply)
 end })
-Tabs.Move:AddToggle("CarryAll", { Title = "反拉回 + 搬运守卫 + 防掉蛋(合成一个)", Description = "反拉回=清检测脚本/断检测连接 · 搬运守卫=焊点重焊+离手拉回 · 防掉蛋=拦掉蛋上报", Default = false, Callback = function(v)
-T.SpeedAntiTP, T.CarryGuard, T.NoDrop = v, v, v
+Tabs.Move:AddToggle("SpeedAntiTPOnly", { Title = "反拉回(清检测脚本 / 断检测连接)", Default = false, Callback = function(v)
+T.SpeedAntiTP = v
 if F._cfgSyncing then return end
-if v then
-pcall(F.SpeedAntiTPEnable)
-pcall(F.CarryPinSet, true)
-pcall(F.CarryGuardEnable)
-pcall(F.MetaHookEnsure)
-else
-pcall(F.SpeedAntiTPDisable)
-pcall(F.CarryGuardDisable)
-pcall(F.CarryPinSet, false)
-end
-F.Out("[合并] 反拉回/搬运守卫/防掉蛋 = " .. (v and "开" or "关"))
+if v then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
+F.Out("[反拉回] = " .. (v and "开" or "关"))
+end })
+Tabs.Move:AddToggle("AutoGrab", { Title = "★ 自动抢蛋(手里一掉就瞬间偷回来)", Description = "身边 22 格内有能拿的蛋/箱(包括刚掉地上的)就立刻瞬间偷回手里, 一直保持在手上; 不依赖焊点", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+pcall(F.AutoGrabSet, v)
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
