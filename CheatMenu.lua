@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:08 sha 8f9faed2 bytes 447098'):format('2026-10-04 14:08','8f9faed2',447098))
+print(('[CheatMenu] build 2026-10-04 14:12 sha f2601135 bytes 448427'):format('2026-10-04 14:12','f2601135',448427))
 local F = {}
-F.VERSION = "v14.0.55"
+F.VERSION = "v14.0.56"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5743,42 +5743,93 @@ or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm") or root
 if not best then return nil end
 return best, hand
 end
-F.AutoGrabSet = function(on)
-T.AutoGrab = on and true or false
-if F._grabLoop then F._grabLoop = false end
-if not on then F.Out("[抢蛋] 已关") return end
-F.Out("[抢蛋] 已开: 身边 22 格内有能拿的蛋/箱(包括刚掉地的), 就立刻瞬间偷回手里")
-F._grabLoop = true
+F.MyEggSet = function(on)
+T.MyEgg = on and true or false
+if F._eggLoop then F._eggLoop = false end
+if not on then
+F._myEgg = nil
+F.Out("[护蛋] 已关")
+return
+end
+F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)")
+F._eggLoop = true
 task.spawn(function()
-while T.AutoGrab and F._grabLoop do
-local _, _, root = GC()
-if root then
+while T.MyEgg and F._eggLoop do
+local ch, _, root = GC()
+if ch and root then
+if not (F._myEgg and F._myEgg.Parent) then
+local KEYS = { "egg", "brainrot", "cash", "carry", "crate", "loot", "box", "bag", "item", "蛋", "脑红" }
+local best, bestD = nil, 8
 pcall(function()
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("Model") or d:IsA("BasePart") or d:IsA("Tool") then
+if d:IsA("Model") or d:IsA("Tool") or d:IsA("BasePart") then
+local nm = tostring(d.Name):lower()
+for _, k in ipairs(KEYS) do
+if nm:find(k, 1, true) then best = d break end
+end
+end
+end
+if best then break end
+end
+if not best then
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
-if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
-local parts = workspace:GetPartBoundsInRadius(root.Position, 22, op)
-local n = 0
-for _, part in ipairs(parts) do
-n = n + 1
-if n > 40 then break end
-local pp = part:FindFirstChildOfClass("ProximityPrompt")
-if pp and pp.Enabled then
-pcall(function() pp.HoldDuration = 0 end)
-pcall(function() pp.RequiresLineOfSight = false end)
-pcall(function() pp.MaxActivationDistance = 1000000 end)
-pcall(function() pp:InputHoldBegin() end)
-task.wait()
-pcall(function() pp:InputHoldEnd() end)
+op.FilterDescendantsInstances = { ch }
+for _, part in ipairs(workspace:GetPartBoundsInRadius(root.Position, 8, op)) do
+local nm = tostring(part.Name):lower()
+for _, k in ipairs(KEYS) do
+if nm:find(k, 1, true) then best, bestD = part, 0 break end
 end
-local cd = part:FindFirstChildOfClass("ClickDetector")
-if cd and type(fireclickdetector) == "function" then pcall(fireclickdetector, cd) end
+if best then break end
+end
+end
+end)
+if best then
+F._myEgg = best
+F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
+end
+end
+local egg = F._myEgg
+if egg and egg.Parent then
+local inHand = false
+pcall(function() inHand = (egg.Parent == ch) or egg:IsDescendantOf(ch) end)
+if not inHand then
+local part = egg:IsA("Model") and (egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart")) or (egg:IsA("BasePart") and egg) or nil
+pcall(function()
+if part then
+local op = OverlapParams.new()
+op.FilterType = Enum.RaycastFilterType.Exclude
+op.FilterDescendantsInstances = { ch }
+local pp = part:FindFirstChildOfClass("ProximityPrompt")
+or (part.Parent and part.Parent:FindFirstChildOfClass("ProximityPrompt"))
+if not pp then
+for _, q in ipairs(workspace:GetPartBoundsInRadius(part.Position, 6, op)) do
+pp = q:FindFirstChildOfClass("ProximityPrompt")
+if pp then break end
+end
+end
+if pp and pp.Enabled then
+pp.HoldDuration = 0
+pp.RequiresLineOfSight = false
+pp.MaxActivationDistance = 1000000
+pp:InputHoldBegin()
+task.wait()
+pp:InputHoldEnd()
+F._eggHits = (F._eggHits or 0) + 1
+if os.clock() - (F._eggLogAt or 0) > 3 then
+F._eggLogAt = os.clock()
+F.Out("[护蛋] 掉了一次 ⇒ 已瞬间偷回(累计 " .. tostring(F._eggHits) .. " 次)")
+end
+end
 end
 end)
 end
+end
+end
 task.wait(0.15)
 end
-F._grabLoop = nil
+F._eggLoop = nil
 end)
 end
 F.CarryPinSet = function(on)
@@ -11619,9 +11670,9 @@ if F._cfgSyncing then return end
 if v then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
 F.Out("[反拉回] = " .. (v and "开" or "关"))
 end })
-Tabs.Move:AddToggle("AutoGrab", { Title = "★ 自动抢蛋(手里一掉就瞬间偷回来)", Description = "身边 22 格内有能拿的蛋/箱(包括刚掉地上的)就立刻瞬间偷回手里, 一直保持在手上; 不依赖焊点", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("MyEgg", { Title = "★ 护蛋(只抢回你自己拿起的那一个)", Description = "盯住你手上那个蛋: 掉地/被夺的瞬间就瞬间偷回手里; 不会去抢别人的蛋", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
-pcall(F.AutoGrabSet, v)
+pcall(F.MyEggSet, v)
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
