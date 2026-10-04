@@ -3578,6 +3578,64 @@ pcall 闭包全部删掉；② `neuter(...)` 闭包与 `function() return end` �
   要么根本没机会被执行；**正解是先把重活丢进 `task.spawn`**，而不是在调用点判断。
   这条对"任何一条来自按钮/下拉的同步重活"都成立。
 
+## ★★★ 分步传送重做：把"单步位移"压进服务端容忍区间（2026-10-04 · 14.0.84，**用户批准后做**）
+
+**旧实现为什么不灵**（`F.HardTP` 里）：
+
+```lua
+local steps = 1
+if dist > 300 then steps = math.clamp(math.ceil(dist / 400), 2, 12) end   -- 单步固定 400 格
+for i = 1, steps do
+  root.CFrame = CFrame.new(from:Lerp(cf.Position, i/steps)) * rot
+  F.TakeAllOwnership()
+  if i < steps then pcall(function() RS.Heartbeat:Wait() end) end          -- 每步只等 1 帧 ~16ms
+end
+```
+
+- **单步 400 格**、**步数上限 12** ⇒ 1337 格也只要 12 步 × 111 格/步；
+- **每步只等 1 个 Heartbeat（≈16ms）** ⇒ 瞬时速度 ≈ 111/0.016 ≈ **6900 格/秒** ⇒ 服务端必判。
+- 更根本的问题：**步数是从"距离/400"倒推的**，也就是"先定步长 400，再算步数" —— 顺序反了。
+  正确顺序是**先定"单步最多能走多少"（服务端容忍上限），再用距离 ÷ 它算步数**。
+
+**新实现**：
+
+```lua
+local stepStuds = tonumber(C.TPMaxStep) or 40     -- 每步最大格数(8~400, 默认 40)
+local stepDelay = tonumber(C.TPDelay)  or 0.1     -- 每步间隔秒(0.05~1, 默认 0.1)
+local steps = math.max(1, math.ceil(dist / stepStuds))   -- 不再有 12 步上限(硬顶 400 步防呆)
+F._tpStepsInfo = { n = steps, step = stepStuds, delay = stepDelay }
+for i = 1, steps do
+  root.CFrame = CFrame.new(from:Lerp(cf.Position, i/steps)) * rot
+  F.TakeAllOwnership()
+  if i < steps then task.wait(stepDelay) end       -- 用 task.wait 给足时间, 不用 Heartbeat:Wait
+end
+```
+
+- ★ **等效速度 = 每步格数 ÷ 间隔**（默认 40/0.1 = 400 格/秒）。项目 `F.KNOWN_LIMITS` 里记的公开阈值是
+  `MaxTeleportDistance = 50 studs / 0.1s 窗口`、`MaxPlayerSpeed = 100 studs/s` ⇒ **先按 40 格/0.1s 试**；
+  仍被拉回就**把每步调小或把间隔调大**（两者都在 TP 页新增的滑块里）。
+- ★ 日志现在会**自报参数**：`分步传送(N 步 · 每步≤40 格 · 间隔 0.10s ⇒ 等效≈400 格/秒)`
+  —— 用户一眼能看出"服务端眼里我有多快"，不用猜。
+- ★★ **通用教训**：**"分步/限速"类实现，一定要先定"单步上限"，再算步数**；
+  反过来（先定步长常量再 clamp 步数）会在长距离时**自动放大单步**，越远越像瞬移。
+
+## ★★★ 「我们的元表钩一直被摘掉」—— 不是游戏干的，是**我们自己**（2026-10-04 · 14.0.83）
+
+用户问："能不能不让游戏重置全局元表？" —— 取证后发现**根本不是游戏在重置**：
+
+1. `F.HookFuse`（熔断，档位切换/急停都会调）的 `steps` 里**第 2 条就是 `F.KickGuardPathsDisable`**；
+2. 而 `F.KickGuardPathsDisable` 会做：`KG.mt.__namecall = KG.oldNC` / `__index` / `__newindex` 还原，
+   然后把 `KG.mtHooked, KG.mt, KG.oldNC …` **全部置 nil**；
+3. 自愈 watchdog（`F._kgHeal`，6 秒一轮）判断条件正是 **`if not KG.kick or not KG.mtHooked then`** ⇒ 立刻认为"被摘掉"；
+4. 于是它调 `F.KickGuardPathsEnable` 重装。**若重装失败**（例如 `mt.__namecall` 已不是 function ⇒ 函数里 `if type(oldNC) ~= "function" then return end` 静默返回），
+   `KG.mtHooked` 仍是 nil ⇒ **6 秒后又判一次、又重装、又失败** ⇒ **无限循环 + 每轮一行日志**
+   （实测单局 `[防踢] 检测到拦截层被摘掉 ⇒ 正在重装` **80 行**，远超实际切档次数）。
+- ★★★ **修法**：① 重装成功时（`KG.mtHooked = true` 处）**`F._kgHealFix = 0` 归零**（合法的档位切换不受影响）；
+  ② watchdog 里**加次数上限**——前 3 次正常重装并报次数，第 4 次打印**一次性说明**"本执行器/本游戏可能禁止改写全局元表 ⇒ 已停止重试"，
+  之后彻底安静。**绝不无限重试 + 无限刷日志。**
+- ★★ **认知纠正**：元表在**我们自己的 VM 里**，我们装钩只影响自己；反过来**引擎/执行器随时可恢复它**（那是它的地盘）。
+  ⇒ "不让别人重置元表"这个方向不成立，能做的只有"**发现被还原就装回去，且装不上要认输并说清楚**"。
+
 ## ★★ 计数器日志改成"每帧一行" = 日志洪泛（2026-10-04 · 14.0.82）
 
 - `KG.logConn`（Heartbeat）里原本有 **9 个计数器**，写法是"计数一变就 `F.Out` 一行"。
