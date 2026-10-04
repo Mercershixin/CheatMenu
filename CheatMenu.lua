@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:45 sha 269cede3 bytes 441467'):format('2026-10-04 13:45','269cede3',441467))
+print(('[CheatMenu] build 2026-10-04 13:49 sha a32402c8 bytes 439657'):format('2026-10-04 13:49','a32402c8',439657))
 local F = {}
-F.VERSION = "v14.0.45"
+F.VERSION = "v14.0.46"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11493,6 +11493,24 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
+Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发(不挪你)", Default = false, Callback = function(v)
+T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
+if F._cfgSyncing then return end
+pcall(F.ProtectApply)
+end })
+Tabs.Move:AddToggle("CarryAll", { Title = "反拉回 + 搬运守卫 + 防掉蛋(合成一个)", Description = "反拉回=清检测脚本/断检测连接 · 搬运守卫=焊点重焊+离手拉回 · 防掉蛋=拦掉蛋上报", Default = false, Callback = function(v)
+T.SpeedAntiTP, T.CarryGuard, T.NoDrop = v, v, v
+if F._cfgSyncing then return end
+if v then
+pcall(F.SpeedAntiTPEnable)
+pcall(F.CarryGuardEnable)
+pcall(F.MetaHookEnsure)
+else
+pcall(F.SpeedAntiTPDisable)
+pcall(F.CarryGuardDisable)
+end
+F.Out("[合并] 反拉回/搬运守卫/防掉蛋 = " .. (v and "开" or "关"))
+end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
 if steady or hit then
@@ -11510,39 +11528,6 @@ steady and "开" or "关",
 hit and ("开" .. (T.HitStrong and "(猛档)" or "(状态法)")) or "关",
 T.TrapWarn and "开" or "关", T.SpeedAntiTP and "开" or "关"))
 end
-Tabs.Move:AddToggle("SteadyOn", { Title = "稳身(不被击倒 / 不被甩飞)", Description = "只动本地状态: 禁掉 Ragdoll/FallingDown 两个状态 + 压异常上升速度; 不碰任何远程、不改碰撞属性。站在跑步机/移动平台上会自动让路", Default = false, Callback = function(v)
-T.SteadyOn = v
-if F._cfgSyncing then return end
-F.Try("ProtectApply", F.ProtectApply)
-end })
-Tabs.Move:AddToggle("HitGuard", { Title = "反攻击 / 受击保护(被打不倒地、不被击飞)", Description = "状态法: 只在本地不让你进倒地/被击飞状态, 不打断游戏的远程 ⇒ 搬运动作不会被卡住。想更猛请去「系统」页把防护档位调到②/③", Default = false, Callback = function(v)
-T.HitGuard = v
-if F._cfgSyncing then return end
-F.Try("ProtectApply", F.ProtectApply)
-end })
-Tabs.Move:AddToggle("TrapWarn", { Title = "反陷阱(踩上去也不触发 · 和反攻击一样不挪你)", Description = "只做『不触发』: 销毁陷阱的 TouchInterest + 断掉陷阱自身的 Touched 回调 + 拦陷阱触发上报。不挪你的位置、不关你身体的「可触碰」、不影响任何正常交互", Default = false, Callback = function(v)
-T.TrapWarn = v
-if F._cfgSyncing then return end
-F.Try("ProtectApply", F.ProtectApply)
-end })
-Tabs.Move:AddToggle("SpeedAntiTP", { Title = "防拉回(清检测脚本 + 断检测连接 · 最招反作弊)", Description = "⚠ 会禁用命中的客户端检测脚本、断掉检测连接、中和检测函数 —— 只在真被拉回时开; 关掉后建议重进一次游戏恢复干净", Default = false, Callback = function(v)
-T.SpeedAntiTP = v
-if F._cfgSyncing then return end
-if v then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
-end })
-Tabs.Move:AddToggle("CarryGuard", { Title = "搬运守卫(蛋不掉手: 焊点重焊 + 离手拉回)", Description = "盯住「把你手上的东西焊在你身上」的那个焊点; 被拆掉就按原样焊回, 东西离手就拉回手上。开之前先站到蛋旁边", Default = false, Callback = function(v)
-local changed = (T.CarryGuard ~= nil) and (T.CarryGuard ~= v)
-T.CarryGuard = v
-if F._cfgSyncing or not changed then return end
-if v then F.CarryGuardEnable() else F.CarryGuardDisable() end
-end })
-Tabs.Move:AddToggle("NoDrop", { Title = "防掉蛋(被夹/被抓也不掉)", Description = "⚠ 会拦掉'蛋掉出去'的上报, 被打掉后可能状态不同步 ⇒ 默认关; 只在需要防掉蛋时才开", Default = false, Callback = function(v)
-local changed = (T.NoDrop ~= nil) and (T.NoDrop ~= v)
-T.NoDrop = v
-if F._cfgSyncing or not changed then return end
-pcall(F.MetaHookEnsure)
-F.Out(v and "[防掉蛋] 已开(被夹/被抓后不掉蛋)" or "[防掉蛋] 已关(会正常掉蛋)")
-end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "★ 瞬间偷蛋 / 瞬间交互(点一下就瞬间完成 · 不用长按 E)", Description = "开: 游戏里所有要按住一会儿的交互(偷蛋/开箱/机关)一律变「点一下就瞬间完成」, 不用长按。不加远距离、不自动偷, 就是老实把长按改成瞬间", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
