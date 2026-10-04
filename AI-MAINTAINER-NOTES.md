@@ -3438,3 +3438,83 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   并对 `ProximityPrompt` 用**与领奖完全相同的判据**预判，命中就打 `[刷奖杯会自动领取这个]`。
   ⇒ 用户跑一次「一键全扫描」即可判断：跑步机在不在、领奖口叫什么、这开关能不能领到。
 - 仍严格**只读**（不点、不改任何实例），延续"扫描页只扫描"原则。
+- ⚠ 14.0.78 起 `刷奖杯` 整条已删除 ⇒ 该标记改为中性的 `[按住式交互点]`（文案/物体名诊断保留，仍有用）。
+
+## ★★★ 「档位③ 开启后巨卡」根因与修复（2026-10-04 · 14.0.78）
+
+用户报：选「防护档位 ③ 重」后**巨卡**。根因不是一个，是**两类叠加**：
+
+### A. 一次性冻结：3 个 `getgc` 大循环里**每个条目都 new 一个 pcall 闭包**
+
+| 位置 | 做什么 | 代价 |
+|---|---|---|
+| `F.AntiCheatGCSweep` | 遍历 `getgc(true)` ≤60000 项，对每个 table 最多 5 次 `pcall(function() rawget(v,key) end)` | 60k × 5 次闭包+pcall |
+| `F.CMX_NeuterPlusEnable` | 同样 60000 项 × NAMES（20~数百条）⇒ `pcall(function() f = rawget(v,NA­MES[i]) end)` | **可达 60k × 数百 = 千万级闭包** ← 主凶 |
+| `F.CMX_HashFreezeEnable` | 60000 项 × (`pcall(islclosure)` + `pcall(debug.info)` 两个闭包) | 12 万级闭包 |
+
+**修法（已落地）**：① `rawget/rawset/islclosure/debug.info` **直接调用**（对 table/function 不会抛错），
+pcall 闭包全部删掉；② `neuter(...)` 闭包与 `function() return end` 提成**模块级常量**（`F._gcNoop/_gcFalse/_gcTrue/_gcKickStall` + `F.GCSweepKeys` 表驱动）；
+③ 循环里每 1500~2000 项 **`task.wait()` 让出**（用 `F._isyieldable()` 包一层，执行器没有 `coroutine.isyieldable` 也不会炸）。
+
+### B. 持续掉帧：元表钩**每次访问都 pcall + 新建闭包**
+
+- `F.KickGuardPathsEnable` 的 `mt.__namecall`：`pcall(function() m = getnamecallmethod() end)` —— **每次方法调用**一次闭包+pcall。
+- 同函数的 `mt.__index` / `mt.__newindex`：`pcall(function() exec = checkcaller() end)` —— **每次属性读写**一次闭包+pcall。
+- 这三层是**全局 Instance 元表**（`getrawmetatable(game)`）⇒ 全游戏每一次 `part.Position` / `:FindFirstChild()` 都要付。
+- ⇒ 开档位③ 后 `__index` 从 1 层变 **3 层**（ACIndexMask + CMXSpoof + KG）、`__namecall` 2 层 ⇒ 每帧成本直接翻几倍。
+
+**修法（已落地）**：
+① `getnamecallmethod` / `checkcaller` 在**安装时**探测一次（`pcall(fn)` 成功才用），钩子里**直接调用**，不再每帧 new 闭包；
+② `__namecall` 开头加**快路径**：方法名不是 `Kick/ChangeState/FireServer/InvokeServer` 就 `return oldNC(...)` —— 绝大多数调用（FindFirstChild/GetChildren/WaitForChild…）只付一次字符串比较；
+③ `F.CMX_IsCaller` 的 `type(checkcaller)` 提到模块初始化（`F._ccProbe`）。
+
+### C. 顺带修正：档位③ 的下拉文案原来写"⇒ 14层全开"，**是假的**
+
+`F.CMX_TierSync` 里 `do return end`（当年就停用了联动，防的就是每帧加层）⇒ 档位③**并不会**开那 14 层 CMX。
+已按实际行为改写文案。★ **教训：UI 文案必须跟着实现走，否则用户按描述判断，必然误判。**
+
+### 每个"每帧连接"的审计结论（本次全量过了一遍）
+
+- 24 个 `Heartbeat/Stepped/RenderStepped` 连接里，**21 个首行就是 `if not T.X then F.XDisable() return end`**（自停自灭火）⇒ 关着时只剩一次布尔判断，不需要改。
+- 剩下 3 个无守卫也都**便宜或自带节流**：`KG.logConn`（纯整数比较，变更才打日志）、`GodConn`/`_antiRagdollConn`（只在开关打开时存在）、`PinPulse`（0.3 秒自动断开）。
+- ⚠ `AntiAFK` 的 Heartbeat 是**每帧**的，但内部先 `os.clock()` 节流到 5 秒 —— 保留。
+- ⚠ 真正的"每帧大活"只有 `GodConn`（每帧写 `hum.Health/MaxHealth`）—— 但只在开无敌时；且现在被 `__newindex` 锁层放大 ⇒ **开无敌 + 开档位 = 额外成本**，属可接受的设计代价。
+
+## 删除「刷奖杯（TreadmillFarm）」（2026-10-04 · 14.0.78）
+
+- 归档位置：`.workbuddy/build/deprecated/2026-10-04_TreadmillFarm.lua`（含 `TreadmillFarmFind/Stand/FarmSet` + UI 开关整段，111 行）。
+- 删除范围：源码 3 个函数（11422~11522）+ UI `Tabs.Move:AddToggle("TreadmillFarm", …)` 一行块 + `F.ScanNearbyInteract` 里的 `[刷奖杯会自动领取这个]` 标记。
+- 残留核对：`TreadmillFarm / TreadmillStand / _tmHome / _tmLoop / _claimN` **全部 0 残留**，编译 0 错。
+- ★ 存档里 `C.TreadmillFarm` 这个旧键会留在玩家配置里 —— 无害（没有控件回填它）。
+
+## 新扫描（placeid 93411036959889，2026-10-04 16:01）暴露的**真缺口**
+
+### ★★★ 最要紧：这个游戏**有客户端检测脚本，但关键词全都没匹配上**
+
+| 证据（日志原文） | 含义 |
+|---|---|
+| `[扫描·检测器] StepDetectionSystem / AfkDetector`（PlayerScripts.v3） | 客户端**有**步数/位移检测 + 挂机检测 |
+| `⚠ 可疑: RunService.Heartbeat ← @ …v3.StepDetectionSystem` | 步数检测挂在 **Heartbeat** 上（58 条连接之一） |
+| `⚠ 可疑: LocalPlayer.Idled ← @ …v3.AfkDetector`（共 3 条） | 挂机检测挂 **Idled** |
+| `[客户端检测] 按名字扫到脚本 0 个 · Heartbeat 上可疑连接 0 条` | **上面明明有，这里却报 0 ⇒ 关键词表漏了** |
+
+**根因**：`F.ANTITP_KEYS` 只有 `obbyantitp/antitp/antilagback/lagback/speedcheck/…` —— **没有 `detection/detector/step/afk`**；
+`StepDetectionSystem` 一个都不命中 ⇒ 既让"客户端检测"结论变成**错的**（早期误判"这游戏客户端没有防加速"），又让**防拉回档扫不到它**。
+
+**另一处结构缺口**：`AC.DisableACConnections` 只扫 `hum/root/char` 的信号 —— 而检测器**全都挂在
+`RunService.Heartbeat/Stepped/RenderStepped` 与 `LP.Idled`** 上 ⇒ 档位②③那句"断了可疑监听"**实际断不到检测器**。
+
+**已补强（14.0.78）**：
+① `F.ANTITP_KEYS` 增加 `detection/detector/stepdetect/afkdetect/cheatwarn/cheatalert/sentinel/watchdog/suspicious`；
+② `AC.DisableACConnections` 新增 `probeSigs = { RS.Heartbeat, Stepped, RenderStepped, PreRender, PreSimulation, PostSimulation, LP.Idled }`，
+以 `force=false`（**只断 `AC.isSuspicious` 命中的**，不误伤正常逻辑）纳入扫描。
+
+### 抓包到的其它可用面（供后续做功能，目前**未动**）
+
+- **游戏自己就有反作弊告警 UI**：`CheatWarningEvent` / `ToggleCheatAlert`（服务端让客户端弹"检测到作弊"）。
+- **速度类通道**：`Prompt50MSpeed` / `Prompt500MSpeed` / `Prompt1BSpeed` / `RequestAdX2Boost` / `SpeedSearchAction`。
+- **世界传送**：`RequestWorldTeleport` / `OpenWorldTeleportModal` / `ccPanel.teleportToWorld`。
+- **挂机状态**：`PlayerAfkStatus`（RemoteEvent）。
+- **完整 Cmdr 客户端**：`CmdrFunction`/`CmdrEvent` + `CmdrClient.Commands.*`（含 `SpawnScheduledTreadmill`/`NextScheduledTreadmill`）。
+- **权限闸**：`SubmitDiscordVerifyCode`/`DiscordVerifyResult`/`VerifyGroup`；**隐藏守卫**：`ShowSecretGuard`。
+- 执行器能力 **38/41**，缺失 `signal-hook` / `getscriptsource` / `gui-guard`（⇒ 读脚本要走 `decompile`+`getscriptbytecode`，本项目已是这么做的）。
