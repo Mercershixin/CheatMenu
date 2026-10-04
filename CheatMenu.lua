@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:52 sha 72783119 bytes 519608'):format('2026-10-05 01:52','72783119',519608))
+print(('[CheatMenu] build 2026-10-05 01:57 sha 4feecf91 bytes 523410'):format('2026-10-05 01:57','4feecf91',523410))
 local F = {}
-F.VERSION = "v16.2.0"
+F.VERSION = "v16.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3277,6 +3277,18 @@ if score then
 if pl == cur then score = score - 1e6 end
 local part = F.CombatVisible(ch, from)
 if part then
+local wantPart = tostring(C.AimPart or "")
+if wantPart ~= "" and wantPart ~= "最近部位(推荐)" then
+local alt = nil
+pcall(function()
+if wantPart == "头" then
+alt = ch:FindFirstChild("Head")
+elseif wantPart == "躯干" then
+alt = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
+end
+end)
+if alt then part = alt end
+end
 if score < bestScore then best, bestPart, bestScore = ch, part, score end
 else
 blocked = blocked + 1
@@ -8009,6 +8021,103 @@ end
 end
 end
 end
+F.ESP_BONES = {
+{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
+{ "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
+{ "UpperTorso", "RightUpperArm" }, { "RightUpperArm", "RightLowerArm" }, { "RightLowerArm", "RightHand" },
+{ "LowerTorso", "LeftUpperLeg" }, { "LeftUpperLeg", "LeftLowerLeg" }, { "LeftLowerLeg", "LeftFoot" },
+{ "LowerTorso", "RightUpperLeg" }, { "RightUpperLeg", "RightLowerLeg" }, { "RightLowerLeg", "RightFoot" },
+}
+F.ESP_BONES_R6 = {
+{ "Head", "Torso" }, { "Torso", "Left Arm" }, { "Torso", "Right Arm" },
+{ "Torso", "Left Leg" }, { "Torso", "Right Leg" },
+}
+F._espBones = {}
+F.EspBoneMake = function(pl)
+local sg = F.EspEnsure()
+if not sg then return nil end
+local rec = F._espBones[pl]
+if rec then return rec end
+rec = { lines = {} }
+local i
+for i = 1, 14 do
+local f = Instance.new("Frame")
+f.Name = "cbone" .. i
+f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+f.BorderSizePixel = 0
+f.BackgroundTransparency = 0.2
+f.Visible = false
+pcall(function() f:SetAttribute("CMOwned", true) end)
+f.Parent = sg
+rec.lines[i] = f
+end
+F._espBones[pl] = rec
+return rec
+end
+F.EspBoneClear = function()
+for pl, rec in pairs(F._espBones) do
+if rec then
+local i
+for i = 1, #rec.lines do pcall(function() rec.lines[i]:Destroy() end) end
+end
+end
+F._espBones = {}
+end
+F.EspBoneDraw = function(cam)
+local list = Players:GetPlayers()
+local i, j
+for i = 1, #list do
+local pl = list[i]
+if pl ~= LP then
+local rec = F._espBones[pl]
+local ch = pl.Character
+local ok = (ch ~= nil)
+if ok then
+local isR15 = (ch:FindFirstChild("UpperTorso") ~= nil)
+local bones = isR15 and F.ESP_BONES or F.ESP_BONES_R6
+if rec == nil and T.EspBone then rec = F.EspBoneMake(pl) end
+if rec then
+local used = 0
+for j = 1, #bones do
+local a = ch:FindFirstChild(bones[j][1])
+local b = ch:FindFirstChild(bones[j][2])
+local line = rec.lines[j]
+if a and b and line then
+local sp1, on1 = cam:WorldToViewportPoint(a.Position)
+local sp2, on2 = cam:WorldToViewportPoint(b.Position)
+if on1 and on2 and T.EspBone then
+local dx = sp2.X - sp1.X
+local dy = sp2.Y - sp1.Y
+local len = math.sqrt(dx * dx + dy * dy)
+if len > 1 then
+local col = Color3.fromRGB(255, 255, 255)
+pcall(function() col = F.CMX_HLTeamColor(pl) end)
+line.Visible = true
+line.Position = UDim2.fromOffset(math.floor(sp1.X), math.floor(sp1.Y))
+line.Size = UDim2.fromOffset(math.floor(len), 1)
+line.Rotation = math.deg(math.atan2(dy, dx))
+line.BackgroundColor3 = col
+used = used + 1
+else
+line.Visible = false
+end
+else
+line.Visible = false
+end
+elseif line then
+line.Visible = false
+end
+end
+for j = #bones + 1, 14 do
+if rec.lines[j] then pcall(function() rec.lines[j].Visible = false end) end
+end
+end
+elseif rec then
+for j = 1, 14 do pcall(function() rec.lines[j].Visible = false end) end
+end
+end
+end
+end
 F.EspTick = function()
 local cam = workspace.CurrentCamera
 if not cam then return end
@@ -8118,6 +8227,7 @@ if F._espLoop then pcall(function() F._espLoop:Disconnect() end) F._espLoop = ni
 if not T.EspOn then
 F.EspClear()
 pcall(F.EspObjClear)
+pcall(F.EspBoneClear)
 if F._espGui then pcall(function() F._espGui:Destroy() end) F._espGui = nil end
 F.Out("[ESP] 已关")
 return
@@ -8130,6 +8240,10 @@ local now = os.clock()
 if now - (F._espAt or 0) < 0.033 then return end
 F._espAt = now
 pcall(F.EspTick)
+if T.EspBone then
+local cam2 = workspace.CurrentCamera
+if cam2 then pcall(F.EspBoneDraw, cam2) end
+end
 if now - (F._espObjAt or 0) > 1.5 then
 F._espObjAt = now
 pcall(F.EspObjScan)
@@ -13534,6 +13648,15 @@ Tabs.Combat:AddToggle("SilentAim", { Title = "静默瞄准(不动你视角也能
 if F._cfgSyncing then return end
 F.SilentAimSet(v)
 end })
+Tabs.Combat:AddDropdown("AimPart", { Title = "瞄准点(锁定的部位)", Values = {
+"最近部位(推荐 · 打得到哪就打哪)",
+"头(爆头用 · 可能被墙挡住)",
+"躯干(稳 · 几乎不会被挡)",
+}, Default = "最近部位(推荐 · 打得到哪就打哪)", Callback = function(v)
+C.AimPart = tostring(v)
+if F._cfgSyncing then return end
+F.Out("[战斗] 瞄准点 = " .. tostring(v))
+end })
 Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格)", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
 Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小(像素 · 只有正面圈内锁用)", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
 Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(默认开)", Description = "从相机到目标打射线, 中间被墙/建筑挡住就不锁(所以不会隔着墙打)", Default = true, Callback = function(v)
@@ -13741,6 +13864,7 @@ Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = 
 Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
 Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
 Tabs.Visual:AddToggle("EspTracer", { Title = "追踪线(屏幕底到目标)", Default = false, Callback = function(v) T.EspTracer = v end })
+Tabs.Visual:AddToggle("EspBone", { Title = "骨骼描线(头-躯干-四肢连线)", Default = false, Callback = function(v) T.EspBone = v end })
 Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = false, Callback = function(v) T.EspNpc = v end })
 Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
 Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
