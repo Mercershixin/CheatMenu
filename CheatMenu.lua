@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:15 sha 9b335a21 bytes 465459'):format('2026-10-04 18:15','9b335a21',465459))
+print(('[CheatMenu] build 2026-10-04 18:18 sha a0c73a82 bytes 470518'):format('2026-10-04 18:18','a0c73a82',470518))
 local F = {}
-F.VERSION = "v14.0.98"
+F.VERSION = "v14.0.99"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11997,6 +11997,105 @@ end
 F._afkInput = nil
 end)
 end
+F.QUEST_API_SCRIPTS = { "TasksScript", "MissionClient", "MissionsClient", "RebirthUi", "RebirthClient", "MegaRebirthClient", "RewardsClient", "TaskClient", "QuestClient" }
+F.APIProbe = function()
+F.Out("[接口探测·只读] ===== 反编译「任务/重生」客户端脚本, 摘出它自己怎么调远程(只读) =====")
+local n = 0
+pcall(function()
+for _, d in ipairs(game:GetDescendants()) do
+local cls = d.ClassName
+if cls == "LocalScript" or cls == "ModuleScript" or cls == "Script" then
+local nm = tostring(d.Name)
+local low = nm:lower()
+local hit = false
+for i = 1, #F.QUEST_API_SCRIPTS do if nm == F.QUEST_API_SCRIPTS[i] then hit = true break end end
+if not hit then hit = (low:find("task", 1, true) ~= nil) or (low:find("mission", 1, true) ~= nil) or (low:find("rebirth", 1, true) ~= nil) end
+if hit then
+local code = nil
+pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
+if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end) end
+if type(code) == "string" and #code >= 8 then
+n = n + 1
+F.Out("[接口探测·只读] ▸ " .. d:GetFullName())
+local shown = 0
+for line in tostring(code):gmatch("[^\n]+") do
+if shown < 25 and (line:find("InvokeServer", 1, true) or line:find("FireServer", 1, true)) then
+shown = shown + 1
+F.Out("      " .. tostring(line):gsub("^%s+", ""):sub(1, 170))
+end
+end
+if shown == 0 then F.Out("      (没有直接调远程)") end
+end
+end
+end
+end
+end)
+F.Out("[接口探测·只读] 共 " .. tostring(n) .. " 个脚本 —— 把上面这些发我, 我按真实参数把「自动任务」接对")
+end
+F.CLAIM_REMOTES = { "RequestClaimTask", "RequestClaimReward", "DailyLoginRewards_Claim", "VIPReward_Claim", "GroupReward_Claim", "Codes_Claim" }
+F.ClaimAll = function()
+local okc, skip, hit = 0, 0, 0
+local detail = {}
+for i = 1, #F.CLAIM_REMOTES do
+local nm = F.CLAIM_REMOTES[i]
+local r = nil
+pcall(function() r = RFunction(nm) end)
+if not r then
+skip = skip + 1
+else
+hit = hit + 1
+local good = false
+pcall(function() r:InvokeServer() good = true end)
+if good then okc = okc + 1 detail[#detail + 1] = nm .. "=OK" else detail[#detail + 1] = nm .. "=失败" end
+end
+end
+F.Out("[一键领奖] 找到 " .. tostring(hit) .. " 个领取接口 · 调用成功 " .. tostring(okc)
+.. " · 本游戏没有的 " .. tostring(skip) .. (#detail > 0 and (" [" .. table.concat(detail, ", ") .. "]") or ""))
+end
+F.AutoRebirthSet = function(on)
+T.AutoRebirth = on and true or false
+if not on then
+pcall(function() local r = RFunction("SetAutoRebirth") if r then r:InvokeServer(false) end end)
+F.Out("[自动重生] 已关")
+return
+end
+local r = nil
+pcall(function() r = RFunction("SetAutoRebirth") end)
+if r then
+pcall(function() r:InvokeServer(true) end)
+F.Out("[自动重生] 已开 · 已调用游戏自带的 SetAutoRebirth(true)(最稳: 由服务端自己重生)")
+else
+F.Out("[自动重生] 本游戏没有 SetAutoRebirth ⇒ 兜底: 每 5 秒找 RebirthFrame 里的按钮点一下")
+end
+task.spawn(function()
+while T.AutoRebirth do
+task.wait(5)
+if not T.AutoRebirth then break end
+if r then
+pcall(function() r:InvokeServer(true) end)
+else
+pcall(function()
+local pg = LP:FindFirstChild("PlayerGui")
+local hud = pg and pg:FindFirstChild("MainHUD")
+local menus = hud and hud:FindFirstChild("Menus")
+local rf = menus and menus:FindFirstChild("RebirthFrame")
+if not rf then return end
+for _, d in ipairs(rf:GetDescendants()) do
+if d:IsA("GuiButton") then
+local t = (tostring(d.Name) .. " " .. tostring(d.Text or "")):lower()
+if (t:find("rebirth", 1, true) ~= nil) or (t:find("重生", 1, true) ~= nil) then
+if type(getconnections) == "function" then
+for _, c in ipairs(getconnections(d.MouseButton1Click) or {}) do pcall(function() c:Fire() end) end
+end
+pcall(function() if type(firesignal) == "function" then firesignal(d.MouseButton1Click) end end)
+end
+end
+end
+end)
+end
+end
+end)
+end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -12274,6 +12373,17 @@ else
 pcall(F.AntiAFKDisable)
 pcall(F.KickGuardDisable)
 end
+end })
+Tabs.AFK:AddSection("任务 / 重生(用游戏自己的接口)")
+Tabs.AFK:AddToggle("AutoRebirth", { Title = "★ 自动重生(优先用游戏自带的自动重生)", Description = "优先调用游戏自己的 SetAutoRebirth(true)(由服务端自己重生, 最稳); 若本游戏没有这个接口, 就每 5 秒找 Rebirth 按钮点一下", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+pcall(F.AutoRebirthSet, v)
+end })
+Tabs.AFK:AddButton({ Title = "★ 一键领奖(任务/奖励/每日/VIP/群组/兑换码 · 全试一遍)", Description = "把本游戏存在的领取接口逐个调用; 每个都单独保护, 缺哪个会自动跳过并在日志写明", Callback = function()
+task.spawn(function() pcall(F.ClaimAll) end)
+end })
+Tabs.AFK:AddButton({ Title = "★ 导出「任务/重生」接口调用方式(只读)", Description = "只读反编译游戏的任务/重生客户端脚本, 摘出它自己是怎么调这些远程的(含参数) —— 有了它我才能把「自动任务(接→tp→完成→领)」的参数接对", Callback = function()
+task.spawn(function() pcall(F.APIProbe) end)
 end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
