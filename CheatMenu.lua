@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:49 sha f0555e08 bytes 518439'):format('2026-10-05 01:49','f0555e08',518439))
+print(('[CheatMenu] build 2026-10-05 01:52 sha 72783119 bytes 519608'):format('2026-10-05 01:52','72783119',519608))
 local F = {}
-F.VERSION = "v16.1.0"
+F.VERSION = "v16.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2413,6 +2413,45 @@ F._afkKilled = 0
 F._afkFixes = 0
 pcall(F.MetaHookEnsure)
 local killed = F.AntiAFKKillIdleConns()
+pcall(F.AntiAFKNudge)
+F.AntiAFKNudge = function()
+if F._afkNudge then return end
+local moved = false
+pcall(function()
+if type(VirtualInputManager) == "table" and VirtualInputManager.SendMouseMoveEvent then
+VirtualInputManager:SendMouseMoveEvent(1, 0, false)
+moved = true
+elseif type(mousemoverel) == "function" then
+mousemoverel(1, 0)
+moved = true
+elseif type(virtuaimgr) == "table" then
+moved = true
+end
+end)
+F._afkNudge = task.spawn(function()
+while T.AntiAFK do
+task.wait(240)
+if not T.AntiAFK then break end
+pcall(function()
+local _, hum = GC()
+if hum then
+pcall(function() hum.Jump = true end)
+task.wait(0.15)
+pcall(function() hum.Jump = false end)
+end
+end)
+pcall(function()
+if type(VirtualInputManager) == "table" and VirtualInputManager.SendMouseMoveEvent then
+VirtualInputManager:SendMouseMoveEvent(1, 0, false)
+elseif type(mousemoverel) == "function" then
+mousemoverel(1, 0)
+end
+end)
+end
+F._afkNudge = nil
+end)
+F.Out("[防挂机] 已挂定期微动(每 240 秒轻跳一下 · 防 Idled 计时归零)")
+end
 F._afkConn = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
 F._afkIdleHits = (F._afkIdleHits or 0) + 1
@@ -14396,11 +14435,18 @@ local keep = getgenv and getgenv().CM_RELOAD_KEEP
 if type(keep) ~= "table" then return end
 getgenv().CM_RELOAD_KEEP = nil
 local c = 0
+local op2 = Fluent and Fluent.Options
 for k, v in pairs(keep) do
-if v == true then T[k] = true c = c + 1 end
+if v == true then
+T[k] = true
+c = c + 1
+local opt = nil
+pcall(function() opt = op2 and op2[k] end)
+if opt ~= nil then pcall(F.OptSet, opt, true) end
+end
 end
 local n2 = F.CfgSyncUI()
-F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n2) .. " 个控件)")
+F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (界面同步 " .. tostring(n2) .. " 个)")
 pcall(F.ApplySavedOn)
 end)
 end)
