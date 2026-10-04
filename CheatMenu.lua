@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:01 sha 3a362193 bytes 441689'):format('2026-10-04 13:01','3a362193',441689))
+print(('[CheatMenu] build 2026-10-04 13:05 sha 243feabb bytes 440998'):format('2026-10-04 13:05','243feabb',440998))
 local F = {}
-F.VERSION = "v14.0.34"
+F.VERSION = "v14.0.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7679,56 +7679,24 @@ if not ok then F.Out("[售卖] 出错: " .. tostring(err)) end
 end)
 end
 function F.WithdrawAll(maxSlot)
-if WithdrawThread then F.Out("[收起] 已在进行中") return end
-WithdrawThread = task.spawn(function()
-local ok, err = pcall(function()
-local ch, hum = GC()
-if not (ch and hum) then F.Out("[收起] 无角色") return end
-maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
-pcall(function() hum:UnequipTools() end)
-task.wait(0.1)
-local done, failed = 0, 0
+maxSlot = tonumber(maxSlot) or 30
+task.spawn(function()
+local node = game:GetService("ReplicatedStorage")
+for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_S_Interact" }) do
+local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
+if not (ok and child) then
+F.Out("[收起脑红] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_S_Interact (" .. tostring(seg) .. " 找不到)")
+return
+end
+node = child
+end
+local n = 0
 for i = 1, maxSlot do
-local bp = LP:FindFirstChild("Backpack")
-local tool
-if bp then
-for _, t in ipairs(bp:GetChildren()) do
-if isEntityTool(t) then tool = t break end
-end
-end
-if not tool then
-F.Out(string.format("[收起] 背包已空(放到第 %d 槽)", i))
-break
-end
-pcall(function() hum:UnequipTools() end)
+if pcall(function() node:FireServer(i) end) then n = n + 1 end
 task.wait(0.08)
-pcall(function() hum:EquipTool(tool) end)
-task.wait(0.2)
-if tool.Parent == ch then
-local used = FireAny(F.PLACE_KEYS, i)
-if used then
-done = done + 1
-F._placeRemote = used
-else
-failed = failed + 1
-if not F._placeWarned then
-F._placeWarned = true
-F.Out("[收起] ⚠ 本游戏没有名字匹配的「放置」接口 ⇒ 收起无法生效(这不是开关问题)")
-F.Out("[收起] 请点「一键全扫描」把 remote 清单发我, 我按你这个游戏的真实接口适配")
 end
-end
-else
-failed = failed + 1
-end
-task.wait(0.15)
-if i % 5 == 0 then F.Out(string.format("[收起] %d/%d", i, maxSlot)) end
-end
-pcall(function() hum:UnequipTools() end)
-F.Out(string.format("[收起] 完成 · 成功 %d · 失败 %d", done, failed))
-pcall(F.LogFlush, "收起脑红")
-end)
-WithdrawThread = nil
-if not ok then F.Out("[收起] 出错: " .. tostring(err)) end
+F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S_Interact(共 " .. tostring(n) .. " 次)")
+pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
 end)
 end
 F.TpToMyPlot = function()
