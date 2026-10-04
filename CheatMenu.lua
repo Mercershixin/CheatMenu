@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:03 sha 8f7aace6 bytes 493388'):format('2026-10-04 23:03','8f7aace6',493388))
+print(('[CheatMenu] build 2026-10-04 23:08 sha 3b8087f1 bytes 493551'):format('2026-10-04 23:08','3b8087f1',493551))
 local F = {}
-F.VERSION = "v14.7.0"
+F.VERSION = "v14.8.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7141,41 +7141,50 @@ for i = 1, #F.ROLE_KILLER do if string.find(t, string.lower(F.ROLE_KILLER[i]), 1
 for i = 1, #F.ROLE_SHERIFF do if string.find(t, string.lower(F.ROLE_SHERIFF[i]), 1, true) then return "sheriff" end end
 return nil
 end
+F._roleCache = {}
 F.RoleOf = function(pl)
 if not pl then return nil, nil end
-local i, k, ok, v
+local now = os.clock()
+local c = F._roleCache[pl]
+if c and (now - c.t) < 1.5 then return c.r, c.w end
+local r, w = nil, nil
+if pl.Parent then
 for i = 1, #F.ROLE_ATTRS do
-k = F.ROLE_ATTRS[i]
-ok, v = pcall(function() return pl:GetAttribute(k) end)
+local k = F.ROLE_ATTRS[i]
+local ok, v = pcall(pl.GetAttribute, pl, k)
 if ok and v ~= nil then
-local r = F.RoleMatch(tostring(v))
-if r then return r, "属性 " .. k .. "=" .. tostring(v) end
+r = F.RoleMatch(tostring(v))
+if r then w = "属性 " .. k .. "=" .. tostring(v) break end
 end
 end
+if not r then
 local tr, tn = nil, nil
 pcall(function() if pl.Team then tn = pl.Team.Name tr = F.RoleMatch(tn) end end)
-if tr then return tr, "队伍 " .. tostring(tn) end
+if tr then r = tr w = "队伍 " .. tostring(tn) end
+end
+if not r then
 local ch = pl.Character
 local bp = nil
 pcall(function() bp = pl:FindFirstChildOfClass("Backpack") end)
 local function scan(c)
-if not c then return nil, nil end
+if not c then return nil end
 local kids = c:GetChildren()
 for i = 1, #kids do
 local d = kids[i]
-local r = F.RoleMatch(d.Name)
-if r then
-if d:IsA("Tool") then return r, "工具 " .. d.Name end
-return r, "角色内 " .. d.Name
+local rr = F.RoleMatch(d.Name)
+if rr then
+if d:IsA("Tool") then return rr, "工具 " .. d.Name end
+return rr, "角色内 " .. d.Name
 end
 end
-return nil, nil
+return nil
 end
-local r, w = scan(ch)
-if r then return r, w end
-r, w = scan(bp)
-if r then return r, w end
-return nil, nil
+r, w = scan(ch)
+if not r then r, w = scan(bp) end
+end
+end
+F._roleCache[pl] = { t = now, r = r, w = w }
+return r, w
 end
 F.RolePretty = function(pl)
 local r = F.RoleOf(pl)
@@ -7284,7 +7293,7 @@ end)
 F._npcLoop = RS.Heartbeat:Connect(function()
 if not T.NpcHL then F.NpcHLSet(false) return end
 local now = os.clock()
-if now - (F._npcAt or 0) < 1.5 then return end
+if now - (F._npcAt or 0) < 3 then return end
 F._npcAt = now
 F.NpcScan()
 for o, rec in pairs(F._npcObjs) do
