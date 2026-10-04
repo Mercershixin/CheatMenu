@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:27 sha 4860baeb bytes 438865'):format('2026-10-04 12:27','4860baeb',438865))
+print(('[CheatMenu] build 2026-10-04 12:31 sha 429bc60d bytes 439833'):format('2026-10-04 12:31','429bc60d',439833))
 local F = {}
-F.VERSION = "v14.0.28"
+F.VERSION = "v14.0.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -215,6 +215,23 @@ local function ok2(o)
 if not (o and o.Name == name) then return nil end
 return typOk(o)
 end
+pcall(function()
+local n = RStorage
+local segs = { "Shared", "Packages", "Network" }
+for i = 1, #segs do
+n = n and n:FindFirstChild(segs[i])
+if not n then break end
+end
+if n then
+local pre = (cls == "RemoteEvent") and "rev_" or "ref_"
+local cands = { name, pre .. name, tostring(name):gsub("%.", "_") }
+for i = 1, #cands do
+local r0 = typOk(n:FindFirstChild(cands[i]))
+if r0 then RRemoteCache[ck] = r0 end
+end
+end
+end)
+if RRemoteCache[ck] then return RRemoteCache[ck] end
 local sh = RStorage:FindFirstChild("Shared")
 local pk = sh and sh:FindFirstChild("Packages")
 local net = pk and pk:FindFirstChild("Network")
@@ -7462,14 +7479,25 @@ end
 local function sellHeld()
 local rf = RFunction("B_Sell")
 if rf then
-local ok = pcall(function() return rf:InvokeServer() end)
-if ok then return true end
+local ok, res = pcall(function() return rf:InvokeServer() end)
+if ok then
+if not F._sellOkLogged then
+F._sellOkLogged = true
+F.Out("[售卖] 已命中接口 " .. tostring(rf:GetFullName()) .. " · InvokeServer 调用成功")
+end
+return true
+end
+F.Out("[售卖] 找到接口 " .. tostring(rf:GetFullName()) .. " 但调用报错 ⇒ 可能被服务端拒绝")
 end
 local re = REvent("B_Sell")
 if re then
 if pcall(function() re:FireServer() end) then return true end
 end
-F.Out("[售卖] 没找到 B_Sell 的 RemoteFunction / RemoteEvent")
+if not F._sellMissLogged then
+F._sellMissLogged = true
+F.Out("[售卖] ⚠ 找不到 B_Sell 接口 —— 应在 ReplicatedStorage.Shared.Packages.Network 下(rev_/ref_ 前缀)")
+F.Out("[售卖] 实测可用的取出办法: RStorage.Shared.Packages.Network.ref_B_Sell (RemoteFunction)")
+end
 return false
 end
 function F.PreviewSell()
