@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:36 sha dd2d90e3 bytes 452065'):format('2026-10-04 14:36','dd2d90e3',452065))
+print(('[CheatMenu] build 2026-10-04 14:39 sha 6445c27e bytes 452521'):format('2026-10-04 14:39','6445c27e',452521))
 local F = {}
-F.VERSION = "v14.0.64"
+F.VERSION = "v14.0.65"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4708,15 +4708,27 @@ end
 function F.SpeedRestore()
 local back = tonumber(F._preSpeed) or tonumber(F._orig and F._orig.walk)
 F._preSpeed = nil
-if not back or back <= 0 then return false end
-if back < 1 then return false end
+if not back or back <= 0 or back < 1 then return false end
 local _, hum = GC()
 if not hum then return false end
 local cur = tonumber(hum.WalkSpeed) or 0
 if cur > back then back = cur end
-if math.abs(cur - back) < 0.01 then return true end
+F._maxWalk = math.max(F._maxWalk or 0, back, cur)
+back = math.max(back, F._maxWalk)
 pcall(function() hum.WalkSpeed = back end)
-F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f", back))
+if F._spdHold then F._spdHold = false end
+F._spdHold = true
+task.spawn(function()
+local t0 = os.clock()
+while F._spdHold and (os.clock() - t0) < 1.5 do
+if T.SpeedOn then break end
+local _, h2 = GC()
+if h2 then pcall(function() h2.WalkSpeed = back end) end
+task.wait(0.05)
+end
+F._spdHold = nil
+end)
+F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f (并在 1.5 秒内压住游戏写回的低值)", back))
 return true
 end
 function F.SpeedSet(on)
@@ -4732,6 +4744,7 @@ local _, hum = GC()
 if hum then
 local cur = tonumber(hum.WalkSpeed)
 if cur and cur > 0 and not F._preSpeed then F._preSpeed = cur end
+pcall(function() F._maxWalk = math.max(F._maxWalk or 0, tonumber(hum.WalkSpeed) or 0, cur or 0) end)
 end
 F.SpeedApply()
 F._spdConn = F.DriveConnect(function(deltaTime)
