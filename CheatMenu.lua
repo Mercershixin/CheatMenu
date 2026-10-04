@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 22:24 sha c653a568 bytes 489329'):format('2026-10-04 22:24','c653a568',489329))
+print(('[CheatMenu] build 2026-10-04 22:28 sha 6a7cb080 bytes 489035'):format('2026-10-04 22:28','6a7cb080',489035))
 local F = {}
-F.VERSION = "v14.4.0"
+F.VERSION = "v14.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5504,13 +5504,16 @@ end
 F.savedNV = nil
 function F.NightVisionEnable()
 local L = game:GetService("Lighting")
-if not F.savedNV then F.savedNV = { Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient } end
-L.Brightness = 1.5 L.ClockTime = 0 L.Ambient = Color3.fromRGB(90, 255, 90)
+if not F.savedNV then F.savedNV = { Brightness = L.Brightness, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient } end
+L.Brightness = math.max(tonumber(L.Brightness) or 0, 2.5)
+L.Ambient = Color3.fromRGB(255, 255, 255)
+L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
 end
 function F.NightVisionDisable()
 local L = game:GetService("Lighting")
 if not F.savedNV then return end
-L.Brightness = F.savedNV.Brightness L.ClockTime = F.savedNV.ClockTime L.Ambient = F.savedNV.Ambient
+L.Brightness = F.savedNV.Brightness L.Ambient = F.savedNV.Ambient
+if F.savedNV.OutdoorAmbient then L.OutdoorAmbient = F.savedNV.OutdoorAmbient end
 end
 F.savedFog = nil
 function F.NoFogEnable()
@@ -6791,13 +6794,24 @@ local c = workspace.CurrentCamera
 if c then c.FieldOfView = (F._orig and F._orig.fov) or 70 end
 end
 local function ZoomEnable()
-LP.CameraMaxZoomDistance = C.Zoom or 400
-LP.CameraMinZoomDistance = 0.5
+pcall(function()
+local cm = LP.CameraMode
+F._origCamMode = cm
+LP.CameraMode = Enum.CameraMode.Classic
+end)
+LP.CameraMaxZoomDistance = 2000000
+LP.CameraMinZoomDistance = 0.1
+pcall(function() game:GetService("StarterPlayer").CameraMaxZoomDistance = 2000000 end)
+pcall(function() workspace.CurrentCamera.CameraSubject = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") or workspace.CurrentCamera.CameraSubject end)
 end
 local function ZoomDisable()
 local o = F._orig or {}
 LP.CameraMaxZoomDistance = o.maxZoom or 128
 LP.CameraMinZoomDistance = o.minZoom or 0.5
+if F._origCamMode then
+pcall(function() LP.CameraMode = F._origCamMode end)
+F._origCamMode = nil
+end
 end
 local LockHealthConn = nil
 local function LockHealthDisable() if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end end
@@ -12522,8 +12536,8 @@ Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果。本开关不落盘, 每次重载要重点一次", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
-Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "两种就是你说的那两种: 正面圈内锁 = 只锁屏幕正面那个圈里的(面对谁锁谁); 漏就锁 = 360°全身, 只要他身上有任何一个部位打得着(哪怕只露一条胳膊/一条腿)就锁", Values = {
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
+Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Values = {
 "漏就锁(360°全身 · 只要打得到就锁)",
 "正面圈内锁(只锁屏幕正面圈里的)",
 }, Default = "漏就锁(360°全身 · 只要打得到就锁)", Callback = function(v)
@@ -12562,21 +12576,6 @@ local cam = tostring(v):find("转视角", 1, true) ~= nil
 T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
-end })
-Tabs.Combat:AddSection("角色识别(谁是杀手/警长 · 通用)")
-Tabs.Combat:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接标在头上)", Description = "认出杀手/警长后, 在他们头顶显示文字标记(隔墙可见)。识别靠: 玩家属性 → 队伍 → 手持/背包里的刀枪 → 角色内物体名, 换游戏也能用", Default = false, Callback = function(v)
-T.RoleTag = v
-if F._cfgSyncing then return end
-F.RoleTagSet(v)
-end })
-Tabs.Combat:AddToggle("RoleColor", { Title = "接入高亮配色(杀手红 / 警长黄)", Description = "让「身体高亮透视」按角色上色: 杀手=红, 警长=黄, 其它=原配色。需要先开视觉页的「身体高亮透视」", Default = false, Callback = function(v)
-T.RoleColor = v
-if F._cfgSyncing then return end
-F.Out("[角色识别] 高亮配色 = " .. (v and "开(杀手红/警长黄)" or "关"))
-end })
-Tabs.Combat:AddButton({ Title = "扫一遍: 谁是杀手/警长(只读)", Callback = function()
-if not F.Once("scan_roles", 1.5) then return end
-F.ScanRoles()
 end })
 Tabs.Surv:AddSection("生存")
 Tabs.Surv:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
@@ -12811,6 +12810,21 @@ if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 F.Out("[降画质] " .. (v and "已开" or "已关"))
 end })
+Tabs.World:AddSection("角色识别(谁是杀手/警长 · 通用)")
+Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接标在头上)", Default = false, Callback = function(v)
+T.RoleTag = v
+if F._cfgSyncing then return end
+F.RoleTagSet(v)
+end })
+Tabs.World:AddToggle("RoleColor", { Title = "接入高亮配色(杀手红 / 警长黄)", Default = false, Callback = function(v)
+T.RoleColor = v
+if F._cfgSyncing then return end
+F.Out("[角色识别] 高亮配色 = " .. (v and "开(杀手红/警长黄)" or "关"))
+end })
+Tabs.World:AddButton({ Title = "扫一遍: 谁是杀手/警长(只读)", Callback = function()
+if not F.Once("scan_roles", 1.5) then return end
+F.ScanRoles()
+end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
 T.Hud = v
@@ -12835,7 +12849,7 @@ if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已
 if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.Name .. "」现在没有角色(在复活/已死)") return end
 TeleportToPlayer(pl)
 end })
-Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "开: 游戏里按 T 直接瞬移到鼠标指的地方(指着天空就送到正前方) / 关: T 键无效", Default = false, Callback = function(v)
+Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Default = false, Callback = function(v)
 T.TPMouse = v
 if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
