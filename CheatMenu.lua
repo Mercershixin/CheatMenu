@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:49 sha c06a343d bytes 464387'):format('2026-10-04 17:49','c06a343d',464387))
+print(('[CheatMenu] build 2026-10-04 17:53 sha dd0ac5c1 bytes 464370'):format('2026-10-04 17:53','dd0ac5c1',464370))
 local F = {}
-F.VERSION = "v14.0.94"
+F.VERSION = "v14.0.95"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9380,27 +9380,28 @@ box.Position = UDim2.new(0.25, 0, 0.9, 0)
 box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 box.BackgroundTransparency = 0.35
 box.TextColor3 = Color3.fromRGB(255, 255, 255)
-box.PlaceholderText = "[CM] 中文聊天框：打中文回车发送，不翻倍"
+box.PlaceholderText = "[CM] 中文聊天框：打中文回车发送(已修回车重复发送)"
 box.ClearTextOnFocus = false
 box.TextEditable = true
 box.Font = Enum.Font.Code
 box.TextSize = 16
 box.Parent = sg
 F._chatIMEBox = sg
+local lastTxt, lastAt = nil, 0
 local function send()
 local txt = box.Text
 if not txt or txt == "" then return end
+local now = os.clock()
+if txt == lastTxt and (now - lastAt) < 0.6 then
+box.Text = ""
+return
+end
+lastTxt, lastAt = txt, now
 box.Text = ""
 F.ChatSend(txt)
 end
 box.FocusLost:Connect(function(enterPressed)
 if enterPressed then send() end
-end)
-box.InputBegan:Connect(function(input, processed)
-if processed then return end
-if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
-send()
-end
 end)
 F.Out("[IME聊天] 已开：左下角框打中文 → 回车发送（不再翻倍）")
 end)
