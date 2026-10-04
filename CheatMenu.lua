@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:33 sha a7bec0fc bytes 512365'):format('2026-10-05 01:33','a7bec0fc',512365))
+print(('[CheatMenu] build 2026-10-05 01:35 sha 4bf1fef0 bytes 515725'):format('2026-10-05 01:35','4bf1fef0',515725))
 local F = {}
-F.VERSION = "v15.6.0"
+F.VERSION = "v15.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5444,7 +5444,76 @@ local _, hum = GC()
 if not hum then return end
 pcall(function() if hum.MaxHealth < 1e6 then hum.MaxHealth = 1e6 end end)
 pcall(function() if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end end)
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
+pcall(function() if hum.BreakJointsOnDeath then hum.BreakJointsOnDeath = false end end)
+pcall(function() if hum.RequiresNeck then hum.RequiresNeck = false end end)
 pcall(function() F.GodKillDied(hum) end)
+end)
+end
+F._cfgLast, F._cfgLoop, F._cfgAt = nil, nil, 0
+F.CfgSaveNow = function()
+if type(writefile) ~= "function" then return false, "执行器没有 writefile" end
+local body = nil
+local ok = pcall(function()
+local d = { T = {}, C = {} }
+local k, v
+for k, v in pairs(T) do
+if type(v) == "boolean" then d.T[k] = v end
+end
+for k, v in pairs(C) do
+local ty = type(v)
+if ty == "boolean" or ty == "number" or ty == "string" then d.C[k] = v end
+end
+body = HS:JSONEncode(d)
+end)
+if not ok or type(body) ~= "string" then return false, "序列化失败" end
+if body == F._cfgLast then return true, "无变化" end
+local okw = pcall(writefile, SaveFile, body)
+if okw then F._cfgLast = body end
+return okw, okw and ("已存 " .. #body .. " 字节") or "写盘失败"
+end
+F.CfgRead = function()
+if type(readfile) ~= "function" then return nil end
+local okh, has = pcall(function() return (type(isfile) == "function") and isfile(SaveFile) or true end)
+if not okh then return nil end
+if type(isfile) == "function" then
+local ok2, h2 = pcall(isfile, SaveFile)
+if ok2 and h2 == false then return nil end
+end
+local ok3, body = pcall(readfile, SaveFile)
+if not (ok3 and type(body) == "string" and #body > 4) then return nil end
+local ok4, d = pcall(function() return HS:JSONDecode(body) end)
+if not (ok4 and type(d) == "table") then return nil end
+return d
+end
+F.CfgApplyC = function()
+local d = F.CfgRead()
+if not d then F.Out("[配置] 没找到存档文件 " .. tostring(SaveFile)) return 0 end
+local n = 0
+F._cfgSyncing = true
+pcall(function()
+if type(d.C) == "table" then
+local k, v
+for k, v in pairs(d.C) do
+local ty = type(v)
+if ty == "number" or ty == "string" or ty == "boolean" then
+C[k] = v
+n = n + 1
+end
+end
+end
+end)
+pcall(F.CfgSyncUI)
+F._cfgSyncing = false
+F.Out("[配置] 已恢复 " .. tostring(n) .. " 项数值配置(开关没有自动打开)")
+return n
+end
+F.CfgAutoLoop = function()
+if F._cfgLoop then return end
+F._cfgLoop = RS.Heartbeat:Connect(function()
+if os.clock() - (F._cfgAt or 0) < 5 then return end
+F._cfgAt = os.clock()
+pcall(F.CfgSaveNow)
 end)
 end
 F.GodModeSet = function(on)
@@ -5465,10 +5534,13 @@ local _, hum = GC()
 if hum then
 pcall(function() hum.MaxHealth = 1e6 end)
 pcall(function() hum.Health = 1e6 end)
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
+pcall(function() hum.BreakJointsOnDeath = false end)
+pcall(function() hum.RequiresNeck = false end)
 F.GodKillDied(hum)
 end
 end)
-F.Out("[上帝模式] 已开(无敌+锁血+不死+防击倒+断死亡事件+拦上报)")
+F.Out("[上帝模式] 已开(无敌 + 锁血 + 不死 + 防击倒 + 禁用Dead状态 + 断死亡事件 + 拦上报)")
 else
 pcall(GodDisable)
 pcall(LockHealthDisable)
@@ -13383,7 +13455,7 @@ if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
 end })
 Tabs.Surv:AddSection("生命")
-Tabs.Surv:AddToggle("GodMode", { Title = "★ 上帝模式(无敌 + 锁血 + 不死 + 防击倒 + 断死亡事件 + 拦上报)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("GodMode", { Title = "★ 上帝模式(无敌 + 锁血 + 不死 + 防击倒 + 禁Dead状态 + 断死亡事件 + 拦上报)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
@@ -13891,6 +13963,26 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 F._fusing = false
 end
+Tabs.Setting:AddSection("配置存档")
+Tabs.Setting:AddButton({ Title = "保存当前设置到本地", Callback = function()
+if not F.Once("cfg_save", 1.5) then return end
+local ok, msg = F.CfgSaveNow()
+F.Out("[配置] 保存" .. (ok and "成功 · " or "失败 · ") .. tostring(msg))
+end })
+Tabs.Setting:AddButton({ Title = "读取上次设置(只恢复数值, 不自动开开关)", Callback = function()
+if not F.Once("cfg_load", 1.5) then return end
+F.CfgApplyC()
+end })
+Tabs.Setting:AddToggle("CfgAuto", { Title = "自动保存(每 5 秒有变化就写盘)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+if v then
+F.CfgAutoLoop()
+F.Out("[配置] 自动保存已开")
+else
+if F._cfgLoop then pcall(function() F._cfgLoop:Disconnect() end) F._cfgLoop = nil end
+F.Out("[配置] 自动保存已关")
+end
+end })
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function()
