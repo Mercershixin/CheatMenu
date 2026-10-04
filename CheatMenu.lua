@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:03 sha 7bc37755 bytes 461867'):format('2026-10-04 17:03','7bc37755',461867))
+print(('[CheatMenu] build 2026-10-04 17:10 sha f0479a6e bytes 461917'):format('2026-10-04 17:10','f0479a6e',461917))
 local F = {}
-F.VERSION = "v14.0.85"
+F.VERSION = "v14.0.86"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11879,6 +11879,7 @@ end)
 end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
+Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
 Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
@@ -11932,39 +11933,39 @@ T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
 end })
-Tabs.Combat:AddSection("生存")
-Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
+Tabs.Surv:AddSection("生存")
+Tabs.Surv:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
 T.AntiRagdoll, T.AntiKnockdown = v, v
 if F._cfgSyncing then return end
 F.AntiRagdollDisable() F.AntiKnockdownDisable()
 if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
 end })
-Tabs.Combat:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端若校验血量会拉回)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端若校验血量会拉回)", Default = false, Callback = function(v)
 T.God = v
 if F._cfgSyncing then return end
 if v then pcall(GodEnable) else pcall(GodDisable) end
 F.Out("[无敌] " .. (v and "已开(血量拉到无穷; 服务端若校验会拉回)" or "已关"))
 end })
-Tabs.Combat:AddToggle("LockHealth", { Title = "锁血(血量恒定)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("LockHealth", { Title = "锁血(血量恒定)", Default = false, Callback = function(v)
 T.LockHealth = v
 if F._cfgSyncing then return end
 if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
 F.Out("[锁血] " .. (v and "已开(血量恒定)" or "已关"))
 end })
-Tabs.Combat:AddToggle("Regen", { Title = "回血", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("Regen", { Title = "回血", Default = false, Callback = function(v)
 T.Regen = v
 if F._cfgSyncing then return end
 if v then pcall(RegenEnable) else pcall(RegenDisable) end
 F.Out("[回血] " .. (v and "已开" or "已关"))
 end })
-Tabs.Combat:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
 T.NoDeath = v
 if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
 end })
-Tabs.Combat:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.HealthShowSet(v)
 end })
