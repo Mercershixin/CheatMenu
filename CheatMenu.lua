@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:05 sha 243feabb bytes 440998'):format('2026-10-04 13:05','243feabb',440998))
+print(('[CheatMenu] build 2026-10-04 13:06 sha 6628c87a bytes 441175'):format('2026-10-04 13:06','6628c87a',441175))
 local F = {}
-F.VERSION = "v14.0.35"
+F.VERSION = "v14.0.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7174,6 +7174,9 @@ end)
 return best
 end
 F.CollectTP = function(maxSlot)
+return F.CollectAll(maxSlot)
+end
+F.CollectTP_OLD = function(maxSlot)
 task.spawn(function()
 local _, _, root = GC()
 if not root then F.Out("[收集] 没有角色, 稍后再点") return end
@@ -7738,28 +7741,24 @@ F.Out("[收钱] 已传送到你的地盘附近(" .. tostring(where) .. ")")
 return true
 end
 function F.CollectAll(maxSlot)
-if CollectThread then return end
-CollectThread = task.spawn(function()
-local ok, err = pcall(function()
-maxSlot = math.clamp(math.floor(tonumber(maxSlot) or 30), 1, 30)
-pcall(F.TpToMyPlot)
-task.wait(0.45)
+maxSlot = tonumber(maxSlot) or 30
+task.spawn(function()
+local node = game:GetService("ReplicatedStorage")
+for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
+local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
+if not (ok and child) then
+F.Out("[收集货币] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_B_Collect (" .. tostring(seg) .. " 找不到)")
+return
+end
+node = child
+end
 local n = 0
-local usedAny = nil
 for i = 1, maxSlot do
-local used = FireAny(F.COLLECT_KEYS, i)
-if used then n = n + 1 usedAny = used end
-task.wait(0.06)
+if pcall(function() node:FireServer(i) end) then n = n + 1 end
+task.wait(0.08)
 end
-if usedAny then
-F.Out(string.format("[收钱] 完成 · 触发 %d 个槽位(接口 %s)", n, tostring(usedAny)))
-else
-F.Out("[收钱] ⚠ 没找到可用的收集接口 ⇒ 本游戏可能不用 remote 收钱(点地盘上的金币按钮更直接)")
-end
-pcall(F.LogFlush, "收钱")
-end)
-CollectThread = nil
-if not ok then F.Out("[收钱] 出错: " .. tostring(err)) end
+F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
+pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
 end)
 end
 local SUFFIX = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15, qa = 1e15, qi = 1e18, sx = 1e21, sp = 1e24, no = 1e30, dc = 1e33 }
@@ -8703,7 +8702,7 @@ Trans._watch, Trans._sig = {}, {}
 local function one(d)
 if not T.Translate or not d then return end
 pcall(function() Trans.GuiEl(d) end)
-if (d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox"))
+if (d:IsA("TextLabel") or d:IsA("TextButton"))
 and not Trans._sig[d] then
 Trans._sig[d] = true
 pcall(function()
@@ -11683,7 +11682,7 @@ end })
 Tabs.AFK:AddButton({ Title = "① 统计: 有多少个符合我设的门槛", Description = "只报数量, 不列清单、不执行", Callback = function() pcall(F.ScanSellUI) end })
 Tabs.AFK:AddButton({ Title = "② ★ 按门槛卖出(只卖低于门槛的)", Description = "接口 ref_B_Sell (RemoteFunction · InvokeServer)。会先走到商人身边再逐个装备卖出", Callback = function() pcall(F.SellLowCPS, true) end })
 Tabs.AFK:AddButton({ Title = "③ 全部卖出(除限定脑红)", Description = "忽略门槛, 把能算出 CPS 的非限定脑红全部卖掉", Callback = function() pcall(F.SellAll) end })
-Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectTP, 30) end })
+Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectAll, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
