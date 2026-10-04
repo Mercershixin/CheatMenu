@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:17 sha a2b54bee bytes 446951'):format('2026-10-04 13:17','a2b54bee',446951))
+print(('[CheatMenu] build 2026-10-04 13:24 sha ae65576a bytes 446670'):format('2026-10-04 13:24','ae65576a',446670))
 local F = {}
-F.VERSION = "v14.0.39"
+F.VERSION = "v14.0.40"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7173,26 +7173,49 @@ end
 end)
 return best
 end
+F.FindMyBase = function()
+local uid, nm = tostring(LP.UserId), tostring(LP.Name)
+local cached = F._myBase
+if cached and cached.Parent then return cached end
+local cand = nil
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("Model") or d:IsA("Folder") then
+local mine = false
+pcall(function()
+local own = d:GetAttribute("Owner") or d:GetAttribute("owner") or d:GetAttribute("UserId") or d:GetAttribute("userId") or d:GetAttribute("Placer")
+if own ~= nil and tostring(own) == uid then mine = true end
+end)
+if not mine then
+local n2 = tostring(d.Name)
+if n2 == nm or n2:find(uid, 1, true) or n2:find(nm, 1, true) then mine = true end
+end
+if mine then cand = d break end
+end
+end
+end)
+F._myBase = cand
+if cand then F.Out("[收集] 我的基地/家 = " .. tostring(cand:GetFullName())) end
+return cand
+end
 F.FindMySlotPart = function(i)
+local base = F.FindMyBase()
+if not base then return nil end
 local want = tostring(i)
 local best = nil
 pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
+for _, d in ipairs(base:GetDescendants()) do
 if d:IsA("BasePart") or d:IsA("Model") then
-local mine, hit = false, false
-pcall(function()
-local own = d:GetAttribute("Owner") or d:GetAttribute("owner") or d:GetAttribute("UserId") or d:GetAttribute("userId") or d:GetAttribute("Placer")
-if own ~= nil and tostring(own) == tostring(LP.UserId) then mine = true end
-end)
+local hit = false
 pcall(function()
 local sl = d:GetAttribute("slot") or d:GetAttribute("Slot") or d:GetAttribute("SlotId") or d:GetAttribute("Index")
 if sl ~= nil and tostring(sl) == want then hit = true end
 end)
-if not hit then pcall(function() hit = tostring(d.Name):find(want, 1, true) ~= nil end) end
-if hit then
-if mine then best = d break end
-if best == nil then best = d end
+if not hit then
+local n2 = tostring(d.Name)
+if n2 == want or n2:find(" " .. want, 1, true) or n2:find(want .. " ", 1, true) or n2 == ("Slot" .. want) or n2 == ("Brainrot" .. want) then hit = true end
 end
+if hit then best = d break end
 end
 end
 end)
@@ -7575,18 +7598,6 @@ end
 F.Out("[卖出] 已按门槛逐个槽位发送 ref_B_Sell(共 " .. tostring(n) .. " 次)")
 end)
 end
-task.spawn(function()
-while true do
-task.wait(2)
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.SellScanResult
-if o and o.Set and F.SellScanStats then
-local r = F.SellScanStats()
-if r then o:Set(string.format("≤ %s: 符合 %d / 能算出 %d(限定 %d 不算)", F.FmtNum(r.n), r.hits, r.total, r.ex)) end
-end
-end)
-end
-end)
 F.SellScanStats = function()
 local raw = nil
 pcall(function()
@@ -11586,10 +11597,6 @@ Tabs.Combat:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目�
 if F._cfgSyncing then return end
 F.HealthShowSet(v)
 end })
-Tabs.Combat:AddToggle("HealthIsolate", { Title = "血量隔离(本地不掉血 · 读伪装+断血量监听)", Description = "把「外部读到的血量」固定成满血, 并断开游戏自己的血量变化监听 ⇒ 本地不会再看到掉血。⚠ 不是真无敌: 游戏若为服务端裁决血量(AuthorityMode=Server), 服务端仍会判你死亡并重生 —— 开关日志里会直接告诉你本游戏吃不吃这套", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-F.HealthIsolateSet(v)
-end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒 · 只影响飞行, 和加速互不影响)", Min = 10, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
@@ -11923,10 +11930,7 @@ T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddToggle("HpBlock", { Title = "拦受伤/死亡上报(让服务端以为你还活着)", Description = "把客户端发给服务端的「受伤/死亡」类 remote 本地拦下 ⇒ 服务端收不到。⚠ 只在游戏用「客户端上报受伤」时有效; 服务端算伤害的游戏拦了没用。日志会列出实际拦到什么, 游戏变卡说明误伤, 关掉即恢复", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-F.HpBlockSet(v)
-end })
+Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报(合成一个)", Description = "拦掉客户端发给服务端的受伤/死亡上报, 同时隔离伪装自己的血量读数 —— 一个开关两件事", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
 task.spawn(function()
