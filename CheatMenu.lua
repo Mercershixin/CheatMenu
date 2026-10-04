@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:30 sha de59eafb bytes 464753'):format('2026-10-04 17:30','de59eafb',464753))
+print(('[CheatMenu] build 2026-10-04 17:37 sha 08ed75bd bytes 464113'):format('2026-10-04 17:37','08ed75bd',464113))
 local F = {}
-F.VERSION = "v14.0.91"
+F.VERSION = "v14.0.92"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3815,7 +3815,7 @@ steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接
 lock and "开" or "关",
 trap and "拦截(只做不触发)" or "关", atp and "开" or "关", bypass and "开" or "关"))
 end
-F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
+F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "speedpad" }
 F._floorLast = {}
 F._floorCacheT, F._floorCacheV = 0, false
 F.OnMovingFloorRaw = function()
@@ -3828,20 +3828,29 @@ op.FilterType = Enum.RaycastFilterType.Exclude
 if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
 local probe = root.Position - Vector3.new(0, 3, 0)
 local seen = {}
-for _, pf in ipairs(workspace:GetPartBoundsInRadius(probe, 7, op)) do
+for _, pf in ipairs(workspace:GetPartBoundsInRadius(probe, 6, op)) do
 seen[pf] = true
 local nm = tostring(pf.Name):lower()
 for _, k in ipairs(F.FLOOR_KEYS) do
 if nm:find(k, 1, true) then hit = true break end
 end
 if not hit then
+local floorLike = false
+pcall(function()
+local sz = pf.Size
+local top = pf.Position.Y + sz.Y / 2
+local feet = root.Position.Y - 2
+floorLike = (math.max(sz.X, sz.Z) >= 6) and (sz.Y <= 4) and (math.abs(top - feet) <= 5)
+end)
+if floorLike then
 local av = 0
 pcall(function() av = pf.AssemblyLinearVelocity.Magnitude end)
-if av > 0.5 then hit = true end
-end
+if av > 3 then hit = true end
 if not hit and F._floorLast[pf] then
 local d = (pf.Position - F._floorLast[pf]).Magnitude
-if d > 0.02 then hit = true end
+if d > 0.25 then hit = true end
+end
+end
 end
 F._floorLast[pf] = pf.Position
 end
@@ -4141,9 +4150,7 @@ end
 return false
 end
 F.TrapUniversal = function()
-local v = tostring(C.TrapScope or "")
-if v == "" then return true end
-return v:find("通用", 1, true) ~= nil
+return true
 end
 F.TrapIsMine = function(part)
 local ok, r = pcall(function()
@@ -12064,16 +12071,6 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
-Tabs.Move:AddDropdown("TrapScope", { Title = "反陷阱范围(夹子名字各游戏不同, 用这个覆盖)", Values = {
-"通用: 附近所有『带触碰(TouchInterest)』的物件都解除(各种游戏通用 · 默认)",
-"保守: 只处理名字/父级名像陷阱的",
-}, Default = "通用: 附近所有『带触碰(TouchInterest)』的物件都解除(各种游戏通用 · 默认)", Callback = function(v)
-C.TrapScope = v
-if F._cfgSyncing then return end
-F.Out("[反陷阱] 范围切到「" .. tostring(v) .. "」"
-.. ((tostring(v):find("通用", 1, true) and " —— 除白名单(金币/拾取/蛋/传送门/按钮…)+你自己的角色外, 附近任何『可被碰触』的零件都会解除触碰")
-or " —— 只按名字/父级名匹配"))
-end })
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
