@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:21 sha 6725a366 bytes 473381'):format('2026-10-04 19:21','6725a366',473381))
+print(('[CheatMenu] build 2026-10-04 19:27 sha bf9bcb46 bytes 475073'):format('2026-10-04 19:27','bf9bcb46',475073))
 local F = {}
-F.VERSION = "v14.0.110"
+F.VERSION = "v14.0.111"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5509,6 +5509,7 @@ end)
 local from = root.Position
 local dist = (cf.Position - from).Magnitude
 local rot = cf - cf.Position
+F._tpAt = os.clock()
 pcall(function() root.CFrame = cf end)
 F._tpOwnInfo = own
 pcall(function()
@@ -5521,6 +5522,7 @@ pcall(function() F.TakeAllOwnership() end)
 pcall(function() if (root.Position - cf.Position).Magnitude > 8 then root.CFrame = cf end end)
 pcall(function() RS.Heartbeat:Wait() end)
 end
+F._tpAt = os.clock()
 if wasStand ~= nil then
 pcall(function() hum.PlatformStand = wasStand end)
 end
@@ -6370,6 +6372,48 @@ end
 F.SpeedFreeDisable = function()
 T.SpeedFree = false
 if F._sfConn then pcall(function() F._sfConn:Disconnect() end) F._sfConn = nil end
+end
+F.NoPullEnable = function()
+if F._npConn then return end
+T.NoPull = true
+F._npAt, F._npPos, F._npHits, F._npBack, F._npLog = 0, nil, 0, 0, 0
+F._npConn = RS.RenderStepped:Connect(function()
+if not T.NoPull then return end
+local now = os.clock()
+if (T.SpeedOn or T.FlyOn) and now - (F._npAt or 0) > 0.5 then
+F._npAt = now
+pcall(F.TakeAllOwnership)
+end
+local _, _, r = GC()
+if not r then return end
+local p = r.Position
+if now - (F._tpAt or 0) < 0.3 then F._npPos = p return end
+local last = F._npPos
+F._npPos = p
+if not last then return end
+local d = (p - last).Magnitude
+local spd = 0
+if T.FlyOn then spd = tonumber(C.FlyValue) or 0 end
+if T.SpeedOn then spd = math.max(spd, tonumber(C.SpeedValue) or 0) end
+local thr = spd / 45 + 60
+if d > thr then
+F._npHits = (F._npHits or 0) + 1
+if now - (F._npLog or 0) > 3 then
+F._npLog = now
+F.Out("[防护·反回拉] 位置被外部挪动 " .. string.format("%.0f", d) .. " 格(正常一帧最多 " .. string.format("%.0f", thr) .. ") ⇒ 已拉回原位 · 累计 " .. tostring(F._npHits) .. " 次")
+end
+if (F._npBack or 0) <= now then
+F._npBack = now + 0.2
+pcall(function() r.CFrame = CFrame.new(last) end)
+F._npPos = last
+end
+end
+end)
+F.Out("[防护·反回拉] 已开: ① 加速/飞行期间持续把角色的网络所有权保持在你这边(只抢所有权, 不动速度) ② 被服务端拉回时自动拉回原位(判据随你的速度自适应, 不会误伤正常移动)")
+end
+F.NoPullDisable = function()
+T.NoPull = false
+if F._npConn then pcall(function() F._npConn:Disconnect() end) F._npConn = nil end
 end
 function F.AllInOneDisableAll()
 pcall(F.SpeedGuardDisable)
@@ -7338,7 +7382,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.KickGuardPathsDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
@@ -9501,7 +9545,7 @@ F.GuiProtectionDisable,
 F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
-F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
+F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
@@ -12286,13 +12330,15 @@ pcall(F.ProtectApply)
 if v then
 pcall(F.SpeedAntiTPEnable)
 pcall(F.SpeedFreeEnable)
+pcall(F.NoPullEnable)
 pcall(F.MyEggSet, true)
 else
 pcall(F.SpeedAntiTPDisable)
 pcall(F.SpeedFreeDisable)
+pcall(F.NoPullDisable)
 pcall(F.MyEggSet, false)
 end
-F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/护蛋 = " .. (v and "开" or "关"))
+F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/反回拉/护蛋 = " .. (v and "开" or "关"))
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
