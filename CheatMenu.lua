@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:05 sha 92bdec13 bytes 459917'):format('2026-10-04 16:05','92bdec13',459917))
+print(('[CheatMenu] build 2026-10-04 16:17 sha f1641ea4 bytes 461411'):format('2026-10-04 16:17','f1641ea4',461411))
 local F = {}
-F.VERSION = "v14.0.78"
+F.VERSION = "v14.0.79"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11926,6 +11926,7 @@ Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 ·
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
+T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 T.SpeedAntiTP, T.MyEgg = v, v
 if F._cfgSyncing then return end
@@ -12245,7 +12246,7 @@ F._auditOff = {}
 F.Out("[远程体检] 已还原之前关掉的全部远程回调")
 return
 end
-F.Out("[远程体检] ===== 所有 FireClient 的处理函数 =====")
+F.Out("[远程体检] ===== 所有 FireClient 的处理函数(纯只读, 不会关掉任何回调) =====")
 pcall(function()
 for _, d in ipairs(rs:GetDescendants()) do
 local cls = d.ClassName
@@ -12263,21 +12264,15 @@ pcall(function()
 local f = conns[1].Function
 if f then local i = debug.getinfo(f, "s") src = tostring(i and i.source or "?") end
 end)
-F.Out(string.format("[远程体检] %s · %d 条连接 · 来源 %s%s", nm, #conns, tostring(src):sub(1, 70), sus and "  <<< 名字像掉蛋/收回" or ""))
-if sus then
-hit = hit + 1
-for _, c in ipairs(conns) do
-pcall(function() c:Disable() end)
-F._auditOff[#F._auditOff + 1] = c
-end
-end
+F.Out(string.format("[远程体检] %s · %d 条连接 · 来源 %s%s", nm, #conns, tostring(src):sub(1, 70), sus and "  <<< 掉蛋/收回类(只列出)" or ""))
+if sus then hit = hit + 1 end
 end
 end
 end
 end)
-F.Out("[远程体检] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 关掉像掉蛋/收回的 " .. tostring(hit) .. " 个(可再点一次还原)")
-F.Out("[远程体检] 注意: 关闭 = 禁用该远程的客户端处理函数(服务端照样发出, 只是我们不再响应)。对 Eggs:*/Ragdoll/Treadmills:* 这类「游戏状态通知」关掉会让客户端状态不同步(UI/交互可能卡住), 建议只在需要时开、用完点第二次还原")
-pcall(function() Fluent:Notify({ Title = "远程体检", Content = "检查 " .. tostring(n) .. " 个 · 关掉可疑 " .. tostring(hit) .. " 个", Duration = 10 }) end)
+F.Out("[远程体检] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 其中名字像掉蛋/收回的 " .. tostring(hit) .. " 个(仅列出, 一个都不动)")
+F.Out("[远程体检] 说明: 旧版会把上面这些回调关掉 ⇒ 直接导致「偷不到蛋 / 搬起来就掉」; 现已改为纯只读, 不会再关任何回调")
+pcall(function() Fluent:Notify({ Title = "远程体检", Content = "只读检查 " .. tostring(n) .. " 个(不动任何回调)", Duration = 8 }) end)
 end
 F.HookResidue = function()
 local layers, ids = 0, {}
@@ -12351,7 +12346,8 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 end
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddButton({ Title = "★ 远程体检(列出所有 FireClient 处理 + 关掉像掉蛋的)", Description = "第一次点=体检并关掉名字像 drop/carry/egg/unequip/ragdoll/fling/kick 的远程回调; 再点一次=全部还原", Callback = function() pcall(F.RemoteAudit, F._auditOff and #F._auditOff > 0) end })
+Tabs.Setting:AddButton({ Title = "★ 远程体检(只列出所有 FireClient 处理 · 纯只读)", Description = "只列清单, 不关任何回调。旧版会关掉名字像 drop/carry/egg 的回调 ⇒ 会导致偷不到蛋/搬起来就掉, 已改掉", Callback = function() pcall(F.RemoteAudit) end })
+Tabs.Setting:AddButton({ Title = "★ 让「已开着的功能」真正生效(热重载后功能像开着其实没装时点)", Description = "把界面上显示为开的功能重新安装一遍(防护合1/稳身/反陷阱/防拉回/视觉等)", Callback = function() pcall(F.ApplySavedOn) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
@@ -12553,6 +12549,48 @@ wasOpen = now
 end
 end)
 F.CFG_NOSYNC = { AimOn = true, LockCam = true, Freecam = true, TPMouse = true }
+F.CFG_APPLY_SKIP = { TransLang = true, TransScope = true }
+F.ApplySavedOn = function(quiet)
+if F._applyingSaved then return 0 end
+F._applyingSaved = true
+local op = Fluent and Fluent.Options
+local applied, failed = 0, {}
+if type(op) == "table" then
+pcall(function()
+for name, opt in pairs(op) do
+if type(name) == "string" and type(opt) == "table" and type(opt.Set) == "function" then
+local skip = (F.CFG_NOSYNC[name] == true) or (F.CFG_APPLY_SKIP[name] == true)
+if not skip then
+for _, k in ipairs(F.PLAYER_DROPDOWNS) do if k == name then skip = true break end end
+end
+if not skip then
+local v = opt.Value
+local go = (v == true)
+if not go and type(v) == "string" and v ~= "" and string.sub(v, 1, 3) ~= "关" then go = true end
+if go then
+local cb = opt.Callback
+if type(cb) ~= "function" then cb = opt.callback end
+local ok = false
+if type(cb) == "function" then
+ok = pcall(cb, v)
+else
+if type(v) == "boolean" then pcall(function() opt:Set(not v) end) end
+ok = pcall(function() opt:Set(v) end)
+end
+if ok then applied = applied + 1 else failed[#failed + 1] = name end
+end
+end
+end
+end
+end)
+end
+F._applyingSaved = false
+if not quiet then
+F.Out("[加载] 已把上次开着的 " .. tostring(applied) .. " 个功能真正装好"
+.. ((#failed > 0) and (" · ⚠ 有 " .. tostring(#failed) .. " 个没装上: " .. table.concat(failed, ", ")) or ""))
+end
+return applied
+end
 function F.CfgSyncUI()
 local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return 0 end
@@ -12615,6 +12653,7 @@ end
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
 if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
+pcall(F.ApplySavedOn)
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
 if type(keep) ~= "table" then return end
@@ -12625,6 +12664,7 @@ if v == true then T[k] = true c = c + 1 end
 end
 local n2 = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (" .. tostring(n2) .. " 个控件)")
+pcall(F.ApplySavedOn)
 end)
 end)
 end)
