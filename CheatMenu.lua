@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:37 sha 81bbdc14 bytes 447850'):format('2026-10-04 13:37','81bbdc14',447850))
+print(('[CheatMenu] build 2026-10-04 13:38 sha 214e6852 bytes 448698'):format('2026-10-04 13:38','214e6852',448698))
 local F = {}
-F.VERSION = "v14.0.43"
+F.VERSION = "v14.0.44"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7247,19 +7247,37 @@ end
 F.CollectTP = function(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
 task.spawn(function()
+local _, _, root = GC()
+if not root then F.Out("[收集货币] 没角色, 稍后再点") return end
+local home = root.CFrame
 local node = game:GetService("ReplicatedStorage")
 for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
 local ok, ch = pcall(function() return node:WaitForChild(seg, 5) end)
 if not (ok and ch) then F.Out("[收集货币] 路径断了: " .. tostring(seg)) return end
 node = ch
 end
-local n = 0
+local base = F.FindMyBase and F.FindMyBase() or nil
+if base then F.Out("[收集货币] 我的基地 = " .. tostring(base:GetFullName() or base.Name)) end
+local moved, n = 0, 0
 for i = 1, maxSlot do
-if pcall(function() node:FireServer(i) end) then n = n + 1 end
-task.wait(0.08)
+local obj = F.FindMySlotPart and F.FindMySlotPart(i) or nil
+if obj then
+local pos = nil
+if obj:IsA("Model") then pcall(function() pos = obj:GetPivot().Position end) else pos = obj.Position end
+if pos then
+pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0)) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+moved = moved + 1
+task.wait(0.28)
 end
-F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
-pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送", Duration = 8 }) end)
+end
+if pcall(function() node:FireServer(i) end) then n = n + 1 end
+task.wait(0.1)
+end
+pcall(function() root.CFrame = home end)
+F.Out("[收集货币] 槽位 " .. tostring(n) .. " 个 · 其中 " .. tostring(moved) .. " 个先走到对应位置 · 已回到原位"
+.. (moved == 0 and " (没认出你的槽位: 把上面『我的基地』那行发我)" or ""))
+pcall(function() Fluent:Notify({ Title = "收集货币", Content = "槽位 " .. tostring(n) .. " 个 · 走到位置 " .. tostring(moved) .. " 个", Duration = 8 }) end)
 end)
 end
 F.CollectTP_OLD = function(maxSlot)
