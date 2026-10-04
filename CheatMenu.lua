@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:09 sha 16bf32ba bytes 433890'):format('2026-10-04 12:09','16bf32ba',433890))
+print(('[CheatMenu] build 2026-10-04 12:19 sha e988f914 bytes 435074'):format('2026-10-04 12:19','e988f914',435074))
 local F = {}
-F.VERSION = "v14.0.25"
+F.VERSION = "v14.0.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10622,31 +10622,44 @@ for i = 1, math.min(#list, 25) do F.Out("   · " .. list[i]) end
 if #list > 25 then F.Out("   ... 其余 " .. tostring(#list - 25) .. " 人已省略") end
 end
 F.ScanInventory = function()
-local list, bag = {}, 0
+local bag, list = 0, {}
 pcall(function()
 local ch = LP.Character
 if ch then
 local t = ch:FindFirstChildOfClass("Tool")
-if t then list[#list + 1] = "手持: " .. t.Name end
+if t then table.insert(list, 1, "手持: " .. t.Name) end
 end
 local bp = LP:FindFirstChildOfClass("Backpack")
 if bp then
+local count = {}
 for _, t in ipairs(bp:GetChildren()) do
 if t:IsA("Tool") then
 bag = bag + 1
-if #list < 40 then list[#list + 1] = "背包: " .. t.Name end
+count[t.Name] = (count[t.Name] or 0) + 1
 end
 end
+local arr = {}
+for nm, c in pairs(count) do arr[#arr + 1] = { nm = nm, c = c } end
+table.sort(arr, function(a, b)
+if a.c ~= b.c then return a.c > b.c end
+return a.nm < b.nm
+end)
+for i = 1, math.min(#arr, 30) do
+list[#list + 1] = string.format("背包: %s ×%d", arr[i].nm, arr[i].c)
+end
+if #arr > 30 then list[#list + 1] = "... 其余 " .. tostring(#arr - 30) .. " 种已省略" end
 end
 end)
-F.Out("[扫描·物品] 手持/背包清单(背包共 " .. tostring(bag) .. " 件):")
+F.Out("[扫描·物品] 手持/背包(共 " .. tostring(bag) .. " 件, 按种类聚合):")
 for i = 1, #list do F.Out("   · " .. list[i]) end
 end
 F.ScanMapPoints = function()
 local KEYS = { "spawn", "portal", "teleport", "gate", "door", "zone", "area", "region",
-"base", "plot", "shop", "store", "buyer", "bank", "chest", "vault", "dealer",
-"market", "tunnel", "ladder", "elevator", "exit", "entrance", "sell", "island" }
+"base", "plot", "owner", "shop", "store", "buyer", "bank", "chest", "vault", "dealer",
+"market", "tunnel", "ladder", "elevator", "exit", "entrance", "sell", "island",
+"plotowner", "kick", "conveyor", "machine", "claw", "rebirth", "upgrade" }
 local seen, list, n = {}, {}, 0
+local _, _, root = GC()
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
@@ -10658,7 +10671,10 @@ if string.find(nm, k, 1, true) then
 local key = d.Name .. "|" .. d.ClassName
 if not seen[key] then
 seen[key] = true
-if #list < 40 then list[#list + 1] = d.Name .. " (" .. d.ClassName .. ")" end
+if #list < 40 then
+local dist = root and string.format(" %.0f格", (d.Position - root.Position).Magnitude) or ""
+list[#list + 1] = d.Name .. " (" .. d.ClassName .. ")" .. dist
+end
 end
 break
 end
@@ -10667,49 +10683,71 @@ end
 end
 end)
 table.sort(list)
-F.Out("[扫描·地标] 名字像 传送点/区域/商店/基地 的部件(去重后 " .. tostring(#list) .. " 类):")
+F.Out("[扫描·地标] 传送点/区域/商店/基地/机器 等(去重 " .. tostring(#list) .. " 类):")
 for i = 1, #list do F.Out("   · " .. list[i]) end
 end
 F.ScanGuiState = function()
 local list = {}
-local function walk(root, tag, depth)
-if not root or depth > 3 then return end
+local NOISE = { surface = true, frames = true, effects = true, container = true, holder = true }
+local function noisy(nm)
+local s = string.lower(nm)
+for k in pairs(NOISE) do if string.find(s, k, 1, true) then return true end end
+return false
+end
+local function hasContent(gui)
+local ok, r = pcall(function()
+for _, d in ipairs(gui:GetDescendants()) do
+if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+local t = d.Text
+if type(t) == "string" and #t > 0 then return true end
+end
+end
+return false
+end)
+return ok and r
+end
+local function walk(root, tag)
 pcall(function()
 for _, d in ipairs(root:GetChildren()) do
-if d:IsA("ScreenGui") and d.Enabled then
+if d:IsA("ScreenGui") and d.Enabled and not noisy(d.Name) and hasContent(d) then
 if #list < 25 then list[#list + 1] = tag .. ": " .. d.Name end
-elseif d:IsA("GuiObject") and d.Visible then
-if #list < 25 and (d:IsA("TextButton") or d:IsA("TextLabel") or d:IsA("TextBox")) then
-local txt = d.Text
-if type(txt) == "string" and #txt > 0 and #txt < 40 then
-list[#list + 1] = tag .. ": " .. tostring(d.ClassName) .. " \"" .. txt .. "\""
 end
-end
-walk(d, tag, depth + 1)
-end
+if d:IsA("GuiObject") then walk(d, tag) end
 end
 end)
 end
-pcall(function() walk(LP:FindFirstChild("PlayerGui"), "PlayerGui", 1) end)
-pcall(function() walk(CoreGui, "CoreGui", 1) end)
-F.Out("[扫描·界面] 当前可见界面(前 25 条 · 已排除我们自己的菜单):")
+pcall(function() walk(LP:FindFirstChild("PlayerGui"), "PlayerGui") end)
+pcall(function() walk(CoreGui, "CoreGui") end)
+table.sort(list)
+F.Out("[扫描·界面] 有实际内容的可见界面(" .. tostring(#list) .. " 个 · 已排除容器与我们的菜单):")
 for i = 1, #list do F.Out("   · " .. list[i]) end
-if #list == 0 then F.Out("   (没有可见的额外界面)") end
+if #list == 0 then F.Out("   (没有额外界面)") end
 end
 F.ScanNetStats = function()
-local ok, ping, down, up, mem = pcall(function()
+local ping = nil
+pcall(function() ping = LP:GetNetworkPing() end)
+local ok, sPing = pcall(function()
 local S = game:GetService("Stats")
-local p = S.Network.ServerStatsItem["Data Ping"]:GetValue()
-local d = S.Network.ServerStatsItem["Data Received"]:GetValue()
-local u = S.Network.ServerStatsItem["Data Sent"]:GetValue()
-local m = S:GetTotalMemoryUsageMb()
-return p, d, u, m
+return S.Network.ServerStatsItem["Data Ping"]:GetValue()
 end)
-if ok and ping then
-F.Out(string.format("[扫描·网络] 延迟 %.0f ms · 收 %.1f KB/s · 发 %.1f KB/s · 内存 %.0f MB",
-tonumber(ping) or 0, tonumber(down) or 0, tonumber(up) or 0, tonumber(mem) or 0))
+local fps = nil
+pcall(function() fps = workspace:GetRealPhysicsFPS() end)
+local had = false
+if ping then
+F.Out(string.format("[扫描·网络] 延迟 %.0f ms(GetNetworkPing)%s", (tonumber(ping) or 0) * 1000,
+fps and string.format(" · 物理帧率 %.0f FPS", fps) or ""))
+had = true
+elseif ok and sPing then
+F.Out(string.format("[扫描·网络] 延迟 %.0f ms(Stats)%s", tonumber(sPing) or 0,
+fps and string.format(" · 物理帧率 %.0f FPS", fps) or ""))
+had = true
+end
+if not had then
+if fps then
+F.Out(string.format("[扫描·网络] 本执行器取不到延迟 ⇒ 只拿到物理帧率 %.0f FPS(不影响其它扫描)", fps))
 else
-F.Out("[扫描·网络] 本执行器/本游戏取不到 Stats(不影响其它扫描)")
+F.Out("[扫描·网络] 本执行器/本游戏取不到网络统计(不影响其它扫描)")
+end
 end
 end
 F.ScanNearbyInteract = function()
