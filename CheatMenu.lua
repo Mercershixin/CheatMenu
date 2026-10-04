@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 22:01 sha 72298ca1 bytes 481660'):format('2026-10-04 22:01','72298ca1',481660))
+print(('[CheatMenu] build 2026-10-04 22:12 sha dad4cc1d bytes 487678'):format('2026-10-04 22:12','dad4cc1d',487678))
 local F = {}
-F.VERSION = "v14.1.0"
+F.VERSION = "v14.2.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7115,7 +7115,148 @@ end)
 end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
 F.CMX_HLMode = function() return tostring(C.BodyHLMode or "①") end
+F.ROLE_KILLER = { "knife","sword","blade","dagger","murder","killer","assassin","reaper","scythe","刀","杀手","匕首" }
+F.ROLE_SHERIFF = { "gun","pistol","revolver","sheriff","cop","police","marshal","deputy","枪","警长","警察" }
+F.ROLE_ATTRS = { "Role","role","RoleName","rolename","Alignment","alignment","Job","job","Class","class","TeamName","teamname" }
+F.ROLE_NAME = { killer = "杀手", sheriff = "警长" }
+F.ROLE_COLOR = { killer = Color3.fromRGB(255, 45, 45), sheriff = Color3.fromRGB(255, 210, 0), none = Color3.fromRGB(120, 230, 130) }
+F.RoleMatch = function(v)
+if type(v) ~= "string" or v == "" then return nil end
+local t = string.lower(v)
+local i
+for i = 1, #F.ROLE_KILLER do if string.find(t, string.lower(F.ROLE_KILLER[i]), 1, true) then return "killer" end end
+for i = 1, #F.ROLE_SHERIFF do if string.find(t, string.lower(F.ROLE_SHERIFF[i]), 1, true) then return "sheriff" end end
+return nil
+end
+F.RoleOf = function(pl)
+if not pl then return nil, nil end
+local i, k, ok, v
+for i = 1, #F.ROLE_ATTRS do
+k = F.ROLE_ATTRS[i]
+ok, v = pcall(function() return pl:GetAttribute(k) end)
+if ok and v ~= nil then
+local r = F.RoleMatch(tostring(v))
+if r then return r, "属性 " .. k .. "=" .. tostring(v) end
+end
+end
+local tr, tn = nil, nil
+pcall(function() if pl.Team then tn = pl.Team.Name tr = F.RoleMatch(tn) end end)
+if tr then return tr, "队伍 " .. tostring(tn) end
+local ch = pl.Character
+local bp = nil
+pcall(function() bp = pl:FindFirstChildOfClass("Backpack") end)
+local function scan(c)
+if not c then return nil, nil end
+local kids = c:GetChildren()
+for i = 1, #kids do
+local d = kids[i]
+local r = F.RoleMatch(d.Name)
+if r then
+if d:IsA("Tool") then return r, "工具 " .. d.Name end
+return r, "角色内 " .. d.Name
+end
+end
+return nil, nil
+end
+local r, w = scan(ch)
+if r then return r, w end
+r, w = scan(bp)
+if r then return r, w end
+return nil, nil
+end
+F.RolePretty = function(pl)
+local r = F.RoleOf(pl)
+if r == "killer" then return F.ROLE_NAME.killer, F.ROLE_COLOR.killer, r end
+if r == "sheriff" then return F.ROLE_NAME.sheriff, F.ROLE_COLOR.sheriff, r end
+return "平民", F.ROLE_COLOR.none, nil
+end
+F._roleTags, F._roleTagConn = {}, nil
+F.RoleTagRefresh = function()
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl == LP then continue end
+local ch = pl.Character
+local head = ch and ch:FindFirstChild("Head")
+local g = F._roleTags[pl]
+if not head then
+if g then pcall(function() g:Destroy() end) F._roleTags[pl] = nil end
+continue
+end
+local name, col, key = F.RolePretty(pl)
+if not g then
+if not host then continue end
+g = Instance.new("BillboardGui")
+g.Name = "CMRoleTag"
+g.AlwaysOnTop = true
+g.Size = UDim2.fromOffset(130, 22)
+g.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
+g.MaxDistance = 400
+local lb = Instance.new("TextLabel")
+lb.Name = "T"
+lb.Size = UDim2.fromScale(1, 1)
+lb.BackgroundTransparency = 1
+lb.TextScaled = true
+lb.Font = Enum.Font.GothamBold
+lb.TextStrokeTransparency = 0.3
+lb.Text = "-"
+lb.Parent = g
+g.Parent = head
+pcall(function() g:SetAttribute("CMOwned", true) end)
+F._roleTags[pl] = g
+end
+local lb = g and g:FindFirstChild("T")
+if lb then
+lb.Text = (key == "killer" and "[杀手] " or key == "sheriff" and "[警长] " or "") .. name
+lb.TextColor3 = col
+end
+end
+for plObj, g in pairs(F._roleTags) do
+if not plObj.Parent then pcall(function() g:Destroy() end) F._roleTags[plObj] = nil end
+end
+end
+F.RoleTagSet = function(on)
+T.RoleTag = on and true or false
+if F._roleTagConn then pcall(function() F._roleTagConn:Disconnect() end) F._roleTagConn = nil end
+if not T.RoleTag then
+for _, g in pairs(F._roleTags) do pcall(function() g:Destroy() end) end
+F._roleTags = {}
+F.Out("[角色识别] 头顶标记已关")
+return
+end
+F.Out("[角色识别] 头顶标记已开(杀手/警长会标在头上)")
+F._roleTagConn = RS.RenderStepped:Connect(function()
+if not T.RoleTag then F.RoleTagSet(false) return end
+local now = os.clock()
+if now - (F._roleTagAt or 0) < 0.4 then return end
+F._roleTagAt = now
+F.RoleTagRefresh()
+end)
+end
+F.ScanRoles = function()
+local n, k, sh = 0, {}, {}
+pcall(function()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+n = n + 1
+local _, _, key = F.RolePretty(pl)
+local why = select(2, F.RoleOf(pl))
+if key == "killer" then k[#k + 1] = pl.Name .. (why and (" (" .. why .. ")") or "")
+elseif key == "sheriff" then sh[#sh + 1] = pl.Name .. (why and (" (" .. why .. ")") or "") end
+end
+end
+end)
+F.Out("[角色识别] 扫了 " .. tostring(n) .. " 人, 识别结果:")
+for i = 1, #k do F.Out("   [杀手] " .. k[i]) end
+for i = 1, #sh do F.Out("   [警长] " .. sh[i]) end
+if #k == 0 and #sh == 0 then F.Out("   (没识别出杀手/警长 — 可能本局没分发, 或者该游戏不向客户端暴露角色)") end
+end
 F.CMX_HLTeamColor = function(pl)
+if T.RoleColor then
+local _, col, key = F.RolePretty(pl)
+if key then return col end
+end
 local same = false
 pcall(function() same = (pl.Team ~= nil and pl.Team == LP.Team) end)
 if T.TeamColorHL == false then return Color3.fromRGB(0, 200, 255) end
@@ -7438,7 +7579,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -9598,7 +9739,7 @@ F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateD
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
-F.AimSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AimSet, F.RoleTagSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -12366,6 +12507,21 @@ local cam = tostring(v):find("转视角", 1, true) ~= nil
 T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
+end })
+Tabs.Combat:AddSection("角色识别(谁是杀手/警长 · 通用)")
+Tabs.Combat:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接标在头上)", Description = "认出杀手/警长后, 在他们头顶显示文字标记(隔墙可见)。识别靠: 玩家属性 → 队伍 → 手持/背包里的刀枪 → 角色内物体名, 换游戏也能用", Default = false, Callback = function(v)
+T.RoleTag = v
+if F._cfgSyncing then return end
+F.RoleTagSet(v)
+end })
+Tabs.Combat:AddToggle("RoleColor", { Title = "接入高亮配色(杀手红 / 警长黄)", Description = "让「身体高亮透视」按角色上色: 杀手=红, 警长=黄, 其它=原配色。需要先开视觉页的「身体高亮透视」", Default = false, Callback = function(v)
+T.RoleColor = v
+if F._cfgSyncing then return end
+F.Out("[角色识别] 高亮配色 = " .. (v and "开(杀手红/警长黄)" or "关"))
+end })
+Tabs.Combat:AddButton({ Title = "扫一遍: 谁是杀手/警长(只读)", Callback = function()
+if not F.Once("scan_roles", 1.5) then return end
+F.ScanRoles()
 end })
 Tabs.Surv:AddSection("生存")
 Tabs.Surv:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
