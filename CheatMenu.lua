@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:36 sha 554079ad bytes 441390'):format('2026-10-04 12:36','554079ad',441390))
+print(('[CheatMenu] build 2026-10-04 12:42 sha 2e7ac6c5 bytes 441474'):format('2026-10-04 12:42','2e7ac6c5',441474))
 local F = {}
-F.VERSION = "v14.0.30"
+F.VERSION = "v14.0.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6791,7 +6791,9 @@ end
 function F.LockCamDisable()
 if F._lockCamConn then F._lockCamConn:Disconnect() F._lockCamConn = nil end
 end
-F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true }
+F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
+AntiAFK = true, KickGuard = true, GuardOn = true, HitGuard = true, SteadyOn = true,
+TrapWarn = true, SpeedGuard = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -6806,7 +6808,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FreecamDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.LockCamDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.KickGuardDisable, F.AntiFlingDisable, F.AntiAFKDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.HitGuardDisable, F.SteadyDisable, F.TrapGuardDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.AutoSaveDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -6863,8 +6865,10 @@ end
 end
 end)
 if #wasOn > 0 then
-F.Out("[急停] 本次关掉的功能: " .. table.concat(wasOn, ", ") .. " (自瞄也在其中 ⇒ 若你没按急停却出现这行, 就是浮钮被长按了)")
+F.Out("[急停] 本次关掉的功能: " .. table.concat(wasOn, ", "))
 end
+F.Out("[急停] 已保留(防护类不关): 角色持续 · 自动存档 · 护界面 · 挂机防踢 · 受击/稳身/陷阱防护 · 速度守卫")
+pcall(F.CfgSyncUI)
 if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
 end
