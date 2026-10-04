@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 03:21 sha 89387a6a bytes 436494'):format('2026-10-04 03:21','89387a6a',436494))
+print(('[CheatMenu] build 2026-10-04 12:04 sha 2c9ad218 bytes 434684'):format('2026-10-04 12:04','2c9ad218',434684))
 local F = {}
-F.VERSION = "v14.0.22"
+F.VERSION = "v14.0.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -178,9 +178,13 @@ local function GC()
 if _gcCh and _gcCh.Parent and _gcHum and _gcHum.Parent and _gcRoot and _gcRoot.Parent then
 return _gcCh, _gcHum, _gcRoot
 end
-local ch = LP.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-local root = (hum and ch:FindFirstChild("HumanoidRootPart")) or (ch and ch:FindFirstChild("HumanoidRootPart"))
+local ok, ch, hum, root = pcall(function()
+local c = LP.Character
+local h = c and c:FindFirstChildOfClass("Humanoid")
+local r = (h and c:FindFirstChild("HumanoidRootPart")) or (c and c:FindFirstChild("HumanoidRootPart"))
+return c, h, r
+end)
+if not ok then return _gcCh, _gcHum, _gcRoot end
 _gcCh, _gcHum, _gcRoot = ch, hum, root
 return ch, hum, root
 end
@@ -592,18 +596,6 @@ if type(F.CMX_KeyIsolate) == "function" then hit = F.CMX_KeyIsolate(hname, kw)
 else hit = hname:find(kw, 1, true) ~= nil end
 if hit then
 AC._hpBlocked = (AC._hpBlocked or 0) + 1
-AC._hpMute = AC._hpMute or {}
-AC._hpMute[hname] = (AC._hpMute[hname] or 0) + 1
-if AC._hpMute[hname] >= 3 then
-AC._hpMuteLogged = AC._hpMuteLogged or {}
-if not AC._hpMuteLogged[hname] then
-AC._hpMuteLogged[hname] = true
-local m4 = "[拦受伤上报·熔断] " .. hname .. " 已反复上报 3 次 ⇒ 直接挂起调用(它再也没机会发出去)"
-if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, m4) end)
-else pcall(F.Out, m4) end
-end
-return task.wait(9e9)
-end
 local now2 = os.clock()
 if now2 - (AC._hpLogAt or 0) > 3 then
 AC._hpLogAt = now2
@@ -7231,33 +7223,6 @@ T.AutoBonus = false
 BonusThread = nil
 F.Out("[领奖] 已停止")
 end
-F.GameCheck = function()
-local _, nm = pcall(function()
-return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-end)
-F.Out("[诊断] 游戏 = " .. tostring(nm or "?") .. " · PlaceId = " .. tostring(game.PlaceId))
-local sh = RStorage:FindFirstChild("Shared")
-local pk = sh and sh:FindFirstChild("Packages")
-local net = pk and pk:FindFirstChild("Network")
-F.Out("[诊断] 网络容器 Shared.Packages.Network = " .. tostring(net)
-.. (net and (" (" .. tostring(#net:GetChildren()) .. " 个通道)") or ""))
-for _, n in ipairs({ "rev_KickEvent", "rev_B_Collect", "rev_B_Upgrade", "rev_Shop_Buy", "rev_SPEED_UPGRADE", "rev_RebirthRequest", "rev_KickZman", "rev_Transformed", "ref_B_SellAll" }) do
-local r = findRemote(n, "RemoteEvent") or findRemote(n, "RemoteFunction")
-F.Out("  " .. (r and "✓" or "✗") .. " " .. n)
-end
-local kupg = kickUpgradesGui()
-local list = ""
-if kupg then
-local names = {}
-for _, b in ipairs(kupg:GetChildren()) do
-names[#names + 1] = tostring(b.Name)
-if #names >= 12 then break end
-end
-list = " · 按钮: " .. table.concat(names, ",")
-end
-F.Out("[诊断] PlayerGui.KickUpgrades = " .. tostring(kupg) .. list)
-F.Out("[诊断] 结论说明: 锻炼=手持配重+点 Bonus/PopBonus; 领奖=点 Bonus + rev_B_Collect + 触碰地盘按钮")
-end
 do
 local CPS = {
 ["Noobini Pizzanini"]=2,["Lirili Larila"]=3,["Tim Cheese"]=3,["Talpa Di Fero"]=4,
@@ -11410,7 +11375,6 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
-Tabs.AFK:AddButton({ Title = "★ 自助诊断(检查本游戏接口/按钮)", Callback = function() pcall(F.GameCheck) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
