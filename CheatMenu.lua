@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:21 sha 43d9cf2f bytes 459948'):format('2026-10-04 17:21','43d9cf2f',459948))
+print(('[CheatMenu] build 2026-10-04 17:22 sha f4704542 bytes 460237'):format('2026-10-04 17:22','f4704542',460237))
 local F = {}
-F.VERSION = "v14.0.88"
+F.VERSION = "v14.0.89"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3627,9 +3627,15 @@ F._antiRagdollConn = nil
 F._antiKnockConn = nil
 function F.AntiRagdollEnable()
 if F._antiRagdollConn then return end
-local function apply()
+local arLast, arLastHum = 0, nil
+local function apply(force)
 local ch, hum = GC()
 if not hum then return end
+if not force then
+local now = os.clock()
+if hum == arLastHum and now - arLast < 0.25 then return end
+arLast, arLastHum = now, hum
+end
 pcall(function()
 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -3639,8 +3645,8 @@ local rc = ch and ch:FindFirstChild("RagdollClient")
 if rc then rc.Enabled = false end
 end)
 end
-apply()
-F._antiRagdollConn = RS.Stepped:Connect(apply)
+apply(true)
+F._antiRagdollConn = RS.Stepped:Connect(function() apply(false) end)
 end
 function F.AntiRagdollDisable()
 if F._antiRagdollConn then F._antiRagdollConn:Disconnect() F._antiRagdollConn = nil end
@@ -5186,9 +5192,13 @@ if hum and F.NoClipStateOrig == nil then
 F.NoClipStateOrig = hum:GetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics)
 end
 end)
+local ncLast = 0
 local function noclip()
 local ch = LP.Character
 if not ch then return end
+local now = os.clock()
+if now - ncLast < 0.3 then return end
+ncLast = now
 local hum = ch:FindFirstChildOfClass("Humanoid")
 if hum then pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, false) end) end
 for _, part in ipairs(ch:GetDescendants()) do
