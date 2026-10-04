@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:58 sha 9a3c7035 bytes 464458'):format('2026-10-04 17:58','9a3c7035',464458))
+print(('[CheatMenu] build 2026-10-04 18:15 sha 9b335a21 bytes 465459'):format('2026-10-04 18:15','9b335a21',465459))
 local F = {}
-F.VERSION = "v14.0.97"
+F.VERSION = "v14.0.98"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9237,7 +9237,6 @@ C.TransOfficial = false
 Trans.Prewarm()
 Trans.Scan()
 Trans.WatchOn()
-pcall(F.ChatIMEBoxEnable)
 Trans.HeartbeatOn()
 Trans.Loop = task.spawn(function()
 while T.Translate do
@@ -9381,13 +9380,30 @@ box.Position = UDim2.new(0.25, 0, 0.9, 0)
 box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 box.BackgroundTransparency = 0.35
 box.TextColor3 = Color3.fromRGB(255, 255, 255)
-box.PlaceholderText = "[CM] 中文聊天框：打中文回车发送(已修回车重复发送)"
+box.PlaceholderText = "[CM] 中文聊天框：回车发送(已自动折掉输入法重复上屏)"
 box.ClearTextOnFocus = false
 box.TextEditable = true
 box.Font = Enum.Font.Code
 box.TextSize = 16
 box.Parent = sg
 F._chatIMEBox = sg
+local luLast, luAt = "", 0
+pcall(function()
+box:GetPropertyChangedSignal("Text"):Connect(function()
+local t = box.Text
+if t == luLast then return end
+local prev = luLast
+local now = os.clock()
+luLast = t
+if now - luAt < 0.12 and #prev >= 1 and #t == #prev + 1
+and t:sub(1, #prev) == prev and t:sub(-1) == prev:sub(-1) then
+box.Text = prev
+luLast = prev
+return
+end
+luAt = now
+end)
+end)
 local lastTxt, lastAt = nil, 0
 local function send()
 local txt = box.Text
@@ -9407,6 +9423,10 @@ if enterPressed then send() end
 end)
 F.Out("[IME聊天] 已开：左下角框打中文 → 回车发送（不再翻倍）")
 end)
+end
+F.ChatBoxSet = function(on)
+T.ChatIMEBox = on and true or false
+if on then pcall(F.ChatIMEBoxEnable) else pcall(F.ChatIMEBoxDisable) end
 end
 F.ChatIMEBoxDisable = function()
 pcall(function() if F._chatIMEBox and F._chatIMEBox.Parent then F._chatIMEBox:Destroy() end end)
@@ -9438,7 +9458,7 @@ AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable,
-F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable,
+F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
@@ -12302,6 +12322,10 @@ F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面�
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
+Tabs.Trans:AddToggle("ChatIMEBox", { Title = "★ 中文聊天框(独立开关 · 用我们自己的框打字发中文)", Description = "屏幕下方出现一个 [CM] 输入框: 在里面打中文 → 回车直接发送。它由脚本直接发消息、并会自动折掉输入法「重复上屏」的那一次 ⇒ 不会再出现打一个变两个。不开翻译也能用", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+pcall(F.ChatBoxSet, v)
+end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
 pcall(F.HookFuse, true)
