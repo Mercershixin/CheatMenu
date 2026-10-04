@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:44 sha 3f704694 bytes 517709'):format('2026-10-05 01:44','3f704694',517709))
+print(('[CheatMenu] build 2026-10-05 01:49 sha f0555e08 bytes 518439'):format('2026-10-05 01:49','f0555e08',518439))
 local F = {}
-F.VERSION = "v16.0.0"
+F.VERSION = "v16.1.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7265,19 +7265,44 @@ local was = root.Visible
 root:GetPropertyChangedSignal("Visible"):Connect(function()
 local now = root.Visible
 F._menuOpen = now and true or false
+pcall(F.ModalOverlaySet, now)
 if was and not now then pcall(F.CloseDropdowns) end
 was = now
 end)
+pcall(F.ModalOverlaySet, root.Visible)
 end
 end)
-pcall(function()
-RS:BindToRenderStep("CM_MenuMouse", Enum.RenderPriority.Camera.Value + 200, function()
-if not F.MenuOpen() then return end
-if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
+F._modalOverlay, F._savedMouseIcon = nil, nil
+F.ModalOverlaySet = function(on)
+local sg = nil
+pcall(function() sg = Fluent and Fluent.GUI end)
+if not sg then return end
+if on then
+if not F._modalOverlay or not F._modalOverlay.Parent then
+local f = Instance.new("TextButton")
+f.Name = "CMModalOverlay"
+f.Size = UDim2.fromScale(1, 1)
+f.Position = UDim2.fromScale(0, 0)
+f.BackgroundTransparency = 1
+f.Text = ""
+f.TextTransparency = 1
+f.AutoButtonColor = false
+f.Modal = true
+f.ZIndex = 0
+pcall(function() f:SetAttribute("CMOwned", true) end)
+f.Parent = sg
+F._modalOverlay = f
 end
-end)
-end)
+pcall(function() F._modalOverlay.Visible = true end)
+pcall(function() F._savedMouseIcon = UIS.MouseIconEnabled UIS.MouseIconEnabled = true end)
+else
+if F._modalOverlay then pcall(function() F._modalOverlay.Visible = false end) end
+if F._savedMouseIcon ~= nil then
+pcall(function() UIS.MouseIconEnabled = F._savedMouseIcon end)
+F._savedMouseIcon = nil
+end
+end
+end
 pcall(function()
 UIS.InputBegan:Connect(function(input, processed)
 if processed then return end
