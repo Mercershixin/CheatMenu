@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:31 sha 54a5afb3 bytes 511636'):format('2026-10-05 01:31','54a5afb3',511636))
+print(('[CheatMenu] build 2026-10-05 01:33 sha a7bec0fc bytes 512365'):format('2026-10-05 01:33','a7bec0fc',512365))
 local F = {}
-F.VERSION = "v15.5.0"
+F.VERSION = "v15.6.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5412,6 +5412,82 @@ end
 end)
 end
 F.savedLight = nil
+F._godLoop, F._godAt = nil, 0
+F.GodKillDied = function(hum)
+if not hum then return 0 end
+local n = 0
+if type(getconnections) == "function" then
+pcall(function()
+local conns = getconnections(hum.Died)
+if type(conns) == "table" then
+local i
+for i = 1, #conns do
+pcall(function() conns[i]:Disconnect() end)
+n = n + 1
+end
+end
+end)
+end
+return n
+end
+F.GodTickLoop = function()
+if F._godLoop then return end
+F._godLoop = RS.Heartbeat:Connect(function()
+if not T.GodMode then
+if F._godLoop then F._godLoop:Disconnect() F._godLoop = nil end
+return
+end
+local now = os.clock()
+if now - (F._godAt or 0) < 0.25 then return end
+F._godAt = now
+local _, hum = GC()
+if not hum then return end
+pcall(function() if hum.MaxHealth < 1e6 then hum.MaxHealth = 1e6 end end)
+pcall(function() if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end end)
+pcall(function() F.GodKillDied(hum) end)
+end)
+end
+F.GodModeSet = function(on)
+T.GodMode = on and true or false
+T.God = T.GodMode
+T.LockHealth = T.GodMode
+T.NoDeath = T.GodMode
+T.AntiRagdoll = T.GodMode
+if T.GodMode then
+pcall(GodEnable)
+pcall(LockHealthEnable)
+pcall(NoDeathEnable)
+pcall(F.AntiRagdollEnable)
+pcall(function() F.HealthIsolateSet(true) end)
+F.GodTickLoop()
+pcall(function()
+local _, hum = GC()
+if hum then
+pcall(function() hum.MaxHealth = 1e6 end)
+pcall(function() hum.Health = 1e6 end)
+F.GodKillDied(hum)
+end
+end)
+F.Out("[上帝模式] 已开(无敌+锁血+不死+防击倒+断死亡事件+拦上报)")
+else
+pcall(GodDisable)
+pcall(LockHealthDisable)
+pcall(NoDeathDisable)
+pcall(F.AntiRagdollDisable)
+pcall(function() F.HealthIsolateSet(false) end)
+if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
+F.Out("[上帝模式] 已关")
+end
+end
+F.GodRefill = function()
+local _, hum = GC()
+if hum then
+pcall(function() hum.Health = hum.MaxHealth end)
+F.Out("[生命] 已回满血")
+else
+F.Out("[生命] 没有角色(还没加载/已死亡)")
+end
+end
 F.LightReassert = function()
 if not (T.FullBright or T.NightVision or T.NoFog) then return end
 local L = game:GetService("Lighting")
@@ -8367,7 +8443,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -13306,37 +13382,14 @@ T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
 end })
-Tabs.Surv:AddSection("生存")
-Tabs.Surv:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
-C.AntiRagdollMode = v and "全部开启" or "关闭"
-T.AntiRagdoll, T.AntiKnockdown = v, v
+Tabs.Surv:AddSection("生命")
+Tabs.Surv:AddToggle("GodMode", { Title = "★ 上帝模式(无敌 + 锁血 + 不死 + 防击倒 + 断死亡事件 + 拦上报)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
-F.AntiRagdollDisable() F.AntiKnockdownDisable()
-if v then F.AntiRagdollEnable() F.AntiKnockdownEnable() end
+F.GodModeSet(v)
 end })
-Tabs.Surv:AddToggle("God", { Title = "无敌(血量拉到无穷 · 服务端若校验血量会拉回)", Default = false, Callback = function(v)
-T.God = v
-if F._cfgSyncing then return end
-if v then pcall(GodEnable) else pcall(GodDisable) end
-F.Out("[无敌] " .. (v and "已开(血量拉到无穷; 服务端若校验会拉回)" or "已关"))
-end })
-Tabs.Surv:AddToggle("LockHealth", { Title = "锁血(血量恒定)", Default = false, Callback = function(v)
-T.LockHealth = v
-if F._cfgSyncing then return end
-if v then pcall(LockHealthEnable) else pcall(LockHealthDisable) end
-F.Out("[锁血] " .. (v and "已开(血量恒定)" or "已关"))
-end })
-Tabs.Surv:AddToggle("Regen", { Title = "回血", Default = false, Callback = function(v)
-T.Regen = v
-if F._cfgSyncing then return end
-if v then pcall(RegenEnable) else pcall(RegenDisable) end
-F.Out("[回血] " .. (v and "已开" or "已关"))
-end })
-Tabs.Surv:AddToggle("NoDeath", { Title = "不死(血量归零自动回满)", Default = false, Callback = function(v)
-T.NoDeath = v
-if F._cfgSyncing then return end
-if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
-F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
+Tabs.Surv:AddButton({ Title = "回满血(一键)", Callback = function()
+if not F.Once("god_refill", 0.8) then return end
+F.GodRefill()
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
