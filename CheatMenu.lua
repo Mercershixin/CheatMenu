@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:11 sha 29c94cf8 bytes 494713'):format('2026-10-04 23:11','29c94cf8',494713))
+print(('[CheatMenu] build 2026-10-04 23:14 sha 1f0fe7bc bytes 494734'):format('2026-10-04 23:14','1f0fe7bc',494734))
 local F = {}
-F.VERSION = "v14.9.0"
+F.VERSION = "v14.10.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5448,10 +5448,7 @@ if not (T.FullBright or T.NightVision or T.NoFog) then return end
 local L = game:GetService("Lighting")
 if not L then return end
 if T.FullBright then
-if L.Brightness ~= 2 or L.ClockTime ~= 14 or L.FogEnd ~= 100000 then pcall(F.FullBrightEnable) end
-end
-if T.NightVision then
-if L.Brightness ~= 1.5 or L.ClockTime ~= 0 then pcall(F.NightVisionEnable) end
+if L.Brightness ~= 6 or L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.FullBrightEnable) end
 end
 if T.NoFog then
 if L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.NoFogEnable) end
@@ -5496,15 +5493,17 @@ L.Brightness = 6 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.Global
 L.Ambient = Color3.fromRGB(255, 255, 255) L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
 L.ExposureCompensation = 0.8
 pcall(function()
-local atm = L:FindFirstChildOfClass("Atmosphere")
-if atm then
+local atm = F._atm
+if atm == nil then atm = L:FindFirstChildOfClass("Atmosphere") F._atm = atm end
+if atm and atm.Parent then
 if not F.savedAtm then F.savedAtm = { Density = atm.Density, Haze = atm.Haze, Glare = atm.Glare } end
 atm.Density = 0 atm.Haze = 0 atm.Glare = 0
 end
 end)
 pcall(function()
-local cc = L:FindFirstChildOfClass("ColorCorrectionEffect")
-if cc then
+local cc = F._cc
+if cc == nil then cc = L:FindFirstChildOfClass("ColorCorrectionEffect") F._cc = cc end
+if cc and cc.Parent then
 if not F.savedCC then F.savedCC = { Brightness = cc.Brightness, Contrast = cc.Contrast } end
 cc.Brightness = 0.3 cc.Contrast = 0.15
 end
