@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:12 sha f2601135 bytes 448427'):format('2026-10-04 14:12','f2601135',448427))
+print(('[CheatMenu] build 2026-10-04 14:14 sha b9e41781 bytes 449338'):format('2026-10-04 14:14','b9e41781',449338))
 local F = {}
-F.VERSION = "v14.0.56"
+F.VERSION = "v14.0.57"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5751,7 +5751,7 @@ F._myEgg = nil
 F.Out("[护蛋] 已关")
 return
 end
-F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)")
+F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)。每 0.05 秒检查一次, 掉了立刻重拿/重新装备")
 F._eggLoop = true
 task.spawn(function()
 while T.MyEgg and F._eggLoop do
@@ -5788,6 +5788,38 @@ end)
 if best then
 F._myEgg = best
 F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
+end
+end
+do
+local ch2, hum2 = GC()
+if ch2 and hum2 then
+local equipped = ch2:FindFirstChildOfClass("Tool")
+if not equipped then
+local bp = LP:FindFirstChildOfClass("Backpack")
+local want = F._myEgg
+local pickTool = nil
+pcall(function()
+if want and want:IsA("Tool") and want.Parent == bp then pickTool = want end
+end)
+if not pickTool then
+pcall(function()
+for _, t in ipairs(bp:GetChildren()) do
+if t:IsA("Tool") then
+local nm = tostring(t.Name):lower()
+if nm:find("egg", 1, true) or nm:find("brainrot", 1, true) or nm:find("蛋", 1, true) then pickTool = t break end
+end
+end
+end)
+end
+if pickTool then
+pcall(function() hum2:EquipTool(pickTool) end)
+F._myEgg = pickTool
+if os.clock() - (F._eggEquipAt or 0) > 3 then
+F._eggEquipAt = os.clock()
+F.Out("[护蛋] 蛋被卸下了 ⇒ 已立刻重新装备「" .. tostring(pickTool.Name) .. "」")
+end
+end
+end
 end
 end
 local egg = F._myEgg
@@ -5827,7 +5859,7 @@ end)
 end
 end
 end
-task.wait(0.15)
+task.wait(0.05)
 end
 F._eggLoop = nil
 end)
