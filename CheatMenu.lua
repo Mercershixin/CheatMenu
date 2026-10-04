@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:49 sha a32402c8 bytes 439657'):format('2026-10-04 13:49','a32402c8',439657))
+print(('[CheatMenu] build 2026-10-04 13:51 sha ff625d7f bytes 442469'):format('2026-10-04 13:51','ff625d7f',442469))
 local F = {}
-F.VERSION = "v14.0.46"
+F.VERSION = "v14.0.47"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -94,6 +94,63 @@ end
 F.Out("[CheatMenu] ===== 加载开始 · " .. F.VERSION .. " =====")
 F.INSTANCE_KEY = "CM_Instance"
 function F.KillPreviousInstance()
+F.FullOnTest = function()
+task.spawn(function()
+local function step(no, name, act)
+F.Out("【全开测试】第 " .. tostring(no) .. " 组: " .. name .. " —— 正在开(崩了就是这一组)")
+pcall(act)
+task.wait(3)
+F.Out("【全开测试】第 " .. tostring(no) .. " 组: " .. name .. " 已过")
+end
+step(1, "视觉(全亮/夜视/去雾/降画质/HUD/准星)", function()
+T.FullBright = true pcall(F.FullBrightEnable)
+T.NightVision = true pcall(F.NightVisionEnable)
+T.NoFog = true pcall(F.NoFogEnable)
+T.Antilag = true pcall(AntilagEnable)
+T.Hud = true pcall(F.HudEnable)
+T.Crosshair = true pcall(F.CrosshairEnable)
+end)
+step(2, "战斗(自瞄+自动开火+Hitbox)", function()
+T.AutoFire = true F.AimSet(true) T.HitboxExpand = true pcall(F.HitboxExpandEnable)
+end)
+step(3, "移动(飞行+加速+无限跳+穿墙)", function()
+T.InfiniteJump = true pcall(F.InfiniteJumpEnable)
+F.FlySet(true) F.SpeedSet(true) T.NoClip = true pcall(F.NoClipEnable)
+end)
+step(4, "生存(无敌/锁血/回血/不死/防击倒)", function()
+T.God = true pcall(GodEnable) T.LockHealth = true pcall(LockHealthEnable)
+T.Regen = true pcall(RegenEnable) T.NoDeath = true pcall(NoDeathEnable)
+T.AntiRagdoll = true pcall(F.AntiRagdollEnable) pcall(F.AntiKnockdownEnable)
+end)
+step(5, "防护(稳身+反攻击+反陷阱 ⇒ 装元表钩)", function()
+T.SteadyOn, T.HitGuard, T.TrapWarn = true, true, true
+pcall(F.ProtectApply)
+end)
+step(6, "搬运(反拉回+搬运守卫+防掉蛋)", function()
+T.SpeedAntiTP, T.CarryGuard, T.NoDrop = true, true, true
+pcall(F.SpeedAntiTPEnable) pcall(F.CarryGuardEnable) pcall(F.MetaHookEnsure)
+end)
+step(7, "挂机防踢(Kick 三路径拦截)", function()
+T.AntiAFK, T.KickGuard = true, true
+pcall(F.AntiAFKEnable) pcall(F.KickGuardEnable)
+end)
+step(8, "反封禁全家桶(拦上报/断日志/按名中和+/哈希冻结)", function()
+pcall(F.CMX_BanAllApply, true)
+end)
+step(9, "防护档位③(元表钩+拦 remote+深度中和)", function()
+T.ACMaster = "③ 重 · +深度中和+全部绕过层(最激进 · 枪战服慎用)"
+pcall(F.ProtectTierApply, T.ACMaster)
+end)
+step(10, "绕过层全开(视图过滤/自产登记/require拦截/时钟粗化/钩子加固)", function()
+T.CMX_TierLink = true
+pcall(F.CMX_TierSync, 4)
+pcall(F.CMX_HookHardApply)
+pcall(F.DeepNeuterEnable)
+end)
+F.Out("【全开测试】10 组全部跑完没崩 —— 把这些日志发我")
+pcall(function() Fluent:Notify({ Title = "全开测试", Content = "10 组跑完没崩; 崩了的话看日志最后一行是哪一组", Duration = 12 }) end)
+end)
+end
 pcall(function()
 if F.NukeAllGUIs then
 local k = F.NukeAllGUIs(false)
@@ -11805,6 +11862,7 @@ Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文�
 end)
 end })
 Tabs.Setting:AddSection("系统")
+Tabs.Setting:AddButton({ Title = "★ 全开测试(逐组开 · 每组停 3 秒 · 崩了看日志最后一行)", Description = "10 组按危险度从低到高依次打开; 哪一组崩了, 日志最后一行就是它", Callback = function() pcall(F.FullOnTest) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
