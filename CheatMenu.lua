@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:24 sha ae65576a bytes 446670'):format('2026-10-04 13:24','ae65576a',446670))
+print(('[CheatMenu] build 2026-10-04 13:28 sha 704452c1 bytes 447279'):format('2026-10-04 13:28','704452c1',447279))
 local F = {}
-F.VERSION = "v14.0.40"
+F.VERSION = "v14.0.41"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7198,14 +7198,21 @@ F._myBase = cand
 if cand then F.Out("[收集] 我的基地/家 = " .. tostring(cand:GetFullName())) end
 return cand
 end
+F.SetMyHome = function()
+local _, _, root = GC()
+if not root then F.Out("[收集] 没角色, 稍后再点") return end
+F._homeCF, F._homePos = root.CFrame, root.Position
+F.Out("[收集] 已把当前位置设为『我的家』= " .. tostring(root.Position))
+pcall(function() Fluent:Notify({ Title = "我的家", Content = "已记录当前位置, 收集货币只会去这附近", Duration = 8 }) end)
+end
 F.FindMySlotPart = function(i)
 local base = F.FindMyBase()
-if not base then return nil end
+local home = F._homePos
+if not base and not home then return nil end
 local want = tostring(i)
-local best = nil
-pcall(function()
-for _, d in ipairs(base:GetDescendants()) do
-if d:IsA("BasePart") or d:IsA("Model") then
+local best, bestD = nil, 99999
+local function consider(d)
+if not (d:IsA("BasePart") or d:IsA("Model")) then return end
 local hit = false
 pcall(function()
 local sl = d:GetAttribute("slot") or d:GetAttribute("Slot") or d:GetAttribute("SlotId") or d:GetAttribute("Index")
@@ -7213,9 +7220,25 @@ if sl ~= nil and tostring(sl) == want then hit = true end
 end)
 if not hit then
 local n2 = tostring(d.Name)
-if n2 == want or n2:find(" " .. want, 1, true) or n2:find(want .. " ", 1, true) or n2 == ("Slot" .. want) or n2 == ("Brainrot" .. want) then hit = true end
+if n2 == want or n2 == ("Slot" .. want) or n2 == ("Brainrot" .. want) then hit = true end
 end
-if hit then best = d break end
+if not hit then return end
+local pos = nil
+if d:IsA("Model") then pcall(function() pos = d:GetPivot().Position end) else pos = d.Position end
+if not pos then return end
+if home then
+local dd = (pos - home).Magnitude
+if dd > 80 then return end
+if dd < bestD then best, bestD = d, dd end
+elseif best == nil then
+best = d
+end
+end
+pcall(function()
+if base then for _, d in ipairs(base:GetDescendants()) do consider(d) end end
+if not best and home then
+for _, d in ipairs(workspace:GetDescendants()) do
+if (d:IsA("BasePart") or d:IsA("Model")) then consider(d) end
 end
 end
 end)
@@ -7250,7 +7273,7 @@ pcall(function() node:FireServer(i) end)
 n = n + 1
 task.wait(0.1)
 end
-pcall(function() root.CFrame = home end)
+pcall(function() root.CFrame = F._homeCF or home end)
 F.Out("[收集] 槽位 " .. tostring(n) .. " 个 · 其中 " .. tostring(moved) .. " 个先 TP 到你的脑红 · 已回到原位置")
 end)
 end
@@ -11830,8 +11853,10 @@ local n = F.ParseCPS(v)
 if n then C.SellMinCPS, C.SellMinCPSTxt = n, v F.Out("[售卖] 门槛 = " .. F.FmtNum(n))
 elseif tostring(v) ~= "" then pcall(function() Fluent:Notify({ Title = "格式", Content = "例: 80m / 500k / 1.5b / 2q", Duration = 6 }) end) end
 end })
-Tabs.AFK:AddInput("SellScanResult", { Title = "符合门槛的个数(自动刷新)", Default = "(读取中…)", Callback = function() end })
+Tabs.AFK:AddButton({ Title = "① 手动统计(点一下看一次)", Description = "不自动刷新", Callback = function() pcall(F.ScanSellUI) end })
+Tabs.AFK:AddInput("SellScanResult", { Title = "符合门槛的个数(手动统计后显示)", Default = "(点①统计)", Callback = function() end })
 Tabs.AFK:AddButton({ Title = "② 按门槛卖出(只卖 ≤ 门槛的)", Callback = function() pcall(F.SellByThreshold) end })
+Tabs.AFK:AddButton({ Title = "★ 设为我的家(站在家里点一下)", Description = "之后收集货币只去这个位置附近, 不会乱跑", Callback = function() pcall(F.SetMyHome) end })
 Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(TP 到你的脑红 → 收集 → 回原位)", Description = "逐个槽位瞬移到属于你的脑红旁边再发收集接口, 全程结束后回到你原来的位置", Callback = function() pcall(F.CollectTP, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
@@ -11940,20 +11965,6 @@ end)
 end })
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
-Tabs.Setting:AddToggle("Session", { Title = "会话保持(角色持续 + 实时玩家列表)", Description = "角色重生后保持你的设置 + 实时刷新玩家列表。不含存档 —— 存档/配置恢复机制按你的要求已整条删除", Default = false, Callback = function(v)
-local changed = (T.Session ~= nil) and (T.Session ~= v)
-T.Session, T.CharPersist = v, v
-if F._cfgSyncing or not changed then return end
-if v then
-pcall(F.CharPersistEnable)
-pcall(F.LivePlayersEnable)
-F.Out("[会话保持] 已开: 角色持续 + 实时玩家列表")
-else
-pcall(F.CharPersistDisable)
-pcall(F.LivePlayersDisable)
-F.Out("[会话保持] 已关")
-end
-end })
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
