@@ -3578,6 +3578,51 @@ pcall 闭包全部删掉；② `neuter(...)` 闭包与 `function() return end` �
   要么根本没机会被执行；**正解是先把重活丢进 `task.spawn`**，而不是在调用点判断。
   这条对"任何一条来自按钮/下拉的同步重活"都成立。
 
+## ★★★ 隐藏 bug 审计：同名函数被定义两次 ⇒ 缓存层被静默覆盖（2026-10-04 · 14.0.87）
+
+全量审计（自查脚本 + `gate.py` + `luau-compile`）抓到**唯一一个真 bug**，而且它**编译/门禁都不报**：
+
+```lua
+F.OnMovingFloorC = function()            -- ① 缓存包装: 0.5s 缓存, 内部调"真实实现"
+  local now = os.clock()
+  if now - (F._floorCacheT or 0) < 0.5 then return F._floorCacheV end
+  F._floorCacheT = now
+  local v = false
+  pcall(function() v = F.OnMovingFloorC() end)   -- ← 期望调到 ②
+  F._floorCacheV = v and true or false
+  return F._floorCacheV
+end
+function F.OnMovingFloorC()              -- ② 真实实现 —— **覆盖了 ①**！
+  ...workspace:GetPartBoundsInRadius(probe, 7, op)...
+end
+```
+
+- **后果**：运行时 `F.OnMovingFloorC` = ②（真实实现），**缓存层 ① 彻底失效** ⇒
+  `GetPartBoundsInRadius` 由"每 0.5 秒一次"变成**每次调用都跑**。而它被 `SteadyEnable` / `AntiKnockdown` 的
+  **Heartbeat 每帧调** ⇒ **每秒 60+ 次物理范围查询**（本该 2 次/秒）。
+- **修法**：真实实现改名 **`F.OnMovingFloorRaw`**；缓存层 `F.OnMovingFloorC` **放到它之后**并调 Raw。
+- ★★★ **教训（已进"代码级 bug 模式"）**：**Lua 里"同名 + `function name()`"第二次就是静默覆盖，没有任何警告**。
+  凡"缓存/包装 + 真实实现"这类成对结构 **必须用两个不同名字**；**不要靠"定义顺序"保证正确性** ——
+  顺序一旦被调整（改动、格式化、代码挪位）就静默失效，且编译器与门禁都发现不了。
+  ⇒ 自查手段：**扫描同名函数定义出现次数 > 1**（本轮脚本已实现，值得长期保留）。
+
+### 本轮审计的其它结论（全部通过）
+
+| 检查项 | 结果 |
+|---|---|
+| `ipairs({...})` 数组里的 nil 洞（会让其后元素被截断） | **0** |
+| `while` 循环体无让出 | 7 处，但**全部有界**（budget 20000 / steps<16 / n<25 / hits<3 / 队列非空），**无死循环** |
+| 引用了但从未定义的 `F./AC.` 成员 | 仅 `F._gcSweepQuiet`（死条件，已清）、`F._inst`（见下） |
+| 同一函数被定义多次 | 仅 `F.OnMovingFloorC`（已修） |
+| 失效功能文案残留（远程体检/刷奖杯/搬蛋保护/分步传送…） | **0** |
+| 未定义全局（白名单外） | **0** |
+| 编译 / 括号 end 配平 / UTF-8 / 产物无 NUL | 全部通过 |
+
+- **P3（低影响，已记录未动）**：`F._inst` 从未被赋值 ⇒ `UnloadAll` 里 `if F._inst and g[CM_Instance]==F._inst then g[CM_Instance]=nil end`
+  这个分支**永不执行**；而 `F.KillPreviousInstance` 读的 `prev = g[CM_Instance]` 也**永远是 nil**
+  ⇒ **整套"实例句柄"机制没接线**（没人把 `g[CM_Instance]` 指向句柄表）。
+  影响低：热重载路径本来就显式调 `F.UnloadAll()`，不依赖它。要修就是"加载时把句柄写进 `g[CM_Instance]`"，属**新行为**，先问用户。
+
 ## ★★★ 分步传送重做：把"单步位移"压进服务端容忍区间（2026-10-04 · 14.0.84，**用户批准后做**）
 
 **旧实现为什么不灵**（`F.HardTP` 里）：
