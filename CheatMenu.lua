@@ -1,14 +1,14 @@
-print(('[CheatMenu] build 2026-10-04 19:27 sha bf9bcb46 bytes 475073'):format('2026-10-04 19:27','bf9bcb46',475073))
+print(('[CheatMenu] build 2026-10-04 19:30 sha 2f993cc6 bytes 474939'):format('2026-10-04 19:30','2f993cc6',474939))
 local F = {}
-F.VERSION = "v14.0.111"
+F.VERSION = "v14.0.112"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
 F._menuHoldAt = nil
 F._menuHoldMoved = false
 F.LIMITS = {
-SCAN_GC_CAP = 30000, SCAN_ANALYZE_CAP = 12000, SCAN_YIELD_EVERY = 300,
-SCAN_SCRIPT_CAP = 40000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 240,
+SCAN_GC_CAP = 300000, SCAN_ANALYZE_CAP = 120000, SCAN_YIELD_EVERY = 300,
+SCAN_SCRIPT_CAP = 400000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 20000,
 PROBE_STEP = 4, PROBE_SEC = 2,
 }
 F.REMOTE_URLS = {
@@ -68,7 +68,7 @@ end
 return s
 end
 F._logBuf = F._logBuf or {}
-F.LOG_BUF_MAX = F.LOG_BUF_MAX or 300
+F.LOG_BUF_MAX = F.LOG_BUF_MAX or 3000
 function F.Out(...)
 local n = select("#", ...)
 local parts = {}
@@ -94,9 +94,9 @@ F._outLast = line
 end
 print(line)
 F._logBuf[#F._logBuf + 1] = line
-if #F._logBuf > 4000 then
+if #F._logBuf > 60000 then
 local keep = {}
-for i = #F._logBuf - 1999, #F._logBuf do keep[#keep + 1] = F._logBuf[i] end
+for i = #F._logBuf - 39999, #F._logBuf do keep[#keep + 1] = F._logBuf[i] end
 F._logBuf = keep
 end
 if F.LogFlush and not F._logFlushing and #F._logBuf >= F.LOG_BUF_MAX and (now - (F._logFlushAt or 0) >= 2) then
@@ -1458,7 +1458,7 @@ local seen, n = {}, 0
 for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
 if not F.gcTick(_gi) then break end
 n = n + 1
-if n > 60000 then break end
+if n > 400000 then break end
 if type(obj) == "function" and (not islclosure or islclosure(obj)) then
 local oki, info = pcall(debug.getinfo, obj, "nS")
 local nm = (oki and info and info.name) or ""
@@ -1540,7 +1540,7 @@ if m == "FireServer" or m == "InvokeServer" then
 if #F._capLog < F.CAP_MAX then
 local args = { ... }
 local parts = {}
-local top = math.min(#args, 6)
+local top = #args
 for i = 1, top do
 local v = args[i]
 local t = typeof(v)
@@ -1702,7 +1702,7 @@ F._dumpText = text
 return text
 end
 F.LOG_MAX = 1500000
-F.LOG_BUF_MAX = 300
+F.LOG_BUF_MAX = 3000
 F._logBuf = F._logBuf or {}
 function F.LogBaseName()
 if F._logBaseName then return F._logBaseName end
@@ -3763,10 +3763,10 @@ end)
 if verbose then
 F.Out(string.format("[客户端检测] 按名字扫到脚本 %d 个 · Heartbeat 上可疑连接 %d 条(共 %d 条连接)",
 #scripts, #conns, (function() local n = 0 pcall(function() n = #getconnections(RS.Heartbeat) end) return n end)()))
-for i = 1, math.min(#scripts, 6) do F.Out("   · 脚本: " .. scripts[i]) end
+for i = 1, #scripts do F.Out("   · 脚本: " .. scripts[i]) end
 if #foundScripts > 0 then
 F.Out("   —— 试着读它的代码(只读, 不执行) ——")
-for i = 1, math.min(#foundScripts, 3) do
+for i = 1, #foundScripts do
 F.Out("   ▸ " .. tostring(foundScripts[i].Name))
 local n, how = F.PeekScript(foundScripts[i])
 if n == 0 then
@@ -3782,7 +3782,7 @@ local nw = pk and pk:FindFirstChild("Networking")
 local known = nw and nw:FindFirstChild("RE/RigSync/Refresh")
 F.Out("   同族已知路径 RE/RigSync/Refresh: " .. (known and "存在(公开作品就是断这一条)" or "不存在(这个游戏结构不同)"))
 end)
-for i = 1, math.min(#conns, 6) do F.Out("   · 连接: " .. conns[i]) end
+for i = 1, #conns do F.Out("   · 连接: " .. conns[i]) end
 if #scripts == 0 and #conns == 0 then
 F.Out("   ★ 结论: 客户端侧没有「防加速/拉回」检测 ⇒ 加速可以直接用(只注意服务端的速度阈值)")
 elseif #scripts == 0 then
@@ -4022,7 +4022,7 @@ end
 end)
 if verbose then
 local names = {}
-for i = 1, math.min(#found, 8) do names[i] = found[i].Name end
+for i = 1, #found do names[i] = found[i].Name end
 F.Out("[受击] 命中 " .. tostring(#found) .. " 个疑似「击退/受击」远程: " .. table.concat(names, " · ")
 .. (#found > 8 and " …" or ""))
 end
@@ -8446,7 +8446,7 @@ local txt = ch.Text or ""
 local num = F.ParseNum(txt)
 if num then found[#found + 1] = { path = p, text = txt } end
 end
-if #p < 80 and #found < 200 then scan(ch, p) end
+if #p < 80 then scan(ch, p) end
 end
 end
 local roots = { { pg:FindFirstChild("HUD"), "HUD" }, { pg:FindFirstChild("Frames"), "Frames" } }
@@ -8456,7 +8456,7 @@ end
 if #found == 0 then
 F.Out("  没扫到数字控件 —— 确认已在正确场景(基地内)")
 else
-for i = 1, math.min(#found, 60) do
+for i = 1, #found do
 F.Out(string.format("  %-58s = %s", found[i].path, found[i].text))
 end
 F.Out(string.format("  共 %d 个数字控件", #found))
@@ -8540,7 +8540,7 @@ if a.Unknown ~= b.Unknown then return not a.Unknown end
 return a.ROI > b.ROI
 end)
 F.Out(string.format("──────── 升级性价比(可升级 %d 个) ────────", #out))
-for i = 1, math.min(#out, 10) do
+for i = 1, #out do
 local e = out[i]
 local mark = e.Unknown and " ⚠词缀未知" or ""
 F.Out(string.format("  %d) %s [%s] Lv%d · CPS≈%s · 一级花 %s 换 +%s · 性价比 %.5f%s",
@@ -10752,7 +10752,7 @@ end
 end)
 if not quiet then
 F.Out("[反封禁·上报] ReplicatedStorage 里命中黑名单的远程: " .. tostring(#out) .. " 个")
-for i = 1, math.min(#out, 20) do
+for i = 1, #out do
 F.Out("[反封禁·上报]   " .. tostring(out[i].inst.ClassName) .. "  " .. tostring(out[i].inst.Name)
 .. "  ← 关键词 " .. out[i].key)
 end
@@ -10768,7 +10768,7 @@ local extra = {}
 if type(all) == "table" then for i = 1, #all do extra[#extra + 1] = all[i] end end
 if type(per) == "table" and #per > 0 then
 F.Out("[反封禁·上报] 本游戏检测档案命中 " .. tostring(#per) .. " 个命名, 已并入拦截名单:")
-for i = 1, math.min(#per, 12) do F.Out("[反封禁·上报]   · " .. tostring(per[i])) end
+for i = 1, #per do F.Out("[反封禁·上报]   · " .. tostring(per[i])) end
 end
 local banAdded = {}
 for i = 1, #extra do
@@ -11572,7 +11572,7 @@ local _, _, root = GC()
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 90000 then break end
+if n > 400000 then break end
 if d:IsA("BasePart") then
 local nm = string.lower(d.Name)
 for _, k in ipairs(KEYS) do
@@ -11580,7 +11580,7 @@ if string.find(nm, k, 1, true) then
 local key = d.Name .. "|" .. d.ClassName
 if not seen[key] then
 seen[key] = true
-if #list < 4000 then
+if #list < 50000 then
 local dist = root and string.format(" %.0f格", (d.Position - root.Position).Magnitude) or ""
 list[#list + 1] = d.Name .. " (" .. d.ClassName .. ")" .. dist
 end
@@ -11666,12 +11666,12 @@ local n, near = 0, {}
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 n = n + 1
-if n > 60000 then break end
+if n > 400000 then break end
 if d:IsA("ClickDetector") or d:IsA("ProximityPrompt") then
 local p = d.Parent
 if p and p:IsA("BasePart") then
 local dist = (p.Position - root.Position).Magnitude
-if dist <= 200 then
+if dist <= 5000 then
 local extra = " · 物体=" .. tostring(p.Name)
 if d:IsA("ProximityPrompt") then
 local at, ot = "", ""
@@ -11689,7 +11689,7 @@ end
 end
 end)
 table.sort(near)
-F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
+F.Out("[扫描·交互点] 5000 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
 F.RemoteList = function()
@@ -11763,7 +11763,7 @@ local lines = {}
 for line in tostring(code):gmatch("[^\n]+") do
 local keep = false
 for i = 1, #KW do if line:find(KW[i], 1, true) then keep = true break end end
-if keep and #lines < 30 then
+if keep and #lines < 500 then
 lines[#lines + 1] = tostring(line):gsub("^%s+", ""):sub(1, 170)
 end
 end
@@ -11795,10 +11795,10 @@ end)
 local dumped = 0
 F.Out("[扫描·游戏接口] ---- 优先整段摘录(名字像 蛋/放置/认领 的脚本) ----")
 for ri = 1, #roots do
-if dumped >= 6 then break end
+if dumped >= 40 then break end
 local seen = 0
 for _, d in ipairs(roots[ri]:GetDescendants()) do
-if dumped >= 6 then break end
+if dumped >= 40 then break end
 seen = seen + 1
 if seen % 300 == 0 then task.wait() end
 local cls = d.ClassName
@@ -11816,7 +11816,7 @@ F.Out("[扫描·游戏接口·整段] ▸ " .. tostring(d:GetFullName()):sub(1, 
 local ln = 0
 for line in tostring(code):gmatch("[^\n]+") do
 ln = ln + 1
-if ln > 110 then F.Out("      ...(只摘前 110 行)"); break end
+if ln > 800 then F.Out("      ...(只摘前 110 行)"); break end
 F.Out("      L" .. tostring(ln) .. ": " .. tostring(line):gsub("^%s+", ""):sub(1, 160))
 end
 end
@@ -12018,7 +12018,7 @@ end
 local arr = {}
 for k, v in pairs(byClass) do arr[#arr + 1] = { k, v } end
 table.sort(arr, function(a, b) return a[2] > b[2] end)
-for i = 1, math.min(#arr, 25) do
+for i = 1, #arr do
 F.Out(string.format("[绕过·空实例]   %-30s %d", tostring(arr[i][1]), arr[i][2]))
 end
 F.Out("[绕过·空实例] 本脚本自己的 " .. tostring(mine) .. " 个(可忽略)")
