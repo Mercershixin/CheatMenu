@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:43 sha 090090a2 bytes 452831'):format('2026-10-04 14:43','090090a2',452831))
+print(('[CheatMenu] build 2026-10-04 14:44 sha 38697fc2 bytes 454150'):format('2026-10-04 14:44','38697fc2',454150))
 local F = {}
-F.VERSION = "v14.0.67"
+F.VERSION = "v14.0.68"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11287,7 +11287,38 @@ table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
+F.RemoteList = function()
+local rs = game:GetService("ReplicatedStorage")
+local KEYS = { "egg", "drop", "carry", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick", "treadmill", "guard", "speed" }
+F.Out("[扫描·远程] ===== 所有 FireClient 的处理函数(谁在听服务端说话) =====")
+local n, sus = 0, 0
+pcall(function()
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = d.ClassName
+if cls == "RemoteEvent" or cls == "UnreliableRemoteEvent" or cls == "RemoteFunction" then
+local conns = nil
+pcall(function() conns = getconnections(d.OnClientEvent) end)
+if conns and #conns > 0 then
+n = n + 1
+local nm = tostring(d.Name)
+local low = nm:lower()
+local hit = false
+for _, k in ipairs(KEYS) do if low:find(k, 1, true) then hit = true break end end
+if hit then sus = sus + 1 end
+local src = "?"
+pcall(function()
+local f = conns[1].Function
+if f then local i = debug.getinfo(f, "s") src = tostring(i and i.source or "?") end
+end)
+F.Out(string.format("[扫描·远程] %s · %d 条连接 · 来源 %s%s", nm, #conns, tostring(src):sub(1, 80), hit and "  <<< 像掉蛋/收回/速度/守卫" or ""))
+end
+end
+end
+end)
+F.Out("[扫描·远程] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 名字可疑(掉蛋/收回/速度/守卫类) " .. tostring(sus) .. " 个")
+end
 F.CMX_ScanAll = function()
+pcall(F.RemoteList)
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
 pcall(F.ScanNearbyInteract)
 task.wait()
