@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:31 sha b09d30e5 bytes 450010'):format('2026-10-04 14:31','b09d30e5',450010))
+print(('[CheatMenu] build 2026-10-04 14:36 sha dd2d90e3 bytes 452065'):format('2026-10-04 14:36','dd2d90e3',452065))
 local F = {}
-F.VERSION = "v14.0.63"
+F.VERSION = "v14.0.64"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12029,6 +12029,50 @@ pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
 end })
+F.RemoteAudit = function(restore)
+local rs = game:GetService("ReplicatedStorage")
+local KEYS = { "drop", "carry", "egg", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick" }
+F._auditOff = F._auditOff or {}
+local n, hit = 0, 0
+if restore then
+for _, c in ipairs(F._auditOff) do pcall(function() c:Enable() end) end
+F._auditOff = {}
+F.Out("[远程体检] 已还原之前关掉的全部远程回调")
+return
+end
+F.Out("[远程体检] ===== 所有 FireClient 的处理函数 =====")
+pcall(function()
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = d.ClassName
+if cls == "RemoteEvent" or cls == "UnreliableRemoteEvent" or cls == "RemoteFunction" then
+local conns = nil
+pcall(function() conns = getconnections(d.OnClientEvent) end)
+if conns and #conns > 0 then
+n = n + 1
+local nm = tostring(d.Name)
+local low = nm:lower()
+local sus = false
+for _, k in ipairs(KEYS) do if low:find(k, 1, true) then sus = true break end end
+local src = "?"
+pcall(function()
+local f = conns[1].Function
+if f then local i = debug.getinfo(f, "s") src = tostring(i and i.source or "?") end
+end)
+F.Out(string.format("[远程体检] %s · %d 条连接 · 来源 %s%s", nm, #conns, tostring(src):sub(1, 70), sus and "  <<< 名字像掉蛋/收回" or ""))
+if sus then
+hit = hit + 1
+for _, c in ipairs(conns) do
+pcall(function() c:Disable() end)
+F._auditOff[#F._auditOff + 1] = c
+end
+end
+end
+end
+end
+end)
+F.Out("[远程体检] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 关掉像掉蛋/收回的 " .. tostring(hit) .. " 个(可再点一次还原)")
+pcall(function() Fluent:Notify({ Title = "远程体检", Content = "检查 " .. tostring(n) .. " 个 · 关掉可疑 " .. tostring(hit) .. " 个", Duration = 10 }) end)
+end
 F.HookResidue = function()
 local layers, ids = 0, {}
 pcall(function()
@@ -12102,6 +12146,7 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 end
 Tabs.Setting:AddSection("系统")
+Tabs.Setting:AddButton({ Title = "★ 远程体检(列出所有 FireClient 处理 + 关掉像掉蛋的)", Description = "第一次点=体检并关掉名字像 drop/carry/egg/unequip/ragdoll/fling/kick 的远程回调; 再点一次=全部还原", Callback = function() pcall(F.RemoteAudit, F._auditOff and #F._auditOff > 0) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
