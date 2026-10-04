@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:13 sha f649663f bytes 496128'):format('2026-10-05 01:13','f649663f',496128))
+print(('[CheatMenu] build 2026-10-05 01:17 sha 4c45efb2 bytes 499229'):format('2026-10-05 01:17','4c45efb2',499229))
 local F = {}
-F.VERSION = "v15.2.0"
+F.VERSION = "v15.3.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7172,24 +7172,18 @@ if tr then r = tr w = "队伍 " .. tostring(tn) end
 end
 if not r then
 local ch = pl.Character
-local bp = nil
-pcall(function() bp = pl:FindFirstChildOfClass("Backpack") end)
-local function scan(c)
-if not c then return nil end
-local kids = c:GetChildren()
+if ch then
+local kids = ch:GetChildren()
 for i = 1, #kids do
 local d = kids[i]
 local isTool = false
 pcall(function() isTool = d:IsA("Tool") end)
 if isTool then
 local rr = F.RoleMatch(d.Name)
-if rr then return rr, "工具 " .. d.Name end
+if rr then r = rr w = "手持 " .. d.Name break end
 end
 end
-return nil
 end
-r, w = scan(ch)
-if not r then r, w = scan(bp) end
 end
 end
 F._roleCache[pl] = { t = now, r = r, w = w }
@@ -7293,7 +7287,8 @@ F._npcLoop, F._npcAdded, F._npcWallLoop = nil, nil, nil
 F.IsNPC = function(o)
 if o == nil then return false end
 local ok, isM = pcall(function() return o:IsA("Model") end)
-if not (ok and isM) then return false end
+local okP, isP = pcall(function() return o:IsA("BasePart") end)
+if not (ok and isM) and not (okP and isP) then return false end
 if o == LP.Character then return false end
 local isPl = false
 pcall(function() isPl = Players:GetPlayerFromCharacter(o) ~= nil end)
@@ -7315,7 +7310,7 @@ h.Name = "CMNpcMark"
 h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 h.FillColor = F.NPC_COLOR
 h.OutlineColor = F.NPC_COLOR
-h.FillTransparency = 0.45
+h.FillTransparency = 0.6
 h.OutlineTransparency = 0
 h.Parent = o
 pcall(function() h:SetAttribute("CMOwned", true) end)
@@ -7356,6 +7351,116 @@ end
 end
 F._npcScanned = n
 return n
+end
+F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
+F.IX_COLOR = Color3.fromRGB(255, 215, 0)
+F.IxAdd = function(o)
+if not T.IxHL then return end
+if F._ixObjs[o] then return end
+local h = Instance.new("Highlight")
+h.Name = "CMIxMark"
+h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+h.FillColor = F.IX_COLOR
+h.OutlineColor = F.IX_COLOR
+h.FillTransparency = 0.6
+h.OutlineTransparency = 0
+h.Parent = o
+pcall(function() h:SetAttribute("CMOwned", true) end)
+F._ixObjs[o] = h
+end
+F.IxIsTarget = function(o)
+if o == nil then return false end
+if o == LP.Character then return false end
+local ok, has = pcall(function() return o:FindFirstChildOfClass("ProximityPrompt") ~= nil or o:FindFirstChildOfClass("ClickDetector") ~= nil end)
+if ok and has then return true end
+local ok2, isAny = pcall(function() return o:IsA("ProximityPrompt") or o:IsA("ClickDetector") end)
+if ok2 and isAny then return true end
+return false
+end
+F.IxScan = function()
+local n = 0
+local list = {}
+pcall(function() list = workspace:GetChildren() end)
+for i = 1, #list do
+local o = list[i]
+if F.IxIsTarget(o) then
+F.IxAdd(o)
+n = n + 1
+end
+end
+local subs = {}
+pcall(function()
+for i = 1, #list do
+local o = list[i]
+local okf = pcall(function() return o:IsA("Folder") or o:IsA("Model") end)
+if okf and o ~= LP.Character then
+local okk, kids = pcall(function() return o:GetChildren() end)
+if okk and kids then
+for j = 1, #kids do subs[#subs + 1] = kids[j] end
+end
+end
+end
+end)
+for i = 1, #subs do
+local o = subs[i]
+if F.IxIsTarget(o) then
+F.IxAdd(o)
+n = n + 1
+else
+local okk2, kids2 = pcall(function() return o:GetChildren() end)
+if okk2 and kids2 then
+for j = 1, #kids2 do
+if F.IxIsTarget(kids2[j]) then F.IxAdd(kids2[j]) n = n + 1 end
+end
+end
+end
+end
+F._ixScanned = n
+return n
+end
+F.IxClear = function()
+for _, h in pairs(F._ixObjs) do
+if h then pcall(function() h:Destroy() end) end
+end
+F._ixObjs = {}
+end
+F.IxHLSet = function(on)
+T.IxHL = on and true or false
+if F._ixLoop then pcall(function() F._ixLoop:Disconnect() end) F._ixLoop = nil end
+if F._ixAdded then pcall(function() F._ixAdded:Disconnect() end) F._ixAdded = nil end
+if not T.IxHL then
+F.IxClear()
+F.Out("[交互高亮] 已关")
+return
+end
+local n = F.IxScan()
+F.Out("[交互高亮] 已开(金色) · 本轮扫到 " .. tostring(n) .. " 个可交互物")
+pcall(function()
+F._ixAdded = workspace.DescendantAdded:Connect(function(o)
+if not T.IxHL then return end
+task.wait(0.3)
+if F.IxIsTarget(o) then
+local parent = o
+pcall(function()
+if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then parent = o.Parent end
+end)
+F.IxAdd(parent)
+end
+end)
+end)
+F._ixLoop = RS.Heartbeat:Connect(function()
+if not T.IxHL then F.IxHLSet(false) return end
+local now = os.clock()
+if now - (F._ixAt or 0) < 3 then return end
+F._ixAt = now
+F.IxScan()
+for o, h in pairs(F._ixObjs) do
+if not o.Parent then
+if h then pcall(function() h:Destroy() end) end
+F._ixObjs[o] = nil
+end
+end
+end)
 end
 F.NpcClear = function()
 for _, rec in pairs(F._npcObjs) do
@@ -7521,8 +7626,6 @@ for i = 1, #sh do F.Out("   [警长] " .. sh[i]) end
 if #k == 0 and #sh == 0 then F.Out("   (没识别出杀手/警长 — 可能本局没分发, 或者该游戏不向客户端暴露角色)") end
 end
 F.CMX_HLTeamColor = function(pl)
-local _, col, key = F.RolePretty(pl)
-if key then return col end
 if T.TeamColorHL == false then return F.ROLE_COLOR.none end
 local same = false
 local hasTeam = false
@@ -7620,7 +7723,7 @@ end
 local top = Instance.new("Highlight")
 top.Name = "BodyMark"
 top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-top.FillTransparency = 0.45
+top.FillTransparency = 0.6
 top.OutlineTransparency = 0
 top.Parent = ch
 F._hlObjs[pl] = { top = top, occ = nil, ch = ch }
@@ -7911,7 +8014,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -10071,7 +10174,7 @@ F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateD
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
-F.AimSet, F.RoleTagSet, F.NpcHLSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -12403,6 +12506,10 @@ pcall(function()
 local n = F.NpcScan()
 F.Out("[扫描·NPC] 场上识别到 " .. tostring(n) .. " 个 NPC/傀儡")
 end)
+pcall(function()
+local n = F.IxScan()
+F.Out("[扫描·交互] 场上识别到 " .. tostring(n) .. " 个可交互物")
+end)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
 end
@@ -13083,6 +13190,11 @@ Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接�
 T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
+end })
+Tabs.World:AddToggle("IxHL", { Title = "★ 高亮可交互物(金色 · 门/箱子/按钮/拾取)", Default = false, Callback = function(v)
+T.IxHL = v
+if F._cfgSyncing then return end
+F.IxHLSet(v)
 end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
