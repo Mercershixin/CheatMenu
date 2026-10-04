@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:31 sha 429bc60d bytes 439833'):format('2026-10-04 12:31','429bc60d',439833))
+print(('[CheatMenu] build 2026-10-04 12:36 sha 554079ad bytes 441390'):format('2026-10-04 12:36','554079ad',441390))
 local F = {}
-F.VERSION = "v14.0.29"
+F.VERSION = "v14.0.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7608,6 +7608,33 @@ F._sellThOverride = nil
 if not ok then F.Out("[售卖] 出错: " .. tostring(err)) end
 end)
 end
+F.GameCheck = function()
+local _, nm = pcall(function()
+return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+end)
+F.Out("[诊断] 游戏 = " .. tostring(nm or "?") .. " · PlaceId = " .. tostring(game.PlaceId))
+local sh = RStorage:FindFirstChild("Shared")
+local pk = sh and sh:FindFirstChild("Packages")
+local net = pk and pk:FindFirstChild("Network")
+F.Out("[诊断] 网络容器 Shared.Packages.Network = " .. tostring(net)
+.. (net and (" (" .. tostring(#net:GetChildren()) .. " 个通道)") or ""))
+for _, n in ipairs({ "rev_KickEvent", "rev_B_Collect", "rev_B_Upgrade", "rev_Shop_Buy", "rev_SPEED_UPGRADE", "rev_RebirthRequest", "rev_KickZman", "rev_Transformed", "ref_B_SellAll" }) do
+local r = findRemote(n, "RemoteEvent") or findRemote(n, "RemoteFunction")
+F.Out("  " .. (r and "✓" or "✗") .. " " .. n)
+end
+local kupg = kickUpgradesGui()
+local list = ""
+if kupg then
+local names = {}
+for _, b in ipairs(kupg:GetChildren()) do
+names[#names + 1] = tostring(b.Name)
+if #names >= 12 then break end
+end
+list = " · 按钮: " .. table.concat(names, ",")
+end
+F.Out("[诊断] PlayerGui.KickUpgrades = " .. tostring(kupg) .. list)
+F.Out("[诊断] 结论说明: 锻炼=手持配重+点 Bonus/PopBonus; 领奖=点 Bonus + rev_B_Collect + 触碰地盘按钮")
+end
 function F.WithdrawAll(maxSlot)
 if WithdrawThread then F.Out("[收起] 已在进行中") return end
 WithdrawThread = task.spawn(function()
@@ -11592,6 +11619,8 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
+Tabs.AFK:AddSection("诊断")
+Tabs.AFK:AddButton({ Title = "★ 自助诊断(检查本游戏接口/按钮)", Description = "列出本游戏真实存在的 remote / 按钮 / 数值控件, 排查功能为什么没生效", Callback = function() pcall(F.GameCheck) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
