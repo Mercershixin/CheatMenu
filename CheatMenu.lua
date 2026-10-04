@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:22 sha f4704542 bytes 460237'):format('2026-10-04 17:22','f4704542',460237))
+print(('[CheatMenu] build 2026-10-04 17:25 sha ea4a4947 bytes 462307'):format('2026-10-04 17:25','ea4a4947',462307))
 local F = {}
-F.VERSION = "v14.0.89"
+F.VERSION = "v14.0.90"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4097,6 +4097,33 @@ F.ALLOW_REMOTE_KEYS = {
 "fetch", "query", "send", "notify", "progress", "tutorial", "lobby", "teleport", "spawn",
 }
 F.TRAP_TAGS = { "PlayerTrap", "Trap", "PlayerTraps", "GuardTrap", "TrapPart", "BearTrap", "ActiveTrap" }
+F.TrapTagged = function(part)
+local ok, r = pcall(function()
+local CS = game:GetService("CollectionService")
+local node, depth = part, 0
+while node and depth < 3 do
+for _, tg in ipairs(F.TRAP_TAGS) do
+if CS:HasTag(node, tg) then return true end
+end
+node = node.Parent
+depth = depth + 1
+end
+return false
+end)
+return (ok and r) and true or false
+end
+F.TrapNameHit = function(part)
+local node, depth = part, 0
+while node and depth < 4 do
+local nm = tostring(node.Name):lower()
+for _, k in ipairs(F.TRAP_KEYS) do
+if nm:find(k, 1, true) then return true end
+end
+node = node.Parent
+depth = depth + 1
+end
+return false
+end
 F.TrapKillTouch = function(part)
 if not part or typeof(part) ~= "Instance" then return false end
 F._trapTouchKilled = F._trapTouchKilled or {}
@@ -4171,6 +4198,7 @@ F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", 
 F._trapConn = nil
 function F.TrapGuardDisable()
 pcall(F.TrapTagWatch, false)
+if F._trapAddConn then pcall(function() F._trapAddConn:Disconnect() end) F._trapAddConn = nil end
 if F._trapConnOff then
 local back = 0
 for _, list in pairs(F._trapConnOff) do
@@ -4193,9 +4221,28 @@ end
 function F.TrapGuardEnable()
 if F._trapConn then return end
 F._trapAt = 0
+F._trapOnAt = os.clock()
+F._trapNdDone = nil
 F._trapBak = F._trapBak or {}
 F._trapConnOff = F._trapConnOff or {}
 pcall(F.TrapTagWatch, true)
+if not F._trapAddConn then
+pcall(function()
+F._trapAddConn = workspace.DescendantAdded:Connect(function(d)
+if not T.TrapWarn then return end
+if not d:IsA("BasePart") then return end
+if not (F.TrapNameHit(d) or F.TrapTagged(d)) then return end
+task.defer(function()
+pcall(function() F.TrapKillTouch(d) end)
+if d.CanTouch then
+F._trapBak = F._trapBak or {}
+F._trapBak[d] = { touch = d.CanTouch }
+pcall(function() d.CanTouch = false end)
+end
+end)
+end)
+end)
+end
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
@@ -4209,11 +4256,7 @@ local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
 if LP.Character then op.FilterDescendantsInstances = { LP.Character } end
 for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 22, op)) do
-local nm = tostring(pt.Name):lower()
-local isTrap = false
-for _, k in ipairs(F.TRAP_KEYS) do
-if nm:find(k, 1, true) then isTrap = true break end
-end
+local isTrap = (F.TrapNameHit(pt) or F.TrapTagged(pt))
 if isTrap then
 hits = hits + 1
 if pt.CanTouch then
@@ -4236,6 +4279,25 @@ end
 end
 end
 end)
+if hits == 0 and not F._trapNdDone and (now - (F._trapOnAt or now)) > 20 then
+F._trapNdDone = true
+local names = {}
+pcall(function()
+local op2 = OverlapParams.new()
+op2.FilterType = Enum.RaycastFilterType.Exclude
+if LP.Character then op2.FilterDescendantsInstances = { LP.Character } end
+for _, pt in ipairs(workspace:GetPartBoundsInRadius(root.Position, 22, op2)) do
+local low = tostring(pt.Name):lower()
+local interesting = pt:FindFirstChild("TouchInterest") ~= nil or pt:FindFirstChildWhichIsA("TouchTransmitter") ~= nil
+if interesting or low:find("trap") or low:find("hitbox") or low:find("trigger") or low:find("zone") then
+names[#names + 1] = pt.Name
+end
+if #names >= 14 then break end
+end
+end)
+F.Out("[反陷阱·诊断] 开了 20 秒一个都没匹配到 ⇒ 附近这些'带触碰/Trigger/Zone'的部件名: "
+.. (#names > 0 and table.concat(names, ", ") or "(没找到)") .. " —— 把这行发我, 我按真实名字补关键词")
+end
 if hits > 0 and not F._trapOnLog then
 F._trapOnLog = true
 F.Out("[反陷阱] 已开(只做『不触发』, 和反攻击一样不挪你): "
