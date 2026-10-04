@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:28 sha 07faf608 bytes 450891'):format('2026-10-04 14:28','07faf608',450891))
+print(('[CheatMenu] build 2026-10-04 14:30 sha 4598652c bytes 450010'):format('2026-10-04 14:30','4598652c',450010))
 local F = {}
-F.VERSION = "v14.0.61"
+F.VERSION = "v14.0.62"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4709,9 +4709,12 @@ function F.SpeedRestore()
 local back = tonumber(F._preSpeed) or tonumber(F._orig and F._orig.walk)
 F._preSpeed = nil
 if not back or back <= 0 then return false end
+if back < 1 then return false end
 local _, hum = GC()
 if not hum then return false end
-if math.abs((tonumber(hum.WalkSpeed) or back) - back) < 0.01 then return true end
+local cur = tonumber(hum.WalkSpeed) or 0
+if cur > back then back = cur end
+if math.abs(cur - back) < 0.01 then return true end
 pcall(function() hum.WalkSpeed = back end)
 F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f", back))
 return true
@@ -5814,30 +5817,6 @@ end)
 if best then
 F._myEgg = best
 F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
-end
-end
-do
-local egg0 = F._myEgg
-if egg0 and egg0.Parent then
-local part0 = egg0:IsA("Model") and (egg0.PrimaryPart or egg0:FindFirstChildWhichIsA("BasePart")) or (egg0:IsA("BasePart") and egg0) or (egg0:IsA("Tool") and egg0:FindFirstChildWhichIsA("BasePart")) or nil
-local hand0 = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand") or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm")
-if part0 and hand0 then
-local pinned = false
-pcall(function() pinned = (F._eggWeld and F._eggWeld.Parent and F._eggWeld.Part1 == part0) end)
-if not pinned then
-pcall(function() if F._eggWeld then F._eggWeld:Destroy() end end)
-pcall(function()
-local w = Instance.new("WeldConstraint")
-w.Name = "CM_EggHold"
-w.Part0, w.Part1 = hand0, part0
-w.Parent = part0
-F._eggWeld = w
-end)
-end
-pcall(function() if not part0.Anchored then part0.CFrame = hand0.CFrame end end)
-end
-elseif F._eggWeld then
-pcall(function() F._eggWeld:Destroy() end) F._eggWeld = nil
 end
 end
 do
