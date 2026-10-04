@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:37 sha 08ed75bd bytes 464113'):format('2026-10-04 17:37','08ed75bd',464113))
+print(('[CheatMenu] build 2026-10-04 17:39 sha 49dd9190 bytes 464187'):format('2026-10-04 17:39','49dd9190',464187))
 local F = {}
-F.VERSION = "v14.0.92"
+F.VERSION = "v14.0.93"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4176,8 +4176,10 @@ F._trapTouchCount = (F._trapTouchCount or 0) + 1
 local now = os.clock()
 if now - (F._trapTouchLog or 0) > 3 then
 F._trapTouchLog = now
-F.Out("[反陷阱] 已解除 " .. tostring(F._trapTouchCount) .. " 个陷阱的触碰(销毁 TouchInterest)"
-.. " ⇒ 这个陷阱踩上去不会再触发(公开作品同款做法)")
+local full = "?"
+pcall(function() full = tostring(part:GetFullName()):sub(1, 90) end)
+F.Out("[反陷阱] 已解除 " .. tostring(F._trapTouchCount) .. " 个物件的触碰(销毁 TouchInterest) · 最近: " .. full
+.. " ⇒ 这些踩上去不会再触发")
 end
 return true
 end
