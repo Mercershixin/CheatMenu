@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:17 sha f1641ea4 bytes 461411'):format('2026-10-04 16:17','f1641ea4',461411))
+print(('[CheatMenu] build 2026-10-04 16:25 sha cb868b79 bytes 465734'):format('2026-10-04 16:25','cb868b79',465734))
 local F = {}
-F.VERSION = "v14.0.79"
+F.VERSION = "v14.0.80"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11438,6 +11438,71 @@ table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
+F.CarrySafeSet = function(on)
+T.CarrySafe = on and true or false
+if F._carrySafeConn then pcall(function() F._carrySafeConn:Disconnect() end) F._carrySafeConn = nil end
+if not on then F.Out("[搬蛋保护] 已关") return end
+pcall(F.LockFieldsUninstall)
+F.Out("[搬蛋保护] 已开: 每 0.1 秒把 WalkSpeed 压到 " .. tostring(tonumber(C.CarrySafeSpeed) or 16) .. " 格/秒 · 并卸掉「属性锁定」层(让服务端的位置纠正真正生效 —— 别再自己骗自己)")
+F.Out("[搬蛋保护] 请同时把「飞行」「加速」关掉; 拿到蛋后别离开蛋的判定范围, 等游戏提示 secured/成功 再走。服务端认可了才算真拿到")
+F._carrySafeConn = RS.Heartbeat:Connect(function()
+if not T.CarrySafe then
+if F._carrySafeConn then pcall(function() F._carrySafeConn:Disconnect() end) F._carrySafeConn = nil end
+return
+end
+local now = os.clock()
+if now - (F._carrySafeAt or 0) < 0.1 then return end
+F._carrySafeAt = now
+local _, hum = GC()
+if not hum then return end
+local lim = tonumber(C.CarrySafeSpeed) or 16
+if (tonumber(hum.WalkSpeed) or 0) > lim then pcall(function() hum.WalkSpeed = lim end) end
+end)
+end
+F.EGG_RULE_KEYS = { "eggpickuprules", "eggcarryrules", "carryrules", "pickuprules", "eggsecured",
+"eggboundary", "eggarea", "eggzone", "carrylimit", "carrydistance", "eggpickup", "pickupdistance" }
+F.DumpEggRules = function()
+local rs = game:GetService("ReplicatedStorage")
+F.Out("[蛋规则·只读] ===== 导出「拿蛋/边界/限速」相关模块(只读, 不改任何东西) =====")
+local found, total = 0, 0
+pcall(function()
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = d.ClassName
+if cls == "ModuleScript" or cls == "Script" or cls == "LocalScript" then
+local low = tostring(d.Name):lower()
+local hit = false
+for _, k in ipairs(F.EGG_RULE_KEYS) do if low:find(k, 1, true) then hit = true break end end
+if hit then
+found = found + 1
+local code = nil
+pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
+if type(code) ~= "string" or #code < 16 then
+pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end)
+end
+if type(code) == "string" and #code >= 8 then
+total = total + #code
+F.Out("[蛋规则·只读] ▸ " .. d:GetFullName() .. " (" .. tostring(#code) .. " 字节)")
+local shown = 0
+for line in tostring(code):gmatch("[^\n]+") do
+if #line <= 220 and line:find("%d") then
+local ll = line:lower()
+if ll:find("speed") or ll:find("dist") or ll:find("radius") or ll:find("range") or ll:find("max")
+or ll:find("limit") or ll:find("bound") or ll:find("carry") or ll:find("pickup") or ll:find("timeout") then
+shown = shown + 1
+if shown <= 40 then F.Out("      " .. tostring(line):gsub("^%s+", ""):sub(1, 170)) end
+end
+end
+end
+if shown == 0 then F.Out("      (这个模块里没有带数字的阈值行)") end
+else
+F.Out("[蛋规则·只读] ▸ " .. d:GetFullName() .. " —— 读不到源码(执行器不支持 decompile/getscriptbytecode)")
+end
+end
+end
+end
+end)
+F.Out("[蛋规则·只读] 共命中 " .. tostring(found) .. " 个模块 · 摘出 " .. tostring(total) .. " 字节 —— 把上面这些发我, 我按真实阈值调「搬蛋保护」的限速值")
+end
 F.RemoteList = function()
 local rs = game:GetService("ReplicatedStorage")
 local KEYS = { "egg", "drop", "carry", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick", "treadmill", "guard", "speed" }
@@ -11957,6 +12022,12 @@ steady and "开" or "关",
 hit and ("开" .. (T.HitStrong and "(猛档)" or "(状态法)")) or "关",
 T.TrapWarn and "开" or "关", T.SpeedAntiTP and "开" or "关"))
 end
+Tabs.Move:AddSection("★ 搬蛋 / 拿蛋(服务端认可才算真拿到)")
+Tabs.Move:AddToggle("CarrySafe", { Title = "★ 搬蛋保护(拿蛋时限速 + 卸掉属性锁定)", Description = "拿蛋/搬蛋时把 WalkSpeed 压到下面那个值, 并临时卸掉「属性锁定」层 —— 让服务端的位置纠正真正生效。服务端认可了才不会把蛋收回", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+pcall(F.CarrySafeSet, v)
+end })
+Tabs.Move:AddSlider("CarrySafeSpeed", { Title = "搬蛋速度上限(格/秒)", Description = "服务端能接受的走路速度一般 16~50; 先按 16 试, 拿到蛋不再消失再逐步往上加", Min = 8, Max = 120, Default = 16, Rounding = 0, Callback = function(v) C.CarrySafeSpeed = v end })
 Tabs.Move:AddToggle("InstantInteract", { Title = "★ 瞬间偷蛋 / 瞬间交互(点一下就瞬间完成 · 不用长按 E)", Description = "开: 游戏里所有要按住一会儿的交互(偷蛋/开箱/机关)一律变「点一下就瞬间完成」, 不用长按。不加远距离、不自动偷, 就是老实把长按改成瞬间", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
@@ -12234,6 +12305,9 @@ task.spawn(function()
 pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
+end })
+Tabs.AC:AddButton({ Title = "★ 导出「拿蛋规则」源码(只读 · 找服务端限速/边界阈值)", Description = "只读地反编译 EggPickupRules / EggBoundary 这类模块, 摘出带数字的阈值行 —— 拿它才能把搬蛋限速调到刚好合法", Callback = function()
+task.spawn(function() pcall(F.DumpEggRules) end)
 end })
 F.RemoteAudit = function(restore)
 local rs = game:GetService("ReplicatedStorage")
