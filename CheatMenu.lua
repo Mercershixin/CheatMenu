@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:24 sha 76da09fb bytes 436000'):format('2026-10-04 12:24','76da09fb',436000))
+print(('[CheatMenu] build 2026-10-04 12:27 sha 4860baeb bytes 438865'):format('2026-10-04 12:27','4860baeb',438865))
 local F = {}
-F.VERSION = "v14.0.27"
+F.VERSION = "v14.0.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -204,12 +204,16 @@ local RRemoteCache = {}
 local function findRemote(name, cls)
 local ck = cls .. "\1" .. name
 if RRemoteCache[ck] then return RRemoteCache[ck] end
-local function ok2(o)
-if not (o and o.Name == name) then return nil end
+local function typOk(o)
+if not o then return nil end
 if o:IsA(cls) then return o end
 local okU, isU = pcall(function() return o:IsA("UnreliableRemoteEvent") end)
 if cls == "RemoteEvent" and okU and isU then return o end
 return nil
+end
+local function ok2(o)
+if not (o and o.Name == name) then return nil end
+return typOk(o)
 end
 local sh = RStorage:FindFirstChild("Shared")
 local pk = sh and sh:FindFirstChild("Packages")
@@ -219,17 +223,41 @@ local pre = (cls == "RemoteEvent") and "rev_" or "ref_"
 local r = ok2(net:FindFirstChild(pre .. name)) or ok2(net:FindFirstChild(pre .. tostring(name):gsub("%.", "_")))
 if r then RRemoteCache[ck] = r return r end
 end
+local pre2 = (cls == "RemoteEvent") and "rev_" or "ref_"
+pcall(function()
+local cands = { pre2 .. name, pre2 .. tostring(name):gsub("%.", "_"), name }
+for i = 1, #cands do
+local c = RStorage:FindFirstChild(cands[i], true)
+if not c then
+local sh2 = RStorage:FindFirstChild("Shared")
+local pk2 = sh2 and sh2:FindFirstChild("Packages")
+local net2 = pk2 and pk2:FindFirstChild("Network")
+if net2 then c = net2:FindFirstChild(cands[i], true) end
+end
+local r2 = typOk(c)
+if r2 then RRemoteCache[ck] = r2 end
+end
+end)
+if RRemoteCache[ck] then return RRemoteCache[ck] end
 local leaf = tostring(name):match("([^%.]+)$") or name
+local pre3 = (cls == "RemoteEvent") and "rev_" or "ref_"
+local lower = tostring(name):lower()
 local q, qh, qt = { RStorage }, 1, 1
-local budget = 6000
+local budget = 20000
 while qh <= qt and budget > 0 do
 local node = q[qh] qh = qh + 1 budget = budget - 1
 local ok, kids = pcall(function() return node:GetChildren() end)
 if ok and type(kids) == "table" then
 for i = 1, #kids do
 local c = kids[i]
-if c.Name == name or c.Name == leaf then
-local rr = ok2(c)
+local cn = c.Name
+local match = (cn == name) or (cn == leaf) or (cn == pre3 .. name)
+if not match then
+local cl = cn:lower()
+match = (cl == lower) or (cl == pre3 .. lower) or (cl == "rev_" .. lower) or (cl == "ref_" .. lower)
+end
+if match then
+local rr = typOk(c)
 if rr then RRemoteCache[ck] = rr return rr end
 end
 if c:IsA("Folder") or c:IsA("Configuration") then qt = qt + 1 q[qt] = c end
@@ -8678,6 +8706,61 @@ tcs.OnBubbleAdded = F._oldOnBubble
 end
 end)
 F._bubbleTransHooked = false
+end
+F.ChatIMEBoxEnable = function()
+if F._chatIMEBox then return end
+pcall(function()
+local sg = Instance.new("ScreenGui")
+sg.Name = "CM_ChatIMEBox"
+sg.ResetOnSpawn = false
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+sg.Parent = (gethui and pcall(gethui) and gethui()) or game:GetService("CoreGui")
+local box = Instance.new("TextBox")
+box.Name = "CM_ChatInput"
+box.Size = UDim2.new(0.5, 0, 0, 32)
+box.Position = UDim2.new(0.25, 0, 0.9, 0)
+box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+box.BackgroundTransparency = 0.35
+box.TextColor3 = Color3.fromRGB(255, 255, 255)
+box.PlaceholderText = "[CM] 中文聊天框：打中文回车发送，不翻倍"
+box.ClearTextOnFocus = false
+box.TextEditable = true
+box.Font = Enum.Font.Code
+box.TextSize = 16
+box.Parent = sg
+F._chatIMEBox = sg
+local function send()
+local txt = box.Text
+if not txt or txt == "" then return end
+box.Text = ""
+F.ChatSend(txt)
+end
+box.FocusLost:Connect(function(enterPressed)
+if enterPressed then send() end
+end)
+box.InputBegan:Connect(function(input, processed)
+if processed then return end
+if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+send()
+end
+end)
+F.Out("[IME聊天] 已开：左下角框打中文 → 回车发送（不再翻倍）")
+end)
+end
+F.ChatIMEBoxDisable = function()
+pcall(function() if F._chatIMEBox and F._chatIMEBox.Parent then F._chatIMEBox:Destroy() end end)
+F._chatIMEBox = nil
+end
+F.ChatSend = function(msg)
+pcall(function()
+local tcs = game:GetService("TextChatService")
+local ch = tcs and tcs:FindFirstChild("TextChannels")
+and (tcs.TextChannels:FindFirstChild("RBXGeneral") or tcs.TextChannels:FindFirstChild("SayChannel"))
+if ch and ch:IsA("TextChannel") then ch:SendAsync(msg) return end
+local chat = game:GetService("Chat")
+if chat and chat.Chat then chat:Chat(game.Players.LocalPlayer, msg, "All") return end
+F.Out("[IME聊天] 发送失败：本游戏聊天接口不可用")
+end)
 end
 function F.TranslateDisable() Trans.Disable() end
 function F.TranslateEnable() return Trans.Enable() end
