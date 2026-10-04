@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:23 sha 3752fa2e bytes 499233'):format('2026-10-05 01:23','3752fa2e',499233))
+print(('[CheatMenu] build 2026-10-05 01:31 sha 54a5afb3 bytes 511636'):format('2026-10-05 01:31','54a5afb3',511636))
 local F = {}
-F.VERSION = "v15.4.0"
+F.VERSION = "v15.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3478,37 +3478,6 @@ if F._silentDied then pcall(function() F._silentDied:Disconnect() end) F._silent
 F._silentCh = nil
 pcall(function() F.MetaUninstall("game.__index", "CMSilent") end)
 F.Out("[静默瞄准] 已关闭")
-end
-F._hpShowOn = false
-F.HealthShowSet = function(on)
-T.HealthShow = on and true or false
-if not T.HealthShow then
-F._hpShowOn = false
-if not T.AimOn then F.CombatHudHide() end
-F.Out("[血量显示] 已关")
-return
-end
-F.CombatHudShow()
-if not F._hpShowOn then
-F._hpShowOn = true
-task.spawn(function()
-while F._hpShowOn and T.HealthShow do
-pcall(function()
-if not T.AimOn then
-local _, hum = GC()
-if hum then
-F.CombatHudSet(string.format("血量: 我 %.0f/%.0f", hum.Health, hum.MaxHealth))
-else
-F.CombatHudSet("血量: (角色没加载)")
-end
-end
-end)
-task.wait(0.25)
-end
-F._hpShowOn = false
-end)
-end
-F.Out("[血量显示] 已开(用屏幕上方那条 HUD; 自瞄开着时显示的是锁定目标的血量)")
 end
 F._hpIsoOn, F._hpIsoConns = false, {}
 F._hpIsoKill = function(sig)
@@ -7542,6 +7511,391 @@ end
 end
 end)
 end
+F.ESP_HEALTH_COLOR = Color3.fromRGB(0, 255, 80)
+F.ESP_LOWHP_COLOR = Color3.fromRGB(255, 60, 60)
+F._espGui, F._espLoop, F._espItems, F._espAt = nil, nil, {}, 0
+F.EspEnsure = function()
+if F._espGui and F._espGui.Parent then return F._espGui end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then return nil end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMEsp"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 999
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.Parent = host
+F._espGui = sg
+return sg
+end
+F.EspMake = function(pl)
+local sg = F.EspEnsure()
+if not sg then return nil end
+local function mk(cls, props)
+local o = Instance.new(cls)
+for k, v in pairs(props) do pcall(function() o[k] = v end) end
+o.Parent = sg
+return o
+end
+local rec = {}
+rec.box = mk("Frame", { Name = "box", BackgroundTransparency = 1, BorderSizePixel = 1, BorderColor3 = Color3.fromRGB(255, 255, 255), Visible = false })
+rec.hpBg = mk("Frame", { Name = "hpBg", BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, Visible = false })
+rec.hpFg = Instance.new("Frame")
+rec.hpFg.Name = "hpFg"
+rec.hpFg.BackgroundColor3 = F.ESP_HEALTH_COLOR
+rec.hpFg.BorderSizePixel = 0
+rec.hpFg.Size = UDim2.fromScale(1, 1)
+rec.hpFg.Parent = rec.hpBg
+rec.tracer = mk("Frame", { Name = "tracer", BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.25, BorderSizePixel = 0, Visible = false })
+rec.name = mk("TextLabel", { Name = "nm", BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
+rec.dist = mk("TextLabel", { Name = "ds", BackgroundTransparency = 1, Font = Enum.Font.Code, TextSize = 13, TextColor3 = Color3.fromRGB(230, 230, 230), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
+F._espItems[pl] = rec
+return rec
+end
+F.EspHideRec = function(rec)
+if not rec then return end
+pcall(function() rec.box.Visible = false end)
+pcall(function() rec.hpBg.Visible = false end)
+pcall(function() rec.tracer.Visible = false end)
+pcall(function() rec.name.Visible = false end)
+pcall(function() rec.dist.Visible = false end)
+end
+F.EspClear = function()
+for _, rec in pairs(F._espItems) do
+if rec then
+pcall(function() if rec.box then rec.box:Destroy() end end)
+pcall(function() if rec.hpBg then rec.hpBg:Destroy() end end)
+pcall(function() if rec.tracer then rec.tracer:Destroy() end end)
+pcall(function() if rec.name then rec.name:Destroy() end end)
+pcall(function() if rec.dist then rec.dist:Destroy() end end)
+end
+end
+F._espItems = {}
+end
+F.ESP_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","fire","trapdoor","spiketrap" }
+F.ESP_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","drop","chest","crate","box","orb","egg","fruit","candy","key","badge" }
+F.ESP_TRAP_COLOR = Color3.fromRGB(255, 60, 60)
+F.ESP_ITEM_COLOR = Color3.fromRGB(80, 255, 160)
+F._espObjs = {}
+F.EspObjClass = function(o)
+if o == nil then return nil, nil, nil end
+if o == LP.Character then return nil, nil, nil end
+local isM = false
+pcall(function() isM = o:IsA("Model") or o:IsA("BasePart") end)
+if not isM then return nil, nil, nil end
+if T.EspNpc then
+local okn, isNpc = pcall(F.IsNPC, o)
+if okn and isNpc then return "npc", F.NPC_COLOR, o.Name end
+end
+if T.EspIx then
+local oki, isIx = pcall(F.IxIsTarget, o)
+if oki and isIx then return "ix", F.IX_COLOR, o.Name end
+end
+local nm = tostring(o.Name)
+local low = string.lower(nm)
+local i
+if T.EspTrap then
+for i = 1, #F.ESP_TRAP_KEYS do
+if string.find(low, F.ESP_TRAP_KEYS[i], 1, true) then return "trap", F.ESP_TRAP_COLOR, nm end
+end
+end
+if T.EspItem then
+for i = 1, #F.ESP_ITEM_KEYS do
+if string.find(low, F.ESP_ITEM_KEYS[i], 1, true) then return "item", F.ESP_ITEM_COLOR, nm end
+end
+end
+return nil, nil, nil
+end
+F.EspObjScan = function()
+if not (T.EspNpc or T.EspIx or T.EspTrap or T.EspItem) then return end
+local list = {}
+pcall(function() list = workspace:GetChildren() end)
+local subs = {}
+local i
+for i = 1, #list do
+local o = list[i]
+local okf, isC = pcall(function() return o:IsA("Folder") or o:IsA("Model") end)
+if okf and isC and o ~= LP.Character then
+local isM = false
+pcall(function() isM = o:IsA("Model") end)
+if not isM then
+local okk, kids = pcall(function() return o:GetChildren() end)
+if okk and kids then
+local j
+for j = 1, #kids do subs[#subs + 1] = kids[j] end
+end
+end
+end
+end
+for i = 1, #subs do list[#list + 1] = subs[i] end
+for i = 1, #list do
+local o = list[i]
+local cat, col, nm = F.EspObjClass(o)
+if cat then
+local rec = F._espObjs[o]
+if rec == nil then
+rec = F.EspMakeObj(o, cat, col)
+end
+if rec then
+rec.cat = cat
+rec.col = col
+rec.nm = nm
+end
+end
+end
+for o, rec in pairs(F._espObjs) do
+if not o.Parent then
+F.EspDropObj(o)
+end
+end
+end
+F.EspMakeObj = function(o, cat, col)
+local sg = F.EspEnsure()
+if not sg then return nil end
+local function mk(cls, props)
+local x = Instance.new(cls)
+local k, v
+for k, v in pairs(props) do pcall(function() x[k] = v end) end
+x.Parent = sg
+return x
+end
+local rec = {}
+rec.box = mk("Frame", { Name = "obox", BackgroundTransparency = 1, BorderSizePixel = 1, BorderColor3 = col or Color3.fromRGB(255,255,255), Visible = false })
+rec.name = mk("TextLabel", { Name = "onm", BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = col or Color3.fromRGB(255,255,255), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
+rec.dist = mk("TextLabel", { Name = "ods", BackgroundTransparency = 1, Font = Enum.Font.Code, TextSize = 12, TextColor3 = Color3.fromRGB(230,230,230), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
+rec.cat, rec.col, rec.nm = cat, col, tostring(o.Name)
+F._espObjs[o] = rec
+return rec
+end
+F.EspDropObj = function(o)
+local rec = F._espObjs[o]
+if rec then
+pcall(function() if rec.box then rec.box:Destroy() end end)
+pcall(function() if rec.name then rec.name:Destroy() end end)
+pcall(function() if rec.dist then rec.dist:Destroy() end end)
+F._espObjs[o] = nil
+end
+end
+F.EspObjClear = function()
+for o in pairs(F._espObjs) do F.EspDropObj(o) end
+F._espObjs = {}
+end
+F.EspObjDraw = function(cam, myRoot)
+local i
+local n = 0
+for o, rec in pairs(F._espObjs) do
+n = n + 1
+if n > 200 then break end
+if rec and rec.box then
+local wp = nil
+if o:IsA("BasePart") then
+wp = o.Position
+else
+local pp = nil
+pcall(function() pp = o.PrimaryPart end)
+if pp == nil then
+local hrp = nil
+pcall(function() hrp = o:FindFirstChild("HumanoidRootPart") end)
+if hrp then
+wp = hrp.Position
+else
+local hd = nil
+pcall(function() hd = o:FindFirstChild("Head") end)
+if hd then wp = hd.Position end
+end
+else
+wp = pp.Position
+end
+if wp == nil then
+local first = nil
+pcall(function()
+local kids = o:GetChildren()
+local j
+for j = 1, #kids do
+if kids[j]:IsA("BasePart") then first = kids[j] break end
+end
+end)
+if first then wp = first.Position else wp = nil end
+end
+end
+if wp then
+local sp, on = cam:WorldToViewportPoint(wp)
+if on then
+local dist = 0
+if myRoot then dist = (wp - myRoot.Position).Magnitude end
+local sizePx = math.clamp(300 / math.max(dist, 3), 6, 60)
+local x, y = sp.X - sizePx / 2, sp.Y - sizePx / 2
+if T.EspBox then
+rec.box.Visible = true
+rec.box.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
+rec.box.Size = UDim2.fromOffset(math.floor(sizePx), math.floor(sizePx))
+rec.box.BorderColor3 = rec.col
+else
+rec.box.Visible = false
+end
+if T.EspName then
+rec.name.Visible = true
+rec.name.Text = tostring(rec.nm)
+rec.name.TextColor3 = rec.col
+rec.name.Position = UDim2.fromOffset(math.floor(sp.X - 60), math.floor(y - 18))
+rec.name.Size = UDim2.fromOffset(120, 16)
+else
+rec.name.Visible = false
+end
+if T.EspDist then
+rec.dist.Visible = true
+rec.dist.Text = string.format("%.0f 格", dist)
+rec.dist.Position = UDim2.fromOffset(math.floor(sp.X - 40), math.floor(y + sizePx + 2))
+rec.dist.Size = UDim2.fromOffset(80, 14)
+else
+rec.dist.Visible = false
+end
+else
+F.EspHideRec(rec)
+end
+else
+F.EspHideRec(rec)
+end
+end
+end
+end
+F.EspTick = function()
+local cam = workspace.CurrentCamera
+if not cam then return end
+local vp = cam.ViewportSize
+local vw, vh = vp.X, vp.Y
+local myRoot = nil
+local okg, _, _, r0 = pcall(GC)
+if okg then myRoot = r0 end
+local list = Players:GetPlayers()
+for i = 1, #list do
+local pl = list[i]
+if pl ~= LP then
+local rec = F._espItems[pl]
+if rec == nil then rec = F.EspMake(pl) end
+local ch = pl.Character
+local head, hrp, hum = nil, nil, nil
+if ch then
+head = ch:FindFirstChild("Head")
+hrp = ch:FindFirstChild("HumanoidRootPart")
+hum = ch:FindFirstChildOfClass("Humanoid")
+end
+if rec and head and hrp and hum and hum.Health > 0 then
+local topW = head.Position + Vector3.new(0, 0.55, 0)
+local botW = hrp.Position - Vector3.new(0, 3, 0)
+local t, tOn = cam:WorldToViewportPoint(topW)
+local b, bOn = cam:WorldToViewportPoint(botW)
+if tOn and bOn then
+local h = math.abs(b.Y - t.Y)
+if h >= 6 and h < 4000 then
+local w = h * 0.55
+local x = t.X - w / 2
+local y = t.Y
+local col = Color3.fromRGB(255, 255, 255)
+pcall(function() col = F.CMX_HLTeamColor(pl) end)
+if T.EspBox then
+rec.box.Visible = true
+rec.box.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
+rec.box.Size = UDim2.fromOffset(math.floor(w), math.floor(h))
+rec.box.BorderColor3 = col
+else
+rec.box.Visible = false
+end
+if T.EspName then
+rec.name.Visible = true
+rec.name.Text = pl.Name
+rec.name.TextColor3 = col
+rec.name.Position = UDim2.fromOffset(math.floor(x - 30), math.floor(y - 20))
+rec.name.Size = UDim2.fromOffset(math.floor(w + 60), 16)
+else
+rec.name.Visible = false
+end
+local dist = 0
+if myRoot then dist = (hrp.Position - myRoot.Position).Magnitude end
+if T.EspDist then
+rec.dist.Visible = true
+rec.dist.Text = string.format("%.0f 格", dist)
+rec.dist.TextColor3 = col
+rec.dist.Position = UDim2.fromOffset(math.floor(x - 30), math.floor(y + h + 2))
+rec.dist.Size = UDim2.fromOffset(math.floor(w + 60), 14)
+else
+rec.dist.Visible = false
+end
+if T.EspHp then
+local frac = 0
+pcall(function() if hum.MaxHealth > 0 then frac = math.clamp(hum.Health / hum.MaxHealth, 0, 1) end end)
+rec.hpBg.Visible = true
+rec.hpBg.Position = UDim2.fromOffset(math.floor(x - 7), math.floor(y))
+rec.hpBg.Size = UDim2.fromOffset(4, math.floor(h))
+rec.hpFg.Size = UDim2.fromScale(1, frac)
+rec.hpFg.Position = UDim2.fromScale(0, 1 - frac)
+rec.hpFg.BackgroundColor3 = (frac > 0.35) and F.ESP_HEALTH_COLOR or F.ESP_LOWHP_COLOR
+else
+rec.hpBg.Visible = false
+end
+if T.EspTracer then
+rec.tracer.Visible = true
+local sx = vw / 2
+local sy = vh
+local cx = t.X
+local cy = y + h / 2
+local dx = cx - sx
+local dy = cy - sy
+local len = math.sqrt(dx * dx + dy * dy)
+if len < 1 then len = 1 end
+rec.tracer.Position = UDim2.fromOffset(math.floor(sx), math.floor(sy))
+rec.tracer.Size = UDim2.fromOffset(math.floor(len), 1)
+rec.tracer.Rotation = math.deg(math.atan2(dy, dx))
+rec.tracer.BackgroundColor3 = col
+else
+rec.tracer.Visible = false
+end
+else
+F.EspHideRec(rec)
+end
+else
+F.EspHideRec(rec)
+end
+else
+F.EspHideRec(rec)
+end
+end
+end
+end
+F.EspSet = function(on)
+T.EspOn = on and true or false
+if F._espLoop then pcall(function() F._espLoop:Disconnect() end) F._espLoop = nil end
+if not T.EspOn then
+F.EspClear()
+pcall(F.EspObjClear)
+if F._espGui then pcall(function() F._espGui:Destroy() end) F._espGui = nil end
+F.Out("[ESP] 已关")
+return
+end
+F.EspEnsure()
+F.Out("[ESP] 已开")
+F._espLoop = RS.RenderStepped:Connect(function()
+if not T.EspOn then F.EspSet(false) return end
+local now = os.clock()
+if now - (F._espAt or 0) < 0.033 then return end
+F._espAt = now
+pcall(F.EspTick)
+if now - (F._espObjAt or 0) > 1.5 then
+F._espObjAt = now
+pcall(F.EspObjScan)
+end
+pcall(function()
+local cam = workspace.CurrentCamera
+if cam then
+local _, _, r0 = pcall(GC)
+F.EspObjDraw(cam, r0)
+end
+end)
+end)
+end
 F._roleTags, F._roleTagConn = {}, nil
 F.RoleTagRefresh = function()
 local host = nil
@@ -8014,7 +8368,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -10174,8 +10528,8 @@ F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateD
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
-F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthShowSet, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
@@ -12984,10 +13338,6 @@ if F._cfgSyncing then return end
 if v then pcall(NoDeathEnable) else pcall(NoDeathDisable) end
 F.Out("[不死] " .. (v and "已开(归零自动回满)" or "已关"))
 end })
-Tabs.Surv:AddToggle("HealthShow", { Title = "血量显示(自己 + 锁定目标)", Description = "用屏幕上那条 HUD 显示血量: 没开自瞄时显示你自己的, 开了自瞄就显示锁定目标的", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-F.HealthShowSet(v)
-end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
 F.SetSpeedValue = function(kind, n)
@@ -13147,6 +13497,21 @@ end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度(正数=往下钻 · 负数=往上藏)", Description = "相对你开这个功能那一刻所站的高度。例: 5 = 钻到地面下 5 格; 20 = 下 20 格; -20 = 升到上方 20 格。改完立刻生效, 不用重开", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
+Tabs.Visual:AddSection("ESP 透视(方框 / 名字 / 距离 / 血条 / 追踪线)")
+Tabs.Visual:AddToggle("EspOn", { Title = "★ ESP 总开关", Default = false, Callback = function(v)
+T.EspOn = v
+if F._cfgSyncing then return end
+F.EspSet(v)
+end })
+Tabs.Visual:AddToggle("EspBox", { Title = "方框", Default = true, Callback = function(v) T.EspBox = v end })
+Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = function(v) T.EspName = v end })
+Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
+Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
+Tabs.Visual:AddToggle("EspTracer", { Title = "追踪线(屏幕底到目标)", Default = false, Callback = function(v) T.EspTracer = v end })
+Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = false, Callback = function(v) T.EspNpc = v end })
+Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
+Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
+Tabs.Visual:AddToggle("EspItem", { Title = "ESP 也显示道具(绿 · 金币/宝石/箱子/蛋)", Default = false, Callback = function(v) T.EspItem = v end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到别人 · 半透明色块 + 外框)", Description = "用的是通用做法: 一个 Highlight, 填充半透明 + 描边 + 始终显示在最上层 ⇒ 隔着墙也看得见。队友绿、敌人红(配合下面的敌我识别)", Default = false, Callback = function(v)
 T.BodyHL = v
