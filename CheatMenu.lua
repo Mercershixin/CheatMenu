@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:17 sha 5fcff1e8 bytes 450940'):format('2026-10-04 14:17','5fcff1e8',450940))
+print(('[CheatMenu] build 2026-10-04 14:22 sha c542db96 bytes 450691'):format('2026-10-04 14:22','c542db96',450691))
 local F = {}
-F.VERSION = "v14.0.58"
+F.VERSION = "v14.0.59"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11737,20 +11737,19 @@ Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒 · 只影响加速, 和飞行互不影响)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
-Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发(不挪你)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
+T.SpeedAntiTP, T.MyEgg = v, v
 if F._cfgSyncing then return end
 pcall(F.ProtectApply)
-end })
-Tabs.Move:AddToggle("SpeedAntiTPOnly", { Title = "反拉回(清检测脚本 / 断检测连接)", Default = false, Callback = function(v)
-T.SpeedAntiTP = v
-if F._cfgSyncing then return end
-if v then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
-F.Out("[反拉回] = " .. (v and "开" or "关"))
-end })
-Tabs.Move:AddToggle("MyEgg", { Title = "★ 护蛋(只抢回你自己拿起的那一个)", Description = "盯住你手上那个蛋: 掉地/被夺的瞬间就瞬间偷回手里; 不会去抢别人的蛋", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-pcall(F.MyEggSet, v)
+if v then
+pcall(F.SpeedAntiTPEnable)
+pcall(F.MyEggSet, true)
+else
+pcall(F.SpeedAntiTPDisable)
+pcall(F.MyEggSet, false)
+end
+F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/护蛋 = " .. (v and "开" or "关"))
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
