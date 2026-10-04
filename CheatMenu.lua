@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 18:27 sha c943ef34 bytes 475003'):format('2026-10-04 18:27','c943ef34',475003))
+print(('[CheatMenu] build 2026-10-04 18:28 sha 2d62cf6f bytes 465460'):format('2026-10-04 18:28','2d62cf6f',465460))
 local F = {}
-F.VERSION = "v14.0.101"
+F.VERSION = "v14.0.102"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11997,228 +11997,6 @@ end
 F._afkInput = nil
 end)
 end
-F.QUEST_API_SCRIPTS = { "TasksScript", "MissionClient", "MissionsClient", "RebirthUi", "RebirthClient", "MegaRebirthClient", "RewardsClient", "TaskClient", "QuestClient" }
-F.APIProbe = function()
-F.Out("[接口探测·只读] ===== 反编译「任务/重生」客户端脚本, 摘出它自己怎么调远程(只读) =====")
-local n = 0
-pcall(function()
-for _, d in ipairs(game:GetDescendants()) do
-local cls = d.ClassName
-if cls == "LocalScript" or cls == "ModuleScript" or cls == "Script" then
-local nm = tostring(d.Name)
-local low = nm:lower()
-local hit = false
-for i = 1, #F.QUEST_API_SCRIPTS do if nm == F.QUEST_API_SCRIPTS[i] then hit = true break end end
-if not hit then
-local full = ""
-pcall(function() full = tostring(d:GetFullName()) end)
-local inGame = (full:find("PlayerGui", 1, true) ~= nil) or (full:find("PlayerScripts", 1, true) ~= nil)
-hit = inGame and ((low:find("task", 1, true) ~= nil) or (low:find("mission", 1, true) ~= nil) or (low:find("rebirth", 1, true) ~= nil))
-end
-if hit then
-local code = nil
-pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
-if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end) end
-if type(code) == "string" and #code >= 8 then
-n = n + 1
-F.Out("[接口探测·只读] ▸ " .. d:GetFullName())
-local shown = 0
-for line in tostring(code):gmatch("[^\n]+") do
-if shown < 25 and (line:find("InvokeServer", 1, true) or line:find("FireServer", 1, true)) then
-shown = shown + 1
-F.Out("      " .. tostring(line):gsub("^%s+", ""):sub(1, 170))
-end
-end
-if shown == 0 then F.Out("      (没有直接调远程)") end
-end
-end
-end
-end
-end)
-F.Out("[接口探测·只读] 共 " .. tostring(n) .. " 个脚本 —— 把上面这些发我, 我按真实参数把「自动任务」接对")
-end
-F.MISSION_ARG_CANDIDATES = { "Easy", "Normal", "Hard", "easy", "normal", "hard", "EASY", "NORMAL", "HARD", 1, 2, 3, "1", "2", "3" }
-F.AutoRebirthSet = function(on)
-T.AutoRebirth = on and true or false
-if not on then
-pcall(function() local r = RFunction("SetAutoRebirth") if r then r:InvokeServer(false) end end)
-F.Out("[自动重生] 已关")
-return
-end
-local r = nil
-pcall(function() r = RFunction("SetAutoRebirth") end)
-if r then
-pcall(function() r:InvokeServer(true) end)
-F.Out("[自动重生] 已开 · 已调用游戏自带的 SetAutoRebirth(true)(最稳: 由服务端自己重生)")
-else
-F.Out("[自动重生] 本游戏没有 SetAutoRebirth ⇒ 兜底: 每 5 秒找 RebirthFrame 里的按钮点一下")
-end
-task.spawn(function()
-while T.AutoRebirth do
-task.wait(5)
-if not T.AutoRebirth then break end
-if r then
-pcall(function() r:InvokeServer(true) end)
-else
-pcall(function()
-local pg = LP:FindFirstChild("PlayerGui")
-local hud = pg and pg:FindFirstChild("MainHUD")
-local menus = hud and hud:FindFirstChild("Menus")
-local rf = menus and menus:FindFirstChild("RebirthFrame")
-if not rf then return end
-for _, d in ipairs(rf:GetDescendants()) do
-if d:IsA("GuiButton") then
-local t = (tostring(d.Name) .. " " .. tostring(d.Text or "")):lower()
-if (t:find("rebirth", 1, true) ~= nil) or (t:find("重生", 1, true) ~= nil) then
-if type(getconnections) == "function" then
-for _, c in ipairs(getconnections(d.MouseButton1Click) or {}) do pcall(function() c:Fire() end) end
-end
-pcall(function() if type(firesignal) == "function" then firesignal(d.MouseButton1Click) end end)
-end
-end
-end
-end)
-end
-end
-end)
-end
-F.MISSION_KEYS = { "point", "checkpoint", "check", "ring", "gate", "node", "waypoint", "marker", "beacon" }
-F.MissionPanel = function()
-local pg = LP and LP:FindFirstChild("PlayerGui")
-local mg = pg and pg:FindFirstChild("MissionsGui")
-return mg
-end
-F.MissionState = function()
-local mg = F.MissionPanel()
-if not mg then return "no-gui" end
-local txt = {}
-pcall(function()
-for _, d in ipairs(mg:GetDescendants()) do
-if (d:IsA("TextLabel") or d:IsA("TextButton")) and type(d.Text) == "string" and #d.Text > 0 then
-txt[#txt + 1] = d.Text
-if #txt >= 25 then break end
-end
-end
-end)
-return table.concat(txt, " | ")
-end
-F.MissionActive = function()
-local s = F.MissionState()
-if s == "no-gui" then return false end
-if s:find("没有激活", 1, true) or s:find("选择一个难度", 1, true) then return false end
-return true
-end
-F.MissionClickStart = function(which)
-local mg = F.MissionPanel()
-if not mg or not mg.Enabled then return false end
-local btns = {}
-pcall(function()
-for _, d in ipairs(mg:GetDescendants()) do
-if d:IsA("GuiButton") then
-local t = tostring(d.Text or "")
-if t:find("开始", 1, true) then btns[#btns + 1] = d end
-end
-end
-end)
-if #btns == 0 then return false end
-local idx = tonumber(which) or 1
-if idx < 1 then idx = 1 end
-if idx > #btns then idx = #btns end
-local b = btns[idx]
-local done = false
-if type(getconnections) == "function" then
-for _, c in ipairs(getconnections(b.MouseButton1Click) or {}) do pcall(function() c:Fire() end) done = true end
-end
-pcall(function() if type(firesignal) == "function" then firesignal(b.MouseButton1Click) done = true end end)
-return done
-end
-F.MissionPoints = function()
-local _, _, root = GC()
-if not root then return {} end
-local out, seen = {}, 0
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-seen = seen + 1
-if seen > 30000 then break end
-if d:IsA("BasePart") then
-local nm = tostring(d.Name):lower()
-local hit = false
-for _, k in ipairs(F.MISSION_KEYS) do if nm:find(k, 1, true) then hit = true break end end
-if hit and (d.Position - root.Position).Magnitude > 15 then out[#out + 1] = d end
-end
-end
-end)
-table.sort(out, function(a, b) return (a.Position - root.Position).Magnitude < (b.Position - root.Position).Magnitude end)
-return out
-end
-F.AutoTaskSet = function(on)
-T.AutoTask = on and true or false
-if not on then F.Out("[自动任务] 已关") return end
-F.Out("[自动任务] 已开: ① 自动试出 Mission_Start 的难度参数 ② 自动找任务点位并逐个传送 ③ 完成后调 Mission_Claim() 领奖")
-local dumped, argIdx, lastClaim, lastHint = false, nil, 0, 0
-task.spawn(function()
-while T.AutoTask do
-local mg = F.MissionPanel()
-if (not mg) or (not mg.Enabled) then
-local n0 = os.clock()
-if n0 - lastHint > 20 then
-lastHint = n0
-F.Out("[自动任务] 请先打开游戏的任务面板(那个「任务」界面) —— 面板没开它不会动")
-end
-else
-if not dumped then
-dumped = true
-pcall(function()
-local r = RFunction("Mission_GetState")
-local ok, res = false, nil
-if r then ok, res = pcall(function() return r:InvokeServer() end) end
-if ok then
-local s = "?"
-pcall(function() s = tostring(res) end)
-F.Out("[自动任务·探测] Mission_GetState() ⇒ " .. tostring(s):sub(1, 300))
-end
-F.Out("[自动任务·探测] 面板文字 ⇒ " .. tostring(F.MissionState()):sub(1, 300))
-end)
-end
-if not F.MissionActive() then
-if argIdx == nil then
-local r = RFunction("Mission_Start")
-if r then
-for i = 1, #F.MISSION_ARG_CANDIDATES do
-if not T.AutoTask then break end
-pcall(function() r:InvokeServer(F.MISSION_ARG_CANDIDATES[i]) end)
-task.wait(0.35)
-if F.MissionActive() then
-argIdx = i
-F.Out("[自动任务] 难度参数试出来了 ⇒ Mission_Start(" .. tostring(F.MISSION_ARG_CANDIDATES[i]) .. ") 有效")
-break
-end
-end
-if argIdx == nil then F.Out("[自动任务] ⚠ 候选参数全试完都没启动任务 —— 把日志发我, 我按真实参数接") end
-end
-else
-pcall(F.MissionClickStart, tonumber(C.MissionPick) or 1)
-end
-end
-local pts = F.MissionPoints()
-if #pts > 0 then
-F.Out("[自动任务] 发现 " .. tostring(#pts) .. " 个候选点位, 开始逐个传送")
-for i = 1, #pts do
-if not T.AutoTask then break end
-pcall(function() F.HardTP(pts[i].CFrame + Vector3.new(0, 3, 0)) end)
-task.wait(0.4)
-end
-end
-local now = os.clock()
-if now - lastClaim > 5 then
-lastClaim = now
-pcall(function() local r = RFunction("Mission_Claim") if r then r:InvokeServer() end end)
-end
-end
-task.wait(0.6)
-end
-end)
-end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -12227,7 +12005,6 @@ Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
-Test    = Window:AddTab({ Title = "测试", Icon = "flask-conical" }),
 }
 Tabs.World   = Tabs.Visual
 Tabs.TP      = Tabs.Move
@@ -12497,22 +12274,6 @@ else
 pcall(F.AntiAFKDisable)
 pcall(F.KickGuardDisable)
 end
-end })
-Tabs.Test:AddSection("任务 / 重生(用游戏自己的接口)")
-Tabs.Test:AddToggle("AutoRebirth", { Title = "★ 自动重生(优先用游戏自带的自动重生)", Description = "优先调用游戏自己的 SetAutoRebirth(true)(由服务端自己重生, 最稳); 若本游戏没有这个接口, 就每 5 秒找 Rebirth 按钮点一下", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-pcall(F.AutoRebirthSet, v)
-end })
-Tabs.Test:AddSection("自动任务(「触摸 N 个点 → 返回」那种)")
-Tabs.Test:AddDropdown("MissionPick", { Title = "跑哪一档(第几个「开始」按钮)", Values = { "1 · 简单(附近 120-260)", "2 · 正常(遥远 1200-2000)", "3 · 困难(需重生解锁)" }, Default = "1 · 简单(附近 120-260)", Callback = function(v)
-C.MissionPick = v
-end })
-Tabs.Test:AddToggle("AutoTask", { Title = "★ 自动任务(自动点开始 → 自动跑点位 → 自动领奖)", Description = "打开任务面板后开它: ① 面板显示「没有激活任务」时自动点「开始」 ② 自动找地图上的任务点位并逐个传送过去 ③ 每 5 秒自动领一次奖。第一次运行会把任务数据写进日志(只读), 便于精修", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-pcall(F.AutoTaskSet, v)
-end })
-Tabs.Test:AddButton({ Title = "★ 导出「任务/重生」接口调用方式(只读)", Description = "只读反编译本游戏的任务/重生客户端脚本, 摘出它自己是怎么调这些远程的(含参数)", Callback = function()
-task.spawn(function() pcall(F.APIProbe) end)
 end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
