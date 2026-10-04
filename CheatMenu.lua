@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:51 sha ee77479a bytes 465750'):format('2026-10-04 16:51','ee77479a',465750))
+print(('[CheatMenu] build 2026-10-04 16:54 sha 1863efd3 bytes 466879'):format('2026-10-04 16:54','1863efd3',466879))
 local F = {}
-F.VERSION = "v14.0.83"
+F.VERSION = "v14.0.84"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5379,18 +5379,21 @@ return (root.Position - cf.Position).Magnitude < 20
 end
 F.Out("[传送] 补间失败 ⇒ 自动退回分步瞬移")
 end
-local steps = 1
-if dist > 300 then
-steps = math.clamp(math.ceil(dist / 400), 2, 12)
-end
+local stepStuds = tonumber(C.TPMaxStep) or 40
+if stepStuds < 8 then stepStuds = 8 end
+if stepStuds > 400 then stepStuds = 400 end
+local stepDelay = tonumber(C.TPDelay) or 0.1
+if stepDelay < 0.05 then stepDelay = 0.05 end
+if stepDelay > 1 then stepDelay = 1 end
+local steps = math.max(1, math.ceil(dist / stepStuds))
+if steps > 400 then steps = 400 end
+F._tpStepsInfo = { n = steps, step = stepStuds, delay = stepDelay }
 for i = 1, steps do
 local t = i / steps
 local p = from:Lerp(cf.Position, t)
 pcall(function() root.CFrame = CFrame.new(p) * rot end)
 pcall(function() F.TakeAllOwnership() end)
-if i < steps then
-pcall(function() RS.Heartbeat:Wait() end)
-end
+if i < steps then task.wait(stepDelay) end
 end
 pcall(function() root.CFrame = cf end)
 pcall(function()
@@ -5615,7 +5618,13 @@ pcall(function() local _, _, r2 = GC() if r2 then now2 = (r2.Position - pos).Mag
 F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · %s · 已抢所有权 %d 个部件(不依赖加速/飞行)",
 tostring(it.name), dist,
 ok and "已到位" or ("没到位(还差 " .. string.format("%.0f", now2 or -1) .. " 格)"),
-dist > 300 and ("分步传送(" .. tostring(math.clamp(math.ceil(dist / 400), 2, 12)) .. " 步)") or "一次到位",
+(function()
+local si = F._tpStepsInfo
+if si then
+return string.format("分步传送(%d 步 · 每步≤%.0f 格 · 间隔 %.2fs ⇒ 等效≈%.0f 格/秒)", si.n, si.step, si.delay, si.step / si.delay)
+end
+return dist > 300 and "分步传送" or "一次到位"
+end)(),
 tonumber(F._tpOwnInfo) or 0))
 if not ok then
 F.Out("[点位] ⚠ 传送被服务端拒绝(这游戏的位移由服务端裁决) —— 换个近一点的点, 或把速度调低再试")
@@ -12149,6 +12158,8 @@ C.TPStep = v
 if F._cfgSyncing then return end
 pcall(F.CMX_ProfilePut, "tpstep", v)
 end })
+Tabs.TP:AddSlider("TPMaxStep", { Title = "分步传送: 每步最大格数(越小越像正常走)", Description = "每一步最多瞬移多远。服务端的位移/速度校验看的就是单步位移 —— 单步太大必被拉回。40 格是稳妥起点", Min = 8, Max = 400, Default = 40, Rounding = 0, Callback = function(v) C.TPMaxStep = v end })
+Tabs.TP:AddSlider("TPDelay", { Title = "分步传送: 每步间隔(秒)", Description = "每步之间等多久。等效速度 = 每步格数 ÷ 间隔, 这个值决定服务端眼里你有多快", Min = 5, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.TPDelay = (tonumber(v) or 10) / 100 end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
