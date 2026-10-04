@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:13 sha 4cb914b4 bytes 443631'):format('2026-10-04 13:13','4cb914b4',443631))
+print(('[CheatMenu] build 2026-10-04 13:17 sha a2b54bee bytes 446951'):format('2026-10-04 13:17','a2b54bee',446951))
 local F = {}
-F.VERSION = "v14.0.38"
+F.VERSION = "v14.0.39"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7173,8 +7173,63 @@ end
 end)
 return best
 end
+F.FindMySlotPart = function(i)
+local want = tostring(i)
+local best = nil
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("BasePart") or d:IsA("Model") then
+local mine, hit = false, false
+pcall(function()
+local own = d:GetAttribute("Owner") or d:GetAttribute("owner") or d:GetAttribute("UserId") or d:GetAttribute("userId") or d:GetAttribute("Placer")
+if own ~= nil and tostring(own) == tostring(LP.UserId) then mine = true end
+end)
+pcall(function()
+local sl = d:GetAttribute("slot") or d:GetAttribute("Slot") or d:GetAttribute("SlotId") or d:GetAttribute("Index")
+if sl ~= nil and tostring(sl) == want then hit = true end
+end)
+if not hit then pcall(function() hit = tostring(d.Name):find(want, 1, true) ~= nil end) end
+if hit then
+if mine then best = d break end
+if best == nil then best = d end
+end
+end
+end
+end)
+return best
+end
 F.CollectTP = function(maxSlot)
-return F.CollectAll(maxSlot)
+maxSlot = tonumber(maxSlot) or 30
+task.spawn(function()
+local _, _, root = GC()
+if not root then return end
+local home = root.CFrame
+local node = game:GetService("ReplicatedStorage")
+for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
+local ok, ch = pcall(function() return node:WaitForChild(seg, 5) end)
+if not (ok and ch) then F.Out("[收集] 路径断了: " .. tostring(seg)) return end
+node = ch
+end
+local moved, n = 0, 0
+for i = 1, maxSlot do
+local obj = F.FindMySlotPart(i)
+if obj then
+local pos = nil
+if obj:IsA("Model") then pcall(function() pos = obj:GetPivot().Position end) else pos = obj.Position end
+if pos then
+pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+moved = moved + 1
+task.wait(0.25)
+end
+end
+pcall(function() node:FireServer(i) end)
+n = n + 1
+task.wait(0.1)
+end
+pcall(function() root.CFrame = home end)
+F.Out("[收集] 槽位 " .. tostring(n) .. " 个 · 其中 " .. tostring(moved) .. " 个先 TP 到你的脑红 · 已回到原位置")
+end)
 end
 F.CollectTP_OLD = function(maxSlot)
 task.spawn(function()
@@ -7414,10 +7469,47 @@ return math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1), 1, 75)
 end
 local function cpsOf(tool)
 if not tool then return nil end
-local base = baseCPSOf(tool)
-if not base then return nil end
-local mut = tostring(tool:GetAttribute("Mutation") or "")
-return base * (MutBuff[mut] or 1) * (lvMul() ^ (toolLevel(tool) - 1))
+local v = nil
+for _, k in ipairs({ "CPS", "Cps", "cps", "Value", "Income", "Money", "PerSecond", "Earnings", "price", "Price" }) do
+local okA, a = pcall(function() return tool:GetAttribute(k) end)
+if okA and type(a) == "number" and a > 0 then return a end
+pcall(function()
+local c = tool:FindFirstChild(k)
+if c and (c:IsA("NumberValue") or c:IsA("IntValue") or c:IsA("StringValue")) then
+local n = tonumber(tostring(c.Value))
+if not n then n = tonumber((tostring(c.Value):lower():gsub("k", "e3"):gsub("m", "e6"):gsub("b", "e9"):gsub("[^%d%.e]", ""))) end
+if n and n > 0 then v = n end
+end
+end)
+if v then return v end
+end
+local texts = {}
+pcall(function()
+for _, d in ipairs(tool:GetDescendants()) do
+if d:IsA("TextLabel") or d:IsA("TextButton") then
+local s = nil
+pcall(function() s = d.Text end)
+if type(s) == "string" and s ~= "" then texts[#texts + 1] = s end
+end
+end
+end)
+texts[#texts + 1] = tostring(tool.Name)
+local SUF = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15 }
+for _, s in ipairs(texts) do
+local low = string.lower(tostring(s))
+for num, suf in string.gmatch(low, "(%d+%.?%d*)([kmbtq])") do
+local mul = SUF[suf]
+if mul then return tonumber(num) * mul end
+end
+end
+for _, s in ipairs(texts) do
+local num = tostring(s):match("([%d][%d,]*%.?%d*)")
+if num then
+local n = tonumber((num:gsub(",", "")))
+if n and n > 0 then return n end
+end
+end
+return nil
 end
 local function describe(tool)
 if not tool then return "?" end
@@ -7483,6 +7575,18 @@ end
 F.Out("[卖出] 已按门槛逐个槽位发送 ref_B_Sell(共 " .. tostring(n) .. " 次)")
 end)
 end
+task.spawn(function()
+while true do
+task.wait(2)
+pcall(function()
+local o = Fluent and Fluent.Options and Fluent.Options.SellScanResult
+if o and o.Set and F.SellScanStats then
+local r = F.SellScanStats()
+if r then o:Set(string.format("≤ %s: 符合 %d / 能算出 %d(限定 %d 不算)", F.FmtNum(r.n), r.hits, r.total, r.ex)) end
+end
+end)
+end
+end)
 F.SellScanStats = function()
 local raw = nil
 pcall(function()
@@ -11719,10 +11823,9 @@ local n = F.ParseCPS(v)
 if n then C.SellMinCPS, C.SellMinCPSTxt = n, v F.Out("[售卖] 门槛 = " .. F.FmtNum(n))
 elseif tostring(v) ~= "" then pcall(function() Fluent:Notify({ Title = "格式", Content = "例: 80m / 500k / 1.5b / 2q", Duration = 6 }) end) end
 end })
-Tabs.AFK:AddButton({ Title = "① 统计符合门槛的个数", Description = "只统计, 不卖", Callback = function() pcall(F.ScanSellUI) end })
-Tabs.AFK:AddInput("SellScanResult", { Title = "统计结果(就显示在这里)", Default = "(还没统计)", Callback = function() end })
+Tabs.AFK:AddInput("SellScanResult", { Title = "符合门槛的个数(自动刷新)", Default = "(读取中…)", Callback = function() end })
 Tabs.AFK:AddButton({ Title = "② 按门槛卖出(只卖 ≤ 门槛的)", Callback = function() pcall(F.SellByThreshold) end })
-Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(先 TP 过去再收 · 1~30 槽)", Description = "逐个槽位先传到对应物件身边, 等一下再发收集接口(不 TP 拿不到)", Callback = function() pcall(F.CollectAll, 30) end })
+Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(TP 到你的脑红 → 收集 → 回原位)", Description = "逐个槽位瞬移到属于你的脑红旁边再发收集接口, 全程结束后回到你原来的位置", Callback = function() pcall(F.CollectTP, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
