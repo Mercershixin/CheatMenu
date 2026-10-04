@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 20:11 sha a810c23b bytes 484497'):format('2026-10-04 20:11','a810c23b',484497))
+print(('[CheatMenu] build 2026-10-04 20:15 sha c2a3d471 bytes 485604'):format('2026-10-04 20:15','c2a3d471',485604))
 local F = {}
-F.VERSION = "v14.0.122"
+F.VERSION = "v14.0.123"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -580,6 +580,17 @@ F._LOCK_KEYS = {
 WalkSpeed = true, JumpPower = true, JumpHeight = true, PlatformStand = true,
 CanCollide = true, Health = true, MaxHealth = true,
 }
+F.Once = function(key, sec)
+F._once = F._once or {}
+local now = os.clock()
+local t = F._once[key]
+if t and (now - t) < (sec or 1.5) then
+F.Out("[防连点] 「" .. tostring(key) .. "」正在执行或刚点过 ⇒ 已忽略这次重复点击")
+return false
+end
+F._once[key] = now
+return true
+end
 F.OptSet = function(o, v)
 if type(o) ~= "table" then return false end
 if type(o.SetValue) == "function" then return (pcall(function() o:SetValue(v) end)) end
@@ -12692,8 +12703,13 @@ end })
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
+if not F.Once("tp_target", 1.5) then return end
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
-if name then TeleportToPlayer(Players:FindFirstChild(name)) end
+if not name then F.Out("[传送] 先在左边「目标玩家」里选一个人") return end
+local pl = Players:FindFirstChild(tostring(name))
+if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已离开)") return end
+if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.Name .. "」现在没有角色(在复活/已死)") return end
+TeleportToPlayer(pl)
 end })
 Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "开: 游戏里按 T 直接瞬移到鼠标指的地方(指着天空就送到正前方) / 关: T 键无效", Default = false, Callback = function(v)
 T.TPMouse = v
@@ -12704,9 +12720,11 @@ or "[T键传送] 已关闭, T 键不再传送")
 end })
 Tabs.Move:AddSection("针对玩家(用上面的「目标玩家」选人 · 真影响他)")
 Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权, 再一点点把他拖到你身边 —— 真动他(所有人都会看到他过来)。抢不到会直接告诉你「本服不支持」", Callback = function()
+if not F.Once("pull", 1.5) then return end
 task.spawn(function() pcall(F.PullPlayer) end)
 end })
 Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "同样先抢所有权, 然后一次到位把他挪到你面前(比上面的拖更瞬移)。抢不到就是本服不给", Callback = function()
+if not F.Once("tpmove", 1.5) then return end
 task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
@@ -12755,7 +12773,10 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("收起脑红")
-Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
+Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function()
+if not F.Once("withdrawall", 2) then return end
+task.spawn(function() pcall(F.WithdrawAll, 30) end)
+end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -12860,6 +12881,7 @@ end })
 Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报(合成一个)", Description = "拦掉客户端发给服务端的受伤/死亡上报, 同时隔离伪装自己的血量读数 —— 一个开关两件事", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
 Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Callback = function()
+if not F.Once("scanall", 6) then return end
 task.spawn(function()
 pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
@@ -12944,11 +12966,24 @@ F._fusing = false
 end
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
-Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
-Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
-Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
-Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function()
+if not F.Once("reload", 6) then return end
+F.HotReload(false)
+end })
+Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function()
+if not F.Once("reload", 6) then return end
+F.HotReload(true)
+end })
+Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function()
+if not F.Once("rejoin", 6) then return end
+F.RejoinNow()
+end })
+Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function()
+if not F.Once("alloff", 2) then return end
+pcall(F.PanicKeyDisableAll)
+end })
 Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function()
+if not F.Once("unload", 4) then return end
 pcall(function() Fluent:Notify({ Title = "卸载", Content = "正在卸载…界面会消失; 日志里会有 [卸载] 复核结果", Duration = 2 }) end)
 task.defer(function()
 pcall(F.UnloadAll)
