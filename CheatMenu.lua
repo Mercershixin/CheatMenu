@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 22:56 sha be3d0a2d bytes 494396'):format('2026-10-04 22:56','be3d0a2d',494396))
+print(('[CheatMenu] build 2026-10-04 23:03 sha 8f7aace6 bytes 493388'):format('2026-10-04 23:03','8f7aace6',493388))
 local F = {}
-F.VERSION = "v14.6.0"
+F.VERSION = "v14.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7420,10 +7420,8 @@ for i = 1, #sh do F.Out("   [警长] " .. sh[i]) end
 if #k == 0 and #sh == 0 then F.Out("   (没识别出杀手/警长 — 可能本局没分发, 或者该游戏不向客户端暴露角色)") end
 end
 F.CMX_HLTeamColor = function(pl)
-if T.RoleColor then
 local _, col, key = F.RolePretty(pl)
 if key then return col end
-end
 local same = false
 pcall(function() same = (pl.Team ~= nil and pl.Team == LP.Team) end)
 if T.TeamColorHL == false then return Color3.fromRGB(0, 200, 255) end
@@ -7534,6 +7532,7 @@ end
 end
 end
 function F.BodyHLEnable()
+F.NpcHLSet(true)
 for _, pl in ipairs(Players:GetPlayers()) do F.BodyHLAdd(pl) end
 F.BodyHLRefresh()
 if not F._hlRConn then
@@ -7601,6 +7600,7 @@ pcall(function() rec:Destroy() end)
 end
 end
 F._hlObjs = {}
+F.NpcHLSet(false)
 if F._hlRConn then F._hlRConn:Disconnect() F._hlRConn = nil end
 end
 function F.SyncMoveUI()
@@ -12288,6 +12288,11 @@ else
 F.Out("[扫描] 没扫到名字像上报/封禁的远程")
 end
 end)
+pcall(F.ScanRoles)
+pcall(function()
+local n = F.NpcScan()
+F.Out("[扫描·NPC] 场上识别到 " .. tostring(n) .. " 个 NPC/傀儡")
+end)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
 end
@@ -12968,31 +12973,6 @@ Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接�
 T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
-end })
-Tabs.World:AddToggle("RoleColor", { Title = "接入高亮配色(杀手红 / 警长黄)", Default = false, Callback = function(v)
-T.RoleColor = v
-if F._cfgSyncing then return end
-F.Out("[角色识别] 高亮配色 = " .. (v and "开(杀手红/警长黄)" or "关"))
-end })
-Tabs.World:AddButton({ Title = "扫一遍: 谁是杀手/警长(只读)", Callback = function()
-if not F.Once("scan_roles", 1.5) then return end
-F.ScanRoles()
-end })
-Tabs.World:AddToggle("NpcHL", { Title = "★ 高亮 NPC(青色 · 隔墙只留外框)", Default = false, Callback = function(v)
-T.NpcHL = v
-if F._cfgSyncing then return end
-F.NpcHLSet(v)
-end })
-Tabs.World:AddButton({ Title = "扫一遍: 场上有多少 NPC(只读)", Callback = function()
-if not F.Once("scan_npc", 1.5) then return end
-local n = F.NpcScan()
-F.Out("[NPC扫描] 场上识别到 " .. tostring(n) .. " 个 NPC/傀儡")
-local names = {}
-for o in pairs(F._npcObjs) do
-if #names < 12 then names[#names + 1] = o.Name end
-end
-if #names > 0 then F.Out("   " .. table.concat(names, " · ")) end
-if n == 0 then F.Out("   (这个游戏可能没用 Humanoid 做人形 NPC, 或者名字里不含关键词)") end
 end })
 Tabs.World:AddInput("NpcExclude", { Title = "NPC 排除名单(名字, 逗号分隔)", Default = "", Callback = function(v)
 local t = {}
