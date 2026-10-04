@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:48 sha d791eb09 bytes 480768'):format('2026-10-04 19:48','d791eb09',480768))
+print(('[CheatMenu] build 2026-10-04 19:59 sha 6dbc4ed1 bytes 485062'):format('2026-10-04 19:59','6dbc4ed1',485062))
 local F = {}
-F.VERSION = "v14.0.118"
+F.VERSION = "v14.0.119"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12295,6 +12295,96 @@ end
 F._afkInput = nil
 end)
 end
+F.GetTargetPlayer = function()
+local nm = nil
+pcall(function()
+if Fluent and Fluent.Options and Fluent.Options.TPTarget then nm = Fluent.Options.TPTarget.Value end
+end)
+if not nm then return nil, "先在「传送」页的『目标玩家』下拉里选一个人" end
+local pl = Players:FindFirstChild(tostring(nm))
+if not pl then return nil, "找不到玩家「" .. tostring(nm) .. "」(可能已离开)" end
+if not pl.Character or not pl.Character.Parent then return nil, "「" .. pl.Name .. "」现在没有角色(在复活/已死)" end
+return pl, nil
+end
+F.GrabOwner = function(part)
+if not part then return false, "目标没有部件" end
+local can = true
+pcall(function() if part.CanSetNetworkOwnership then can = part:CanSetNetworkOwnership() end end)
+if not can then return false, "服务端锁了所有权 ⇒ 本服不支持直接动别人" end
+local ok = pcall(function() part:SetNetworkOwner(LP) end)
+if not ok then return false, "抢所有权被拒(执行器或服务端不允许)" end
+return true, nil
+end
+F.PullPlayer = function()
+local pl, err = F.GetTargetPlayer()
+if not pl then F.Out("[拉人] " .. tostring(err)) return end
+local tp = pl.Character
+local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
+if not tRoot then F.Out("[拉人] 目标没有 HumanoidRootPart") return end
+local ok, why = F.GrabOwner(tRoot)
+F.Out("[拉人] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
+task.spawn(function()
+for _ = 1, 30 do
+local _, _, myRoot = GC()
+if not (myRoot and myRoot.Parent and tRoot and tRoot.Parent) then break end
+pcall(function()
+local to = myRoot.Position - tRoot.Position
+local d = to.Magnitude
+if d > 4 then
+tRoot.AssemblyLinearVelocity = Vector3.zero
+tRoot.CFrame = CFrame.new(tRoot.Position + to.Unit * math.min(d - 3, 14))
+end
+end)
+task.wait(0.06)
+end
+F.Out("[拉人] 结束 —— 人没过来就是本服抢不到他的所有权(说明这个游戏不支持)")
+end)
+end
+F.FlingPlayer = function()
+local pl, err = F.GetTargetPlayer()
+if not pl then F.Out("[搞飞] " .. tostring(err)) return end
+local tp = pl.Character
+local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
+if not tRoot then F.Out("[搞飞] 目标没有 HumanoidRootPart") return end
+local ok, why = F.GrabOwner(tRoot)
+F.Out("[搞飞] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功 ⇒ 直接把他推上天" or ("失败 ⇒ " .. tostring(why) .. " · 改用公开同款『自己当炮弹撞他』")))
+if ok then
+task.spawn(function()
+for _ = 1, 6 do
+if not (tRoot and tRoot.Parent) then break end
+pcall(function()
+tRoot.AssemblyLinearVelocity = Vector3.new(0, 9e4, 0)
+tRoot.AssemblyAngularVelocity = Vector3.new(9e7, 9e7, 9e7)
+end)
+task.wait(0.06)
+end
+F.Out("[搞飞] 已把他甩出去(他那边会真的飞起来)")
+end)
+else
+task.spawn(function()
+local ang = 0
+for i = 1, 16 do
+local _, _, myRoot = GC()
+if not (myRoot and myRoot.Parent and tRoot and tRoot.Parent) then break end
+ang = ang + 100
+pcall(function()
+myRoot.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0, ((i % 2 == 0) and 1.5 or -1.5), 0) * CFrame.Angles(math.rad(ang), 0, 0)
+myRoot.AssemblyLinearVelocity = Vector3.new(9e7, 9e8, 9e7)
+myRoot.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
+end)
+task.wait(0.05)
+end
+pcall(function()
+local _, _, myRoot = GC()
+if myRoot then
+myRoot.AssemblyLinearVelocity = Vector3.zero
+myRoot.AssemblyAngularVelocity = Vector3.zero
+end
+end)
+F.Out("[搞飞] 撞完了 —— 没飞就再来一次(贴近他、或从他上方撞更有效)")
+end)
+end
+end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -12309,6 +12399,13 @@ Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 do
+Tabs.Combat:AddSection("针对玩家(用「传送」页选中的目标 · 真影响他, 不是本地假象)")
+Tabs.Combat:AddButton({ Title = "★ 把目标拉到我身边", Description = "先抢他的网络所有权, 再把他拖过来 —— 这是真动他(所有人都会看到他过来了)。抢不到会明确告诉你: 那种游戏不支持直接动别人", Callback = function()
+task.spawn(function() pcall(F.PullPlayer) end)
+end })
+Tabs.Combat:AddButton({ Title = "★ 把目标搞飞(甩出去)", Description = "先试『抢所有权 → 直接推他上天』; 抢不到就用公开脚本同款『把自己当炮弹高速撞他』兜底", Callback = function()
+task.spawn(function() pcall(F.FlingPlayer) end)
+end })
 Tabs.Combat:AddSection("自瞄")
 Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开: 自动挑一个敌人锁住, 屏幕上会显示「锁定: 名字 · 距离」让你看得见效果。本开关不落盘, 每次重载要重点一次", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
 Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "两种就是你说的那两种: 正面圈内锁 = 只锁屏幕正面那个圈里的(面对谁锁谁); 漏就锁 = 360°全身, 只要他身上有任何一个部位打得着(哪怕只露一条胳膊/一条腿)就锁", Values = {
