@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:35 sha 1166725e bytes 477347'):format('2026-10-04 19:35','1166725e',477347))
+print(('[CheatMenu] build 2026-10-04 19:39 sha 756fa6bb bytes 477658'):format('2026-10-04 19:39','756fa6bb',477658))
 local F = {}
-F.VERSION = "v14.0.114"
+F.VERSION = "v14.0.115"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5338,6 +5338,8 @@ end
 F.HideConn, F.HideBaseY = nil, nil
 function F.HideDisable()
 if F.HideConn then F.HideConn:Disconnect() F.HideConn = nil end
+pcall(function() if F._hideFloor and F._hideFloor.Parent then F._hideFloor:Destroy() end end)
+F._hideFloor = nil
 if F._hideCharConn then pcall(function() F._hideCharConn:Disconnect() end) F._hideCharConn = nil end
 pcall(function()
 local _, _, r = GC()
@@ -5359,27 +5361,35 @@ F.Out("[藏地下] 检测到重生 ⇒ 已按新位置重置基准高度")
 end)
 end)
 end
-F.HideConn = RS.RenderStepped:Connect(function(dt)
+pcall(function()
+if F._hideFloor and F._hideFloor.Parent then F._hideFloor:Destroy() end
+local pf = Instance.new("Part")
+pf.Name = "CM_AirWalk"
+pf.Size = Vector3.new(6, 1, 6)
+pf.Anchored = true
+pf.CanCollide = true
+pf.Transparency = 1
+pf.CanQuery = false
+pf.CanTouch = false
+local _, _, r0 = GC()
+if r0 then pf.CFrame = CFrame.new(r0.Position.X, r0.Position.Y - 3.5, r0.Position.Z) end
+pf.Parent = workspace
+F._hideFloor = pf
+end)
+F.HideConn = RS.Heartbeat:Connect(function()
 if not T.Hide then F.HideDisable() return end
 local _, hum, r = GC()
 if not (hum and r) then return end
 local depth = math.min(math.max(tonumber(C.HideDepth) or 5, -60), 60)
 local ty = F.HideBaseY - depth
-local dir = hum.MoveDirection
-local spd = tonumber(hum.WalkSpeed) or 16
-if spd < 1 then spd = 1 end
-if spd > 5000 then spd = 5000 end
-local cur = r.Position
-local nx, nz = cur.X, cur.Z
-if dir.Magnitude > 0.05 then
-if type(dt) ~= "number" or dt <= 0 or dt > 0.5 then dt = 1 / 60 end
-nx = cur.X + dir.X * spd * dt
-nz = cur.Z + dir.Z * spd * dt
+if math.abs(r.Position.Y - ty) > 6 then
+pcall(function() r.CFrame = CFrame.new(r.Position.X, ty, r.Position.Z) end)
 end
-r.CFrame = CFrame.new(nx, ty, nz)
 pcall(function()
-r.AssemblyLinearVelocity = Vector3.zero
-r.AssemblyAngularVelocity = Vector3.zero
+local pf = F._hideFloor
+if pf and pf.Parent then
+pf.CFrame = CFrame.new(r.Position.X, ty - 3.5, r.Position.Z)
+end
 end)
 local cam = workspace.CurrentCamera
 if cam then
