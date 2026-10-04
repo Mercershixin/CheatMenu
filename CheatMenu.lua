@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:42 sha ccd712fd bytes 517022'):format('2026-10-05 01:42','ccd712fd',517022))
+print(('[CheatMenu] build 2026-10-05 01:44 sha 3f704694 bytes 517709'):format('2026-10-05 01:44','3f704694',517709))
 local F = {}
-F.VERSION = "v15.10.0"
+F.VERSION = "v16.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11878,6 +11878,9 @@ F.CMX_BAN_KEYS = {
 "antikick", "anti-kick", "kick", "ban", "banplayer", "report", "reportban",
 "hash", "hashcheck", "exploit", "iy", "submit", "flag", "flagged",
 "logdetect", "logban", "punish", "detect", "detectionreport", "moderation",
+"verify", "validate", "integrity", "tamper", "suspicion", "violation",
+"anticheat", "accheck", "securitycheck", "audit", "inspect", "monitor",
+"sentry", "watcher", "tripwire", "honeypot", "canary", "fingerprint",
 }
 F.CMX_KeyIsolate = function(low, key)
 local s, e = low:find(key, 1, true)
@@ -12049,6 +12052,12 @@ local NAMES = {
 "ban", "banPlayer", "report", "reportPlayer", "flag", "flagPlayer", "submit", "submitReport",
 "onDetect", "onFlag", "onBan", "logDetection", "logBan", "recordFlag",
 "antiKick", "antikick", "kickPlayer", "punishPlayer", "detectPlayer", "sendBan", "sendReport",
+"detect", "detection", "verify", "validate", "audit", "inspect", "monitor",
+"tripwire", "honeypot", "canary", "integrity", "tamper", "fingerprint", "signature",
+"antiCheat", "anticheat", "acCheck", "securityCheck", "suspicion", "suspicious",
+"violation", "offense", "strike", "enforce", "moderation", "moderator",
+"hookDetect", "metaCheck", "memoryCheck", "gcCheck", "speedCheck", "flyCheck",
+"watcher", "sentry", "guardAI", "reportDetect", "flagPlayerInternal", "banAsync",
 }
 pcall(function()
 local all = F.CMX_AllDetectKeys and F.CMX_AllDetectKeys()
