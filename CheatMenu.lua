@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:08 sha 3b8087f1 bytes 493551'):format('2026-10-04 23:08','3b8087f1',493551))
+print(('[CheatMenu] build 2026-10-04 23:11 sha 29c94cf8 bytes 494713'):format('2026-10-04 23:11','29c94cf8',494713))
 local F = {}
-F.VERSION = "v14.8.0"
+F.VERSION = "v14.9.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5490,16 +5490,47 @@ end
 function F.FullBrightEnable()
 local L = game:GetService("Lighting")
 if not F.savedLight then
-F.savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd, GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient }
+F.savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd, FogStart = L.FogStart, GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient, ExposureCompensation = L.ExposureCompensation }
 end
-L.Brightness = 2 L.ClockTime = 14 L.FogEnd = 100000 L.GlobalShadows = false
+L.Brightness = 6 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
 L.Ambient = Color3.fromRGB(255, 255, 255) L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+L.ExposureCompensation = 0.8
+pcall(function()
+local atm = L:FindFirstChildOfClass("Atmosphere")
+if atm then
+if not F.savedAtm then F.savedAtm = { Density = atm.Density, Haze = atm.Haze, Glare = atm.Glare } end
+atm.Density = 0 atm.Haze = 0 atm.Glare = 0
+end
+end)
+pcall(function()
+local cc = L:FindFirstChildOfClass("ColorCorrectionEffect")
+if cc then
+if not F.savedCC then F.savedCC = { Brightness = cc.Brightness, Contrast = cc.Contrast } end
+cc.Brightness = 0.3 cc.Contrast = 0.15
+end
+end)
 end
 function F.FullBrightDisable()
 local L = game:GetService("Lighting")
 if not F.savedLight then return end
 L.Brightness = F.savedLight.Brightness L.ClockTime = F.savedLight.ClockTime L.FogEnd = F.savedLight.FogEnd
+L.FogStart = F.savedLight.FogStart or L.FogEnd
 L.GlobalShadows = F.savedLight.GlobalShadows L.Ambient = F.savedLight.Ambient L.OutdoorAmbient = F.savedLight.OutdoorAmbient
+if F.savedLight.ExposureCompensation ~= nil then L.ExposureCompensation = F.savedLight.ExposureCompensation end
+if F.savedAtm then
+pcall(function()
+local atm = L:FindFirstChildOfClass("Atmosphere")
+if atm then atm.Density = F.savedAtm.Density atm.Haze = F.savedAtm.Haze atm.Glare = F.savedAtm.Glare end
+end)
+F.savedAtm = nil
+end
+if F.savedCC then
+pcall(function()
+local cc = L:FindFirstChildOfClass("ColorCorrectionEffect")
+if cc then cc.Brightness = F.savedCC.Brightness cc.Contrast = F.savedCC.Contrast end
+end)
+F.savedCC = nil
+end
 end
 F.savedNV = nil
 function F.NightVisionEnable()
