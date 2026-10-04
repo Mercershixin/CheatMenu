@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:54 sha e65fa133 bytes 456712'):format('2026-10-04 14:54','e65fa133',456712))
+print(('[CheatMenu] build 2026-10-04 15:01 sha cc916aa6 bytes 458005'):format('2026-10-04 15:01','cc916aa6',458005))
 local F = {}
-F.VERSION = "v14.0.71"
+F.VERSION = "v14.0.72"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11300,22 +11300,54 @@ table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
+F.TreadmillFarmFind = function()
+local _, _, root = GC()
+if not root then return nil end
+local best, bestD = nil, 1e9
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+local nm = tostring(d.Name)
+if nm:find("readmill", 1, true) or nm:find("跑步机", 1, true) then
+local part = nil
+if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
+if part and part:IsA("BasePart") then
+local dd = (part.Position - root.Position).Magnitude
+if dd < bestD then best, bestD = part, dd end
+end
+end
+end
+end)
+return best, bestD
+end
+F.TreadmillStand = function()
+local _, _, root = GC()
+if not root then return false end
+local part = F.TreadmillFarmFind()
+if not part then F.Out("[跑步机] 没找到跑步机(名字里带 Treadmill 的部件)") return false end
+local top = part.Position + Vector3.new(0, part.Size.Y / 2 + 3, 0)
+local rp = RaycastParams.new()
+rp.FilterDescendantsInstances = { LP.Character }
+local hit = workspace:Raycast(top, Vector3.new(0, -20, 0), rp)
+local y = hit and hit.Position.Y or top.Y
+root.CFrame = CFrame.new(Vector3.new(part.Position.X, y + 3, part.Position.Z))
+root.AssemblyLinearVelocity = Vector3.zero
+F._tmHome = root.Position
+F.Out("[跑步机] 已站到跑步机带上(踩实): " .. tostring(part.Parent and part.Parent.Name or part.Name))
+return true
+end
 F.TreadmillFarmSet = function(on)
 T.TreadmillFarm = on and true or false
 if F._tmLoop then F._tmLoop = false end
-if not on then
-F.Out("[跑步机] 已关")
-return
-end
-local _, _, root0 = GC()
-F._tmHome = root0 and root0.Position or nil
-F.Out("[跑步机] 已开: 站在跑步机带上原地跑(自动按 W), 距离由游戏自己的 PersonalTreadmillStep 计算; 每 1 秒检查一次, 偏离超过 8 格会把你拉回原位, 保证一直在有效区")
+if not on then F.Out("[跑步机] 已关") return end
+pcall(F.TreadmillStand)
+F.Out("[跑步机] 已开: 先自动站到带上(踩实) → 再原地迈步(W), 距离由游戏自己的 PersonalTreadmillStep 结算; 每 1 秒把位置钉回带面, 不会走出判定区")
 F._tmLoop = true
 task.spawn(function()
 local n = 0
 while T.TreadmillFarm and F._tmLoop do
 local _, hum, root = GC()
 if hum and root then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end)
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
 vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
@@ -11326,11 +11358,13 @@ local vim = game:GetService("VirtualInputManager")
 vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
 end)
 n = n + 1
-if F._tmHome and (root.Position - F._tmHome).Magnitude > 8 then
-pcall(function() root.CFrame = CFrame.new(F._tmHome) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+if n % 8 == 0 then
+local part = F.TreadmillFarmFind()
+if part and F._tmHome then
+pcall(function() root.CFrame = CFrame.new(Vector3.new(F._tmHome.X, F._tmHome.Y, F._tmHome.Z)) end)
 end
-if n % 40 == 0 then F.Out("[跑步机] 已在带上原地跑 " .. tostring(n) .. " 次按键(距离要看游戏自己的计数)") end
+end
+if n % 40 == 0 then F.Out("[跑步机] 已在带上迈步 " .. tostring(n) .. " 次") end
 end
 task.wait(0.05)
 end
