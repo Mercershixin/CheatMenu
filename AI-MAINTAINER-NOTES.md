@@ -3385,3 +3385,48 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   ★ 实现要点：① **走 `F.MetaInstall("__newindex", ...)` 进分层栈**（可精确卸载、与其它层共存）；② 第一道就是 `F._LOCK_KEYS[k]` 白名单，**不在名单直接转发**（每帧零开销）；
   ③ `checkcaller()` 排除自己；④ **只改 `v`、绝不读同一个 key**（避免递归，这条坑已复发过）。
   ⇒ **只在档位②③挂载**（`ProtectTierApply` 的 lvl>=2 / lvl>=3），关档 / 急停 / 卸载都会卸 —— 符合"不开档位=普通效果、开档位才上钩子"的设计。
+
+
+## 修「急停/卸载 断链」的 nil 洞口（2026-10-04 · 14.0.76）
+
+### 根因：`ipairs({...})` 里的 nil 会静默截断其后全部元素
+
+- `F.AutoSaveDisable` **全项目没有任何定义**（只有遗留标志 `T.AutoSave` / `F.PANIC_KEEP.AutoSave`），
+  却被写进两个"关闭链"数组里：
+  ① `F.PanicKeyDisableAll` 的 `ipairs({ F.AimSet, ..., F.AutoSaveDisable, F.GuiProtectionDisable, ... })`；
+  ② `UnloadAll` 的 `disables = { ..., F.AutoSaveDisable, ... }`。
+- Lua 的 `ipairs` **遇到第一个 nil 就停止** ⇒ 该位置**之后的 19 个关闭函数从来没被调用过**：
+  `F.GuiProtectionDisable · F.SpeedAntiTPDisable · F.SpeedRestore · F.FlySet · F.FlyDestroy · F.BypassDisable ·
+  F.AllInOneDisableAll · F.PinDisable · F.SpoofDisable · F.MetaHookUninstall · F.AntiCheatGCRestore ·
+  F.DeepNeuterDisable · F.AutoTrainDisable · F.AutoBonusDisable · F.AutoGymDisable · F.SilentAimDisable ·
+  F.HealthShowSet · F.HealthIsolateDisable · F.LockFieldsUninstall`。
+- ★★★ **后果**：按「一键全关」或手机浮钮长按急停后，**加速 / 飞行 / 绕过（Bypass）/ 元表钩子这些"最该关掉"的项目仍然开着**
+  —— 表面上日志说"已执行 N 项"，实际后半段全被吞掉。这是**功能级真 bug**，不是文案问题。
+- **修法（已发 14.0.76）**：删掉那两处 `F.AutoSaveDisable` 引用（急停链 L7124 / 卸载链 L9253）。
+  另删 `F.HookFuse` steps 里对 `AC.UninstallPropertyLock` 的悬空 pcall（该函数 14.0.18 已归档删除）。
+- ★ **铁律固化**：**往 `ipairs({ ... })` 这类"关闭/调用链"里加成员前，必须确认每个成员都已定义**；
+  只要有一个 nil，**后面所有成员一起失效且无任何报错**。这类洞只能靠"成员是否定义"的静态检查发现。
+
+### `gate.py` 的 `use-before-decl` 是误报（不是代码问题）
+
+- 报 `out` 用在 L946（其实它是 `function AC.disableSignalConns(sig, force, out)` 的**参数**）；
+  报 `ch` 用在 L997（其实它由 L981 的 **多名字声明** `local ch, hum, root = GC()` 提供）。
+- ⇒ 该检查器**不认「表函数参数」、也不认「`local a, b, c = ...` 多名字声明」**。属检查器短板，
+  且 `gate.py` 退出码仍为 0（只提示不拦截）⇒ 长期挂着"失败项"但**不是真问题**。
+  修检查器时要同时补这两条解析规则，否则会继续产生假警。
+
+## 刷奖杯（TreadmillFarm）在与扫描同服的实测接口核对（2026-10-04）
+
+- 该服（placeid 93411036959889）真实接口（`[扫描·远程]` / `[抓包]` 实测，非猜测）：
+  `PersonalTreadmillStep`（RemoteEvent，客户端上报"走了一步"）/ `PersonalTreadmillSync` / `PlacePersonalTreadmill`（RemoteFunction，放置自己的跑步机）/
+  `CheckGoldTreadmill` / `PromptGoldTreadmill`·`PromptDiamondTreadmill`·`PromptCandyTreadmill`·`PromptAdminTreadmill` /
+  `TreadmillSignal` / `updateTreadmillEnabled` / `toggleTreadmillEnabled` / `BuyTreadmillSkin`·`EquipTreadmillSkin`。
+  客户端脚本 `Players.<name>.PlayerScripts.PersonalTreadmill`；模块 `ReplicatedStorage.Treadmill.Treadmills` / `Treadmill.Raycast`。
+- ★ **"奖杯"= Gold / Diamond / Candy / Admin 四档跑步机**（对应 `Prompt*Treadmill`）——即"在跑步机上累积距离到档位"。
+- ⚠ **自动领奖的命中条件**：`q.Name + ProximityPrompt.ActionText + ObjectText` 里含 `trophy/claim/reward/奖/领/milestone`。
+  本服 200 格内只有 6 个交互点，**名字全是通用名**（`ProximityPrompt`×5 + `EventPrompt`）⇒ 日志只打了 Name，
+  **能不能自动领到取决于这些 prompt 的 ActionText/ObjectText**（未见日志，无法从名字判断）。
+- ⚠ **站错目标的风险**：`F.TreadmillFarmFind` 的 `rank>0` 会匹配**任何**名字含 `Gold/Diamond/Candy/Trophy` 的部件
+  （不要求同时含 treadmill）⇒ 场上若有 `GoldCoin` 之类，可能被当成最高优先级目标。
+  自查办法：看日志 `[跑步机] 已站到跑步机带上(踩实): <名字>` 那行是否是你自己的跑步机。
+- 该功能**没进"急停/卸载链"**，但急停会把所有 `T[k]` 置 false（含 `T.TreadmillFarm`）⇒ 循环自然退出，无残留风险。
