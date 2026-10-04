@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:39 sha 49dd9190 bytes 464187'):format('2026-10-04 17:39','49dd9190',464187))
+print(('[CheatMenu] build 2026-10-04 17:49 sha c06a343d bytes 464387'):format('2026-10-04 17:49','c06a343d',464387))
 local F = {}
-F.VERSION = "v14.0.93"
+F.VERSION = "v14.0.94"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12395,6 +12395,11 @@ local conns = #(AC._disabledConns or {})
 return { layers = layers, ids = ids, hooked = hooked, readonly = ro, conns = conns }
 end
 F.HookFuse = function(quiet)
+if F._fusing then
+if not quiet then F.Out("【熔断】已有一次熔断在进行中 ⇒ 跳过这一次重复的(避免连续两次卸/装元表)") end
+return
+end
+F._fusing = true
 if not quiet then F.Out("【熔断】① 开始卸掉所有钩子") end
 local steps = {
 function() for slot, bucket in pairs(F.MetaLayers or {}) do for id in pairs(bucket) do pcall(F.MetaUninstall, slot, id) end end end,
@@ -12445,6 +12450,7 @@ else
 F.Out("【熔断】✅ 本来就没有残留 —— 已清干净")
 end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
+F._fusing = false
 end
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
