@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:58 sha 4949b3d3 bytes 445392'):format('2026-10-04 13:58','4949b3d3',445392))
+print(('[CheatMenu] build 2026-10-04 14:01 sha 50dd6976 bytes 445443'):format('2026-10-04 14:01','50dd6976',445443))
 local F = {}
-F.VERSION = "v14.0.50"
+F.VERSION = "v14.0.51"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3509,7 +3509,7 @@ local function GodEnable()
 if GodConn then return end
 local function apply()
 local _, hum = GC()
-if hum then hum.MaxHealth = math.huge hum.Health = math.huge end
+if hum then hum.MaxHealth = 1e9 hum.Health = 1e9 end
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
@@ -11499,13 +11499,6 @@ T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AimTurnCamera", { Title = "锁定时把视角也转过去(默认关)", Description = "关: 只转你的人物朝向, 视角完全归你(适合踢/打类游戏); 开: 连相机一起转过去(适合按相机方向判定弹道的枪战游戏)", Default = true, Callback = function(v)
-T.AimTurnCamera = v
-T.AimTurnBody = not v
-if F._cfgSyncing then return end
-F.Out("[战斗] 锁定时转视角 = " .. (v and "开" or "关"))
-if v then F.EnsureAimOn("开转视角") end
-end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Description = "勾它时会顺手把上面的「自瞄」也打开(否则它单独开没有任何作用)", Default = true, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
@@ -11513,6 +11506,15 @@ F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
 if v then F.EnsureAimOn("开自动开火") end
 end })
 Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
+Tabs.Combat:AddDropdown("AimLockMode", { Title = "锁定方式", Values = {
+"转身锁人(只转人物朝向 · 不碰你视角)",
+"转视角(把相机也转过去 · 枪战用)",
+}, Default = "转身锁人(只转人物朝向 · 不碰你视角)", Callback = function(v)
+local cam = tostring(v):find("转视角", 1, true) ~= nil
+T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
+if F._cfgSyncing then return end
+F.Out("[战斗] 锁定方式 = " .. tostring(v))
+end })
 Tabs.Combat:AddSection("生存")
 Tabs.Combat:AddToggle("AntiRagdoll", { Title = "防击倒(反布娃娃+防被撞飞)", Default = false, Callback = function(v)
 C.AntiRagdollMode = v and "全部开启" or "关闭"
@@ -11774,6 +11776,16 @@ else
 F.TranslateDisable()
 end
 end })
+Tabs.Trans:AddDropdown("TransScope", { Title = "翻译范围", Values = { "只翻译界面", "界面 + 公屏聊天", "界面 + 公屏 + 气泡(全部)" }, Default = "只翻译界面", Callback = function(v)
+local s = tostring(v)
+local chat = s:find("公屏", 1, true) ~= nil
+local bub = s:find("气泡", 1, true) ~= nil
+T.ChatTranslate, T.BubbleTranslate = chat, bub
+if F._cfgSyncing then return end
+if chat then pcall(F.ChatTranslateEnable) else pcall(F.ChatTranslateDisable) end
+if bub then pcall(F.BubbleTranslateEnable) else pcall(F.BubbleTranslateDisable) end
+F.Out("[翻译] 范围 = " .. s)
+end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v)
 C.TransLang = v
@@ -11784,16 +11796,6 @@ F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面�
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
-Tabs.Trans:AddToggle("ChatTranslate", { Title = "公屏聊天翻译(官方钩子)", Default = false, Callback = function(v)
-T.ChatTranslate = v
-if F._cfgSyncing then return end
-if v then F.ChatTranslateEnable() else F.ChatTranslateDisable() end
-end })
-Tabs.Trans:AddToggle("BubbleTranslate", { Title = "气泡聊天翻译(官方钩子)", Default = false, Callback = function(v)
-T.BubbleTranslate = v
-if F._cfgSyncing then return end
-if v then F.BubbleTranslateEnable() else F.BubbleTranslateDisable() end
-end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
 pcall(F.HookFuse, true)
