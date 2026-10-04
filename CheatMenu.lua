@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:01 sha cc916aa6 bytes 458005'):format('2026-10-04 15:01','cc916aa6',458005))
+print(('[CheatMenu] build 2026-10-04 15:03 sha fc5d091c bytes 459339'):format('2026-10-04 15:03','fc5d091c',459339))
 local F = {}
-F.VERSION = "v14.0.72"
+F.VERSION = "v14.0.73"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5762,7 +5762,7 @@ local part = nil
 if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
 if part then
 local dd = (part.Position - root.Position).Magnitude
-if dd < bestD then best, bestD = part, dd end
+if (rank or 0) > (F._tmRank or 0) or ((rank or 0) == (F._tmRank or 0) and dd < bestD) then best, bestD, F._tmRank = part, dd, rank end
 end
 end
 end
@@ -11307,7 +11307,9 @@ local best, bestD = nil, 1e9
 pcall(function()
 for _, d in ipairs(workspace:GetDescendants()) do
 local nm = tostring(d.Name)
-if nm:find("readmill", 1, true) or nm:find("跑步机", 1, true) then
+local rank = 0
+if nm:find("Gold", 1, true) then rank = 4 elseif nm:find("Diamond", 1, true) then rank = 3 elseif nm:find("Candy", 1, true) then rank = 2 elseif nm:find("Trophy", 1, true) then rank = 5 end
+if rank > 0 or nm:find("readmill", 1, true) or nm:find("跑步机", 1, true) then
 local part = nil
 if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
 if part and part:IsA("BasePart") then
@@ -11365,6 +11367,31 @@ pcall(function() root.CFrame = CFrame.new(Vector3.new(F._tmHome.X, F._tmHome.Y, 
 end
 end
 if n % 40 == 0 then F.Out("[跑步机] 已在带上迈步 " .. tostring(n) .. " 次") end
+pcall(function()
+local cl = LP.Character
+if not cl then return end
+local r = cl:FindFirstChild("HumanoidRootPart")
+if not r then return end
+local op = OverlapParams.new()
+op.FilterType = Enum.RaycastFilterType.Exclude
+op.FilterDescendantsInstances = { cl }
+for _, q in ipairs(workspace:GetPartBoundsInRadius(r.Position, 40, op)) do
+local pp = q:FindFirstChildOfClass("ProximityPrompt")
+if pp and pp.Enabled then
+local bag = (tostring(q.Name) .. tostring(pp.ActionText) .. tostring(pp.ObjectText)):lower()
+if bag:find("trophy", 1, true) or bag:find("claim", 1, true) or bag:find("reward", 1, true) or bag:find("奖", 1, true) or bag:find("领", 1, true) or bag:find("milestone", 1, true) then
+pp.HoldDuration = 0
+pp.RequiresLineOfSight = false
+pp.MaxActivationDistance = 1000000
+pp:InputHoldBegin()
+task.wait()
+pp:InputHoldEnd()
+F._claimN = (F._claimN or 0) + 1
+if F._claimN % 5 == 1 then F.Out("[刷奖杯] 已自动领取 " .. tostring(F._claimN) .. " 次(最近: " .. tostring(q.Name) .. ")") end
+end
+end
+end
+end)
 end
 task.wait(0.05)
 end
@@ -11872,7 +11899,7 @@ pcall(F.MyEggSet, false)
 end
 F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/护蛋 = " .. (v and "开" or "关"))
 end })
-Tabs.Move:AddToggle("TreadmillFarm", { Title = "★ 跑步机刷距离(站在带上原地跑)", Description = "自动按 W 原地跑, 距离由游戏自己的 PersonalTreadmillStep 结算; 偏离超过 8 格会自动拉回, 保证一直在跑步机有效区内", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("TreadmillFarm", { Title = "★ 刷奖杯(自动上跑步机刷距离 + 自动领奖)", Description = "自动按 W 原地跑, 距离由游戏自己的 PersonalTreadmillStep 结算; 偏离超过 8 格会自动拉回, 保证一直在跑步机有效区内", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 pcall(F.TreadmillFarmSet, v)
 end })
