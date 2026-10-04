@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:35 sha 8c8af60d bytes 463755'):format('2026-10-04 16:35','8c8af60d',463755))
+print(('[CheatMenu] build 2026-10-04 16:46 sha 1284a14e bytes 465446'):format('2026-10-04 16:46','1284a14e',465446))
 local F = {}
-F.VERSION = "v14.0.81"
+F.VERSION = "v14.0.82"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2500,8 +2500,11 @@ T.DeepNeuter = true
 pcall(F.MetaHookEnsure)
 local n = 0
 pcall(function() n = F.AntiCheatGCSweep() end)
-F.Out("[深度中和] 已开: getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
-.. " —— 这层最容易招反作弊, 用完记得关")
+if n and n > 0 then
+F.Out("[深度中和] 已开: getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数 —— 这层最容易招反作弊, 用完记得关")
+else
+F.Out("[深度中和] 已开(大扫描已放到后台, 不再卡主线程; 扫完日志会报结果) —— 这层最容易招反作弊, 用完记得关")
+end
 end
 function F.DeepNeuterDisable()
 T.DeepNeuter = false
@@ -2517,6 +2520,21 @@ F._isyieldable = function()
 if type(coroutine) ~= "table" or type(coroutine.isyieldable) ~= "function" then return false end
 local ok, r = pcall(coroutine.isyieldable)
 return (ok and r) and true or false
+end
+F._logAt = {}
+F.LogRate = function(key, secs)
+local now = os.clock()
+if now - (F._logAt[key] or 0) < (secs or 3) then return false end
+F._logAt[key] = now
+return true
+end
+F.RunChunked = function(work, tag)
+if F._isyieldable() then return work() end
+task.spawn(function()
+local ok, err = pcall(work)
+if not ok then pcall(F.Out, "[" .. tostring(tag or "后台扫描") .. "] 后台执行出错(已跳过): " .. tostring(err)) end
+end)
+return nil
 end
 F._gcSweepSaved = {}
 F._gcKickStall = function() return task.wait(9e9) end
@@ -2535,8 +2553,9 @@ F.GCSweepKeys[4][2] = F._gcNoop
 return F.GCSweepKeys
 end
 F.AntiCheatGCSweep = function()
-local n, seen = 0, 0
 if type(getgc) ~= "function" then return 0 end
+local work = function()
+local n, seen = 0, 0
 local saved = F._gcSweepSaved
 local KEYS = F.EnsureGcSweepKeys()
 pcall(function()
@@ -2583,6 +2602,8 @@ F.Out("[防踢] getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函�
 .. " (含「这个物理约束是游戏自己加的」这类判定)")
 end
 return n
+end
+return F.RunChunked(work, "防踢中和") or 0
 end
 F.AntiCheatGCRestore = function()
 local n = 0
@@ -2829,12 +2850,12 @@ if not ok or not KG.mtHooked then KG.mtHooked = nil return end
 KG.blockSet = {}
 KG.logConn = RS.Heartbeat:Connect(function()
 local n = KG.blocked or 0
-if n ~= (KG.lastReport or 0) then
+if n ~= (KG.lastReport or 0) and F.LogRate("lastReport") then
 KG.lastReport = n
 F.Out("[CheatMenu] 拦截 Kick 调用 ×" .. tostring(n) .. " (三条路径: :Kick() / .Kick 取值 / .Kick 赋值)")
 end
 local n2 = KG.blocked3 or 0
-if n2 ~= (KG.lastReport3 or 0) then
+if n2 ~= (KG.lastReport3 or 0) and F.LogRate("lastReport3") then
 KG.lastReport3 = n2
 F.Out("[屏蔽] 已挡下服务端对我角色的写入 ×" .. tostring(n2)
 .. " (钉住/清血/打断飞行/禁走/禁跳/禁转向)")
@@ -2886,45 +2907,45 @@ else
 KG.root, KG.intent, KG.dev = nil, nil, nil
 end
 local n5 = KG.blocked5 or 0
-if n5 ~= (KG.lastBlock5 or 0) then
+if n5 ~= (KG.lastBlock5 or 0) and F.LogRate("lastBlock5") then
 KG.lastBlock5 = n5
 F.Out("[屏蔽] 已挡下服务端把我拉回去 ×" .. tostring(n5) .. " (它想把你写回原地, 被拦下)")
 end
 local n10 = KG.blocked10 or 0
-if n10 ~= (KG.lastBlock10 or 0) then
+if n10 ~= (KG.lastBlock10 or 0) and F.LogRate("lastBlock10") then
 KG.lastBlock10 = n10
 F.Out("[防掉蛋] 已拦下'掉蛋/放下'上报 ×" .. tostring(n10)
 .. " (被夹/被抓后游戏想让你的蛋掉出去, 被挡掉 ⇒ 蛋还在你手上)")
 end
 local n9 = KG.blocked9 or 0
-if n9 ~= (KG.lastBlock9 or 0) then
+if n9 ~= (KG.lastBlock9 or 0) and F.LogRate("lastBlock9") then
 KG.lastBlock9 = n9
 F.Out("[拦触发] 已拦下 陷阱/守卫/抓捕 的触发上报 ×" .. tostring(n9)
 .. " (游戏想上报'我被夹/被抓了', 被挡掉 ⇒ 服务端收不到就不会处理你)")
 end
 local n8 = KG.blocked8 or 0
-if n8 ~= (KG.lastBlock8 or 0) then
+if n8 ~= (KG.lastBlock8 or 0) and F.LogRate("lastBlock8") then
 KG.lastBlock8 = n8
 F.Out("[屏蔽] 已挡下把你打晕/打成布娃娃 ×" .. tostring(n8) .. " (被球棒打晕会掉蛋, 这层就是防这个)")
 end
 local n7 = KG.blocked7 or 0
-if n7 ~= (KG.lastBlock7 or 0) then
+if n7 ~= (KG.lastBlock7 or 0) and F.LogRate("lastBlock7") then
 KG.lastBlock7 = n7
 F.Out("[屏蔽] 已挡下把你切成物理道具 ×" .. tostring(n7) .. " (ChangeState(Physics) 是反作弊'冻结你'的常用手法)")
 end
 local n6 = KG.blocked6 or 0
-if n6 ~= (KG.lastBlock6 or 0) then
+if n6 ~= (KG.lastBlock6 or 0) and F.LogRate("lastBlock6") then
 KG.lastBlock6 = n6
 F.Out("[反检测] 已拦下客户端上报 ×" .. tostring(n6)
 .. " (完整性Integrity/拉回前奏Correction/违规Violation/反作弊anticheat/蜜罐honeypot/挂机Afk —— 服务端收不到这些就少一条判你的依据)")
 end
 local n4 = KG.blocked4 or 0
-if n4 ~= (KG.lastBlock4 or 0) then
+if n4 ~= (KG.lastBlock4 or 0) and F.LogRate("lastBlock4") then
 KG.lastBlock4 = n4
 F.Out("[屏蔽] 已挡下服务端把我改回去 ×" .. tostring(n4) .. " (把隐身改回可见 / 把瞬发交互改回长按)")
 end
 local n3 = KG.spoofHits or 0
-if n3 ~= (KG.lastSpoof or 0) then
+if n3 ~= (KG.lastSpoof or 0) and F.LogRate("lastSpoof") then
 KG.lastSpoof = n3
 F.Out("[伪装] 已对游戏侧伪装速度读数 ×" .. tostring(n3) .. " (游戏读到的是原值, 不是加速值)")
 end
@@ -10656,6 +10677,8 @@ end
 end
 end)
 F.CMX_NPSaved = {}
+F.CMX_NPOn = true
+local work = function()
 local n, seen = 0, 0
 local saved = F.CMX_NPSaved
 local noop = F._gcNoop or function() return end
@@ -10676,10 +10699,12 @@ end
 end
 end
 end)
-F.CMX_NPOn = true
 F.Out("[反封禁·按名中和+] 已扫 " .. tostring(seen) .. " 个表, 中和 " .. tostring(n)
 .. " 个封禁/举报/标记类函数(ban/report/flag/onDetect/antiKick…) · 关闭时逐个还原")
 return n > 0
+end
+local r = F.RunChunked(work, "按名中和+")
+return (r == nil) or (r == true)
 end
 F.CMX_NeuterPlusDisable = function()
 if not F.CMX_NPOn then return end
@@ -10704,8 +10729,11 @@ return false
 end
 F.CMX_HashSaved = {}
 F.CMX_HashCache = {}
+F.CMX_HashOn = true
+F.CMX_HashFreezeHits = 0
 F._islcFn = (type(islclosure) == "function") and islclosure or nil
 F._dbgInfo = (type(debug) == "table" and type(debug.info) == "function") and debug.info or nil
+local work = function()
 local props = 0
 local savedH = F.CMX_HashSaved
 local islcFn, dbgInfo = F._islcFn, F._dbgInfo
@@ -10752,11 +10780,12 @@ return r
 end)
 if o then n = n + 1 end
 end
-F.CMX_HashOn = true
-F.CMX_HashFreezeHits = 0
 F.Out("[反封禁·哈希冻结] 找到 " .. tostring(#F.CMX_HashSaved) .. " 个名字像哈希的闭包;"
 .. " 第一次算出的 32/40/64 位 hex 会被记住, 之后恒定返回同一个值 ⇒ 服务器看到客户端指纹一直没变")
 return #F.CMX_HashSaved > 0
+end
+local r = F.RunChunked(work, "哈希冻结")
+return (r == nil) or (r == true)
 end
 F.CMX_HashFreezeDisable = function()
 if not F.CMX_HashOn then return end
@@ -12601,7 +12630,7 @@ F.ApplySavedOn = function(quiet)
 if F._applyingSaved then return 0 end
 F._applyingSaved = true
 local op = Fluent and Fluent.Options
-local applied, failed = 0, {}
+local applied, failed, names = 0, {}, {}
 if type(op) == "table" then
 pcall(function()
 for name, opt in pairs(op) do
@@ -12611,20 +12640,33 @@ if not skip then
 for _, k in ipairs(F.PLAYER_DROPDOWNS) do if k == name then skip = true break end end
 end
 if not skip then
-local v = opt.Value
-local go = (v == true)
-if not go and type(v) == "string" and v ~= "" and string.sub(v, 1, 3) ~= "关" then go = true end
+local ty = opt.Type
+if type(ty) ~= "string" then
+if type(opt.Value) == "boolean" then ty = "Toggle"
+elseif type(opt.Value) == "number" then ty = "Slider"
+elseif type(opt.Value) == "table" then ty = "Dropdown"
+elseif type(opt.Value) == "string" then ty = "Input" end
+end
+local want = (ty == "Toggle") and T[name] or C[name]
+if want == nil then want = T[name] end
+local go = (want == true)
+if not go and type(want) == "string" and want ~= "" and string.sub(want, 1, 3) ~= "关" then go = true end
 if go then
 local cb = opt.Callback
 if type(cb) ~= "function" then cb = opt.callback end
 local ok = false
 if type(cb) == "function" then
-ok = pcall(cb, v)
+ok = pcall(cb, want)
 else
-if type(v) == "boolean" then pcall(function() opt:Set(not v) end) end
-ok = pcall(function() opt:Set(v) end)
+if type(want) == "boolean" then pcall(function() opt:Set(not want) end) end
+ok = pcall(function() opt:Set(want) end)
 end
-if ok then applied = applied + 1 else failed[#failed + 1] = name end
+if ok then
+applied = applied + 1
+if #names < 14 then names[#names + 1] = name end
+else
+failed[#failed + 1] = name
+end
 end
 end
 end
@@ -12634,6 +12676,7 @@ end
 F._applyingSaved = false
 if not quiet then
 F.Out("[加载] 已把上次开着的 " .. tostring(applied) .. " 个功能真正装好"
+.. ((#names > 0) and (" [" .. table.concat(names, ", ") .. "]") or "")
 .. ((#failed > 0) and (" · ⚠ 有 " .. tostring(#failed) .. " 个没装上: " .. table.concat(failed, ", ")) or ""))
 end
 return applied
