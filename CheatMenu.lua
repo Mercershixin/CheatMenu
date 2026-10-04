@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 22:19 sha daa2e728 bytes 489009'):format('2026-10-04 22:19','daa2e728',489009))
+print(('[CheatMenu] build 2026-10-04 22:24 sha c653a568 bytes 489329'):format('2026-10-04 22:24','c653a568',489329))
 local F = {}
-F.VERSION = "v14.3.0"
+F.VERSION = "v14.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7097,11 +7097,10 @@ end)
 end
 end)
 pcall(function()
-RS.RenderStepped:Connect(function()
-if F.MenuOpen() then
+RS:BindToRenderStep("CM_MenuMouse", Enum.RenderPriority.Camera.Value + 200, function()
+if not F.MenuOpen() then return end
 if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
 pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
-end
 end
 end)
 end)
@@ -7278,32 +7277,42 @@ end)
 local k = math.clamp(d / 300, 0, 1)
 return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 140, 255), k), d
 end
-F.CMX_HLOccluded = function(pl)
+F._hlRP = nil
+F._hlEx = {}
+F.CMX_HLOccluded = function(pl, cam, myCh)
 local ch = pl.Character
 if not ch then return false end
-local tgt = ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("Head")
-local cam = workspace.CurrentCamera
+local tgt = ch:FindFirstChild("HumanoidRootPart")
+if not tgt then tgt = ch:FindFirstChild("Head") end
 if not (tgt and cam) then return false end
 local origin = cam.CFrame.Position
 local dir = tgt.Position - origin
-if dir.Magnitude < 0.5 then return false end
-local ok, hit = pcall(function()
+local d = dir.Magnitude
+if d < 0.5 or d > 600 then return false end
+if not F._hlRP then
 local rp = RaycastParams.new()
 rp.FilterType = Enum.RaycastFilterType.Exclude
-local ex = { ch, cam }
-if LP.Character then ex[#ex + 1] = LP.Character end
-rp.FilterDescendantsInstances = ex
 rp.IgnoreWater = true
-return workspace:Raycast(origin, dir, rp)
-end)
+F._hlRP = rp
+end
+local ex = F._hlEx
+ex[1] = ch
+ex[2] = cam
+ex[3] = myCh
+F._hlRP.FilterDescendantsInstances = ex
+local ok, hit = pcall(workspace.Raycast, workspace, origin, dir, F._hlRP)
 if ok and hit then return true end
 return false
 end
 F.CMX_HLApply = function(pl, rec)
 if not rec or not rec.top then return end
 local team = F.CMX_HLTeamColor(pl)
-local wall = F.CMX_HLOccluded(pl)
+local wall = rec.wall
+if wall == nil then
+local cam = workspace.CurrentCamera
+wall = F.CMX_HLOccluded(pl, cam, LP.Character)
 rec.wall = wall
+end
 local fill = wall and 1 or 0.45
 pcall(function()
 rec.top.FillColor = team
@@ -7383,11 +7392,14 @@ if not F._hlWallLoop then
 F._hlWallLoop = RS.Heartbeat:Connect(function()
 if not T.BodyHL then return end
 local now = os.clock()
-if now - (F._hlWallAt or 0) < 0.12 then return end
+if now - (F._hlWallAt or 0) < 0.2 then return end
 F._hlWallAt = now
+local cam = workspace.CurrentCamera
+if not cam then return end
+local myCh = LP.Character
 for pl, rec in pairs(F._hlObjs) do
 if type(rec) == "table" and rec.top and rec.top.Parent then
-local wall = F.CMX_HLOccluded(pl)
+local wall = F.CMX_HLOccluded(pl, cam, myCh)
 if rec.wall ~= wall then
 rec.wall = wall
 pcall(function() rec.top.FillTransparency = wall and 1 or 0.45 end)
