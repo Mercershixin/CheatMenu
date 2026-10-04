@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:22 sha c542db96 bytes 450691'):format('2026-10-04 14:22','c542db96',450691))
+print(('[CheatMenu] build 2026-10-04 14:25 sha f5cc3bc8 bytes 451499'):format('2026-10-04 14:25','f5cc3bc8',451499))
 local F = {}
-F.VERSION = "v14.0.59"
+F.VERSION = "v14.0.60"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4360,6 +4360,10 @@ tostring(tag), set, actual, ratio * 100, verdict))
 end
 F._invSav, F._invConn = nil, nil
 function F.InvisibleEnable()
+pcall(function()
+local _, hum = GC()
+if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+end)
 if F._invSav then return end
 local ch = LP.Character
 if not ch then F.Out("[隐身] 现在没有角色, 等进游戏再开") return end
@@ -5834,6 +5838,24 @@ pcall(function() if not part0.Anchored then part0.CFrame = hand0.CFrame end end)
 end
 elseif F._eggWeld then
 pcall(function() F._eggWeld:Destroy() end) F._eggWeld = nil
+end
+end
+do
+local egg1 = F._myEgg
+if egg1 and egg1.Parent and egg1.Parent ~= ch then
+local part1 = egg1:IsA("Model") and (egg1.PrimaryPart or egg1:FindFirstChildWhichIsA("BasePart")) or (egg1:IsA("BasePart") and egg1) or nil
+local hand1 = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand") or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm")
+if part1 and hand1 then
+pcall(function()
+egg1.Parent = ch
+part1.CFrame = hand1.CFrame
+end)
+F._eggGrabBack = (F._eggGrabBack or 0) + 1
+if os.clock() - (F._eggGbAt or 0) > 3 then
+F._eggGbAt = os.clock()
+F.Out("[护蛋] 蛋被抢走/换父级 ⇒ 已拎回手上(累计 " .. tostring(F._eggGrabBack) .. " 次)")
+end
+end
 end
 end
 do
