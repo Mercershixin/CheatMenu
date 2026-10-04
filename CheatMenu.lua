@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:47 sha 092c8694 bytes 454391'):format('2026-10-04 14:47','092c8694',454391))
+print(('[CheatMenu] build 2026-10-04 14:50 sha 9a5c3b36 bytes 455098'):format('2026-10-04 14:50','9a5c3b36',455098))
 local F = {}
-F.VERSION = "v14.0.69"
+F.VERSION = "v14.0.70"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5840,6 +5840,17 @@ end)
 if best then
 F._myEgg = best
 F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
+pcall(function()
+local bp = best:IsA("Model") and (best.PrimaryPart or best:FindFirstChildWhichIsA("BasePart")) or (best:IsA("BasePart") and best) or nil
+if bp then
+local can = false
+pcall(function() can = bp:CanSetNetworkOwnership() end)
+if can then
+pcall(function() bp:SetNetworkOwner(LP) end)
+F.Out("[护蛋] 已抢到蛋的网络所有权(服务端改不动它的位置/归属了)")
+end
+end
+end)
 end
 end
 do
@@ -12127,6 +12138,7 @@ end
 end
 end)
 F.Out("[远程体检] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 关掉像掉蛋/收回的 " .. tostring(hit) .. " 个(可再点一次还原)")
+F.Out("[远程体检] 注意: 关闭 = 禁用该远程的客户端处理函数(服务端照样发出, 只是我们不再响应)。对 Eggs:*/Ragdoll/Treadmills:* 这类「游戏状态通知」关掉会让客户端状态不同步(UI/交互可能卡住), 建议只在需要时开、用完点第二次还原")
 pcall(function() Fluent:Notify({ Title = "远程体检", Content = "检查 " .. tostring(n) .. " 个 · 关掉可疑 " .. tostring(hit) .. " 个", Duration = 10 }) end)
 end
 F.HookResidue = function()
