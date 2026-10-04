@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:41 sha 42b8bea6 bytes 478494'):format('2026-10-04 19:41','42b8bea6',478494))
+print(('[CheatMenu] build 2026-10-04 19:46 sha 38172845 bytes 480841'):format('2026-10-04 19:46','38172845',480841))
 local F = {}
-F.VERSION = "v14.0.116"
+F.VERSION = "v14.0.117"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12383,7 +12383,48 @@ F.HealthShowSet(v)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行(WASD 移动 · 空格升/Ctrl降 · 松手即停)", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v end })
+F.SetSpeedValue = function(kind, n)
+n = tonumber(n)
+local op = Fluent and Fluent.Options
+local o = op and op[(kind == "fly") and "FlyValue" or "SpeedValue"]
+if not n then return end
+local lo = (o and tonumber(o.Min)) or 0
+local hi = (o and tonumber(o.Max)) or 5000
+if n < lo then n = lo end
+if n > hi then n = hi end
+n = math.floor(n)
+if kind == "fly" then
+C.FlyValue = n
+if o and o.Set then pcall(function() o:Set(n) end) end
+if T.FlyOn then pcall(function() F.FlySet(true) end) end
+else
+C.SpeedValue = n
+if o and o.Set then pcall(function() o:Set(n) end) end
+if T.SpeedOn then pcall(F.SpeedApply) end
+end
+F._slInGuard = true
+local ib = op and op[((kind == "fly") and "FlyValueIn" or "SpeedValueIn")]
+if ib and ib.Set then pcall(function() ib:Set(tostring(n)) end) end
+F._slInGuard = false
+F.Out("[速度] " .. ((kind == "fly") and "飞行" or "加速") .. " 已设为 " .. tostring(n) .. " 格/秒 (范围 " .. tostring(math.floor(lo)) .. "~" .. tostring(math.floor(hi)) .. ")")
+end
+F.SyncSpeedInput = function(kind, v)
+if F._slInGuard then return end
+local op = Fluent and Fluent.Options
+local ib = op and op[((kind == "fly") and "FlyValueIn" or "SpeedValueIn")]
+if ib and ib.Set and tonumber(v) then
+F._slInGuard = true
+pcall(function() ib:Set(tostring(math.floor(tonumber(v)))) end)
+F._slInGuard = false
+end
+end
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v F.SyncSpeedInput("fly", v) end })
+Tabs.Move:AddInput("FlyValueIn", { Title = "飞行速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块; 也会自动夹到当前档位的范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
+if F._slInGuard then return end
+local n = tonumber(v)
+if not n then return end
+pcall(F.SetSpeedValue, "fly", n)
+end })
 F.SPEED_TIERS = {
 { 16, 5000 }, { 5001, 10000 }, { 10001, 15000 }, { 15001, 20000 }, { 20001, 25000 }, { 25001, 30000 },
 }
@@ -12406,6 +12447,8 @@ local cur = tonumber(C.SpeedValue) or lo
 if cur < lo then cur = lo end
 if cur > hi then cur = hi end
 C.SpeedValue, C.FlyValue = cur, cur
+pcall(function() F.SyncSpeedInput("speed", cur) end)
+pcall(function() F.SyncSpeedInput("fly", cur) end)
 if T.SpeedOn then pcall(F.SpeedApply) end
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 F.Out("[速度档位] 档" .. tostring(idx) .. " ⇒ 滑块量程改成 " .. tostring(lo) .. "~" .. tostring(hi) .. " (飞行/加速共用), 当前值 " .. tostring(cur))
@@ -12419,7 +12462,13 @@ pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块; 也会自动夹到当前档位的范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
+if F._slInGuard then return end
+local n = tonumber(v)
+if not n then return end
+pcall(F.SetSpeedValue, "speed", n)
+end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 防减速 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 防减速=拿着一东西时游戏想把速度压慢会被挡回(保持正常速度, 服务端判定不受影响) · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
 T.GuardAll = v
