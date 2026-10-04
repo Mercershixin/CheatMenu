@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:17 sha 4c45efb2 bytes 499229'):format('2026-10-05 01:17','4c45efb2',499229))
+print(('[CheatMenu] build 2026-10-05 01:23 sha 3752fa2e bytes 499233'):format('2026-10-05 01:23','3752fa2e',499233))
 local F = {}
-F.VERSION = "v15.3.0"
+F.VERSION = "v15.4.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -334,14 +334,14 @@ local SaveFile = "CheatMenu_Config_v1.json"
 local Fluent = nil
 local FLUENT_SOURCES = {
 "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://ghfast.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://gh-proxy.com/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://ghpxy.hwinzniej.top/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://ghproxy.net/https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua",
-"https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
-"https://fastly.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
-"https://gcore.jsdelivr.net/gh/dawid-scripts/Fluent@master/main.lua",
+"https://ghfast.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://gh-proxy.com/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://ghpxy.hwinzniej.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://ghproxy.net/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua",
+"https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
+"https://fastly.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
+"https://gcore.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
 }
 local FLUENT_LOCAL = { "CheatMenu_Fluent.lua", "Fluent.lua", "fluent.lua" }
 local function fluentLooksLua(body)
