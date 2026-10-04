@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 19:39 sha 756fa6bb bytes 477658'):format('2026-10-04 19:39','756fa6bb',477658))
+print(('[CheatMenu] build 2026-10-04 19:41 sha 42b8bea6 bytes 478494'):format('2026-10-04 19:41','42b8bea6',478494))
 local F = {}
-F.VERSION = "v14.0.115"
+F.VERSION = "v14.0.116"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4567,6 +4567,10 @@ F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
 F._probe, F._probeAt = {}, 0
 function F.SpeedProbe(r, tag, sp, dt, full3d)
 if not r or not sp then return end
+if tag ~= "飞行" then
+local _, humP = GC()
+if humP and humP.MoveDirection.Magnitude < 0.1 then return end
+end
 local now = os.clock()
 local flat = full3d and r.Position or Vector3.new(r.Position.X, 0, r.Position.Z)
 local p = F._probe[tag]
@@ -4598,6 +4602,27 @@ verdict = " · 偏低(引擎物理或服务端在压速度, 不是脚本虚标)"
 end
 F.Out(string.format("[速度自检·%s] 设定 %.0f 格/秒 → 实测 %.0f 格/秒 (%.0f%%)%s",
 tostring(tag), set, actual, ratio * 100, verdict))
+F._probePeak = F._probePeak or {}
+local pk = string.format("%.0f", set)
+if not F._probePeak[pk] or actual > F._probePeak[pk] then F._probePeak[pk] = actual end
+if now - (F._probeSumAt or 0) > 15 then
+F._probeSumAt = now
+local ks = {}
+for k in pairs(F._probePeak) do
+local n2 = tonumber(k)
+if n2 then ks[#ks + 1] = n2 end
+end
+table.sort(ks)
+if #ks > 0 then
+local parts = {}
+for i = 1, #ks do
+local kk = string.format("%.0f", ks[i])
+parts[#parts + 1] = kk .. "→" .. string.format("%.0f", F._probePeak[kk])
+end
+F.Out("[速度上限体检] 各设定值实测峰值(格/秒): " .. table.concat(parts, " · ")
+.. " —— 峰值明显低于设定的那几个值 = 已经超出本服容许, 挑峰值达标的那档用")
+end
+end
 end
 F._invSav, F._invConn = nil, nil
 function F.InvisibleEnable()
