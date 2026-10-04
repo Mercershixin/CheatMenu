@@ -3607,3 +3607,24 @@ pcall 闭包全部删掉；② `neuter(...)` 闭包与 `function() return end` �
   ⇒ 拿到真实阈值后才能把「搬蛋速度上限」调到**刚好合法**（先 16，不消失再往上加）。
 - ★ 教训：**"服务端权威"的功能，客户端只能改变自己让它合法，不能替服务端做决定**；
   而且**屏蔽服务端纠正 ≠ 赢**，只会让自己看不到真相。这条与血量的结论一致（见 14.0.13）。
+
+### `EggPickupRules` 真身（2026-10-04 用户只读导出，placeid 81814694958364）
+
+```lua
+local Attribute = a1:GetAttribute("EggPickupHalfSize")
+function u5.inRange(a1, a2, a3)                 -- Line 15
+  return Magnitude <= u5.distance + (if not a3 then 0 else u5.latencyTolerance)
+function u5.activationRadius(a1)                -- Line 19
+  return Vector2.new(a1.X, a1.Z).Magnitude / 2 + u5.distance
+```
+
+- ★★★ **拿蛋 = 纯"距离"判定**（你在不在蛋旁边），**不是速度阈值**；阈值来自
+  ① **属性 `EggPickupHalfSize`** ② 模块字段 `u5.distance` / `u5.latencyTolerance`（**都不写死在代码里**）。
+- ⇒ 「开加速拿蛋→回安全区就消失」的精确解释：服务端用**它看到的你的位置**算距离，
+  523 格/秒 + 回滚 1248 次 ⇒ 它眼里你不在蛋旁 ⇒ 拾取不成立 ⇒ 蛋收回。**与"速度上限"无关**。
+- ★ `EggSecuredEffects` 摘出的全是**粒子/音效**参数（lifetime/speed/RollOff），**与判定无关** ——
+  说明 `EggSecured` 只是"蛋已安全"的**表现层**事件。
+- ★★ **改这个模块没用**：ReplicatedStorage 的 ModuleScript 在客户端/服务端是**各自的 VM 副本**，
+  客户端改 `u5.distance` 只影响本地预判；服务端 `require` 的是它自己那份。**"伪装欺骗规则"这条路不通**。
+- ★★ **本游戏会重置全局元表**：导出后日志出现 `[防踢] 检测到拦截层被摘掉 ⇒ 正在重装`（两次）
+  ⇒ 我们的元表钩在该游戏**会被摘掉**，靠自愈重装顶着 —— 依赖元表钩的功能别当稳定前提。
