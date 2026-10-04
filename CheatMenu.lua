@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:14 sha 1f0fe7bc bytes 494734'):format('2026-10-04 23:14','1f0fe7bc',494734))
+print(('[CheatMenu] build 2026-10-04 23:15 sha 8725d5a3 bytes 494738'):format('2026-10-04 23:15','8725d5a3',494738))
 local F = {}
-F.VERSION = "v14.10.0"
+F.VERSION = "v15.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5448,7 +5448,7 @@ if not (T.FullBright or T.NightVision or T.NoFog) then return end
 local L = game:GetService("Lighting")
 if not L then return end
 if T.FullBright then
-if L.Brightness ~= 6 or L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.FullBrightEnable) end
+if L.Brightness ~= 3.5 or L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.FullBrightEnable) end
 end
 if T.NoFog then
 if L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.NoFogEnable) end
@@ -5489,9 +5489,9 @@ local L = game:GetService("Lighting")
 if not F.savedLight then
 F.savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd, FogStart = L.FogStart, GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient, ExposureCompensation = L.ExposureCompensation }
 end
-L.Brightness = 6 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
+L.Brightness = 3.5 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
 L.Ambient = Color3.fromRGB(255, 255, 255) L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-L.ExposureCompensation = 0.8
+L.ExposureCompensation = 0.2
 pcall(function()
 local atm = F._atm
 if atm == nil then atm = L:FindFirstChildOfClass("Atmosphere") F._atm = atm end
@@ -5505,7 +5505,7 @@ local cc = F._cc
 if cc == nil then cc = L:FindFirstChildOfClass("ColorCorrectionEffect") F._cc = cc end
 if cc and cc.Parent then
 if not F.savedCC then F.savedCC = { Brightness = cc.Brightness, Contrast = cc.Contrast } end
-cc.Brightness = 0.3 cc.Contrast = 0.15
+cc.Brightness = 0.08 cc.Contrast = 0.08
 end
 end)
 end
