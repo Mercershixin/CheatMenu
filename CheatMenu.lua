@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 12:06 sha 83af0ae1 bytes 429590'):format('2026-10-04 12:06','83af0ae1',429590))
+print(('[CheatMenu] build 2026-10-04 12:09 sha 16bf32ba bytes 433890'):format('2026-10-04 12:09','16bf32ba',433890))
 local F = {}
-F.VERSION = "v14.0.24"
+F.VERSION = "v14.0.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10596,6 +10596,122 @@ end
 end
 F.Out("[扫描·监听] 共 " .. tostring(total) .. " 条连接 · 可疑 " .. tostring(susp) .. " 条")
 end
+F.ScanPlayers = function()
+local _, _, root = GC()
+local n, list = 0, {}
+pcall(function()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character then
+n = n + 1
+local hum = pl.Character:FindFirstChildOfClass("Humanoid")
+local r = pl.Character:FindFirstChild("HumanoidRootPart")
+local dist = (root and r) and (r.Position - root.Position).Magnitude or -1
+local hp = (hum and hum.Health) or -1
+local mx = (hum and hum.MaxHealth) or -1
+local tool, team = nil, nil
+pcall(function() local t = pl.Character:FindFirstChildOfClass("Tool") if t then tool = t.Name end end)
+pcall(function() if pl.Team then team = pl.Team.Name end end)
+list[#list + 1] = string.format("%s · %.0f 格 · 血 %.0f/%.0f%s%s", pl.Name, dist, hp, mx,
+tool and (" · 手持 " .. tool) or "", team and (" · 队 " .. team) or "")
+end
+end
+end)
+table.sort(list)
+F.Out("[扫描·玩家] 同服其它玩家 " .. tostring(n) .. " 人:")
+for i = 1, math.min(#list, 25) do F.Out("   · " .. list[i]) end
+if #list > 25 then F.Out("   ... 其余 " .. tostring(#list - 25) .. " 人已省略") end
+end
+F.ScanInventory = function()
+local list, bag = {}, 0
+pcall(function()
+local ch = LP.Character
+if ch then
+local t = ch:FindFirstChildOfClass("Tool")
+if t then list[#list + 1] = "手持: " .. t.Name end
+end
+local bp = LP:FindFirstChildOfClass("Backpack")
+if bp then
+for _, t in ipairs(bp:GetChildren()) do
+if t:IsA("Tool") then
+bag = bag + 1
+if #list < 40 then list[#list + 1] = "背包: " .. t.Name end
+end
+end
+end
+end)
+F.Out("[扫描·物品] 手持/背包清单(背包共 " .. tostring(bag) .. " 件):")
+for i = 1, #list do F.Out("   · " .. list[i]) end
+end
+F.ScanMapPoints = function()
+local KEYS = { "spawn", "portal", "teleport", "gate", "door", "zone", "area", "region",
+"base", "plot", "shop", "store", "buyer", "bank", "chest", "vault", "dealer",
+"market", "tunnel", "ladder", "elevator", "exit", "entrance", "sell", "island" }
+local seen, list, n = {}, {}, 0
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 9000 then break end
+if d:IsA("BasePart") then
+local nm = string.lower(d.Name)
+for _, k in ipairs(KEYS) do
+if string.find(nm, k, 1, true) then
+local key = d.Name .. "|" .. d.ClassName
+if not seen[key] then
+seen[key] = true
+if #list < 40 then list[#list + 1] = d.Name .. " (" .. d.ClassName .. ")" end
+end
+break
+end
+end
+end
+end
+end)
+table.sort(list)
+F.Out("[扫描·地标] 名字像 传送点/区域/商店/基地 的部件(去重后 " .. tostring(#list) .. " 类):")
+for i = 1, #list do F.Out("   · " .. list[i]) end
+end
+F.ScanGuiState = function()
+local list = {}
+local function walk(root, tag, depth)
+if not root or depth > 3 then return end
+pcall(function()
+for _, d in ipairs(root:GetChildren()) do
+if d:IsA("ScreenGui") and d.Enabled then
+if #list < 25 then list[#list + 1] = tag .. ": " .. d.Name end
+elseif d:IsA("GuiObject") and d.Visible then
+if #list < 25 and (d:IsA("TextButton") or d:IsA("TextLabel") or d:IsA("TextBox")) then
+local txt = d.Text
+if type(txt) == "string" and #txt > 0 and #txt < 40 then
+list[#list + 1] = tag .. ": " .. tostring(d.ClassName) .. " \"" .. txt .. "\""
+end
+end
+walk(d, tag, depth + 1)
+end
+end
+end)
+end
+pcall(function() walk(LP:FindFirstChild("PlayerGui"), "PlayerGui", 1) end)
+pcall(function() walk(CoreGui, "CoreGui", 1) end)
+F.Out("[扫描·界面] 当前可见界面(前 25 条 · 已排除我们自己的菜单):")
+for i = 1, #list do F.Out("   · " .. list[i]) end
+if #list == 0 then F.Out("   (没有可见的额外界面)") end
+end
+F.ScanNetStats = function()
+local ok, ping, down, up, mem = pcall(function()
+local S = game:GetService("Stats")
+local p = S.Network.ServerStatsItem["Data Ping"]:GetValue()
+local d = S.Network.ServerStatsItem["Data Received"]:GetValue()
+local u = S.Network.ServerStatsItem["Data Sent"]:GetValue()
+local m = S:GetTotalMemoryUsageMb()
+return p, d, u, m
+end)
+if ok and ping then
+F.Out(string.format("[扫描·网络] 延迟 %.0f ms · 收 %.1f KB/s · 发 %.1f KB/s · 内存 %.0f MB",
+tonumber(ping) or 0, tonumber(down) or 0, tonumber(up) or 0, tonumber(mem) or 0))
+else
+F.Out("[扫描·网络] 本执行器/本游戏取不到 Stats(不影响其它扫描)")
+end
+end
 F.ScanNearbyInteract = function()
 local _, _, root = GC()
 if not root then F.Out("[扫描·交互点] 角色没加载") return end
@@ -10623,6 +10739,12 @@ end
 F.CMX_ScanAll = function()
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
 pcall(F.ScanNearbyInteract)
+pcall(F.ScanPlayers)
+pcall(F.ScanInventory)
+pcall(F.ScanMapPoints)
+pcall(F.ScanGuiState)
+pcall(F.ScanNetStats)
+pcall(F.ScanHUD)
 pcall(F.CMX_ScanBypassSurface)
 pcall(F.CMX_ScanACFamily)
 pcall(F.CMX_ScanListeners)
