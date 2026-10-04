@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:10 sha f0479a6e bytes 461917'):format('2026-10-04 17:10','f0479a6e',461917))
+print(('[CheatMenu] build 2026-10-04 17:17 sha 0e189937 bytes 459555'):format('2026-10-04 17:17','0e189937',459555))
 local F = {}
-F.VERSION = "v14.0.86"
+F.VERSION = "v14.0.87"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2599,7 +2599,7 @@ end
 end
 end
 end)
-if n > 0 and not F._gcSweepQuiet then
+if n > 0 then
 F.Out("[防踢] getgc 扫到并中和 " .. tostring(n) .. " 个检测/踢人函数"
 .. " (含「这个物理约束是游戏自己加的」这类判定)")
 end
@@ -3803,16 +3803,7 @@ end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "walk", "mill", "runner", "speedpad" }
 F._floorLast = {}
 F._floorCacheT, F._floorCacheV = 0, false
-F.OnMovingFloorC = function()
-local now = os.clock()
-if now - (F._floorCacheT or 0) < 0.5 then return F._floorCacheV end
-F._floorCacheT = now
-local v = false
-pcall(function() v = F.OnMovingFloorC() end)
-F._floorCacheV = v and true or false
-return F._floorCacheV
-end
-function F.OnMovingFloorC()
+F.OnMovingFloorRaw = function()
 local _, _, root = GC()
 if not root then return false end
 local hit = false
@@ -3844,6 +3835,15 @@ if not seen[obj] then F._floorLast[obj] = nil end
 end
 end)
 return hit
+end
+F.OnMovingFloorC = function()
+local now = os.clock()
+if now - (F._floorCacheT or 0) < 0.5 then return F._floorCacheV end
+F._floorCacheT = now
+local v = false
+pcall(function() v = F.OnMovingFloorRaw() end)
+F._floorCacheV = v and true or false
+return F._floorCacheV
 end
 F.ANTITP_KEYS = { "obbyantitp", "antitp", "antilagback", "lagback",
 "speedcheck", "speedguard", "anticheat", "antiexploit", "antifly",
@@ -11444,50 +11444,6 @@ table.sort(near)
 F.Out("[扫描·交互点] 200 格内共 " .. tostring(#near) .. " 个(纯只读, 不会自动点任何东西)")
 for i = 1, #near do F.Out("   · " .. near[i]) end
 end
-F.EGG_RULE_KEYS = { "eggpickuprules", "eggcarryrules", "carryrules", "pickuprules", "eggsecured",
-"eggboundary", "eggarea", "eggzone", "carrylimit", "carrydistance", "eggpickup", "pickupdistance" }
-F.DumpEggRules = function()
-local rs = game:GetService("ReplicatedStorage")
-F.Out("[蛋规则·只读] ===== 导出「拿蛋/边界/限速」相关模块(只读, 不改任何东西) =====")
-local found, total = 0, 0
-pcall(function()
-for _, d in ipairs(rs:GetDescendants()) do
-local cls = d.ClassName
-if cls == "ModuleScript" or cls == "Script" or cls == "LocalScript" then
-local low = tostring(d.Name):lower()
-local hit = false
-for _, k in ipairs(F.EGG_RULE_KEYS) do if low:find(k, 1, true) then hit = true break end end
-if hit then
-found = found + 1
-local code = nil
-pcall(function() if type(decompile) == "function" then code = decompile(d) end end)
-if type(code) ~= "string" or #code < 16 then
-pcall(function() if type(getscriptbytecode) == "function" then code = getscriptbytecode(d) end end)
-end
-if type(code) == "string" and #code >= 8 then
-total = total + #code
-F.Out("[蛋规则·只读] ▸ " .. d:GetFullName() .. " (" .. tostring(#code) .. " 字节)")
-local shown = 0
-for line in tostring(code):gmatch("[^\n]+") do
-if #line <= 220 and line:find("%d") then
-local ll = line:lower()
-if ll:find("speed") or ll:find("dist") or ll:find("radius") or ll:find("range") or ll:find("max")
-or ll:find("limit") or ll:find("bound") or ll:find("carry") or ll:find("pickup") or ll:find("timeout") then
-shown = shown + 1
-if shown <= 40 then F.Out("      " .. tostring(line):gsub("^%s+", ""):sub(1, 170)) end
-end
-end
-end
-if shown == 0 then F.Out("      (这个模块里没有带数字的阈值行)") end
-else
-F.Out("[蛋规则·只读] ▸ " .. d:GetFullName() .. " —— 读不到源码(执行器不支持 decompile/getscriptbytecode)")
-end
-end
-end
-end
-end)
-F.Out("[蛋规则·只读] 共命中 " .. tostring(found) .. " 个模块 · 摘出 " .. tostring(total) .. " 字节 —— 把上面这些发我, 我按真实阈值给你方案")
-end
 F.RemoteList = function()
 local rs = game:GetService("ReplicatedStorage")
 local KEYS = { "egg", "drop", "carry", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick", "treadmill", "guard", "speed" }
@@ -12277,9 +12233,6 @@ task.spawn(function()
 pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
-end })
-Tabs.AC:AddButton({ Title = "★ 导出「拿蛋规则」源码(只读 · 看服务端到底卡什么)", Description = "只读地反编译 EggPickupRules / EggBoundary 这类模块, 摘出带数字的阈值行(不改任何东西)", Callback = function()
-task.spawn(function() pcall(F.DumpEggRules) end)
 end })
 F.HookResidue = function()
 local layers, ids = 0, {}
