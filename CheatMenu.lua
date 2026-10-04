@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 23:15 sha 8725d5a3 bytes 494738'):format('2026-10-04 23:15','8725d5a3',494738))
+print(('[CheatMenu] build 2026-10-04 23:21 sha 0d2cbdd0 bytes 493704'):format('2026-10-04 23:21','0d2cbdd0',493704))
 local F = {}
-F.VERSION = "v15.0.0"
+F.VERSION = "v15.1.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5491,23 +5491,6 @@ F.savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.
 end
 L.Brightness = 3.5 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
 L.Ambient = Color3.fromRGB(255, 255, 255) L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-L.ExposureCompensation = 0.2
-pcall(function()
-local atm = F._atm
-if atm == nil then atm = L:FindFirstChildOfClass("Atmosphere") F._atm = atm end
-if atm and atm.Parent then
-if not F.savedAtm then F.savedAtm = { Density = atm.Density, Haze = atm.Haze, Glare = atm.Glare } end
-atm.Density = 0 atm.Haze = 0 atm.Glare = 0
-end
-end)
-pcall(function()
-local cc = F._cc
-if cc == nil then cc = L:FindFirstChildOfClass("ColorCorrectionEffect") F._cc = cc end
-if cc and cc.Parent then
-if not F.savedCC then F.savedCC = { Brightness = cc.Brightness, Contrast = cc.Contrast } end
-cc.Brightness = 0.08 cc.Contrast = 0.08
-end
-end)
 end
 function F.FullBrightDisable()
 local L = game:GetService("Lighting")
@@ -5515,21 +5498,6 @@ if not F.savedLight then return end
 L.Brightness = F.savedLight.Brightness L.ClockTime = F.savedLight.ClockTime L.FogEnd = F.savedLight.FogEnd
 L.FogStart = F.savedLight.FogStart or L.FogEnd
 L.GlobalShadows = F.savedLight.GlobalShadows L.Ambient = F.savedLight.Ambient L.OutdoorAmbient = F.savedLight.OutdoorAmbient
-if F.savedLight.ExposureCompensation ~= nil then L.ExposureCompensation = F.savedLight.ExposureCompensation end
-if F.savedAtm then
-pcall(function()
-local atm = L:FindFirstChildOfClass("Atmosphere")
-if atm then atm.Density = F.savedAtm.Density atm.Haze = F.savedAtm.Haze atm.Glare = F.savedAtm.Glare end
-end)
-F.savedAtm = nil
-end
-if F.savedCC then
-pcall(function()
-local cc = L:FindFirstChildOfClass("ColorCorrectionEffect")
-if cc then cc.Brightness = F.savedCC.Brightness cc.Contrast = F.savedCC.Contrast end
-end)
-F.savedCC = nil
-end
 end
 F.savedNV = nil
 function F.NightVisionEnable()
@@ -6723,6 +6691,15 @@ L.GlobalShadows = savedLag.GlobalShadows L.FogEnd = savedLag.FogEnd L.FogStart =
 L.Brightness = savedLag.Brightness L.ClockTime = savedLag.ClockTime L.Ambient = savedLag.Ambient
 end)
 pcall(function() settings().Rendering.QualityLevel = savedLag.quality end)
+pcall(function()
+local Terr = workspace:FindFirstChildWhichIsA("Terrain")
+if Terr and savedLag.terr then
+Terr.WaterWaveSize = savedLag.terr.WaveSize
+Terr.WaterWaveSpeed = savedLag.terr.WaveSpeed
+Terr.WaterReflectance = savedLag.terr.Reflectance
+Terr.WaterTransparency = savedLag.terr.Transparency
+end
+end)
 for _, e in ipairs(savedLag.fx) do pcall(function() if e and e.Parent then e.Enabled = true end end) end
 for _, rec in ipairs(savedLag.pe) do
 if rec.obj and rec.obj.Parent then pcall(function() rec.obj.Lifetime = rec.life end) end
@@ -6742,6 +6719,7 @@ pcall(function() settings().Rendering.QualityLevel = 1 end)
 local Terrain = workspace:FindFirstChildWhichIsA("Terrain")
 if Terrain then
 pcall(function()
+savedLag.terr = { WaveSize = Terrain.WaterWaveSize, WaveSpeed = Terrain.WaterWaveSpeed, Reflectance = Terrain.WaterReflectance, Transparency = Terrain.WaterTransparency }
 Terrain.WaterWaveSize = 0
 Terrain.WaterWaveSpeed = 0
 Terrain.WaterReflectance = 0
@@ -7235,7 +7213,6 @@ if o == LP.Character then return false end
 local isPl = false
 pcall(function() isPl = Players:GetPlayerFromCharacter(o) ~= nil end)
 if isPl then return false end
-if F.NPC_EXCLUDE[o.Name] then return false end
 local hum = nil
 pcall(function() hum = o:FindFirstChildOfClass("Humanoid") end)
 if hum then return true end
@@ -13012,15 +12989,6 @@ Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接�
 T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
-end })
-Tabs.World:AddInput("NpcExclude", { Title = "NPC 排除名单(名字, 逗号分隔)", Default = "", Callback = function(v)
-local t = {}
-for name in string.gmatch(tostring(v or ""), "[^,%s]+") do t[name] = true end
-F.NPC_EXCLUDE = t
-if T.NpcHL and not F._cfgSyncing then
-F.NpcHLSet(false)
-F.NpcHLSet(true)
-end
 end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
