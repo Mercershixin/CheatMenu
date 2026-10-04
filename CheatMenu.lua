@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:53 sha dd0ac5c1 bytes 464370'):format('2026-10-04 17:53','dd0ac5c1',464370))
+print(('[CheatMenu] build 2026-10-04 17:54 sha 729742e3 bytes 464417'):format('2026-10-04 17:54','729742e3',464417))
 local F = {}
-F.VERSION = "v14.0.95"
+F.VERSION = "v14.0.96"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7644,6 +7644,7 @@ F.Out("[训练] 已停止")
 end
 local GymThread2 = nil
 F.GymRetrigger = function()
+if F._typing then return end
 local _, hum, root = GC()
 if not root then return end
 pcall(function()
@@ -11950,7 +11951,7 @@ end)
 end
 end
 end
-if mode:find("按键注入", 1, true) then
+if mode:find("按键注入", 1, true) and not F._typing then
 local kp, kr = F.CMX_G("keypress"), F.CMX_G("keyrelease")
 if type(kp) == "function" and type(kr) == "function" then
 pcall(kp, 0x20)
