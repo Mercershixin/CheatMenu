@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:28 sha 704452c1 bytes 447279'):format('2026-10-04 13:28','704452c1',447279))
+print(('[CheatMenu] build 2026-10-04 13:32 sha 3a59527a bytes 446638'):format('2026-10-04 13:32','3a59527a',446638))
 local F = {}
-F.VERSION = "v14.0.41"
+F.VERSION = "v14.0.42"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7247,34 +7247,19 @@ end
 F.CollectTP = function(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
 task.spawn(function()
-local _, _, root = GC()
-if not root then return end
-local home = root.CFrame
 local node = game:GetService("ReplicatedStorage")
 for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
 local ok, ch = pcall(function() return node:WaitForChild(seg, 5) end)
-if not (ok and ch) then F.Out("[收集] 路径断了: " .. tostring(seg)) return end
+if not (ok and ch) then F.Out("[收集货币] 路径断了: " .. tostring(seg)) return end
 node = ch
 end
-local moved, n = 0, 0
+local n = 0
 for i = 1, maxSlot do
-local obj = F.FindMySlotPart(i)
-if obj then
-local pos = nil
-if obj:IsA("Model") then pcall(function() pos = obj:GetPivot().Position end) else pos = obj.Position end
-if pos then
-pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-moved = moved + 1
-task.wait(0.25)
+if pcall(function() node:FireServer(i) end) then n = n + 1 end
+task.wait(0.08)
 end
-end
-pcall(function() node:FireServer(i) end)
-n = n + 1
-task.wait(0.1)
-end
-pcall(function() root.CFrame = F._homeCF or home end)
-F.Out("[收集] 槽位 " .. tostring(n) .. " 个 · 其中 " .. tostring(moved) .. " 个先 TP 到你的脑红 · 已回到原位置")
+F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
+pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送", Duration = 8 }) end)
 end)
 end
 F.CollectTP_OLD = function(maxSlot)
@@ -11856,8 +11841,7 @@ end })
 Tabs.AFK:AddButton({ Title = "① 手动统计(点一下看一次)", Description = "不自动刷新", Callback = function() pcall(F.ScanSellUI) end })
 Tabs.AFK:AddInput("SellScanResult", { Title = "符合门槛的个数(手动统计后显示)", Default = "(点①统计)", Callback = function() end })
 Tabs.AFK:AddButton({ Title = "② 按门槛卖出(只卖 ≤ 门槛的)", Callback = function() pcall(F.SellByThreshold) end })
-Tabs.AFK:AddButton({ Title = "★ 设为我的家(站在家里点一下)", Description = "之后收集货币只去这个位置附近, 不会乱跑", Callback = function() pcall(F.SetMyHome) end })
-Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(TP 到你的脑红 → 收集 → 回原位)", Description = "逐个槽位瞬移到属于你的脑红旁边再发收集接口, 全程结束后回到你原来的位置", Callback = function() pcall(F.CollectTP, 30) end })
+Tabs.AFK:AddButton({ Title = "④ ★ 收集货币(1~30 槽)", Description = "接口 rev_B_Collect · FireServer(槽位)", Callback = function() pcall(F.CollectTP, 30) end })
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function() pcall(F.WithdrawAll, 30) end })
 Tabs.Trans:AddSection("本地翻译服务")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(UI 文字 + 互动文字)", Default = false, Callback = function(v)
