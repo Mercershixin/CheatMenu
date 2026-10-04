@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 15:38 sha 3a61968a bytes 461655'):format('2026-10-04 15:38','3a61968a',461655))
+print(('[CheatMenu] build 2026-10-04 15:49 sha 3a539bed bytes 462280'):format('2026-10-04 15:49','3a539bed',462280))
 local F = {}
-F.VERSION = "v14.0.76"
+F.VERSION = "v14.0.77"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11357,7 +11357,17 @@ local p = d.Parent
 if p and p:IsA("BasePart") then
 local dist = (p.Position - root.Position).Magnitude
 if dist <= 200 then
-near[#near + 1] = string.format("%s (%s) · %.0f 格", d.Name, d.ClassName, dist)
+local extra = " · 物体=" .. tostring(p.Name)
+if d:IsA("ProximityPrompt") then
+local at, ot = "", ""
+pcall(function() at = tostring(d.ActionText or "") end)
+pcall(function() ot = tostring(d.ObjectText or "") end)
+local bag = (tostring(p.Name) .. " " .. at .. " " .. ot):lower()
+local hit = bag:find("trophy", 1, true) or bag:find("claim", 1, true) or bag:find("reward", 1, true) or bag:find("奖", 1, true) or bag:find("领", 1, true) or bag:find("milestone", 1, true)
+extra = extra .. string.format(" · 动作=%s · 说明=%s", at, ot)
+if hit then extra = extra .. " · [刷奖杯会自动领取这个]" end
+end
+near[#near + 1] = string.format("%s (%s) · %.0f 格%s", d.Name, d.ClassName, dist, extra)
 end
 end
 end
