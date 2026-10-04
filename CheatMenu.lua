@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 01:40 sha f3540dca bytes 516952'):format('2026-10-05 01:40','f3540dca',516952))
+print(('[CheatMenu] build 2026-10-05 01:42 sha ccd712fd bytes 517022'):format('2026-10-05 01:42','ccd712fd',517022))
 local F = {}
-F.VERSION = "v15.9.0"
+F.VERSION = "v15.10.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13629,7 +13629,7 @@ T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
-Tabs.Move:AddToggle("Invisible", { Title = "隐身(对所有人看不见 · 真隐身)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("Invisible", { Title = "隐身(自己角色透明 · 对别人也生效)", Description = "把自己角色的所有部件 Transparency 设为 1 —— 客户端持有自己角色的网络所有权, 这个改动会复制给其他玩家; 顺带关掉名字/血条显示。服务端若有透明检测会拉回", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
@@ -13752,12 +13752,12 @@ F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
 end })
-Tabs.Move:AddSection("针对玩家(用上面的「目标玩家」选人 · 真影响他)")
-Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权, 再一点点把他拖到你身边 —— 真动他(所有人都会看到他过来)。抢不到会直接告诉你「本服不支持」", Callback = function()
+Tabs.Move:AddSection("针对玩家(用上面的「目标玩家」选人 · 能否真动他取决于本服)")
+Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权再逐帧拖。★ 只有本服允许抢所有权时才真动得了他(多数游戏锁了 ⇒ 会明确告诉你不支持); 跨服(别的服务器)做不到, 客户端只能影响当前这一局", Callback = function()
 if not F.Once("pull", 1.5) then return end
 task.spawn(function() pcall(F.PullPlayer) end)
 end })
-Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "同样先抢所有权, 然后一次到位把他挪到你面前(比上面的拖更瞬移)。抢不到就是本服不给", Callback = function()
+Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "先抢所有权再一次挪到位。★ 同样受本服限制: 抢不到就是动不了; 跨服做不到", Callback = function()
 if not F.Once("tpmove", 1.5) then return end
 task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
