@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 20:05 sha 3cf33928 bytes 484491'):format('2026-10-04 20:05','3cf33928',484491))
+print(('[CheatMenu] build 2026-10-04 20:11 sha a810c23b bytes 484497'):format('2026-10-04 20:11','a810c23b',484497))
 local F = {}
-F.VERSION = "v14.0.121"
+F.VERSION = "v14.0.122"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12594,13 +12594,6 @@ T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
-Tabs.Move:AddSection("针对玩家(先在「传送」页选目标 · 真影响他)")
-Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权, 再一点点把他拖到你身边 —— 真动他(所有人都会看到他过来)。抢不到会直接告诉你「本服不支持」", Callback = function()
-task.spawn(function() pcall(F.PullPlayer) end)
-end })
-Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "同样先抢所有权, 然后一次到位把他挪到你面前(比上面的拖更瞬移)。抢不到就是本服不给", Callback = function()
-task.spawn(function() pcall(F.TPMovePlayer, "front") end)
-end })
 Tabs.Move:AddSection("位移(无限跳 / 穿墙 / 藏地下)")
 Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Callback = function() pcall(F.SuicideNow) end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Default = false, Callback = function(v)
@@ -12708,6 +12701,13 @@ if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
+end })
+Tabs.Move:AddSection("针对玩家(用上面的「目标玩家」选人 · 真影响他)")
+Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权, 再一点点把他拖到你身边 —— 真动他(所有人都会看到他过来)。抢不到会直接告诉你「本服不支持」", Callback = function()
+task.spawn(function() pcall(F.PullPlayer) end)
+end })
+Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "同样先抢所有权, 然后一次到位把他挪到你面前(比上面的拖更瞬移)。抢不到就是本服不给", Callback = function()
+task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
