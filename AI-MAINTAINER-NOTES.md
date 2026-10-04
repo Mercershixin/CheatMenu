@@ -3430,3 +3430,11 @@ HitGuardDisable, SteadyDisable, TrapGuardDisable, SpeedAntiTPDisable, SpeedResto
   （不要求同时含 treadmill）⇒ 场上若有 `GoldCoin` 之类，可能被当成最高优先级目标。
   自查办法：看日志 `[跑步机] 已站到跑步机带上(踩实): <名字>` 那行是否是你自己的跑步机。
 - 该功能**没进"急停/卸载链"**，但急停会把所有 `T[k]` 置 false（含 `T.TreadmillFarm`）⇒ 循环自然退出，无残留风险。
+
+### 14.0.77：给「附近可交互点」扫描加自诊断（纯只读）
+
+- **动机**：自动领奖靠 `名字 + ActionText + ObjectText` 命中关键词，但旧扫描**只打 Name** ⇒ 通用名（`ProximityPrompt`）看不出会不会被领，只能靠猜。
+- **改动**（`F.ScanNearbyInteract`）：每条现在输出 `物体=<父部件名> · 动作=<ActionText> · 说明=<ObjectText>`；
+  并对 `ProximityPrompt` 用**与领奖完全相同的判据**预判，命中就打 `[刷奖杯会自动领取这个]`。
+  ⇒ 用户跑一次「一键全扫描」即可判断：跑步机在不在、领奖口叫什么、这开关能不能领到。
+- 仍严格**只读**（不点、不改任何实例），延续"扫描页只扫描"原则。
