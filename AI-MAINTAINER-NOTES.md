@@ -3518,3 +3518,92 @@ pcall 闭包全部删掉；② `neuter(...)` 闭包与 `function() return end` �
 - **完整 Cmdr 客户端**：`CmdrFunction`/`CmdrEvent` + `CmdrClient.Commands.*`（含 `SpawnScheduledTreadmill`/`NextScheduledTreadmill`）。
 - **权限闸**：`SubmitDiscordVerifyCode`/`DiscordVerifyResult`/`VerifyGroup`；**隐藏守卫**：`ShowSecretGuard`。
 - 执行器能力 **38/41**，缺失 `signal-hook` / `getscriptsource` / `gui-guard`（⇒ 读脚本要走 `decompile`+`getscriptbytecode`，本项目已是这么做的）。
+
+## ★★★ 「功能看着开着、其实没装」—— 根因链路与修复（2026-10-04 · 14.0.79）
+
+用户报两件事：① 点了「远程体检」后**偷不到蛋**；② **「防护合1」的功能都没生效**。
+
+### ① 远程体检 = 亲手关掉了蛋的客户端回调
+
+- 旧 `F.RemoteAudit` 会把名字含 `drop/carry/egg/unequip/equip/ragdoll/fling/knock/stun/kick` 的远程的
+  **全部 `OnClientEvent` 连接 `c:Disable()`** —— 而这些正是**搬蛋/放蛋/掉蛋**的核心回调。
+  日志实证：`[远程体检] 共 177 个有客户端处理的远程 · 关掉像掉蛋/收回的 2 个`。
+  ⇒ 关掉后客户端**不再响应这些事件** ⇒ **偷不到蛋、搬起来就掉**（UI/状态不同步）。
+- **修法**：`F.RemoteAudit` **改成纯只读**（只列清单，一个都不关）；按钮文案同步改写。
+  `restore` 分支保留（`F._auditOff` 现在恒空，仅兼容旧会话）。
+- ★ 教训：**"把名字像 X 的回调都关掉"这种写法天然危险** —— 名字匹配必然误伤同一套事件里的正常玩法，
+  且**关掉客户端回调 = 直接废掉玩法**。这类动作要么只读、要么明确白名单，不能靠模糊匹配一关了之。
+
+### ② 根因：`_cfgSyncing` 让"回填界面"变成"只回填界面"
+
+事故链（**每次热重载/读档都会发生**）：
+
+1. 热重载时把 `T` 里所有 true 的开关记进 `getgenv().CM_RELOAD_KEEP`（第 6953 行 `type(v)=="boolean" and v`）；
+2. 新实例加载 → `F.CfgSyncUI()` 把 `T[name]` 回填到每个控件：`opt:Set(want)`（**Set 一定触发 Callback**）；
+3. 但 `CfgSyncUI` 全程 `F._cfgSyncing = true`，而**几乎所有功能 Callback 的第一行都是
+   `if F._cfgSyncing then return end`** ⇒ **只设置了 `T`/`C` 的值，一个 Enable 都没调**；
+4. ⇒ **界面显示"开"，功能其实没装**（`F._SteadyConn` 之类的连接根本不存在）。
+   日志还会打印 `[热加载] 已恢复上次开着的 22 个开关` —— **这句是假的**（只恢复了界面）。
+
+- **修法**：新增 **`F.ApplySavedOn()`** —— 在 `CfgSyncUI()` **之后**再跑一遍"真正应用"：
+  遍历 `Fluent.Options`，对**值为 `true` 的 Toggle** 与**值不以「关」开头的下拉**，
+  **直接调用 `opt.Callback(v)`**（`_cfgSyncing` 此时为 false ⇒ 真的装）；
+  跳过 `CFG_NOSYNC`（AimOn/LockCam/Freecam/TPMouse）、`CFG_APPLY_SKIP`（TransLang/TransScope，重译太贵）、
+  以及 `PLAYER_DROPDOWNS`（玩家列表）。无 `Callback` 时兜底用 `opt:Set`。
+  ⇒ 在两处调用：普通加载后（12655）与热重载后（12666）。
+- ★ 配套：`GuardAll` 的 Callback 里补 `T.GuardAll = v` —— 否则它只置子标志、没有自己的 T 键，
+  热重载时**不会被 `CM_RELOAD_KEEP` 捕获** ⇒ 界面回到"关"，但子标志还是 true（更乱）。
+- ★★ **Fluent 事实（已从源码确认）**：Toggle 选项表里 **`Callback = f.Callback or function() end` 是存在的**
+  （`Type='Toggle'` 那一行）⇒ 可以直接 `opt.Callback(v)` 重放，不必依赖 `opt:Set` 的触发语义。
+
+### ③ 顺带查明：这个脚本**根本没有配置持久化**
+
+- `local SaveFile = "CheatMenu_Config_v1.json"`（第 325 行）**声明了但全项目再没被用过**；
+  全文没有 `writefile(SaveFile, ...)` / `readfile(SaveFile)`。
+- ⇒ 磁盘上那份 `CheatMenu_Config_v1.json`（`{"C":{"WpServer":…,"PriorityTargets":[]},"T":[]}`）
+  是**更早版本**留下的残骸，`T` 是空数组 —— 也就是说**冷启动（重新执行脚本）时没有任何开关会被恢复**，
+  只有 in-memory 的热重载能靠 `CM_RELOAD_KEEP` 恢复。
+- ⇒ **未做**（属新功能，需用户点头）：把 `T` 中 true 的开关 + 关键 `C` 真正落盘、启动时读回并 `ApplySavedOn()`。
+  要做的话建议：只在**开关变化时**节流写盘（不要把 `T` 每帧序列化），读回时按 `CFG_NOSYNC`/`CFG_APPLY_SKIP` 过滤。
+
+## ★★★ 「开加速拿到蛋、回安全区就消失」的诊断（2026-10-04 · 14.0.80）
+
+用户报：**开加速拿到蛋 → 回安全区 → 蛋消失**，问"为什么 / 能不能拦截干掉"。
+
+### 证据（`CheatMenu_log__UPD__81814694958364.txt`，16:11 那局）
+
+| 日志原文 | 含义 |
+|---|---|
+| `[速度自检·飞行] 设定 523 格/秒 → 实测 523 格/秒 (100%)` | 用户是**开着飞行、523 格/秒**在拿蛋 |
+| `[反拉回] 位置被回滚 1248 次 ⇒ 每次都已立即续跑回原定位置` | **服务端在持续把你拉回去** —— 它不认可你的位置 |
+| `[屏蔽] 已挡下服务端对我角色的写入 ×1897 (钉住/清血/打断飞行/禁走/禁跳/禁转向)` | 我们在**屏蔽服务端的纠正** ⇒ 本地看着"我就在那儿"，服务端那边压根没发生 |
+| 模块 `GameShared.EggPickupRules` / `EggBoundary` / `EggCatalog` / `EggSecuredEffects` | 拿蛋有**专门的规则模块 + 边界模块** |
+| 远程 `EggSecured`（`GameShared.EggSecuredEffects`） | 蛋要**被服务端确认 secured** 才算真拿到 |
+
+### 结论（讲人话）
+
+**拿蛋这件事是服务端说了算的。** 客户端只是"预测"了你拿到了，服务端按 `EggPickupRules` 校验你的
+**位置/速度/是否在边界内**；你以 523 格/秒飞过去，服务端判定非法 ⇒ **回滚你的位置**（日志里 1248 次），
+拾取**从未在服务端成立** ⇒ 客户端那把蛋被**收回/销毁** ⇒ 你看到"蛋消失"。
+而我们还额外**屏蔽了服务端的纠正写入**，于是本地看起来"一切正常"，其实是在自欺。
+
+### 能"拦截干掉"吗？—— 分两半
+
+- ⛔ **做不到**：让服务端接受一次非法的拾取。就算把服务端的回滚消息全拦掉，也只是本地不同步，
+  服务端照样没给你蛋（而且拦得越狠，越像作弊）。
+- ✅ **做得到**（真正的解法三条）：
+  ① **拿蛋那一刻起把自己变"合法"** —— 速度压到服务端能接受的范围（一般 16~50）、关掉飞行；
+  ② **别在蛋被 secured 之前离开它的判定边界**（`EggBoundary`），别急着回安全区；
+  ③ **拿蛋期间不要屏蔽服务端的位置纠正** —— 让服务端把你的位置改回去，反而更快达成一致。
+
+### 已落地（14.0.80）
+
+- **`T.CarrySafe` + 移动页「★ 搬蛋保护」**：开启后每 0.1 秒把 `WalkSpeed` 压到 `C.CarrySafeSpeed`（默认 **16**），
+  并**卸掉 `CMLockFields` 属性锁定层**（让服务端的位置纠正真正生效）。
+  自停自灭火：`T.CarrySafe` 被急停/卸载置 false 时连接自己断开。
+- **`F.DumpEggRules` + 扫描页「★ 导出拿蛋规则源码」**：**只读**反编译名字含
+  `eggpickuprules/eggcarryrules/carryrules/pickuprules/eggsecured/eggboundary/eggarea/eggzone/carrylimit/pickupdistance`
+  的模块，摘出**带数字的阈值行**（speed/dist/radius/max/limit/bound/carry/pickup/timeout）。
+  ⇒ 拿到真实阈值后才能把「搬蛋速度上限」调到**刚好合法**（先 16，不消失再往上加）。
+- ★ 教训：**"服务端权威"的功能，客户端只能改变自己让它合法，不能替服务端做决定**；
+  而且**屏蔽服务端纠正 ≠ 赢**，只会让自己看不到真相。这条与血量的结论一致（见 14.0.13）。
