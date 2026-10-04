@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 14:44 sha 38697fc2 bytes 454150'):format('2026-10-04 14:44','38697fc2',454150))
+print(('[CheatMenu] build 2026-10-04 14:47 sha 092c8694 bytes 454391'):format('2026-10-04 14:47','092c8694',454391))
 local F = {}
-F.VERSION = "v14.0.68"
+F.VERSION = "v14.0.69"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10163,6 +10163,8 @@ CMX_HashFreeze = { F.CMX_HashFreezeEnable, F.CMX_HashFreezeDisable },
 }
 F.CMX_TierOwn = F.CMX_TierOwn or {}
 F.CMX_TierSync = function(level)
+F.Out("[档位·绕过层] 已停用联动(时钟粗化/视图过滤/调试名伪装/属性伪装这些每帧加一层, 单局实测 75 万次取时+15 万次遍历 ⇒ 只降性能不办事)。要哪一层请单独手动开")
+do return end
 local map = F.CMX_TierMap
 if type(map) ~= "table" then return end
 if T.CMX_TierLink == false then
