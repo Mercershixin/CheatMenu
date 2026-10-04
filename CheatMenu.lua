@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 16:54 sha 1863efd3 bytes 466879'):format('2026-10-04 16:54','1863efd3',466879))
+print(('[CheatMenu] build 2026-10-04 17:03 sha 7bc37755 bytes 461867'):format('2026-10-04 17:03','7bc37755',461867))
 local F = {}
-F.VERSION = "v14.0.84"
+F.VERSION = "v14.0.85"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2562,7 +2562,9 @@ pcall(function()
 for _, v in pairs(getgc(true)) do
 seen = seen + 1
 if seen > 60000 then break end
+if not T.DeepNeuter then break end
 if seen % 2000 == 0 and F._isyieldable() then task.wait() end
+if seen % 2000 == 0 and not T.DeepNeuter then break end
 if typeof(v) == "table" then
 for i = 1, #KEYS do
 local key, repl = KEYS[i][1], KEYS[i][2]
@@ -5357,45 +5359,8 @@ end)
 local from = root.Position
 local dist = (cf.Position - from).Magnitude
 local rot = cf - cf.Position
-if tostring(C.TPStep or ""):find("补间", 1, true) then
-local dur = math.clamp(tonumber(C.TweenDur) or 0.8, 0.1, 5)
-local ts = game:GetService("TweenService")
-local okT = pcall(function()
-local tw = ts:Create(root, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = cf })
-F._tpTween = tw
-tw:Play()
-tw.Completed:Wait()
-end)
-F._tpTween = nil
-if okT then
-pcall(function()
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-end)
-if wasStand ~= nil then pcall(function() hum.PlatformStand = wasStand end) end
-F._tpOwnInfo = own
-F.Out(string.format("[传送] 补间到位 · %.1fs · %.0f 格(没抢所有权, 被拉回就换回分步瞬移)", dur, dist))
-return (root.Position - cf.Position).Magnitude < 20
-end
-F.Out("[传送] 补间失败 ⇒ 自动退回分步瞬移")
-end
-local stepStuds = tonumber(C.TPMaxStep) or 40
-if stepStuds < 8 then stepStuds = 8 end
-if stepStuds > 400 then stepStuds = 400 end
-local stepDelay = tonumber(C.TPDelay) or 0.1
-if stepDelay < 0.05 then stepDelay = 0.05 end
-if stepDelay > 1 then stepDelay = 1 end
-local steps = math.max(1, math.ceil(dist / stepStuds))
-if steps > 400 then steps = 400 end
-F._tpStepsInfo = { n = steps, step = stepStuds, delay = stepDelay }
-for i = 1, steps do
-local t = i / steps
-local p = from:Lerp(cf.Position, t)
-pcall(function() root.CFrame = CFrame.new(p) * rot end)
-pcall(function() F.TakeAllOwnership() end)
-if i < steps then task.wait(stepDelay) end
-end
 pcall(function() root.CFrame = cf end)
+F._tpOwnInfo = own
 pcall(function()
 root.AssemblyLinearVelocity = Vector3.zero
 root.AssemblyAngularVelocity = Vector3.zero
@@ -5615,16 +5580,9 @@ end
 end
 local now2 = nil
 pcall(function() local _, _, r2 = GC() if r2 then now2 = (r2.Position - pos).Magnitude end end)
-F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · %s · 已抢所有权 %d 个部件(不依赖加速/飞行)",
+F.Out(string.format("[点位] 传送到「%s」 · 距离 %.0f 格 · %s · 已抢所有权 %d 个部件(不依赖加速/飞行)",
 tostring(it.name), dist,
 ok and "已到位" or ("没到位(还差 " .. string.format("%.0f", now2 or -1) .. " 格)"),
-(function()
-local si = F._tpStepsInfo
-if si then
-return string.format("分步传送(%d 步 · 每步≤%.0f 格 · 间隔 %.2fs ⇒ 等效≈%.0f 格/秒)", si.n, si.step, si.delay, si.step / si.delay)
-end
-return dist > 300 and "分步传送" or "一次到位"
-end)(),
 tonumber(F._tpOwnInfo) or 0))
 if not ok then
 F.Out("[点位] ⚠ 传送被服务端拒绝(这游戏的位移由服务端裁决) —— 换个近一点的点, 或把速度调低再试")
@@ -10430,7 +10388,6 @@ C.SpeedDrive = p.speed
 n = n + 1
 if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 end
-if p.tpstep and C.TPStep ~= p.tpstep then C.TPStep = p.tpstep n = n + 1 end
 if p.flydrive_pos ~= nil and T.CMX_SpoofPos ~= p.flydrive_pos then T.CMX_SpoofPos = p.flydrive_pos n = n + 1 end
 if n > 0 then F.Out("[游戏档案] 已套用本游戏专属设置 " .. tostring(n) .. " 项(档位/通道)") end
 end
@@ -10700,7 +10657,9 @@ pcall(function()
 for _, v in pairs(getgc(true)) do
 seen = seen + 1
 if seen > 60000 then break end
+if not F.CMX_NPOn then break end
 if seen % 1500 == 0 and F._isyieldable() then task.wait() end
+if seen % 1500 == 0 and not F.CMX_NPOn then break end
 if type(v) == "table" then
 for i = 1, #NAMES do
 local f = rawget(v, NAMES[i])
@@ -10755,7 +10714,9 @@ pcall(function()
 for _, f in pairs(getgc(true)) do
 props = props + 1
 if props > 60000 then break end
+if not F.CMX_HashOn then break end
 if props % 1500 == 0 and F._isyieldable() then task.wait() end
+if props % 1500 == 0 and not F.CMX_HashOn then break end
 if type(f) == "function" then
 local isl = false
 if islcFn then
@@ -10776,8 +10737,10 @@ end
 end
 end
 end)
+if not F.CMX_HashOn then return false end
 local n = 0
 for i = 1, #F.CMX_HashSaved do
+if not F.CMX_HashOn then break end
 local f = F.CMX_HashSaved[i]
 local key = tostring(f)
 local o
@@ -12150,16 +12113,6 @@ if v then F.LockCamEnable() else F.LockCamDisable() end
 F.Out("[锁相机] " .. (v and "已开(相机锁在当前朝向)" or "已关"))
 end })
 Tabs.TP:AddSection("传送")
-Tabs.TP:AddDropdown("TPStep", { Title = "传送步进方式(鼠标传送 / 收藏点位 全部适用)", Values = {
-"分步瞬移(现状 · 每步抢网络所有权, 最稳)",
-"补间步进(TweenService 平滑过渡 · 不抢所有权, 长距离更容易被拉回)",
-}, Default = "分步瞬移(现状 · 每步抢网络所有权, 最稳)", Callback = function(v)
-C.TPStep = v
-if F._cfgSyncing then return end
-pcall(F.CMX_ProfilePut, "tpstep", v)
-end })
-Tabs.TP:AddSlider("TPMaxStep", { Title = "分步传送: 每步最大格数(越小越像正常走)", Description = "每一步最多瞬移多远。服务端的位移/速度校验看的就是单步位移 —— 单步太大必被拉回。40 格是稳妥起点", Min = 8, Max = 400, Default = 40, Rounding = 0, Callback = function(v) C.TPMaxStep = v end })
-Tabs.TP:AddSlider("TPDelay", { Title = "分步传送: 每步间隔(秒)", Description = "每步之间等多久。等效速度 = 每步格数 ÷ 间隔, 这个值决定服务端眼里你有多快", Min = 5, Max = 100, Default = 10, Rounding = 0, Callback = function(v) C.TPDelay = (tonumber(v) or 10) / 100 end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
@@ -12327,45 +12280,6 @@ end })
 Tabs.AC:AddButton({ Title = "★ 导出「拿蛋规则」源码(只读 · 看服务端到底卡什么)", Description = "只读地反编译 EggPickupRules / EggBoundary 这类模块, 摘出带数字的阈值行(不改任何东西)", Callback = function()
 task.spawn(function() pcall(F.DumpEggRules) end)
 end })
-F.RemoteAudit = function(restore)
-local rs = game:GetService("ReplicatedStorage")
-local KEYS = { "drop", "carry", "egg", "unequip", "equip", "ragdoll", "fling", "knock", "stun", "kick" }
-F._auditOff = F._auditOff or {}
-local n, hit = 0, 0
-if restore then
-for _, c in ipairs(F._auditOff) do pcall(function() c:Enable() end) end
-F._auditOff = {}
-F.Out("[远程体检] 已还原之前关掉的全部远程回调")
-return
-end
-F.Out("[远程体检] ===== 所有 FireClient 的处理函数(纯只读, 不会关掉任何回调) =====")
-pcall(function()
-for _, d in ipairs(rs:GetDescendants()) do
-local cls = d.ClassName
-if cls == "RemoteEvent" or cls == "UnreliableRemoteEvent" or cls == "RemoteFunction" then
-local conns = nil
-pcall(function() conns = getconnections(d.OnClientEvent) end)
-if conns and #conns > 0 then
-n = n + 1
-local nm = tostring(d.Name)
-local low = nm:lower()
-local sus = false
-for _, k in ipairs(KEYS) do if low:find(k, 1, true) then sus = true break end end
-local src = "?"
-pcall(function()
-local f = conns[1].Function
-if f then local i = debug.getinfo(f, "s") src = tostring(i and i.source or "?") end
-end)
-F.Out(string.format("[远程体检] %s · %d 条连接 · 来源 %s%s", nm, #conns, tostring(src):sub(1, 70), sus and "  <<< 掉蛋/收回类(只列出)" or ""))
-if sus then hit = hit + 1 end
-end
-end
-end
-end)
-F.Out("[远程体检] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 其中名字像掉蛋/收回的 " .. tostring(hit) .. " 个(仅列出, 一个都不动)")
-F.Out("[远程体检] 说明: 旧版会把上面这些回调关掉 ⇒ 直接导致「偷不到蛋 / 搬起来就掉」; 现已改为纯只读, 不会再关任何回调")
-pcall(function() Fluent:Notify({ Title = "远程体检", Content = "只读检查 " .. tostring(n) .. " 个(不动任何回调)", Duration = 8 }) end)
-end
 F.HookResidue = function()
 local layers, ids = 0, {}
 pcall(function()
@@ -12438,8 +12352,6 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 end
 Tabs.Setting:AddSection("系统")
-Tabs.Setting:AddButton({ Title = "★ 远程体检(只列出所有 FireClient 处理 · 纯只读)", Description = "只列清单, 不关任何回调。旧版会关掉名字像 drop/carry/egg 的回调 ⇒ 会导致偷不到蛋/搬起来就掉, 已改掉", Callback = function() pcall(F.RemoteAudit) end })
-Tabs.Setting:AddButton({ Title = "★ 让「已开着的功能」真正生效(热重载后功能像开着其实没装时点)", Description = "把界面上显示为开的功能重新安装一遍(防护合1/稳身/反陷阱/防拉回/视觉等)", Callback = function() pcall(F.ApplySavedOn) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
