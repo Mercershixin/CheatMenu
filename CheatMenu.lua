@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 13:06 sha 6628c87a bytes 441175'):format('2026-10-04 13:06','6628c87a',441175))
+print(('[CheatMenu] build 2026-10-04 13:08 sha a75dbcfe bytes 442758'):format('2026-10-04 13:08','a75dbcfe',442758))
 local F = {}
-F.VERSION = "v14.0.36"
+F.VERSION = "v14.0.37"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11792,6 +11792,32 @@ Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文�
 end)
 end })
 Tabs.Setting:AddSection("系统")
+F.UnloadAll = UnloadAll
+Tabs.Setting:AddToggle("Session", { Title = "会话保持(角色持续 + 实时玩家列表)", Description = "角色重生后保持你的设置 + 实时刷新玩家列表。不含存档 —— 存档/配置恢复机制按你的要求已整条删除", Default = false, Callback = function(v)
+local changed = (T.Session ~= nil) and (T.Session ~= v)
+T.Session, T.CharPersist = v, v
+if F._cfgSyncing or not changed then return end
+if v then
+pcall(F.CharPersistEnable)
+pcall(F.LivePlayersEnable)
+F.Out("[会话保持] 已开: 角色持续 + 实时玩家列表")
+else
+pcall(F.CharPersistDisable)
+pcall(F.LivePlayersDisable)
+F.Out("[会话保持] 已关")
+end
+end })
+Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载 · 已经是最新就不动)", Callback = function() F.HotReload(false) end })
+Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function() F.HotReload(true) end })
+Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function() F.RejoinNow() end })
+Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function() pcall(F.PanicKeyDisableAll) end })
+Tabs.Setting:AddButton({ Title = "卸载脚本", Callback = function()
+pcall(function() Fluent:Notify({ Title = "卸载", Content = "正在卸载…界面会消失; 日志里会有 [卸载] 复核结果", Duration = 2 }) end)
+task.defer(function()
+pcall(F.UnloadAll)
+pcall(function() F.LogFlush("卸载") end)
+end)
+end })
 F.RecordOriginals()
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
