@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-04 17:54 sha 729742e3 bytes 464417'):format('2026-10-04 17:54','729742e3',464417))
+print(('[CheatMenu] build 2026-10-04 17:58 sha 9a3c7035 bytes 464458'):format('2026-10-04 17:58','9a3c7035',464458))
 local F = {}
-F.VERSION = "v14.0.96"
+F.VERSION = "v14.0.97"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9399,6 +9399,7 @@ return
 end
 lastTxt, lastAt = txt, now
 box.Text = ""
+pcall(function() box:ReleaseFocus() end)
 F.ChatSend(txt)
 end
 box.FocusLost:Connect(function(enterPressed)
