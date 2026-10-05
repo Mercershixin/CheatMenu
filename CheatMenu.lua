@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 00:39 sha fa732b25 bytes 452269'):format('2026-10-06 00:39','fa732b25',452269))
+print(('[CheatMenu] build 2026-10-06 00:51 sha 508df082 bytes 437736'):format('2026-10-06 00:51','508df082',437736))
 local F = {}
-F.VERSION = "v16.9.18"
+F.VERSION = "v16.9.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -224,7 +224,6 @@ pcall(function() if F.OnCharacter then F.OnCharacter(ch) end end)
 end)
 end)
 end)
-local SaveFile = "CheatMenu_Config_v1.json"
 local Fluent = nil
 local FLUENT_SOURCES = {
 "https://ghfast.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
@@ -4764,72 +4763,6 @@ end)
 pcall(function() F.GodKillDied(hum) end)
 end)
 end
-F._cfgLast, F._cfgLoop, F._cfgAt = nil, nil, 0
-F.CfgSaveNow = function()
-if type(writefile) ~= "function" then return false, "执行器没有 writefile" end
-local body = nil
-local ok = pcall(function()
-local d = { T = {}, C = {} }
-local k, v
-for k, v in pairs(T) do
-if type(v) == "boolean" then d.T[k] = v end
-end
-for k, v in pairs(C) do
-local ty = type(v)
-if ty == "boolean" or ty == "number" or ty == "string" then d.C[k] = v end
-end
-body = HS:JSONEncode(d)
-end)
-if not ok or type(body) ~= "string" then return false, "序列化失败" end
-if body == F._cfgLast then return true, "无变化" end
-local okw = pcall(writefile, SaveFile, body)
-if okw then F._cfgLast = body end
-return okw, okw and ("已存 " .. #body .. " 字节") or "写盘失败"
-end
-F.CfgRead = function()
-if type(readfile) ~= "function" then return nil end
-local okh, has = pcall(function() return (type(isfile) == "function") and isfile(SaveFile) or true end)
-if not okh then return nil end
-if type(isfile) == "function" then
-local ok2, h2 = pcall(isfile, SaveFile)
-if ok2 and h2 == false then return nil end
-end
-local ok3, body = pcall(readfile, SaveFile)
-if not (ok3 and type(body) == "string" and #body > 4) then return nil end
-local ok4, d = pcall(function() return HS:JSONDecode(body) end)
-if not (ok4 and type(d) == "table") then return nil end
-return d
-end
-F.CfgApplyC = function()
-local d = F.CfgRead()
-if not d then F.Out("[配置] 没找到存档文件 " .. tostring(SaveFile)) return 0 end
-local n = 0
-F._cfgSyncing = true
-pcall(function()
-if type(d.C) == "table" then
-local k, v
-for k, v in pairs(d.C) do
-local ty = type(v)
-if ty == "number" or ty == "string" or ty == "boolean" then
-C[k] = v
-n = n + 1
-end
-end
-end
-end)
-pcall(F.CfgSyncUI)
-F._cfgSyncing = false
-F.Out("[配置] 已恢复 " .. tostring(n) .. " 项数值配置(开关没有自动打开)")
-return n
-end
-F.CfgAutoLoop = function()
-if F._cfgLoop then return end
-F._cfgLoop = RS.Heartbeat:Connect(function()
-if os.clock() - (F._cfgAt or 0) < 5 then return end
-F._cfgAt = os.clock()
-pcall(F.CfgSaveNow)
-end)
-end
 local LockHealthEnable, LockHealthDisable, NoDeathEnable, NoDeathDisable
 F.GodModeSet = function(on)
 T.GodMode = on and true or false
@@ -5525,14 +5458,17 @@ local best, bestD = nil, 8
 pcall(function()
 for _, d in ipairs(ch:GetDescendants()) do
 if d:IsA("Model") or d:IsA("BasePart") or d:IsA("Tool") then
-if d:IsA("Model") or d:IsA("Tool") or d:IsA("BasePart") then
 local nm = tostring(d.Name):lower()
+local hit = false
 for _, k in ipairs(KEYS) do
-if nm:find(k, 1, true) then best = d break end
+if nm:find(k, 1, true) then hit = true break end
+end
+if hit then
+local pp = d:IsA("Model") and (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart")) or (d:IsA("BasePart") and d) or nil
+local dd = pp and (pp.Position - root.Position).Magnitude or 0
+if dd <= bestD then best, bestD = d, dd end
 end
 end
-end
-if best then break end
 end
 if not best then
 local op = OverlapParams.new()
@@ -5540,10 +5476,14 @@ op.FilterType = Enum.RaycastFilterType.Exclude
 op.FilterDescendantsInstances = { ch }
 for _, part in ipairs(workspace:GetPartBoundsInRadius(root.Position, 8, op)) do
 local nm = tostring(part.Name):lower()
+local hit = false
 for _, k in ipairs(KEYS) do
-if nm:find(k, 1, true) then best, bestD = part, 0 break end
+if nm:find(k, 1, true) then hit = true break end
 end
-if best then break end
+if hit then
+local dd = (part.Position - root.Position).Magnitude
+if dd <= bestD then best, bestD = part, dd end
+end
 end
 end
 end)
@@ -11334,8 +11274,8 @@ Tabs[_keys[_k]] = _safeTab(_v, _keys[_k])
 end
 end
 do
-Tabs.Combat:AddSection("自瞄(自动瞄准)")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "开启后自动锁定敌人。开它时会顺手把下面的「自动开火」也打开(不想要就手动关掉)", Default = false, Callback = function(v)
+Tabs.Combat:AddSection("自瞄")
+Tabs.Combat:AddToggle("AimOn", { Title = "自瞄", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.AimSet(v, "手动")
 if v then
@@ -11345,7 +11285,7 @@ if op and op.Value ~= true then F.OptSet(op, true) end
 end)
 end
 end })
-Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Description = "漏就锁 = 360° 全身, 只要打得到就锁; 正面圈内锁 = 只锁屏幕正面那个圈里的, 圈外的人不会转动你视角", Values = {
+Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Values = {
 "漏就锁(360°全身 · 只要打得到就锁)",
 "正面圈内锁(只锁屏幕正面圈里的)",
 }, Default = "漏就锁(360°全身 · 只要打得到就锁)", Callback = function(v)
@@ -11353,10 +11293,10 @@ C.CombatMode = tostring(v)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定模式 = " .. tostring(v))
 end })
-Tabs.Combat:AddSlider("AimSmooth", { Title = "自瞄平滑(0=瞬转 · 越大越像人手动)", Description = "0 = 瞬间对准; 数值越大转得越慢越自然。反作弊敏感的游戏建议 3~6", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v)
+Tabs.Combat:AddSlider("AimSmooth", { Title = "自瞄平滑", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v)
 C.AimSmooth = v
 end })
-Tabs.Combat:AddDropdown("AimPart", { Title = "瞄准点(锁定的部位)", Description = "选「头」时若被墙挡住会自动退回能打到的部位, 不会锁在墙后面", Values = {
+Tabs.Combat:AddDropdown("AimPart", { Title = "瞄准点", Values = {
 "最近部位(推荐 · 打得到哪就打哪)",
 "头(爆头用 · 可能被墙挡住)",
 "躯干(稳 · 几乎不会被挡)",
@@ -11365,31 +11305,31 @@ C.AimPart = tostring(v)
 if F._cfgSyncing then return end
 F.Out("[战斗] 瞄准点 = " .. tostring(v))
 end })
-Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格)", Description = "超过这个距离的人不进候选。默认 200, 最大 1000; 只打近处可调到 30~60", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
-Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小(像素 · 只有「正面圈内锁」用)", Description = "配合「锁定模式 = 正面圈内锁」决定多宽范围内才锁人; 想「打得到就锁」请把模式改成「漏就锁」", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
-Tabs.Combat:AddToggle("FovCircle", { Title = "自瞄 FOV 圈(把上面那圈画出来)", Description = "只在屏幕上画一个圈做参考, 半径跟着「正面圈大小」滑块实时变。纯显示, 不影响锁定判定", Default = false, Callback = function(v)
+Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
+Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
+Tabs.Combat:AddToggle("FovCircle", { Title = "自瞄 FOV 圈", Default = false, Callback = function(v)
 T.FovCircle = v
 if F._cfgSyncing then return end
 if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
 end })
-Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(默认开)", Description = "从相机到目标打射线, 中间有墙/建筑挡住就不锁。关掉会隔墙锁人, 但打不打得中取决于游戏", Default = true, Callback = function(v)
+Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙", Default = true, Callback = function(v)
 T.CombatWallCheck = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打隔墙 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("CombatSkipInvincible", { Title = "不打无敌/出生保护的人(默认开)", Description = "目标身上有出生保护罩(ForceField)、血量超过上限、或带 Invincible 属性时跳过。想连无敌的人也锁就关掉", Default = true, Callback = function(v)
+Tabs.Combat:AddToggle("CombatSkipInvincible", { Title = "不打无敌/出生保护的人", Default = true, Callback = function(v)
 T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机)", Description = "锁到人就自动按下开火, 间隔见下面滑块。默认关; 打开「自瞄」时会自动带上它。单独开没用(没有目标可锁)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("AutoFire", { Title = "自动开火", Default = false, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
 if v then F.EnsureAimOn("开自动开火") end
 end })
-Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔(秒)", Description = "两次开火之间的最小间隔。默认 0.12; 调到 0.05 附近更连续但更像机器, 0.3 以上会明显断续", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
-Tabs.Combat:AddDropdown("AimLockMode", { Title = "锁定方式", Description = "转身锁人 = 只把人物朝向转过去, 不碰你的视角(不晕); 转视角 = 连相机一起转(枪战压枪用)", Values = {
+Tabs.Combat:AddSlider("AutoFireGap", { Title = "开火间隔", Min = 0.05, Max = 1, Default = 0.12, Rounding = 2, Callback = function(v) C.AutoFireGap = v end })
+Tabs.Combat:AddDropdown("AimLockMode", { Title = "锁定方式", Values = {
 "转身锁人(只转人物朝向 · 不碰你视角)",
 "转视角(把相机也转过去 · 枪战用)",
 }, Default = "转身锁人(只转人物朝向 · 不碰你视角)", Callback = function(v)
@@ -11399,27 +11339,27 @@ if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
 end })
 Tabs.Surv:AddSection("生命 / 保命")
-Tabs.Surv:AddToggle("GodMode", { Title = "★ 上帝模式(无敌 + 锁血 + 不死 + 防击倒 + 断死亡事件 + 拦上报)", Description = "一次性把防击倒、锁血、不死、拦上报全开: 血锁在 100 万、关闭死亡状态与断颈、清掉死亡事件。服务端权威的游戏里仍可能被真正的伤害判定带走", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
-Tabs.Surv:AddToggle("AntiKnockdown", { Title = "防击倒(被按倒/翻滚时自动站起)", Description = "被强行按倒、进入翻滚或物理状态时自动拉回站起; 死亡与飞行时不干预。上帝模式里已含本项, 单独开也可以", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("AntiKnockdown", { Title = "防击倒", Default = false, Callback = function(v)
 T.AntiKnockdown = v
 if F._cfgSyncing then return end
 if v then pcall(F.AntiKnockdownEnable) else pcall(F.AntiKnockdownDisable) end
 end })
-Tabs.Surv:AddToggle("Regen", { Title = "自动回血(掉血后按速度慢慢补满)", Description = "血量低于上限时按下面设定值逐秒补回。服务端权威的游戏里只是本地看着回血", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("Regen", { Title = "自动回血", Default = false, Callback = function(v)
 T.Regen = v
 if F._cfgSyncing then return end
 if v then pcall(RegenEnable) else pcall(RegenDisable) end
 end })
-Tabs.Surv:AddSlider("RegenRate", { Title = "回血速度(每秒)", Description = "每秒补多少血。默认 10; 想在几秒内补满就调到 100 以上", Min = 1, Max = 500, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
-Tabs.Surv:AddButton({ Title = "回满血(一键)", Description = "立刻把血量补到上限, 只补这一次", Callback = function()
+Tabs.Surv:AddSlider("RegenRate", { Title = "回血速度", Min = 1, Max = 500, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
+Tabs.Surv:AddButton({ Title = "回满血", Callback = function()
 if not F.Once("god_refill", 0.8) then return end
 F.GodRefill()
 end })
 Tabs.Move:AddSection("飞行")
-Tabs.Move:AddToggle("FlyOn", { Title = "飞行(键盘 WASD · 空格升 / Ctrl 降 · 手机用摇杆)", Description = "松手即停, 姿态保持直立不翻滚。开飞行时会临时关掉「无限跳」避免两个功能打架", Default = false, Callback = function(v) F.FlySet(v) end })
+Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
 local op = Fluent and Fluent.Options
@@ -11455,8 +11395,8 @@ F.OptSet(ib, tostring(math.floor(tonumber(v))))
 F._slInGuard = false
 end
 end
-Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度(格/秒)", Description = "可拖滑块, 也可用下面的输入框直接打字。受「速度档位」限制, 切档后本滑块的上下限会跟着变", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v F.SyncSpeedInput("fly", v) end })
-Tabs.Move:AddInput("FlyValueIn", { Title = "飞行速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块, 并夹到当前档位范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
+Tabs.Move:AddSlider("FlyValue", { Title = "飞行速度", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.FlyValue = v F.SyncSpeedInput("fly", v) end })
+Tabs.Move:AddInput("FlyValueIn", { Title = "飞行速度 · 直接输入数字", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
 if F._slInGuard then return end
 local n = tonumber(v)
 if not n then return end
@@ -11490,7 +11430,7 @@ if T.SpeedOn then pcall(F.SpeedApply) end
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 F.Out("[速度档位] 档" .. tostring(idx) .. " ⇒ 滑块量程改成 " .. tostring(lo) .. "~" .. tostring(hi) .. " (飞行/加速共用), 当前值 " .. tostring(cur))
 end
-Tabs.Move:AddDropdown("SpeedTier", { Title = "★ 速度档位(切滑块量程 · 飞行与加速共用)", Description = "档1 16~5000 · 档2 5001~10000 · 档3 10001~15000 · 档4 15001~20000 · 档5 20001~25000 · 档6 25001~30000。切档后「飞行速度」和「加速速度」两个滑块只能在那一档区间里滑", Values = {
+Tabs.Move:AddDropdown("SpeedTier", { Title = "速度档位", Values = {
 "档1 (16-5000)", "档2 (5001-10000)", "档3 (10001-15000)", "档4 (15001-20000)", "档5 (20001-25000)", "档6 (25001-30000)",
 }, Default = "档1 (16-5000)", Callback = function(v)
 local idx = tonumber(tostring(v):match("档(%d)")) or 1
@@ -11498,16 +11438,16 @@ if F._cfgSyncing then return end
 pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("SpeedOn", { Title = "★ 加速(水平全向 · 松手即停 · 坐载具自动推载具)", Description = "走路、游泳、坐载具共用这一个开关和同一个速度值; 坐上载具时推力自动给到载具上", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Description = "默认 60, 受「速度档位」限制。游戏对异常速度检测严格时别开太高", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
-Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块, 并夹到当前档位范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
+Tabs.Move:AddToggle("SpeedOn", { Title = "加速", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
+Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
 if F._slInGuard then return end
 local n = tonumber(v)
 if not n then return end
 pcall(F.SetSpeedValue, "speed", n)
 end })
-Tabs.Move:AddSection("★ 防护(稳身 / 反攻 / 反陷阱 / 护蛋)")
-Tabs.Move:AddToggle("GuardAll", { Title = "★ 防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 防减速 + 护蛋/搬运保护 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本并断掉检测连接 · 防减速=拿着东西时游戏想把速度压慢会被挡回 · 护蛋=只抢回你自己那个蛋 · 搬运保护=手上的东西被卸下/焊点被拆时自动装回", Default = false, Callback = function(v)
+Tabs.Move:AddSection("防护")
+Tabs.Move:AddToggle("GuardAll", { Title = "防护", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 T.SpeedAntiTP, T.MyEgg, T.CarryGuard = v, v, v
@@ -11545,130 +11485,130 @@ steady and "开" or "关",
 hit and ("开" .. (T.HitStrong and "(猛档)" or "(状态法)")) or "关",
 T.TrapWarn and "开" or "关", T.SpeedAntiTP and "开" or "关"))
 end
-Tabs.Move:AddToggle("InstantInteract", { Title = "★ 瞬间偷蛋 / 瞬间交互(点一下立刻完成 · 不用长按 E)", Description = "把所有要按住一会儿的交互(偷蛋/开箱/机关)改成点一下即刻完成。不加远距离、也不会自动偷, 只是老实把长按变成瞬间", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("InstantInteract", { Title = "瞬间偷蛋 / 瞬间交互", Default = false, Callback = function(v)
 local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
-Tabs.Move:AddToggle("Invisible", { Title = "隐身(自己角色全透明 · 别人也看不见)", Description = "把自己所有部件透明度设为 1, 并关掉名字/血条显示。客户端持有自己角色的所有权, 所以别人也看不见; 服务端若做透明检测会把你拉回", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
-Tabs.Move:AddSection("位移(无限跳 / 穿墙 / 藏地下)")
-Tabs.Setting:AddButton({ Title = "自杀 / 重置角色(卡住、被夹住时用)", Description = "立刻让角色死亡并重生, 用来脱离卡住的位置", Callback = function() pcall(F.SuicideNow) end })
-Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳(空中也能跳)", Description = "在空中也能反复起跳。开着「飞行」时会自动临时关掉它", Default = false, Callback = function(v)
+Tabs.Move:AddSection("位移")
+Tabs.Setting:AddButton({ Title = "自杀 / 重置角色", Callback = function() pcall(F.SuicideNow) end })
+Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
 if F._cfgSyncing or not changed then return end
 if v then F.InfiniteJumpEnable() else F.InfiniteJumpDisable() end
 F.Out("[无限跳] " .. (v and "已开" or "已关"))
 end })
-Tabs.Move:AddToggle("NoClip", { Title = "穿墙(可以穿过墙和建筑)", Description = "关掉角色所有部件的碰撞。只影响你本地移动, 掉到地图外请用「自杀 / 重置角色」", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("NoClip", { Title = "穿墙", Default = false, Callback = function(v)
 T.NoClip = v
 if F._cfgSyncing then return end
 if v then F.NoClipEnable() else F.NoClipDisable() end
 F.Out("[穿墙] " .. (v and "已开" or "已关"))
 end })
-Tabs.Move:AddToggle("Hide", { Title = "藏地下(仍可自由水平移动)", Description = "把自己钻到地下躲避视线, 深度用下面滑块调; 开着仍能用方向键正常走动", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("Hide", { Title = "藏地下", Default = false, Callback = function(v)
 T.Hide = v
 if F._cfgSyncing then return end
 if v then F.HideEnable() else F.HideDisable() end
 end })
-Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度(正数=往下钻 · 负数=往上藏)", Description = "相对你开这个功能那一刻所站的高度。例: 5 = 钻到地面下 5 格; 20 = 下 20 格; -20 = 升到上方 20 格。改完立刻生效, 不用重开", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
+Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
-Tabs.Visual:AddSection("ESP 透视(名字 / 距离 / 血条)")
-Tabs.Visual:AddToggle("EspOn", { Title = "★ ESP 总开关", Description = "给其他人画上信息标签; 具体显示哪几项由下面三个开关决定", Default = false, Callback = function(v)
+Tabs.Visual:AddSection("ESP 透视")
+Tabs.Visual:AddToggle("EspOn", { Title = "ESP 总开关", Default = false, Callback = function(v)
 T.EspOn = v
 if F._cfgSyncing then return end
 F.EspSet(v)
 end })
-Tabs.Visual:AddToggle("EspName", { Title = "名字", Description = "在目标身上显示玩家名字", Default = true, Callback = function(v) T.EspName = v end })
-Tabs.Visual:AddToggle("EspDist", { Title = "距离", Description = "显示你和目标之间的距离(格)", Default = true, Callback = function(v) T.EspDist = v end })
-Tabs.Visual:AddToggle("EspHp", { Title = "血条", Description = "显示目标的血条, 血量低会变红", Default = true, Callback = function(v) T.EspHp = v end })
-Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记(队友头顶绿色 [队友] 名字)", Description = "给同队的人加一个绿色标记, 一眼分清队友和敌人", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = function(v) T.EspName = v end })
+Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
+Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
+Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.AllyMarkSet(v)
 end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
-Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到人 · 半透明色块 + 外框)", Description = "给其他玩家套一个填充半透明 + 描边的色块, 并强制显示在最上层 ⇒ 隔着墙也看得见。颜色配合下面的「敌我识别」", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视", Default = false, Callback = function(v)
 T.BodyHL = v
 if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 F.Out("[高亮] 身体高亮 = " .. (v and "开(隔墙可见 · 队友绿/敌人红看下面的敌我识别)" or "关"))
 end })
-Tabs.Visual:AddToggle("IxHL", { Title = "★ 高亮透视(值得注意的东西全标出来 · 隔墙可见)", Description = "一个开关标出全场: NPC/假人(棕) · 可交互物/门/箱子/按钮(金) · 陷阱/尖刺/岩浆/炸弹(红) · 道具/金币/宝石/蛋(绿) · 掉落物/武器(黄) · 载具/车船飞机(青)。其中陷阱/道具/掉落是按名字关键词认的, 换游戏可能认不出", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视", Default = false, Callback = function(v)
 T.IxHL = v
 if F._cfgSyncing then return end
 F.IxHLSet(v)
 end })
 Tabs.Visual:AddSection("穿墙透视")
-Tabs.Visual:AddToggle("XRay", { Title = "★ 穿墙透视(墙/建筑变透明 · 直接看到墙后)", Description = "把地图里除「玩家角色」外的物件在本地渲染层设为全透明 ⇒ 墙和建筑看不见了, 直接看到墙后。纯本地渲染、不改真数据, 关掉即恢复。地形(Terrain)不受影响", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("XRay", { Title = "穿墙透视", Default = false, Callback = function(v)
 T.XRay = v
 if F._cfgSyncing then return end
 F.XRaySet(v)
 end })
-Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别(队友绿 / 敌人红)", Description = "按队伍把别人分成队友(绿)和敌人(红); 优先读游戏自己的敌人名单, 读不到才按队伍判。自己没队伍时不会乱判", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别", Default = false, Callback = function(v)
 T.TeamColorHL = v
 if F._cfgSyncing then return end
 if T.BodyHL then F.BodyHLRefresh() end
 F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
 end })
 Tabs.World:AddSection("画面增强")
-Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强(全亮 + 夜视 + 去雾)", Description = "一起开: 全场景提亮、夜视、去雾; 关掉后原值还原", Default = false, Callback = function(v)
+Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
 if F._cfgSyncing then return end
 if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable() pcall(F.LightWatchEnable)
 else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() pcall(F.LightWatchDisable) end
 end })
-Tabs.World:AddToggle("ViewBoost", { Title = "视角增强(FOV + 无限缩放)", Description = "拉大视野并解除镜头缩放距离限制, 看得更远更广", Default = false, Callback = function(v)
+Tabs.World:AddToggle("ViewBoost", { Title = "视角增强", Default = false, Callback = function(v)
 T.FOV = v T.Zoom = v
 if F._cfgSyncing then return end
 if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 F.Out("[视角] 视角增强 = " .. (v and "开(FOV+无限缩放)" or "关"))
 end })
-Tabs.World:AddToggle("Mute", { Title = "静音", Description = "把游戏音效压到 0; 关掉还原原音量", Default = false, Callback = function(v)
+Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
 T.Mute = v
 if F._cfgSyncing then return end
 if v then MuteEnable() else MuteDisable() end
 F.Out("[静音] " .. (v and "已开" or "已关"))
 end })
-Tabs.World:AddToggle("Antilag", { Title = "降画质(省性能 · 关掉即还原)", Description = "一次性压低渲染档位, 关阴影/后处理/材质/灯光/粒子/云/水面反射, 并把远处小物件隐藏。每一项都记了原值, 关掉会完整还原", Default = false, Callback = function(v)
+Tabs.World:AddToggle("Antilag", { Title = "降画质", Default = false, Callback = function(v)
 T.Antilag = v
 if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 F.Out("[降画质] " .. (v and "已开" or "已关"))
 end })
-Tabs.World:AddSection("角色识别(谁是杀手/警长 · 通用)")
-Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接标在头上)", Description = "从游戏的角色/身份字段读出谁是杀手、谁是警长, 直接标在头顶; 读不到就不标", Default = false, Callback = function(v)
+Tabs.World:AddSection("角色识别")
+Tabs.World:AddToggle("RoleTag", { Title = "头顶标记", Default = false, Callback = function(v)
 T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
 end })
 Tabs.World:AddSection("相机 / 准星")
-Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Description = "屏幕角上显示帧率和延迟, 方便看性能变化", Default = false, Callback = function(v)
+Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
 T.Hud = v
 if F._cfgSyncing then return end
 if v then F.HudEnable() else F.HudDisable() end
 end })
-Tabs.World:AddToggle("Crosshair", { Title = "准星(屏幕中心)", Description = "显示一个自定义准星; 样式/大小/颜色见下面三项", Default = false, Callback = function(v)
+Tabs.World:AddToggle("Crosshair", { Title = "准星", Default = false, Callback = function(v)
 T.Crosshair = v
 if F._cfgSyncing then return end
 if v then F.CrosshairEnable() else F.CrosshairDisable() end
 end })
-Tabs.World:AddDropdown("CrosshairStyle", { Title = "准星样式", Description = "十字 / 点 / 圆圈 三种", Values = { "十字(默认)", "点(小圆点)", "圆(空心圈)" }, Default = "十字(默认)", Callback = function(v)
+Tabs.World:AddDropdown("CrosshairStyle", { Title = "准星样式", Values = { "十字(默认)", "点(小圆点)", "圆(空心圈)" }, Default = "十字(默认)", Callback = function(v)
 C.CrosshairStyle = tostring(v)
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
 end })
-Tabs.World:AddSlider("CrosshairSize", { Title = "准星大小(像素)", Description = "准星的整体尺寸", Min = 6, Max = 40, Default = 14, Rounding = 0, Callback = function(v)
+Tabs.World:AddSlider("CrosshairSize", { Title = "准星大小", Min = 6, Max = 40, Default = 14, Rounding = 0, Callback = function(v)
 C.CrosshairSize = v
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
 end })
-Tabs.World:AddColorPicker("CrosshairColor", { Title = "准星颜色", Description = "准星的颜色", Default = Color3.fromRGB(0, 255, 120), Callback = function(v)
+Tabs.World:AddColorPicker("CrosshairColor", { Title = "准星颜色", Default = Color3.fromRGB(0, 255, 120), Callback = function(v)
 C.CrosshairColor = v
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
@@ -11676,8 +11616,8 @@ end })
 end
 do
 Tabs.TP:AddSection("传送")
-Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家(下拉选人)", Description = "选谁就针对谁。列表会随有人进服/离服自动刷新", Values = F.PlayerNames(), Default = nil })
-Tabs.TP:AddButton({ Title = "传送到目标", Description = "传送到上面下拉里选中的那个玩家身边", Callback = function()
+Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
+Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 if not F.Once("tp_target", 1.5) then return end
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then F.Out("[传送] 先在左边「目标玩家」里选一个人") return end
@@ -11686,27 +11626,27 @@ if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已
 if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.Name .. "」现在没有角色(在复活/已死)") return end
 TeleportToPlayer(pl)
 end })
-Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Description = "按 T 传到你鼠标指向的位置(手机是屏幕点的地方)", Default = false, Callback = function(v)
+Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Default = false, Callback = function(v)
 T.TPMouse = v
 if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
 end })
-Tabs.Move:AddSection("针对玩家(用上面的「目标玩家」选人 · 能否真动他取决于本服)")
-Tabs.Move:AddButton({ Title = "★ 用绳子把他拉过来(逐帧拖)", Description = "先抢他的网络所有权再逐帧拖过来。只有本服允许抢所有权时才真拉得动(多数游戏锁了 ⇒ 会明确告诉你不支持); 跨服做不到", Callback = function()
+Tabs.Move:AddSection("针对玩家")
+Tabs.Move:AddButton({ Title = "用绳子把他拉过来", Callback = function()
 if not F.Once("pull", 1.5) then return end
 task.spawn(function() pcall(F.PullPlayer) end)
 end })
-Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "先抢所有权再一次挪到位。同样受本服限制: 抢不到就是动不了; 跨服做不到", Callback = function()
+Tabs.Move:AddButton({ Title = "把他瞬间 TP 到我面前", Callback = function()
 if not F.Once("tpmove", 1.5) then return end
 task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
-Tabs.Move:AddButton({ Title = "★ 把他甩飞(撞飞/推飞 · 自动择优)", Description = "先试抢他的所有权直接推飞; 抢不到就改成「把自己变成高速旋转体撞过去」(公开 fling 脚本的主流做法, 不依赖对方所有权)。速度检测严格的游戏可能把你拉回或踢出", Callback = function()
+Tabs.Move:AddButton({ Title = "把他甩飞", Callback = function()
 if not F.Once("fling", 1.5) then return end
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
-Tabs.TP:AddSection("收藏点位(5 个 · 点=存/传 · 右键或长按=删)")
+Tabs.TP:AddSection("收藏点位")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
 F._wpb[i] = Tabs.TP:AddButton({ Title = "点位" .. tostring(i) .. " · 空位(点=存 / 右键=删)", Callback = function()
@@ -11714,44 +11654,44 @@ F.WpClick(i)
 end })
 F.WpSlotHook(i, F._wpb[i])
 end
-Tabs.TP:AddButton({ Title = "删除最近保存的点位", Description = "把最后存进去的那个点位删掉", Callback = function()
+Tabs.TP:AddButton({ Title = "删除最近保存的点位", Callback = function()
 F.WaypointDel(F.WpLastName())
 F.WaypointRefreshUI()
 end })
-Tabs.TP:AddButton({ Title = "清空所有点位", Description = "一次性删掉 5 个点位", Callback = function() F.WpClear() end })
+Tabs.TP:AddButton({ Title = "清空所有点位", Callback = function() F.WpClear() end })
 F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.AFK:AddSection("★ 挂机防踢")
-Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(PuckAFK 通用做法 · 默认开)", Description = "游戏判你挂机时, 在屏幕角落做一次「空点」把挂机计时清零。不改你的角色、不装任何元表钩子 ⇒ 不会因为 hook 被反作弊踢。触屏设备自动跳过", Default = true, Callback = function(v)
+Tabs.AFK:AddSection("挂机防踢")
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢", Default = true, Callback = function(v)
 T.AntiAFK = v
 if F._cfgSyncing then return end
 if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
 end })
-Tabs.AFK:AddSection("自动化(锻炼 / 领奖 / 健身房)")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼(手持配重 · 只在原地练)", Description = "只在原地: 把配重拿上手 + 反复触发锻炼动作。不移动、不传送、不领奖 —— 要自动领 ×2/×5 奖励请开下面的「自动领取」", Default = false, Callback = function(v)
+Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
 if v then F.AutoTrainEnable() else F.AutoTrainDisable() end
 end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取锻炼奖励(×2 / ×5 / ×10 多倍)", Description = "只点掉锻炼/健身弹出的多倍奖励按钮(名叫 Bonus/PopBonus, 或写着 ×2/×5/×10 的按钮)。不领邮箱/离线/转盘等其他东西", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取锻炼奖励", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
 if v then F.AutoBonusEnable() else F.AutoBonusDisable() end
 end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房(自动参加健身房事件)", Description = "只有这个开关会让角色移动: 自动传送到最近的 LIFT 举铁机并站上去反复重进, 站到游戏认可为止", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("脑红 / 现金")
-Tabs.AFK:AddButton({ Title = "★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出去的脑红全部收回背包, 逐个槽位扫 1~30", Callback = function()
+Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
 Tabs.Trans:AddSection("本地翻译服务")
-Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(界面文字 + 互动文字)", Description = "由本地翻译服务把游戏里的英文界面/文字译成你选的语言; 范围见下面「翻译范围」", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v then
 F.TranslateEnable()
@@ -11759,7 +11699,7 @@ else
 F.TranslateDisable()
 end
 end })
-Tabs.Trans:AddDropdown("TransScope", { Title = "翻译范围", Description = "只翻译界面 / 再加公屏聊天 / 再加气泡(全部)", Values = { "只翻译界面", "界面 + 公屏聊天", "界面 + 公屏 + 气泡(全部)" }, Default = "只翻译界面", Callback = function(v)
+Tabs.Trans:AddDropdown("TransScope", { Title = "翻译范围", Values = { "只翻译界面", "界面 + 公屏聊天", "界面 + 公屏 + 气泡(全部)" }, Default = "只翻译界面", Callback = function(v)
 local s = tostring(v)
 local chat = s:find("公屏", 1, true) ~= nil
 local bub = s:find("气泡", 1, true) ~= nil
@@ -11769,7 +11709,7 @@ if chat then pcall(F.ChatTranslateEnable) else pcall(F.ChatTranslateDisable) end
 if bub then pcall(F.BubbleTranslateEnable) else pcall(F.BubbleTranslateDisable) end
 F.Out("[翻译] 范围 = " .. s)
 end })
-Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言(要译成哪种语言)", Description = "切换后会清掉缓存并把界面重新译一遍", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
+Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
 Default = "zh", Callback = function(v)
 C.TransLang = v
 if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
@@ -11779,7 +11719,7 @@ F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面�
 task.spawn(function() pcall(Trans.RetranslateAll) end)
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
-Tabs.Trans:AddToggle("ChatIMEBox", { Title = "★ 中文聊天框(独立开关)", Description = "屏幕下方出现一个 [CM] 输入框: 打中文回车直接发送。脚本直接发消息并折掉输入法「重复上屏」那一次 ⇒ 不会打一个变两个。不开翻译也能用", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("ChatIMEBox", { Title = "中文聊天框", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 pcall(F.ChatBoxSet, v)
 end })
@@ -11840,7 +11780,7 @@ pcall(F.CfgSyncUI)
 F.Out("[防护档位] = " .. v)
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = v, Duration = 6 }) end)
 end
-Tabs.AC:AddDropdown("ACMaster", { Title = "★ 防护档位(按需选 · 越轻越稳)", Description = "关 = 什么都不开 · ①轻 = 只装只读钩(反甩 + 护界面 + 权限守卫 + 属性读伪装) · ②中 = 再加 namecall 拦上报 + 拦受伤上报 + 反封禁 4 层 · ③重 = 元表钩全装 + 断可疑连接 + 深度中和(最激进, 也最容易被反作弊注意)", Values = {
+Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 反甩+护界面+权限守卫+属性读伪装(只装 __index 只读钩)",
 "② 中 · +namecall 拦上报+拦受伤上报+反封禁4层+温和绕过层(时钟/调试名/Instance)",
@@ -11850,9 +11790,9 @@ T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报(合成一个)", Description = "拦掉客户端发给服务端的受伤/死亡上报, 同时隔离伪装自己的血量读数 —— 一个开关两件事", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
-Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
-Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍)", Description = "把游戏里的远程/脚本/界面/资产全扫一遍, 结果写进脚本日志文件并提示路径, 你直接发给我就行", Callback = function()
+Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
+Tabs.AC:AddSection("扫描 / 收集")
+Tabs.AC:AddButton({ Title = "一键全扫描", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
 pcall(F.CMX_ScanAll)
@@ -11931,51 +11871,31 @@ pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸
 F._fusing = false
 end
 Tabs.Setting:AddSection("日志防护")
-Tabs.Setting:AddToggle("LockLog", { Title = "护日志(拦 LogService:ClearOutput)", Description = "阻止游戏清空日志输出, 防止反作弊抹掉痕迹", Default = false, Callback = function(v)
+Tabs.Setting:AddToggle("LockLog", { Title = "护日志", Default = false, Callback = function(v)
 T.LockLog = v
 if F._cfgSyncing then return end
 pcall(F.LockLogClear, v)
 end })
-Tabs.Setting:AddSection("配置存档")
-Tabs.Setting:AddButton({ Title = "保存当前设置到本地", Description = "把现在所有开关和数值写进本地存档", Callback = function()
-if not F.Once("cfg_save", 1.5) then return end
-local ok, msg = F.CfgSaveNow()
-F.Out("[配置] 保存" .. (ok and "成功 · " or "失败 · ") .. tostring(msg))
-end })
-Tabs.Setting:AddButton({ Title = "读取上次设置(只恢复数值, 不自动开开关)", Description = "恢复存档里的数值; 开关状态不会因此自动打开, 需要你自己再点", Callback = function()
-if not F.Once("cfg_load", 1.5) then return end
-F.CfgApplyC()
-end })
-Tabs.Setting:AddToggle("CfgAuto", { Title = "自动保存(每 5 秒有变化就写盘)", Description = "开着时, 你改任何设置过 5 秒就会自动存一次", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v then
-F.CfgAutoLoop()
-F.Out("[配置] 自动保存已开")
-else
-if F._cfgLoop then pcall(function() F._cfgLoop:Disconnect() end) F._cfgLoop = nil end
-F.Out("[配置] 自动保存已关")
-end
-end })
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
-Tabs.Setting:AddButton({ Title = "★ 热加载(有新版本才重载)", Description = "检查远端版本, 有新版才重新下载并加载; 已是最新就什么都不做", Callback = function()
+Tabs.Setting:AddButton({ Title = "热加载", Callback = function()
 if not F.Once("reload", 6) then return end
 F.HotReload(false)
 end })
-Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍)", Description = "强制重新下载脚本并加载。热加载点了没反应就用这个", Callback = function()
+Tabs.Setting:AddButton({ Title = "强制重载", Callback = function()
 if not F.Once("reloadforce", 3) then return end
 F.HotReload(true)
 end })
-Tabs.Setting:AddToggle("KickRejoin", { Title = "被踢/掉线自动回到同一服务器", Description = "被踢出或掉线时自动重连回同一服务器的同一位置。只在真的离开时触发, 平时零开销", Default = false, Callback = function(v)
+Tabs.Setting:AddToggle("KickRejoin", { Title = "被踢/掉线自动回到同一服务器", Default = false, Callback = function(v)
 T.KickRejoin = v
 if F._cfgSyncing then return end
 if v then pcall(F.KickRejoinEnable) else pcall(F.KickRejoinDisable) end
 end })
-Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function()
+Tabs.Setting:AddButton({ Title = "重新进入服务器", Callback = function()
 if not F.Once("rejoin", 6) then return end
 F.RejoinNow()
 end })
-Tabs.Setting:AddButton({ Title = "一键全关(关掉所有功能并还原)", Callback = function()
+Tabs.Setting:AddButton({ Title = "一键全关", Callback = function()
 if not F.Once("alloff", 2) then return end
 pcall(F.PanicKeyDisableAll)
 end })
@@ -12064,7 +11984,7 @@ end
 end
 end
 end
-local _polishCache, _polishAt = nil, 0
+local _polishCache, _polishAt, _polishState = nil, 0, setmetatable({}, { __mode = "k" })
 local function polishToggleVisuals()
 if not (Fluent and Fluent.GUI) then return end
 local now = os.clock()
@@ -12078,6 +11998,7 @@ if need then
 local ok, desc = pcall(function() return F.walk(Fluent.GUI) end)
 if not ok or not desc then return end
 _polishCache = {}
+_polishState = setmetatable({}, { __mode = "k" })
 for i = 1, #desc do
 local obj = desc[i]
 if obj:IsA("ImageLabel") and tostring(obj.Image or ""):find("12266946128", 1, true) then
@@ -12089,12 +12010,15 @@ end
 for _, obj in ipairs(_polishCache) do
 if obj.Parent then
 local isOn = obj.Position.X.Offset >= 15
+if _polishState[obj] ~= isOn then
+_polishState[obj] = isOn
 if isOn then
 obj.ImageColor3 = Color3.fromRGB(255, 255, 255)
 obj.ImageTransparency = 0
 else
 obj.ImageColor3 = Color3.fromRGB(150, 150, 150)
 obj.ImageTransparency = 0.45
+end
 end
 end
 end
