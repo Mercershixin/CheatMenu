@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:26 sha 4e786646 bytes 524483'):format('2026-10-05 23:26','4e786646',524483))
+print(('[CheatMenu] build 2026-10-05 23:38 sha 433dbdfb bytes 527595'):format('2026-10-05 23:38','433dbdfb',527595))
 local F = {}
-F.VERSION = "v16.9.10"
+F.VERSION = "v16.9.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8782,6 +8782,110 @@ end
 clickBonusButtons(false)
 end
 local GymThread = nil
+local function gymMult()
+local a, b, c = 0, 0, 0
+pcall(function() a = tonumber(LP:GetAttribute("liftMachine")) or 0 end)
+pcall(function() b = tonumber(LP:GetAttribute("gym_speed")) or 0 end)
+pcall(function() c = tonumber(LP:GetAttribute("gym_power")) or 0 end)
+return a, b, c
+end
+local function waitGymRecognition(sec)
+local t0 = os.clock()
+while os.clock() - t0 < (sec or 0.9) do
+local a, b, c = gymMult()
+if a > 1 or b > 1 or c > 1 then return true end
+task.wait(0.08)
+end
+return false
+end
+F.NetRoot = function()
+local r = nil
+pcall(function()
+local RSv = game:GetService("ReplicatedStorage")
+local sh = RSv:FindFirstChild("Shared")
+local pk = sh and sh:FindFirstChild("Packages")
+r = pk and pk:FindFirstChild("Network")
+end)
+return r
+end
+F.RemoteByName = function(name)
+local root = F.NetRoot()
+if not root then return nil end
+local r = nil
+pcall(function() r = root:FindFirstChild("rev_" .. tostring(name)) end)
+if r and r:IsA("RemoteEvent") then return r end
+return nil
+end
+F.ConnectRemote = function(name, cb)
+local r = F.RemoteByName(name)
+if not r then return false end
+pcall(function() r.OnClientEvent:Connect(cb) end)
+return true
+end
+F.ClaimRemoteSweep = function()
+local root = F.NetRoot()
+if not root then return 0 end
+local KEYS = { "claim", "award", "reward", "bonus", "mail", "collect", "daily", "gift", "cash", "spin" }
+local n = 0
+pcall(function()
+local kids = root:GetChildren()
+local i, j
+for i = 1, #kids do
+local o = kids[i]
+if o:IsA("RemoteEvent") then
+local nm = tostring(o.Name)
+if nm:sub(1, 4) == "rev_" then
+local low = nm:lower()
+for j = 1, #KEYS do
+if low:find(KEYS[j], 1, true) then
+pcall(function() o:FireServer() end)
+n = n + 1
+break
+end
+end
+end
+end
+end
+end)
+return n
+end
+F.GymEventWatch = function(on)
+if not on then
+if F._gymWatchConns then
+for _, c in ipairs(F._gymWatchConns) do pcall(function() c:Disconnect() end) end
+F._gymWatchConns = nil
+end
+return
+end
+if F._gymWatchConns then return end
+local root = F.NetRoot()
+if not root then return end
+local conns = {}
+pcall(function()
+local KEYS = { "gym", "lift", "train" }
+local kids = root:GetChildren()
+local i, j
+for i = 1, #kids do
+local o = kids[i]
+if o:IsA("RemoteEvent") then
+local low = tostring(o.Name):lower()
+for j = 1, #KEYS do
+if low:find(KEYS[j], 1, true) then
+conns[#conns + 1] = o.OnClientEvent:Connect(function()
+F._gymEventAt = os.clock()
+F._gymEventName = tostring(o.Name)
+end)
+break
+end
+end
+end
+end
+end)
+F._gymWatchConns = conns
+if #conns > 0 then
+F.Out("[健身房] 已挂事件监听 " .. tostring(#conns) .. " 条(照 2.txt 的 connectRemote 做法)")
+end
+end
 local function liveMachines()
 local r = {}
 local ok, t = pcall(CS.GetTagged, CS, "LiftMachine")
@@ -8821,10 +8925,15 @@ if ok then pos = pivot.Position end
 elseif best:IsA("BasePart") then pos = best.Position end
 if pos then
 local target = pos + Vector3.new(0, 3, 0)
-if (root.Position - target).Magnitude > 2.5 then
+local farD = (root.Position - target).Magnitude
+if farD > 2.5 then
+pcall(function()
+local _, humM = GC()
+if humM then humM:MoveTo(target) end
+end)
 if os.clock() - (F._gymNote or 0) > 8 then
 F._gymNote = os.clock()
-F.Out("[健身房] 检测到机器在 " .. string.format("%.0f", (root.Position - target).Magnitude) .. " 格外 —— 已不再自动把你吸上机器, 你自己站上去(站着+手持配重就会算锻炼)")
+F.Out("[健身房] 检测到机器在 " .. string.format("%.0f", farD) .. " 格外 ⇒ 正在自动走过去参加(内置寻路 MoveTo, 不注入按键)")
 end
 end
 pcall(function() equipSquatTool() end)
@@ -8840,11 +8949,13 @@ vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
 end)
 task.wait(0.15)
 end
-local lv2 = tonumber(LP:GetAttribute("liftMachine")) or 0
-if lv2 ~= (F._gymLv or -1) then
-F._gymLv = lv2
-F.Out("[健身房] 已站上机器 · liftMachine=" .. tostring(lv2)
-.. (lv2 > 0 and " (在涨 ⇒ 效果吃上了)" or " (还是 0 ⇒ 游戏没判定你在锻炼, 把这条发我)"))
+local okG = waitGymRecognition(0.9)
+local g1, g2, g3 = gymMult()
+local sig = tostring(g1) .. "/" .. tostring(g2) .. "/" .. tostring(g3)
+if sig ~= (F._gymLv or "") then
+F._gymLv = sig
+F.Out("[健身房] 站上机器 · 增益 liftMachine=x" .. tostring(g1) .. " · gym_speed=x" .. tostring(g2) .. " · gym_power=x" .. tostring(g3)
+.. (okG and " ⇒ 游戏已认可(锻炼真生效了)" or " ⇒ 游戏还没认可(换个位置或换台机器再试)"))
 end
 end
 else equipSquatTool() end
@@ -8955,6 +9066,7 @@ end)
 end
 function F.AutoGymEnable()
 if GymThread2 or GymThread then return end
+pcall(function() F.GymEventWatch(true) end)
 pcall(function()
 if kickUpgradesGui() then
 F.Out("[健身房] 已启动: 手持配重 + 自动点击 KickUpgrades 的 Bonus/PopBonus 锻炼弹窗")
@@ -8981,6 +9093,7 @@ end)
 end
 function F.AutoGymDisable()
 T.AutoGym = false
+pcall(function() F.GymEventWatch(false) end)
 GymThread2 = nil
 F.Out("[健身房] 已停止")
 end
@@ -9055,6 +9168,11 @@ pcall(function()
 local n, saw = clickBonusButtons(false)
 if not saw then n = n + scanMultiplierButtons() end
 collectCashOnce()
+if os.clock() - (F._claimSweepAt or 0) > 60 then
+F._claimSweepAt = os.clock()
+local cn = F.ClaimRemoteSweep()
+if cn > 0 then F.Out("[领奖] 已按远程名字主动领奖 " .. tostring(cn) .. " 次(照 2.txt 的 AutoClaimMailboxRewards 做法)") end
+end
 if n > 0 then
 total = total + n
 if os.clock() - logAt > 20 then
