@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 21:23 sha 66583737 bytes 520113'):format('2026-10-05 21:23','66583737',520113))
+print(('[CheatMenu] build 2026-10-05 22:01 sha 7c69ddb9 bytes 522723'):format('2026-10-05 22:01','7c69ddb9',522723))
 local F = {}
-F.VERSION = "v16.9.4"
+F.VERSION = "v16.9.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3106,6 +3106,9 @@ local ch = pl.Character
 if not ch or not ch.Parent then return nil end
 local hum = ch:FindFirstChildOfClass("Humanoid")
 if not hum or hum.Health <= 0 then return nil end
+local hst = nil
+pcall(function() hst = hum:GetState() end)
+if hst == Enum.HumanoidStateType.Dead then return nil end
 if T.CombatSkipInvincible ~= false then
 if ch:FindFirstChildOfClass("ForceField") then return nil, "无敌" end
 if hum.Health > hum.MaxHealth + 0.01 then return nil, "无敌" end
@@ -3126,6 +3129,13 @@ end
 local ignore = {}
 if LP.Character then ignore[#ignore + 1] = LP.Character end
 pcall(function() ignore[#ignore + 1] = workspace.CurrentCamera end)
+local oka, allp = pcall(function() return Players:GetPlayers() end)
+if oka and allp then
+local oi
+for oi = 1, #allp do
+if allp[oi].Character then ignore[#ignore + 1] = allp[oi].Character end
+end
+end
 local params = F.CombatNewRay(ignore)
 local best, bestD = nil, math.huge
 for _, n in ipairs(F.COMBAT_LOS_PARTS) do
@@ -7942,6 +7952,9 @@ if ch then
 head = ch:FindFirstChild("Head")
 hrp = ch:FindFirstChild("HumanoidRootPart")
 hum = ch:FindFirstChildOfClass("Humanoid")
+if not hrp then pcall(function() hrp = ch.PrimaryPart or ch:FindFirstChildWhichIsA("BasePart") end) end
+if not head then head = hrp end
+if not hum then pcall(function() hum = ch:FindFirstChildWhichIsA("Humanoid") end) end
 end
 if rec and head and hrp and hum and hum.Health > 0 then
 local topW = head.Position + Vector3.new(0, 0.55, 0)
@@ -8102,18 +8115,40 @@ for i = 1, #k do F.Out("   [杀手] " .. k[i]) end
 for i = 1, #sh do F.Out("   [警长] " .. sh[i]) end
 if #k == 0 and #sh == 0 then F.Out("   (没识别出杀手/警长 — 可能本局没分发, 或者该游戏不向客户端暴露角色)") end
 end
-F.CMX_HLTeamColor = function(pl)
-if T.TeamColorHL == false then return F.ROLE_COLOR.none end
-local same = false
-local hasTeam = false
+F.GameEnemyNames = {}
+F.RefreshGameEnemyNames = function()
+local out = {}
 pcall(function()
-if pl.Team ~= nil then
-hasTeam = true
-same = (pl.Team == LP.Team)
+local hl = workspace:FindFirstChild("Highlight")
+if not hl then return end
+local en = hl:FindFirstChild("Enemy")
+if not en then return end
+local names = {}
+local pls = Players:GetPlayers()
+local i
+for i = 1, #pls do names[pls[i].Name] = true end
+local ds = en:GetDescendants()
+for i = 1, #ds do
+if names[ds[i].Name] then out[ds[i].Name] = true end
 end
 end)
-if not hasTeam then return F.ROLE_COLOR.none end
-return same and Color3.fromRGB(0, 255, 80) or Color3.fromRGB(255, 60, 60)
+F.GameEnemyNames = out
+end
+F.CMX_HLTeamColor = function(pl)
+if T.TeamColorHL == false then return F.ROLE_COLOR.none end
+local now2 = os.clock()
+if now2 - (F._enemyScanAt or 0) > 2 then
+F._enemyScanAt = now2
+pcall(F.RefreshGameEnemyNames)
+end
+if F.GameEnemyNames and F.GameEnemyNames[pl.Name] then return Color3.fromRGB(255, 60, 60) end
+if T.TeamColorHL == false then return F.ROLE_COLOR.none end
+local mine, theirs = nil, nil
+pcall(function() mine = LP.Team end)
+pcall(function() theirs = pl.Team end)
+if mine == nil or theirs == nil then return F.ROLE_COLOR.none end
+if theirs == mine then return Color3.fromRGB(0, 255, 80) end
+return Color3.fromRGB(255, 60, 60)
 end
 F.CMX_HLWarnColor = function()
 local c = C.CMX_HLWallColor
@@ -8149,9 +8184,19 @@ rp.IgnoreWater = true
 F._hlRP = rp
 end
 local ex = F._hlEx
+local ei
+for ei = #ex, 1, -1 do ex[ei] = nil end
 ex[1] = ch
 ex[2] = cam
 ex[3] = myCh
+local okb, allb = pcall(function() return Players:GetPlayers() end)
+if okb and allb then
+local bi, bc
+for bi = 1, #allb do
+bc = allb[bi].Character
+if bc ~= nil and bc ~= ch then ex[#ex + 1] = bc end
+end
+end
 F._hlRP.FilterDescendantsInstances = ex
 local ok, hit = pcall(workspace.Raycast, workspace, origin, dir, F._hlRP)
 if ok and hit then return true end
@@ -8238,6 +8283,7 @@ end)
 end
 if not F._hlAdded then
 F._hlAdded = Players.PlayerAdded:Connect(function(pl)
+if pl.Character then task.defer(function() F.BodyHLAdd(pl) F.BodyHLRefresh() end) end
 pl.CharacterAdded:Connect(function() task.wait(0.4) F.BodyHLAdd(pl) F.BodyHLRefresh() end)
 end)
 end
@@ -13329,6 +13375,37 @@ p[nm] = (function(fn, label)
 return function(_, ...)
 local ok, res = pcall(fn, t, ...)
 if not ok then
+if label == "AddColorPicker" then
+local p1, p2 = ...
+local opts = p2 or {}
+local ok2 = false
+pcall(function()
+local PRESET = {
+["绿"] = Color3.fromRGB(0, 255, 120),
+["红"] = Color3.fromRGB(255, 60, 60),
+["黄"] = Color3.fromRGB(255, 220, 60),
+["青"] = Color3.fromRGB(0, 235, 255),
+["蓝"] = Color3.fromRGB(70, 140, 255),
+["白"] = Color3.fromRGB(255, 255, 255),
+["紫"] = Color3.fromRGB(190, 120, 255),
+["橙"] = Color3.fromRGB(255, 150, 40),
+}
+t:AddDropdown(p1, {
+Title = tostring(opts.Title or "颜色") .. " [预设 · 本执行器无取色器]",
+Values = { "绿", "红", "黄", "青", "蓝", "白", "紫", "橙" },
+Default = "绿",
+Callback = function(v)
+local c = PRESET[tostring(v)]
+if c ~= nil and type(opts.Callback) == "function" then pcall(opts.Callback, c) end
+end,
+})
+ok2 = true
+end)
+if ok2 then
+pcall(function() F.Out("[UI] * " .. tag .. " / AddColorPicker 本执行器不支持 -> 已自动降级为「预设颜色下拉」") end)
+return nil
+end
+end
 F._uiFails = F._uiFails + 1
 pcall(function() F.Out("[UI] * " .. tag .. " / " .. label .. " -> 建不出来(已跳过这一项, 其余照常): " .. tostring(res)) end)
 return nil
