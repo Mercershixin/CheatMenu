@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 22:01 sha 7c69ddb9 bytes 522723'):format('2026-10-05 22:01','7c69ddb9',522723))
+print(('[CheatMenu] build 2026-10-05 22:21 sha 9db77aa2 bytes 524621'):format('2026-10-05 22:21','9db77aa2',524621))
 local F = {}
-F.VERSION = "v16.9.5"
+F.VERSION = "v16.9.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3100,10 +3100,9 @@ if p.FilterType ~= Enum.RaycastFilterType.Exclude then pcall(function() p.Filter
 p.FilterDescendantsInstances = ignore or {}
 return p
 end
-F.CombatAlive = function(pl)
-if typeof(pl) ~= "Instance" then return nil end
-local ch = pl.Character
-if not ch or not ch.Parent then return nil end
+F.CombatAliveBody = function(ch)
+if typeof(ch) ~= "Instance" then return nil end
+if not ch.Parent then return nil end
 local hum = ch:FindFirstChildOfClass("Humanoid")
 if not hum or hum.Health <= 0 then return nil end
 local hst = nil
@@ -3121,11 +3120,13 @@ end
 if not root then return nil, "没模型" end
 return ch, hum, root
 end
-F.CombatVisible = function(ch, fromPos)
-if T.CombatWallCheck == false then
-local r = ch.PrimaryPart
-return r and r.Position or nil
+F.CombatAlive = function(pl)
+if typeof(pl) ~= "Instance" then return nil end
+local ch = pl.Character
+if not ch then return nil end
+return F.CombatAliveBody(ch)
 end
+F.CombatVisible = function(ch, fromPos, prefer)
 local ignore = {}
 if LP.Character then ignore[#ignore + 1] = LP.Character end
 pcall(function() ignore[#ignore + 1] = workspace.CurrentCamera end)
@@ -3136,7 +3137,29 @@ for oi = 1, #allp do
 if allp[oi].Character then ignore[#ignore + 1] = allp[oi].Character end
 end
 end
+if T.CombatWallCheck == false then
+if prefer then
+for pi = 1, #prefer do
+local pp = ch:FindFirstChild(prefer[pi])
+if pp and pp:IsA("BasePart") then return pp end
+end
+end
+for _, n in ipairs(F.COMBAT_LOS_PARTS) do
+local p = ch:FindFirstChild(n)
+if p and p:IsA("BasePart") then return p end
+end
+return nil
+end
 local params = F.CombatNewRay(ignore)
+if prefer then
+for pi = 1, #prefer do
+local pp = ch:FindFirstChild(prefer[pi])
+if pp and pp:IsA("BasePart") then
+local h0 = workspace:Raycast(fromPos, pp.Position - fromPos, params)
+if (not h0) or h0.Instance:IsDescendantOf(ch) then return pp end
+end
+end
+end
 local best, bestD = nil, math.huge
 for _, n in ipairs(F.COMBAT_LOS_PARTS) do
 local part = ch:FindFirstChild(n)
@@ -3150,6 +3173,41 @@ end
 end
 return best
 end
+F._candBuf = F._candBuf or {}
+F._combatNpcs = F._combatNpcs or {}
+F._combatNpcAt = 0
+F.CombatNpcRefresh = function()
+local now = os.clock()
+if #F._combatNpcs > 0 and (now - (F._combatNpcAt or 0)) < 1.5 then return F._combatNpcs end
+F._combatNpcAt = now
+local out = F._combatNpcs
+local n = 0
+pcall(function()
+local list = workspace:GetChildren()
+local i
+for i = 1, #list do
+local o = list[i]
+if o ~= LP.Character and F.IsNPC(o) and o:FindFirstChildOfClass("Humanoid") then n = n + 1 out[n] = o end
+end
+for i = 1, #list do
+local o = list[i]
+local okf = pcall(function() return o:IsA("Folder") and not o:IsA("Model") end)
+if okf then
+local okk, kids = pcall(function() return o:GetChildren() end)
+if okk and kids then
+local j
+for j = 1, #kids do
+local k = kids[j]
+if k ~= LP.Character and F.IsNPC(k) and k:FindFirstChildOfClass("Humanoid") then n = n + 1 out[n] = k end
+end
+end
+end
+end
+end)
+local i = #out
+while i > n do out[i] = nil i = i - 1 end
+return out
+end
 F.CombatPick = function()
 local _, hum0, root0 = GC()
 if not root0 then return nil, nil, "没有角色" end
@@ -3161,10 +3219,25 @@ local pov = (tostring(C.CombatMode or ""):find("正面", 1, true) ~= nil)
 local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
 local cur = F._combatNow
 local best, bestPart, bestScore, blocked, why = nil, nil, math.huge, 0, "没有敌人"
+local prefer = nil
+local wantPart = tostring(C.AimPart or "")
+if wantPart ~= "" then
+if wantPart:find("头", 1, true) ~= nil then prefer = { "Head" }
+elseif wantPart:find("躯干", 1, true) ~= nil then prefer = { "UpperTorso", "Torso" } end
+end
+local buf = F._candBuf
+local n = 0
 for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch, h, root = F.CombatAlive(pl)
-if ch then
+if pl ~= LP and pl.Character then n = n + 1 buf[n] = pl.Character end
+end
+local nl = F.CombatNpcRefresh()
+local i
+for i = 1, #nl do n = n + 1 buf[n] = nl[i] end
+local ci
+for ci = 1, n do
+local ch = buf[ci]
+local okc, h, root = F.CombatAliveBody(ch)
+if okc then
 local dist = (root.Position - root0.Position).Magnitude
 if dist <= range then
 local score = nil
@@ -3178,21 +3251,9 @@ else
 score = dist
 end
 if score then
-if pl == cur then score = score - 1e6 end
-local part = F.CombatVisible(ch, from)
+if ch == cur then score = score - 1e6 end
+local part = F.CombatVisible(ch, from, prefer)
 if part then
-local wantPart = tostring(C.AimPart or "")
-if wantPart ~= "" then
-local alt = nil
-pcall(function()
-if wantPart:find("头", 1, true) ~= nil then
-alt = ch:FindFirstChild("Head")
-elseif wantPart:find("躯干", 1, true) ~= nil then
-alt = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
-end
-end)
-if alt then part = alt end
-end
 if score < bestScore then best, bestPart, bestScore = ch, part, score end
 else
 blocked = blocked + 1
@@ -3204,7 +3265,8 @@ why = "超出锁定距离"
 end
 end
 end
-end
+local bi = n
+while bi > 0 do buf[bi] = nil bi = bi - 1 end
 F._combatNow, F._combatBlocked, F._combatWhy = best, blocked, why
 if best then return best, bestPart end
 return nil, nil, why
@@ -3330,6 +3392,7 @@ F._silentPart = nil
 end
 local dist = (part.Position - root.Position).Magnitude
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
+.. " · 锁" .. tostring(part.Name)
 .. (T.AutoFire and " · 自动开火中" or ""))
 local dir = part.Position - root.Position
 if T.AimTurnBody == true then
@@ -13427,7 +13490,7 @@ end
 end
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "锁定范围内的玩家与 NPC / 人机(有血量的非玩家角色)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
 Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Values = {
 "漏就锁(360°全身 · 只要打得到就锁)",
 "正面圈内锁(只锁屏幕正面圈里的)",
