@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:27 sha 99703c76 bytes 542140'):format('2026-10-05 18:27','99703c76',542140))
+print(('[CheatMenu] build 2026-10-05 18:39 sha 8c981c58 bytes 541931'):format('2026-10-05 18:39','8c981c58',541931))
 local F = {}
-F.VERSION = "v16.8.0"
+F.VERSION = "v16.8.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3280,12 +3280,12 @@ if pl == cur then score = score - 1e6 end
 local part = F.CombatVisible(ch, from)
 if part then
 local wantPart = tostring(C.AimPart or "")
-if wantPart ~= "" and wantPart ~= "最近部位(推荐)" then
+if wantPart ~= "" then
 local alt = nil
 pcall(function()
-if wantPart == "头" then
+if wantPart:find("头", 1, true) ~= nil then
 alt = ch:FindFirstChild("Head")
-elseif wantPart == "躯干" then
+elseif wantPart:find("躯干", 1, true) ~= nil then
 alt = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso")
 end
 end)
@@ -14106,6 +14106,11 @@ F.Out("[战斗] 瞄准点 = " .. tostring(v))
 end })
 Tabs.Combat:AddSlider("CombatRange", { Title = "锁定距离(格)", Min = 5, Max = 1000, Default = 200, Rounding = 0, Callback = function(v) C.CombatRange = v end })
 Tabs.Combat:AddSlider("CombatFOV", { Title = "正面圈大小(像素 · 只有正面圈内锁用)", Min = 50, Max = 1200, Default = 400, Rounding = 0, Callback = function(v) C.CombatFOV = v end })
+Tabs.Combat:AddToggle("FovCircle", { Title = "自瞄 FOV 圈(把上面那圈画出来)", Description = "半径跟着「正面圈大小」滑块走; 纯显示, 不影响锁定判定", Default = false, Callback = function(v)
+T.FovCircle = v
+if F._cfgSyncing then return end
+if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
+end })
 Tabs.Combat:AddToggle("CombatWallCheck", { Title = "不打隔墙(默认开)", Description = "从相机到目标打射线, 中间被墙/建筑挡住就不锁(所以不会隔着墙打)", Default = true, Callback = function(v)
 T.CombatWallCheck = v
 if F._cfgSyncing then return end
@@ -14247,10 +14252,10 @@ if not n then return end
 pcall(F.SetSpeedValue, "speed", n)
 end })
 Tabs.Move:AddSection("★ 防护(稳身 / 反攻击 / 反陷阱)")
-Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 防减速 + 护蛋 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 防减速=拿着一东西时游戏想把速度压慢会被挡回(保持正常速度, 服务端判定不受影响) · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("GuardAll", { Title = "防护(稳身 + 反攻击 + 反陷阱 + 反拉回 + 防减速 + 护蛋/搬运保护 · 合成一个)", Description = "稳身=不被击倒/甩飞 · 反攻击=被打不倒地不被击飞 · 反陷阱=踩上去不触发 · 反拉回=清检测脚本/断检测连接 · 防减速=拿着一东西时游戏想把速度压慢会被挡回(保持正常速度, 服务端判定不受影响) · 护蛋=只抢回你自己那个蛋(焊在手上 + 被卸下立刻装回) · 搬运保护=手上的东西焊点被拆/离手时自动装回", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
-T.SpeedAntiTP, T.MyEgg = v, v
+T.SpeedAntiTP, T.MyEgg, T.CarryGuard = v, v, v
 if F._cfgSyncing then return end
 pcall(F.ProtectApply)
 if v then
@@ -14258,13 +14263,15 @@ pcall(F.SpeedAntiTPEnable)
 pcall(F.SpeedFreeEnable)
 pcall(F.NoPullEnable)
 pcall(F.MyEggSet, true)
+pcall(F.CarryGuardEnable)
 else
 pcall(F.SpeedAntiTPDisable)
 pcall(F.SpeedFreeDisable)
 pcall(F.NoPullDisable)
 pcall(F.MyEggSet, false)
+pcall(F.CarryGuardDisable)
 end
-F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/反回拉/护蛋 = " .. (v and "开" or "关"))
+F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/反回拉/护蛋/搬运保护 = " .. (v and "开" or "关"))
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
@@ -14417,11 +14424,6 @@ C.CrosshairColor = v
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
 end })
-Tabs.World:AddToggle("FovCircle", { Title = "自瞄 FOV 圈(按自瞄视野画一个圈)", Description = "半径跟随自瞄视野滑块的数值; 纯显示, 不影响判定", Default = false, Callback = function(v)
-T.FovCircle = v
-if F._cfgSyncing then return end
-if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
-end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -14502,11 +14504,6 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Description =
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
-end })
-Tabs.AFK:AddToggle("CarryGuard", { Title = "★ 搬运守卫(焊点被拆就重焊 + 东西离手就拉回)", Description = "先站到要搬的东西旁边再开; 游戏判定你放下时自动拽回手上", Default = false, Callback = function(v)
-T.CarryGuard = v
-if F._cfgSyncing then return end
-if v then pcall(F.CarryGuardEnable) else pcall(F.CarryGuardDisable) end
 end })
 Tabs.AFK:AddSection("收起脑红")
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function()
