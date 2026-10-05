@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 10:16 sha 4ee84d4a bytes 539682'):format('2026-10-05 10:16','4ee84d4a',539682))
+print(('[CheatMenu] build 2026-10-05 17:20 sha 6da5526a bytes 539924'):format('2026-10-05 17:20','6da5526a',539924))
 local F = {}
-F.VERSION = "v16.6.0"
+F.VERSION = "v16.7.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8270,6 +8270,18 @@ F.Out("[快捷键] 已关")
 end
 F._pickLoop, F._pickAt, F._pickCount = nil, 0, 0
 F.PICK_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "coin", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest" }
+F.PickIsTarget = function(d)
+if d == nil then return false end
+if d == LP.Character then return false end
+local ok = false
+pcall(function() ok = d:IsA("BasePart") or d:IsA("Tool") end)
+if not ok then return false end
+local nm = string.lower(tostring(d.Name))
+for i = 1, #F.PICK_KEYS do
+if string.find(nm, F.PICK_KEYS[i], 1, true) then return true end
+end
+return false
+end
 F.AutoPickEnable = function()
 if F._pickLoop then return end
 F._pickCount = 0
@@ -8279,7 +8291,7 @@ if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop =
 return
 end
 local now = os.clock()
-local gap = tonumber(C.AutoPickGap) or 0.25
+local gap = tonumber(C.AutoPickGap) or 0.6
 if now - (F._pickAt or 0) < gap then return end
 F._pickAt = now
 local _, hum, root = GC()
@@ -8287,27 +8299,21 @@ if not (hum and root) then return end
 local range = tonumber(C.AutoPickRange) or 30
 local done = 0
 pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
+for _, d in ipairs(workspace:GetChildren()) do
 if done >= 6 then break end
-local isPart = false
-pcall(function() isPart = d:IsA("BasePart") or d:IsA("Tool") end)
-if isPart then
-local nm = string.lower(tostring(d.Name))
-local ok = false
-for i = 1, #F.PICK_KEYS do
-if string.find(nm, F.PICK_KEYS[i], 1, true) then ok = true break end
-end
-if ok then
+if F.PickIsTarget(d) then
 local pos = nil
 pcall(function() pos = d.Position end)
+local cand = { d }
+if pos == nil then
+pcall(function() if d:IsA("Model") then pos = (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart")) and (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart")).Position end end)
+end
 if pos then
 local dist = (pos - root.Position).Magnitude
 if dist <= range and dist > 0.5 then
-local touched = false
 if type(firetouchinterest) == "function" then
-pcall(function() firetouchinterest(root, d, 0) firetouchinterest(root, d, 1) touched = true end)
-end
-if not touched and type(firetouchinterest) ~= "function" then
+pcall(function() firetouchinterest(root, d, 0) firetouchinterest(root, d, 1) end)
+else
 pcall(function() d.CFrame = root.CFrame end)
 end
 done = done + 1
@@ -8316,10 +8322,9 @@ end
 end
 end
 end
-end
-end)
 end)
 F.Out("[自动拾取] 已开(碰到就收 · 半径 " .. tostring(tonumber(C.AutoPickRange) or 30) .. " 格)")
+end)
 end
 F.AutoPickDisable = function()
 if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop = nil end
