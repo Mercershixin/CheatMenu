@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 19:15 sha 4cf0c647 bytes 536685'):format('2026-10-05 19:15','4cf0c647',536685))
+print(('[CheatMenu] build 2026-10-05 19:35 sha a26b6152 bytes 536108'):format('2026-10-05 19:35','a26b6152',536108))
 local F = {}
-F.VERSION = "v16.8.4"
+F.VERSION = "v16.8.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -311,22 +311,6 @@ return nil
 end
 local function REvent(n) return findRemote(n, "RemoteEvent") end
 local function RFunction(n) return findRemote(n, "RemoteFunction") end
-local function Fire(n, ...)
-local r = REvent(n)
-if not r then return false end
-pcall(function(...) r:FireServer(...) end, ...)
-return true
-end
-local function FireAny(names, ...)
-for i = 1, #names do
-local r = REvent(names[i])
-if r then
-pcall(function(...) r:FireServer(...) end, ...)
-return names[i]
-end
-end
-return false
-end
 F.PLACE_KEYS = { "S_Interact", "B_Interact", "S_Place", "B_Place", "B_PutEgg", "S_PutEgg",
 "PlaceEgg", "PlaceBrainrot", "PlaceItem", "Deploy", "SetPlot", "S_Put", "B_Put", "Interact" }
 F.COLLECT_KEYS = { "B_Collect", "S_Collect", "Collect", "S_Interact", "B_CollectCash", "CollectCash" }
@@ -4958,9 +4942,13 @@ local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
 T.SpeedOn = want
 if not want then
+T.VehicleBoost = false
+pcall(F.VehicleBoostDisable)
 F.SpeedRestore()
 return
 end
+T.VehicleBoost = true
+pcall(F.VehicleBoostEnable)
 local _, hum = GC()
 if hum then
 local cur = tonumber(hum.WalkSpeed)
@@ -5429,7 +5417,7 @@ F.GodTickLoop = function()
 if F._godLoop then return end
 F._godLoop = RS.Heartbeat:Connect(function()
 if not T.GodMode then
-if F._godLoop then F._godLoop:Disconnect() F._godLoop = nil end
+pcall(F.GodModeSet, false)
 return
 end
 local now = os.clock()
@@ -6536,7 +6524,7 @@ if F._sfConn then return end
 T.SpeedFree = true
 F._sfHits, F._sfAt = 0, 0
 F._sfConn = RS.Heartbeat:Connect(function()
-if not T.SpeedFree then return end
+if not T.SpeedFree then pcall(F.SpeedFreeDisable) return end
 local now = os.clock()
 if now - (F._sfAt or 0) < 0.2 then return end
 F._sfAt = now
@@ -6602,7 +6590,7 @@ T.NoPull = true
 pcall(F.PosSrcProbeOn)
 F._npAt, F._npPos, F._npHits, F._npBack, F._npLog = 0, nil, 0, 0, 0
 F._npConn = RS.RenderStepped:Connect(function()
-if not T.NoPull then return end
+if not T.NoPull then pcall(F.NoPullDisable) return end
 local now = os.clock()
 if (T.SpeedOn or T.FlyOn or T.Hide) and now - (F._npAt or 0) > 0.1 then
 F._npAt = now
@@ -8200,10 +8188,7 @@ F.AutoPickEnable = function()
 if F._pickLoop then return end
 F._pickCount = 0
 F._pickLoop = RS.Heartbeat:Connect(function()
-if not T.AutoPick then
-if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop = nil end
-return
-end
+if not T.AutoPick then pcall(F.AutoPickDisable) return end
 local now = os.clock()
 local gap = tonumber(C.AutoPickGap) or 0.6
 if now - (F._pickAt or 0) < gap then return end
@@ -8303,10 +8288,7 @@ F.Out("[队友标记] 已关")
 return
 end
 F._allyRefresh = RS.Heartbeat:Connect(function()
-if not T.AllyMark then
-if F._allyRefresh then pcall(function() F._allyRefresh:Disconnect() end) F._allyRefresh = nil end
-return
-end
+if not T.AllyMark then pcall(F.AllyMarkSet, false) return end
 local now = os.clock()
 if now - (F._allyAt or 0) < 0.5 then return end
 F._allyAt = now
@@ -8336,7 +8318,7 @@ if seat == nil then return end
 local veh = nil
 pcall(function() veh = seat.Parent or seat end)
 if veh == nil then return end
-local speed = tonumber(C.VehicleSpeed) or 200
+local speed = tonumber(C.SpeedValue) or tonumber(C.VehicleSpeed) or 60
 local dir = nil
 local vel = root.AssemblyLinearVelocity
 local hv = Vector3.new(vel.X, 0, vel.Z)
@@ -8372,7 +8354,7 @@ end
 end)
 F._vehCount = n
 end)
-F.Out("[载具加速] 已开(坐上去自动给载具推力 " .. tostring(tonumber(C.VehicleSpeed) or 200) .. ")")
+F.Out("[加速] 坐上载具会自动给载具推力 " .. tostring(tonumber(C.SpeedValue) or 60) .. " 格/秒(与加速同一个速度值)")
 end
 F.DROP_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest", "weapon", "gun", "sword" }
 F.ESP_DROP_COLOR = Color3.fromRGB(255, 240, 120)
@@ -14080,13 +14062,7 @@ if F._cfgSyncing then return end
 pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
-Tabs.Move:AddToggle("VehicleBoost", { Title = "★ 载具加速(坐上载具自动给推力)", Default = false, Callback = function(v)
-T.VehicleBoost = v
-if F._cfgSyncing then return end
-if v then pcall(F.VehicleBoostEnable) else pcall(F.VehicleBoostDisable) end
-end })
-Tabs.Move:AddSlider("VehicleSpeed", { Title = "载具速度(格/秒)", Min = 50, Max = 2000, Default = 200, Rounding = 0, Callback = function(v) C.VehicleSpeed = v end })
-Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddToggle("SpeedOn", { Title = "★ 加速(水平全向 · 松手即停 · 坐载具时自动给载具推力)", Description = "走路/游泳/坐载具共用这一个开关与下面同一个速度值; 坐载具时自动把推力给到载具上", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块; 也会自动夹到当前档位的范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
 if F._slInGuard then return end
