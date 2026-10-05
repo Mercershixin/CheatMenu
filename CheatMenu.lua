@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:38 sha 433dbdfb bytes 527595'):format('2026-10-05 23:38','433dbdfb',527595))
+print(('[CheatMenu] build 2026-10-05 23:41 sha f2caaa55 bytes 528296'):format('2026-10-05 23:41','f2caaa55',528296))
 local F = {}
-F.VERSION = "v16.9.11"
+F.VERSION = "v16.9.12"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10913,12 +10913,14 @@ if cam and cam.ViewportSize.X > 0 then
 _vw, _vh = cam.ViewportSize.X, cam.ViewportSize.Y
 end
 end)
-local _w = math.clamp(math.floor(_vw * 0.96), 240, _touch and 520 or 500)
-local _h = math.clamp(math.floor(_vh * 0.88), 240, _touch and 600 or 540)
+local _minSide = math.min(_vw, _vh)
+local _phone = (_vw < 760) or (_vh < 500) or (_touch and _minSide <= 720)
+local _w = math.clamp(math.floor(_vw * 0.96), 240, _phone and 520 or 500)
+local _h = math.clamp(math.floor(_vh * 0.88), 240, _phone and 600 or 540)
 local Window = Fluent:CreateWindow({
 Title = "CheatMenu",
 SubTitle = F.VERSION,
-TabWidth = _touch and math.clamp(math.floor(_w / 8), 50, 66) or 100,
+TabWidth = _phone and math.clamp(math.floor(_w / 8), 50, 66) or 100,
 Size = UDim2.fromOffset(_w, _h),
 Acrylic = false,
 Theme = "Aqua",
@@ -10995,7 +10997,11 @@ if dragInput and i == dragInput then
 local dx = i.Position.X - sx
 local dy = i.Position.Y - sy
 if math.abs(dx) > 10 or math.abs(dy) > 10 then F._menuHoldMoved = true end
-btn.Position = UDim2.new(0, bx + dx, 0, by + dy)
+local vps = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(1280, 720)
+local bw, bh = btn.AbsoluteSize.X, btn.AbsoluteSize.Y
+local nx = math.clamp(bx + dx, 2, math.max(2, vps.X - bw - 2))
+local ny = math.clamp(by + dy, 2, math.max(2, vps.Y - bh - 2))
+btn.Position = UDim2.new(0, nx, 0, ny)
 end
 end)
 btn.InputEnded:Connect(function(i)
@@ -14286,9 +14292,16 @@ F.Out("[加载] 没有任何功能会被自动开启 —— 要用什么点什�
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
-F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writefile=%s · gethui=%s · 触屏=%s",
-ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
-type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
+local vw, vh = 0, 0
+pcall(function()
+local cam = workspace.CurrentCamera
+if cam and cam.ViewportSize.X > 0 then vw, vh = cam.ViewportSize.X, cam.ViewportSize.Y end
+end)
+local minSide = math.min(vw, vh)
+local isPhone = (vw < 760) or (vh < 500) or (UIS.TouchEnabled and minSide <= 720)
+F.Out(string.format("[环境] 执行器=%s · 平台=%s · 布局=%s · 视口=%dx%d · loadstring=%s · writefile=%s · gethui=%s",
+ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"), (isPhone and "手机" or "桌面"), vw, vh,
+type(loadstring), type(writefile), type(gethui)))
 end)
 pcall(function() if UIS.TouchEnabled and UIS.MouseIconEnabled then UIS.MouseIconEnabled = false end end)
 pcall(function()
