@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:47 sha aa4b6b60 bytes 541936'):format('2026-10-05 18:47','aa4b6b60',541936))
+print(('[CheatMenu] build 2026-10-05 18:50 sha 543b82a2 bytes 542329'):format('2026-10-05 18:50','543b82a2',542329))
 local F = {}
-F.VERSION = "v16.8.2"
+F.VERSION = "v16.8.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -14737,6 +14737,11 @@ end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function()
 if not F.Once("reloadforce", 3) then return end
 F.HotReload(true)
+end })
+Tabs.Setting:AddToggle("KickRejoin", { Title = "被踢/掉线自动回到同一服务器", Description = "你被踢出或掉线时自动重连回同一服务器的同一位置; 只在真的离开时触发, 平时零开销", Default = false, Callback = function(v)
+T.KickRejoin = v
+if F._cfgSyncing then return end
+if v then pcall(F.KickRejoinEnable) else pcall(F.KickRejoinDisable) end
 end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function()
 if not F.Once("rejoin", 6) then return end
