@@ -3807,3 +3807,32 @@ function u5.activationRadius(a1)                -- Line 19
   客户端改 `u5.distance` 只影响本地预判；服务端 `require` 的是它自己那份。**"伪装欺骗规则"这条路不通**。
 - ★★ **本游戏会重置全局元表**：导出后日志出现 `[防踢] 检测到拦截层被摘掉 ⇒ 正在重装`（两次）
   ⇒ 我们的元表钩在该游戏**会被摘掉**，靠自愈重装顶着 —— 依赖元表钩的功能别当稳定前提。
+
+
+---
+
+## v16.9.18 · 孤儿代码彻底清除（2026-10-06）
+
+**这一版删了 2,155 行**（源 14,493 → 12,338 行；547KB → 464KB）。下面这些名字**本版已不存在**，
+以后别再按它们找代码 / 找开关：
+
+- **卖/收钱整簇**：`CollectAll` `PreviewSell` `SellLowCPS` `SellAll` `SellScanStats` `SlotOfTool` `ParseCPS`
+  `TpToMyPlot` `ReadBase` `UpgradeAdvice` `HudNum` `REvent` `RFunction` `findRemote` `isEntityTool` `isExclusiveTool`
+  `baseCPSOf` `lvMul` `toolLevel` `cpsOf` `describe` `threshold` `collectLists` `findSeller` `moveToSeller` `sellHeld`
+  `fmtNum` + 常量表(`CPS`/`MutBuff`/`EXCLUSIVE_SET`/`EX_WORDS`/`SELLER_NAME`/`SELLER_CF`)。
+  ⇒ **只剩 `F.WithdrawAll`（★ 收起脑红）**。
+- **诊断/导出/自检**：`DumpAll` `EnvSelfCheck` `LogDump` `SnapshotCollect` `ProbeCapabilities` `capProbe` `SrvProbe` `SrvFPS`
+  `CMX_ScanExport` `CMX_BBReport` `CMX_NetOwnerReport` `CMX_HLWarnColor` `CMX_HLDistColor` `CombatReport`。
+- **反检测套件里"没有入口"的那批**（`Enable` 零引用 ⇒ 永远开不了）：`CMX_ViewFilter` `CMX_Humanize` `CMX_InstNew`
+  `CMX_DebugMask` `CMX_RequireBlock` `CMX_ClockMask` `CMX_IdentityMask` `CMX_AutoScrub` `CMX_ArgScrub`
+  `CMX_SetIdentity` `CMX_HookHardApply/Restore` `CMX_FFlagApplyPack/FFlagRestore` `CMX_AntiDetectHide` `CMX_AimLead`
+  `CMX_Remember` `CMX_ShowGameDetect` `CMX_ProfilePut/Apply/Get` `CMX_GameLabel` `CMX_IsOursFn` `CMX_IsHidden` `CMX_Jitter`
+  ⇒ **保留**的只有「全家桶四层」`CMX_BlockReport/CutLog/NeuterPlus/HashFreeze` + `CMX_Scan*` 六段扫描。
+- **零散**：`CombatAlive` `SrvOneClick` `CarryPinSet` `CarryPinFind` `SrvOwnInfo` `FixCharCollision` `FindByShape`
+  `ScanByConstants` `HitboxBackup` `AntiAFKInputLoop`（旧自研防挂机循环）。
+
+**规矩（写死）**：
+1. 判孤儿 = 零引用；删完要**传递闭包复扫到不动点**。
+2. `F.XEnable` 零引用 ⇒ `F.XDisable` 也死 —— 成对删，并**从 `ipairs{}`/`steps{}` 清单摘名**（留 nil ⇒ 其后全不执行）。
+3. `local` 值**不许**进闭包（同名不同作用域会串）；只用"全文件只出现一次"判据。
+4. 验收：编译 0 错 + 孤儿复扫=∅ + 门禁[4]=0 + 关闭链 nil 洞=0 + 配平 + 等价性 + raw 一致。
