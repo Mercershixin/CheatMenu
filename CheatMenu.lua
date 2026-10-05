@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:41 sha f2caaa55 bytes 528296'):format('2026-10-05 23:41','f2caaa55',528296))
+print(('[CheatMenu] build 2026-10-05 23:48 sha 5777d29a bytes 528608'):format('2026-10-05 23:48','5777d29a',528608))
 local F = {}
-F.VERSION = "v16.9.12"
+F.VERSION = "v16.9.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13609,7 +13609,16 @@ end
 end
 do
 Tabs.Combat:AddSection("自瞄")
-Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "锁定范围内的玩家与 NPC / 人机(有血量的非玩家角色)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
+Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Description = "锁定时会顺带把下面的「自动开火」打开(不想要就手动关掉它)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.AimSet(v, "手动")
+if v then
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options.AutoFire
+if op and op.Value ~= true then F.OptSet(op, true) end
+end)
+end
+end })
 Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Values = {
 "漏就锁(360°全身 · 只要打得到就锁)",
 "正面圈内锁(只锁屏幕正面圈里的)",
@@ -13647,7 +13656,7 @@ T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Description = "勾它时会顺手把上面的「自瞄」也打开(否则它单独开没有任何作用)", Default = true, Callback = function(v)
+Tabs.Combat:AddToggle("AutoFire", { Title = "★ 自动开火(FPS 自动扳机: 锁到人就自动按下开火)", Description = "默认关。打开上面的「自瞄」时会自动帮你打开它 —— 不想要自动开火就手动关掉。它单独开没有作用", Default = false, Callback = function(v)
 T.AutoFire = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 自动开火 = " .. (v and "开" or "关"))
@@ -13989,7 +13998,7 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("★ 挂机防踢")
-Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值), 反作弊或服务端踢你时本地拦下", Default = true, Callback = function(v)
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "⚠ 默认关 —— 它会在加载时改写全局元表, 有些反作弊会因为这一层 hook 直接把你踢掉(挂机前再开)。① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值)", Default = false, Callback = function(v)
 T.AntiAFK, T.KickGuard = v, v
 if F._cfgSyncing then return end
 if v then
