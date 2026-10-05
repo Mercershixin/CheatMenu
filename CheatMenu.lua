@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 02:00 sha d3068d43 bytes 436983'):format('2026-10-06 02:00','d3068d43',436983))
+print(('[CheatMenu] build 2026-10-06 02:17 sha 60524ea0 bytes 437432'):format('2026-10-06 02:17','60524ea0',437432))
 local F = {}
-F.VERSION = "v16.9.24"
+F.VERSION = "v16.9.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2588,8 +2588,8 @@ local _, hum0, root0 = GC()
 if not root0 then return nil, nil, "没有角色" end
 local cam = workspace.CurrentCamera
 local from = cam and cam.CFrame.Position or root0.Position
-local range = tonumber(C.CombatRange) or 300
-local fovpx = tonumber(C.CombatFOV) or 300
+local range = tonumber(C.CombatRange) or 200
+local fovpx = tonumber(C.CombatFOV) or 400
 local pov = (tostring(C.CombatMode or ""):find("正面", 1, true) ~= nil)
 local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
 local cur = F._combatNow
@@ -2627,12 +2627,13 @@ score = dist
 end
 if score then
 if ch == cur then score = score - 1e6 end
+if score < bestScore then
 local part = F.CombatVisible(ch, from, prefer)
-if part then
-if score < bestScore then best, bestPart, bestScore = ch, part, score end
+if part then best, bestPart, bestScore = ch, part, score
 else
 blocked = blocked + 1
 why = "被墙挡住"
+end
 end
 end
 else
@@ -2648,6 +2649,10 @@ return nil, nil, why
 end
 F.CombatHudSet = function(text)
 if not F._combatHud then return end
+if text == F._combatHudText then return end
+local now = os.clock()
+if now - (F._combatHudAt or 0) < 0.1 then return end
+F._combatHudAt, F._combatHudText = now, text
 pcall(function() F._combatHud.Text = text end)
 end
 F.CombatHudShow = function()
@@ -2675,7 +2680,10 @@ end
 F.CombatHudHide = function()
 if F._combatHudGui then pcall(function() F._combatHudGui:Destroy() end) end
 F._combatHud, F._combatHudGui = nil, nil
+F._combatHudText, F._combatHudAt = nil, 0
 end
+T.AimTurnCamera, T.AimTurnBody = false, true
+T.EspName, T.EspDist, T.EspHp, T.TeamColorHL = true, true, true, false
 F._aimHeart, F._aimErr, F._aimLastHeart = 0, 0, 0
 F._AIM_STEP = "CM_Combat"
 F.CombatTickSafe = function()
@@ -2693,11 +2701,11 @@ function F.AimBindStep()
 if F._aimBind then pcall(function() RS:UnbindFromRenderStep(F._AIM_STEP) end) F._aimBind = nil end
 if F._aimConn then pcall(function() F._aimConn:Disconnect() end) F._aimConn = nil end
 local ok = pcall(function()
-RS:BindToRenderStep(F._AIM_STEP, Enum.RenderPriority.Camera.Value + 1, function() F.CombatTickSafe() end)
+RS:BindToRenderStep(F._AIM_STEP, Enum.RenderPriority.Camera.Value + 1, function(dt) F._aimDt = dt F.CombatTickSafe() end)
 end)
 if ok then F._aimBind = true return end
 F.Out("[战斗] 自瞄主绑定失败 ⇒ 改用 RenderStepped 兜底")
-F._aimConn = RS.RenderStepped:Connect(function() F.CombatTickSafe() end)
+F._aimConn = RS.RenderStepped:Connect(function(dt) F._aimDt = dt F.CombatTickSafe() end)
 end
 function F.AimWatch()
 if F._aimWatch then return end
@@ -2771,7 +2779,9 @@ local sm = tonumber(C.AimSmooth) or 0
 if sm > 0 then
 local goal = CFrame.lookAt(cam.CFrame.Position, part.Position)
 pcall(function()
-local a = math.clamp(1 / math.max(sm, 1), 0.05, 1)
+local base = math.clamp(1 / math.max(sm, 1), 0.05, 1)
+local st = math.clamp((F._aimDt or 0.0166667) * 60, 0.02, 8)
+local a = 1 - (1 - base) ^ st
 cam.CFrame = cam.CFrame:Lerp(goal, a)
 end)
 else
@@ -6382,7 +6392,7 @@ circle.AnchorPoint = Vector2.new(0.5, 0.5)
 circle.Position = UDim2.fromScale(0.5, 0.5)
 circle.BackgroundTransparency = 1
 circle.BorderSizePixel = 0
-circle.Size = UDim2.fromOffset((tonumber(C.CombatFOV) or 200) * 2, (tonumber(C.CombatFOV) or 200) * 2)
+circle.Size = UDim2.fromOffset((tonumber(C.CombatFOV) or 400) * 2, (tonumber(C.CombatFOV) or 400) * 2)
 circle.Parent = sg
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(1, 0)
@@ -6403,12 +6413,12 @@ end
 local lastFov = -1
 F._fovConn = RS.RenderStepped:Connect(function()
 if not T.FovCircle then F.FovCircleDisable() return end
-local fov = tonumber(C.CombatFOV) or 200
+local fov = tonumber(C.CombatFOV) or 400
 if fov == lastFov then return end
 lastFov = fov
 pcall(function() F._fovRing.Size = UDim2.fromOffset(fov * 2, fov * 2) end)
 end)
-F.Out("[准星] FOV 圈已开(直径 " .. tostring((tonumber(C.CombatFOV) or 200) * 2) .. " px)")
+F.Out("[准星] FOV 圈已开(直径 " .. tostring((tonumber(C.CombatFOV) or 400) * 2) .. " px)")
 end
 function F.FovCircleDisable()
 if F._fovConn then F._fovConn:Disconnect() F._fovConn = nil end
