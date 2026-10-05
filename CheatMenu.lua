@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 01:34 sha b2a6ba30 bytes 437423'):format('2026-10-06 01:34','b2a6ba30',437423))
+print(('[CheatMenu] build 2026-10-06 01:58 sha 70eb0ed4 bytes 436989'):format('2026-10-06 01:58','70eb0ed4',436989))
 local F = {}
-F.VERSION = "v16.9.22"
+F.VERSION = "v16.9.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1980,26 +1980,20 @@ end
 function F.KickGuardPathsEnable()
 if KG.mtHooked then return end
 KG.kick = true
-local ok = pcall(function()
-if type(getrawmetatable) ~= "function" then return end
-local mt = getrawmetatable(game)
-if type(mt) ~= "table" then return end
-pcall(function() if setreadonly then setreadonly(mt, false) end end)
-F._roUnlocked = true
-local oldNC, oldIX, oldNIX = mt.__namecall, mt.__index, mt.__newindex
-if type(oldNC) ~= "function" then return end
-local function wrap(fn)
-if type(newcclosure) == "function" then return newcclosure(fn) end
-return fn
-end
+local ccFn = nil
+pcall(function()
+if type(checkcaller) == "function" and pcall(checkcaller) then ccFn = checkcaller end
+end)
 local gnFn = nil
-if type(getnamecallmethod) == "function" then
-local okG = pcall(getnamecallmethod)
-if okG then gnFn = getnamecallmethod end
-end
-mt.__namecall = wrap(function(self, ...)
+pcall(function()
+if type(getnamecallmethod) == "function" and pcall(getnamecallmethod) then gnFn = getnamecallmethod end
+end)
+pcall(function() if type(getrawmetatable) == "function" and setreadonly then setreadonly(getrawmetatable(game), false) end end)
+F._roUnlocked = true
+local nNC = F.MetaInstall("__namecall", game, "CMKickNC", function(box)
+return function(self, ...)
 local m = gnFn and gnFn() or ""
-if m ~= "Kick" and m ~= "ChangeState" and m ~= "FireServer" and m ~= "InvokeServer" then return oldNC(self, ...) end
+if m ~= "Kick" and m ~= "ChangeState" and m ~= "FireServer" and m ~= "InvokeServer" then return box.orig(self, ...) end
 if KG.kick and m == "Kick" and self == LP then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
@@ -2060,16 +2054,12 @@ end
 end
 end
 end
-return oldNC(self, ...)
-end)
-if type(oldIX) == "function" then
-local ccFn = nil
-if type(checkcaller) == "function" then
-local okC = pcall(checkcaller)
-if okC then ccFn = checkcaller end
+return box.orig(self, ...)
 end
-mt.__index = wrap(function(self, key)
-if ccFn and ccFn() then return oldIX(self, key) end
+end)
+local nIX = F.MetaInstall("__index", game, "CMKickIX", function(box)
+return function(self, key)
+if ccFn and ccFn() then return box.orig(self, key) end
 if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return function() end
@@ -2084,17 +2074,12 @@ KG.spoofHits = (KG.spoofHits or 0) + 1
 return KG.spoofJump
 end
 end
-return oldIX(self, key)
+return box.orig(self, key)
+end
 end)
-end
-if type(oldNIX) == "function" then
-local ccFn2 = nil
-if type(checkcaller) == "function" then
-local okC2 = pcall(checkcaller)
-if okC2 then ccFn2 = checkcaller end
-end
-mt.__newindex = wrap(function(self, key, v)
-if ccFn2 and ccFn2() then return oldNIX(self, key, v) end
+local nNIX = F.MetaInstall("__newindex", game, "CMKickNIX", function(box)
+return function(self, key, v)
+if ccFn and ccFn() then return box.orig(self, key, v) end
 if KG.kick and self == LP and key == "Kick" then
 KG.blocked = (KG.blocked or 0) + 1
 return nil
@@ -2158,11 +2143,10 @@ return nil
 end
 end
 end
-return oldNIX(self, key, v)
-end)
+return box.orig(self, key, v)
 end
-KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = mt, oldNC, oldIX, oldNIX
-KG.mtHooked = true
+end)
+KG.mtHooked = (nNC ~= nil) or (nIX ~= nil) or (nNIX ~= nil)
 F._kgHealFix = 0
 pcall(function()
 if type(debug) ~= "table" or type(debug.getinfo) ~= "function" then return end
@@ -2182,8 +2166,7 @@ return info
 end
 if type(newcclosure) == "function" then debug.getinfo = newcclosure(wrapped) else debug.getinfo = wrapped end
 end)
-end)
-if not ok or not KG.mtHooked then KG.mtHooked = nil return end
+if not KG.mtHooked then return end
 KG.blockSet = {}
 KG.logConn = RS.Heartbeat:Connect(function()
 local n = KG.blocked or 0
@@ -2292,14 +2275,12 @@ function F.KickGuardPathsDisable()
 KG.kick = false
 if T.Spoof or T.SpeedGuard then return end
 if KG.logConn then pcall(function() KG.logConn:Disconnect() end) KG.logConn = nil end
-if KG.mtHooked and KG.mt then
-pcall(function()
-if KG.oldNC then KG.mt.__namecall = KG.oldNC end
-if KG.oldIX then KG.mt.__index = KG.oldIX end
-if KG.oldNIX then KG.mt.__newindex = KG.oldNIX end
-end)
+if KG.mtHooked then
+pcall(function() F.MetaUninstall("__namecall", "CMKickNC") end)
+pcall(function() F.MetaUninstall("__index", "CMKickIX") end)
+pcall(function() F.MetaUninstall("__newindex", "CMKickNIX") end)
 end
-KG.mtHooked, KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = nil, nil, nil, nil, nil
+KG.mtHooked, KG.mt = nil, nil
 KG.lastReport = nil
 pcall(F.CMX_RestoreRO)
 end
@@ -11535,6 +11516,12 @@ if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 F.Out("[高亮] 身体高亮 = " .. (v and "开(隔墙可见 · 队友绿/敌人红看下面的敌我识别)" or "关"))
 end })
+Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别", Default = false, Callback = function(v)
+T.TeamColorHL = v
+if F._cfgSyncing then return end
+if T.BodyHL then F.BodyHLRefresh() end
+F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
+end })
 Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视", Default = false, Callback = function(v)
 T.IxHL = v
 if F._cfgSyncing then return end
@@ -11546,13 +11533,7 @@ T.XRay = v
 if F._cfgSyncing then return end
 F.XRaySet(v)
 end })
-Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别", Default = false, Callback = function(v)
-T.TeamColorHL = v
-if F._cfgSyncing then return end
-if T.BodyHL then F.BodyHLRefresh() end
-F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
-end })
-Tabs.World:AddSection("画面增强")
+Tabs.World:AddSection("画面 / 声音")
 Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
 if F._cfgSyncing then return end
@@ -11582,7 +11563,7 @@ T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
 end })
-Tabs.World:AddSection("相机 / 准星")
+Tabs.World:AddSection("HUD / 准星")
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
 T.Hud = v
 if F._cfgSyncing then return end
@@ -11680,7 +11661,7 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
-Tabs.AFK:AddSection("脑红 / 现金")
+Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
@@ -11786,7 +11767,7 @@ if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
-Tabs.AC:AddSection("扫描 / 收集")
+Tabs.AC:AddSection("扫描")
 Tabs.AC:AddButton({ Title = "一键全扫描", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
