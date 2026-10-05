@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 01:10 sha 97231d41 bytes 437369'):format('2026-10-06 01:10','97231d41',437369))
+print(('[CheatMenu] build 2026-10-06 01:34 sha b2a6ba30 bytes 437423'):format('2026-10-06 01:34','b2a6ba30',437423))
 local F = {}
-F.VERSION = "v16.9.21"
+F.VERSION = "v16.9.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11444,6 +11444,7 @@ pcall(F.SetSpeedValue, "speed", n)
 end })
 Tabs.Move:AddSection("防护")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护", Default = false, Callback = function(v)
+T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 T.SpeedAntiTP, T.MyEgg, T.CarryGuard = v, v, v
 if F._cfgSyncing then return end
@@ -11564,6 +11565,7 @@ if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
 F.Out("[视角] 视角增强 = " .. (v and "开(FOV+无限缩放)" or "关"))
 end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
+T.Mute = v
 if F._cfgSyncing then return end
 if v then MuteEnable() else MuteDisable() end
 F.Out("[静音] " .. (v and "已开" or "已关"))
@@ -11620,6 +11622,7 @@ if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.N
 TeleportToPlayer(pl)
 end })
 Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Default = false, Callback = function(v)
+T.TPMouse = v
 if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
@@ -11864,6 +11867,7 @@ F._fusing = false
 end
 Tabs.Setting:AddSection("日志防护")
 Tabs.Setting:AddToggle("LockLog", { Title = "护日志", Default = false, Callback = function(v)
+T.LockLog = v
 if F._cfgSyncing then return end
 pcall(F.LockLogClear, v)
 end })
