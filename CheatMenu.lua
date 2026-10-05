@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 20:33 sha d6cb4dbe bytes 533158'):format('2026-10-05 20:33','d6cb4dbe',533158))
+print(('[CheatMenu] build 2026-10-05 20:48 sha 0b4cc252 bytes 534146'):format('2026-10-05 20:48','0b4cc252',534146))
 local F = {}
-F.VERSION = "v16.9.1"
+F.VERSION = "v16.9.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13770,6 +13770,36 @@ Tabs.World   = Tabs.Visual
 Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
+F._uiFails = 0
+local _tabAPI = { "AddSection", "AddToggle", "AddSlider", "AddButton", "AddDropdown", "AddInput", "AddColorPicker" }
+local function _safeTab(t, tag)
+local p = {}
+local k, nm
+for k = 1, #_tabAPI do
+nm = _tabAPI[k]
+p[nm] = (function(fn, label)
+return function(_, ...)
+local ok, res = pcall(fn, t, ...)
+if not ok then
+F._uiFails = F._uiFails + 1
+pcall(function() F.Out("[UI] * " .. tag .. " / " .. label .. " -> 建不出来(已跳过这一项, 其余照常): " .. tostring(res)) end)
+return nil
+end
+return res
+end
+end)(t[nm], nm)
+end
+return setmetatable(p, { __index = function(_, kk) return t[kk] end })
+end
+do
+local _keys = {}
+local _k, _v
+for _k, _ in pairs(Tabs) do _keys[#_keys + 1] = _k end
+for _k = 1, #_keys do
+_v = Tabs[_keys[_k]]
+Tabs[_keys[_k]] = _safeTab(_v, _keys[_k])
+end
+end
 do
 Tabs.Combat:AddSection("自瞄")
 Tabs.Combat:AddToggle("AimOn", { Title = "★ 自瞄(总开关)", Default = false, Callback = function(v) if F._cfgSyncing then return end F.AimSet(v, "手动") end })
@@ -14636,6 +14666,8 @@ F._cfgSyncing = false
 if not okBuild then
 F.Out("[UI] ⚠ 菜单构建中断 ⇒ 断点之后的控件全都没建出来! 原因: " .. tostring(buildErr))
 F.Out("[UI] 把上面这一行发出来, 就能立刻定位是哪个控件把菜单带塌的")
+elseif (F._uiFails or 0) > 0 then
+F.Out("[UI] ⚠ 有 " .. tostring(F._uiFails) .. " 个控件没建出来(已逐个跳过, 其余功能正常) - 把带 * 的几行发我即可定位")
 end
 task.defer(function() F._cfgSyncing = false end)
 task.spawn(function()
