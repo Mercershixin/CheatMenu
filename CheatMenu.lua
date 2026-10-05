@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:04 sha 73291b0e bytes 540100'):format('2026-10-05 18:04','73291b0e',540100))
+print(('[CheatMenu] build 2026-10-05 18:15 sha 3a6aa8e3 bytes 540114'):format('2026-10-05 18:15','3a6aa8e3',540114))
 local F = {}
-F.VERSION = "v16.7.1"
+F.VERSION = "v16.7.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6447,8 +6447,8 @@ pp:InputHoldBegin()
 task.wait()
 pp:InputHoldEnd()
 F._eggHits = (F._eggHits or 0) + 1
-if os.clock() - (F._eggLogAt or 0) > 3 then
-F._eggLogAt = os.clock()
+if os.clock() - (F._eggStealLogAt or 0) > 3 then
+F._eggStealLogAt = os.clock()
 F.Out("[护蛋] 掉了一次 ⇒ 已瞬间偷回(累计 " .. tostring(F._eggHits) .. " 次)")
 end
 end
@@ -8228,9 +8228,9 @@ end
 F.KEY_ACTIONS = {
 { key = Enum.KeyCode.X, label = "自瞄", get = function() return T.AimOn end,
 set = function(on) pcall(F.AimSet, on, "快捷键") end },
-{ key = Enum.KeyCode.V, label = "飞行", get = function() return T.Fly end,
+{ key = Enum.KeyCode.V, label = "飞行", get = function() return T.FlyOn end,
 set = function(on) pcall(F.FlySet, on) end },
-{ key = Enum.KeyCode.B, label = "加速", get = function() return T.Speed end,
+{ key = Enum.KeyCode.B, label = "加速", get = function() return T.SpeedOn end,
 set = function(on) pcall(F.SpeedSet, on) end },
 { key = Enum.KeyCode.C, label = "穿墙", get = function() return T.NoClip end,
 set = function(on) end },
