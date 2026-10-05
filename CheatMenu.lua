@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:48 sha 5777d29a bytes 528608'):format('2026-10-05 23:48','5777d29a',528608))
+print(('[CheatMenu] build 2026-10-05 23:56 sha ad2d3991 bytes 532234'):format('2026-10-05 23:56','ad2d3991',532234))
 local F = {}
-F.VERSION = "v16.9.13"
+F.VERSION = "v16.9.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2290,93 +2290,22 @@ F._scavenging = keep
 return n
 end
 F._afkConn = nil
-F._afkConn2 = nil
-F._afkDisabledConns = {}
-F.AntiAFKKillIdleConns = function()
-local n = 0
+F.ANTI_AFK_KEY = "__CMX_UNIVERSAL_ANTI_AFK"
+F._afkEnv = function()
+local ge = _G
 pcall(function()
-if type(getconnections) ~= "function" then return end
-for _, c in ipairs(getconnections(LP.Idled) or {}) do
-local fn = nil
-pcall(function() fn = c.Function end)
-if fn == nil then pcall(function() fn = c.__function end) end
-local nm, srcPath = "", ""
-if type(fn) == "function" and type(debug) == "table" and type(debug.getinfo) == "function" then
-pcall(function()
-local info = debug.getinfo(fn, "Sln")
-nm = tostring(info and info.name or ""):lower()
-srcPath = tostring(info and info.source or ""):lower()
-end)
-end
-local bag = nm .. " " .. srcPath
-if bag:find("afk") or bag:find("idle") or bag:find("timeout") or bag:find("anticheat")
-or bag:find("detect") or bag:find("anti") or bag:find("guard") or bag:find("kick")
-or bag:find("boot") then
-pcall(function() c:Disable() end)
-F._afkDisabledConns[#F._afkDisabledConns + 1] = c
-n = n + 1
-end
+if type(getgenv) == "function" then
+local e = getgenv()
+if type(e) == "table" then ge = e end
 end
 end)
-F._afkKilled = (F._afkKilled or 0) + n
-return n
+return ge
 end
-function F.AntiAFKEnable()
-if F._afkConn then return end
-T.AntiAFK = true
-F._afkKilled = 0
-F._afkFixes = 0
-pcall(F.MetaHookEnsure)
-local killed = F.AntiAFKKillIdleConns()
-pcall(F.AntiAFKNudge)
-F.AntiAFKNudge = function()
-if F._afkNudge then return end
-local moved = false
-if not UIS.TouchEnabled then
-pcall(function()
-local vim = nil
-pcall(function() vim = game:GetService("VirtualInputManager") end)
-if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
-vim:SendMouseMoveEvent(1, 0, false)
-moved = true
-elseif type(mousemoverel) == "function" then
-mousemoverel(1, 0)
-moved = true
-end
-end)
-end
-F._afkNudge = task.spawn(function()
-while T.AntiAFK do
-task.wait(240)
-if not T.AntiAFK then break end
-pcall(function()
-local _, hum = GC()
-if hum then
-pcall(function() hum.Jump = true end)
-task.wait(0.15)
-pcall(function() hum.Jump = false end)
-end
-end)
-if not UIS.TouchEnabled then
-pcall(function()
-local vim = nil
-pcall(function() vim = game:GetService("VirtualInputManager") end)
-if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
-vim:SendMouseMoveEvent(1, 0, false)
-elseif type(mousemoverel) == "function" then
-mousemoverel(1, 0)
-end
-end)
-end
-end
-F._afkNudge = nil
-end)
-F.Out("[防挂机] 已挂定期微动(每 240 秒轻跳一下 · 防 Idled 计时归零)")
-end
-F.AntiAFKIdleHit = function()
+F.AntiAFKHit = function()
 local vu = nil
-pcall(function() vu = game:GetService("VirtualUser") end)
-if not vu then return false end
+pcall(function() vu = VirtualUser end)
+if type(vu) ~= "table" then pcall(function() vu = game:GetService("VirtualUser") end) end
+if type(vu) ~= "table" then return false end
 pcall(function() vu:CaptureController() end)
 pcall(function() vu:ClickButton2(Vector2.new(0, 0)) end)
 pcall(function()
@@ -2388,45 +2317,38 @@ vu:Button2Up(Vector2.new(0, 0), cf)
 end)
 return true
 end
-F._afkConn = LP.Idled:Connect(function()
-F._afkIdleHits = (F._afkIdleHits or 0) + 1
+F.AntiAFKEnable = function()
+local ge = F._afkEnv()
+local oldState = ge[F.ANTI_AFK_KEY]
+if type(oldState) == "table" and oldState.Connection then
+pcall(function() oldState.Connection:Disconnect() end)
+end
+if not LP then return end
+local connection = LP.Idled:Connect(function()
 if not T.AntiAFK then return end
 if UIS.TouchEnabled then return end
 pcall(function()
-if F.AntiAFKIdleHit() then
-F._afkIdleFixed = (F._afkIdleFixed or 0) + 1
-F.Out("[防挂机] 游戏判你挂机 ⇒ 已按 PuckAFK 的通用做法做一次「空点」(不动你的人物)")
+if F.AntiAFKHit() then
+F._afkFixed = (F._afkFixed or 0) + 1
+if F.LogRate("afk_idle", 6) then
+F.Out("[挂机防踢] 游戏判你挂机 ⇒ 已在屏幕角落做一次「空点」把计时清零(照搬 PuckAFK 通用做法)")
+end
 end
 end)
 end)
-pcall(F.AntiAFKInputLoop)
-F._afkConn2 = RS.Heartbeat:Connect(function()
-if not T.AntiAFK then F.AntiAFKDisable() return end
-local now = os.clock()
-if now - (F._afkAt or 0) < 5 then return end
-F._afkAt = now
-if now - (F._afkHbAt or 0) > 15 then
-F._afkHbAt = now
-pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
+ge[F.ANTI_AFK_KEY] = { Connection = connection, Enabled = true }
+F._afkConn = connection
+F.Out("[挂机防踢] 已开: 通用防挂机(照搬 PuckAFK) —— 只在游戏判你挂机时于屏幕角落「空点」一次; 不改角色属性、不装任何元表钩子(所以不会因为 hook 被踢)")
 end
-local hits = F._afkIdleHits or 0
-if hits ~= (F._afkIdleLogged or 0) then
-F._afkIdleLogged = hits
-F.Out("[防挂机] 游戏判你挂机过 " .. tostring(hits) .. " 次 ⇒ 已按时间监听处理(不动你的人物)")
+F.AntiAFKDisable = function()
+local ge = F._afkEnv()
+local state = ge[F.ANTI_AFK_KEY]
+if type(state) == "table" and state.Connection then
+pcall(function() state.Connection:Disconnect() end)
 end
-end)
-F.Out("[防挂机] 已开(完全不动你的人物): 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
-.. " + 每 15 秒写一次心跳属性 + 监听 Idled 只记录")
-end
-function F.AntiAFKDisable()
-T.AntiAFK = false
-F._afkInput = nil
-if F._afkDisabledConns then
-for _, c in ipairs(F._afkDisabledConns) do pcall(function() c:Enable() end) end
-F._afkDisabledConns = {}
-end
+pcall(function() ge[F.ANTI_AFK_KEY] = nil end)
 if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
-if F._afkConn2 then pcall(function() F._afkConn2:Disconnect() end) F._afkConn2 = nil end
+F.Out("[挂机防踢] 已关")
 end
 F._flingConns = {}
 function F.AntiFlingEnable()
@@ -2951,57 +2873,6 @@ end
 KG.mtHooked, KG.mt, KG.oldNC, KG.oldIX, KG.oldNIX = nil, nil, nil, nil, nil
 KG.lastReport = nil
 pcall(F.CMX_RestoreRO)
-end
-function F.KickGuardEnable()
-if KG.hooked then return true end
-F.Out("[防踢] 正在装「Kick 三路径拦截」(会改写全局元表) —— 个别反作弊会因这层 hook 直接踢你; 平时建议关着, 挂机前再开")
-F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
-local kf = LP.Kick
-if type(kf) ~= "function" or not hookfunction then return false end
-local orig
-local wrapper = function(self, msg)
-if self == LP and (type(msg) == "string" or type(msg) == "number") then
-F.Out("[CheatMenu] 本地拦截 Kick: " .. tostring(msg))
-return nil
-end
-if orig then return orig(self, msg) end
-end
-local ok, result = pcall(function()
-if newcclosure then return hookfunction(kf, newcclosure(wrapper)) else return hookfunction(kf, wrapper) end
-end)
-if not ok or type(result) ~= "function" then return false end
-orig = result
-KG.target = kf
-KG.orig = result
-KG.hooked = true
-if not F._kgHeal then
-F._kgHeal = task.spawn(function()
-while T.KickGuard do
-task.wait(6)
-if not T.KickGuard then break end
-if not KG.kick or not KG.mtHooked then
-F._kgHealFix = (F._kgHealFix or 0) + 1
-if F._kgHealFix <= 3 then
-F.Out("[防踢] 检测到拦截层被摘掉 ⇒ 正在重装(第 " .. tostring(F._kgHealFix) .. " 次)")
-F.Try("KickGuardPathsEnable", F.KickGuardPathsEnable)
-elseif F._kgHealFix == 4 then
-F.Out("[防踢] ⚠ 元表钩反复装不上(本执行器/本游戏可能禁止改写全局元表) ⇒ 已停止重试, 也不再刷日志; 依赖元表钩的拦截层本次不可用")
-end
-end
-end
-F._kgHeal = nil
-end)
-end
-return true
-end
-function F.KickGuardDisable()
-pcall(F.AntiCheatGCRestore)
-pcall(F.KickGuardPathsDisable)
-if KG.hooked and hookfunction and KG.target and KG.orig then
-pcall(function() hookfunction(KG.target, KG.orig) end)
-end
-KG.hooked = false
-KG.orig = nil
 end
 function F.KickRejoinDisable()
 if KG.rjConn then pcall(function() KG.rjConn:Disconnect() end) KG.rjConn = nil end
@@ -8512,7 +8383,7 @@ end)
 return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
-AntiAFK = true, KickGuard = true, GuardOn = true, HitGuard = true, SteadyOn = true,
+AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true }
 function F.PanicKeyDisableAll()
 local keep = {}
@@ -8656,153 +8527,405 @@ local GYM_WEIGHT_NAMES = {
 ["Giant Gold Star Barbell"]=true,["Emerald Barbell"]=true,["Planet Barbell"]=true,
 ["Big Jupiter"]=true,["Black Hole Barbell"]=true,
 }
-local function equipSquatTool()
-local _, hum = GC()
-if not hum then return end
-local bp = LP:FindFirstChild("Backpack")
-for _, ct in ipairs({ bp, LP.Character }) do
-if ct then
-for _, t in ipairs(ct:GetChildren()) do
-if t:IsA("Tool") then
-local ok, ht = pcall(function() return t:HasTag("SquatTool") end)
-if ok and ht then pcall(function() hum:EquipTool(t) end) return t end
+local function gymChar() return LP.Character end
+local function gymHum() local ch = gymChar() return ch and ch:FindFirstChildOfClass("Humanoid") or nil end
+local function gymRoot() local ch = gymChar() return ch and (ch.PrimaryPart or ch:FindFirstChild("HumanoidRootPart")) or nil end
+local function gymAlive() local h = gymHum() return h ~= nil and h.Health > 0 and gymRoot() ~= nil end
+local function gymWaitAlive(timeout)
+local deadline = os.clock() + (timeout or 10)
+while os.clock() < deadline do
+if gymAlive() then return true end
+task.wait(0.1)
 end
+return gymAlive()
 end
+local function gymHasTag(instance, tag)
+if not instance then return false end
+local ok, result = pcall(function() return instance:HasTag(tag) end)
+return ok and result == true
 end
-end
-for _, ct in ipairs({ bp, LP.Character }) do
-if ct then
-for _, t in ipairs(ct:GetChildren()) do
-if t:IsA("Tool") and GYM_WEIGHT_NAMES[t.Name] then
-pcall(function() hum:EquipTool(t) end)
-return t
-end
-end
-end
-end
-end
-local function kickUpgradesGui()
-local g = PG
-pcall(function() g = LP:FindFirstChild("PlayerGui") or g end)
-return g and g:FindFirstChild("KickUpgrades") or nil
-end
-local function isBrainrotTool(t)
-local ok, r = pcall(function() return t:GetAttribute("Rarity") end)
-if ok and r ~= nil then return true end
-ok, r = pcall(function() return t:FindFirstChild("Rarity") end)
-return (ok and r ~= nil) and true or false
-end
-local function weightTool()
-local ch = LP.Character
-local bp = LP:FindFirstChild("Backpack")
-local containers = { ch, bp }
-for _, ct in ipairs(containers) do
-if ct then
-for _, t in ipairs(ct:GetChildren()) do
-if t:IsA("Tool") then
-local ok, ht = pcall(function() return t:HasTag("SquatTool") end)
-if ok and ht then return t end
-end
-end
-end
-end
-for _, ct in ipairs(containers) do
-if ct then
-for _, t in ipairs(ct:GetChildren()) do
-if t:IsA("Tool") and GYM_WEIGHT_NAMES[t.Name] and not isBrainrotTool(t) then return t end
-end
-end
-end
-for _, ct in ipairs(containers) do
-if ct then
-for _, t in ipairs(ct:GetChildren()) do
-if t:IsA("Tool") and not isBrainrotTool(t) then return t end
-end
-end
-end
-end
-local function guiClick(b)
-if not (b and b:IsA("GuiButton")) then return false end
-local did = false
-if type(getconnections) == "function" then
-for _, sig in ipairs({ b.InputBegan, b.MouseButton1Down, b.MouseButton1Up, b.MouseButton1Click, b.Activated }) do
-if sig then
+local function gymUnequipUnanchor()
 pcall(function()
-for _, c in ipairs(getconnections(sig) or {}) do
-pcall(function() c:Fire({ UserInputType = Enum.UserInputType.MouseButton1, UserInputState = Enum.UserInputState.Begin }) end)
-pcall(function() c:Fire() end)
+local hum = gymHum()
+if hum then hum:UnequipTools() end
+local root = gymRoot()
+if root then
+root.Anchored = false
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
 end
 end)
 end
+local function gymWalkTo(position, timeout, radius)
+if typeof(position) ~= "Vector3" or not gymWaitAlive(5) then return false end
+local hum = gymHum()
+if not hum then return false end
+gymUnequipUnanchor()
+radius = tonumber(radius) or 5
+local deadline = os.clock() + (timeout or 12)
+while os.clock() < deadline do
+local root = gymRoot()
+if not root then return false end
+if (root.Position - position).Magnitude <= radius then return true end
+pcall(function() hum:MoveTo(position) end)
+task.wait(0.1)
+end
+local root = gymRoot()
+return root ~= nil and (root.Position - position).Magnitude <= radius
+end
+local function gymEquippedWeightTool()
+local ch = gymChar()
+if ch then
+for _, tool in ipairs(ch:GetChildren()) do
+if tool:IsA("Tool") and (gymHasTag(tool, "SquatTool") or GYM_WEIGHT_NAMES[tool.Name] ~= nil) then return tool end
 end
 end
-if firesignal then
-pcall(function() firesignal(b.MouseButton1Click) did = true end)
-pcall(function() firesignal(b.Activated) did = true end)
-end
-if not UIS.TouchEnabled then
-pcall(function()
-local cam = workspace.CurrentCamera
-local vp = (cam and cam.ViewportSize) or Vector2.new(800, 600)
-local ap, as = b.AbsolutePosition, b.AbsoluteSize
-local x = math.clamp(ap.X + as.X * 0.5, 2, math.max(3, vp.X - 2))
-local y = math.clamp(ap.Y + as.Y * 0.5, 2, math.max(3, vp.Y - 2))
-local vim = game:GetService("VirtualInputManager")
-vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
-vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
-did = true
-end)
-end
-return did
-end
-local function clickBonusButtons(anyButton)
-local kupg = kickUpgradesGui()
-if not kupg then return 0, false end
-local n, sawBonus = 0, false
-for _, b in ipairs(kupg:GetChildren()) do
-if b:IsA("GuiButton") then
-local okv, vis = pcall(function() return b.Visible end)
-if okv and vis then
-local isBonus = (b.Name == "Bonus" or b.Name == "PopBonus")
-if isBonus then sawBonus = true end
-if (isBonus or anyButton) and guiClick(b) then n = n + 1 end
+local fallback
+for _, container in ipairs({ LP:FindFirstChild("Backpack"), ch }) do
+if container then
+for _, tool in ipairs(container:GetChildren()) do
+if tool:IsA("Tool") and (gymHasTag(tool, "SquatTool") or GYM_WEIGHT_NAMES[tool.Name] ~= nil) then
+fallback = fallback or tool
 end
 end
 end
-return n, sawBonus
 end
-local function trainTickOnce()
-local ch, hum = GC()
-if not (ch and hum) then return end
-local w = weightTool()
-if w then
-if w.Parent ~= ch then pcall(function() hum:EquipTool(w) end) end
-pcall(function() w:Activate() end)
+return fallback
 end
-clickBonusButtons(false)
+local Gym = {}
+F.Gym = Gym
+Gym.Event = { Active = false, LastSeenAt = 0, Machine = nil, MachineName = nil, LastVerifiedPart = nil, LastVerifiedMachine = nil }
+Gym.TravelMode = "Teleport (Safe)"
+Gym.currentLiftMachineMultiplier = function()
+return math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)
 end
-local GymThread = nil
-local function gymMult()
-local a, b, c = 0, 0, 0
-pcall(function() a = tonumber(LP:GetAttribute("liftMachine")) or 0 end)
-pcall(function() b = tonumber(LP:GetAttribute("gym_speed")) or 0 end)
-pcall(function() c = tonumber(LP:GetAttribute("gym_power")) or 0 end)
-return a, b, c
+Gym.currentGymSpeedMultiplier = function()
+return math.max(1, tonumber(LP:GetAttribute("gym_speed")) or 1)
 end
-local function waitGymRecognition(sec)
-local t0 = os.clock()
-while os.clock() - t0 < (sec or 0.9) do
-local a, b, c = gymMult()
-if a > 1 or b > 1 or c > 1 then return true end
-task.wait(0.08)
+Gym.currentGymPowerMultiplier = function()
+return math.max(1, tonumber(LP:GetAttribute("gym_power")) or 1)
+end
+Gym.liveLiftMachines = function()
+local result = {}
+local ok, tagged = pcall(CS.GetTagged, CS, "LiftMachine")
+if not ok or type(tagged) ~= "table" then return result end
+for _, machine in ipairs(tagged) do
+if machine and machine.Parent and machine:IsDescendantOf(WS) then result[#result + 1] = machine end
+end
+return result
+end
+Gym.nearestLiftMachine = function()
+local machines = Gym.liveLiftMachines()
+if #machines == 0 then return nil end
+local root = gymRoot()
+local best, bestDistance
+for _, machine in ipairs(machines) do
+local position
+if machine:IsA("BasePart") then
+position = machine.Position
+elseif machine:IsA("Model") then
+local ok, pivot = pcall(machine.GetPivot, machine)
+if ok then position = pivot.Position end
+end
+if not position then
+local part = machine:FindFirstChildWhichIsA("BasePart", true)
+if part then position = part.Position end
+end
+local distance = root and position and (root.Position - position).Magnitude or 0
+if not bestDistance or distance < bestDistance then
+bestDistance = distance
+best = machine
+end
+end
+return best
+end
+Gym.gymTimeActive = function(force)
+local machine = Gym.nearestLiftMachine()
+if machine then
+Gym.Event.Active = true
+Gym.Event.LastSeenAt = os.clock()
+Gym.Event.MachineName = machine.Name
+Gym.Event.Machine = machine
+return true, nil, machine
+end
+local grace = 1.50
+local active = Gym.Event.Active and (os.clock() - (Gym.Event.LastSeenAt or 0) <= grace)
+if not active then Gym.Event.Active = false end
+return active, nil, nil
+end
+Gym.isDescendantOfNamedFolder = function(object, folderName)
+local node = object and object.Parent
+while node do
+if node.Name == folderName then return true end
+node = node.Parent
 end
 return false
+end
+Gym.liftMachinePartScore = function(part)
+if not part or not part:IsA("BasePart") then return -math.huge end
+local name = tostring(part.Name or ""):lower()
+local score = 0
+if Gym.isDescendantOfNamedFolder(part, "StandingPlatforms") then score = score + 1200 end
+if Gym.isDescendantOfNamedFolder(part, "Hitboxes") then score = score + 1100 end
+if name:find("standing", 1, true) or name:find("platform", 1, true) or name:find("pad", 1, true) then score = score + 500 end
+if name:find("hitbox", 1, true) or name:find("zone", 1, true) then score = score + 450 end
+if name:find("lift", 1, true) or name:find("squat", 1, true) then score = score + 250 end
+if part.Transparency >= 0.95 and not part.CanCollide then score = score + 80 end
+if part.Size.X >= 3 and part.Size.Z >= 3 then score = score + 60 end
+return score
+end
+Gym.liftMachineCandidateParts = function(machine)
+local candidates = {}
+local seen = {}
+local function add(part)
+if part and part:IsA("BasePart") and part.Parent and not seen[part] then
+seen[part] = true
+candidates[#candidates + 1] = { Part = part, Score = Gym.liftMachinePartScore(part) }
+end
+end
+if not machine then return candidates end
+if machine:IsA("BasePart") then
+add(machine)
+elseif machine:IsA("Model") then
+add(machine.PrimaryPart)
+end
+local standing = machine:FindFirstChild("StandingPlatforms", true)
+if standing then
+for _, child in ipairs(standing:GetDescendants()) do add(child) end
+for _, child in ipairs(standing:GetChildren()) do add(child) end
+end
+local hitboxes = machine:FindFirstChild("Hitboxes", true)
+if hitboxes then
+for _, child in ipairs(hitboxes:GetDescendants()) do add(child) end
+for _, child in ipairs(hitboxes:GetChildren()) do add(child) end
+end
+for _, descendant in ipairs(machine:GetDescendants()) do
+if descendant:IsA("BasePart") then
+local score = Gym.liftMachinePartScore(descendant)
+if score >= 200 then add(descendant) end
+end
+end
+if #candidates == 0 then
+add(machine:FindFirstChildWhichIsA("BasePart", true))
+end
+table.sort(candidates, function(a, b) return a.Score > b.Score end)
+return candidates
+end
+Gym.gymTargetPosition = function(part)
+local root = gymRoot()
+local hum = gymHum()
+if not part or not root or not hum then return nil end
+local lowName = tostring(part.Name or ""):lower()
+local isHitbox = Gym.isDescendantOfNamedFolder(part, "Hitboxes")
+or lowName:find("hitbox", 1, true)
+or lowName:find("zone", 1, true)
+if isHitbox then return part.Position end
+local rootHalf = math.max(1, root.Size.Y * 0.5)
+local yOffset = part.Size.Y * 0.5 + math.max(1.5, hum.HipHeight or 2) + rootHalf
+return part.CFrame:PointToWorldSpace(Vector3.new(0, yOffset, 0))
+end
+Gym.moveToLiftMachinePart = function(part)
+if not part or not part.Parent or not gymWaitAlive(3) then return false end
+local root = gymRoot()
+if not root or root.Anchored then return false end
+local target = Gym.gymTargetPosition(part)
+if not target then return false end
+gymUnequipUnanchor()
+local mode = tostring(Gym.TravelMode or "Teleport (Safe)")
+if mode == "Manual" then
+return Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z).Magnitude <= 7
+end
+if mode == "Teleport (Safe)" then
+pcall(function()
+local rotationOnly = root.CFrame - root.CFrame.Position
+root.CFrame = CFrame.new(target) * rotationOnly
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+end)
+task.wait(0.16)
+root = gymRoot()
+return root ~= nil and (root.Position - target).Magnitude <= 8
+end
+return gymWalkTo(target, 12, 5)
+end
+Gym.ensureGymTrainingTool = function()
+local tool = gymEquippedWeightTool()
+local ch = gymChar()
+if tool and ch and tool.Parent == ch and gymHasTag(tool, "SquatTool") then return tool end
+tool = gymEquippedWeightTool()
+if not tool then return nil end
+if ch and tool.Parent ~= ch then
+local hum = gymHum()
+if hum then pcall(function() hum:EquipTool(tool) end) end
+task.wait(0.08)
+tool = gymEquippedWeightTool()
+end
+return tool
+end
+Gym.waitForLiftMachineRecognition = function(timeout)
+local deadline = os.clock() + (timeout or 0.9)
+while os.clock() < deadline do
+if Gym.currentLiftMachineMultiplier() > 1 then return true end
+F.GymClickBonusPopups(false)
+task.wait(0.025)
+end
+return Gym.currentLiftMachineMultiplier() > 1
+end
+Gym.gymMachineProgress = function(machine)
+if not machine or not machine.Parent then return 1, 0, 0 end
+local multiplier = tonumber(machine:GetAttribute("Multiplier")) or Gym.currentLiftMachineMultiplier() or 1
+local squats = tonumber(machine:GetAttribute("Squats")) or 0
+local goal = tonumber(machine:GetAttribute("Goal")) or 0
+return multiplier, squats, goal
+end
+Gym.gymMachineNeedsReenter = function()
+local machine = Gym.Event.Machine
+if not machine or not machine.Parent or not machine:IsDescendantOf(WS) then return true end
+if Gym.currentLiftMachineMultiplier() <= 1 then return true end
+local tool = gymEquippedWeightTool()
+local ch = gymChar()
+if not tool or not ch or tool.Parent ~= ch or not gymHasTag(tool, "SquatTool") then return true end
+return false
+end
+Gym.enterGymMachine = function(forceRescan)
+local machine = forceRescan and Gym.nearestLiftMachine() or Gym.Event.Machine
+if not machine or not machine.Parent or not machine:IsDescendantOf(WS) then
+machine = Gym.nearestLiftMachine()
+end
+if not machine then return false end
+Gym.Event.Machine = machine
+Gym.Event.MachineName = machine.Name
+if Gym.currentLiftMachineMultiplier() > 1 then
+Gym.ensureGymTrainingTool()
+return true
+end
+local candidates = Gym.liftMachineCandidateParts(machine)
+local lastPart = Gym.Event.LastVerifiedPart
+if Gym.Event.LastVerifiedMachine == machine and lastPart and lastPart.Parent then
+table.insert(candidates, 1, { Part = lastPart, Score = math.huge })
+end
+local maximum = math.min(#candidates, 10)
+for index = 1, maximum do
+local part = candidates[index].Part
+if Gym.moveToLiftMachinePart(part) then
+local tool = Gym.ensureGymTrainingTool()
+if tool and Gym.waitForLiftMachineRecognition(0.90) then
+Gym.Event.LastVerifiedMachine = machine
+Gym.Event.LastVerifiedPart = part
+return true
+end
+end
+gymUnequipUnanchor()
+task.wait(0.05)
+end
+return Gym.currentLiftMachineMultiplier() > 1
+end
+local _bonusBtnAt = setmetatable({}, { __mode = "k" })
+F.GymGuiVisible = function(object)
+if not object or not object:IsA("GuiObject") or not object.Visible then return false end
+local parent = object.Parent
+while parent do
+if parent:IsA("GuiObject") and not parent.Visible then return false end
+if parent:IsA("ScreenGui") and not parent.Enabled then return false end
+parent = parent.Parent
+end
+return true
+end
+local function gymMultFromText(value)
+local compact = tostring(value or ""):upper():gsub("%s+", ""):gsub("×", "X")
+if compact == "X2" or compact == "2X" then return 2
+elseif compact == "X5" or compact == "5X" then return 5
+elseif compact == "X10" or compact == "10X" then return 10 end
+return nil
+end
+local function gymMultForButton(button)
+if not button or not button:IsA("GuiButton") then return nil end
+if button:IsA("TextButton") then
+local direct = gymMultFromText(button.Text)
+if direct then return direct end
+end
+local ok, descendants = pcall(button.GetDescendants, button)
+if ok and type(descendants) == "table" then
+for _, child in ipairs(descendants) do
+if child:IsA("TextLabel") or child:IsA("TextButton") then
+local m = gymMultFromText(child.Text)
+if m then return m end
+end
+end
+end
+local parent = button.Parent
+if parent and parent:IsA("GuiObject") then
+local children = parent:GetChildren()
+local pn = tostring(parent.Name or ""):lower()
+local bn = tostring(button.Name or ""):lower()
+local likely = pn:find("bonus", 1, true) or pn:find("tavi", 1, true) or pn:find("mish", 1, true) or pn:find("mult", 1, true)
+or bn:find("bonus", 1, true) or bn:find("tavi", 1, true) or bn:find("mish", 1, true)
+if likely or #children <= 12 then
+for _, child in ipairs(children) do
+if child:IsA("TextLabel") or child:IsA("TextButton") then
+local m = gymMultFromText(child.Text)
+if m then return m end
+end
+end
+end
+end
+return nil
+end
+F.GymClickButton = function(button)
+if not button or not button:IsA("GuiButton") then return false end
+if not button.Visible or button.AbsoluteSize.X <= 1 or button.AbsoluteSize.Y <= 1 then return false end
+local used = false
+if type(firesignal) == "function" then
+used = pcall(function() firesignal(button.Activated) end)
+if not used then used = pcall(function() firesignal(button.MouseButton1Click) end) end
+end
+if not used and type(getconnections) == "function" then
+pcall(function()
+for _, sig in ipairs({ button.Activated, button.MouseButton1Click }) do
+if sig then
+for _, c in ipairs(getconnections(sig) or {}) do pcall(function() c:Fire() end) end
+end
+end
+used = true
+end)
+end
+return used
+end
+F.GymClickBonusPopups = function(force)
+local now = os.clock()
+if not force and now - (F._gymBonusAt or 0) < 0.025 then return 0 end
+F._gymBonusAt = now
+if not gymEquippedWeightTool() then return 0 end
+if not PG then return 0 end
+local clicked = 0
+local ok, descendants = pcall(PG.GetDescendants, PG)
+if not ok or type(descendants) ~= "table" then return 0 end
+for _, object in ipairs(descendants) do
+if object:IsA("GuiButton") and F.GymGuiVisible(object) then
+local multiplier = gymMultForButton(object)
+if multiplier then
+local last = _bonusBtnAt[object] or 0
+if now - last >= 0.20 then
+_bonusBtnAt[object] = now
+if F.GymClickButton(object) then
+clicked = clicked + 1
+F._gymBonusClicks = (F._gymBonusClicks or 0) + 1
+task.delay(0.01, function() pcall(function() F.FireSrv("TaviMishkal") end) end)
+end
+end
+end
+end
+end
+if clicked > 0 and F.LogRate("gym_bonus", 8) then
+F.Out("[锻炼] 已点掉 " .. tostring(clicked) .. " 个 ×2/×5 锻炼弹窗(累计 " .. tostring(F._gymBonusClicks or 0) .. ")")
+end
+return clicked
 end
 F.NetRoot = function()
 local r = nil
 pcall(function()
-local RSv = game:GetService("ReplicatedStorage")
-local sh = RSv:FindFirstChild("Shared")
+local rss = game:GetService("ReplicatedStorage")
+local sh = rss:FindFirstChild("Shared")
 local pk = sh and sh:FindFirstChild("Packages")
 r = pk and pk:FindFirstChild("Network")
 end)
@@ -8816,164 +8939,179 @@ pcall(function() r = root:FindFirstChild("rev_" .. tostring(name)) end)
 if r and r:IsA("RemoteEvent") then return r end
 return nil
 end
-F.ConnectRemote = function(name, cb)
-local r = F.RemoteByName(name)
-if not r then return false end
-pcall(function() r.OnClientEvent:Connect(cb) end)
-return true
-end
-F.ClaimRemoteSweep = function()
+F.RemoteFuncByName = function(name)
 local root = F.NetRoot()
-if not root then return 0 end
-local KEYS = { "claim", "award", "reward", "bonus", "mail", "collect", "daily", "gift", "cash", "spin" }
-local n = 0
-pcall(function()
-local kids = root:GetChildren()
-local i, j
-for i = 1, #kids do
-local o = kids[i]
-if o:IsA("RemoteEvent") then
-local nm = tostring(o.Name)
-if nm:sub(1, 4) == "rev_" then
-local low = nm:lower()
-for j = 1, #KEYS do
-if low:find(KEYS[j], 1, true) then
-pcall(function() o:FireServer() end)
-n = n + 1
-break
+if not root then return nil end
+local r = nil
+pcall(function() r = root:FindFirstChild("ref_" .. tostring(name)) end)
+if r and r:IsA("RemoteFunction") then return r end
+return nil
+end
+F.FireSrv = function(name, ...)
+local remote = F.RemoteByName(name)
+if not remote then return false end
+local args = table.pack(...)
+return (pcall(function() remote:FireServer(table.unpack(args, 1, args.n)) end))
+end
+F.InvokeSrv = function(name, ...)
+local remote = F.RemoteFuncByName(name)
+if not remote then return false, nil end
+local args = table.pack(...)
+local ok, a = pcall(function() return remote:InvokeServer(table.unpack(args, 1, args.n)) end)
+if not ok then return false, nil end
+return true, a
+end
+F.ConnectRemote = function(name, cb)
+local remote = F.RemoteByName(name)
+if not remote then return nil end
+local c = nil
+pcall(function() c = remote.OnClientEvent:Connect(cb) end)
+return c
+end
+F.GymFrames = function()
+if not PG then return nil end
+return PG:FindFirstChild("Frames")
+end
+F.GymWheelSpins = function()
+if typeof(F._wheelSpinsCache) == "number" then return math.max(0, math.floor(F._wheelSpinsCache)) end
+local wheelGui = PG and PG:FindFirstChild("WheelSpin")
+local buttons = wheelGui and wheelGui:FindFirstChild("Buttons")
+local spinButton = buttons and buttons:FindFirstChild("SpinButton")
+local label = spinButton and spinButton:FindFirstChild("SpinsLabel")
+if label and (label:IsA("TextLabel") or label:IsA("TextButton")) then
+local parsed = tonumber(tostring(label.Text or ""):match("(%d+)"))
+if parsed then
+F._wheelSpinsCache = math.max(0, math.floor(parsed))
+return F._wheelSpinsCache
 end
 end
+return 0
+end
+local BattlePassFreeXP = { [1]=500,[2]=1000,[3]=1500,[4]=2000,[5]=2500,[6]=3000,[7]=3500,[8]=4000,[9]=4500,[10]=5000,[11]=5500,[12]=6000,[13]=6500,[14]=7000,[15]=7500 }
+local BattlePassBonusXP = { [1]=8250,[2]=9000,[3]=9750,[4]=10500,[5]=11250 }
+F.ClaimBattlePass = function()
+local state = F._bpState
+if type(state) ~= "table" or typeof(state.XP) ~= "number" then return false end
+if os.clock() - (F._lastBpClaim or 0) < 10 then return false end
+F._lastBpClaim = os.clock()
+state.UnlockedFreeRewards = state.UnlockedFreeRewards or {}
+state.UnlockedPremiumRewards = state.UnlockedPremiumRewards or {}
+state.UnlockedBonusRewards = state.UnlockedBonusRewards or {}
+local did = false
+for id = 1, 15 do
+local needed = BattlePassFreeXP[id]
+if needed and state.XP >= needed and not table.find(state.UnlockedFreeRewards, id) then
+local ok, claimed = F.InvokeSrv("BattlePassAttemptClaim", id, "Free")
+if ok and claimed then table.insert(state.UnlockedFreeRewards, id) did = true end
+task.wait(0.04)
+end
+if state.HasPremium and needed and state.XP >= needed and not table.find(state.UnlockedPremiumRewards, id) then
+local ok, claimed = F.InvokeSrv("BattlePassAttemptClaim", id, "Premium")
+if ok and claimed then table.insert(state.UnlockedPremiumRewards, id) did = true end
+task.wait(0.04)
 end
 end
+for id = 1, 5 do
+local needed = BattlePassBonusXP[id]
+if needed and state.XP >= needed and not table.find(state.UnlockedBonusRewards, id) then
+local ok, claimed = F.InvokeSrv("BattlePassAttemptBonusClaim", id, "Bonus")
+if ok and claimed then table.insert(state.UnlockedBonusRewards, id) did = true end
+task.wait(0.04)
 end
-end)
-return n
 end
-F.GymEventWatch = function(on)
+return did
+end
+F.ClaimWheelSpin = function()
+if os.clock() < (F._wheelBusyUntil or 0) then return false end
+if os.clock() - (F._wheelReqAt or 0) < 5.4 then return false end
+if F.GymWheelSpins() <= 0 then return false end
+F._wheelReqAt = os.clock()
+F._wheelBusyUntil = os.clock() + 5.25
+return F.FireSrv("RequestSpin")
+end
+F.ClaimTick = function()
+local fired = 0
+if not F._freeItemClaimed and os.clock() - (F._freeItemCheckedAt or 0) >= 5 then
+F._freeItemCheckedAt = os.clock()
+if F.FireSrv("CheckFree") then fired = fired + 1 end
+end
+if not F._offlineClaimed then
+local frames = F.GymFrames()
+local offline = frames and frames:FindFirstChild("OfflineFrame")
+if offline and offline.Visible then
+F._offlineClaimed = true
+if F.FireSrv("Offline_Claim") then fired = fired + 1 end
+end
+end
+if not F._groupGiftDone then
+F._groupGiftDone = true
+if WS:FindFirstChild("FreeGift") and F.FireSrv("GroupClaim") then fired = fired + 1 end
+end
+if os.clock() - (F._mailboxClaimAt or 0) >= 60 then
+F._mailboxClaimAt = os.clock()
+for _, id in ipairs({ "2586061570371093144", "7058748194620048013", "5736338153371992847" }) do
+if F.FireSrv("MailClaim", id) then fired = fired + 1 end
+task.wait(0.03)
+end
+end
+if F.ClaimWheelSpin() then fired = fired + 1 end
+if F.ClaimBattlePass() then fired = fired + 1 end
+return fired
+end
+F.ClaimWatch = function(on)
 if not on then
-if F._gymWatchConns then
-for _, c in ipairs(F._gymWatchConns) do pcall(function() c:Disconnect() end) end
-F._gymWatchConns = nil
+if F._claimConns then
+for _, c in ipairs(F._claimConns) do pcall(function() c:Disconnect() end) end
+F._claimConns = nil
 end
 return
 end
-if F._gymWatchConns then return end
-local root = F.NetRoot()
-if not root then return end
-local conns = {}
-pcall(function()
-local KEYS = { "gym", "lift", "train" }
-local kids = root:GetChildren()
-local i, j
-for i = 1, #kids do
-local o = kids[i]
-if o:IsA("RemoteEvent") then
-local low = tostring(o.Name):lower()
-for j = 1, #KEYS do
-if low:find(KEYS[j], 1, true) then
-conns[#conns + 1] = o.OnClientEvent:Connect(function()
-F._gymEventAt = os.clock()
-F._gymEventName = tostring(o.Name)
-end)
-break
+if F._claimConns then return end
+F._claimConns = {}
+local function add(name, cb)
+local c = F.ConnectRemote(name, cb)
+if c then F._claimConns[#F._claimConns + 1] = c end
 end
-end
-end
+add("CheckFree", function(claimed)
+F._freeItemClaimed = (claimed == true)
+F._freeItemCheckedAt = os.clock()
+if claimed == false and T.AutoBonus then
+task.defer(function()
+if T.AutoBonus then
+F.FireSrv("ClaimFree")
+F._freeItemClaimed = true
+if F.LogRate("claim_free", 5) then F.Out("[自动领取] 免费商店脑红 ⇒ 已自动领取") end
 end
 end)
-F._gymWatchConns = conns
-if #conns > 0 then
-F.Out("[健身房] 已挂事件监听 " .. tostring(#conns) .. " 条(照 2.txt 的 connectRemote 做法)")
 end
-end
-local function liveMachines()
-local r = {}
-local ok, t = pcall(CS.GetTagged, CS, "LiftMachine")
-if ok and type(t) == "table" then
-for _, m in ipairs(t) do
-if m and m.Parent and m:IsDescendantOf(WS) then r[#r + 1] = m end
-end
-end
-return r
-end
-local function AutoGymLiftMachineLegacy()
-if GymThread then return end
-GymThread = task.spawn(function()
-while T.AutoGym do
-local machines = liveMachines()
-local _, _, root = GC()
-if #machines > 0 and root then
-local best, bestDist = nil, math.huge
-for _, m in ipairs(machines) do
-local pos
-if m:IsA("Model") then
-local ok, pivot = pcall(m.GetPivot, m)
-if ok then pos = pivot.Position end
-elseif m:IsA("BasePart") then pos = m.Position end
-if pos then
-local d = (root.Position - pos).Magnitude
-if d < bestDist then bestDist = d best = m end
-end
-end
-if best then
-local lv = math.max(1, tonumber(LP:GetAttribute("liftMachine")) or 1)
-if lv <= 1 then
-local pos
-if best:IsA("Model") then
-local ok, pivot = pcall(best.GetPivot, best)
-if ok then pos = pivot.Position end
-elseif best:IsA("BasePart") then pos = best.Position end
-if pos then
-local target = pos + Vector3.new(0, 3, 0)
-local farD = (root.Position - target).Magnitude
-if farD > 2.5 then
-pcall(function()
-local _, humM = GC()
-if humM then humM:MoveTo(target) end
 end)
-if os.clock() - (F._gymNote or 0) > 8 then
-F._gymNote = os.clock()
-F.Out("[健身房] 检测到机器在 " .. string.format("%.0f", farD) .. " 格外 ⇒ 正在自动走过去参加(内置寻路 MoveTo, 不注入按键)")
+add("UpdateSpins", function(spins) if typeof(spins) == "number" then F._wheelSpinsCache = math.max(0, math.floor(spins)) end end)
+add("SpinWheel", function() F._wheelBusyUntil = os.clock() + 5.25 end)
+add("BattlePassDataSend", function(state) if type(state) == "table" then F._bpState = state end end)
+if #F._claimConns > 0 then
+F.Out("[自动领取] 已挂奖励监听 " .. tostring(#F._claimConns) .. " 条(照搬参考脚本的 connectRemote 做法)")
 end
-end
-pcall(function() equipSquatTool() end)
-local _, hum2 = GC()
-for _i = 1, 5 do
-if not T.AutoGym then break end
-if hum2 then pcall(function() hum2:Move(Vector3.zero, false) end) end
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-task.wait(0.15)
-vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-end)
-task.wait(0.15)
-end
-local okG = waitGymRecognition(0.9)
-local g1, g2, g3 = gymMult()
-local sig = tostring(g1) .. "/" .. tostring(g2) .. "/" .. tostring(g3)
-if sig ~= (F._gymLv or "") then
-F._gymLv = sig
-F.Out("[健身房] 站上机器 · 增益 liftMachine=x" .. tostring(g1) .. " · gym_speed=x" .. tostring(g2) .. " · gym_power=x" .. tostring(g3)
-.. (okG and " ⇒ 游戏已认可(锻炼真生效了)" or " ⇒ 游戏还没认可(换个位置或换台机器再试)"))
-end
-end
-else equipSquatTool() end
-end
-end
-task.wait(1)
-end
-GymThread = nil
-end)
 end
 local TrainThread = nil
 function F.AutoTrainEnable()
 if TrainThread then return end
-F.Out("[训练] 已启动: 自动手持配重并 Activate (锻炼加成请同时开「自动锻炼(健身房)」)")
+F.Out("[自动锻炼] 已启动(照搬参考脚本): 手持配重 → 站上举铁机 → 等游戏认可(liftMachine/x 属性) → 自动点 ×2/×5 弹窗")
 TrainThread = task.spawn(function()
+local logAt = 0
 while T.AutoTrain do
-pcall(trainTickOnce)
-task.wait(math.max(0.3, tonumber(C.AutoTrainSec) or 1))
+pcall(function()
+Gym.enterGymMachine(false)
+Gym.ensureGymTrainingTool()
+local okG = Gym.waitForLiftMachineRecognition(0.9)
+F.GymClickBonusPopups(false)
+if os.clock() - logAt > 12 then
+logAt = os.clock()
+F.Out(string.format("[自动锻炼] 机器 x%.1f · gym_speed x%.1f · gym_power x%.1f %s",
+Gym.currentLiftMachineMultiplier(), Gym.currentGymSpeedMultiplier(), Gym.currentGymPowerMultiplier(),
+okG and "⇒ 游戏已认可(正在涨)" or "⇒ 还没认可(换个位置或换台机器)"))
+end
+end)
+task.wait(0.4)
 end
 TrainThread = nil
 end)
@@ -8981,207 +9119,67 @@ end
 function F.AutoTrainDisable()
 T.AutoTrain = false
 TrainThread = nil
-F.Out("[训练] 已停止")
+F.Out("[自动锻炼] 已停止")
 end
-local GymThread2 = nil
-F.GymRetrigger = function()
-if F._typing then return end
-local _, hum, root = GC()
-if not root then return end
+local GymThread = nil
+function F.AutoGymEnable()
+if GymThread then return end
+Gym.TravelMode = "Teleport (Safe)"
+F.Out("[自动传送健身房] 已启动(照搬参考脚本): 自动传送到最近的 LIFT 举铁机并站上去, 站到游戏认可为止")
+GymThread = task.spawn(function()
+while T.AutoGym do
 pcall(function()
-local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
-if tool then tool:Activate() end
-end)
-if not UIS.TouchEnabled then pcall(function() mouse1click() end) end
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-task.wait(0.05)
-vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-end)
-F.Out("[健身房] 已重新开始锻炼(激活手上配重 + 触发一次动作)")
+local active, _, machine = Gym.gymTimeActive(true)
+if not active then
+if os.clock() - (F._gymNoneAt or 0) > 10 then
+F._gymNoneAt = os.clock()
+F.Out("[自动传送健身房] 场上暂时没有带 LiftMachine 标签的举铁机 ⇒ 等下一次健身房事件")
 end
-F.FindCurrencyPart = function(i)
-local want = tostring(i)
-local best = nil
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("BasePart") then
-local nm = tostring(d.Name):lower()
-if nm:find(want, 1, true) or tostring(d:GetAttribute("slot")) == want then
-for _, k in ipairs({ "cash", "coin", "money", "currency", "drop", "loot", "pickup", "collect", "现金", "钱" }) do
-if nm:find(k, 1, true) then best = d break end
+else
+if machine then Gym.Event.Machine = machine end
+if Gym.gymMachineNeedsReenter() then
+gymUnequipUnanchor()
+Gym.enterGymMachine(true)
+else
+Gym.ensureGymTrainingTool()
 end
-end
-if best then break end
+F.GymClickBonusPopups(false)
+if os.clock() - (F._gymLogAt or 0) > 10 then
+F._gymLogAt = os.clock()
+local m, squats, goal = Gym.gymMachineProgress(Gym.Event.Machine)
+F.Out(string.format("[自动传送健身房] %s · 进度 x%.0f %.0f/%.0f · 机器 x%.1f",
+tostring(Gym.Event.MachineName or "?"), m, squats, goal, Gym.currentLiftMachineMultiplier()))
 end
 end
 end)
-return best
-end
-F.FindMyBase = function()
-local uid, nm = tostring(LP.UserId), tostring(LP.Name)
-local cached = F._myBase
-if cached and cached.Parent then return cached end
-local cand = nil
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("Model") or d:IsA("Folder") then
-local mine = false
-pcall(function()
-local own = d:GetAttribute("Owner") or d:GetAttribute("owner") or d:GetAttribute("UserId") or d:GetAttribute("userId") or d:GetAttribute("Placer")
-if own ~= nil and tostring(own) == uid then mine = true end
-end)
-if not mine then
-local n2 = tostring(d.Name)
-if n2 == nm or n2:find(uid, 1, true) or n2:find(nm, 1, true) then mine = true end
-end
-if mine then cand = d break end
-end
-end
-end)
-F._myBase = cand
-if cand then F.Out("[收集] 我的基地/家 = " .. tostring(cand:GetFullName())) end
-return cand
-end
-F.CollectTP_OLD = function(maxSlot)
-task.spawn(function()
-local _, _, root = GC()
-if not root then F.Out("[收集] 没有角色, 稍后再点") return end
-local n = 0
-for i = 1, (maxSlot or 30) do
-if not root.Parent then break end
-local part = F.FindCurrencyPart(i)
-if part then
-pcall(function() root.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 0)) end)
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 task.wait(0.25)
 end
-pcall(F.CollectAll, i)
-n = n + 1
-task.wait(0.12)
-end
-F.Out("[收集] 已按槽位 1~" .. tostring(maxSlot or 30) .. " 逐个 TP 过去再收集(共 " .. tostring(n) .. " 次)")
-end)
-end
-function F.AutoGymEnable()
-if GymThread2 or GymThread then return end
-pcall(function() F.GymEventWatch(true) end)
-pcall(function()
-if kickUpgradesGui() then
-F.Out("[健身房] 已启动: 手持配重 + 自动点击 KickUpgrades 的 Bonus/PopBonus 锻炼弹窗")
-GymThread2 = task.spawn(function()
-local noGui = 0
-while T.AutoGym do
-pcall(trainTickOnce)
-if kickUpgradesGui() then noGui = 0 else noGui = noGui + 1 end
-if noGui >= 40 then
-F.Out("[健身房] 找不到 KickUpgrades ⇒ 退回旧的举铁机(LiftMachine)逻辑")
-break
-end
-pcall(F.GymRetrigger)
-task.wait(tonumber(C.AutoGymRate) or 0.12)
-end
-GymThread2 = nil
-if T.AutoGym then pcall(AutoGymLiftMachineLegacy) end
-end)
-else
-F.Out("[健身房] 本游戏没有 KickUpgrades 锻炼界面 ⇒ 走旧的举铁机(LiftMachine)逻辑")
-AutoGymLiftMachineLegacy()
-end
+GymThread = nil
 end)
 end
 function F.AutoGymDisable()
 T.AutoGym = false
-pcall(function() F.GymEventWatch(false) end)
-GymThread2 = nil
-F.Out("[健身房] 已停止")
-end
-local function multiplierFromText(v)
-local compact = tostring(v or ""):upper():gsub("%s+", ""):gsub("×", "X")
-if compact == "X2" or compact == "2X" then return 2
-elseif compact == "X5" or compact == "5X" then return 5
-elseif compact == "X10" or compact == "10X" then return 10 end
-end
-local function scanMultiplierButtons()
-local roots = { PG, CoreGui }
-if gethui then pcall(function() table.insert(roots, gethui()) end) end
-local n = 0
-for _, root in ipairs(roots) do
-if root then
-local ok, list = pcall(function() return F.walk(root, 20000) end)
-if ok and type(list) == "table" then
-for _, obj in ipairs(list) do
-if obj:IsA("TextButton") then
-local okv, vis = pcall(function() return obj.Visible end)
-if okv and vis then
-local hit = multiplierFromText(obj.Text) and true or false
-if not hit then
-for _, child in ipairs(F.walk(obj, 60)) do
-if (child:IsA("TextLabel") or child:IsA("TextButton")) and multiplierFromText(child.Text) then
-hit = true break
-end
-end
-end
-if hit and guiClick(obj) then n = n + 1 end
-end
-end
-end
-end
-end
-end
-return n
-end
-local function collectCashOnce()
-local r = REvent("rev_B_Collect")
-if r then
-for i = 1, 12 do
-if not T.AutoBonus then break end
-pcall(function() r:FireServer(i) end)
-end
-end
-pcall(function()
-local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-local plots = WS:FindFirstChild("Plots")
-if not (hrp and plots and firetouchinterest) then return end
-for _, plot in ipairs(plots:GetChildren()) do
-local owner = nil
-pcall(function() owner = plot:GetAttribute("Owner") end)
-local btns = plot:FindFirstChild("Buttons")
-if owner == LP.Name and btns then
-for _, slot in ipairs(btns:GetChildren()) do
-pcall(function() firetouchinterest(hrp, slot, 0) end)
-pcall(function() firetouchinterest(hrp, slot, 1) end)
-end
-end
-end
-end)
+GymThread = nil
+F.Out("[自动传送健身房] 已停止")
 end
 local BonusThread = nil
 function F.AutoBonusEnable()
 if BonusThread and T.AutoBonus then return end
-F.Out("[领奖] 已启动: 点 KickUpgrades 的 Bonus/PopBonus 奖励 + 收现金 rev_B_Collect + 触碰地盘收钱按钮")
+pcall(function() F.ClaimWatch(true) end)
+F.Out("[自动领取] 已启动(照搬参考脚本): 免费商店脑红 + 离线收益 + 群组礼物 + 邮箱(3 个事件 ID) + 转盘 + 战斗通行证 + ×2/×5 弹窗")
 BonusThread = task.spawn(function()
 local logAt, total = 0, 0
 while T.AutoBonus do
 pcall(function()
-local n, saw = clickBonusButtons(false)
-if not saw then n = n + scanMultiplierButtons() end
-collectCashOnce()
-if os.clock() - (F._claimSweepAt or 0) > 60 then
-F._claimSweepAt = os.clock()
-local cn = F.ClaimRemoteSweep()
-if cn > 0 then F.Out("[领奖] 已按远程名字主动领奖 " .. tostring(cn) .. " 次(照 2.txt 的 AutoClaimMailboxRewards 做法)") end
-end
-if n > 0 then
-total = total + n
-if os.clock() - logAt > 20 then
+local n = F.GymClickBonusPopups(false)
+local fired = F.ClaimTick()
+total = total + fired
+if (n > 0 or fired > 0) and os.clock() - logAt > 20 then
 logAt = os.clock()
-F.Out("[领奖] 已点掉 " .. tostring(total) .. " 个奖励按钮")
-end
+F.Out("[自动领取] 本轮触发了 " .. tostring(fired) .. " 个奖励远程 · 点掉 " .. tostring(n) .. " 个弹窗(累计远程 " .. tostring(total) .. ")")
 end
 end)
-task.wait(math.max(0.1, tonumber(C.AutoBonusRate) or 0.5))
+task.wait(0.35)
 end
 BonusThread = nil
 end)
@@ -9189,7 +9187,8 @@ end
 function F.AutoBonusDisable()
 T.AutoBonus = false
 BonusThread = nil
-F.Out("[领奖] 已停止")
+pcall(function() F.ClaimWatch(false) end)
+F.Out("[自动领取] 已停止")
 end
 do
 local CPS = {
@@ -10796,7 +10795,7 @@ function F.TranslateEnable() return Trans.Enable() end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
-F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
+F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
 F.FlingStop, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
@@ -13998,29 +13997,23 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("★ 挂机防踢")
-Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(防挂机 + 防踢 合成一个开关)", Description = "⚠ 默认关 —— 它会在加载时改写全局元表, 有些反作弊会因为这一层 hook 直接把你踢掉(挂机前再开)。① 防挂机: 不写人物任何属性, 只掐掉游戏挂在 Idled 上的检测连接 + 定期写心跳属性; ② 防踢: 钩住 Kick 的三条路径(Kick 方法 / .Kick 取值 / .Kick 赋值)", Default = false, Callback = function(v)
-T.AntiAFK, T.KickGuard = v, v
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢(PuckAFK 通用做法)", Description = "直接照搬 PuckAFK 的通用防挂机: 游戏判你挂机时, 在屏幕角落做一次「空点」把挂机计时清零。不改你的角色、不装任何元表钩子 —— 所以不会因为 hook 被反作弊踢。", Default = true, Callback = function(v)
+T.AntiAFK = v
 if F._cfgSyncing then return end
-if v then
-F.Try("AntiAFKEnable", F.AntiAFKEnable)
-F.Try("KickGuardEnable", F.KickGuardEnable)
-else
-pcall(F.AntiAFKDisable)
-pcall(F.KickGuardDisable)
-end
+if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
 end })
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼(手持配重 + 站上举铁机)", Description = "照搬参考脚本: 自动手持配重 → 走到/站上最近的 LIFT 举铁机 → 等游戏认可(liftMachine 属性 >1) → 自动点 ×2/×5 锻炼弹窗", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
 if v then F.AutoTrainEnable() else F.AutoTrainDisable() end
 end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "领取踢击奖励(自动点 Bonus / 收现金)", Description = "① 点 PlayerGui.KickUpgrades 里 Visible 的 Bonus/PopBonus 按钮(就是那个 ×2 奖励) ② 发 rev_B_Collect 收现金 ③ 触碰自己地盘(Plots)上的收钱按钮", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取(照搬参考脚本的领奖链)", Description = "免费商店脑红 + 离线收益 + 群组礼物 + 邮箱奖励(3 个事件 ID 每 60 秒) + 转盘自动抽 + 战斗通行证领取 + ×2/×5 弹窗", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
 if v then F.AutoBonusEnable() else F.AutoBonusDisable() end
 end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Description = "这游戏的锻炼 = 手持配重 + 反复点 KickUpgrades 的 Bonus 弹窗(不是站在跑步机上)。开它只会在找得到该界面时工作; 找不到会自己退回旧的举铁机逻辑", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房(自动参加健身房事件)", Description = "照搬参考脚本: 自动传送到最近的 LIFT 举铁机(Teleport (Safe))并站上去反复重进, 站到游戏认可为止", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
@@ -14613,8 +14606,6 @@ pcall(F.ApplySavedOn)
 end)
 end)
 end)
-T.AntiAFK, T.KickGuard = true, true
 F.Try("AntiAFKEnable", F.AntiAFKEnable)
-F.Try("KickGuardEnable", F.KickGuardEnable)
-F.Out("[挂机防踢] 默认已开(防挂机 + 防踢)")
+F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
