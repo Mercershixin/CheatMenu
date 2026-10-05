@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 00:51 sha 508df082 bytes 437736'):format('2026-10-06 00:51','508df082',437736))
+print(('[CheatMenu] build 2026-10-06 00:56 sha 0e9dfb18 bytes 437535'):format('2026-10-06 00:56','0e9dfb18',437535))
 local F = {}
-F.VERSION = "v16.9.19"
+F.VERSION = "v16.9.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -429,10 +429,6 @@ local raw = wrapperFactory(box)
 if type(raw) ~= "function" then return nil end
 local rec = { id = id, slot = slot, target = target, box = box, raw = raw, alive = true }
 local mk = newcclosure
-if T.CMX_HookHard and type(AC) == "table" and type(AC.cap) == "function" then
-local okN, nl = pcall(AC.cap, "newlclosure")
-if okN and type(nl) == "function" then mk = nl end
-end
 local wrapped
 local okW = pcall(function()
 wrapped = mk(function(self, ...)
@@ -10353,7 +10349,7 @@ end
 end
 end)
 F.Out(string.format("[反检测] ① 我们钩过的函数 %d 个 · 其中 LClosure %d / C 闭包 %d", hooked, lc, cc))
-if cc > 0 and not T.CMX_HookHard then
+if cc > 0 then
 F.Out("[反检测]    ⚠ C 闭包形态会被「islclosure 自检」认出来(本版没有可开的新 C 闭包化开关, 仅提示)")
 end
 local layers = 0
