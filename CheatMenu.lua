@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 02:02 sha 9ce31f53 bytes 531727'):format('2026-10-05 02:02','9ce31f53',531727))
+print(('[CheatMenu] build 2026-10-05 10:12 sha 64e76218 bytes 536478'):format('2026-10-05 10:12','64e76218',536478))
 local F = {}
-F.VERSION = "v16.4.0"
+F.VERSION = "v16.5.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8260,6 +8260,133 @@ F.KeyBindDisable = function()
 if F._keyBindConn then pcall(function() F._keyBindConn:Disconnect() end) F._keyBindConn = nil end
 F.Out("[快捷键] 已关")
 end
+F._pickLoop, F._pickAt, F._pickCount = nil, 0, 0
+F.PICK_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "coin", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest" }
+F.AutoPickEnable = function()
+if F._pickLoop then return end
+F._pickCount = 0
+F._pickLoop = RS.Heartbeat:Connect(function()
+if not T.AutoPick then
+if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop = nil end
+return
+end
+local now = os.clock()
+local gap = tonumber(C.AutoPickGap) or 0.25
+if now - (F._pickAt or 0) < gap then return end
+F._pickAt = now
+local _, hum, root = GC()
+if not (hum and root) then return end
+local range = tonumber(C.AutoPickRange) or 30
+local done = 0
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if done >= 6 then break end
+local isPart = false
+pcall(function() isPart = d:IsA("BasePart") or d:IsA("Tool") end)
+if isPart then
+local nm = string.lower(tostring(d.Name))
+local ok = false
+for i = 1, #F.PICK_KEYS do
+if string.find(nm, F.PICK_KEYS[i], 1, true) then ok = true break end
+end
+if ok then
+local pos = nil
+pcall(function() pos = d.Position end)
+if pos then
+local dist = (pos - root.Position).Magnitude
+if dist <= range and dist > 0.5 then
+local touched = false
+if type(firetouchinterest) == "function" then
+pcall(function() firetouchinterest(root, d, 0) firetouchinterest(root, d, 1) touched = true end)
+end
+if not touched and type(firetouchinterest) ~= "function" then
+pcall(function() d.CFrame = root.CFrame end)
+end
+done = done + 1
+F._pickCount = (F._pickCount or 0) + 1
+end
+end
+end
+end
+end
+end)
+end)
+F.Out("[自动拾取] 已开(碰到就收 · 半径 " .. tostring(tonumber(C.AutoPickRange) or 30) .. " 格)")
+end
+F.AutoPickDisable = function()
+if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop = nil end
+F.Out("[自动拾取] 已关 · 本次收了 " .. tostring(F._pickCount or 0) .. " 次")
+end
+F._allyTags = {}
+F.AllyTagRefresh = function()
+if not T.AllyMark then return end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if not host then pcall(function() host = CoreGui end) end
+local myTeam = nil
+pcall(function() myTeam = LP.Team end)
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local g = F._allyTags[pl]
+local isAlly = false
+pcall(function() isAlly = (myTeam ~= nil and pl.Team == myTeam) end)
+local ch = pl.Character
+local head = ch and ch:FindFirstChild("Head")
+if isAlly and head and host then
+if not g then
+g = Instance.new("BillboardGui")
+g.Name = "CMAllyTag"
+g.AlwaysOnTop = true
+g.Size = UDim2.fromOffset(120, 20)
+g.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
+g.MaxDistance = 500
+local lb = Instance.new("TextLabel")
+lb.Name = "T"
+lb.Size = UDim2.fromScale(1, 1)
+lb.BackgroundTransparency = 1
+lb.TextScaled = true
+lb.Font = Enum.Font.GothamBold
+lb.TextColor3 = Color3.fromRGB(0, 255, 80)
+lb.TextStrokeTransparency = 0.3
+lb.Text = "[队友] " .. pl.Name
+lb.Parent = g
+g.Adornee = head
+pcall(function() g:SetAttribute("CMOwned", true) end)
+g.Parent = host
+F._allyTags[pl] = g
+else
+pcall(function() g.Adornee = head g.Enabled = true end)
+end
+else
+if g then pcall(function() g.Enabled = false end) end
+end
+end
+end
+end
+F.AllyMarkClear = function()
+for _, g in pairs(F._allyTags) do pcall(function() g:Destroy() end) end
+F._allyTags = {}
+end
+F.AllyMarkSet = function(on)
+T.AllyMark = on and true or false
+if F._allyRefresh then pcall(function() F._allyRefresh:Disconnect() end) F._allyRefresh = nil end
+if not T.AllyMark then
+F.AllyMarkClear()
+F.Out("[队友标记] 已关")
+return
+end
+F._allyRefresh = RS.Heartbeat:Connect(function()
+if not T.AllyMark then
+if F._allyRefresh then pcall(function() F._allyRefresh:Disconnect() end) F._allyRefresh = nil end
+return
+end
+local now = os.clock()
+if now - (F._allyAt or 0) < 0.5 then return end
+F._allyAt = now
+pcall(F.AllyTagRefresh)
+end)
+F.Out("[队友标记] 已开(队友头顶显示绿色 [队友] 名字)")
+end
 F.EspBoneClear = function()
 for pl, rec in pairs(F._espBones) do
 if rec then
@@ -8936,7 +9063,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.AutoPickDisable, F.AllyMarkSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -14088,6 +14215,10 @@ Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = fa
 Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
 Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
 Tabs.Visual:AddToggle("EspItem", { Title = "ESP 也显示道具(绿 · 金币/宝石/箱子/蛋)", Default = false, Callback = function(v) T.EspItem = v end })
+Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记(队友头顶显示绿色名字)", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+F.AllyMarkSet(v)
+end })
 Tabs.Visual:AddSection("身体高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视(隔墙也能看到别人 · 半透明色块 + 外框)", Description = "用的是通用做法: 一个 Highlight, 填充半透明 + 描边 + 始终显示在最上层 ⇒ 隔着墙也看得见。队友绿、敌人红(配合下面的敌我识别)", Default = false, Callback = function(v)
 T.BodyHL = v
@@ -14221,6 +14352,13 @@ pcall(F.AntiAFKDisable)
 pcall(F.KickGuardDisable)
 end
 end })
+Tabs.AFK:AddToggle("AutoPick", { Title = "★ 自动拾取(附近掉落物碰到就收)", Default = false, Callback = function(v)
+T.AutoPick = v
+if F._cfgSyncing then return end
+if v then pcall(F.AutoPickEnable) else pcall(F.AutoPickDisable) end
+end })
+Tabs.AFK:AddSlider("AutoPickRange", { Title = "拾取半径(格)", Min = 5, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.AutoPickRange = v end })
+Tabs.AFK:AddSlider("AutoPickGap", { Title = "拾取间隔(秒)", Min = 0.05, Max = 2, Default = 0.25, Rounding = 2, Callback = function(v) C.AutoPickGap = v end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
 T.AutoTrain = v
