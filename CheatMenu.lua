@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 10:12 sha 64e76218 bytes 536478'):format('2026-10-05 10:12','64e76218',536478))
+print(('[CheatMenu] build 2026-10-05 10:16 sha 4ee84d4a bytes 539682'):format('2026-10-05 10:16','4ee84d4a',539682))
 local F = {}
-F.VERSION = "v16.5.0"
+F.VERSION = "v16.6.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7896,6 +7896,14 @@ for i = 1, #F.ESP_TRAP_KEYS do
 if string.find(low, F.ESP_TRAP_KEYS[i], 1, true) then return "trap", F.ESP_TRAP_COLOR, nm end
 end
 end
+if T.EspDrop then
+local isTool2 = false
+pcall(function() isTool2 = o:IsA("Tool") end)
+if isTool2 then return "drop", F.ESP_DROP_COLOR, nm end
+for i = 1, #F.DROP_KEYS do
+if string.find(low, F.DROP_KEYS[i], 1, true) then return "drop", F.ESP_DROP_COLOR, nm end
+end
+end
 if T.EspItem then
 for i = 1, #F.ESP_ITEM_KEYS do
 if string.find(low, F.ESP_ITEM_KEYS[i], 1, true) then return "item", F.ESP_ITEM_COLOR, nm end
@@ -7904,7 +7912,7 @@ end
 return nil, nil, nil
 end
 F.EspObjScan = function()
-if not (T.EspNpc or T.EspIx or T.EspTrap or T.EspItem) then return end
+if not (T.EspNpc or T.EspIx or T.EspTrap or T.EspItem or T.EspDrop) then return end
 local list = {}
 pcall(function() list = workspace:GetChildren() end)
 local subs = {}
@@ -8386,6 +8394,83 @@ F._allyAt = now
 pcall(F.AllyTagRefresh)
 end)
 F.Out("[队友标记] 已开(队友头顶显示绿色 [队友] 名字)")
+end
+F._vehLoop, F._vehAt, F._vehPart, F._vehCount = nil, 0, nil, 0
+F.VehicleBoostDisable = function()
+if F._vehLoop then pcall(function() F._vehLoop:Disconnect() end) F._vehLoop = nil end
+F.Out("[载具加速] 已关")
+end
+F.VehicleBoostEnable = function()
+if F._vehLoop then return end
+F._vehAt = 0
+F._vehLoop = RS.Heartbeat:Connect(function()
+if not T.VehicleBoost then F.VehicleBoostDisable() return end
+local now = os.clock()
+if now - (F._vehAt or 0) < 0.05 then return end
+F._vehAt = now
+local _, hum, root = GC()
+if not (hum and root) then return end
+local seat = nil
+pcall(function() seat = hum.SeatPart end)
+if seat == nil then return end
+local veh = nil
+pcall(function() veh = seat.Parent or seat end)
+if veh == nil then return end
+local speed = tonumber(C.VehicleSpeed) or 200
+local dir = nil
+local vel = root.AssemblyLinearVelocity
+local hv = Vector3.new(vel.X, 0, vel.Z)
+if hv.Magnitude > 1 then
+dir = hv.Unit
+else
+pcall(function() dir = root.CFrame.LookVector end)
+end
+if dir == nil then return end
+local n = 0
+pcall(function()
+for _, p in ipairs(veh:GetDescendants()) do
+if p:IsA("BasePart") then
+pcall(function()
+local v = p.AssemblyLinearVelocity
+p.AssemblyLinearVelocity = Vector3.new(dir.X * speed, v.Y, dir.Z * speed)
+end)
+n = n + 1
+end
+end
+end)
+F._vehCount = n
+end)
+F.Out("[载具加速] 已开(坐上去自动给载具推力 " .. tostring(tonumber(C.VehicleSpeed) or 200) .. ")")
+end
+F.DROP_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest", "weapon", "gun", "sword" }
+F.ESP_DROP_COLOR = Color3.fromRGB(255, 240, 120)
+F.EspDropScan = function()
+if not T.EspDrop then return end
+local list = {}
+pcall(function() list = workspace:GetChildren() end)
+local i
+for i = 1, #list do
+local o = list[i]
+local isTool = false
+pcall(function() isTool = o:IsA("Tool") end)
+local nm = tostring(o.Name)
+local low = string.lower(nm)
+local hit = isTool
+if not hit then
+for j = 1, #F.DROP_KEYS do
+if string.find(low, F.DROP_KEYS[j], 1, true) then hit = true break end
+end
+end
+if hit and o ~= LP.Character then
+local rec = F._espObjs[o]
+if rec == nil then rec = F.EspMakeObj(o, "drop", F.ESP_DROP_COLOR) end
+if rec then
+rec.cat = "drop"
+rec.col = F.ESP_DROP_COLOR
+rec.nm = nm
+end
+end
+end
 end
 F.EspBoneClear = function()
 for pl, rec in pairs(F._espBones) do
@@ -9063,7 +9148,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.AutoPickDisable, F.AllyMarkSet, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.AutoPickDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -14116,6 +14201,12 @@ if F._cfgSyncing then return end
 pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
+Tabs.Move:AddToggle("VehicleBoost", { Title = "★ 载具加速(坐上载具自动给推力)", Default = false, Callback = function(v)
+T.VehicleBoost = v
+if F._cfgSyncing then return end
+if v then pcall(F.VehicleBoostEnable) else pcall(F.VehicleBoostDisable) end
+end })
+Tabs.Move:AddSlider("VehicleSpeed", { Title = "载具速度(格/秒)", Min = 50, Max = 2000, Default = 200, Rounding = 0, Callback = function(v) C.VehicleSpeed = v end })
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速(水平全向 · 松手即停 · 不含上下)", Default = false, Callback = function(v) F.SpeedSet(v) end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度(格/秒)", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字(滑块不好拖时用这个)", Description = "填数字回车立即生效, 会自动同步上面的滑块; 也会自动夹到当前档位的范围内", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
@@ -14215,6 +14306,7 @@ Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = fa
 Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
 Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
 Tabs.Visual:AddToggle("EspItem", { Title = "ESP 也显示道具(绿 · 金币/宝石/箱子/蛋)", Default = false, Callback = function(v) T.EspItem = v end })
+Tabs.Visual:AddToggle("EspDrop", { Title = "ESP 也显示掉落物(黄 · 地上的武器/战利品)", Default = false, Callback = function(v) T.EspDrop = v end })
 Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记(队友头顶显示绿色名字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.AllyMarkSet(v)
