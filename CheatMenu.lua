@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:50 sha 543b82a2 bytes 542329'):format('2026-10-05 18:50','543b82a2',542329))
+print(('[CheatMenu] build 2026-10-05 19:15 sha 4cf0c647 bytes 536685'):format('2026-10-05 19:15','4cf0c647',536685))
 local F = {}
-F.VERSION = "v16.8.3"
+F.VERSION = "v16.8.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8,7 +8,7 @@ F._menuHoldAt = nil
 F._menuHoldMoved = false
 F.LIMITS = {
 SCAN_GC_CAP = 300000, SCAN_ANALYZE_CAP = 120000, SCAN_YIELD_EVERY = 300,
-SCAN_SCRIPT_CAP = 400000, SCAN_DESC_EVERY = 400, CAPTURE_MAX = 20000,
+SCAN_SCRIPT_CAP = 400000, SCAN_DESC_EVERY = 400,
 PROBE_STEP = 4, PROBE_SEC = 2,
 }
 F.REMOTE_URLS = {
@@ -743,7 +743,7 @@ if not hookfunction then return end
 local orig
 local fn = isE and remote.FireServer or remote.InvokeServer
 local wrapper = function(self, ...)
-if (T.RemoteBlock or T.ACBypass) and not checkcaller() then return nil end
+if T.RemoteBlock and not checkcaller() then return nil end
 if orig then return orig(self, ...) end
 end
 local ok, res = pcall(function()
@@ -777,9 +777,6 @@ local mode = rawget(mt, "__mode")
 if type(mode) == "string" and (mode:find("k", 1, true) or mode:find("v", 1, true)) then
 AC._weakSeen = AC._weakSeen + 1
 if type(tbl) == "table" then pcall(rawset, AC._weakTables, tbl, true) end
-if T.ACBypass then
-F.Out("[CheatMenu] 拦截弱表 setmetatable: __mode=" .. mode .. " (累计 " .. AC._weakSeen .. ")")
-end
 end
 end
 return AC._stblOld(tbl, mt)
@@ -926,7 +923,7 @@ local got = F.MetaInstall("game.__index", game, "ACIndexMask", function(box)
 return function(t, k)
 if checkcaller() or typeof(t) ~= "Instance" then return box.orig(t, k) end
 if k == "WalkSpeed" or k == "JumpPower" or k == "JumpHeight" then
-if not (T.SpeedMask or T.ACBypass or T.Spoof) then return box.orig(t, k) end
+if not T.Spoof then return box.orig(t, k) end
 local _, hum = GC()
 if hum and t == hum then
 if k == "WalkSpeed" then return F.CMX_LegitWalk() end
@@ -936,7 +933,7 @@ end
 return box.orig(t, k)
 end
 if k == "MaxHealth" or k == "Health" then
-if not (T.Spoof or T.ACBypass) then return box.orig(t, k) end
+if not T.Spoof then return box.orig(t, k) end
 local _, hum = GC()
 if hum and t == hum then
 local v = (k == "MaxHealth") and hum.MaxHealth or hum.Health
@@ -1542,71 +1539,6 @@ F._scavenging = keepScav
 snap.caps = F._caps or select(1, F.ProbeCapabilities(false))
 return snap
 end
-F._capOn = false
-F._capLog = {}
-F.CAP_MAX = F.LIMITS.CAPTURE_MAX
-function F.CaptureEnable()
-if F._capOn then return true end
-if not (hookmetamethod and newcclosure and getnamecallmethod) then return false end
-F._capLog = {}
-local got = F.MetaInstall("__namecall", game, "Capture", function(box)
-return function(self, ...)
-if F._capOn and not checkcaller() and typeof(self) == "Instance" then
-local m = getnamecallmethod()
-if m == "FireServer" or m == "InvokeServer" then
-if #F._capLog < F.CAP_MAX then
-local args = { ... }
-local parts = {}
-local top = #args
-for i = 1, top do
-local v = args[i]
-local t = typeof(v)
-if t == "Instance" then
-parts[i] = v.ClassName .. ":" .. tostring(v.Name)
-elseif t == "Vector3" then
-parts[i] = string.format("V3(%.1f,%.1f,%.1f)", v.X, v.Y, v.Z)
-elseif t == "string" then
-parts[i] = (#v > 60) and (v:sub(1, 60) .. "...") or v
-elseif t == "table" then
-parts[i] = "{n=" .. tostring(#v) .. "}"
-elseif t == "CFrame" then
-parts[i] = string.format("CF(%.1f,%.1f,%.1f)", v.X, v.Y, v.Z)
-else
-parts[i] = tostring(v)
-end
-end
-F._capLog[#F._capLog + 1] = {
-n = tostring(self.Name), c = tostring(self.ClassName),
-m = m, a = table.concat(parts, ", "),
-}
-if #F._capLog % 10 == 0 then
-F.Out("[采集] 已记录 " .. #F._capLog .. " 条上行 remote, 最近: " .. tostring(self.Name) .. ":" .. tostring(m))
-end
-end
-end
-end
-return box.orig(self, ...)
-end
-end)
-if not got then
-F._capOn = false
-return false
-end
-F._capOn = true
-F._capLayer = got
-F.Out("[采集] 已开始记录 remote 上行调用(上限 " .. F.CAP_MAX .. " 条)")
-F.Out("[采集] 现在**正常玩一会儿**(建议 5-10 分钟: 卖东西/买东西/踢方块/被检测的操作都做一遍)")
-F.Out("[采集] 玩完点「复制扫描结果」, 内容会复制到剪贴板, 直接粘给我即可")
-return true
-end
-function F.CaptureDisable()
-if not F._capOn then return 0 end
-F.MetaUninstall("__namecall", "Capture")
-F._capOn = false
-F._capLayer = nil
-F.Out("[采集] 已停止, 本次记录 " .. #F._capLog .. " 条")
-return #F._capLog
-end
 function F.DumpAll()
 local snap = F.SnapshotCollect()
 local lines = {}
@@ -1679,14 +1611,7 @@ local h = snap.scripthashes[i]
 w("  " .. tostring(h.h) .. "  " .. tostring(h.p))
 end
 w("")
-w("--- [5] remote 上行采集(客户端实际发出去的参数 = 服务端的输入面) ---")
-w("共 " .. #F._capLog .. " 条")
-for i = 1, #F._capLog do
-local c = F._capLog[i]
-w(string.format("  %s [%s] %s(%s)", c.n, c.c, c.m, c.a))
-end
-w("")
-w("--- [6] 不可见边界(原理上拿不到, 与本脚本无关) ---")
+w("--- [5] 不可见边界(原理上拿不到, 与本脚本无关) ---")
 for i = 1, #F.AC_INVISIBLE do w("  " .. F.AC_INVISIBLE[i]) end
 w("")
 w("===== 导出结束 =====")
@@ -1707,9 +1632,7 @@ F.Out("══════ 全量导出 ══════")
 F.Out("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
 " · 复制剪贴板 " .. (copied and "成功(直接粘给我)" or "失败(手动从 F9 复制)"))
 F.Out("  内容: 远程 " .. #snap.remotes .. " · 反作弊碎片 " .. #snap.acfns ..
-" · 属性 " .. #snap.attrs .. " 种 · 脚本指纹 " .. #snap.scripthashes ..
-" · 上行采集 " .. #F._capLog .. " 条")
-F.Out("  ⚠ 服务端判定逻辑不在其中(原理上不可见), 但上面的[5]是服务端判定的**输入面**。")
+" · 属性 " .. #snap.attrs .. " 种 · 脚本指纹 " .. #snap.scripthashes)
 if not copied then
 F.Out("────── 以下为可复制正文 ──────")
 F.Out(text)
@@ -2723,29 +2646,6 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
-if (m == "FireServer" or m == "InvokeServer") and T.NoDrop then
-local isInst1 = false
-pcall(function() isInst1 = (typeof(self) == "Instance") end)
-if isInst1 then
-local nm1 = ""
-pcall(function() nm1 = self.Name end)
-if type(nm1) == "string" and nm1 ~= "" then
-local low1 = string.lower(nm1)
-local allow1 = false
-for _, ak in ipairs(F.ALLOW_REMOTE_KEYS) do
-if string.find(low1, ak, 1, true) then allow1 = true break end
-end
-if not allow1 then
-for _, kk in ipairs(F.DROP_KEYS) do
-if string.find(low1, kk, 1, true) then
-KG.blocked10 = (KG.blocked10 or 0) + 1
-return nil
-end
-end
-end
-end
-end
-end
 if (m == "FireServer" or m == "InvokeServer") and (T.TrapWarn or T.GuardOn) then
 local isInst0 = false
 pcall(function() isInst0 = (typeof(self) == "Instance") end)
@@ -3058,9 +2958,9 @@ KG.orig = result
 KG.hooked = true
 if not F._kgHeal then
 F._kgHeal = task.spawn(function()
-while T.KickProtect or T.KickGuard do
+while T.KickGuard do
 task.wait(6)
-if not (T.KickProtect or T.KickGuard) then break end
+if not T.KickGuard then break end
 if not KG.kick or not KG.mtHooked then
 F._kgHealFix = (F._kgHealFix or 0) + 1
 if F._kgHealFix <= 3 then
@@ -3340,6 +3240,7 @@ end
 F._aimHeart, F._aimErr, F._aimLastHeart = 0, 0, 0
 F._AIM_STEP = "CM_Combat"
 F.CombatTickSafe = function()
+if not T.AimOn then return end
 F._aimHeart = (F._aimHeart or 0) + 1
 local ok, err = pcall(F.CombatTick)
 if not ok then
@@ -6222,7 +6123,6 @@ T.DeepNeuter, T.AntiTPOn = true, true
 F.Try("SpeedAntiTPEnable", F.SpeedAntiTPEnable)
 F.Try("DeepNeuterEnable", F.DeepNeuterEnable)
 end
-pcall(F.CMX_TierSync, F.CMX_TierLevel(v))
 pcall(F.CfgSyncUI)
 F.Out("[绕过防护] 档位 = " .. v)
 end
@@ -8417,6 +8317,7 @@ end
 F._vehLoop, F._vehAt, F._vehPart, F._vehCount = nil, 0, nil, 0
 F.VehicleBoostDisable = function()
 if F._vehLoop then pcall(function() F._vehLoop:Disconnect() end) F._vehLoop = nil end
+F._vehRef, F._vehParts, F._vehScanAt = nil, nil, 0
 F.Out("[载具加速] 已关")
 end
 F.VehicleBoostEnable = function()
@@ -8446,13 +8347,25 @@ pcall(function() dir = root.CFrame.LookVector end)
 end
 if dir == nil then return end
 local n = 0
+if F._vehRef ~= veh or (now - (F._vehScanAt or 0) > 2) then
+F._vehRef = veh
+F._vehScanAt = now
+local parts = {}
 pcall(function()
 for _, p in ipairs(veh:GetDescendants()) do
-if p:IsA("BasePart") then
+if p:IsA("BasePart") then parts[#parts + 1] = p end
+end
+end)
+F._vehParts = parts
+end
 pcall(function()
+local parts = F._vehParts
+if not parts then return end
+for i = 1, #parts do
+local p = parts[i]
+if p and p.Parent then
 local v = p.AssemblyLinearVelocity
 p.AssemblyLinearVelocity = Vector3.new(dir.X * speed, v.Y, dir.Z * speed)
-end)
 n = n + 1
 end
 end
@@ -8671,28 +8584,32 @@ return
 end
 F.EspEnsure()
 F.Out("[ESP] 已开")
+F.EspObjDrawSafe = function()
+local cam = workspace.CurrentCamera
+if not cam then return end
+local _, _, r0 = pcall(GC)
+pcall(F.EspObjDraw, cam, r0)
+end
 F._espLoop = RS.RenderStepped:Connect(function()
 if not T.EspOn then F.EspSet(false) return end
 local now = os.clock()
 if now - (F._espAt or 0) < 0.033 then return end
 F._espAt = now
 pcall(F.EspTick)
-if T.EspBone then
+if T.EspBone and now - (F._espBoneAt or 0) >= 0.066 then
+F._espBoneAt = now
 local cam2 = workspace.CurrentCamera
 if cam2 then pcall(F.EspBoneDraw, cam2) end
 end
-if T.Chams then pcall(F.ChamsTick) end
+if T.Chams and now - (F._espChamsAt or 0) >= 0.2 then
+F._espChamsAt = now
+pcall(F.ChamsTick)
+end
 if now - (F._espObjAt or 0) > 1.5 then
 F._espObjAt = now
 pcall(F.EspObjScan)
 end
-pcall(function()
-local cam = workspace.CurrentCamera
-if cam then
-local _, _, r0 = pcall(GC)
-F.EspObjDraw(cam, r0)
-end
-end)
+pcall(F.EspObjDrawSafe)
 end)
 end
 F._roleTags, F._roleTagConn = {}, nil
@@ -9168,7 +9085,7 @@ F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.AutoPickDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.IASet, F.IASet, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.CaptureDisable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -11323,7 +11240,7 @@ AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable,
-F.CaptureDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
+F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
@@ -11334,7 +11251,6 @@ F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable,
 function()
 AC._neutFns = {}
 F._dumpText = nil
-F._capLog = {}
 F._autoTh = nil
 F._cfgSyncing = false
 F._tpMouseOn = false
@@ -12288,79 +12204,6 @@ lead = lead + Vector3.new(0, 0.5 * g * t * t, 0)
 end
 F.CMX_LeadT = t
 return lead
-end
-F.CMX_TierLevel = function(v)
-local t = tostring(v or "")
-if t:find("④", 1, true) then return 4 end
-if t:find("③", 1, true) then return 3 end
-if t:find("②", 1, true) then return 2 end
-return 1
-end
-F.CMX_TierMap = {
-CMX_AutoScrub = { F.CMX_AutoScrubEnable, F.CMX_AutoScrubDisable },
-CMX_SpoofIndex = { F.CMX_SpoofIndexEnable, F.CMX_SpoofIndexDisable },
-CMX_ViewFilter = { F.CMX_ViewFilterEnable, F.CMX_ViewFilterDisable },
-CMX_HookHard = { F.CMX_HookHardApply, F.CMX_HookHardRestore },
-CMX_RequireBlock = { F.CMX_RequireBlockEnable, F.CMX_RequireBlockDisable },
-CMX_ClockMask = { F.CMX_ClockMaskEnable, F.CMX_ClockMaskDisable },
-CMX_InstNew = { F.CMX_InstNewEnable, F.CMX_InstNewDisable },
-CMX_DebugMask = { F.CMX_DebugMaskEnable, F.CMX_DebugMaskDisable },
-CMX_IdentityMask = { F.CMX_IdentityMaskEnable, F.CMX_IdentityMaskDisable },
-CMX_FFlagPack = { F.CMX_FFlagApplyPack, F.CMX_FFlagRestore },
-CMX_BlockReport = { F.CMX_BlockReportEnable, F.CMX_BlockReportDisable },
-CMX_CutLog = { F.CMX_CutLogEnable, F.CMX_CutLogDisable },
-CMX_NeuterPlus = { F.CMX_NeuterPlusEnable, F.CMX_NeuterPlusDisable },
-CMX_HashFreeze = { F.CMX_HashFreezeEnable, F.CMX_HashFreezeDisable },
-}
-F.CMX_TierOwn = F.CMX_TierOwn or {}
-F.CMX_TierSync = function(level)
-F.Out("[档位·绕过层] 已停用联动(时钟粗化/视图过滤/调试名伪装/属性伪装这些每帧加一层, 单局实测 75 万次取时+15 万次遍历 ⇒ 只降性能不办事)。要哪一层请单独手动开")
-do return end
-local map = F.CMX_TierMap
-if type(map) ~= "table" then return end
-if T.CMX_TierLink == false then
-F.Out("[档位·绕过层] 你关掉了「档位联动绕过层」⇒ 档位只管原有的防护, 绕过层保持你的手动设置")
-return
-end
-local lv = tonumber(level) or 1
-local want = {}
-if lv >= 2 then
-want.CMX_AutoScrub, want.CMX_SpoofIndex, want.CMX_ViewFilter = true, true, true
-end
-if lv >= 2 then
-want.CMX_BlockReport = true
-want.CMX_ClockMask, want.CMX_DebugMask, want.CMX_InstNew = true, true, true
-end
-if lv >= 3 then
-want.CMX_HookHard, want.CMX_RequireBlock = true, true
-want.CMX_CutLog, want.CMX_NeuterPlus, want.CMX_HashFreeze = true, true, true
-end
-if lv >= 4 then
-want.CMX_InstNew, want.CMX_DebugMask = true, true
-want.CMX_IdentityMask, want.CMX_FFlagPack = true, true
-end
-local on, off = 0, 0
-for key, pair in pairs(map) do
-if want[key] then
-if not T[key] then
-T[key] = true
-F.CMX_TierOwn[key] = true
-pcall(pair[1])
-on = on + 1
-end
-else
-if F.CMX_TierOwn[key] and T[key] then
-T[key] = false
-F.CMX_TierOwn[key] = nil
-pcall(pair[2])
-off = off + 1
-end
-end
-end
-if on > 0 or off > 0 then
-F.Out("[档位·绕过层] 档位 " .. tostring(lv) .. " ⇒ 绕过层 开 " .. tostring(on)
-.. " 层 / 关 " .. tostring(off) .. " 层(只动档位带起来的那些, 你手动开的不受影响)")
-end
 end
 F.CMX_PLACEMAP_RAW = "107778070777162=Steal An Egg|124216119978534=[⌛] Ride A Pet|109983668079237=[🥚] Steal a Brainrot|121864768012064=[👾UPD] Fish It! 🐟|113290951185459=[⚙️UPD 6] Anime Dice|16732694052=Fisch 🐟 [RACING]|114326934417838=Break and Steal an Egg|77108422251420=[SKINS 🐮] Search For The Needl|15532962292=Sol's RNG [ Summer Event 🏖️]|6961824067=Fling Things and People|104320321984431=Paint to Get Rich 🎨|123720558354386=Build the Pyramid!|8737899170=⛏️ [MINE] Pet Simulator 99! 🌌|71704434889758=(BETA) Drive A Kukirin!|3351674303=Driving Empire [2X CASH]|1537690962=Bee Swarm Simulator|76841016201110=💭Dream Car Collection [LUCK EV|105011592530400=Build and Kill Zombies|111543903102439=+1 Stone Skipping|79480724066456=[🛥️Boats🛥️] Southern Mudding 🚜|122245938604556=[🔮UPDATE!] +1 Tongue Escape 😛|87740422849523=Steal A Car|78490532994307=Build An Ant Empire|537413528=Build A Boat For Treasure|80242821185181=+1 Wings For Eggs|89469502395769=[🍭] Kick a Lucky Block|126884695634066=[🐿️] Grow a Garden 🌶️|98610101874791=+1 Strength for Eggs|122278212262864=Race for Eggs|98800969324557=[⛏️] Storage Hunters: Open Wor|109928390521457=Anime Breaker [🛠️CRAFT]|120475074479690=[😇] Steal From The Rich!|107164765081465=[BOSS] Steal A Verity!|132767904294856=[⚽] Blue Lock Farm|137228775845999=Ghost Driver [ALPHA]|102072869879193=[GUILDS] Anime Astral Simulato|119048529960596=[🛵] Restaurant Tycoon 3|114697347887839=🐒 +1 Speed Monkey Escape|4639625707=War Tycoon|13822889=🌳 Lumber Tycoon 2|76943966208523=Clone to Steal Eggs|7305309231=Taxi Boss 🚖|103429966174263=+1 Paint Keyboard Adventure|82081400078378=Steal ASMR!|138686218420016=[🗻] Mine Antarctica|74629631798007=[🎣UPD!] Pets Universe! 🐾|131346454575416=[💥] Mini War|128784467030899=[UPD☢️] Merge a Nuke!|88047783411976=Open Sea For Animals!|70906625936847=Gym Star Simulator 🏋️|95409544559668=Military Army Tycoon|77843161404023=Run a Restaurant!|92648272637932=[W3] +1 Mog Evolution|99679692310083=Steal Animal Egg|121831322352666=Dig For Eggs|4924922222=Brookhaven 🏡RP|920587237=[24H🎃] Adopt Me!|15101393044=Dress To Impress ⭐|13967668166=LifeTogether 🏠 RP|8481844229=Berry Avenue 🏠 RP|5233782396=✨ Creatures of Sonaria 📜 Survi|74395953411817=Dreamville 🏡 RP [Multiple Kids|122485613019196=Dubai 🏡 RP [Multiple Kids! 👶]|185655149=[🍂] Welcome to Bloxburg|7711635737=Emergency Hamburg|136020512003847=San Diego Roleplay|5289509545=Gacha Online ✨ RP|12985361032=Metro Life 🏡 City RP|97577741629233=⭐Catalog Avatar Runway|735030788=Royale🎃High|2534724415=[🗺️] Emergency Response: Liber|16625391970=NewSmith 🏡 RP|6989310863=Wild Horse Islands|8704997000=[🧪] Maple Hospital 🍂|3663340706=Warrior Cats: Ultimate Edition|891852901=Greenville RP (⭐AUDI + SHELBY |1365404657=Feather Family 🎃 [Burrowing Ow|192800=🍕Work at a Pizza Place|135717153770519=Toilet World Roleplay 2|15768329004=IT GIRL 🏝️|6698800091=[MOBILE!📱]Prior Extinction - D|96796259580891=Kingdom World|18753889337=Main Street 🏡RP|106568491289620=[将] Shogun's Reign|18214855317=Savannah Life|12716055617=Emergency Emden|17192092512=Deermont 🏡RP|71599043035739=SCP MORPH|3457390032=Club Roblox RP 💗 [👶 NEEDS]|8369888266=Redcliff City 🏡RP|6737970321=Livetopia 🏡 RP|5712833750=Animal Simulator|6377740507=[Stickers] Miraculous™ RP: Lad|5593925613=Countryball World 🌎|135571353544108=Love Letter: Roleplay ( YANWEE|104841616983113=San Aurie|13473615074=Boxywood 🏠🌴 RP|11862502039=Seaside RP🏡🌴 City RP|112333343527957=Highschool Experience RP|15182389440=[ 🍂 🏍️ 🎣 BikeLife ] Northline |71174733280934=Palmhaven City Life RP🏡|16962279458=☀️ KOYA DANCE STUDIO|18537079992=Армия Роблокса РП|5041144419=SCP: Roleplay|75178747054941=LCS: EQuest|79886695267825=Steal The Show! 🎤⭐|3631820248=[🎉6th Anniversary!] Stevos Gem|81223687051453=PRISON RP|373513488=FNAF RP - TPRR [🐻FB3 EVENT📺]|118447215156914=Prism Runway Show💎|102917792916356=Apocalyptic Titans Roleplay|142823291=Murder Mystery 2|79546208627805=99 Nights in the Forest 🔦|18687417158=[✨BONUS] Forsaken|93978595733734=[CURE] Violence District|78515283254292=Animal Hospital (Anomaly) 🧪|9872472334=Evade|4623386862=Piggy [SEASON 9 - FRIGHT NIGHT|893973440=Flee the Facility|116802325837172=7 Days Cat-Sitting|70411440483149=100 Days At Sea|124061247871628=Animal Daycare (Anomaly)|2768379856=3008 [2.75]|113481077323469=Scream And Run|70923197964305=⚔️ Killer's Arena|115668616082195=WHO FARTED?|85967844112283=Last Stop [Beta]|117713779364528=Lethal Ape Experience|78453398695059=THRESHOLD [HORROR] [UPD 1.5]|92122513197996=⛏️Dig to Escape|189707=Natural Disaster Survival|82591391194183=MM2 of The Locust|97793725257596=MMZ👽|90148635862803=[UPD] 🧟 Survive the Apocalypse|139020444733179=Survive Deep in the Woods|82457571485380=Zombie Rush Survival 🧟‍♂️|96168869671905=💎 ROB IT|6205205961=Escape Running Head|121165298854655=[CREATURE] DON'T LET HIM IN|14608970270=(ANNIVERSARY) Outcome Memories|15318113891=Lethal Ape|140553375004913=this underrated game (flamingo|137826330724902=Scary Shawarma Kiosk: the ANOM|129626004396080=just a sniper game|127877871885165=he ate them. [HORROR]|114204398207377=[FACTIONS] Survive Zombie Aren|18666738837=Death Order: Simon Says|128263975853774=🛠️Build and Survive|12931609417=Color or Die 🎨|127380660530951=Survive Overnight in a Mega St|87468080405188=[UPDATE] Home Alone: Anomalies|18199615050=[UPD] Demonology🕯️|7336302630=Project Delta|135889880932940=Survive 7 Days In Desert 🌵|120951586797306=🙈 Killer or Innocent|100227226022278=Survive The Swarm[2x loot]|6382584061=Build to Survive 🛠️|98894876188248=Cheating During Testing [BETA]|116070952245255=[💪] Build Base to Survive VERI|123393202531499=Build and Hide to Survive VERI|4580204640=🔪Survive the Killer!|74716719697996=[⏰SOON]🚪Survive Verity in Area|109423220190564=[UPDATE] Backrooms Company|82531308645115=Plunder [UPD]|124338404742585=Keep the Door Locked🔒|5118969548=Spider|108645230905176=Mrbeast Island Escape|119004860768199=[UPD]BreakDoor|2753915549=Blox Fruits|16205713724=Slayers 2|1730877806=[🍬HALLOWEEN PT 1] Grand Piece |13379208636=Attack on Titan Revolution|2809202155=[CDR & DD] Your Bizarre Advent|77649408247578=[2X LUCK] Dungeon Quest Reborn|111097829542198=[🦋] Legacy Piece|128451689942376=[🎞️ PROJECTION] Jujutsu: Zero|4520749081=King Legacy|117533937949084=Iron Soul: Dungeon|104761395312874=[🐲Goku & Castorice🟣] Lineage P|114574503491412=Anime Zero [RELEASE] 🎉|4616652839=Shindo Life [250]|90860390610142=Clover Legends|106484206883664=⚔️ Dungeon Lootr|4111023553=Deepwoken|80734098185936=An Average Campaign [Alpha v0.|18172550962=[CLASSES] Pixel Blade|8075399143=[✨Ashura Update] Ninja Time|9096881148=Peroxide [Update!]|93934100402512=Clover Time [BETA RELEASE]|71315343=[PARASITE 🌀] Dragon Ball Rage|125503525638054=The Veil|5571328985=[🐢] Bloodlines|2727067538=World // Zero ⚔️ Anime RPG|120704669141193=[V13] Blox Loot|140409475718339=[YUTA!] Anime Apocalypse|10260193230=[UPDATE 4] Meme Sea|10450270085=[⚖️JUDGEMAN] Jujutsu Infinite|5130598377=A Universal Time|119091355492870=[UPDATE 1.75]Rock Fruit|6918802270=Haze Seas|11729688377=Booga Booga [QUESTS! 📜]|10912405603=[3 YEARS!] Clover Retribution|15014439457=Demon Blade|3177438863=[🎃EVENT] Dragon Blox|122003435349029=The Portal [MMORPG]|10595058975=[Withered Grove 🧿] Arcane Line|3016661674=Rogue Lineage|14067600077=TYPE://SOUL|6728870912=World of Stands|5116869569=🌴 Doodle World! [BEACH EVENT]|139150436440482=[⚔️COMBAT] Ninja: Legacy [RP]|914010731=Ro-Ghoul [ALPHA]|116276659864007=Project Mirror Labyrinth|6938803436=[⭐2X] Anime Dimensions Simulat|6298464951=Roblox Is Unbreakable|102829972707814=civilization survival game|132044122002338=[Update 11 🔥] Chaos Fruits|118582391303761=UNTITLED RPG GAME|114581778828030=Soul RPG|100283815455755=Vagrant Survival [0.9]|15167153398=✨Someday City 2.0 ✨|5870869755=HEROES: Infinite 2|18923620224=[🗼 UPDATE 5.0] Anime Warriors |1087852616=CATASTROPHIA ☢️ Survive ☢️|134931730875913=[BETA] Crazy Odyssey: A New Jo|4622037906=Sans Fight Simulator|17625359962=RIVALS|112731528776884=KNIFE DUELS|90568084448279=[FPS] One Tap|122446657157717=[🔥NEW SNIPER] Sniper Arena|13687899540=Cold War [VIETNAM]|120851538706364=Murder Duels|114234929420007=BloxStrike|84556640895285=Deagle Arena|12334109280=Guts & Blackpowder|113506071094099=[🌴] SHARP|10165583746=Examination|93091759101123=FPS🔥AirDrop Arena [S5]🔥|72920620366355=[SEASON 3] Operation One|79393329652220=[🧤] Defusal|130404059693601=Strike: Warfare|3678761576=[🗣️CALLOUT🗣️] ENTRENCHED 🥀|120189115846709=TTK Testing [CUSTOMIZATION]|129253568870286=Bonk & Block [5v5]|102871156420149=The Lost Front|109397169461300=SNIPER DUELS|21532277=Notoriety: A PAYDAY® Experienc|118367369949006=Ground War|13955927965=Blood Zone 🎃|90184287580174=(SEASON 2) KILLSTREAK|286090429=Arsenal|136801880565837=[FPS] Flick|18259975825=Grave/Digger|13429790955=📚 Murderers vs Sheriffs 2|123873483242204=Anime Finals|3891618314=⚓ Harbor Havoc|119214646022567=Top sniper [5.0]|5286116071=Hunting Season [BETA]|15694891095=[CLANS] Combat Arena|94590879393563=Weird Gun Game [UPDATE!]|301549746=Counter Blox|130490210702949=Blood Debt Gun System|99342262733194=[SUMMER] Randomizer: Redux|14313259147=FORTLINE|104856666707760=Killstreak Battle Royale|3214114884=[💰2x] Flag Wars!|99001115434148=Fluxo PVP [MATCHMAKING]|94987506187454=[🤝 TRADING] REDLINER|115286378269814=Protect The House From Monster|13438553315=Decaying Winter|4991214437=town|13794093709=SCORCHED EARTH 🔊|106605940421527=BetterEH|443406476=Project Lazarus: 💀 ZOMBIES 💀|14518422161=Gunfight Arena|2778230703=Reminiscence Zombies|112757576021097=Defuse Division|111267397030523=CQB Hell [NEW MODES]|328028363=Typical Colors 2|71607575632633=[🎃] Zone Defense RNG|131558436575033=[REALISTIC] SevenM Hood Testin|9391468976=[SKY ASSASSIN] Jujutsu Shenani|10449761463=The Strongest Battlegrounds|135856908115931=[🌌DUELS] Murderers VS Sheriffs|13772394625=Blade Ball|104715542330896=BlockSpin 🔪 [WEATHER]|6872265039=BedWars [🎣RERELEASE🪤]|101770480176177=[X2 XP] Command An Army|1458767429=ABA|120700541929930=Knife VS Gun DUELS|127403135954624=[ Halloween ] Kaiju Alpha|118418618261207=RUNAWAYS [beta]|108567435288296=Anime Ability Arena|72105128013629=Kidnap And Jail|6403373529=[UPDATE🏴‍☠️] Slap Battles👏|110175021189594=Ability Arena 💥|94217045453265=Dueling Grounds ⚔️|606849621=Jailbreak|13621938427=[DEIMOS👹] untitled boxing game|128119795963270=Murder Mystery DUELS"
 F.CMX_PlaceMap = nil
@@ -14587,7 +14430,6 @@ pcall(F.CMX_BanAllApply, true)
 if not T.HpBlock then F._tierHpOwn = true end
 T.HpBlock = true
 pcall(F.HpBlockSet, true)
-pcall(F.CMX_TierSync, 2)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 if lvl >= 3 then
