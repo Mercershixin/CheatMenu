@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 01:58 sha 70eb0ed4 bytes 436989'):format('2026-10-06 01:58','70eb0ed4',436989))
+print(('[CheatMenu] build 2026-10-06 02:00 sha d3068d43 bytes 436983'):format('2026-10-06 02:00','d3068d43',436983))
 local F = {}
-F.VERSION = "v16.9.23"
+F.VERSION = "v16.9.24"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11509,7 +11509,7 @@ Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记", Default = false, Cal
 if F._cfgSyncing then return end
 F.AllyMarkSet(v)
 end })
-Tabs.Visual:AddSection("身体高亮 / 敌我识别")
+Tabs.Visual:AddSection("高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视", Default = false, Callback = function(v)
 T.BodyHL = v
 if F._cfgSyncing then return end
