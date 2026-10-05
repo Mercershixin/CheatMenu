@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 21:08 sha 973accc3 bytes 520913'):format('2026-10-05 21:08','973accc3',520913))
+print(('[CheatMenu] build 2026-10-05 21:23 sha 66583737 bytes 520113'):format('2026-10-05 21:23','66583737',520113))
 local F = {}
-F.VERSION = "v16.9.3"
+F.VERSION = "v16.9.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7394,8 +7394,6 @@ end
 F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin" }
 F.NPC_EXCLUDE = {}
 F.NPC_COLOR = Color3.fromRGB(170, 110, 55)
-F._npcObjs = {}
-F._npcLoop, F._npcAdded, F._npcWallLoop = nil, nil, nil
 F.IsNPC = function(o)
 if o == nil then return false end
 local ok, isM = pcall(function() return o:IsA("Model") end)
@@ -7414,30 +7412,13 @@ if string.find(low, F.NPC_KEYS[i], 1, true) then return true end
 end
 return false
 end
-F.NpcAdd = function(o)
-if not T.NpcHL then return end
-if F._npcObjs[o] then return end
-local h = Instance.new("Highlight")
-h.Name = "CMNpcMark"
-h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-h.FillColor = F.NPC_COLOR
-h.OutlineColor = F.NPC_COLOR
-h.FillTransparency = 0.6
-h.OutlineTransparency = 0
-h.Parent = o
-pcall(function() h:SetAttribute("CMOwned", true) end)
-F._npcObjs[o] = { h = h, wall = false }
-end
 F.NpcScan = function()
 local n = 0
 local list = {}
 pcall(function() list = workspace:GetChildren() end)
+local i
 for i = 1, #list do
-local o = list[i]
-if F.IsNPC(o) then
-F.NpcAdd(o)
-n = n + 1
-end
+if F.IsNPC(list[i]) then n = n + 1 end
 end
 local subs = {}
 pcall(function()
@@ -7448,37 +7429,84 @@ if okf and o ~= LP.Character then
 local isM = false
 pcall(function() isM = o:IsA("Model") end)
 if not isM then
-local kids = o:GetChildren()
+local okk, kids = pcall(function() return o:GetChildren() end)
+if okk and kids then
 for j = 1, #kids do subs[#subs + 1] = kids[j] end
+end
 end
 end
 end
 end)
 for i = 1, #subs do
-local o = subs[i]
-if F.IsNPC(o) then
-F.NpcAdd(o)
-n = n + 1
-end
+if F.IsNPC(subs[i]) then n = n + 1 end
 end
 F._npcScanned = n
 return n
 end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
 F.IX_COLOR = Color3.fromRGB(255, 215, 0)
-F.IxAdd = function(o)
+F.HL_COLORS = {
+npc = F.NPC_COLOR,
+ix = F.IX_COLOR,
+trap = Color3.fromRGB(255, 60, 60),
+item = Color3.fromRGB(80, 255, 160),
+drop = Color3.fromRGB(255, 240, 120),
+veh = Color3.fromRGB(0, 235, 255),
+}
+F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap" }
+F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge" }
+F.HL_DROP_KEYS = { "weapon","gun","sword","cash","money","reward" }
+F.HLKind = function(o)
+if o == nil or o == LP.Character then return nil end
+local okT = false
+pcall(function() okT = o:IsA("Model") or o:IsA("BasePart") or o:IsA("Tool") end)
+if okT then
+local okn, isNpc = pcall(F.IsNPC, o)
+if okn and isNpc then return "npc", F.HL_COLORS.npc end
+local oki, isIx = pcall(F.IxIsTarget, o)
+if oki and isIx then return "ix", F.HL_COLORS.ix end
+local isVeh = false
+pcall(function() isVeh = o:IsA("VehicleSeat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil end)
+if isVeh then return "veh", F.HL_COLORS.veh end
+local isTool = false
+pcall(function() isTool = o:IsA("Tool") end)
+if isTool then return "drop", F.HL_COLORS.drop end
+local low = string.lower(tostring(o.Name))
+local i
+for i = 1, #F.HL_TRAP_KEYS do
+if string.find(low, F.HL_TRAP_KEYS[i], 1, true) then return "trap", F.HL_COLORS.trap end
+end
+for i = 1, #F.HL_ITEM_KEYS do
+if string.find(low, F.HL_ITEM_KEYS[i], 1, true) then return "item", F.HL_COLORS.item end
+end
+for i = 1, #F.HL_DROP_KEYS do
+if string.find(low, F.HL_DROP_KEYS[i], 1, true) then return "drop", F.HL_COLORS.drop end
+end
+return nil
+end
+local okX = false
+pcall(function() okX = o:IsA("ProximityPrompt") or o:IsA("ClickDetector") end)
+if okX then return "ix", F.HL_COLORS.ix end
+return nil
+end
+F.IxAdd = function(o, col)
 if not T.IxHL then return end
-if F._ixObjs[o] then return end
+if o == nil then return end
+local rec0 = F._ixObjs[o]
+if rec0 then
+if col and rec0.h then pcall(function() rec0.h.FillColor = col rec0.h.OutlineColor = col end) end
+return
+end
 local h = Instance.new("Highlight")
-h.Name = "CMIxMark"
+h.Name = "CMHLMark"
 h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-h.FillColor = F.IX_COLOR
-h.OutlineColor = F.IX_COLOR
+h.FillColor = col or F.HL_COLORS.ix
+h.OutlineColor = col or F.HL_COLORS.ix
 h.FillTransparency = 0.6
 h.OutlineTransparency = 0
 h.Parent = o
 pcall(function() h:SetAttribute("CMOwned", true) end)
-F._ixObjs[o] = h
+F._ixObjs[o] = { h = h }
 end
 F.IxIsTarget = function(o)
 if o == nil then return false end
@@ -7495,10 +7523,8 @@ local list = {}
 pcall(function() list = workspace:GetChildren() end)
 for i = 1, #list do
 local o = list[i]
-if F.IxIsTarget(o) then
-F.IxAdd(o)
-n = n + 1
-end
+local k1, c1 = F.HLKind(o)
+if k1 then F.IxAdd(o, c1) n = n + 1 end
 end
 local subs = {}
 pcall(function()
@@ -7515,15 +7541,13 @@ end
 end)
 for i = 1, #subs do
 local o = subs[i]
-if F.IxIsTarget(o) then
-F.IxAdd(o)
-n = n + 1
-else
+local k2, c2 = F.HLKind(o)
+if k2 then F.IxAdd(o, c2) n = n + 1 end
 local okk2, kids2 = pcall(function() return o:GetChildren() end)
 if okk2 and kids2 then
 for j = 1, #kids2 do
-if F.IxIsTarget(kids2[j]) then F.IxAdd(kids2[j]) n = n + 1 end
-end
+local k3, c3 = F.HLKind(kids2[j])
+if k3 then F.IxAdd(kids2[j], c3) n = n + 1 end
 end
 end
 end
@@ -7531,8 +7555,8 @@ F._ixScanned = n
 return n
 end
 F.IxClear = function()
-for _, h in pairs(F._ixObjs) do
-if h then pcall(function() h:Destroy() end) end
+for _, rec in pairs(F._ixObjs) do
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
 end
 F._ixObjs = {}
 end
@@ -7542,21 +7566,22 @@ if F._ixLoop then pcall(function() F._ixLoop:Disconnect() end) F._ixLoop = nil e
 if F._ixAdded then pcall(function() F._ixAdded:Disconnect() end) F._ixAdded = nil end
 if not T.IxHL then
 F.IxClear()
-F.Out("[交互高亮] 已关")
+F.Out("[高亮透视] 已关")
 return
 end
 local n = F.IxScan()
-F.Out("[交互高亮] 已开(金色) · 本轮扫到 " .. tostring(n) .. " 个可交互物")
+F.Out("[高亮透视] 已开 · 本轮标出 " .. tostring(n) .. " 个(NPC棕/交互金/陷阱红/道具绿/掉落黄/载具青)")
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
 if not T.IxHL then return end
 task.wait(0.3)
-if F.IxIsTarget(o) then
+local kk, cc = F.HLKind(o)
+if kk then
 local parent = o
 pcall(function()
 if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then parent = o.Parent end
 end)
-F.IxAdd(parent)
+F.IxAdd(parent, cc)
 end
 end)
 end)
@@ -7566,90 +7591,10 @@ local now = os.clock()
 if now - (F._ixAt or 0) < 3 then return end
 F._ixAt = now
 F.IxScan()
-for o, h in pairs(F._ixObjs) do
+for o, rec in pairs(F._ixObjs) do
 if not o.Parent then
-if h then pcall(function() h:Destroy() end) end
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
 F._ixObjs[o] = nil
-end
-end
-end)
-end
-F.NpcClear = function()
-for _, rec in pairs(F._npcObjs) do
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-end
-F._npcObjs = {}
-end
-F.NpcHLSet = function(on)
-T.NpcHL = on and true or false
-if F._npcLoop then pcall(function() F._npcLoop:Disconnect() end) F._npcLoop = nil end
-if F._npcAdded then pcall(function() F._npcAdded:Disconnect() end) F._npcAdded = nil end
-if F._npcWallLoop then pcall(function() F._npcWallLoop:Disconnect() end) F._npcWallLoop = nil end
-if not T.NpcHL then
-F.NpcClear()
-F.Out("[NPC高亮] 已关")
-return
-end
-local n = F.NpcScan()
-F.Out("[NPC高亮] 已开(棕 · 隔墙可见) · 本轮扫到 " .. tostring(n) .. " 个")
-pcall(function()
-F._npcAdded = workspace.DescendantAdded:Connect(function(o)
-if not T.NpcHL then return end
-task.wait(0.25)
-if F.IsNPC(o) then F.NpcAdd(o) end
-end)
-end)
-F._npcLoop = RS.Heartbeat:Connect(function()
-if not T.NpcHL then F.NpcHLSet(false) return end
-local now = os.clock()
-if now - (F._npcAt or 0) < 3 then return end
-F._npcAt = now
-F.NpcScan()
-for o, rec in pairs(F._npcObjs) do
-if not o.Parent then
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-F._npcObjs[o] = nil
-end
-end
-end)
-F._npcWallLoop = RS.Heartbeat:Connect(function()
-if not T.NpcHL then return end
-local now = os.clock()
-if now - (F._npcWallAt or 0) < 0.25 then return end
-F._npcWallAt = now
-local cam = workspace.CurrentCamera
-if not cam then return end
-local myCh = LP.Character
-for o, rec in pairs(F._npcObjs) do
-if rec and rec.h and rec.h.Parent then
-local tgt = nil
-pcall(function() tgt = o:FindFirstChild("HumanoidRootPart") end)
-if tgt == nil then pcall(function() tgt = o.PrimaryPart end) end
-if tgt ~= nil then
-local origin = cam.CFrame.Position
-local dv = tgt.Position - origin
-local dist = dv.Magnitude
-if dist > 0.5 and dist < 800 then
-if not F._hlRP then
-local rp = RaycastParams.new()
-rp.FilterType = Enum.RaycastFilterType.Exclude
-rp.IgnoreWater = true
-F._hlRP = rp
-end
-local ex = F._hlEx
-ex[1] = o
-ex[2] = cam
-ex[3] = myCh
-F._hlRP.FilterDescendantsInstances = ex
-local wall = false
-local okr, hit = pcall(workspace.Raycast, workspace, origin, dv, F._hlRP)
-if okr and hit then wall = true end
-if rec.wall ~= wall then
-rec.wall = wall
-pcall(function() rec.h.FillTransparency = wall and 1 or 0.45 end)
-end
-end
-end
 end
 end
 end)
@@ -8542,7 +8487,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.XRaySet, F.HitMarkDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.HitMarkDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -10702,7 +10647,7 @@ F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEB
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
-F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -13669,10 +13614,10 @@ if F._cfgSyncing then return end
 if v then F.BodyHLEnable() else F.BodyHLDisable() end
 F.Out("[高亮] 身体高亮 = " .. (v and "开(隔墙可见 · 队友绿/敌人红看下面的敌我识别)" or "关"))
 end })
-Tabs.Visual:AddToggle("NpcHL", { Title = "NPC 高亮透视(棕 · 隔墙可见)", Description = "把场景里的 NPC/假人/怪物整体描边并显示在最上层 ⇒ 隔着墙也看得见。判定方式是通用的: 有 Humanoid 但不是玩家, 或名字含 npc/zombie/monster/boss 等词", Default = false, Callback = function(v)
-T.NpcHL = v
+Tabs.Visual:AddToggle("IxHL", { Title = "★ 高亮透视(值得注意的东西全标出来 · 隔墙可见)", Description = "一个开关标出全场: NPC/假人(棕) · 可交互物/门/箱子/按钮(金) · 陷阱/尖刺/岩浆/炸弹(红) · 道具/金币/宝石/蛋(绿) · 掉落物/武器(黄) · 载具/车船飞机(青)。整体描边并显示在最上层 ⇒ 隔着墙也看得见", Default = false, Callback = function(v)
+T.IxHL = v
 if F._cfgSyncing then return end
-F.NpcHLSet(v)
+F.IxHLSet(v)
 end })
 Tabs.Visual:AddSection("穿墙透视")
 Tabs.Visual:AddToggle("XRay", { Title = "★ 穿墙透视(墙/建筑变透明 · 直接看到墙后)", Description = "把地图里除「玩家角色」外的物件在本地渲染层设为全透明 ⇒ 墙、建筑都看不见了, 直接看到墙后的东西。纯本地渲染、不改真数据, 关掉即恢复。注意: 地形(Terrain)不受影响, 水晶/玻璃本来就透明的也没变化", Default = false, Callback = function(v)
@@ -13716,11 +13661,6 @@ Tabs.World:AddToggle("RoleTag", { Title = "★ 头顶标记(杀手/警长直接�
 T.RoleTag = v
 if F._cfgSyncing then return end
 F.RoleTagSet(v)
-end })
-Tabs.World:AddToggle("IxHL", { Title = "★ 高亮可交互物(金色 · 门/箱子/按钮/拾取)", Default = false, Callback = function(v)
-T.IxHL = v
-if F._cfgSyncing then return end
-F.IxHLSet(v)
 end })
 Tabs.World:AddSection("相机 / 准星")
 Tabs.World:AddToggle("Hud", { Title = "FPS/Ping HUD", Default = false, Callback = function(v)
