@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 22:21 sha 9db77aa2 bytes 524621'):format('2026-10-05 22:21','9db77aa2',524621))
+print(('[CheatMenu] build 2026-10-05 22:30 sha b046f192 bytes 526161'):format('2026-10-05 22:30','b046f192',526161))
 local F = {}
-F.VERSION = "v16.9.6"
+F.VERSION = "v16.9.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3173,6 +3173,40 @@ end
 end
 return best
 end
+F.CombatNpcOk = function(o)
+if o == nil or o == LP.Character then return false end
+local bad = false
+pcall(function()
+if o:IsDescendantOf(LP.Character) then bad = true end
+local cm0 = workspace.CurrentCamera
+if cm0 and o:IsDescendantOf(cm0) then bad = true end
+end)
+if bad then return false end
+if not F.IsNPC(o) then return false end
+if not o:FindFirstChildOfClass("Humanoid") then return false end
+local head = o:FindFirstChild("Head")
+local rp = o.PrimaryPart
+if not (head or rp) then return false end
+local nm = o.Name
+local okp, allp = pcall(function() return Players:GetPlayers() end)
+if okp and allp then
+local i
+for i = 1, #allp do
+local pl = allp[i]
+if nm == pl.Name then return false end
+local c = pl.Character
+if c and nm == c.Name then return false end
+end
+end
+local cm = workspace.CurrentCamera
+if cm then
+local pos = nil
+if head and head:IsA("BasePart") then pos = head.Position
+elseif rp and rp:IsA("BasePart") then pos = rp.Position end
+if pos and (pos - cm.CFrame.Position).Magnitude < 4 then return false end
+end
+return true
+end
 F._candBuf = F._candBuf or {}
 F._combatNpcs = F._combatNpcs or {}
 F._combatNpcAt = 0
@@ -3187,7 +3221,7 @@ local list = workspace:GetChildren()
 local i
 for i = 1, #list do
 local o = list[i]
-if o ~= LP.Character and F.IsNPC(o) and o:FindFirstChildOfClass("Humanoid") then n = n + 1 out[n] = o end
+if n < 60 and F.CombatNpcOk(o) then n = n + 1 out[n] = o end
 end
 for i = 1, #list do
 local o = list[i]
@@ -3198,12 +3232,29 @@ if okk and kids then
 local j
 for j = 1, #kids do
 local k = kids[j]
-if k ~= LP.Character and F.IsNPC(k) and k:FindFirstChildOfClass("Humanoid") then n = n + 1 out[n] = k end
+if n < 60 and F.CombatNpcOk(k) then n = n + 1 out[n] = k end
 end
 end
 end
 end
 end)
+local ref = nil
+pcall(function() local r0 = LP.Character and LP.Character.PrimaryPart if r0 then ref = r0.Position end end)
+if ref and n > 12 then
+local a
+for a = 1, 12 do
+local pick, pd = a, math.huge
+local b
+for b = a, n do
+local rp0 = out[b].PrimaryPart
+local okr, pp0 = pcall(function() return rp0 and rp0.Position or nil end)
+local d0 = (okr and pp0) and (pp0 - ref).Magnitude or math.huge
+if d0 < pd then pick, pd = b, d0 end
+end
+if pick ~= a then local sw = out[a] out[a] = out[pick] out[pick] = sw end
+end
+n = 12
+end
 local i = #out
 while i > n do out[i] = nil i = i - 1 end
 return out
@@ -3405,7 +3456,7 @@ end
 end
 if T.AimTurnCamera ~= false then
 local cam = workspace.CurrentCamera
-if cam then
+if cam and (part.Position - cam.CFrame.Position).Magnitude > 2.5 then
 local sm = tonumber(C.AimSmooth) or 0
 if sm > 0 then
 local goal = CFrame.lookAt(cam.CFrame.Position, part.Position)
