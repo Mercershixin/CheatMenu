@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:39 sha 8c981c58 bytes 541931'):format('2026-10-05 18:39','8c981c58',541931))
+print(('[CheatMenu] build 2026-10-05 18:47 sha aa4b6b60 bytes 541936'):format('2026-10-05 18:47','aa4b6b60',541936))
 local F = {}
-F.VERSION = "v16.8.1"
+F.VERSION = "v16.8.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -14735,7 +14735,7 @@ if not F.Once("reload", 6) then return end
 F.HotReload(false)
 end })
 Tabs.Setting:AddButton({ Title = "★ 强制重载(即使已是最新也重下一遍 · 热加载没反应就点这个)", Callback = function()
-if not F.Once("reload", 6) then return end
+if not F.Once("reloadforce", 3) then return end
 F.HotReload(true)
 end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器(回同一个服务器)", Callback = function()
