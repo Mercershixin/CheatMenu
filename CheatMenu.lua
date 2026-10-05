@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 20:48 sha 0b4cc252 bytes 534146'):format('2026-10-05 20:48','0b4cc252',534146))
+print(('[CheatMenu] build 2026-10-05 21:08 sha 973accc3 bytes 520913'):format('2026-10-05 21:08','973accc3',520913))
 local F = {}
-F.VERSION = "v16.9.2"
+F.VERSION = "v16.9.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -317,11 +317,11 @@ F.COLLECT_KEYS = { "B_Collect", "S_Collect", "Collect", "S_Interact", "B_Collect
 local SaveFile = "CheatMenu_Config_v1.json"
 local Fluent = nil
 local FLUENT_SOURCES = {
-"https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://ghfast.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://gh-proxy.com/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://ghpxy.hwinzniej.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://ghproxy.net/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://ghpxy.hwinzniej.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+"https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua",
 "https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
 "https://fastly.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
@@ -355,10 +355,18 @@ if okR and fluentLooksLua(body) and fluentTry(body, "本地文件 " .. fn) then 
 end
 end
 if not Fluent then
+local _ft0 = os.clock()
 for _, url in ipairs(FLUENT_SOURCES) do
 local ok, body = pcall(function() return game:HttpGet(url) end)
-if ok and fluentLooksLua(body) and fluentTry(body, string.sub(url, 1, 48)) then break end
+if ok and fluentLooksLua(body) and fluentTry(body, string.sub(url, 1, 48)) then
+if type(writefile) == "function" then
+pcall(writefile, "CheatMenu_Fluent.lua", body)
+F.Out("[CheatMenu] 已把 Fluent 缓存到本地 => 下次加载免网络、秒开")
 end
+break
+end
+end
+F.Out(string.format("[CheatMenu] Fluent 取源耗时 %.2f 秒", os.clock() - _ft0))
 end
 if not Fluent then
 local why = (type(loadstring) ~= "function" and type(load) ~= "function")
@@ -6807,6 +6815,11 @@ L.GlobalShadows = savedLag.GlobalShadows L.FogEnd = savedLag.FogEnd L.FogStart =
 L.Brightness = savedLag.Brightness L.ClockTime = savedLag.ClockTime L.Ambient = savedLag.Ambient
 end)
 pcall(function() settings().Rendering.QualityLevel = savedLag.quality end)
+pcall(function() if savedLag.mesh then settings().Rendering.MeshPartDetailLevel = savedLag.mesh end end)
+pcall(function() if savedLag.lit then L.EnvironmentDiffuseScale = savedLag.lit.Diffuse L.EnvironmentSpecularScale = savedLag.lit.Specular L.ShadowSoftness = savedLag.lit.Soft end end)
+if savedLag.lights then for _, e in ipairs(savedLag.lights) do pcall(function() if e and e.Parent then e.Enabled = true end end) end end
+if savedLag.beams then for _, e in ipairs(savedLag.beams) do pcall(function() if e and e.Parent then e.Enabled = true end end) end end
+if savedLag.clouds then for _, e in ipairs(savedLag.clouds) do pcall(function() if e and e.Parent then e.Enabled = true end end) end end
 pcall(function()
 local Terr = workspace:FindFirstChildWhichIsA("Terrain")
 if Terr and savedLag.terr then
@@ -6828,7 +6841,10 @@ local function AntilagEnable()
 local L = game:GetService("Lighting")
 if not savedLag then
 savedLag = { GlobalShadows = L.GlobalShadows, FogEnd = L.FogEnd, FogStart = L.FogStart,
-Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient, fx = {}, pe = {} }
+Brightness = L.Brightness, ClockTime = L.ClockTime, Ambient = L.Ambient, fx = {}, pe = {},
+lights = {}, beams = {}, clouds = {} }
+pcall(function() savedLag.lit = { Diffuse = L.EnvironmentDiffuseScale, Specular = L.EnvironmentSpecularScale, Soft = L.ShadowSoftness } end)
+pcall(function() savedLag.mesh = settings().Rendering.MeshPartDetailLevel end)
 pcall(function() savedLag.quality = settings().Rendering.QualityLevel end)
 end
 pcall(function() settings().Rendering.QualityLevel = 1 end)
@@ -6843,7 +6859,13 @@ Terrain.WaterTransparency = 1
 end)
 end
 L.GlobalShadows = false L.FogEnd = 9e9 L.FogStart = 9e9 L.Brightness = 1
-local nfx, npe = 0, 0
+pcall(function()
+L.EnvironmentDiffuseScale = 0
+L.EnvironmentSpecularScale = 0
+L.ShadowSoftness = 0
+end)
+pcall(function() settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level00 end)
+local nfx, npe, nli, nbm = 0, 0, 0, 0
 for _, d in ipairs(F.walk(workspace)) do
 local cn = tostring(d.ClassName)
 if cn == "ParticleEmitter" or cn == "Trail" then
@@ -6856,6 +6878,16 @@ npe = npe + 1
 end
 elseif cn == "Smoke" or cn == "Fire" or cn == "Sparkles" then
 pcall(function() d.Enabled = false end)
+elseif cn == "Beam" then
+pcall(function() if d.Enabled then savedLag.beams[#savedLag.beams + 1] = d end d.Enabled = false end)
+nbm = nbm + 1
+elseif cn == "PointLight" or cn == "SpotLight" or cn == "SurfaceLight" then
+pcall(function() if d.Enabled then savedLag.lights[#savedLag.lights + 1] = d end d.Enabled = false end)
+nli = nli + 1
+elseif cn == "Clouds" then
+pcall(function() if d.Enabled then savedLag.clouds[#savedLag.clouds + 1] = d end d.Enabled = false end)
+elseif d:IsA("BasePart") then
+pcall(function() d.CastShadow = false end)
 end
 end
 for _, d in ipairs(F.walk(L)) do
@@ -6869,9 +6901,6 @@ break
 end
 end
 end
-for _, v in ipairs(F.walk(workspace)) do
-if v:IsA("BasePart") then pcall(function() v.CastShadow = false end) end
-end
 if not F._lagAddConn then
 F._lagAddConn = workspace.DescendantAdded:Connect(function(child)
 if not T.Antilag then return end
@@ -6879,6 +6908,8 @@ pcall(function()
 if child:IsA("ParticleEmitter") or child:IsA("Trail") then
 child.Lifetime = NumberRange.new(0)
 elseif child:IsA("Smoke") or child:IsA("Fire") or child:IsA("Sparkles") then
+child.Enabled = false
+elseif child:IsA("Beam") or child:IsA("PointLight") or child:IsA("SpotLight") or child:IsA("SurfaceLight") or child:IsA("Clouds") then
 child.Enabled = false
 end
 end)
@@ -6909,8 +6940,8 @@ if n > 0 then F._lagAnimN = (F._lagAnimN or 0) + n end
 end
 end)
 end
-F.Out(string.format("[降画质] 渲染质量档=%d · 关光效 %d 个(Bloom/阳光/景深/氛围) · 灭粒子特效 %d 个 · 关阴影 · 之后新出的特效也自动灭",
-1, nfx, npe))
+F.Out(string.format("[降画质] 渲染档=%d · 光效 %d · 粒子 %d · 灯光 %d · 光束 %d · 全场景关阴影 · 网格最低档 · 新特效自动灭",
+1, nfx, npe, nli, nbm))
 end
 local function FOVEnable() workspace.CurrentCamera.FieldOfView = C.FOV or 100 end
 local function FOVDisable()
@@ -7683,282 +7714,6 @@ end
 end
 F._espItems = {}
 end
-F.ESP_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","fire","trapdoor","spiketrap" }
-F.ESP_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","drop","chest","crate","box","orb","egg","fruit","candy","key","badge" }
-F.ESP_TRAP_COLOR = Color3.fromRGB(255, 60, 60)
-F.ESP_ITEM_COLOR = Color3.fromRGB(80, 255, 160)
-F.ESP_VEH_COLOR = Color3.fromRGB(0, 235, 255)
-F._espObjs = {}
-F.EspObjClass = function(o)
-if o == nil then return nil, nil, nil end
-if o == LP.Character then return nil, nil, nil end
-local okCh, inCh = pcall(function()
-local m = o:FindFirstAncestorOfClass("Model")
-return m ~= nil and Players:GetPlayerFromCharacter(m) ~= nil
-end)
-if okCh and inCh then return nil, nil, nil end
-local isM = false
-pcall(function() isM = o:IsA("Model") or o:IsA("BasePart") end)
-if not isM then return nil, nil, nil end
-if T.EspNpc then
-local okn, isNpc = pcall(F.IsNPC, o)
-if okn and isNpc then return "npc", F.NPC_COLOR, o.Name end
-end
-if T.EspIx then
-local oki, isIx = pcall(F.IxIsTarget, o)
-if oki and isIx then return "ix", F.IX_COLOR, o.Name end
-end
-local nm = tostring(o.Name)
-local low = string.lower(nm)
-local i
-if T.EspVeh then
-local isVeh = false
-pcall(function() isVeh = o:IsA("VehicleSeat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil end)
-if isVeh then return "veh", F.ESP_VEH_COLOR, nm end
-end
-if T.EspTrap then
-for i = 1, #F.ESP_TRAP_KEYS do
-if string.find(low, F.ESP_TRAP_KEYS[i], 1, true) then return "trap", F.ESP_TRAP_COLOR, nm end
-end
-end
-if T.EspDrop then
-local isTool2 = false
-pcall(function() isTool2 = o:IsA("Tool") end)
-if isTool2 then return "drop", F.ESP_DROP_COLOR, nm end
-for i = 1, #F.DROP_KEYS do
-if string.find(low, F.DROP_KEYS[i], 1, true) then return "drop", F.ESP_DROP_COLOR, nm end
-end
-end
-if T.EspItem then
-for i = 1, #F.ESP_ITEM_KEYS do
-if string.find(low, F.ESP_ITEM_KEYS[i], 1, true) then return "item", F.ESP_ITEM_COLOR, nm end
-end
-end
-return nil, nil, nil
-end
-F.EspObjScan = function()
-if not (T.EspNpc or T.EspIx or T.EspTrap or T.EspItem or T.EspDrop or T.EspVeh) then return end
-local list = {}
-pcall(function() list = workspace:GetChildren() end)
-local subs = {}
-local i
-for i = 1, #list do
-local o = list[i]
-local okf, isC = pcall(function() return o:IsA("Folder") or o:IsA("Model") end)
-if okf and isC and o ~= LP.Character then
-local isM = false
-pcall(function() isM = o:IsA("Model") end)
-if not isM then
-local okk, kids = pcall(function() return o:GetChildren() end)
-if okk and kids then
-local j
-for j = 1, #kids do subs[#subs + 1] = kids[j] end
-end
-end
-end
-end
-for i = 1, #subs do list[#list + 1] = subs[i] end
-local subs2 = {}
-for i = 1, #subs do
-local o = subs[i]
-local okf2 = false
-pcall(function() okf2 = o:IsA("Folder") end)
-if okf2 and o ~= LP.Character then
-local okk2, kids2 = pcall(function() return o:GetChildren() end)
-if okk2 and kids2 then
-local j
-for j = 1, #kids2 do subs2[#subs2 + 1] = kids2[j] end
-end
-end
-end
-for i = 1, #subs2 do list[#list + 1] = subs2[i] end
-for i = 1, #list do
-local o = list[i]
-local cat, col, nm = F.EspObjClass(o)
-if cat then
-local rec = F._espObjs[o]
-if rec == nil then
-rec = F.EspMakeObj(o, cat, col)
-end
-if rec then
-rec.cat = cat
-rec.col = col
-rec.nm = nm
-end
-end
-end
-for o, rec in pairs(F._espObjs) do
-if not o.Parent then
-F.EspDropObj(o)
-end
-end
-end
-F.EspMakeObj = function(o, cat, col)
-local sg = F.EspEnsure()
-if not sg then return nil end
-local function mk(cls, props)
-local x = Instance.new(cls)
-local k, v
-for k, v in pairs(props) do pcall(function() x[k] = v end) end
-x.Parent = sg
-return x
-end
-local rec = {}
-rec.box = mk("Frame", { Name = "obox", BackgroundTransparency = 1, BorderSizePixel = 1, BorderColor3 = col or Color3.fromRGB(255,255,255), Visible = false })
-rec.name = mk("TextLabel", { Name = "onm", BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = col or Color3.fromRGB(255,255,255), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
-rec.dist = mk("TextLabel", { Name = "ods", BackgroundTransparency = 1, Font = Enum.Font.Code, TextSize = 12, TextColor3 = Color3.fromRGB(230,230,230), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
-rec.cat, rec.col, rec.nm = cat, col, tostring(o.Name)
-F._espObjs[o] = rec
-return rec
-end
-F.EspDropObj = function(o)
-local rec = F._espObjs[o]
-if rec then
-pcall(function() if rec.box then rec.box:Destroy() end end)
-pcall(function() if rec.name then rec.name:Destroy() end end)
-pcall(function() if rec.dist then rec.dist:Destroy() end end)
-F._espObjs[o] = nil
-end
-end
-F.EspObjClear = function()
-for o in pairs(F._espObjs) do F.EspDropObj(o) end
-F._espObjs = {}
-end
-F.EspObjDraw = function(cam, myRoot)
-local i
-local n = 0
-for o, rec in pairs(F._espObjs) do
-n = n + 1
-if n > 200 then break end
-if rec and rec.box then
-local wp = nil
-if o:IsA("BasePart") then
-wp = o.Position
-else
-local pp = nil
-pcall(function() pp = o.PrimaryPart end)
-if pp == nil then
-local hrp = nil
-pcall(function() hrp = o:FindFirstChild("HumanoidRootPart") end)
-if hrp then
-wp = hrp.Position
-else
-local hd = nil
-pcall(function() hd = o:FindFirstChild("Head") end)
-if hd then wp = hd.Position end
-end
-else
-wp = pp.Position
-end
-if wp == nil then
-local first = nil
-pcall(function()
-local kids = o:GetChildren()
-local j
-for j = 1, #kids do
-if kids[j]:IsA("BasePart") then first = kids[j] break end
-end
-end)
-if first then wp = first.Position else wp = nil end
-end
-end
-if wp then
-local sp, on = cam:WorldToViewportPoint(wp)
-if on then
-local dist = 0
-if myRoot then dist = (wp - myRoot.Position).Magnitude end
-local sizePx = math.clamp(300 / math.max(dist, 3), 6, 60)
-local x, y = sp.X - sizePx / 2, sp.Y - sizePx / 2
-rec.box.Visible = true
-rec.box.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
-rec.box.Size = UDim2.fromOffset(math.floor(sizePx), math.floor(sizePx))
-rec.box.BorderColor3 = rec.col
-if T.EspName then
-rec.name.Visible = true
-rec.name.Text = tostring(rec.nm)
-rec.name.TextColor3 = rec.col
-rec.name.Position = UDim2.fromOffset(math.floor(sp.X - 60), math.floor(y - 18))
-rec.name.Size = UDim2.fromOffset(120, 16)
-else
-rec.name.Visible = false
-end
-if T.EspDist then
-rec.dist.Visible = true
-rec.dist.Text = string.format("%.0f 格", dist)
-rec.dist.Position = UDim2.fromOffset(math.floor(sp.X - 40), math.floor(y + sizePx + 2))
-rec.dist.Size = UDim2.fromOffset(80, 14)
-else
-rec.dist.Visible = false
-end
-else
-F.EspHideRec(rec)
-end
-else
-F.EspHideRec(rec)
-end
-end
-end
-end
-F._chams = {}
-F.ChamsAdd = function(pl)
-if not T.Chams then return end
-if F._chams[pl] then return end
-local ch = pl.Character
-if not ch then return end
-local h = Instance.new("Highlight")
-h.Name = "CMChams"
-h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-h.FillTransparency = 0
-h.OutlineTransparency = 0
-pcall(function() h:SetAttribute("CMOwned", true) end)
-h.Parent = ch
-F._chams[pl] = { h = h, ch = ch }
-end
-F.ChamsClear = function()
-for _, rec in pairs(F._chams) do
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-end
-F._chams = {}
-end
-F.ChamsTick = function()
-if not T.Chams then return end
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local rec = F._chams[pl]
-local ch = pl.Character
-if ch then
-if rec == nil or rec.ch ~= ch then
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-F._chams[pl] = nil
-F.ChamsAdd(pl)
-end
-local r2 = F._chams[pl]
-if r2 and r2.h then
-local col = Color3.fromRGB(255, 255, 255)
-pcall(function() col = F.CMX_HLTeamColor(pl) end)
-pcall(function()
-r2.h.FillColor = col
-r2.h.OutlineColor = col
-r2.h.FillTransparency = 0
-end)
-end
-else
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-F._chams[pl] = nil
-end
-end
-end
-end
-F.ChamsSet = function(on)
-T.Chams = on and true or false
-if not T.Chams then
-F.ChamsClear()
-F.Out("[Chams] 已关")
-return
-end
-F.ChamsTick()
-F.Out("[Chams] 已开(纯色覆盖 · 隔墙可见)")
-end
 F._hitMarkGui, F._hitMarkConn = nil, nil
 F.HitMarkFlash = function(ok)
 local host = nil
@@ -8096,112 +7851,6 @@ local i
 for i = 1, #list do F.XRayApply(list[i]) end
 end)
 end
-F.KEY_ACTIONS = {
-{ key = Enum.KeyCode.X, label = "自瞄", get = function() return T.AimOn end,
-set = function(on) pcall(F.AimSet, on, "快捷键") end },
-{ key = Enum.KeyCode.V, label = "飞行", get = function() return T.FlyOn end,
-set = function(on) pcall(F.FlySet, on) end },
-{ key = Enum.KeyCode.B, label = "加速", get = function() return T.SpeedOn end,
-set = function(on) pcall(F.SpeedSet, on) end },
-{ key = Enum.KeyCode.C, label = "穿墙", get = function() return T.NoClip end,
-set = function(on) end },
-{ key = Enum.KeyCode.N, label = "上帝模式", get = function() return T.GodMode end,
-set = function(on) pcall(F.GodModeSet, on) end },
-{ key = Enum.KeyCode.H, label = "身体高亮", get = function() return T.BodyHL end,
-set = function(on) pcall(F.BodyHLEnable) if not on then pcall(F.BodyHLDisable) end end },
-{ key = Enum.KeyCode.J, label = "ESP", get = function() return T.EspOn end,
-set = function(on) pcall(F.EspSet, on) end },
-}
-F._keyBindConn = nil
-F.KeyBindEnable = function()
-if F._keyBindConn then return end
-F._keyBindConn = UIS.InputBegan:Connect(function(input, processed)
-if processed then return end
-if not T.KeyBind then return end
-local code = input.KeyCode
-for i = 1, #F.KEY_ACTIONS do
-local a = F.KEY_ACTIONS[i]
-if a.key == code then
-local cur = false
-pcall(function() cur = a.get() end)
-local want = (not cur) and true or false
-pcall(a.set, want)
-pcall(function() F.Out("[快捷键] " .. a.label .. " = " .. (want and "开" or "关")) end)
-if Fluent and Fluent.Notify then
-pcall(function()
-Fluent:Notify({ Title = "快捷键", Content = a.label .. " → " .. (want and "开" or "关"), Duration = 2 })
-end)
-end
-break
-end
-end
-end)
-F.Out("[快捷键] 已开 · X=自瞄 V=飞行 B=加速 C=穿墙 N=上帝模式 H=高亮 J=ESP (按一下切换)")
-end
-F.KeyBindDisable = function()
-if F._keyBindConn then pcall(function() F._keyBindConn:Disconnect() end) F._keyBindConn = nil end
-F.Out("[快捷键] 已关")
-end
-F._pickLoop, F._pickAt, F._pickCount = nil, 0, 0
-F.PICK_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "coin", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest" }
-F.PickIsTarget = function(d)
-if d == nil then return false end
-if d == LP.Character then return false end
-local ok = false
-pcall(function() ok = d:IsA("BasePart") or d:IsA("Tool") end)
-if not ok then return false end
-local nm = string.lower(tostring(d.Name))
-for i = 1, #F.PICK_KEYS do
-if string.find(nm, F.PICK_KEYS[i], 1, true) then return true end
-end
-return false
-end
-F.AutoPickEnable = function()
-if F._pickLoop then return end
-F._pickCount = 0
-F._pickLoop = RS.Heartbeat:Connect(function()
-if not T.AutoPick then pcall(F.AutoPickDisable) return end
-local now = os.clock()
-local gap = tonumber(C.AutoPickGap) or 0.6
-if now - (F._pickAt or 0) < gap then return end
-F._pickAt = now
-local _, hum, root = GC()
-if not (hum and root) then return end
-local range = tonumber(C.AutoPickRange) or 30
-local done = 0
-pcall(function()
-for _, d in ipairs(workspace:GetChildren()) do
-if done >= 6 then break end
-if F.PickIsTarget(d) then
-local pos = nil
-pcall(function() pos = d.Position end)
-local cand = { d }
-if pos == nil then
-pcall(function() if d:IsA("Model") then pos = (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart")) and (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart")).Position end end)
-end
-if pos then
-local dist = (pos - root.Position).Magnitude
-if dist <= range and dist > 0.5 then
-if type(firetouchinterest) == "function" then
-pcall(function() firetouchinterest(root, d, 0) firetouchinterest(root, d, 1) end)
-else
-pcall(function() d.CFrame = root.CFrame end)
-end
-done = done + 1
-F._pickCount = (F._pickCount or 0) + 1
-end
-end
-end
-end
-end)
-F.Out("[自动拾取] 已开(碰到就收 · 半径 " .. tostring(tonumber(C.AutoPickRange) or 30) .. " 格)")
-end)
-end
-F.AutoPickDisable = function()
-if F._pickLoop then pcall(function() F._pickLoop:Disconnect() end) F._pickLoop = nil end
-F.Out("[自动拾取] 已关 · 本次收了 " .. tostring(F._pickCount or 0) .. " 次")
-end
-F._allyTags = {}
 F.AllyTagRefresh = function()
 if not T.AllyMark then return end
 local host = nil
@@ -8328,36 +7977,6 @@ F._vehCount = n
 end)
 F.Out("[加速] 坐上载具会自动给载具推力 " .. tostring(tonumber(C.SpeedValue) or 60) .. " 格/秒(与加速同一个速度值)")
 end
-F.DROP_KEYS = { "tool", "coin", "gem", "token", "item", "pickup", "loot", "drop", "cash", "money", "orb", "egg", "fruit", "candy", "key", "badge", "crate", "chest", "weapon", "gun", "sword" }
-F.ESP_DROP_COLOR = Color3.fromRGB(255, 240, 120)
-F.EspDropScan = function()
-if not T.EspDrop then return end
-local list = {}
-pcall(function() list = workspace:GetChildren() end)
-local i
-for i = 1, #list do
-local o = list[i]
-local isTool = false
-pcall(function() isTool = o:IsA("Tool") end)
-local nm = tostring(o.Name)
-local low = string.lower(nm)
-local hit = isTool
-if not hit then
-for j = 1, #F.DROP_KEYS do
-if string.find(low, F.DROP_KEYS[j], 1, true) then hit = true break end
-end
-end
-if hit and o ~= LP.Character then
-local rec = F._espObjs[o]
-if rec == nil then rec = F.EspMakeObj(o, "drop", F.ESP_DROP_COLOR) end
-if rec then
-rec.cat = "drop"
-rec.col = F.ESP_DROP_COLOR
-rec.nm = nm
-end
-end
-end
-end
 F.EspTick = function()
 local cam = workspace.CurrentCamera
 if not cam then return end
@@ -8441,34 +8060,18 @@ T.EspOn = on and true or false
 if F._espLoop then pcall(function() F._espLoop:Disconnect() end) F._espLoop = nil end
 if not T.EspOn then
 F.EspClear()
-pcall(F.EspObjClear)
 if F._espGui then pcall(function() F._espGui:Destroy() end) F._espGui = nil end
 F.Out("[ESP] 已关")
 return
 end
 F.EspEnsure()
 F.Out("[ESP] 已开")
-F.EspObjDrawSafe = function()
-local cam = workspace.CurrentCamera
-if not cam then return end
-local _, _, r0 = pcall(GC)
-pcall(F.EspObjDraw, cam, r0)
-end
 F._espLoop = RS.RenderStepped:Connect(function()
 if not T.EspOn then F.EspSet(false) return end
 local now = os.clock()
 if now - (F._espAt or 0) < 0.033 then return end
 F._espAt = now
 pcall(F.EspTick)
-if T.Chams and now - (F._espChamsAt or 0) >= 0.2 then
-F._espChamsAt = now
-pcall(F.ChamsTick)
-end
-if now - (F._espObjAt or 0) > 1.5 then
-F._espObjAt = now
-pcall(F.EspObjScan)
-end
-pcall(F.EspObjDrawSafe)
 end)
 end
 F._roleTags, F._roleTagConn = {}, nil
@@ -8939,7 +8542,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.XRaySet, F.ChamsSet, F.HitMarkDisable, F.KeyBindDisable, F.AutoPickDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.NpcHLSet, F.IxHLSet, F.EspSet, F.XRaySet, F.HitMarkDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.SilentAimDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -14055,16 +13658,6 @@ end })
 Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = function(v) T.EspName = v end })
 Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
 Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
-Tabs.Visual:AddToggle("Chams", { Title = "Chams 纯色覆盖(整个人填满单色 · 隔墙可见)", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-F.ChamsSet(v)
-end })
-Tabs.Visual:AddToggle("EspNpc", { Title = "ESP 也显示 NPC(棕)", Default = false, Callback = function(v) T.EspNpc = v end })
-Tabs.Visual:AddToggle("EspIx", { Title = "ESP 也显示可交互物(金)", Default = false, Callback = function(v) T.EspIx = v end })
-Tabs.Visual:AddToggle("EspTrap", { Title = "ESP 也显示陷阱(红 · 尖刺/岩浆/炸弹)", Default = false, Callback = function(v) T.EspTrap = v end })
-Tabs.Visual:AddToggle("EspItem", { Title = "ESP 也显示道具(绿 · 金币/宝石/箱子/蛋)", Default = false, Callback = function(v) T.EspItem = v end })
-Tabs.Visual:AddToggle("EspDrop", { Title = "ESP 也显示掉落物(黄 · 地上的武器/战利品)", Default = false, Callback = function(v) T.EspDrop = v end })
-Tabs.Visual:AddToggle("EspVeh", { Title = "ESP 也显示载具(青 · 车/船/飞机)", Default = false, Callback = function(v) T.EspVeh = v end })
 Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记(队友头顶显示绿色名字)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.AllyMarkSet(v)
@@ -14213,13 +13806,6 @@ pcall(F.AntiAFKDisable)
 pcall(F.KickGuardDisable)
 end
 end })
-Tabs.AFK:AddToggle("AutoPick", { Title = "★ 自动拾取(附近掉落物碰到就收)", Default = false, Callback = function(v)
-T.AutoPick = v
-if F._cfgSyncing then return end
-if v then pcall(F.AutoPickEnable) else pcall(F.AutoPickDisable) end
-end })
-Tabs.AFK:AddSlider("AutoPickRange", { Title = "拾取半径(格)", Min = 5, Max = 200, Default = 30, Rounding = 0, Callback = function(v) C.AutoPickRange = v end })
-Tabs.AFK:AddSlider("AutoPickGap", { Title = "拾取间隔(秒)", Min = 0.05, Max = 2, Default = 0.25, Rounding = 2, Callback = function(v) C.AutoPickGap = v end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "踢击训练(自动手持配重)", Description = "自动装备一件配重(brainrot 以外的 Tool)并按一次 Activate; 想真正涨力量请同时开下面的「自动锻炼(健身房)」", Default = false, Callback = function(v)
 T.AutoTrain = v
@@ -14431,12 +14017,6 @@ Tabs.Setting:AddToggle("LockLog", { Title = "护日志(拦 LogService:ClearOutpu
 T.LockLog = v
 if F._cfgSyncing then return end
 pcall(F.LockLogClear, v)
-end })
-Tabs.Setting:AddSection("快捷键")
-Tabs.Setting:AddToggle("KeyBind", { Title = "★ 快捷键(不开菜单直接按键切功能)", Description = "X=自瞄 · V=飞行 · B=加速 · C=穿墙 · N=上帝模式 · H=高亮 · J=ESP(按一下切换)", Default = false, Callback = function(v)
-T.KeyBind = v
-if F._cfgSyncing then return end
-if v then pcall(F.KeyBindEnable) else pcall(F.KeyBindDisable) end
 end })
 Tabs.Setting:AddSection("配置存档")
 Tabs.Setting:AddButton({ Title = "保存当前设置到本地", Callback = function()
@@ -14661,7 +14241,9 @@ if k > 0 then F.Out("[清理] 建界面前已清掉 " .. tostring(k) .. " 个残
 end
 end)
 F._cfgSyncing = true
+local _bt0 = os.clock()
 local okBuild, buildErr = pcall(buildMenu)
+F.Out(string.format("[CheatMenu] 菜单构建耗时 %.2f 秒", os.clock() - _bt0))
 F._cfgSyncing = false
 if not okBuild then
 F.Out("[UI] ⚠ 菜单构建中断 ⇒ 断点之后的控件全都没建出来! 原因: " .. tostring(buildErr))
