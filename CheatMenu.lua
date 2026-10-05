@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 17:20 sha 6da5526a bytes 539924'):format('2026-10-05 17:20','6da5526a',539924))
+print(('[CheatMenu] build 2026-10-05 18:04 sha 73291b0e bytes 540100'):format('2026-10-05 18:04','73291b0e',540100))
 local F = {}
-F.VERSION = "v16.7.0"
+F.VERSION = "v16.7.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2418,13 +2418,13 @@ F.AntiAFKNudge = function()
 if F._afkNudge then return end
 local moved = false
 pcall(function()
-if type(VirtualInputManager) == "table" and VirtualInputManager.SendMouseMoveEvent then
-VirtualInputManager:SendMouseMoveEvent(1, 0, false)
+local vim = nil
+pcall(function() vim = game:GetService("VirtualInputManager") end)
+if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
+vim:SendMouseMoveEvent(1, 0, false)
 moved = true
 elseif type(mousemoverel) == "function" then
 mousemoverel(1, 0)
-moved = true
-elseif type(virtuaimgr) == "table" then
 moved = true
 end
 end)
@@ -2441,8 +2441,10 @@ pcall(function() hum.Jump = false end)
 end
 end)
 pcall(function()
-if type(VirtualInputManager) == "table" and VirtualInputManager.SendMouseMoveEvent then
-VirtualInputManager:SendMouseMoveEvent(1, 0, false)
+local vim = nil
+pcall(function() vim = game:GetService("VirtualInputManager") end)
+if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
+vim:SendMouseMoveEvent(1, 0, false)
 elseif type(mousemoverel) == "function" then
 mousemoverel(1, 0)
 end
@@ -5486,7 +5488,7 @@ return F._logClearHook
 else
 if not F._logClearHook then return false end
 pcall(function()
-if F._logClearOrig then restorefunction(F._logClearOrig) end
+if F._logClearOrig and type(restorefunction) == "function" then restorefunction(F._logClearOrig) end
 end)
 F._logClearHook, F._logClearOrig = nil, nil
 F.Out("[反封禁·护日志] 已还原")
@@ -5607,6 +5609,7 @@ F._cfgAt = os.clock()
 pcall(F.CfgSaveNow)
 end)
 end
+local LockHealthEnable, LockHealthDisable, NoDeathEnable, NoDeathDisable
 F.GodModeSet = function(on)
 T.GodMode = on and true or false
 T.God = T.GodMode
@@ -7036,8 +7039,8 @@ F._origCamMode = nil
 end
 end
 local LockHealthConn = nil
-local function LockHealthDisable() if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end end
-local function LockHealthEnable()
+LockHealthDisable = function() if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end end
+LockHealthEnable = function()
 if LockHealthConn then return end
 LockHealthConn = RS.Heartbeat:Connect(function()
 if not T.LockHealth then LockHealthDisable() return end
@@ -7065,8 +7068,8 @@ end
 end)
 end
 local NoDeathConn = nil
-local function NoDeathDisable() if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end end
-local function NoDeathEnable()
+NoDeathDisable = function() if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end end
+NoDeathEnable = function()
 if NoDeathConn then return end
 NoDeathConn = RS.Heartbeat:Connect(function()
 if not T.NoDeath then NoDeathDisable() return end
@@ -7330,7 +7333,7 @@ end
 F._menuOpen = false
 F.MenuWin = function()
 local w = getgenv and getgenv().CM_Window
-if not w and type(Window) == "table" then w = Window end
+if not w and type(F.Window) == "table" then w = F.Window end
 return w
 end
 function F.MenuOpen()
@@ -11430,6 +11433,7 @@ Acrylic = false,
 Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
+F.Window = Window
 if getgenv then getgenv().CM_Window = Window end
 pcall(function()
 local g = Fluent and Fluent.GUI
