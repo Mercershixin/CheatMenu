@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 20:06 sha ca56b71d bytes 537725'):format('2026-10-05 20:06','ca56b71d',537725))
+print(('[CheatMenu] build 2026-10-05 20:33 sha d6cb4dbe bytes 533158'):format('2026-10-05 20:33','d6cb4dbe',533158))
 local F = {}
-F.VERSION = "v16.9.0"
+F.VERSION = "v16.9.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7653,7 +7653,6 @@ o.Parent = sg
 return o
 end
 local rec = {}
-rec.box = mk("Frame", { Name = "box", BackgroundTransparency = 1, BorderSizePixel = 1, BorderColor3 = Color3.fromRGB(255, 255, 255), Visible = false })
 rec.hpBg = mk("Frame", { Name = "hpBg", BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, Visible = false })
 rec.hpFg = Instance.new("Frame")
 rec.hpFg.Name = "hpFg"
@@ -7661,7 +7660,6 @@ rec.hpFg.BackgroundColor3 = F.ESP_HEALTH_COLOR
 rec.hpFg.BorderSizePixel = 0
 rec.hpFg.Size = UDim2.fromScale(1, 1)
 rec.hpFg.Parent = rec.hpBg
-rec.tracer = mk("Frame", { Name = "tracer", BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.25, BorderSizePixel = 0, Visible = false })
 rec.name = mk("TextLabel", { Name = "nm", BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
 rec.dist = mk("TextLabel", { Name = "ds", BackgroundTransparency = 1, Font = Enum.Font.Code, TextSize = 13, TextColor3 = Color3.fromRGB(230, 230, 230), TextStrokeTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Center, Visible = false })
 F._espItems[pl] = rec
@@ -7671,7 +7669,6 @@ F.EspHideRec = function(rec)
 if not rec then return end
 pcall(function() rec.box.Visible = false end)
 pcall(function() rec.hpBg.Visible = false end)
-pcall(function() rec.tracer.Visible = false end)
 pcall(function() rec.name.Visible = false end)
 pcall(function() rec.dist.Visible = false end)
 end
@@ -7680,7 +7677,6 @@ for _, rec in pairs(F._espItems) do
 if rec then
 pcall(function() if rec.box then rec.box:Destroy() end end)
 pcall(function() if rec.hpBg then rec.hpBg:Destroy() end end)
-pcall(function() if rec.tracer then rec.tracer:Destroy() end end)
 pcall(function() if rec.name then rec.name:Destroy() end end)
 pcall(function() if rec.dist then rec.dist:Destroy() end end)
 end
@@ -7873,14 +7869,10 @@ local dist = 0
 if myRoot then dist = (wp - myRoot.Position).Magnitude end
 local sizePx = math.clamp(300 / math.max(dist, 3), 6, 60)
 local x, y = sp.X - sizePx / 2, sp.Y - sizePx / 2
-if T.EspBox then
 rec.box.Visible = true
 rec.box.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
 rec.box.Size = UDim2.fromOffset(math.floor(sizePx), math.floor(sizePx))
 rec.box.BorderColor3 = rec.col
-else
-rec.box.Visible = false
-end
 if T.EspName then
 rec.name.Visible = true
 rec.name.Text = tostring(rec.nm)
@@ -8031,39 +8023,6 @@ if F._hitMarkConn then pcall(function() F._hitMarkConn:Disconnect() end) F._hitM
 F._hitMarkHp = {}
 if F._hitMarkGui then pcall(function() F._hitMarkGui:Destroy() end) F._hitMarkGui = nil end
 F.Out("[命中标记] 已关")
-end
-F.ESP_BONES = {
-{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
-{ "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
-{ "UpperTorso", "RightUpperArm" }, { "RightUpperArm", "RightLowerArm" }, { "RightLowerArm", "RightHand" },
-{ "LowerTorso", "LeftUpperLeg" }, { "LeftUpperLeg", "LeftLowerLeg" }, { "LeftLowerLeg", "LeftFoot" },
-{ "LowerTorso", "RightUpperLeg" }, { "RightUpperLeg", "RightLowerLeg" }, { "RightLowerLeg", "RightFoot" },
-}
-F.ESP_BONES_R6 = {
-{ "Head", "Torso" }, { "Torso", "Left Arm" }, { "Torso", "Right Arm" },
-{ "Torso", "Left Leg" }, { "Torso", "Right Leg" },
-}
-F._espBones = {}
-F.EspBoneMake = function(pl)
-local sg = F.EspEnsure()
-if not sg then return nil end
-local rec = F._espBones[pl]
-if rec then return rec end
-rec = { lines = {} }
-local i
-for i = 1, 14 do
-local f = Instance.new("Frame")
-f.Name = "cbone" .. i
-f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-f.BorderSizePixel = 0
-f.BackgroundTransparency = 0.2
-f.Visible = false
-pcall(function() f:SetAttribute("CMOwned", true) end)
-f.Parent = sg
-rec.lines[i] = f
-end
-F._espBones[pl] = rec
-return rec
 end
 F._xrayObjs = {}
 F._xrayAdded, F._xrayLoop, F._xrayAt = nil, nil, 0
@@ -8399,70 +8358,6 @@ end
 end
 end
 end
-F.EspBoneClear = function()
-for pl, rec in pairs(F._espBones) do
-if rec then
-local i
-for i = 1, #rec.lines do pcall(function() rec.lines[i]:Destroy() end) end
-end
-end
-F._espBones = {}
-end
-F.EspBoneDraw = function(cam)
-local list = Players:GetPlayers()
-local i, j
-for i = 1, #list do
-local pl = list[i]
-if pl ~= LP then
-local rec = F._espBones[pl]
-local ch = pl.Character
-local ok = (ch ~= nil)
-if ok then
-local isR15 = (ch:FindFirstChild("UpperTorso") ~= nil)
-local bones = isR15 and F.ESP_BONES or F.ESP_BONES_R6
-if rec == nil and T.EspBone then rec = F.EspBoneMake(pl) end
-if rec then
-local used = 0
-for j = 1, #bones do
-local a = ch:FindFirstChild(bones[j][1])
-local b = ch:FindFirstChild(bones[j][2])
-local line = rec.lines[j]
-if a and b and line then
-local sp1, on1 = cam:WorldToViewportPoint(a.Position)
-local sp2, on2 = cam:WorldToViewportPoint(b.Position)
-if on1 and on2 and T.EspBone then
-local dx = sp2.X - sp1.X
-local dy = sp2.Y - sp1.Y
-local len = math.sqrt(dx * dx + dy * dy)
-if len > 1 then
-local col = Color3.fromRGB(255, 255, 255)
-pcall(function() col = F.CMX_HLTeamColor(pl) end)
-line.Visible = true
-line.Position = UDim2.fromOffset(math.floor(sp1.X), math.floor(sp1.Y))
-line.Size = UDim2.fromOffset(math.floor(len), 1)
-line.Rotation = math.deg(math.atan2(dy, dx))
-line.BackgroundColor3 = col
-used = used + 1
-else
-line.Visible = false
-end
-else
-line.Visible = false
-end
-elseif line then
-line.Visible = false
-end
-end
-for j = #bones + 1, 14 do
-if rec.lines[j] then pcall(function() rec.lines[j].Visible = false end) end
-end
-end
-elseif rec then
-for j = 1, 14 do pcall(function() rec.lines[j].Visible = false end) end
-end
-end
-end
-end
 F.EspTick = function()
 local cam = workspace.CurrentCamera
 if not cam then return end
@@ -8497,14 +8392,6 @@ local x = t.X - w / 2
 local y = t.Y
 local col = Color3.fromRGB(255, 255, 255)
 pcall(function() col = F.CMX_HLTeamColor(pl) end)
-if T.EspBox then
-rec.box.Visible = true
-rec.box.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
-rec.box.Size = UDim2.fromOffset(math.floor(w), math.floor(h))
-rec.box.BorderColor3 = col
-else
-rec.box.Visible = false
-end
 if T.EspName then
 rec.name.Visible = true
 rec.name.Text = pl.Name
@@ -8537,23 +8424,6 @@ rec.hpFg.BackgroundColor3 = (frac > 0.35) and F.ESP_HEALTH_COLOR or F.ESP_LOWHP_
 else
 rec.hpBg.Visible = false
 end
-if T.EspTracer then
-rec.tracer.Visible = true
-local sx = vw / 2
-local sy = vh
-local cx = t.X
-local cy = y + h / 2
-local dx = cx - sx
-local dy = cy - sy
-local len = math.sqrt(dx * dx + dy * dy)
-if len < 1 then len = 1 end
-rec.tracer.Position = UDim2.fromOffset(math.floor(sx), math.floor(sy))
-rec.tracer.Size = UDim2.fromOffset(math.floor(len), 1)
-rec.tracer.Rotation = math.deg(math.atan2(dy, dx))
-rec.tracer.BackgroundColor3 = col
-else
-rec.tracer.Visible = false
-end
 else
 F.EspHideRec(rec)
 end
@@ -8572,7 +8442,6 @@ if F._espLoop then pcall(function() F._espLoop:Disconnect() end) F._espLoop = ni
 if not T.EspOn then
 F.EspClear()
 pcall(F.EspObjClear)
-pcall(F.EspBoneClear)
 if F._espGui then pcall(function() F._espGui:Destroy() end) F._espGui = nil end
 F.Out("[ESP] 已关")
 return
@@ -8591,11 +8460,6 @@ local now = os.clock()
 if now - (F._espAt or 0) < 0.033 then return end
 F._espAt = now
 pcall(F.EspTick)
-if T.EspBone and now - (F._espBoneAt or 0) >= 0.066 then
-F._espBoneAt = now
-local cam2 = workspace.CurrentCamera
-if cam2 then pcall(F.EspBoneDraw, cam2) end
-end
 if T.Chams and now - (F._espChamsAt or 0) >= 0.2 then
 F._espChamsAt = now
 pcall(F.ChamsTick)
@@ -14152,18 +14016,15 @@ end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度(正数=往下钻 · 负数=往上藏)", Description = "相对你开这个功能那一刻所站的高度。例: 5 = 钻到地面下 5 格; 20 = 下 20 格; -20 = 升到上方 20 格。改完立刻生效, 不用重开", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
 end
 do
-Tabs.Visual:AddSection("ESP 透视(方框 / 名字 / 距离 / 血条 / 追踪线)")
+Tabs.Visual:AddSection("ESP 透视(名字 / 距离 / 血条)")
 Tabs.Visual:AddToggle("EspOn", { Title = "★ ESP 总开关", Default = false, Callback = function(v)
 T.EspOn = v
 if F._cfgSyncing then return end
 F.EspSet(v)
 end })
-Tabs.Visual:AddToggle("EspBox", { Title = "方框", Default = true, Callback = function(v) T.EspBox = v end })
 Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = function(v) T.EspName = v end })
 Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
 Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
-Tabs.Visual:AddToggle("EspTracer", { Title = "追踪线(屏幕底到目标)", Default = false, Callback = function(v) T.EspTracer = v end })
-Tabs.Visual:AddToggle("EspBone", { Title = "骨骼描线(头-躯干-四肢连线)", Default = false, Callback = function(v) T.EspBone = v end })
 Tabs.Visual:AddToggle("Chams", { Title = "Chams 纯色覆盖(整个人填满单色 · 隔墙可见)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.ChamsSet(v)
