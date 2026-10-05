@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:10 sha be211a1c bytes 523408'):format('2026-10-05 23:10','be211a1c',523408))
+print(('[CheatMenu] build 2026-10-05 23:26 sha 4e786646 bytes 524483'):format('2026-10-05 23:26','4e786646',524483))
 local F = {}
-F.VERSION = "v16.9.9"
+F.VERSION = "v16.9.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2332,6 +2332,7 @@ pcall(F.AntiAFKNudge)
 F.AntiAFKNudge = function()
 if F._afkNudge then return end
 local moved = false
+if not UIS.TouchEnabled then
 pcall(function()
 local vim = nil
 pcall(function() vim = game:GetService("VirtualInputManager") end)
@@ -2343,6 +2344,7 @@ mousemoverel(1, 0)
 moved = true
 end
 end)
+end
 F._afkNudge = task.spawn(function()
 while T.AntiAFK do
 task.wait(240)
@@ -2355,6 +2357,7 @@ task.wait(0.15)
 pcall(function() hum.Jump = false end)
 end
 end)
+if not UIS.TouchEnabled then
 pcall(function()
 local vim = nil
 pcall(function() vim = game:GetService("VirtualInputManager") end)
@@ -2365,13 +2368,36 @@ mousemoverel(1, 0)
 end
 end)
 end
+end
 F._afkNudge = nil
 end)
 F.Out("[防挂机] 已挂定期微动(每 240 秒轻跳一下 · 防 Idled 计时归零)")
 end
+F.AntiAFKIdleHit = function()
+local vu = nil
+pcall(function() vu = game:GetService("VirtualUser") end)
+if not vu then return false end
+pcall(function() vu:CaptureController() end)
+pcall(function() vu:ClickButton2(Vector2.new(0, 0)) end)
+pcall(function()
+local cam = workspace.CurrentCamera
+local cf = (cam and cam.CFrame) or CFrame.new()
+vu:Button2Down(Vector2.new(0, 0), cf)
+task.wait(0.05)
+vu:Button2Up(Vector2.new(0, 0), cf)
+end)
+return true
+end
 F._afkConn = LP.Idled:Connect(function()
-if not T.AntiAFK then return end
 F._afkIdleHits = (F._afkIdleHits or 0) + 1
+if not T.AntiAFK then return end
+if UIS.TouchEnabled then return end
+pcall(function()
+if F.AntiAFKIdleHit() then
+F._afkIdleFixed = (F._afkIdleFixed or 0) + 1
+F.Out("[防挂机] 游戏判你挂机 ⇒ 已按 PuckAFK 的通用做法做一次「空点」(不动你的人物)")
+end
+end)
 end)
 pcall(F.AntiAFKInputLoop)
 F._afkConn2 = RS.Heartbeat:Connect(function()
@@ -3032,19 +3058,23 @@ F._aimConn = nil
 F._fireAt = 0
 function F.FireOnce()
 local did = {}
+local touch = UIS.TouchEnabled == true
 local cam = workspace.CurrentCamera
 local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
+if not touch then
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
 vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
 vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
 did[#did + 1] = "VIM"
 end)
+end
 pcall(function()
 local ch = LP.Character
 local tool = ch and ch:FindFirstChildOfClass("Tool")
 if tool then tool:Activate() did[#did + 1] = "tool" end
 end)
+if not touch then
 pcall(function()
 local vu = game:GetService("VirtualUser")
 vu:CaptureController()
@@ -3052,6 +3082,7 @@ vu:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
 pcall(function() vu:ReleaseController() end)
 did[#did + 1] = "VirtualUser"
 end)
+end
 pcall(function()
 local b = F._fireBtn
 if not (b and b.Parent and b.Visible) then
@@ -3083,11 +3114,13 @@ end
 end
 end
 end)
+if not touch then
 pcall(function()
 if type(mouse1click) == "function" then
 if pcall(mouse1click) then did[#did + 1] = "mouse1click" end
 end
 end)
+end
 F._lastFireVia = table.concat(did, "+")
 return F._lastFireVia
 end
@@ -7393,7 +7426,7 @@ f.Parent = sg
 F._modalOverlay = f
 end
 pcall(function() F._modalOverlay.Visible = true end)
-pcall(function() F._savedMouseIcon = UIS.MouseIconEnabled UIS.MouseIconEnabled = true end)
+pcall(function() if not UIS.TouchEnabled then F._savedMouseIcon = UIS.MouseIconEnabled UIS.MouseIconEnabled = true end end)
 else
 if F._modalOverlay then pcall(function() F._modalOverlay.Visible = false end) end
 if F._savedMouseIcon ~= nil then
@@ -8707,6 +8740,7 @@ if firesignal then
 pcall(function() firesignal(b.MouseButton1Click) did = true end)
 pcall(function() firesignal(b.Activated) did = true end)
 end
+if not UIS.TouchEnabled then
 pcall(function()
 local cam = workspace.CurrentCamera
 local vp = (cam and cam.ViewportSize) or Vector2.new(800, 600)
@@ -8718,6 +8752,7 @@ vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
 vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
 did = true
 end)
+end
 return did
 end
 local function clickBonusButtons(anyButton)
@@ -8846,7 +8881,7 @@ pcall(function()
 local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
 if tool then tool:Activate() end
 end)
-pcall(function() mouse1click() end)
+if not UIS.TouchEnabled then pcall(function() mouse1click() end) end
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
 vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -14137,6 +14172,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · loadstring=%s · writ
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"),
 type(loadstring), type(writefile), type(gethui), tostring(UIS.TouchEnabled)))
 end)
+pcall(function() if UIS.TouchEnabled and UIS.MouseIconEnabled then UIS.MouseIconEnabled = false end end)
 pcall(function()
 task.spawn(function()
 local mine = tostring(F.VERSION or ""):gsub("^v", "")
