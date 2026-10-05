@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 02:44 sha 4bf2465d bytes 437832'):format('2026-10-06 02:44','4bf2465d',437832))
+print(('[CheatMenu] build 2026-10-06 03:03 sha 5b2d20cf bytes 439263'):format('2026-10-06 03:03','5b2d20cf',439263))
 local F = {}
-F.VERSION = "v16.9.26"
+F.VERSION = "v16.9.27"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5334,7 +5334,6 @@ pcall(F.BypassTierApply, T.BypassTier)
 end)
 end
 F.BypassTierApply = function(v)
-pcall(F.HookFuse, true)
 v = tostring(v or "")
 local wants = {
 afk = string.find(v, "防挂机", 1, true) ~= nil,
@@ -11563,6 +11562,7 @@ T.FullBright = v T.NightVision = v T.NoFog = v
 if F._cfgSyncing then return end
 if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable() pcall(F.LightWatchEnable)
 else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() pcall(F.LightWatchDisable) end
+F.Out("[视觉增强] 全亮/夜视/去雾/光照守卫 = " .. (v and "开" or "关"))
 end })
 Tabs.World:AddToggle("ViewBoost", { Title = "视角增强", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -11743,11 +11743,22 @@ T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 if F._tierHpOwn then
 F._tierHpOwn = nil
-T.HpBlock = false
-F.Out("[防护档位] 已收回档位自己开的「拦受伤上报」")
+T.HpBlock, T.HealthIsolate = false, false
+pcall(F.HealthIsolateSet, false)
+F.Out("[防护档位] 已收回档位自己开的「血量隔离 + 拦受伤上报」")
+end
+pcall(AC.AntiPauseDisable)
+if F._tierGuardOwn then
+F._tierGuardOwn = nil
+T.GuardAll, T.MyEgg, T.CarryGuard, T.SpeedFree = false, false, false, false
+pcall(F.MyEggSet, false)
+pcall(F.CarryGuardDisable)
+pcall(F.SpeedFreeDisable)
+F.Out("[防护档位] 已收回档位自己开的「完整防护」")
 end
 pcall(F.LockFieldsUninstall)
 pcall(F.MetaHookUninstall)
+if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(血量隔离/锁血/无敌等)保持不动")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
@@ -11764,27 +11775,36 @@ if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
-if not T.HpBlock then F._tierHpOwn = true end
-T.HpBlock = true
+if not (T.HpBlock and T.HealthIsolate) then F._tierHpOwn = true end
+T.HpBlock, T.HealthIsolate = true, true
+pcall(F.HealthIsolateSet, true)
 pcall(F.HpBlockSet, true)
+pcall(AC.AntiPauseEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 if lvl >= 3 then
-T.ACWriteTier = "③ + 深度中和(按名中和检测函数 · 最激进)"
+T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
-T.BypassTier = "④ 全部 + 防拉回档 + 深度中和 ｜ 绕过层: 再+自产登记+栈伪装+身份+FFlag(最激进)"
+T.BypassTier = "④ 绕过层全开: 防护(稳身·受击·陷阱) + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回(清检测脚本) + 深度中和"
 pcall(F.BypassTierApply, T.BypassTier)
+if not T.GuardAll then F._tierGuardOwn = true end
+T.GuardAll = true
+T.MyEgg, T.CarryGuard, T.SpeedFree = true, true, true
+pcall(F.MyEggSet, true)
+pcall(F.CarryGuardEnable)
+pcall(F.SpeedFreeEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
+if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] = " .. v)
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = v, Duration = 6 }) end)
 end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
-"① 轻 · 反甩+护界面+权限守卫+属性读伪装(只装 __index 只读钩)",
-"② 中 · +namecall 拦上报+拦受伤上报+反封禁4层+温和绕过层(时钟/调试名/Instance)",
-"③ 重 · +元表钩全装+拦上报+断可疑连接+深度中和(getgc中和检测函数) ⇒ 最激进",
+"① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停",
+"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(getgc 按名中和) + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
