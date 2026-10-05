@@ -3996,5 +3996,54 @@ v16.9.22 已写回；`T.ACMaster` 因同样原因保留。
 3. 改代码**别按行号多步替换**（会索引错位）；本文件 **CRLF/LF 混用**，也别全局归一化行尾 ——
    用**行块替换 + 沿用原行尾**（`_fix_combat.py` 就是这么写的）。
 
+---
+
+## v16.9.26 · 全页全量复查 + 强化（2026-10-06）
+
+### 8 道独立检查门（"强制复查不许跳过"时全跑）
+
+| 门 | 查什么 | 工具 |
+|---|---|---|
+| G1 | 编译 | `luau-compile --binary` |
+| G2 | 孤儿 / nil 洞 / 未定义 / 配平 / 只读未写 | `preflight.py` |
+| G3 | 每个控件是否真接到引擎 | `_verify_effect.py` |
+| G4 | 界面 `Default` == 后端实际默认 | `_audit_defaults.py` |
+| G5 | 启停对称 + **关闭链传递闭包** + 状态键双向 | `_audit_pairs.py` |
+| G6 | **跨功能副作用**（关 A 却动了 B） | `_audit_sideeffect.py` |
+| G7 | 幂等 / 每帧重活 / 还原完整性 / 线程收敛 | `_audit_impl.py` |
+| G8 | 事件 + 钩子清单 | `_audit_events.py` |
+
+### ★★★ 铁律：**关 A 不许动 B**
+
+`Trans.Disable()`（翻译总开关）里有一行 `pcall(F.ChatIMEBoxDisable)`，
+而「中文聊天框」是**独立开关**（`F.ChatSend` 用 `TextChatService` 发**原始文本**，完全不经过翻译服务）
+⇒ 关翻译把聊天框也拆了，而 `T.ChatIMEBox` 仍 true、开关仍显示"开" ⇒ **界面骗人 + 功能被意外关掉**。
+
+- **判据**：任何 `F.XDisable` 里调 `F.YEnable/Disable` 时，先问"Y 和 X 是同一功能族吗" ——
+  **不是 ⇒ 缺陷**（除非 X 是 Y 的合并总开关，或该联动已在标题/日志写明）。
+- 修法：删掉该调用；并给 `F.ChatIMEBoxDisable` 补 `T.ChatIMEBox = false` 防状态漂移；
+  卸载链（`UnloadAll`）里的调用**保留** —— 卸载本来就该清。
+
+### ★★ 铁律：所有 `hookfunction` 的替换函数一律 `newcclosure` 包
+
+公开的 remote-spy 探测靠 `debug.getinfo(orig).what == "Lua"` 判定"被 Lua 钩过"。
+本版补齐 3 处漏网的裸闭包钩子（护日志 `ClearOutput` / 上帝模式 `TakeDamage` / 反TP 中和），
+与其余 16 处统一（`newcclosure` 16 → 22）。**保留降级**：`newcclosure` 不可用时仍用裸闭包。
+
+### 判读要点（都踩过）
+
+- ⛔ **判"急停漏项"必须用传递闭包**，不能只看直接引用：`F.GuardOnDisable → F.GuardSet(false,…)` 这种二级调用才是真覆盖。
+- ⛔ `_audit_pairs.py` 里 `M` 是**字符串**，按行处理前必须 `split("\n")`，否则 spans 恒空、闭包失效。
+- ⛔ `_audit_impl.py` 的"while 无 yield"用非贪婪正则截窗口会**误报**（护蛋循环的 `task.wait` 在 139 行之后）⇒ 必须回原文看完整块。
+- ✅ 误报的典型来源：`HideEnable` 的 `CanCollide/CanQuery/CanTouch/Transparency` 是它**自建隐形地板**的属性（Disable 里 `Destroy` 了）；
+  `Hud/Crosshair/FovCircle/ChatIMEBox` 的 `Position` 是**即建即毁的 GUI**；`AntiFling/Steady/VehicleBoost` 的速度类是**清异常速度**。
+
+### 公开语料对比（103 份）
+
+- **事件覆盖不低于语料**；语料里 5 个"看似缺口"（`CharacterRemoving`/`Touched`/`Chatted`/`Activated`/`Destroying`）逐个查证不成立。
+- 唯一"语料常用我们没用"：`TweenService`（47.6%）—— 只是平滑的另一种实现，非能力缺口。
+- **`ReleaseController` 语料 0 家写、我们有** ⇒ 我们更规范（公开脚本抢了 VirtualUser 控制器不还）。
+
+
 
 
