@@ -3890,3 +3890,56 @@ v16.9.22 已写回；`T.ACMaster` 因同样原因保留。
 - **他们有我们没有**（未做）：自动循环偷取 · 自动锁基地 · ESP 稀有度+收益 · 自动买装备 ·
   宠物/隐藏点标注 · Desync · 静默瞄准/打击光环 · 自动送达/自动收钱 · 配置预设/界面位置记忆。
 
+---
+
+## v16.9.24 · 元表钩子统一 + 命名/位置修正（2026-10-06）
+
+### ★★★ 铁律：元表钩子**只许走 `F.MetaInstall` 分层系统**，禁止裸赋值 `mt[slot]`
+
+`F.MetaInstall` 用 `hookmetamethod` 装（**保持函数身份**）并按槽记账 `F.MetaLayers[slot][id]`；
+`MetaUninstall` 会正确重接链表。**裸赋值 `mt.__namecall = f` 有两个致命问题**：
+
+1. **绕过分层表** ⇒ 卸载时会把同槽上 `MetaInstall` 装的层一起摘掉，而分层表仍以为它在装
+   ⇒ **反封禁静默失效**。本版修掉的实例：`F.KickGuardPathsEnable/Disable` 曾直接
+   `mt.__namecall/__index/__newindex = ...` 并保存 `KG.old*` 还原；现已并入分层系统
+   （id：`CMKickNC` / `CMKickIX` / `CMKickNIX`）。**拦截逻辑一行未改。**
+2. **改变 `mt[slot]` 的身份** ⇒ 命中游戏方常见探测：
+   ```lua
+   local mt = getrawmetatable(game)
+   local originalNamecall = mt.__namecall          -- 游戏开局先记
+   if mt.__namecall ~= originalNamecall then flag("__namecall changed") end
+   ```
+
+### 游戏侧反作弊会主动钓钩子（据公开 remote-spy 探测脚本）
+
+| 手法 | 我们怎么防 |
+|---|---|
+| `mt.__namecall ~= 原函数` 身份比对 | 只用 `hookmetamethod`（见上） |
+| **蜜罐对象**：`setmetatable({}, { __index = function() flag() end, __tostring = ..., __concat = ..., __len = ... })` 塞进 remote，谁碰谁暴露 | 每个钩子第一行对**不匹配的对象零副作用地原样返回**：`ACIndexMask` 判 `typeof(t) ~= "Instance"`；KickGuard 三钩子判完 key 就 `return box.orig(...)`；`AC` namecall **只看 `self.Name`、不遍历参数** |
+| 错误栈一致性（`pcall(error)` 返回类型非 string） | 不干预错误处理 |
+| `getrawmetatable` 被拦即判环境异常 | 装钩前 `pcall` 探测 |
+
+### 全局调用要先探测再使用
+
+`if type(checkcaller) == "function" and pcall(checkcaller) then ccFn = checkcaller end`
+—— 裸调 `checkcaller()` 在缺该全局的执行器上会让**每次元表访问都报错**。
+
+### 命名 / 位置（本版修正）
+
+- **控件放错分节**：`敌我识别` 原在「穿墙透视」下，而其实现只是给身体高亮重新上色
+  （`if T.BodyHL then F.BodyHLRefresh() end`）⇒ 移到「高亮 / 敌我识别」。
+- **分节改名（名不副实）**：`脑红 / 现金`→`脑红` · `扫描 / 收集`→`扫描` · `相机 / 准星`→`HUD / 准星` ·
+  `画面增强`→`画面 / 声音` · `身体高亮 / 敌我识别`→`高亮 / 敌我识别`。
+- **可见名与实现逐条相符，0 处不符**；唯一"内部键偏窄"的是 `IxHL`（覆盖 NPC/可交互物/陷阱/道具/掉落/载具 6 类），
+  但 id 只在内部用 ⇒ 不改（改键名要同步 `T.`/`C.` 与 `CfgSyncUI`，风险大于收益）。
+
+### 工程坑（写脚本时）
+
+- ⛔ **别用"按行号多步替换"改代码**：先删行再改行会**索引错位**（本版我因此把 `KG.blockSet = {}` 覆盖掉，
+  会让钩子里 `blockSet[self]` 索引 nil）。正确做法是**用切片重建整个列表**，改完用 `difflib` 逐行 diff 复核。
+- **拉远端大文件会 `IncompleteRead`** ⇒ 用 Contents API **分块读（64KB）+ 重试 + 按 `Content-Length` 校验**
+  （`_remote_check.py`）；raw 抖动时这是唯一可靠的核对通道。
+- 事件/钩子审计：`_audit_events.py`（逐控件抽真实事件 / 钩子 / 被写属性，能穿透 `pcall(F.X)` 传引用、
+  `local function`、`Trans.X`）；语料对比：`_corpus_events.py`。
+
+
