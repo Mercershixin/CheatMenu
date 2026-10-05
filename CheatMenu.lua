@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 00:14 sha e291c155 bytes 533042'):format('2026-10-06 00:14','e291c155',533042))
+print(('[CheatMenu] build 2026-10-06 00:36 sha fa732b25 bytes 452269'):format('2026-10-06 00:36','fa732b25',452269))
 local F = {}
-F.VERSION = "v16.9.17"
+F.VERSION = "v16.9.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -195,8 +195,6 @@ local checkcaller   = checkcaller or function() return false end
 local getnamecallmethod = getnamecallmethod
 local dbgGetConstants = (debug and (debug.getconstants or debug.getconsts)) or getconstants or getconsts
 local dbgGetUpvalues  = (debug and (debug.getupvalues or debug.getupvals)) or getupvalues or getupvals
-local dbgGetInfo      = (debug and (debug.getinfo or debug.info)) or getinfo
-local dbgGetGC        = getgc or get_gc_objects or getGC
 local T = {}
 local C = {}
 local _gcCh, _gcHum, _gcRoot
@@ -226,94 +224,6 @@ pcall(function() if F.OnCharacter then F.OnCharacter(ch) end end)
 end)
 end)
 end)
-local RRemoteCache = {}
-local function findRemote(name, cls)
-local ck = cls .. "\1" .. name
-if RRemoteCache[ck] then return RRemoteCache[ck] end
-local function typOk(o)
-if not o then return nil end
-if o:IsA(cls) then return o end
-local okU, isU = pcall(function() return o:IsA("UnreliableRemoteEvent") end)
-if cls == "RemoteEvent" and okU and isU then return o end
-return nil
-end
-local function ok2(o)
-if not (o and o.Name == name) then return nil end
-return typOk(o)
-end
-pcall(function()
-local n = RStorage
-local segs = { "Shared", "Packages", "Network" }
-for i = 1, #segs do
-n = n and n:FindFirstChild(segs[i])
-if not n then break end
-end
-if n then
-local pre = (cls == "RemoteEvent") and "rev_" or "ref_"
-local cands = { name, pre .. name, tostring(name):gsub("%.", "_") }
-for i = 1, #cands do
-local r0 = typOk(n:FindFirstChild(cands[i]))
-if r0 then RRemoteCache[ck] = r0 end
-end
-end
-end)
-if RRemoteCache[ck] then return RRemoteCache[ck] end
-local sh = RStorage:FindFirstChild("Shared")
-local pk = sh and sh:FindFirstChild("Packages")
-local net = pk and pk:FindFirstChild("Network")
-if net then
-local pre = (cls == "RemoteEvent") and "rev_" or "ref_"
-local r = ok2(net:FindFirstChild(pre .. name)) or ok2(net:FindFirstChild(pre .. tostring(name):gsub("%.", "_")))
-if r then RRemoteCache[ck] = r return r end
-end
-local pre2 = (cls == "RemoteEvent") and "rev_" or "ref_"
-pcall(function()
-local cands = { pre2 .. name, pre2 .. tostring(name):gsub("%.", "_"), name }
-for i = 1, #cands do
-local c = RStorage:FindFirstChild(cands[i], true)
-if not c then
-local sh2 = RStorage:FindFirstChild("Shared")
-local pk2 = sh2 and sh2:FindFirstChild("Packages")
-local net2 = pk2 and pk2:FindFirstChild("Network")
-if net2 then c = net2:FindFirstChild(cands[i], true) end
-end
-local r2 = typOk(c)
-if r2 then RRemoteCache[ck] = r2 end
-end
-end)
-if RRemoteCache[ck] then return RRemoteCache[ck] end
-local leaf = tostring(name):match("([^%.]+)$") or name
-local pre3 = (cls == "RemoteEvent") and "rev_" or "ref_"
-local lower = tostring(name):lower()
-local q, qh, qt = { RStorage }, 1, 1
-local budget = 20000
-while qh <= qt and budget > 0 do
-local node = q[qh] qh = qh + 1 budget = budget - 1
-local ok, kids = pcall(function() return node:GetChildren() end)
-if ok and type(kids) == "table" then
-for i = 1, #kids do
-local c = kids[i]
-local cn = c.Name
-local match = (cn == name) or (cn == leaf) or (cn == pre3 .. name)
-if not match then
-local cl = cn:lower()
-match = (cl == lower) or (cl == pre3 .. lower) or (cl == "rev_" .. lower) or (cl == "ref_" .. lower)
-end
-if match then
-local rr = typOk(c)
-if rr then RRemoteCache[ck] = rr return rr end
-end
-if c:IsA("Folder") or c:IsA("Configuration") then qt = qt + 1 q[qt] = c end
-end
-end
-end
-return nil
-end
-local function REvent(n) return findRemote(n, "RemoteEvent") end
-local function RFunction(n) return findRemote(n, "RemoteFunction") end
-F.PLACE_KEYS = { "S_Interact", "B_Interact", "S_Place", "B_Place", "B_PutEgg", "S_PutEgg",
-"PlaceEgg", "PlaceBrainrot", "PlaceItem", "Deploy", "SetPlot", "S_Put", "B_Put", "Interact" }
-F.COLLECT_KEYS = { "B_Collect", "S_Collect", "Collect", "S_Interact", "B_CollectCash", "CollectCash" }
 local SaveFile = "CheatMenu_Config_v1.json"
 local Fluent = nil
 local FLUENT_SOURCES = {
@@ -1303,336 +1213,6 @@ if ok and v ~= nil then return k end
 end
 return nil
 end
-F.CAP_LIST = {
-{ "getgc", "扫描 GC 对象 —— 整个扫描模块的地基" },
-{ "filtergc", "按名一步定位函数(反作弊中和强烈依赖)" },
-{ "getconnections", "断反作弊监听 / 改写游戏自己的回调" },
-{ "getnilinstances", "扫隐藏实例(反作弊藏 remote 的常用手法)" },
-{ "getinstances", "扫**完全不在 DataModel 里**的游离实例(比 nil 更隐蔽)" },
-{ "decompile", "反编译脚本源码(读可疑脚本用)" },
-{ "getreg", "读注册表(找被隐藏的模块)" },
-{ "getloadedmodules", "列出已加载模块" },
-{ "hookfunction", "hook 具名函数 / 中和反作弊检测函数" },
-{ "hookmetamethod", "拦 __namecall / __index / __newindex" },
-{ "newcclosure", "把我们的 hook 伪装成 C 闭包" },
-{ "getnamecallmethod", "缺它就拦不到 Kick / FireServer" },
-{ "getrawmetatable", "直接读写元表" },
-{ "setreadonly", "解锁只读表" },
-{ "islclosure", "区分 Lua 闭包与 C 函数" },
-{ "checkcaller", "区分「游戏调用」与「自己调用」" },
-{ "getrenv", "拿游戏侧环境副本(读游戏里的表/函数)" },
-{ "cloneref", "安全取服务引用" },
-{ "getthreadidentity", "线程身份伪装" },
-{ "setupvalue", "原地改 upvalue(零 hook 指纹)" },
-{ "fireproximityprompt", "直接触发交互" },
-{ "sethiddenproperty", "写隐藏属性" },
-{ "request", "HTTP 请求" },
-{ "Drawing", "Drawing API(高性能 2D 绘制)" },
-}
-function F.capProbe(name)
-if type(name) ~= "string" then return false end
-if name:find(".", 1, true) then
-local a, b = name:match("^([%w_]+)%.([%w_]+)$")
-if not a then return false end
-local holder = AC.cap(a)
-return type(holder) == "table" and type(holder[b]) == "function"
-end
-local v = AC.cap(name)
-if name == "request" and v == nil then
-local syn = AC.cap("syn")
-if type(syn) == "table" then v = syn.request end
-end
-return v ~= nil
-end
-function F.ProbeCapabilities(verbose)
-local res, okN, miss = {}, 0, {}
-local extra = { "debug.getinfo", "debug.getconstants", "debug.getupvalues" }
-for i = 1, #extra do
-local has = F.capProbe(extra[i])
-res[extra[i]] = has
-if has then okN = okN + 1 else miss[#miss + 1] = extra[i] end
-end
-for i = 1, #F.CAP_LIST do
-local name = F.CAP_LIST[i][1]
-local has = F.capProbe(name)
-res[name] = has
-if has then okN = okN + 1 else miss[#miss + 1] = name end
-end
-F._caps = res
-local total = #F.CAP_LIST + #extra
-if verbose ~= false then
-F.Out(string.format("[能力探测] 可用 %d/%d", okN, total))
-for i = 1, #F.CAP_LIST do
-local name, desc = F.CAP_LIST[i][1], F.CAP_LIST[i][2]
-F.Out(string.format("  %s %-20s %s", res[name] and "✓" or "✗", name, desc))
-end
-F.Out(string.format("  %s %-20s %s", res["debug.getinfo"] and "✓" or "✗", "debug.getinfo", "读闭包元数据"))
-F.Out(string.format("  %s %-20s %s", res["debug.getconstants"] and "✓" or "✗", "debug.getconstants", "读闭包常量(关键词定位)"))
-F.Out(string.format("  %s %-20s %s", res["debug.getupvalues"] and "✓" or "✗", "debug.getupvalues", "读闭包 upvalue"))
-if #miss > 0 then
-F.Out("[能力探测] ⚠ 缺失: " .. table.concat(miss, ", ") .. " —— 相关功能会自动降级, 不是「没扫到」")
-end
-end
-return res, okN, total
-end
-F.AC_INVISIBLE = {
-"服务器脚本源码(ServerScriptService / ServerStorage 不下发到客户端)",
-"服务端判定逻辑与阈值(在服务端跑, 客户端不可见)",
-"Roblox 自带反作弊 Hyperion(原生二进制, 非 Lua)",
-"服务端玩家的真实位置/速度(只得到复制后的结果)",
-}
-function F.EnvSelfCheck()
-task.spawn(function()
-local caps = {
-{ n = "loadstring", f = function() return type(loadstring) == "function" end, need = "热加载 / 按文本加载" },
-{ n = "load", f = function() return type(load) == "function" end, need = "loadstring 的兜底(二选一即可)" },
-{ n = "readfile/writefile", f = function() return type(readfile) == "function" and type(writefile) == "function" end, need = "配置存档 / 翻译缓存 / 日志落盘" },
-{ n = "gethui", f = function() return type(gethui) == "function" end, need = "界面挂到隐蔽容器(缺了退 CoreGui, 不影响显示)" },
-{ n = "hookmetamethod", f = function() return type(hookmetamethod) == "function" end, need = "反作弊拦截 / remote 采集 / 属性读回伪装" },
-{ n = "newcclosure", f = function() return type(newcclosure) == "function" end, need = "同上(钩子要包成 C 闭包)" },
-{ n = "getrawmetatable", f = function() return type(getrawmetatable) == "function" end, need = "同上" },
-{ n = "getgc", f = function() return type(getgc) == "function" end, need = "GC 扫描 / 自动分析" },
-{ n = "getconnections", f = function() return type(getconnections) == "function" end, need = "连接清理 / 监听扫描" },
-{ n = "getnamecallmethod", f = function() return type(getnamecallmethod) == "function" end, need = "namecall 钩子判方法" },
-{ n = "debug.getinfo", f = function() return debug ~= nil and type(debug.getinfo) == "function" end, need = "来源比对 / 自身识别" },
-{ n = "debug.getconstants", f = function() return debug ~= nil and type(debug.getconstants) == "function" end, need = "按常量找函数 / 阈值提取" },
-{ n = "filtergc", f = function() return type(filtergc) == "function" end, need = "按名/按常量定位(可选, 缺了自动走全扫)" },
-}
-local okN, miss = 0, {}
-for _, c in ipairs(caps) do
-local ok = false
-pcall(function() ok = (c.f() == true) end)
-if ok then okN = okN + 1 else miss[#miss + 1] = c end
-end
-local plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
-local vp = "?"
-pcall(function()
-local c = workspace.CurrentCamera
-if c then vp = c.ViewportSize.X .. "x" .. c.ViewportSize.Y end
-end)
-local host, gui = "?", "未创建"
-pcall(function() host = tostring(gethui and gethui() or game:GetService("CoreGui")) end)
-pcall(function() if Fluent and Fluent.GUI and Fluent.GUI.Parent then gui = "已创建" end end)
-F.Out(string.format("[自检] 执行器能力 %d/%d · 平台=%s · 视口=%s · 菜单=%s · 宿主=%s",
-okN, #caps, plat, vp, gui, host))
-for _, c in ipairs(miss) do
-F.Out("[自检]   ✗ 缺 " .. c.n .. " ⇒ 受影响: " .. c.need)
-end
-local names = {}
-for i = 1, #miss do names[i] = miss[i].n end
-local verdict = (#miss == 0)
-and "环境完好 —— 若仍看不到界面, 按 G 呼出 / 点屏幕上那个小按钮"
-or ("缺 " .. #miss .. " 项: " .. table.concat(names, ", ") .. " —— 只有依赖它们的子功能无效, 其余照常")
-F.Out("[自检] 结论: " .. verdict)
-if Fluent and Fluent.Notify then
-Fluent:Notify({
-Title = "环境自检",
-Content = string.format("能力 %d/%d · %s · 菜单:%s", okN, #caps, plat, gui) .. "\n" .. verdict,
-Duration = 16,
-})
-end
-pcall(F.LogFlush, "环境自检")
-end)
-end
-function F.SnapshotCollect()
-local snap = { t = os.time(), remotes = {}, acfns = {}, hidden = {}, attrs = {}, scripthashes = {},
-caps = {}, authority = nil }
-local keepScav = F._scavenging
-F._scavenging = true
-pcall(function() snap.authority = tostring(workspace.AuthorityMode) end)
-pcall(function()
-local seen = {}
-local function add(obj, src)
-local cls = AC.isRemoteLike(obj)
-if not cls then return end
-local nm = tostring(obj.Name)
-local key = cls .. "\0" .. nm
-if seen[key] then seen[key].src = seen[key].src .. "," .. src return end
-seen[key] = { n = nm, c = cls, src = src, s = AC.isSuspicious(nm) and 1 or 0,
-down = (obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent")) and 1 or 0 }
-end
-for _, d in ipairs(F.walk(RStorage)) do add(d, "RS") end
-if type(getnilinstances) == "function" then
-for _gi, inst in ipairs(getnilinstances()) do if not F.gcTick(_gi) then break end add(inst, "nil") end
-end
-for _, v in pairs(seen) do snap.remotes[#snap.remotes + 1] = v end
-table.sort(snap.remotes, function(a, b) return a.n < b.n end)
-end)
-pcall(function()
-if type(getgc) ~= "function" then return end
-local seen, n = {}, 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-n = n + 1
-if n > 400000 then break end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local oki, info = pcall(debug.getinfo, obj, "nS")
-local nm = (oki and info and info.name) or ""
-local src = (oki and info and info.source) or ""
-local hit = AC.isSuspicious(nm) or AC.isSuspicious(src)
-if not hit then
-local okc, consts = pcall(dbgGetConstants, obj)
-if okc and type(consts) == "table" then
-for i = 1, #consts do
-if type(consts[i]) == "string" and AC.isSuspicious(consts[i]) then hit = true break end
-end
-end
-end
-if hit then
-local k = tostring(nm) .. "@" .. tostring(src)
-if not seen[k] then
-seen[k] = true
-snap.acfns[#snap.acfns + 1] = { f = tostring(nm), s = tostring(src) }
-end
-end
-end
-end
-table.sort(snap.acfns, function(a, b) return a.f < b.f end)
-end)
-pcall(function()
-local cnt = {}
-local roots = { workspace, LP, RStorage }
-for i = 1, #roots do
-local r = roots[i]
-if r then
-local bag = { r }
-local nAttr = 0
-for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
-for j = 1, #bag do
-nAttr = nAttr + 1
-if nAttr > 12000 then break end
-local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
-if okA and type(attrs) == "table" then
-for k in pairs(attrs) do cnt[tostring(k)] = (cnt[tostring(k)] or 0) + 1 end
-end
-end
-end
-end
-for k, v in pairs(cnt) do snap.attrs[#snap.attrs + 1] = { k = k, n = v } end
-table.sort(snap.attrs, function(a, b) return a.k < b.k end)
-end)
-pcall(function()
-local hasher = AC.cap("getscripthash")
-if type(hasher) ~= "function" then return end
-if type(getloadedmodules) ~= "function" then return end
-local ok, mods = pcall(getloadedmodules)
-if not ok or type(mods) ~= "table" then return end
-for i = 1, #mods do
-local m = mods[i]
-if typeof(m) == "Instance" then
-local okH, h = pcall(hasher, m)
-if okH and h ~= nil then
-snap.scripthashes[#snap.scripthashes + 1] = { p = m:GetFullName(), h = tostring(h) }
-end
-end
-end
-end)
-F._scavenging = keepScav
-snap.caps = F._caps or select(1, F.ProbeCapabilities(false))
-return snap
-end
-function F.DumpAll()
-local snap = F.SnapshotCollect()
-local lines = {}
-local function w(s) lines[#lines + 1] = s end
-w("===== CheatMenu 客户端反作弊面全量导出 =====")
-w(string.format("时间: %s   版本字面量: 见 SubTitle", os.date("%Y-%m-%d %H:%M:%S")))
-local okP, pid = pcall(function() return game.PlaceId end)
-w("PlaceId: " .. tostring(okP and pid or "?"))
-local okJ, jid = pcall(function() return game.JobId end)
-w("JobId: " .. tostring(okJ and jid or "?"))
-w("AuthorityMode: " .. tostring(snap.authority or "(无此字段)"))
-local cok, ctot = 0, 0
-for _, v in pairs(snap.caps or {}) do ctot = ctot + 1 if v then cok = cok + 1 end end
-w("执行器能力: " .. cok .. "/" .. ctot)
-local missCaps = {}
-for k, v in pairs(snap.caps or {}) do if not v then missCaps[#missCaps + 1] = k end end
-if #missCaps > 0 then w("  缺失: " .. table.concat(missCaps, ", ")) end
-w("")
-w("--- [1] 远程面(名称 | 类别 | 名字可疑 | 可下行 | 来源) ---")
-w("共 " .. #snap.remotes .. " 个")
-for i = 1, #snap.remotes do
-local r = snap.remotes[i]
-w(string.format("  %s | %s | %s | %s | %s", r.n, r.c,
-r.s == 1 and "可疑" or "-", r.down == 1 and "是" or "否", r.src))
-end
-w("")
-w("--- [2] 客户端侧反作弊函数碎片(函数名 @ 来源) ---")
-w("共 " .. #snap.acfns .. " 个")
-for i = 1, #snap.acfns do w("  " .. snap.acfns[i].f .. " @ " .. snap.acfns[i].s) end
-w("")
-w("--- [3] 属性(名称 | 出现次数 | 样例值) ---")
-local attrSamples = {}
-pcall(function()
-local roots = { workspace, LP, RStorage }
-local seen = {}
-for i = 1, #roots do
-local r = roots[i]
-if r then
-local bag = { r }
-local nA = 0
-for _, d in ipairs(F.walk(r)) do bag[#bag + 1] = d end
-for j = 1, #bag do
-nA = nA + 1
-if nA > 12000 then break end
-local okA, attrs = pcall(function() return bag[j]:GetAttributes() end)
-if okA and type(attrs) == "table" then
-for k, v in pairs(attrs) do
-local key = tostring(k)
-if not attrSamples[key] then
-local sv = tostring(v)
-if #sv > 40 then sv = sv:sub(1, 40) .. "..." end
-attrSamples[key] = sv
-end
-end
-end
-end
-end
-end
-end)
-w("共 " .. #snap.attrs .. " 种")
-for i = 1, #snap.attrs do
-local a = snap.attrs[i]
-w(string.format("  %s | x%d | %s", a.k, a.n, tostring(attrSamples[a.k] or "-")))
-end
-w("")
-w("--- [4] 客户端脚本指纹(getscripthash) ---")
-w("共 " .. #snap.scripthashes .. " 个")
-for i = 1, #snap.scripthashes do
-local h = snap.scripthashes[i]
-w("  " .. tostring(h.h) .. "  " .. tostring(h.p))
-end
-w("")
-w("--- [5] 不可见边界(原理上拿不到, 与本脚本无关) ---")
-for i = 1, #F.AC_INVISIBLE do w("  " .. F.AC_INVISIBLE[i]) end
-w("")
-w("===== 导出结束 =====")
-local text = table.concat(lines, "\n")
-local wrote = false
-pcall(function() writefile("CheatMenu_Capture.txt", text) wrote = true end)
-local copied = false
-pcall(function()
-local sc = AC.cap("setclipboard")
-if type(sc) == "function" then sc(text) copied = true return end
-if syn and syn.clipboard and type(syn.clipboard.set) == "function" then
-syn.clipboard.set(text) copied = true return
-end
-if type(toclipboard) == "function" then toclipboard(text) copied = true return end
-if type(write_clipboard) == "function" then write_clipboard(text) copied = true end
-end)
-F.Out("══════ 全量导出 ══════")
-F.Out("  长度 " .. #text .. " 字符 · 写文件 " .. (wrote and "成功(CheatMenu_Capture.txt)" or "失败") ..
-" · 复制剪贴板 " .. (copied and "成功(直接粘给我)" or "失败(手动从 F9 复制)"))
-F.Out("  内容: 远程 " .. #snap.remotes .. " · 反作弊碎片 " .. #snap.acfns ..
-" · 属性 " .. #snap.attrs .. " 种 · 脚本指纹 " .. #snap.scripthashes)
-if not copied then
-F.Out("────── 以下为可复制正文 ──────")
-F.Out(text)
-F.Out("────── 正文结束 ──────")
-end
-F._dumpText = text
-return text
-end
 F.LOG_MAX = 1500000
 F.LOG_BUF_MAX = 3000
 F._logBuf = F._logBuf or {}
@@ -1721,12 +1301,6 @@ F.Out("[日志] ⚠ 写入失败(可能磁盘只读或路径不允许), 内容�
 end
 F._logFlushing = false
 return usedName, #body
-end
-function F.LogDump(text, tag)
-if type(text) == "string" and #text > 0 then
-F._logBuf[#F._logBuf + 1] = text
-end
-return F.LogFlush(tag)
 end
 function F.UnifiedACPass()
 if F._unifiedRunning then return 0 end
@@ -2172,122 +1746,9 @@ if ok2 and type(u) == "table" then out.nups = #u end
 end)
 return out
 end
-function F.ScanByConstants(list, mode)
-if type(list) ~= "table" or #list == 0 then
-F.Out("[按常量] 用法: 需要一组字符串（逗号分隔），例如 ` - On Xbox, - On mobile`")
-return 0
-end
-local keep = F._scavenging
-F._scavenging = true
-F.Out("[按常量] ===== 按常量字符串找函数 · 关键词 " .. table.concat(list, " | ") .. " =====")
-local hits, n = {}, 0
-local function report(f)
-n = n + 1
-if n > 40 then return end
-local oki, info = nil, nil
-if type(dbgGetInfo) == "function" then oki, info = pcall(dbgGetInfo, f, "nS") end
-local nm = (oki and info and info.name) or "(匿名)"
-local sv = (oki and info and info.source) or "?"
-F.Out(string.format("[按常量]   %s @ %s", nm, sv))
-local fp = F.FnFingerprint(f)
-if #fp.nums > 0 then
-local nums = {}
-for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
-F.Out("[按常量]      数字: " .. table.concat(nums, ", ")
-.. "  形状(upvalue " .. fp.nups .. " / 常量 " .. fp.nconsts .. ")")
-end
-if #fp.strs > 0 then F.Out("[按常量]      字符串: " .. table.concat(fp.strs, " | "):sub(1, 160)) end
-hits[#hits + 1] = f
-end
-local used = "getgc 回退"
-if type(filtergc) == "function" then
-local ok, got = pcall(filtergc, "function", { Constants = list, IgnoreExecutor = true }, true)
-if ok and type(got) == "table" then
-local n0 = n
-for i = 1, #got do
-if type(got[i]) == "function" then report(got[i]) end
-end
-if n > n0 then used = "filtergc" end
-end
-end
-if n == 0 and type(dbgGetGC) == "function" then
-local seen, scanned = 0, 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local okc, consts = pcall(dbgGetConstants, obj)
-if okc and type(consts) == "table" then
-local joined = {}
-for i = 1, #consts do
-if type(consts[i]) == "string" then joined[#joined + 1] = consts[i] end
-end
-local blob = table.concat(joined, "\n")
-local all = (mode ~= "any")
-local hit = all
-for i = 1, #list do
-local foundOne = blob:find(list[i], 1, true) ~= nil
-if all then
-if not foundOne then hit = false break end
-else
-if foundOne then hit = true break end
-end
-end
-if hit then
-seen = seen + 1
-if seen > 40 then break end
-report(obj)
-end
-end
-end
-end
-end
-F.Out(string.format("[按常量] 命中 %d 个（通道: %s）", n, used))
-if n > 0 then
-F.Out("[按常量] 把上面每个函数「数字」当**上限参考**：加速/飞行速度压到它下面即可")
-end
-F._scavenging = keep
-return n
-end
 function F.IsOursSrc(low)
 if type(low) ~= "string" then return false end
 return (low:find("cheatmenu", 1, true) ~= nil) or (low:find("fluent", 1, true) ~= nil)
-end
-function F.FindByShape(nups, nconsts)
-if type(getgc) ~= "function" then
-F.Out("[形状] ⚠ 本执行器缺 getgc —— 无法按形状搜索")
-return
-end
-local keep = F._scavenging
-F._scavenging = true
-F.Out(string.format("[形状] ===== 形状搜索: upvalue=%s 常量=%s =====", tostring(nups), tostring(nconsts)))
-local n, scanned = 0, 0
-for _gi, obj in ipairs(F.GuardedGetGC(true, true)) do
-if not F.gcTick(_gi) then break end
-scanned = scanned + 1
-if scanned > F.LIMITS.SCAN_ANALYZE_CAP then break end
-if scanned % F.LIMITS.SCAN_YIELD_EVERY == 0 then task.wait() end
-if type(obj) == "function" and (not islclosure or islclosure(obj)) then
-local fp = F.FnFingerprint(obj)
-if fp.nups == nups and fp.nconsts == nconsts then
-n = n + 1
-if n <= 40 then
-local oki, info = pcall(debug.getinfo, obj, "nS")
-F.Out(string.format("[形状]   #%d %s @ %s", n,
-(oki and info and info.name ~= "" and info.name) or "(匿名)",
-(oki and info and info.source) or "?"))
-local nums = {}
-for i = 1, #fp.nums do nums[i] = tostring(fp.nums[i]) end
-if #nums > 0 then F.Out("[形状]      数字: " .. table.concat(nums, ", ")) end
-end
-end
-end
-end
-F.Out(string.format("[形状] 命中 %d 个（已扫 %d 个函数）", n, scanned))
-F._scavenging = keep
-return n
 end
 F._afkConn = nil
 F.ANTI_AFK_KEY = "__CMX_UNIVERSAL_ANTI_AFK"
@@ -2362,7 +1823,6 @@ local v = root.AssemblyLinearVelocity
 local av = root.AssemblyAngularVelocity
 if v.Magnitude > lim then
 pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, math.min(v.Y, 50), 0) end)
-F._flingAt2 = os.clock()
 F._flingHits = (F._flingHits or 0) + 1
 if os.clock() - (F._flingLogAt or 0) > 2 then
 F._flingLogAt = os.clock()
@@ -2377,32 +1837,6 @@ end
 fix()
 table.insert(F._flingConns, RS.Heartbeat:Connect(fix))
 table.insert(F._flingConns, LP.CharacterAdded:Connect(function() task.wait(0.3) fix() end))
-end
-F.BODY_PARTS = {
-["HumanoidRootPart"] = true, ["Head"] = true, ["Torso"] = true,
-["UpperTorso"] = true, ["LowerTorso"] = true,
-["Left Arm"] = true, ["Right Arm"] = true, ["Left Leg"] = true, ["Right Leg"] = true,
-["LeftUpperArm"] = true, ["LeftLowerArm"] = true, ["LeftHand"] = true,
-["RightUpperArm"] = true, ["RightLowerArm"] = true, ["RightHand"] = true,
-["LeftUpperLeg"] = true, ["LeftLowerLeg"] = true, ["LeftFoot"] = true,
-["RightUpperLeg"] = true, ["RightLowerLeg"] = true, ["RightFoot"] = true,
-}
-function F.FixCharCollision()
-local ch = GC()
-if not ch then F.Out("[修复] 现在没有角色, 稍后再点"); return 0 end
-local n = 0
-pcall(function()
-for _, p in ipairs(ch:GetDescendants()) do
-if p:IsA("BasePart") and F.BODY_PARTS[p.Name] == true then
-if p.CanCollide == false or p.CanTouch == false or p.CanQuery == false then
-p.CanCollide, p.CanTouch, p.CanQuery = true, true, true
-n = n + 1
-end
-end
-end
-end)
-F.Out("[修复] 已把 " .. tostring(n) .. " 个身体部位的 碰撞/触碰/可查询 恢复默认(true) —— 只动标准身体部件, 不碰挂件/工具/游戏加的部件")
-return n
 end
 function F.AntiFlingDisable()
 T.AntiFling = false
@@ -3028,12 +2462,6 @@ end
 if not root then return nil, "没模型" end
 return ch, hum, root
 end
-F.CombatAlive = function(pl)
-if typeof(pl) ~= "Instance" then return nil end
-local ch = pl.Character
-if not ch then return nil end
-return F.CombatAliveBody(ch)
-end
 F.CombatVisible = function(ch, fromPos, prefer)
 local ignore = {}
 if LP.Character then ignore[#ignore + 1] = LP.Character end
@@ -3238,7 +2666,7 @@ end
 end
 local bi = n
 while bi > 0 do buf[bi] = nil bi = bi - 1 end
-F._combatNow, F._combatBlocked, F._combatWhy = best, blocked, why
+F._combatNow, F._combatWhy = best, why
 if best then return best, bestPart end
 return nil, nil, why
 end
@@ -3496,19 +2924,6 @@ for i = 1, #F._hpIsoConns do pcall(function() F._hpIsoConns[i]:Enable() end) end
 F._hpIsoConns = {}
 pcall(function() F.MetaUninstall("game.__index", "CMHealthLock") end)
 F.Out("[血量隔离] 已关闭")
-end
-F.CombatReport = function()
-local ch = F._combatNow
-local name = "(无)"
-if ch and ch.Parent then
-pcall(function() name = (Players:GetPlayerFromCharacter(ch) or {}).Name or ch.Name end)
-if name == nil then name = ch.Name end
-end
-F.Out("[战斗] 当前锁定 = " .. tostring(name) .. " · 原因/状态 = " .. tostring(F._combatWhy or "-")
-.. " · 被墙挡住 " .. tostring(F._combatBlocked or 0) .. " 个")
-F.Out("[战斗] 模式=" .. tostring(C.CombatMode or "?") .. " · 距离=" .. tostring(C.CombatRange or 300)
-.. " · 圈=" .. tostring(C.CombatFOV or 300) .. " · 不打隔墙=" .. tostring(T.CombatWallCheck ~= false)
-.. " · 不打无敌=" .. tostring(T.CombatSkipInvincible ~= false) .. " · 自动开火=" .. tostring(T.AutoFire == true))
 end
 local GodConn = nil
 local function GodDisable()
@@ -4014,8 +3429,6 @@ end
 end
 end)
 end
-F.DROP_KEYS = { "dropheld", "droppet", "dropheldegg", "dropitem", "dropcarry", "releaseheld",
-"dropbrainrot" }
 F.BLOCK_REMOTE_KEYS = {
 "trap", "snare", "cage", "stun", "mousetrap", "beartrap", "ratstrap",
 "caught", "arrested", "handcuff", "jailed", "wanted", "guardcatch", "guardhit", "securityhit",
@@ -4347,7 +3760,6 @@ pcall(function() root.AssemblyLinearVelocity = Vector3.new(v.X, 40, v.Z) end)
 end
 end)
 end
-F.HitboxBackup = {}
 F._authorityServer = nil
 F._authorityMode = nil
 function F.AuthorityGuard(verbose)
@@ -4371,24 +3783,6 @@ own = nil, ownAt = 0, holdConn = nil, takeOK = false,
 snap = 0, snapMax = 0, bad = 0, expectMove = 0, dir = nil,
 lastPos = nil, landAt = 0,
 }
-function F.SrvFPS()
-local f = 60
-pcall(function() f = workspace:GetRealPhysicsFPS() end)
-return math.clamp(tonumber(f) or 60, 30, 240)
-end
-function F.SrvOwnInfo()
-local _, hum, root = GC()
-local o = { hasRoot = root ~= nil, owner = nil, ownerName = "(无角色)", serverOwned = nil }
-if not root then return o end
-pcall(function() o.owner = root:GetNetworkOwner() end)
-o.ownerName = o.owner and o.owner.Name or "nil(服务端持有)"
-o.serverOwned = (o.owner == nil)
-o.anchored = root.Anchored
-o.humState = "(未知)"
-pcall(function() o.humState = tostring(hum:GetState()) end)
-F._srv.own = o
-return o
-end
 function F.SrvOwnTake(verbose)
 local ch, _, root = GC()
 if not (ch and root) then return false end
@@ -4416,75 +3810,11 @@ F.Out("[Srv] 夺取网络所有权: 部件 " .. tostring(#parts) .. " 个, 回�
 end
 return got
 end
-function F.SrvProbe(step, sec)
-local _, _, root = GC()
-if not root then return nil end
-step = tonumber(step) or (F.LIMITS and F.LIMITS.PROBE_STEP) or 4
-sec = tonumber(sec) or 2
-local cam = workspace.CurrentCamera
-local dir = cam and cam.CFrame.LookVector or Vector3.new(1, 0, 0)
-dir = Vector3.new(dir.X, 0, dir.Z)
-if dir.Magnitude < 0.01 then dir = Vector3.new(1, 0, 0) end
-dir = dir.Unit
-local startPos = root.Position
-local intended, n, t0 = 0, 0, os.clock()
-while os.clock() - t0 < sec do
-local _, _, r = GC()
-if not r then break end
-r.CFrame = r.CFrame + dir * step
-intended = intended + step
-n = n + 1
-RS.Heartbeat:Wait()
-end
-local _, _, r2 = GC()
-if not r2 then return nil end
-local actual = (r2.Position - startPos):Dot(dir)
-local ratio = (intended > 0) and (actual / intended) or 0
-return { step = step, sec = sec, frames = n, intended = intended,
-actual = actual, ratio = ratio, fps = n / math.max(sec, 0.001) }
-end
-function F.SrvOneClick()
-task.spawn(function()
-local o = F.SrvOwnInfo()
-local L = {}
-L[#L + 1] = string.format("物理帧率 %.0f · 本脚本不做任何限速(上限就是你在滑块上写的数)", F.SrvFPS())
-L[#L + 1] = "① 网络所有权(HRP) = " .. tostring(o.ownerName)
-if o.serverOwned then
-if F.SrvOwnTake(true) then
-L[#L + 1] = "② 已夺取所有权: 回读=本地 ✓"
-else
-L[#L + 1] = "② ⛔ 抢不回所有权 ⇒ **该游戏位移类功能不可行**(服务端持有, 不是参数问题)"
-end
-else
-L[#L + 1] = "② 所有权本来就在本地 ✓"
-end
-F.Out("[诊断] ⚠ 探针会向服务端发送约 120 次强位移 —— AuthorityMode=Server 时可能被记录/踢")
-local step = F.LIMITS.PROBE_STEP
-local r = F.SrvProbe(step, 2)
-if not r then
-L[#L + 1] = "③ 探针: 没有角色, 无法测"
-else
-L[#L + 1] = string.format("③ 探针(单帧 %.2f): 意图 %.0f / 实走 %.0f ⇒ 通过率 %.0f%%",
-r.step, r.intended, r.actual, r.ratio * 100)
-if r.ratio < 0.9 then
-L[#L + 1] = "④ 通过率不足 ⇒ 位移正被服务端搬回。★ 本脚本不再自动降速, 降不降由你决定"
-else
-L[#L + 1] = "④ 当前档位被服务端接受"
-end
-end
-F.Out("──── 反拉回诊断 ────")
-for _, s in ipairs(L) do F.Out("  " .. s) end
-F.Out("────────────────────")
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "反拉回诊断", Content = table.concat(L, "\n"), Duration = 15 })
-end
-end)
-end
 F._baseWalk = nil
 F._preSpeed = nil
 F._spdConn, F._flyConn = nil, nil
 F._flyBv, F._flyBg, F._flyAp, F._flyAo, F._flyAtt = nil, nil, nil, nil, nil
-F._probe, F._probeAt = {}, 0
+F._probe = {}
 function F.SpeedProbe(r, tag, sp, dt, full3d)
 if not r or not sp then return end
 if tag ~= "飞行" then
@@ -4819,7 +4149,7 @@ d, F._eggBack))
 end
 end
 end
-F._pinConn, F._pinAp, F._pinAtt = nil, nil, nil
+F._pinConn = nil
 function F.PinDisable()
 if F._pinConn then pcall(function() F._pinConn:Disconnect() end) F._pinConn = nil end
 for _, k in ipairs({ "_pinAp", "_pinAtt" }) do
@@ -4869,7 +4199,6 @@ local _, _, r3 = GC()
 if r3 then owner = r3:GetNetworkOwner() end
 end)
 if owner ~= LP then
-F._bypassOwnOK = pcall(F.SrvOwnTake, false)
 end
 end
 end
@@ -5679,7 +5008,6 @@ root.AssemblyAngularVelocity = Vector3.zero
 end)
 local from = root.Position
 local dist = (cf.Position - from).Magnitude
-local rot = cf - cf.Position
 F._tpAt = os.clock()
 pcall(function() root.CFrame = cf end)
 F._tpOwnInfo = own
@@ -6121,37 +5449,7 @@ pcall(F.PinDisable)
 pcall(F.BypassDisable)
 F.Out("[反拉回] 已关")
 end
-F._pinConn, F._pinned = nil, nil
-F.CarryPinFind = function()
-local ch, _, root = GC()
-if not (ch and root) then return nil end
-local KEYS = { "egg", "brainrot", "cash", "carry", "crate", "loot", "pet", "drop", "box", "bag", "item", "蛋", "脑红" }
-local best, bestD = nil, 14
-pcall(function()
-local n = 0
-for _, d in ipairs(workspace:GetDescendants()) do
-n = n + 1
-if n > 4000 then break end
-if d:IsA("Model") or d:IsA("BasePart") then
-local nm = tostring(d.Name):lower()
-local hit = false
-for _, k in ipairs(KEYS) do if nm:find(k, 1, true) then hit = true break end end
-if hit then
-local part = nil
-if d:IsA("Model") then part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart") else part = d end
-if part then
-local dd = (part.Position - root.Position).Magnitude
-if dd < bestD then best, bestD = part, dd end
-end
-end
-end
-end
-end)
-local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand")
-or ch:FindFirstChild("Right Arm") or ch:FindFirstChild("Left Arm") or root
-if not best then return nil end
-return best, hand
-end
+F._pinConn = nil
 F.MyEggSet = function(on)
 T.MyEgg = on and true or false
 if F._eggLoop then F._eggLoop = false end
@@ -6353,48 +5651,6 @@ end
 F._eggLoop = nil
 end)
 end
-F.CarryPinSet = function(on)
-T.CarryPin = on and true or false
-if F._pinLoop then F._pinLoop = false end
-if not on then
-if F._pinned then pcall(function() if F._pinned.Weld then F._pinned.Weld:Destroy() end end) end
-F._pinned = nil
-F.Out("[蛋守卫] 已关")
-return
-end
-F.Out("[蛋守卫] 已开(低开销版): 扫到一次就钉住, 之后只跟随, 不再满地图扫")
-F._pinLoop = true
-task.spawn(function()
-while T.CarryPin and F._pinLoop do
-local ch, _, root = GC()
-if ch and root then
-local ok = false
-if F._pinned and F._pinned.Part and F._pinned.Part.Parent then
-local hand = ch:FindFirstChild("RightHand") or ch:FindFirstChild("LeftHand") or root
-pcall(function() if not F._pinned.Part.Anchored then F._pinned.Part.CFrame = hand.CFrame end end)
-ok = true
-end
-if not ok then
-if F._pinned then pcall(function() if F._pinned.Weld then F._pinned.Weld:Destroy() end end) F._pinned = nil end
-local part, hand = F.CarryPinFind()
-if part and hand then
-local okW, w = pcall(function()
-local w2 = Instance.new("WeldConstraint")
-w2.Name = "CM_CarryPin"
-w2.Part0, w2.Part1 = hand, part
-w2.Parent = part
-return w2
-end)
-F._pinned = { Part = part, Weld = (okW and w) or nil }
-F.Out("[蛋守卫] 已把「" .. tostring(part.Parent and part.Parent.Name or part.Name) .. "」钉在手上")
-end
-end
-end
-task.wait(0.1)
-end
-F._pinLoop = nil
-end)
-end
 F.CarryGuardEnable = function()
 if F._cgConn then return end
 F.EggLock()
@@ -6481,7 +5737,6 @@ pcall(function()
 F._charEv[#F._charEv + 1] = hum.StateChanged:Connect(function(_, new)
 if new == Enum.HumanoidStateType.FallingDown or new == Enum.HumanoidStateType.Ragdoll
 or new == Enum.HumanoidStateType.PlatformStanding then
-F._lastBadState = tostring(new)
 end
 end)
 end)
@@ -6489,7 +5744,6 @@ pcall(function()
 F._charEv[#F._charEv + 1] = hum.HealthChanged:Connect(function(hp)
 local max = hum.MaxHealth
 if max and max > 1 and hp > 0 and hp < max * 0.35 then
-F._lastHurtAt = os.clock()
 end
 end)
 end)
@@ -7376,7 +6630,6 @@ if r == "sheriff" then return F.ROLE_NAME.sheriff, F.ROLE_COLOR.sheriff, r end
 return "平民", F.ROLE_COLOR.none, nil
 end
 F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin" }
-F.NPC_EXCLUDE = {}
 F.NPC_COLOR = Color3.fromRGB(170, 110, 55)
 F.IsNPC = function(o)
 if o == nil then return false end
@@ -7424,7 +6677,6 @@ end)
 for i = 1, #subs do
 if F.IsNPC(subs[i]) then n = n + 1 end
 end
-F._npcScanned = n
 return n
 end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
@@ -7535,7 +6787,6 @@ if k3 then F.IxAdd(kids2[j], c3) n = n + 1 end
 end
 end
 end
-F._ixScanned = n
 return n
 end
 F.IxClear = function()
@@ -7781,7 +7032,7 @@ pcall(F.AllyTagRefresh)
 end)
 F.Out("[队友标记] 已开(队友头顶显示绿色 [队友] 名字)")
 end
-F._vehLoop, F._vehAt, F._vehPart, F._vehCount = nil, 0, nil, 0
+F._vehLoop, F._vehAt = nil, 0
 F.VehicleBoostDisable = function()
 if F._vehLoop then pcall(function() F._vehLoop:Disconnect() end) F._vehLoop = nil end
 F._vehRef, F._vehParts, F._vehScanAt = nil, nil, 0
@@ -7837,7 +7088,6 @@ n = n + 1
 end
 end
 end)
-F._vehCount = n
 end)
 F.Out("[加速] 坐上载具会自动给载具推力 " .. tostring(tonumber(C.SpeedValue) or 60) .. " 格/秒(与加速同一个速度值)")
 end
@@ -8059,21 +7309,6 @@ if mine == nil or theirs == nil then return F.ROLE_COLOR.none end
 if theirs == mine then return Color3.fromRGB(0, 255, 80) end
 return Color3.fromRGB(255, 60, 60)
 end
-F.CMX_HLWarnColor = function()
-local c = C.CMX_HLWallColor
-if typeof(c) == "Color3" then return c end
-return Color3.fromRGB(255, 190, 0)
-end
-F.CMX_HLDistColor = function(pl)
-local _, _, root = GC()
-local d = 0
-pcall(function()
-local h = pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
-if h and root then d = (h.Position - root.Position).Magnitude end
-end)
-local k = math.clamp(d / 300, 0, 1)
-return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 140, 255), k), d
-end
 F._hlRP = nil
 F._hlEx = {}
 F.CMX_HLOccluded = function(pl, cam, myCh)
@@ -8128,7 +7363,6 @@ rec.top.FillTransparency = fill
 rec.top.OutlineTransparency = 0
 rec.top.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 end)
-F.CMX_HLSimple = true
 if rec.occ then
 pcall(function() rec.occ:Destroy() end)
 rec.occ = nil
@@ -8514,7 +7748,6 @@ F.Out("[重进] 两种方式都被挡 请手动从 Roblox 菜单重进")
 end
 return ok2
 end
-F._saveThread = nil
 F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
@@ -8593,7 +7826,6 @@ end
 return fallback
 end
 local Gym = {}
-F.Gym = Gym
 Gym.Event = { Active = false, LastSeenAt = 0, Machine = nil, MachineName = nil, LastVerifiedPart = nil, LastVerifiedMachine = nil }
 Gym.TravelMode = "Teleport (Safe)"
 Gym.currentLiftMachineMultiplier = function()
@@ -9050,397 +8282,6 @@ BonusThread = nil
 F.Out("[自动领取] 已停止")
 end
 do
-local CPS = {
-["Noobini Pizzanini"]=2,["Lirili Larila"]=3,["Tim Cheese"]=3,["Talpa Di Fero"]=4,
-["Svinina Bombardino"]=5,["Pipi Kiwi"]=6,["Fruli Frula"]=7,["Trippi Troppi"]=7,
-["Gangster Footera"]=15,["Bobrito Bandito"]=17,["Boneca Ambalabu"]=17,
-["Ta Ta Ta Ta Sahur"]=18,["Ballerina Cappuccina"]=19,["Cappuccino Assassino"]=22,
-["Brr Brr Patapim"]=22,["Cacto Hipopotamo"]=26,["Garamararam"]=40,
-["Madung"]=44,["Waterdino"]=50,["Pesto Mortioni"]=52,["Pannaburro"]=62,
-["Orcalero"]=64,["Mangolini Parrocini"]=64,["John Pork"]=72,
-["Gattatino Nyanino"]=76,["Chimpanzini Bananini"]=100,["Plan Red"]=130,
-["Plan Blue"]=140,["Capi Taco"]=150,["Trulimero Trulicina"]=160,
-["Bambini Crostini"]=160,["Elefantucci Bananucci"]=170,
-["Bananita Dolphinita"]=235,["Salamino Pinguino"]=280,
-["Penguino Cocosino"]=450,["67"]=500,["Burbaloni Luliloli"]=550,
-["Chef Crabracadabra"]=600,["Capybara Eggplant"]=650,["Bangello"]=725,
-["Elefanto Frigo"]=775,["Rinooccio Verdini"]=880,["Glorbo Fruttodrillo"]=950,
-["Udin Din Din Dun"]=1850,["Pandaccini Bananini"]=2000,
-["Octopusini Bluberini"]=2150,["Strawberelli Flamingelli"]=2300,
-["Sigma Boy"]=2450,["Frigo Camelo"]=2600,["Orangutini Ananasini"]=2700,
-["Rhino Toasterino"]=2950,["Bombardiro Crocodilo"]=3100,
-["Bombini Gusini"]=4750,["Castlino Fortini"]=5000,["Tuff Toucan"]=5300,
-["Fryuro"]=5850,["Burguro"]=6250,["Guest666"]=7000,
-["Zibra Zubra Zibralini"]=7750,["Cavallo Virtuso"]=10000,
-["Gorillo Watermelondrillo"]=12000,["Cocofanto Elefanto"]=14000,
-["Bambu Sahur"]=12500,["W or L"]=15000,["Girafa Celeste"]=16500,
-["Tralalero Tralala"]=17500,["Tralalerita Tralala"]=18000,
-["Peant Jarro"]=19500,["Dipperi Chiperini"]=20000,["Rexosaurus"]=22500,
-["1x1x1x1"]=25000,["Matteo"]=30000,["Espresso Signora"]=36500,
-["Alessio"]=27500,["Tripi Tropi Tropa Tripa"]=28000,["SWAG SODA"]=29000,
-["Stoppo Luminino"]=30000,["Torrtuginni Dragonfrutini"]=32000,
-["Tictac Sahur"]=38000,["Los Primos Blue"]=44500,["Cactus Pingu"]=55000,
-["La Vacca Saturno Saturnita"]=70000,["Agarrini La Palini"]=90000,
-["Bottellini"]=75000,["Karkerkar Kurkur"]=120000,["Blackhole Goat"]=125000,
-["Cappuccino Clownino"]=135000,["Compactoroni Diskaloni"]=135000,
-["Nuclearo Dinossauro"]=190000,["Los Nooo My Hotspotsitos"]=200000,
-["Chillin Chilli"]=220000,["Crazylone Pizaione"]=225000,["Corn Sahur"]=225000,
-["Meowl"]=275000,["Strawberry Elephant"]=420000,
-["Dragonfrutina Dolphinita"]=475000,["Guerriro Digitale"]=490000,
-["Chicleteira Bicicleteira"]=500000,["Pot Hotspot"]=525000,
-["Krupuk Pagi Pagi"]=540000,["Beluga Beluga"]=575000,["Tralaledon"]=625000,
-["Anpali Babel"]=750000,["Los Primos"]=800000,["Ketchuru Matsuru"]=800000,
-["Mastodontico Telepiedone"]=850000,["Espresso Shockantoni"]=1000000,
-["Ketupat Kepat"]=1250000,["Professora 67"]=1400000,["Astro Tim"]=1500000,
-["Dumbelloni"]=1750000,["Baba Yaga"]=2000000,["Don Tiramisotto"]=2250000,
-["Kicky"]=2500000,["Smelloni Papayoni"]=2750000,["Barbelloni Gymrattoni"]=3000000,
-["Dribbloni Spaghetti"]=7500000,["Coinator Baconator"]=6500000,
-["Lucky Fella"]=5000000,["Pulcino Pistoletti"]=10000000,
-["Divinello Starblock"]=8750000,["Cordraculo"]=10000000,
-["Harpini Goosini"]=11250000,["OctoDJ"]=15000000,["Tubafante"]=12500000,
-["Turtinella Melodica"]=16500000,["Cucumbro Nerdino"]=2500000,
-}
-local MutBuff = {Golden=1.5,Diamond=2,Plasma=4,Molten=6,Radioactive=8,
-Shadow=12,Electrified=16,Rainbow=40,Astral=50,Infinity=75,
-Void=12,Virus=14,Wet=16,Alien=22,Bacon=30,Enchanted=12,
-Phantom=35,Volcanic=35,Heavenly=36,Carnival=37,
-["Block Cup"]=38,Undead=35,Jungle=40,Frozen=40}
-local EXCLUSIVE_SET = {["W"]=true,["Dragon Cannelloni"]=true,["Spaghetti Tualetti"]=true,["Esok Sekolah"]=true,["Job Job Job Sahur"]=true,["Yess My Examen"]=true,["Lucky Kick"]=true,["Hippocopter"]=true,["Auto Grizzlioni"]=true,["Los Bombardinos"]=true,["Rocky"]=true,["Hat Tricky"]=true,["GOAT"]=true,["Bronze Block Medali"]=true,["Golden Block Cuppy"]=true,["Silver Block Cuppy"]=true,["Bronze Block Cuppy"]=true,["Golden Block Medali"]=true,["Silver Block Medali"]=true,["Stadoini"]=true,["Cone Cone Cone Sahur"]=true,["Ballberto"]=true,["Soccerdino"]=true,["Netini Goalini"]=true,["Orangutango Supremo"]=true,["Croakumber"]=true,["Lampuccio Raccoonelli"]=true,["Tuki Tuki Taco"]=true,["Professor Tigrellini"]=true,["Patagotitan"]=true,["Frigorex"]=true,["Velacoraptor"]=true,["Bicletairussaurus"]=true,["Jet Jet Raptoret"]=true,["Tricerabob"]=true,["Teacherrina"]=true,["Locko Blocko"]=true,["Scuolabus Giraffini"]=true,["Donutello"]=true,["Professor Penneroni"]=true,["Brain Mogger"]=true}
-local EX_WORDS = { "exclusive", "独家", "专属", "limited", "限定", "vip", "percent", "百分比", "幸运", "lucky", "%", "x2", "x5", "x10", "x20", "x50" }
-local SELLER_NAME = "Timmy"
-local SELLER_CF = CFrame.new(134.125, 0.125, 83.866) * CFrame.Angles(0, -1.5707963267948966, 0)
-local SellThread, WithdrawThread, CollectThread = nil, nil, nil
-local function isEntityTool(t)
-if not t or not t:IsA("Tool") then return false end
-local ok, ht = pcall(function() return t:HasTag("EntityTool") end)
-return ok and ht
-end
-local function isExclusiveTool(t)
-if not t then return false end
-if EXCLUSIVE_SET[t.Name] then return true end
-local n = string.lower(t.Name)
-for i = 1, #EX_WORDS do
-if string.find(n, EX_WORDS[i], 1, true) then return true end
-end
-if t:GetAttribute("Exclusive") or t:GetAttribute("IsExclusive")
-or t:GetAttribute("Limited") or t:GetAttribute("IsLimited")
-or t:GetAttribute("Percent") or t:GetAttribute("Multiplier") then
-return true
-end
-return false
-end
-local function baseCPSOf(tool)
-if not tool then return nil end
-local base = CPS[tool.Name]
-if base then return base, "内置表" end
-local a = tool:GetAttribute("CPS") or tool:GetAttribute("BaseCPS")
-if typeof(a) == "number" then return a, "物品属性" end
-return nil
-end
-local function lvMul()
-local lm = tonumber(C.SellLvMul) or 1.25
-if lm <= 0 then lm = 1.25 end
-return lm
-end
-local function toolLevel(tool)
-return math.clamp(math.floor(tonumber(tool:GetAttribute("Level")) or 1), 1, 75)
-end
-local function cpsOf(tool)
-if not tool then return nil end
-local v = nil
-for _, k in ipairs({ "CPS", "Cps", "cps", "Value", "Income", "Money", "PerSecond", "Earnings", "price", "Price" }) do
-local okA, a = pcall(function() return tool:GetAttribute(k) end)
-if okA and type(a) == "number" and a > 0 then return a end
-pcall(function()
-local c = tool:FindFirstChild(k)
-if c and (c:IsA("NumberValue") or c:IsA("IntValue") or c:IsA("StringValue")) then
-local n = tonumber(tostring(c.Value))
-if not n then n = tonumber((tostring(c.Value):lower():gsub("k", "e3"):gsub("m", "e6"):gsub("b", "e9"):gsub("[^%d%.e]", ""))) end
-if n and n > 0 then v = n end
-end
-end)
-if v then return v end
-end
-local texts = {}
-pcall(function()
-for _, d in ipairs(tool:GetDescendants()) do
-if d:IsA("TextLabel") or d:IsA("TextButton") then
-local s = nil
-pcall(function() s = d.Text end)
-if type(s) == "string" and s ~= "" then texts[#texts + 1] = s end
-end
-end
-end)
-texts[#texts + 1] = tostring(tool.Name)
-local SUF = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15 }
-for _, s in ipairs(texts) do
-local low = string.lower(tostring(s))
-for num, suf in string.gmatch(low, "(%d+%.?%d*)([kmbtq])") do
-local mul = SUF[suf]
-if mul then return tonumber(num) * mul end
-end
-end
-for _, s in ipairs(texts) do
-local num = tostring(s):match("([%d][%d,]*%.?%d*)")
-if num then
-local n = tonumber((num:gsub(",", "")))
-if n and n > 0 then return n end
-end
-end
-return nil
-end
-local function describe(tool)
-if not tool then return "?" end
-local base, src = baseCPSOf(tool)
-if not base then return "(不在内置表且无 CPS 属性 ⇒ 不卖)" end
-local mut = tostring(tool:GetAttribute("Mutation") or "")
-return string.format("基础%.0f(%s)·等级%d·词缀%s×%.2f·乘数%.2f^%d", base, src, toolLevel(tool),
-(mut == "" and "无" or mut), (MutBuff[mut] or 1), lvMul(), toolLevel(tool) - 1)
-end
-local function fmtNum(v)
-v = tonumber(v) or 0
-if v >= 1e12 then return string.format("%.2fT", v / 1e12) end
-if v >= 1e9 then return string.format("%.2fB", v / 1e9) end
-if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
-if v >= 1e3 then return string.format("%.1fK", v / 1e3) end
-return tostring(math.floor(v))
-end
-F.FmtNum = fmtNum
-F.SlotOfTool = function(t)
-local ok, sl = pcall(function() return t:GetAttribute("slot") or t:GetAttribute("Slot") or t:GetAttribute("Index") end)
-if ok and sl ~= nil then return tonumber(sl) end
-local n = tonumber(tostring(t.Name):match("(%d+)"))
-return n
-end
-F.SellScanStats = function()
-local raw = nil
-pcall(function()
-local o = Fluent and Fluent.Options and Fluent.Options.SellMinCPS
-if o and o.Value ~= nil and tostring(o.Value) ~= "" then raw = o.Value end
-end)
-if raw == nil then raw = C.SellMinCPSTxt end
-local n = F.ParseCPS(raw)
-if not n then return nil, "门槛没看懂(例: 80m / 500k / 1.5b / 2q)" end
-C.SellMinCPS = n
-local seen, hits, total, ex, where = {}, 0, 0, 0, {}
-local function add(c, tag)
-if c and not seen[c] then seen[c] = true
-local cnt = 0
-pcall(function()
-for _, t in ipairs(c:GetChildren()) do
-if t:IsA("Tool") and isEntityTool(t) then
-if isExclusiveTool(t) then ex = ex + 1
-else
-local cps = cpsOf(t)
-if cps then total = total + 1 cnt = cnt + 1 if cps <= n then hits = hits + 1 end end
-end
-end
-end
-end)
-where[#where + 1] = tag .. "=" .. tostring(cnt)
-end
-end
-add(LP:FindFirstChildOfClass("Backpack"), "背包")
-add(LP.Character, "身上")
-pcall(function() add(LP.Character and LP.Character:FindFirstChildOfClass("Backpack"), "背包2") end)
-return { n = n, hits = hits, total = total, ex = ex, where = table.concat(where, " ") }, nil
-end
-function F.ParseCPS(s)
-if type(s) == "number" then return s end
-if type(s) ~= "string" then return nil end
-local t = string.lower(s):gsub("%s", "")
-if t == "" then return nil end
-local num, suf = t:match("^(%d+%.?%d*)([kmbtq]?)$")
-local n = tonumber(num)
-if not n then return nil end
-local m = 1
-if suf == "k" then m = 1e3
-elseif suf == "m" then m = 1e6
-elseif suf == "b" then m = 1e9
-elseif suf == "t" then m = 1e12
-elseif suf == "q" then m = 1e15 end
-return n * m
-end
-local function threshold()
-if F._sellThOverride then return math.huge end
-return tonumber(C.SellMinCPS) or 100000
-end
-local function collectLists()
-local picks, all = {}, {}
-local function scan(list)
-if not list then return end
-for _, t in ipairs(list:GetChildren()) do
-if t:IsA("Tool") and isEntityTool(t) then
-local c = cpsOf(t)
-local ex = isExclusiveTool(t)
-all[#all + 1] = { Tool = t, Name = t.Name, CPS = c or 0, Ex = ex, Known = c ~= nil }
-if c and not ex then picks[#picks + 1] = { Tool = t, Name = t.Name, CPS = c } end
-end
-end
-end
-scan(LP.Character)
-scan(LP:FindFirstChild("Backpack"))
-table.sort(all, function(a, b) return a.CPS < b.CPS end)
-table.sort(picks, function(a, b) return a.CPS < b.CPS end)
-return picks, all
-end
-local function findSeller()
-local npcs = workspace:FindFirstChild("NPCs")
-if not npcs then return nil end
-for _, o in ipairs(npcs:GetChildren()) do
-if o:IsA("Model") and (o.Name == SELLER_NAME or o:GetAttribute("Name") == SELLER_NAME) then return o end
-end
-for _, o in ipairs(npcs:GetDescendants()) do
-if o:IsA("Model") and (o.Name == SELLER_NAME or o:GetAttribute("Name") == SELLER_NAME) then return o end
-end
-return nil
-end
-local function moveToSeller()
-local _, _, root = GC()
-if not root then return false end
-local seller = findSeller()
-local part = seller and (seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart
-or seller:FindFirstChildWhichIsA("BasePart", true))
-if part then
-local target = part.Position
-local away = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
-if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
-local stand = Vector3.new(target.X, root.Position.Y, target.Z) + away.Unit * 4
-pcall(function()
-root.CFrame = CFrame.new(stand, Vector3.new(target.X, stand.Y, target.Z))
-root.AssemblyLinearVelocity = Vector3.zero
-end)
-else
-local rel = root.CFrame - root.CFrame.Position
-pcall(function()
-root.CFrame = SELLER_CF * rel
-root.AssemblyLinearVelocity = Vector3.zero
-end)
-end
-task.wait(0.2)
-return true
-end
-local function sellHeld()
-local rf = RFunction("B_Sell")
-if rf then
-local ok, res = pcall(function() return rf:InvokeServer() end)
-if ok then
-if not F._sellOkLogged then
-F._sellOkLogged = true
-F.Out("[售卖] 已命中接口 " .. tostring(rf:GetFullName()) .. " · InvokeServer 调用成功")
-end
-return true
-end
-F.Out("[售卖] 找到接口 " .. tostring(rf:GetFullName()) .. " 但调用报错 ⇒ 可能被服务端拒绝")
-end
-local re = REvent("B_Sell")
-if re then
-if pcall(function() re:FireServer() end) then return true end
-end
-if not F._sellMissLogged then
-F._sellMissLogged = true
-F.Out("[售卖] ⚠ 找不到 B_Sell 接口 —— 应在 ReplicatedStorage.Shared.Packages.Network 下(rev_/ref_ 前缀)")
-F.Out("[售卖] 实测可用的取出办法: RStorage.Shared.Packages.Network.ref_B_Sell (RemoteFunction)")
-end
-return false
-end
-function F.PreviewSell()
-task.spawn(function()
-local th = threshold()
-local _, all = collectLists()
-local nSell, nKeep, nUnknown = 0, 0, 0
-for _, e in ipairs(all) do
-if not e.Known then nUnknown = nUnknown + 1
-elseif e.Ex then nKeep = nKeep + 1
-elseif e.CPS < th then nSell = nSell + 1 end
-end
-F.Out(string.format("[统计] 门槛 %s ⇒ 符合门槛、可卖 %d 个(实体脑红共 %d 个; 限定保留 %d, 算不出 %d)",
-fmtNum(th), nSell, #all, nKeep, nUnknown))
-end)
-end
-function F.SellLowCPS(force)
-if SellThread then F.Out("[售卖] 已在进行中") return end
-SellThread = task.spawn(function()
-local ok, err = pcall(function()
-local ch, hum, root = GC()
-if not (hum and root) then F.Out("[售卖] 无角色") return end
-local returnCF = root.CFrame
-local th = threshold()
-local thTxt = F._sellThOverride and "全部(除限定)" or fmtNum(th)
-F.Out(string.format("[售卖] 开始 · 门槛 %s · 先走到%s身边", thTxt, SELLER_NAME))
-moveToSeller()
-task.wait(0.3)
-local total, rounds, noProgress = 0, 0, 0
-while rounds < 60 do
-if not (force or T.AutoSell) then break end
-rounds = rounds + 1
-local picks = collectLists()
-if #picks == 0 then
-if rounds == 1 then F.Out(string.format("[售卖] 没有低于 %s 的脑红", thTxt)) end
-break
-end
-F.Out(string.format("[售卖] 第 %d 轮 · 待卖 %d 个", rounds, #picks))
-local sold = 0
-for i = 1, #picks do
-if not (force or T.AutoSell) then break end
-local e = picks[i]
-local tool = e.Tool
-if tool and tool.Parent then
-pcall(function() hum:UnequipTools() end)
-task.wait(0.08)
-pcall(function() hum:EquipTool(tool) end)
-task.wait(0.2)
-if tool.Parent == ch then
-F.Out(string.format("[售卖]   %s CPS≈%s · %s", tool.Name, fmtNum(e.CPS), describe(tool)))
-local okf = sellHeld()
-task.wait(0.3)
-if okf and not tool.Parent then
-sold = sold + 1
-total = total + 1
-end
-end
-task.wait(0.05)
-end
-end
-if sold == 0 then
-noProgress = noProgress + 1
-F.Out(string.format("[售卖] 第 %d 轮无进展 (%d/2)", rounds, noProgress))
-if noProgress >= 2 then break end
-task.wait(0.5)
-else
-noProgress = 0
-end
-local seller = findSeller()
-local _, _, r = GC()
-local part = seller and (seller:FindFirstChild("HumanoidRootPart") or seller.PrimaryPart)
-if r and part and (r.Position - part.Position).Magnitude > 20 then
-moveToSeller()
-task.wait(0.25)
-end
-end
-pcall(function() hum:UnequipTools() end)
-F.Out(string.format("[售卖] 完成 · 共卖 %d 个 · 走了 %d 轮", total, rounds))
-if total > 0 and T.AutoSell then
-F._sellFinish = true
-T.AutoSell = false
-local op = Fluent and Fluent.Options and Fluent.Options.AutoSell
-if op and op.Value then F.OptSet(op, false) end
-F._sellFinish = nil
-F.Out("[售卖] 本轮已卖完 ⇒ 自动关闭「按 CPS 卖出」(要再卖请重新打开)")
-end
-local _, _, r2 = GC()
-if r2 then
-pcall(function()
-r2.CFrame = returnCF
-r2.AssemblyLinearVelocity = Vector3.zero
-end)
-end
-end)
-SellThread = nil
-F._sellThOverride = nil
-if not ok then F.Out("[售卖] 出错: " .. tostring(err)) end
-end)
-end
 function F.WithdrawAll(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
 task.spawn(function()
@@ -9462,65 +8303,6 @@ F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S
 pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
 end)
 end
-F.TpToMyPlot = function()
-local _, _, root = GC()
-if not root then F.Out("[收钱] 无角色, 无法过去") return false end
-local target, where = nil, nil
-pcall(function()
-local me = tostring(LP.Name)
-local dn = tostring(LP.DisplayName or "")
-for _, d in ipairs(workspace:GetDescendants()) do
-if (d:IsA("Model") or d:IsA("BasePart")) and d ~= LP.Character then
-local s = tostring(d.Name)
-if s == me or (dn ~= "" and s == dn) or s:find(me, 1, true) then
-local pt = d:IsA("Model") and (d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart", true)) or d
-if pt then target = pt.Position where = s break end
-end
-end
-end
-end)
-if not target then
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do
-if d:IsA("BasePart") and d.Name == "PlotOwner" then
-target = d.Position where = "PlotOwner" break
-end
-end
-end)
-end
-if not target then
-F.Out("[收钱] ⚠ 找不到你的地盘(名字里没有你的名字, 也没发现 PlotOwner 部件) ⇒ 请手动走过去再点")
-return false
-end
-pcall(function()
-root.CFrame = CFrame.new(target + Vector3.new(0, 4, 0))
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-end)
-F.Out("[收钱] 已传送到你的地盘附近(" .. tostring(where) .. ")")
-return true
-end
-function F.CollectAll(maxSlot)
-maxSlot = tonumber(maxSlot) or 30
-task.spawn(function()
-local node = game:GetService("ReplicatedStorage")
-for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
-local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
-if not (ok and child) then
-F.Out("[收集货币] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_B_Collect (" .. tostring(seg) .. " 找不到)")
-return
-end
-node = child
-end
-local n = 0
-for i = 1, maxSlot do
-if pcall(function() node:FireServer(i) end) then n = n + 1 end
-task.wait(0.08)
-end
-F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
-pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
-end)
-end
 local SUFFIX = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15, qa = 1e15, qi = 1e18, sx = 1e21, sp = 1e24, no = 1e30, dc = 1e33 }
 function F.ParseNum(v)
 if typeof(v) == "number" then return v end
@@ -9537,22 +8319,6 @@ local m = SUFFIX[string.lower(suf)]
 if m then return base * m end
 end
 return base
-end
-function F.HudNum(...)
-local cur = LP:FindFirstChild("PlayerGui")
-for i = 1, select("#", ...) do
-if not cur then return nil, "路径断了" end
-cur = cur:FindFirstChild(select(i, ...))
-end
-if not cur then return nil, "没这个元素" end
-local s = nil
-pcall(function()
-if cur:IsA("TextLabel") or cur:IsA("TextButton") then s = cur.Text end
-end)
-if s == nil then return nil, "不是文本控件" end
-local num = F.ParseNum(s)
-if not num then return nil, "内容=" .. tostring(s) .. " 认不出数字" end
-return num, tostring(s)
 end
 function F.ScanHUD()
 task.spawn(function()
@@ -9589,111 +8355,6 @@ if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "HUD 扫描", Content = "找到 " .. #found .. " 个数字控件, 明细见控制台 F9", Duration = 10 })
 end
 end)
-end
-function F.ReadBase()
-task.spawn(function()
-F.Out("──────── 基地数据(只读) ────────")
-local rows = {
-{ "金币", { "HUD", "BottomLeft", "CoinsFrame", "InsideFrame", "CoinLabel" } },
-{ "踢力", { "HUD", "BottomLeft", "KickLevel", "TextLabel" } },
-{ "精通", { "HUD", "BottomLeft", "KickMastery", "InsideFrame", "CoinLabel" } },
-{ "重生等级", { "Frames", "Rebirth", "RebirthLevel" } },
-}
-for i = 1, #rows do
-local v, note = F.HudNum(table.unpack(rows[i][2]))
-F.Out(string.format("  %-8s %s", rows[i][1],
-v and (fmtNum(v) .. "   (" .. tostring(note) .. ")") or ("读不到 —— " .. tostring(note))))
-end
-local sp, note = F.HudNum("Frames", "SpeedUpgrades", "ScrollingFrame", "+1 Speed", "NameLabel")
-if sp then
-F.Out(string.format("  %-8s %d   (原始 %s)", "速度等级", math.max(0, math.floor(sp - 13 + 0.5)), tostring(note)))
-else
-F.Out("  " .. string.format("%-8s", "速度等级") .. "读不到 —— " .. tostring(note) .. "(需先打开速度升级面板)")
-end
-local step = LP:GetAttribute("TutorialStep")
-F.Out("  " .. string.format("%-8s", "教程步") .. (step == nil and "(无此属性)" or tostring(step)))
-local _, all = collectLists()
-F.Out("  " .. string.format("%-8s", "实体工具") .. #all .. " 个(手持+背包)")
-F.Out("───────────────────────────────")
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "基地数据", Content = "已读取, 明细见控制台 F9(只读, 没改动任何东西)", Duration = 10 })
-end
-pcall(F.LogFlush, "基地数据")
-end)
-end
-function F.UpgradeAdvice()
-task.spawn(function()
-local out = {}
-local function consider(tool, where)
-local base = baseCPSOf(tool)
-if not base then return end
-local lv = toolLevel(tool)
-if lv >= 75 then return end
-local mut = tostring(tool:GetAttribute("Mutation") or "")
-local mm = MutBuff[mut]
-local unknown = false
-if not mm and mut ~= "" then
-unknown = true
-mm = 1
-elseif not mm then
-mm = 1
-end
-local cps = base * mm * (lvMul() ^ (lv - 1))
-local cost = math.floor(base * mm * (1.5 ^ (lv - 1)))
-if cost <= 0 then return end
-local gain = cps * 0.25
-out[#out + 1] = { Name = tool.Name, Where = where, Lv = lv, CPS = cps, Cost = cost,
-Gain = gain, ROI = gain / cost, Unknown = unknown }
-end
-local ch = LP.Character
-local bp = LP:FindFirstChild("Backpack")
-if ch then
-for _, t in ipairs(ch:GetChildren()) do
-if t:IsA("Tool") and isEntityTool(t) then consider(t, "手持") end
-end
-end
-if bp then
-for _, t in ipairs(bp:GetChildren()) do
-if t:IsA("Tool") and isEntityTool(t) then consider(t, "背包") end
-end
-end
-table.sort(out, function(a, b)
-if a.Unknown ~= b.Unknown then return not a.Unknown end
-return a.ROI > b.ROI
-end)
-F.Out(string.format("──────── 升级性价比(可升级 %d 个) ────────", #out))
-for i = 1, #out do
-local e = out[i]
-local mark = e.Unknown and " ⚠词缀未知" or ""
-F.Out(string.format("  %d) %s [%s] Lv%d · CPS≈%s · 一级花 %s 换 +%s · 性价比 %.5f%s",
-i, e.Name, e.Where, e.Lv, fmtNum(e.CPS), fmtNum(e.Cost), fmtNum(e.Gain), e.ROI, mark))
-end
-local best = out[1]
-if best then
-local secs = (best.Gain > 0) and (best.Cost / best.Gain) or 0
-F.Out(string.format("  结论: 优先升「%s」—— 花 %s, 每秒多 %s, 约 %.0f 秒回本",
-best.Name, fmtNum(best.Cost), fmtNum(best.Gain), secs))
-else
-F.Out("  没有可升级对象(不在已知表里 或 都满级 75)")
-end
-F.Out("────────────────────────────────────")
-if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "升级性价比", Content = best and ("建议优先升「" .. best.Name .. "」(性价比 " .. string.format("%.5f", best.ROI) .. ")") or "没有可升级对象", Duration = 12 })
-end
-pcall(F.LogFlush, "升级性价比")
-end)
-end
-function F.SellAll()
-if SellThread then F.Out("[卖光] 正在售卖中, 稍后再试") return end
-F._sellThOverride = true
-F.Out("[卖光] 会把背包里能算出 CPS 的、非限定脑红全部卖掉")
-task.delay(300, function()
-if F._sellThOverride then
-F._sellThOverride = nil
-F.Out("[卖光] 兜底超时: 已清掉临时门槛覆盖")
-end
-end)
-F.SellLowCPS(true)
 end
 end
 local Trans = {}
@@ -10672,8 +9333,6 @@ F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
-F._dumpText = nil
-F._autoTh = nil
 F._cfgSyncing = false
 F._tpMouseOn = false
 pcall(function()
@@ -10892,86 +9551,13 @@ return nil
 end
 F.CMX_DisableAll = function()
 for _, fn in ipairs({
-F.CMX_IdentityMaskDisable, F.CMX_FFlagRestore, F.CMX_SpoofIndexDisable,
-F.CMX_ViewFilterDisable, F.CMX_HumanizeDisable, F.CMX_InstNewDisable,
-F.CMX_DebugMaskDisable, F.CMX_RequireBlockDisable, F.CMX_ClockMaskDisable,
+F.CMX_SpoofIndexDisable,
 F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
 F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 }) do pcall(fn) end
 T.CMX_SpoofPos = false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
 task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
-end
-F.CMX_NetOwnerReport = function()
-local _, _, root = GC()
-if not root then
-F.Out("[补强·所有权诊断] 没角色")
-return
-end
-F.Out("[补强·所有权诊断] 本机角色 HumanoidRootPart:")
-pcall(function()
-local o = root:GetNetworkOwner()
-F.Out("   GetNetworkOwner = " .. (o and (o.Name .. "(" .. tostring(o.UserId) .. ")") or "nil(服务器持有或不可读)"))
-end)
-pcall(function() F.Out("   IsGrounded = " .. tostring(root:IsGrounded())) end)
-local cam = workspace.CurrentCamera
-if cam then
-pcall(function()
-local o2 = cam:GetNetworkOwner()
-F.Out("   Camera.GetNetworkOwner = " .. (o2 and o2.Name or "nil"))
-end)
-end
-local cnt = 0
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-if hrp then
-local o = nil
-pcall(function() o = hrp:GetNetworkOwner() end)
-F.Out("   " .. pl.Name .. " 的角色所有权 = " .. (o and o.Name or "nil(非本机)"))
-cnt = cnt + 1
-end
-if cnt >= 6 then break end
-end
-end
-end
-F.CMX_BBReport = function()
-local _, _, root = GC()
-if not root then
-F.Out("[补强·包围盒] 没角色")
-return
-end
-pcall(function()
-local cf, sz = root.CFrame, root.Size
-F.Out("[补强·包围盒] HumanoidRootPart Size=" .. tostring(sz))
-F.Out("   世界包围盒 中心=" .. tostring(cf.Position) .. " 半径≈" .. string.format("%.2f", sz.Magnitude * 0.5))
-end)
-local ch = LP.Character
-if ch then
-pcall(function()
-local cf, sz = ch:GetBoundingBox()
-F.Out("   角色 Model 包围盒 尺寸=" .. tostring(sz) .. " (精确含所有部件)")
-end)
-pcall(function()
-local sz2 = ch:GetExtentsSize()
-F.Out("   角色 GetExtentsSize=" .. tostring(sz2) .. " (轴对齐外接盒)")
-end)
-local names = {}
-pcall(function()
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") and d.CanCollide then names[#names + 1] = d.Name end
-end
-end)
-F.Out("   可碰撞部件 " .. tostring(#names) .. " 个: " .. table.concat(names, ", "):sub(1, 200))
-end
-local _, _, r2 = GC()
-if r2 then
-pcall(function()
-local parts = WS:GetPartBoundsInRadius(r2.Position, 12, OverlapParams.new())
-F.Out("   半径12格内部件 " .. tostring(#parts) .. " 个 (可评估命中盒是否够大)")
-end)
-end
 end
 F.CMX_SafeHook = function(f, wrapper, wantLua)
 if type(f) ~= "function" or type(wrapper) ~= "function" then return nil end
@@ -11141,10 +9727,6 @@ for _ in pairs(F._stealthHooked or {}) do guarded = guarded + 1 end
 end)
 F.Out("[绕过·台账]   元方法拦截层 " .. tostring(n) .. " 个 · 被我们钩过的函数 " .. tostring(hooked) .. " 个"
 .. " · 隐身钩 " .. tostring(guarded) .. " 个")
-if F.CMX_ScrubOn then
-F.Out("[绕过·台账]   ★ 参数清洗钩子: 开 · 已清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次 · 自愈重装 "
-.. tostring(F.CMX_ScrubHealFix or 0) .. " 次")
-end
 if KG.hooked then
 F.Out("[绕过·台账]   ★ 防踢 Kick 钩子: 开 · 拦截 " .. tostring(KG.blocked or 0) .. " 次 · 自愈重装 "
 .. tostring(F._kgHealFix or 0) .. " 次")
@@ -11155,31 +9737,12 @@ end
 F.CMX_Own = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
 F.CMX_HiddenCount = 0
-F.CMX_Jitter = function(base, pct)
-local b = tonumber(base) or 0.5
-local p = tonumber(pct) or 0.3
-return b * (1 - p + math.random() * p * 2)
-end
 F.CMX_MarkOwn = function(o)
 if typeof(o) == "Instance" then
 F.CMX_Own[o] = true
 F.CMX_HiddenCount = F.CMX_HiddenCount + 1
 end
 return o
-end
-F.CMX_IsHidden = function(o)
-if typeof(o) ~= "Instance" then return false end
-if F.CMX_Own[o] then return true end
-local nm = nil
-pcall(function() nm = o.Name end)
-if type(nm) == "string" then
-if nm:find("CMFly", 1, true) or nm:find("CMX_", 1, true) then
-F.CMX_Own[o] = true
-F.CMX_HiddenCount = F.CMX_HiddenCount + 1
-return true
-end
-end
-return false
 end
 F.CMX_IsOwnPart = function(t)
 if F.CMX_SpoofParts[t] then return true end
@@ -11372,267 +9935,6 @@ F.CMX_SpoofMiss  = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofLast  = setmetatable({}, { __mode = "k" })
 F.Out("[绕过·属性伪装] 已关 · 本次共伪装 " .. tostring(F.CMX_SpoofUseCount or 0) .. " 次属性读取")
 end
-F.CMX_ViewFilterEnable = function()
-if F.CMX_ViewOn then return false end
-local got = F.MetaInstall("__namecall", game, "CMXView", function(box)
-return function(self, ...)
-local m = getnamecallmethod and getnamecallmethod() or ""
-if (m == "GetChildren" or m == "GetDescendants" or m == "FindFirstChild"
-or m == "FindFirstChildOfClass" or m == "FindFirstChildWhichIsA")
-and not F.CMX_IsCaller() then
-local res = box.orig(self, ...)
-if m == "GetChildren" or m == "GetDescendants" then
-if type(res) == "table" then
-local out, n = {}, 0
-for i = 1, #res do
-if not F.CMX_IsHidden(res[i]) then
-n = n + 1
-out[n] = res[i]
-end
-end
-F.CMX_ViewUseCount = (F.CMX_ViewUseCount or 0) + 1
-return out
-end
-return res
-end
-if F.CMX_IsHidden(res) then return nil end
-return res
-end
-return box.orig(self, ...)
-end
-end)
-if not got then
-T.CMX_ViewFilter = false
-F.Out("[绕过·视图过滤] 装不上 __namecall 钩子 ⇒ 该层不可用")
-return false
-end
-F.CMX_ViewOn = true
-F.CMX_ViewUseCount = 0
-pcall(function()
-F.CMX_MarkOwn(F._flyAtt)
-F.CMX_MarkOwn(F._flyAo)
-F.CMX_MarkOwn(F._flyAp)
-F.CMX_MarkOwn(F._flyBv)
-F.CMX_MarkOwn(F._flyBg)
-end)
-F.Out("[绕过·视图过滤] 已开: 反作弊遍历你的角色时, 看不见我们挂上去的东西(飞行约束/附件/方框)"
-.. " · 我们自己的遍历不受影响")
-return true
-end
-F.CMX_ViewFilterDisable = function()
-if not F.CMX_ViewOn then return end
-F.CMX_ViewOn = false
-pcall(function() F.MetaUninstall("__namecall", "CMXView") end)
-F.Out("[绕过·视图过滤] 已关 · 本次过滤 " .. tostring(F.CMX_ViewUseCount or 0) .. " 次遍历")
-end
-F.CMX_HumanizeEnable = function()
-F.CMX_HumanizeOn = true
-F.Out("[绕过·去机械化] 已开: 自动点击/自动交互/挂机注入的间隔改成随机抖动(0.7~1.3 倍), 不再是死板等间隔")
-return true
-end
-F.CMX_HumanizeDisable = function()
-if not F.CMX_HumanizeOn then return end
-F.CMX_HumanizeOn = false
-F.Out("[绕过·去机械化] 已关: 恢复固定间隔")
-end
-F.CMX_FakeSrc = "@game/PlayerScripts/PlayerModule/ControlModule"
-F.CMX_IsOursFn = function(f)
-if type(f) ~= "function" then return false end
-return F.CMX_Own[f] == true
-end
-F.CMX_InstNewEnable = function()
-if F.CMX_InstNewOn then return false end
-if type(Instance) ~= "table" or type(Instance.new) ~= "function" then return false end
-local orig
-orig = F.CMX_SafeHook(Instance.new, function(cls, parent, ...)
-local o = orig(cls, parent, ...)
-if F.CMX_InstNewOn and F.CMX_MarkFromOurs and F.CMX_IsCaller() then
-pcall(F.CMX_MarkOwn, o)
-end
-return o
-end)
-if not orig then
-T.CMX_InstNew = false
-F.Out("[绕过·自产登记] 钩不上 Instance.new ⇒ 该层不可用")
-return false
-end
-F.CMX_InstNewOrig = orig
-F.CMX_InstNewOn = true
-F.CMX_MarkFromOurs = true
-F.Out("[绕过·自产登记] 已开: 此后**我们**创建的任何实例自动登记为「自己人」"
-.. " ⇒ 视图过滤不用再靠名字, 游戏/反作弊的遍历一律看不见(游戏自己 created 的不受影响)")
-return true
-end
-F.CMX_InstNewDisable = function()
-if not F.CMX_InstNewOn then return end
-F.CMX_InstNewOn = false
-F.CMX_MarkFromOurs = false
-if F.CMX_InstNewOrig then
-pcall(function() hookfunction(Instance.new, F.CMX_InstNewOrig) end)
-end
-F.CMX_InstNewOrig = nil
-F.Out("[绕过·自产登记] 已关(已还原 Instance.new)")
-end
-F.CMX_DebugMaskEnable = function()
-if F.CMX_DebugMaskOn then return false end
-local d = debug
-if type(d) ~= "table" then return false end
-local target = d.info or d.getinfo
-if type(target) ~= "function" then return false end
-local orig
-orig = F.CMX_SafeHook(target, function(a, b, ...)
-local r = orig(a, b, ...)
-if not F.CMX_DebugMaskOn then return r end
-if F.CMX_IsCaller() then return r end
-if type(r) == "table" then
-local src = r.source
-if type(src) == "string" and (src:find("CheatMenu", 1, true)
-or src:find("PlayerScripts/", 1, true) == nil and src:sub(1, 1) == "=") then
-pcall(function()
-r.source = F.CMX_FakeSrc
-r.short_src = "ControlModule"
-r.what = "Lua"
-end)
-F.CMX_DebugMaskCount = (F.CMX_DebugMaskCount or 0) + 1
-elseif F.CMX_IsOursFn(a) then
-pcall(function()
-r.source = F.CMX_FakeSrc
-r.short_src = "ControlModule"
-r.what = "Lua"
-end)
-F.CMX_DebugMaskCount = (F.CMX_DebugMaskCount or 0) + 1
-end
-end
-return r
-end)
-if not orig then
-T.CMX_DebugMask = false
-F.Out("[绕过·栈取证伪装] 钩不上 debug.info ⇒ 该层不可用")
-return false
-end
-F.CMX_DebugMaskOrig = orig
-F.CMX_DebugMaskTarget = target
-F.CMX_DebugMaskOn = true
-F.CMX_DebugMaskCount = 0
-F.Out("[绕过·栈取证伪装] 已开: 反作弊用 debug.info/getinfo 做栈取证时, 我们的代码会显示成 "
-.. F.CMX_FakeSrc .. " · 我们自己查栈拿到的仍是真信息")
-return true
-end
-F.CMX_DebugMaskDisable = function()
-if not F.CMX_DebugMaskOn then return end
-F.CMX_DebugMaskOn = false
-if F.CMX_DebugMaskTarget and F.CMX_DebugMaskOrig then
-pcall(function() hookfunction(F.CMX_DebugMaskTarget, F.CMX_DebugMaskOrig) end)
-end
-F.CMX_DebugMaskTarget, F.CMX_DebugMaskOrig = nil, nil
-F.Out("[绕过·栈取证伪装] 已关 · 本次伪装 " .. tostring(F.CMX_DebugMaskCount or 0) .. " 次查询")
-end
-F.CMX_RequireBlockEnable = function()
-if F.CMX_RequireOn then return false end
-if type(require) ~= "function" then return false end
-F.CMX_RequireKeys = F.CMX_RequireKeys or {
-"anticheat", "anti-cheat", "antiexploit", "anti-exploit", "antihack", "anti-hack",
-"cheatdetector", "detection", "detector", "integrity", "checksum", "watchdog",
-"sentinel", "serverguard", "clientguard", "banmodule", "kickmodule",
-}
-local orig
-orig = F.CMX_SafeHook(require, function(mod, ...)
-if F.CMX_RequireOn and not F.CMX_IsCaller() then
-local nm = nil
-pcall(function() nm = tostring(mod) end)
-if type(nm) == "string" then
-local low = nm:lower()
-for i = 1, #F.CMX_RequireKeys do
-if low:find(F.CMX_RequireKeys[i], 1, true) then
-F.CMX_ReqBlocked = (F.CMX_ReqBlocked or 0) + 1
-local now = os.clock()
-if now - (F.CMX_ReqLogAt or 0) > 3 then
-F.CMX_ReqLogAt = now
-F.Out("[绕过·模块拦截] 已拦下可疑模块加载: " .. nm:sub(1, 70)
-.. " (累计 " .. tostring(F.CMX_ReqBlocked) .. " 次)")
-end
-return setmetatable({}, { __index = function() return function() end end })
-end
-end
-end
-end
-return orig(mod, ...)
-end)
-if not orig then
-T.CMX_RequireBlock = false
-F.Out("[绕过·模块拦截] 钩不上 require ⇒ 该层不可用")
-return false
-end
-F.CMX_RequireOrig = orig
-F.CMX_RequireOn = true
-F.CMX_ReqBlocked = 0
-F.Out("[绕过·模块拦截] 已开: 名字里带 anticheat/detector/integrity/checksum 之类的模块会被拦下并返回空模块"
-.. " · 我们自己的 require 不受影响")
-return true
-end
-F.CMX_RequireBlockDisable = function()
-if not F.CMX_RequireOn then return end
-F.CMX_RequireOn = false
-if F.CMX_RequireOrig then pcall(function() hookfunction(require, F.CMX_RequireOrig) end) end
-F.CMX_RequireOrig = nil
-F.Out("[绕过·模块拦截] 已关(已还原 require) · 本次拦下 " .. tostring(F.CMX_ReqBlocked or 0) .. " 个")
-end
-F.CMX_ClockMaskEnable = function()
-if F.CMX_ClockOn then return false end
-local q = tonumber(C.CMX_ClockStep) or 0.1
-F.CMX_ClockStepVal = q
-if type(os) ~= "table" or type(os.clock) ~= "function" then return false end
-local orig
-orig = F.CMX_SafeHook(os.clock, function(...)
-local v = orig(...)
-if not F.CMX_ClockOn then return v end
-if F.CMX_IsCaller() then return v end
-if type(v) ~= "number" then return v end
-F.CMX_ClockMaskCount = (F.CMX_ClockMaskCount or 0) + 1
-return math.floor(v / F.CMX_ClockStepVal) * F.CMX_ClockStepVal
-end)
-if not orig then
-T.CMX_ClockMask = false
-F.Out("[绕过·时钟粗化] 钩不上 os.clock ⇒ 该层不可用")
-return false
-end
-F.CMX_ClockOrig = orig
-F.CMX_ClockOn = true
-F.CMX_ClockMaskCount = 0
-F.Out("[绕过·时钟粗化] 已开: 别人用 os.clock 量时间只能拿到 " .. tostring(q)
-.. " 秒的整数倍(量不出我们 10ms 级的动作节奏) · 我们自己量时间仍是精确的")
-return true
-end
-F.CMX_ClockMaskDisable = function()
-if not F.CMX_ClockOn then return end
-F.CMX_ClockOn = false
-if F.CMX_ClockOrig then pcall(function() hookfunction(os.clock, F.CMX_ClockOrig) end) end
-F.CMX_ClockOrig = nil
-F.Out("[绕过·时钟粗化] 已关 · 本次粗化 " .. tostring(F.CMX_ClockMaskCount or 0) .. " 次取时")
-end
-F.CMX_AimLead = function(part, cam)
-local pos = part.Position
-local v = nil
-pcall(function() v = part.AssemblyLinearVelocity end)
-if typeof(v) ~= "Vector3" then pcall(function() v = part.Velocity end) end
-if typeof(v) ~= "Vector3" or v.Magnitude < 0.5 then return pos end
-local speed = tonumber(C.CMX_ProjSpeed) or 300
-if speed <= 1 then return pos end
-local origin = cam.CFrame.Position
-local t = (pos - origin).Magnitude / speed
-for _ = 1, 3 do
-t = ((pos + v * t) - origin).Magnitude / speed
-end
-if t > 1.5 then t = 1.5 end
-local lead = pos + v * t
-if C.CMX_ProjDrop then
-local g = 196.2
-pcall(function() g = workspace.Gravity end)
-lead = lead + Vector3.new(0, 0.5 * g * t * t, 0)
-end
-F.CMX_LeadT = t
-return lead
-end
 F.CMX_PLACEMAP_RAW = "107778070777162=Steal An Egg|124216119978534=[⌛] Ride A Pet|109983668079237=[🥚] Steal a Brainrot|121864768012064=[👾UPD] Fish It! 🐟|113290951185459=[⚙️UPD 6] Anime Dice|16732694052=Fisch 🐟 [RACING]|114326934417838=Break and Steal an Egg|77108422251420=[SKINS 🐮] Search For The Needl|15532962292=Sol's RNG [ Summer Event 🏖️]|6961824067=Fling Things and People|104320321984431=Paint to Get Rich 🎨|123720558354386=Build the Pyramid!|8737899170=⛏️ [MINE] Pet Simulator 99! 🌌|71704434889758=(BETA) Drive A Kukirin!|3351674303=Driving Empire [2X CASH]|1537690962=Bee Swarm Simulator|76841016201110=💭Dream Car Collection [LUCK EV|105011592530400=Build and Kill Zombies|111543903102439=+1 Stone Skipping|79480724066456=[🛥️Boats🛥️] Southern Mudding 🚜|122245938604556=[🔮UPDATE!] +1 Tongue Escape 😛|87740422849523=Steal A Car|78490532994307=Build An Ant Empire|537413528=Build A Boat For Treasure|80242821185181=+1 Wings For Eggs|89469502395769=[🍭] Kick a Lucky Block|126884695634066=[🐿️] Grow a Garden 🌶️|98610101874791=+1 Strength for Eggs|122278212262864=Race for Eggs|98800969324557=[⛏️] Storage Hunters: Open Wor|109928390521457=Anime Breaker [🛠️CRAFT]|120475074479690=[😇] Steal From The Rich!|107164765081465=[BOSS] Steal A Verity!|132767904294856=[⚽] Blue Lock Farm|137228775845999=Ghost Driver [ALPHA]|102072869879193=[GUILDS] Anime Astral Simulato|119048529960596=[🛵] Restaurant Tycoon 3|114697347887839=🐒 +1 Speed Monkey Escape|4639625707=War Tycoon|13822889=🌳 Lumber Tycoon 2|76943966208523=Clone to Steal Eggs|7305309231=Taxi Boss 🚖|103429966174263=+1 Paint Keyboard Adventure|82081400078378=Steal ASMR!|138686218420016=[🗻] Mine Antarctica|74629631798007=[🎣UPD!] Pets Universe! 🐾|131346454575416=[💥] Mini War|128784467030899=[UPD☢️] Merge a Nuke!|88047783411976=Open Sea For Animals!|70906625936847=Gym Star Simulator 🏋️|95409544559668=Military Army Tycoon|77843161404023=Run a Restaurant!|92648272637932=[W3] +1 Mog Evolution|99679692310083=Steal Animal Egg|121831322352666=Dig For Eggs|4924922222=Brookhaven 🏡RP|920587237=[24H🎃] Adopt Me!|15101393044=Dress To Impress ⭐|13967668166=LifeTogether 🏠 RP|8481844229=Berry Avenue 🏠 RP|5233782396=✨ Creatures of Sonaria 📜 Survi|74395953411817=Dreamville 🏡 RP [Multiple Kids|122485613019196=Dubai 🏡 RP [Multiple Kids! 👶]|185655149=[🍂] Welcome to Bloxburg|7711635737=Emergency Hamburg|136020512003847=San Diego Roleplay|5289509545=Gacha Online ✨ RP|12985361032=Metro Life 🏡 City RP|97577741629233=⭐Catalog Avatar Runway|735030788=Royale🎃High|2534724415=[🗺️] Emergency Response: Liber|16625391970=NewSmith 🏡 RP|6989310863=Wild Horse Islands|8704997000=[🧪] Maple Hospital 🍂|3663340706=Warrior Cats: Ultimate Edition|891852901=Greenville RP (⭐AUDI + SHELBY |1365404657=Feather Family 🎃 [Burrowing Ow|192800=🍕Work at a Pizza Place|135717153770519=Toilet World Roleplay 2|15768329004=IT GIRL 🏝️|6698800091=[MOBILE!📱]Prior Extinction - D|96796259580891=Kingdom World|18753889337=Main Street 🏡RP|106568491289620=[将] Shogun's Reign|18214855317=Savannah Life|12716055617=Emergency Emden|17192092512=Deermont 🏡RP|71599043035739=SCP MORPH|3457390032=Club Roblox RP 💗 [👶 NEEDS]|8369888266=Redcliff City 🏡RP|6737970321=Livetopia 🏡 RP|5712833750=Animal Simulator|6377740507=[Stickers] Miraculous™ RP: Lad|5593925613=Countryball World 🌎|135571353544108=Love Letter: Roleplay ( YANWEE|104841616983113=San Aurie|13473615074=Boxywood 🏠🌴 RP|11862502039=Seaside RP🏡🌴 City RP|112333343527957=Highschool Experience RP|15182389440=[ 🍂 🏍️ 🎣 BikeLife ] Northline |71174733280934=Palmhaven City Life RP🏡|16962279458=☀️ KOYA DANCE STUDIO|18537079992=Армия Роблокса РП|5041144419=SCP: Roleplay|75178747054941=LCS: EQuest|79886695267825=Steal The Show! 🎤⭐|3631820248=[🎉6th Anniversary!] Stevos Gem|81223687051453=PRISON RP|373513488=FNAF RP - TPRR [🐻FB3 EVENT📺]|118447215156914=Prism Runway Show💎|102917792916356=Apocalyptic Titans Roleplay|142823291=Murder Mystery 2|79546208627805=99 Nights in the Forest 🔦|18687417158=[✨BONUS] Forsaken|93978595733734=[CURE] Violence District|78515283254292=Animal Hospital (Anomaly) 🧪|9872472334=Evade|4623386862=Piggy [SEASON 9 - FRIGHT NIGHT|893973440=Flee the Facility|116802325837172=7 Days Cat-Sitting|70411440483149=100 Days At Sea|124061247871628=Animal Daycare (Anomaly)|2768379856=3008 [2.75]|113481077323469=Scream And Run|70923197964305=⚔️ Killer's Arena|115668616082195=WHO FARTED?|85967844112283=Last Stop [Beta]|117713779364528=Lethal Ape Experience|78453398695059=THRESHOLD [HORROR] [UPD 1.5]|92122513197996=⛏️Dig to Escape|189707=Natural Disaster Survival|82591391194183=MM2 of The Locust|97793725257596=MMZ👽|90148635862803=[UPD] 🧟 Survive the Apocalypse|139020444733179=Survive Deep in the Woods|82457571485380=Zombie Rush Survival 🧟‍♂️|96168869671905=💎 ROB IT|6205205961=Escape Running Head|121165298854655=[CREATURE] DON'T LET HIM IN|14608970270=(ANNIVERSARY) Outcome Memories|15318113891=Lethal Ape|140553375004913=this underrated game (flamingo|137826330724902=Scary Shawarma Kiosk: the ANOM|129626004396080=just a sniper game|127877871885165=he ate them. [HORROR]|114204398207377=[FACTIONS] Survive Zombie Aren|18666738837=Death Order: Simon Says|128263975853774=🛠️Build and Survive|12931609417=Color or Die 🎨|127380660530951=Survive Overnight in a Mega St|87468080405188=[UPDATE] Home Alone: Anomalies|18199615050=[UPD] Demonology🕯️|7336302630=Project Delta|135889880932940=Survive 7 Days In Desert 🌵|120951586797306=🙈 Killer or Innocent|100227226022278=Survive The Swarm[2x loot]|6382584061=Build to Survive 🛠️|98894876188248=Cheating During Testing [BETA]|116070952245255=[💪] Build Base to Survive VERI|123393202531499=Build and Hide to Survive VERI|4580204640=🔪Survive the Killer!|74716719697996=[⏰SOON]🚪Survive Verity in Area|109423220190564=[UPDATE] Backrooms Company|82531308645115=Plunder [UPD]|124338404742585=Keep the Door Locked🔒|5118969548=Spider|108645230905176=Mrbeast Island Escape|119004860768199=[UPD]BreakDoor|2753915549=Blox Fruits|16205713724=Slayers 2|1730877806=[🍬HALLOWEEN PT 1] Grand Piece |13379208636=Attack on Titan Revolution|2809202155=[CDR & DD] Your Bizarre Advent|77649408247578=[2X LUCK] Dungeon Quest Reborn|111097829542198=[🦋] Legacy Piece|128451689942376=[🎞️ PROJECTION] Jujutsu: Zero|4520749081=King Legacy|117533937949084=Iron Soul: Dungeon|104761395312874=[🐲Goku & Castorice🟣] Lineage P|114574503491412=Anime Zero [RELEASE] 🎉|4616652839=Shindo Life [250]|90860390610142=Clover Legends|106484206883664=⚔️ Dungeon Lootr|4111023553=Deepwoken|80734098185936=An Average Campaign [Alpha v0.|18172550962=[CLASSES] Pixel Blade|8075399143=[✨Ashura Update] Ninja Time|9096881148=Peroxide [Update!]|93934100402512=Clover Time [BETA RELEASE]|71315343=[PARASITE 🌀] Dragon Ball Rage|125503525638054=The Veil|5571328985=[🐢] Bloodlines|2727067538=World // Zero ⚔️ Anime RPG|120704669141193=[V13] Blox Loot|140409475718339=[YUTA!] Anime Apocalypse|10260193230=[UPDATE 4] Meme Sea|10450270085=[⚖️JUDGEMAN] Jujutsu Infinite|5130598377=A Universal Time|119091355492870=[UPDATE 1.75]Rock Fruit|6918802270=Haze Seas|11729688377=Booga Booga [QUESTS! 📜]|10912405603=[3 YEARS!] Clover Retribution|15014439457=Demon Blade|3177438863=[🎃EVENT] Dragon Blox|122003435349029=The Portal [MMORPG]|10595058975=[Withered Grove 🧿] Arcane Line|3016661674=Rogue Lineage|14067600077=TYPE://SOUL|6728870912=World of Stands|5116869569=🌴 Doodle World! [BEACH EVENT]|139150436440482=[⚔️COMBAT] Ninja: Legacy [RP]|914010731=Ro-Ghoul [ALPHA]|116276659864007=Project Mirror Labyrinth|6938803436=[⭐2X] Anime Dimensions Simulat|6298464951=Roblox Is Unbreakable|102829972707814=civilization survival game|132044122002338=[Update 11 🔥] Chaos Fruits|118582391303761=UNTITLED RPG GAME|114581778828030=Soul RPG|100283815455755=Vagrant Survival [0.9]|15167153398=✨Someday City 2.0 ✨|5870869755=HEROES: Infinite 2|18923620224=[🗼 UPDATE 5.0] Anime Warriors |1087852616=CATASTROPHIA ☢️ Survive ☢️|134931730875913=[BETA] Crazy Odyssey: A New Jo|4622037906=Sans Fight Simulator|17625359962=RIVALS|112731528776884=KNIFE DUELS|90568084448279=[FPS] One Tap|122446657157717=[🔥NEW SNIPER] Sniper Arena|13687899540=Cold War [VIETNAM]|120851538706364=Murder Duels|114234929420007=BloxStrike|84556640895285=Deagle Arena|12334109280=Guts & Blackpowder|113506071094099=[🌴] SHARP|10165583746=Examination|93091759101123=FPS🔥AirDrop Arena [S5]🔥|72920620366355=[SEASON 3] Operation One|79393329652220=[🧤] Defusal|130404059693601=Strike: Warfare|3678761576=[🗣️CALLOUT🗣️] ENTRENCHED 🥀|120189115846709=TTK Testing [CUSTOMIZATION]|129253568870286=Bonk & Block [5v5]|102871156420149=The Lost Front|109397169461300=SNIPER DUELS|21532277=Notoriety: A PAYDAY® Experienc|118367369949006=Ground War|13955927965=Blood Zone 🎃|90184287580174=(SEASON 2) KILLSTREAK|286090429=Arsenal|136801880565837=[FPS] Flick|18259975825=Grave/Digger|13429790955=📚 Murderers vs Sheriffs 2|123873483242204=Anime Finals|3891618314=⚓ Harbor Havoc|119214646022567=Top sniper [5.0]|5286116071=Hunting Season [BETA]|15694891095=[CLANS] Combat Arena|94590879393563=Weird Gun Game [UPDATE!]|301549746=Counter Blox|130490210702949=Blood Debt Gun System|99342262733194=[SUMMER] Randomizer: Redux|14313259147=FORTLINE|104856666707760=Killstreak Battle Royale|3214114884=[💰2x] Flag Wars!|99001115434148=Fluxo PVP [MATCHMAKING]|94987506187454=[🤝 TRADING] REDLINER|115286378269814=Protect The House From Monster|13438553315=Decaying Winter|4991214437=town|13794093709=SCORCHED EARTH 🔊|106605940421527=BetterEH|443406476=Project Lazarus: 💀 ZOMBIES 💀|14518422161=Gunfight Arena|2778230703=Reminiscence Zombies|112757576021097=Defuse Division|111267397030523=CQB Hell [NEW MODES]|328028363=Typical Colors 2|71607575632633=[🎃] Zone Defense RNG|131558436575033=[REALISTIC] SevenM Hood Testin|9391468976=[SKY ASSASSIN] Jujutsu Shenani|10449761463=The Strongest Battlegrounds|135856908115931=[🌌DUELS] Murderers VS Sheriffs|13772394625=Blade Ball|104715542330896=BlockSpin 🔪 [WEATHER]|6872265039=BedWars [🎣RERELEASE🪤]|101770480176177=[X2 XP] Command An Army|1458767429=ABA|120700541929930=Knife VS Gun DUELS|127403135954624=[ Halloween ] Kaiju Alpha|118418618261207=RUNAWAYS [beta]|108567435288296=Anime Ability Arena|72105128013629=Kidnap And Jail|6403373529=[UPDATE🏴‍☠️] Slap Battles👏|110175021189594=Ability Arena 💥|94217045453265=Dueling Grounds ⚔️|606849621=Jailbreak|13621938427=[DEIMOS👹] untitled boxing game|128119795963270=Murder Mystery DUELS"
 F.CMX_PlaceMap = nil
 F.CMX_GameName = function()
@@ -11645,51 +9947,6 @@ if k then F.CMX_PlaceMap[k] = v end
 end
 end
 return F.CMX_PlaceMap[pid], pid
-end
-F.CMX_GameLabel = function()
-local nm, pid = F.CMX_GameName()
-if nm then return nm .. "  (PlaceId " .. pid .. ")" end
-return "未知游戏  (PlaceId " .. pid .. " / GameId " .. tostring(game.GameId or "?") .. ")"
-end
-F.CMX_ProfileGet = function()
-local _, pid = F.CMX_GameName()
-if not pid or pid == "" then return nil end
-C.CMX_GameProfiles = C.CMX_GameProfiles or {}
-return C.CMX_GameProfiles[pid]
-end
-F.CMX_ProfilePut = function(field, value)
-local _, pid = F.CMX_GameName()
-if not pid or pid == "" or value == nil then return end
-C.CMX_GameProfiles = C.CMX_GameProfiles or {}
-local p = C.CMX_GameProfiles[pid]
-if not p then p = {} C.CMX_GameProfiles[pid] = p end
-p[field] = value
-end
-F.CMX_ProfileApply = function()
-F.Out("[游戏档案] 当前游戏: " .. F.CMX_GameLabel())
-local p = F.CMX_ProfileGet()
-if not p then
-F.Out("[游戏档案] 这个游戏还没档案 ⇒ 你在本局调好的 档位/飞行通道/加速通道/传送方式 会被记住, 下次可用「套用本游戏上次的设置」按钮一键套回")
-return
-end
-local n = 0
-if p.tier and T.BypassTier ~= p.tier then
-T.BypassTier = p.tier
-pcall(F.BypassTierApply, p.tier)
-n = n + 1
-end
-if p.fly and C.FlyDrive ~= p.fly then
-C.FlyDrive = p.fly
-n = n + 1
-if T.FlyOn then pcall(function() F.FlySet(true) end) end
-end
-if p.speed and C.SpeedDrive ~= p.speed then
-C.SpeedDrive = p.speed
-n = n + 1
-if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
-end
-if p.flydrive_pos ~= nil and T.CMX_SpoofPos ~= p.flydrive_pos then T.CMX_SpoofPos = p.flydrive_pos n = n + 1 end
-if n > 0 then F.Out("[游戏档案] 已套用本游戏专属设置 " .. tostring(n) .. " 项(档位/通道)") end
 end
 F.CMX_ScanDetectors = function()
 F.Out("[扫描·检测器] ===== 名字像检测器的对象 / 脚本 =====")
@@ -12122,18 +10379,6 @@ local per = F.CMX_GameDetectKeys()
 push(per)
 return out, per
 end
-F.CMX_ShowGameDetect = function()
-F.Out("[检测档案] 当前游戏: " .. F.CMX_GameLabel())
-local per, pid = F.CMX_GameDetectKeys()
-if per and #per > 0 then
-F.Out("[检测档案] 本游戏已知的检测命名(从公开脚本里挖出来的, " .. tostring(#per) .. " 个):")
-for i = 1, #per do F.Out("[检测档案]   · " .. tostring(per[i])) end
-else
-F.Out("[检测档案] 这个游戏没有预置档案(公开脚本里没挖到它的检测命名)")
-end
-F.Out("[检测档案] 通用词库: 强命中 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.strong or {}))
-.. " 个 + 移动/加速/飞行专用 " .. tostring(#(F.CMX_GENKEYS and F.CMX_GENKEYS.move or {})) .. " 个")
-end
 F.CMX_BanAllApply = function(on)
 local items = {
 { "CMX_BlockReport", F.CMX_BlockReportEnable, F.CMX_BlockReportDisable, "拦上报/封禁远程" },
@@ -12156,165 +10401,6 @@ or "已关(四层全部还原)"))
 return n
 end
 F.CMX_ScrubShapes = { { 19, 15, 2 }, { 19, 14, 2 }, { 12, 8, 2 }, { 8, 5, 2 }, { 7, 3, 2 } }
-F.CMX_Remember = function(key, on)
-if type(C.CMX_BypassOn) ~= "table" then C.CMX_BypassOn = {} end
-local list = C.CMX_BypassOn
-for i = #list, 1, -1 do
-if tostring(list[i]) == tostring(key) then table.remove(list, i) end
-end
-if on then list[#list + 1] = tostring(key) end
-end
-F.CMX_AutoScrubEnable = function()
-if F.CMX_AutoScrubOn then return false end
-local good = nil
-for i = 1, #F.CMX_ScrubShapes do
-local sh = F.CMX_ScrubShapes[i]
-local f = F.CMX_FindClosureFast(sh[1], sh[2])
-if f then
-local t = nil
-pcall(function() t = debug.getupvalue(f, sh[3]) end)
-if type(t) == "function" then good = { sh[1], sh[2], sh[3] } break end
-end
-end
-if not good then
-F.Out("[绕过·自动清洗] 常见形状全试完都没命中(执行器 getgc 受限?) ⇒ 改用「参数清洗钩子」手填形状")
-return false
-end
-F.CMX_ShapeOverride = tostring(good[1]) .. "," .. tostring(good[2]) .. "," .. tostring(good[3])
-F.CMX_AutoScrubOn = true
-local ok = F.CMX_ArgScrubEnable()
-if not ok then
-F.CMX_AutoScrubOn = false
-return false
-end
-F.Out("[绕过·自动清洗] 已开: 形状 " .. tostring(good[1]) .. "," .. tostring(good[2]) .. "," .. tostring(good[3])
-.. " 的第 " .. tostring(good[3]) .. " 个 upvalue 已挂钩")
-return true
-end
-F.CMX_AutoScrubDisable = function()
-if not F.CMX_AutoScrubOn then return end
-F.CMX_AutoScrubOn = false
-pcall(F.CMX_ArgScrubDisable)
-F.Out("[绕过·自动清洗] 已关")
-end
-F.CMX_HookHardApply = function()
-local nl = F.CMX_G("newlclosure")
-if type(nl) ~= "function" then
-T.CMX_HookHard = false
-F.Out("[绕过·钩子加固] 本执行器没有 newlclosure ⇒ 加固不可用, 其余绕过照常")
-return false
-end
-T.CMX_HookHard = true
-local n = 0
-for slot, bucket in pairs(F.MetaLayers or {}) do
-for id, rec in pairs(bucket) do
-if rec and rec.alive and type(rec.raw) == "function" and rec.box then
-local ok, w = pcall(nl, function(self, ...)
-if not rec.alive then return rec.box.orig(self, ...) end
-return rec.raw(self, ...)
-end)
-if ok and type(w) == "function" then
-local ok2 = pcall(function() hookmetamethod(rec.target, slot, w) end)
-if ok2 then rec.wrapper = w n = n + 1 end
-end
-end
-end
-end
-F.Out("[绕过·钩子加固] 已把 " .. tostring(n) .. " 层元方法钩子重建成 LClosure 形态"
-.. " —— 反作弊用 islclosure 自检钩子时会看到「这是个普通 Lua 函数」; 之后新装的钩子也走这条")
-return true
-end
-F.CMX_HookHardRestore = function()
-if not T.CMX_HookHard then return end
-T.CMX_HookHard = false
-local nc = F.CMX_G("newcclosure")
-if type(nc) ~= "function" then return end
-local n = 0
-for slot, bucket in pairs(F.MetaLayers or {}) do
-for id, rec in pairs(bucket) do
-if rec and rec.alive and type(rec.raw) == "function" and rec.box then
-local ok, w = pcall(nc, function(self, ...)
-if not rec.alive then return rec.box.orig(self, ...) end
-return rec.raw(self, ...)
-end)
-if ok and type(w) == "function" then
-local ok2 = pcall(function() hookmetamethod(rec.target, slot, w) end)
-if ok2 then rec.wrapper = w n = n + 1 end
-end
-end
-end
-end
-F.Out("[绕过·钩子加固] 已还原 " .. tostring(n) .. " 层为新 C 闭包形态")
-end
-F.CMX_IdentityMaskEnable = function()
-if F.CMX_IdentityOn then return false end
-local g = F.CMX_G("getthreadidentity") or F.CMX_G("getidentity")
-if type(g) == "function" then
-pcall(function() F.CMX_IdentitySaved = g() end)
-end
-local before = F.CMX_IdentitySaved
-local ok = F.CMX_SetIdentity(8)
-if not ok then return false end
-F.CMX_IdentityOn = true
-F.Out("[绕过·身份] 已伪装: 线程身份 " .. tostring(before or "?") .. " → 8")
-return true
-end
-F.CMX_IdentityMaskDisable = function()
-if not F.CMX_IdentityOn then return end
-F.CMX_IdentityOn = false
-local want = tonumber(F.CMX_IdentitySaved) or 2
-pcall(function() F.CMX_SetIdentity(want) end)
-F.CMX_IdentitySaved = nil
-F.Out("[绕过·身份] 已还原线程身份")
-end
-F.CMX_FFlagPreset = {
-{ "FFlagDebugDisableTelemetryV2", "true" },
-{ "DFIntTaskSchedulerTargetFps", "240" },
-}
-F.CMX_FFlagApplyPack = function()
-local sf = F.CMX_G("setfflag")
-if type(sf) ~= "function" then
-T.CMX_FFlagPack = false
-F.Out("[绕过·FFlag] 本执行器没有 setfflag ⇒ 该层不可用")
-return false
-end
-if F.CMX_FFlagOn then return false end
-local gf = F.CMX_G("getfflag")
-if type(gf) ~= "function" then
-T.CMX_FFlagPack = false
-F.CMX_FFlagOn = false
-F.Out("[绕过·FFlag] 本执行器没有 getfflag ⇒ 为避免写了没法还原, 已跳过 FFlag 写入")
-return false
-end
-F.CMX_FFlagSaved = {}
-local n = 0
-for i = 1, #F.CMX_FFlagPreset do
-local k, v = F.CMX_FFlagPreset[i][1], F.CMX_FFlagPreset[i][2]
-if type(gf) == "function" then
-local ok, old = pcall(gf, k)
-if ok then F.CMX_FFlagSaved[k] = old end
-end
-local num = tonumber(v)
-local ok2 = pcall(sf, k, num ~= nil and num or v)
-if ok2 then n = n + 1 end
-end
-F.CMX_FFlagOn = true
-F.Out("[绕过·FFlag] 已写入预设 " .. tostring(n) .. "/" .. tostring(#F.CMX_FFlagPreset)
-.. " 条(遥测关闭 + 帧率上限) · 想加自己的一条用下面「写自定义 FFlag」")
-return n > 0
-end
-F.CMX_FFlagRestore = function()
-if not F.CMX_FFlagOn then return end
-F.CMX_FFlagOn = false
-local sf = F.CMX_G("setfflag")
-if type(sf) == "function" and type(F.CMX_FFlagSaved) == "table" then
-for k, v in pairs(F.CMX_FFlagSaved) do
-if v ~= nil then pcall(sf, k, v) end
-end
-end
-F.CMX_FFlagSaved = nil
-F.Out("[绕过·FFlag] 已尽力还原(取不到旧值的项无法还原, 重进游戏即可复位)")
-end
 F.CMX_AntiDetectAudit = function()
 F.Out("[反检测] ===== 自检: 我们会在哪些地方被看见 =====")
 local hooked, lc, cc = 0, 0, 0
@@ -12328,7 +10414,7 @@ end
 end)
 F.Out(string.format("[反检测] ① 我们钩过的函数 %d 个 · 其中 LClosure %d / C 闭包 %d", hooked, lc, cc))
 if cc > 0 and not T.CMX_HookHard then
-F.Out("[反检测]    ⚠ C 闭包形态会被「islclosure 自检」认出来 ⇒ 建议开「钩子加固(newlclosure)」")
+F.Out("[反检测]    ⚠ C 闭包形态会被「islclosure 自检」认出来(本版没有可开的新 C 闭包化开关, 仅提示)")
 end
 local layers = 0
 pcall(function()
@@ -12351,75 +10437,14 @@ end
 end
 end)
 F.Out("[反检测] ③ 我们的界面: 在隐藏容器里 " .. tostring(inHui) .. " 个 · 直接挂在 CoreGui 明文可见 " .. tostring(inCore) .. " 个")
-if inCore > 0 then F.Out("[反检测]    ⚠ 明文挂在 CoreGui 的界面, 游戏用 CoreGui:GetChildren() 就能看到 ⇒ 点下面「一键藏匿」") end
+if inCore > 0 then F.Out("[反检测]    ⚠ 明文挂在 CoreGui 的界面, 游戏用 CoreGui:GetChildren() 就能看到 ⇒ 建议关掉「界面保护」外的多余挂载") end
 local mtRO = "?"
 pcall(function()
 local mt = getrawmetatable(game)
 if mt and type(isreadonly) == "function" then mtRO = tostring(isreadonly(mt)) end
 end)
 F.Out("[反检测] ④ game 元表只读状态 = " .. mtRO .. "(false 表示我们为了挂钩把它解锁了)")
-if F.CMX_ScrubOn or F.CMX_AutoScrubOn then
-F.Out("[反检测] ⑤ 参数清洗钩子: 开 · 已清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次")
-end
-F.Out("[反检测] 结论: 上面带 ⚠ 的项就是当前暴露面, 点「一键藏匿」能自动处理 ①③④")
-end
-F.CMX_AntiDetectHide = function()
-F.Out("[反检测] 正在藏匿…")
-pcall(F.CMX_AntiDetectAudit)
-if not T.CMX_HookHard and type(F.CMX_G("newlclosure")) == "function" then
-F.Try("CMX_HookHardApply", F.CMX_HookHardApply)
-end
-local moved = 0
-pcall(function()
-local hui = gethui and gethui()
-if not hui then return end
-local roots = { game:GetService("CoreGui") }
-pcall(function() roots[#roots + 1] = LP:FindFirstChild("PlayerGui") end)
-for _, r in ipairs(roots) do
-if r then
-for _, d in ipairs(r:GetChildren()) do
-local ours = false
-pcall(function() if d:GetAttribute("CMOwned") then ours = true end end)
-for _, k in ipairs(F.OUR_GUI_NAMES) do
-if string.find(tostring(d.Name), k, 1, true) then ours = true break end
-end
-if ours and d.Parent ~= hui then
-pcall(function() d.Parent = hui moved = moved + 1 end)
-end
-end
-end
-end
-end)
-local protected = 0
-local pg = F.CMX_G("protect_gui") or F.CMX_G("protectgui")
-if type(pg) == "function" then
-pcall(function()
-local hui = gethui and gethui()
-if not hui then return end
-for _, d in ipairs(hui:GetChildren()) do
-if pcall(pg, d) then protected = protected + 1 end
-end
-end)
-end
-local roFixed = false
-if type(F.MetaLayers) == "table" then
-local alive = false
-pcall(function()
-for _, bucket in pairs(F.MetaLayers) do
-for _, rec in pairs(bucket) do
-if rec and rec.alive then alive = true end
-end
-end
-end)
-if not alive then
-pcall(function()
-local mt = getrawmetatable(game)
-if mt and type(setreadonly) == "function" then setreadonly(mt, true) roFixed = true end
-end)
-end
-end
-F.Out("[反检测] 已藏匿: 界面挪进隐藏容器 " .. tostring(moved) .. " 个 · 加保护 " .. tostring(protected)
-.. " 个 · game 元表恢复只读 " .. (roFixed and "是" or "否(还有活着的钩子层, 不能恢复)"))
+F.Out("[反检测] 结论: 上面带 ⚠ 的项就是当前暴露面(可关的项见系统页「反作弊」区)")
 end
 F.ACWriteTierApply = function(v)
 v = tostring(v or "")
@@ -12947,100 +10972,6 @@ end)
 pcall(F.LogFlush, "一键全扫描")
 F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
 end
-F.CMX_ScanExport = function()
-local lines = F._logBuf or {}
-local txt = table.concat(lines, "\n")
-local ok = false
-pcall(function()
-local sc = F.CMX_G("setclipboard") or F.CMX_G("toclipboard") or F.CMX_G("write_clipboard")
-if type(sc) == "function" then sc(txt) ok = true end
-end)
-F.Out("[扫描·导出] 日志 " .. tostring(#lines) .. " 行 / " .. tostring(#txt) .. " 字"
-.. (ok and " · 已复制到剪贴板, 直接粘给我就行" or " · 复制失败(执行器没剪贴板)"))
-end
-F.CMX_ArgScrubEnable = function()
-if F.CMX_ScrubOn then return false end
-local nups, nconsts, upidx = F.CMX_ScrubParse()
-local f, seen = F.CMX_FindClosure(nups, nconsts)
-if not f then
-F.Out("[绕过·参数清洗] 形状(" .. tostring(nups) .. "," .. tostring(nconsts)
-.. ") 没找到闭包(已扫 " .. tostring(seen or 0) .. " 个) —— 换个形状或提高扫描上限")
-return false
-end
-local target = nil
-pcall(function() target = debug.getupvalue(f, upidx) end)
-if type(target) ~= "function" then
-F.Out("[绕过·参数清洗] 该闭包第 " .. tostring(upidx) .. " 个 upvalue 不是函数 —— 换 upindex(常见 2)")
-return false
-end
-local orig = nil
-local hits = 0
-local wrap = function(a1, a2, ...)
-if typeof(a2) == "table" then
-pcall(setmetatable, a2, {})
-hits = hits + 1
-F.CMX_ScrubHits = hits
-end
-if type(orig) ~= "function" then return nil end
-return orig(a1, a2, ...)
-end
-local o = F.CMX_SafeHook(target, wrap)
-if not o then
-F.Out("[绕过·参数清洗] hookfunction 失败(该函数被保护 / 执行器不支持)")
-return false
-end
-orig = o
-F.CMX_ScrubOrig = o
-F.CMX_ScrubHook = target
-F.CMX_ScrubOn = true
-F.CMX_ScrubHits = 0
-F.CMX_ScrubShape = { nups, nconsts, upidx }
-local sig = ""
-pcall(function()
-local si = debug.getinfo(target, "s")
-sig = tostring(si and si.source or "?") .. "#" .. tostring(si and si.linedefined or -1)
-end)
-F.CMX_ScrubSig = sig
-if not F.CMX_ScrubHeal then
-local holder = { thread = nil, done = false }
-holder.thread = task.spawn(function()
-while F.CMX_ScrubOn do
-task.wait(8)
-if not F.CMX_ScrubOn then break end
-local cur = ""
-pcall(function()
-local si = debug.getinfo(F.CMX_ScrubHook, "s")
-cur = tostring(si and si.source or "?") .. "#" .. tostring(si and si.linedefined or -1)
-end)
-if cur ~= F.CMX_ScrubSig then
-F.Out("[绕过·参数清洗] 目标函数被重建 ⇒ 正在重新定位并重装钩子")
-local sp = F.CMX_ScrubShape
-pcall(F.CMX_ArgScrubDisable)
-if sp then
-F.CMX_ShapeOverride = tostring(sp[1]) .. "," .. tostring(sp[2]) .. "," .. tostring(sp[3])
-F.Try("CMX_ArgScrubEnable", F.CMX_ArgScrubEnable)
-end
-F.CMX_ScrubHealFix = (F.CMX_ScrubHealFix or 0) + 1
-end
-end
-holder.done = true
-if F.CMX_ScrubHeal == holder.thread then F.CMX_ScrubHeal = nil end
-end)
-if holder.done then F.CMX_ScrubHeal = nil else F.CMX_ScrubHeal = holder.thread end
-end
-F.Out("[绕过·参数清洗] 已开: 形状(" .. tostring(nups) .. "," .. tostring(nconsts)
-.. ") 的第 " .. tostring(upidx) .. " 个 upvalue 已挂钩 · 参数表元表会被抹成空表(反指纹检测)")
-return true
-end
-F.CMX_ArgScrubDisable = function()
-if not F.CMX_ScrubOn then return end
-F.CMX_ScrubOn = false
-pcall(function()
-if F.CMX_ScrubHook and F.CMX_ScrubOrig then hookfunction(F.CMX_ScrubHook, F.CMX_ScrubOrig) end
-end)
-F.CMX_ScrubHook, F.CMX_ScrubOrig = nil, nil
-F.Out("[绕过·参数清洗] 已关 · 本次共清洗 " .. tostring(F.CMX_ScrubHits or 0) .. " 次参数表")
-end
 F.CMX_StackDump = function()
 F.Out("[绕过·栈] ===== 当前调用栈(从内往外) =====")
 local i, n = 1, 0
@@ -13122,22 +11053,6 @@ pcall(function()
 F.Out("[绕过·能力]   当前线程身份 = " .. tostring(getthreadidentity and getthreadidentity() or "?"))
 end)
 end
-F.CMX_SetIdentity = function(n)
-local f = F.CMX_G("setthreadidentity") or F.CMX_G("setidentity")
-if type(f) ~= "function" then
-F.Out("[绕过·身份] 本执行器没有 setthreadidentity/setidentity —— 无法改线程身份")
-return false
-end
-local want = tonumber(n) or 8
-local ok = pcall(f, want)
-local now = "?"
-pcall(function()
-local g = F.CMX_G("getthreadidentity") or F.CMX_G("getidentity")
-if type(g) == "function" then now = tostring(g()) end
-end)
-F.Out("[绕过·身份] " .. (ok and ("已设为 " .. tostring(want)) or "设置被拒") .. " · 当前读回 = " .. now)
-return ok
-end
 F.CMX_FnInfo = function(txt)
 local a, b, c = F.CMX_ScrubParse(txt)
 local f, seen = F.CMX_FindClosure(a, b)
@@ -13183,7 +11098,6 @@ if F._iiAuto then return end
 F._iiAuto = task.spawn(function()
 while T.InstantInteract do
 local igap = 4
-if F.CMX_HumanizeOn then igap = F.CMX_Jitter(4, 1.5) end
 task.wait(igap)
 if not T.InstantInteract then break end
 if not (F.II_SAVED and next(F.II_SAVED)) then
@@ -13211,52 +11125,6 @@ end
 end
 end
 F._iiAuto = nil
-end)
-end
-F.AntiAFKInputLoop = function()
-if F._afkInput then return end
-F._afkInput = task.spawn(function()
-while T.AntiAFK do
-local mode = tostring(C.AFKMode or "")
-if mode:find("鼠标抖动", 1, true) then
-local mm = F.CMX_G("mousemoverel")
-if type(mm) == "function" then
-pcall(mm, 40, 0)
-task.wait(0.05)
-pcall(mm, -40, 0)
-else
-local vu = F.CMX_G("VirtualUser")
-if vu then
-pcall(function()
-vu:CaptureController()
-vu:MoveMouse(Vector2.new(60, 60))
-end)
-end
-end
-end
-if mode:find("按键注入", 1, true) and not F._typing then
-local kp, kr = F.CMX_G("keypress"), F.CMX_G("keyrelease")
-if type(kp) == "function" and type(kr) == "function" then
-pcall(kp, 0x20)
-task.wait(0.06)
-pcall(kr, 0x20)
-else
-local vim = nil
-pcall(function() vim = game:GetService("VirtualInputManager") end)
-if vim then
-pcall(function()
-vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-task.wait(0.06)
-vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-end)
-end
-end
-end
-local agap = 30
-if F.CMX_HumanizeOn then agap = F.CMX_Jitter(30, 0.4) end
-task.wait(agap)
-end
-F._afkInput = nil
 end)
 end
 F.GetTargetPlayer = function()
@@ -13878,24 +11746,6 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddSection("脑红 / 现金")
-Tabs.AFK:AddButton({ Title = "一键收钱 / 收集货币(1~30 槽)", Description = "逐个槽位发 rev_B_Collect 收钱; 找不到这个接口会在日志里明确报错", Callback = function()
-if not F.Once("collectall", 3) then return end
-task.spawn(function() pcall(F.CollectAll, 30) end)
-end })
-Tabs.AFK:AddButton({ Title = "预览(只读 · 会卖几个 / 保留几个)", Description = "只看不动背包: 按当前门槛算出「可卖 N 个 · 限定保留 M 个 · 算不出 X 个」", Callback = function()
-if not F.Once("previewsell", 2) then return end
-pcall(F.PreviewSell)
-end })
-Tabs.AFK:AddInput("SellMinCPS", { Title = "卖出门槛(支持 80m / 500k / 1.5b / 2q)", Description = "低于这个 CPS 的脑红才会被卖; 限定/独家那些永远保留。不确定就填 100k", Default = "100k", Placeholder = "例如 80m", Callback = function(v)
-C.SellMinCPSTxt = v
-local n = F.ParseCPS(v)
-if n then C.SellMinCPS = n end
-end })
-Tabs.AFK:AddSlider("SellLvMul", { Title = "等级乘数(算 CPS 用)", Description = "游戏公式里的每级倍数, 默认 1.25; 不确定就别改", Min = 1, Max = 5, Default = 1.25, Rounding = 2, Callback = function(v) C.SellLvMul = v end })
-Tabs.AFK:AddButton({ Title = "★ 按门槛卖出(装备→确认→卖→确认消失)", Description = "走到卖家身边, 一个个装备并确认卖出结果(消失才算成功), 卖完自动停; 限定/独家永远不卖", Callback = function()
-if not F.Once("selllow", 4) then return end
-task.spawn(function() pcall(F.SellLowCPS, true) end)
-end })
 Tabs.AFK:AddButton({ Title = "★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出去的脑红全部收回背包, 逐个槽位扫 1~30", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
@@ -14002,7 +11852,7 @@ pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报(合成一个)", Description = "拦掉客户端发给服务端的受伤/死亡上报, 同时隔离伪装自己的血量读数 —— 一个开关两件事", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描 / 收集(一键扫全部 · 结果直接给我)")
-Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍并自动导出)", Description = "把游戏里的远程/脚本/界面/资产全扫一遍, 结果写进脚本日志文件并提示路径, 你直接发给我就行", Callback = function()
+Tabs.AC:AddButton({ Title = "★ 一键全扫描(不用选 · 全部扫一遍)", Description = "把游戏里的远程/脚本/界面/资产全扫一遍, 结果写进脚本日志文件并提示路径, 你直接发给我就行", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
 pcall(F.CMX_ScanAll)
@@ -14045,12 +11895,6 @@ function() pcall(AC.UninstallAntiTP) end,
 function() pcall(AC.WatchNewScriptsDisable) end,
 function() pcall(AC.WatchNewRemotesDisable) end,
 function() pcall(AC.AntiPauseDisable) end,
-function() pcall(F.CMX_HookHardRestore) end,
-function() pcall(F.CMX_ViewFilterDisable) end,
-function() pcall(F.CMX_InstNewDisable) end,
-function() pcall(F.CMX_RequireBlockDisable) end,
-function() pcall(F.CMX_ClockMaskDisable) end,
-function() pcall(F.CMX_DebugMaskDisable) end,
 function() pcall(F.CMX_SpoofIndexDisable) end,
 function() pcall(F.CMX_NeuterPlusDisable) end,
 function() pcall(F.CMX_HashFreezeDisable) end,
