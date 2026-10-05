@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 22:47 sha d28b0321 bytes 523628'):format('2026-10-05 22:47','d28b0321',523628))
+print(('[CheatMenu] build 2026-10-05 23:10 sha be211a1c bytes 523408'):format('2026-10-05 23:10','be211a1c',523408))
 local F = {}
-F.VERSION = "v16.9.8"
+F.VERSION = "v16.9.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3104,11 +3104,15 @@ F.CombatAliveBody = function(ch)
 if typeof(ch) ~= "Instance" then return nil end
 if not ch.Parent then return nil end
 local hum = ch:FindFirstChildOfClass("Humanoid")
-if not hum or hum.Health <= 0 then return nil end
+if not hum then return nil end
+local hp0 = tonumber(hum.Health) or 0
+if hp0 <= 0.05 then return nil end
 local hst = nil
 pcall(function() hst = hum:GetState() end)
 if hst == Enum.HumanoidStateType.Dead then return nil end
-if T.CombatSkipInvincible ~= false then
+local isPChar = false
+pcall(function() isPChar = Players:GetPlayerFromCharacter(ch) ~= nil end)
+if T.CombatSkipInvincible ~= false and isPChar then
 if ch:FindFirstChildOfClass("ForceField") then return nil, "无敌" end
 if hum.Health > hum.MaxHealth + 0.01 then return nil, "无敌" end
 if hum:GetAttribute("Invincible") == true then return nil, "无敌" end
@@ -3183,11 +3187,10 @@ if cm0 and o:IsDescendantOf(cm0) then bad = true end
 end)
 if bad then return false end
 if not F.IsNPC(o) then return false end
-if not o:FindFirstChildOfClass("Humanoid") then return false end
-local head = o:FindFirstChild("Head")
-local rp = o.PrimaryPart
-if not (head or rp) then return false end
-local nm = o.Name
+local hum = nil
+pcall(function() hum = o:FindFirstChildOfClass("Humanoid") end)
+if not hum then return false end
+local nm = tostring(o.Name)
 local okp, allp = pcall(function() return Players:GetPlayers() end)
 if okp and allp then
 local i
@@ -3198,12 +3201,17 @@ local c = pl.Character
 if c and nm == c.Name then return false end
 end
 end
-local cm = workspace.CurrentCamera
-if cm then
 local pos = nil
-if head and head:IsA("BasePart") then pos = head.Position
-elseif rp and rp:IsA("BasePart") then pos = rp.Position end
-if pos and (pos - cm.CFrame.Position).Magnitude < 4 then return false end
+local hd = o:FindFirstChild("Head")
+if hd and hd:IsA("BasePart") then pos = hd.Position end
+if not pos then
+local rpx = o.PrimaryPart
+if rpx and rpx:IsA("BasePart") then pos = rpx.Position end
+end
+if pos then
+local ref0 = nil
+pcall(function() local r0 = LP.Character and LP.Character.PrimaryPart if r0 then ref0 = r0.Position end end)
+if ref0 and (pos - ref0).Magnitude < 2 then return false end
 end
 return true
 end
@@ -3212,37 +3220,45 @@ F._combatNpcs = F._combatNpcs or {}
 F._combatNpcAt = 0
 F.CombatNpcRefresh = function()
 local now = os.clock()
-if #F._combatNpcs > 0 and (now - (F._combatNpcAt or 0)) < 1.5 then return F._combatNpcs end
+if #F._combatNpcs > 0 and (now - (F._combatNpcAt or 0)) < 2.5 then return F._combatNpcs end
 F._combatNpcAt = now
 local out = F._combatNpcs
 local n = 0
 pcall(function()
 local list = workspace:GetChildren()
-local i
+local i, j
 for i = 1, #list do
 local o = list[i]
-if n < 60 and F.CombatNpcOk(o) then n = n + 1 out[n] = o end
+if n < 80 and F.CombatNpcOk(o) then n = n + 1 out[n] = o end
 end
+local subs = {}
 for i = 1, #list do
 local o = list[i]
-local okf = pcall(function() return o:IsA("Folder") and not o:IsA("Model") end)
-if okf then
+local okf = pcall(function() return o:IsA("Folder") or o:IsA("Model") end)
+if okf and o ~= LP.Character then
 local okk, kids = pcall(function() return o:GetChildren() end)
 if okk and kids then
-local j
-for j = 1, #kids do
-local k = kids[j]
-if n < 60 and F.CombatNpcOk(k) then n = n + 1 out[n] = k end
+for j = 1, #kids do subs[#subs + 1] = kids[j] end
 end
+end
+end
+for i = 1, #subs do
+local o = subs[i]
+if n < 80 and F.CombatNpcOk(o) then n = n + 1 out[n] = o end
+local okk2, kids2 = pcall(function() return o:GetChildren() end)
+if okk2 and kids2 then
+for j = 1, #kids2 do
+local k = kids2[j]
+if n < 80 and F.CombatNpcOk(k) then n = n + 1 out[n] = k end
 end
 end
 end
 end)
 local ref = nil
 pcall(function() local r0 = LP.Character and LP.Character.PrimaryPart if r0 then ref = r0.Position end end)
-if ref and n > 12 then
+if ref and n > 16 then
 local a
-for a = 1, 12 do
+for a = 1, 16 do
 local pick, pd = a, math.huge
 local b
 for b = a, n do
@@ -3253,7 +3269,7 @@ if d0 < pd then pick, pd = b, d0 end
 end
 if pick ~= a then local sw = out[a] out[a] = out[pick] out[pick] = sw end
 end
-n = 12
+n = 16
 end
 local i = #out
 while i > n do out[i] = nil i = i - 1 end
@@ -3423,8 +3439,13 @@ end
 local pl = nil
 pcall(function() pl = Players:GetPlayerFromCharacter(ch) end)
 local dist = (part.Position - root.Position).Magnitude
+local thp = "?"
+pcall(function()
+local th = ch:FindFirstChildOfClass("Humanoid")
+if th then thp = string.format("%d/%d", math.floor(th.Health), math.floor(th.MaxHealth)) end
+end)
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
-.. " · 锁" .. tostring(part.Name)
+.. " · 锁" .. tostring(part.Name) .. " · HP " .. thp
 .. (T.AutoFire and " · 自动开火中" or ""))
 local dir = part.Position - root.Position
 if T.AimTurnBody == true then
@@ -7718,71 +7739,6 @@ end
 end
 F._espItems = {}
 end
-F._hitMarkGui, F._hitMarkConn = nil, nil
-F.HitMarkFlash = function(ok)
-local host = nil
-pcall(function() host = gethui and gethui() end)
-if not host then pcall(function() host = CoreGui end) end
-if not host then return end
-if not F._hitMarkGui or not F._hitMarkGui.Parent then
-local sg = Instance.new("ScreenGui")
-sg.Name = "CMHitMark"
-sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true
-sg.DisplayOrder = 1000
-pcall(function() sg:SetAttribute("CMOwned", true) end)
-sg.Parent = host
-F._hitMarkGui = sg
-end
-local lbl = Instance.new("TextLabel")
-lbl.Size = UDim2.fromOffset(44, 44)
-lbl.Position = UDim2.new(0.5, -22, 0.5, -22)
-lbl.BackgroundTransparency = 1
-lbl.Text = ok and "X" or "·"
-lbl.TextScaled = true
-lbl.Font = Enum.Font.GothamBold
-lbl.TextColor3 = ok and Color3.fromRGB(255, 70, 70) or Color3.fromRGB(230, 230, 230)
-lbl.TextStrokeTransparency = 0.4
-lbl.Parent = F._hitMarkGui
-task.spawn(function()
-task.wait(0.22)
-pcall(function() lbl:Destroy() end)
-end)
-end
-F.HitMarkEnable = function()
-if F._hitMarkConn then return end
-F._hitMarkHp = {}
-F._hitMarkConn = RS.Heartbeat:Connect(function()
-if not T.HitMark then F.HitMarkDisable() return end
-local now = os.clock()
-if now - (F._hitMarkAt or 0) < 0.05 then return end
-F._hitMarkAt = now
-for _, pl in ipairs(Players:GetPlayers()) do
-if pl ~= LP then
-local ch = pl.Character
-local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hum then
-local last = F._hitMarkHp[pl]
-local cur = hum.Health
-if last ~= nil and cur < last and cur >= 0 and (last - cur) > 0.01 then
-local isKill = (cur <= 0)
-pcall(F.HitMarkFlash, isKill)
-end
-F._hitMarkHp[pl] = cur
-else
-F._hitMarkHp[pl] = nil
-end
-end
-end
-end)
-F.Out("[命中标记] 已开(打到人时屏幕中心闪 X · 击杀闪红)")
-end
-F.HitMarkDisable = function()
-if F._hitMarkConn then pcall(function() F._hitMarkConn:Disconnect() end) F._hitMarkConn = nil end
-F._hitMarkHp = {}
-if F._hitMarkGui then pcall(function() F._hitMarkGui:Destroy() end) F._hitMarkGui = nil end
-F.Out("[命中标记] 已关")
-end
 F._xrayObjs = {}
 F._xrayAdded, F._xrayLoop, F._xrayAt = nil, nil, 0
 F.XRayApply = function(o)
@@ -8522,49 +8478,6 @@ pcall(chunk)
 end)
 return true
 end
-F._hiddenPlayers = nil
-function F.HidePlayerEnable()
-F._hiddenPlayers = F._hiddenPlayers or {}
-local name = Fluent.Options.FlingTarget and Fluent.Options.FlingTarget.Value
-local pl = name and Players:FindFirstChild(name)
-local ch = pl and pl.Character
-if not (pl and ch) then return end
-F._hiddenPlayers[pl] = true
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end
-end
-local hum0 = ch:FindFirstChildOfClass("Humanoid")
-if hum0 then pcall(function() hum0.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end) end
-if not F._hidePlConns then F._hidePlConns = {} end
-if not F._hidePlConns[pl] then
-F._hidePlConns[pl] = pl.CharacterAdded:Connect(function(nch)
-task.wait(0.3)
-if not F._hiddenPlayers[pl] then return end
-for _, d in ipairs(nch:GetDescendants()) do
-if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end
-end
-local h2 = nch:FindFirstChildOfClass("Humanoid")
-if h2 then pcall(function() h2.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end) end
-end)
-end
-end
-function F.HidePlayerDisable()
-if F._hiddenPlayers then
-for pl in pairs(F._hiddenPlayers) do
-local ch = pl.Character
-if ch then
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then d.LocalTransparencyModifier = 0 end
-end
-end
-end
-end
-F._hiddenPlayers = {}
-if F._hidePlConns then
-for pl, c in pairs(F._hidePlConns) do pcall(function() c:Disconnect() end) end
-F._hidePlConns = {}
-end
-end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, KickGuard = true, GuardOn = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true }
@@ -8581,8 +8494,8 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.HidePlayerDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.HitMarkDisable, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -10731,7 +10644,7 @@ local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.KickGuardDisable, F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.HidePlayerDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13349,6 +13262,67 @@ local ok = pcall(function() part:SetNetworkOwner(LP) end)
 if not ok then return false, "抢所有权被拒(执行器或服务端不允许)" end
 return true, nil
 end
+F.FlingStop = function()
+F._flingHit = false
+pcall(function()
+local _, _, r = GC()
+if r and r.Parent then r.AssemblyAngularVelocity = Vector3.zero end
+end)
+end
+F.FlingPlayer = function()
+local pl, err = F.GetTargetPlayer()
+if not pl then F.Out("[甩飞] " .. tostring(err)) return end
+local tp = pl.Character
+if not tp then F.Out("[甩飞] 目标当前没有角色") return end
+local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
+if not tRoot then F.Out("[甩飞] 目标没有 HumanoidRootPart") return end
+local tHum = tp:FindFirstChildOfClass("Humanoid")
+local ok, why = F.GrabOwner(tRoot)
+F.Out("[甩飞] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
+if ok then
+F.Out("[甩飞] 用「直接推飞」: 先把他抬离地面, 再给极大的线性速度+自转")
+task.spawn(function()
+local i
+for i = 1, 10 do
+if not (tRoot and tRoot.Parent) then break end
+pcall(function()
+if tHum and tHum.Parent then tHum.PlatformStand = true end
+tRoot:PivotTo(tRoot:GetPivot() + Vector3.new(0, 1, 0))
+tRoot.AssemblyLinearVelocity = Vector3.new(math.random(-400, 400), 700, math.random(-400, 400))
+tRoot.AssemblyAngularVelocity = Vector3.new(math.random(-2000, 2000), math.random(-2000, 2000), math.random(-2000, 2000))
+end)
+task.wait(0.05)
+end
+task.wait(0.6)
+pcall(function() if tHum and tHum.Parent then tHum.PlatformStand = false end end)
+F.Out("[甩飞] 结束")
+end)
+else
+F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「旋转撞击」: 把自己变成高速旋转体撞过去")
+F.Out("[甩飞] 原理: 自己角色的所有权一定在自己手里, 高速旋转撞击会由服务端复制给所有人(公开 fling 脚本的主流做法)")
+F._flingHit = true
+task.spawn(function()
+local n = 0
+while F._flingHit and n < 50 do
+n = n + 1
+local _, myHum, myRoot = GC()
+if not (myRoot and myRoot.Parent) then break end
+if not (tRoot and tRoot.Parent) then break end
+pcall(function()
+myRoot.AssemblyAngularVelocity = Vector3.new(0, 9000, 0)
+local d = tRoot.Position - myRoot.Position
+local flat = Vector3.new(d.X, 0, d.Z)
+if flat.Magnitude > 0.5 then
+myRoot.AssemblyLinearVelocity = flat.Unit * 55 + Vector3.new(0, 12, 0)
+end
+end)
+task.wait(0.05)
+end
+F.FlingStop()
+F.Out("[甩飞] 结束(撞击模式已停, 自身自转/Speed 已归零)")
+end)
+end
+end
 F.PullPlayer = function()
 local pl, err = F.GetTargetPlayer()
 if not pl then F.Out("[拉人] " .. tostring(err)) return end
@@ -13484,11 +13458,6 @@ Tabs.Combat:AddDropdown("CombatMode", { Title = "锁定模式", Values = {
 C.CombatMode = tostring(v)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定模式 = " .. tostring(v))
-end })
-Tabs.Combat:AddToggle("HitMark", { Title = "命中标记(打到人时屏幕中心闪 X · 击杀闪红)", Default = false, Callback = function(v)
-T.HitMark = v
-if F._cfgSyncing then return end
-if v then pcall(F.HitMarkEnable) else pcall(F.HitMarkDisable) end
 end })
 Tabs.Combat:AddSlider("AimSmooth", { Title = "自瞄平滑(0=瞬转 · 越大越像人手动)", Min = 0, Max = 20, Default = 0, Rounding = 0, Callback = function(v)
 C.AimSmooth = v
@@ -13838,6 +13807,10 @@ end })
 Tabs.Move:AddButton({ Title = "★ 把他瞬间 TP 到我面前", Description = "先抢所有权再一次挪到位。★ 同样受本服限制: 抢不到就是动不了; 跨服做不到", Callback = function()
 if not F.Once("tpmove", 1.5) then return end
 task.spawn(function() pcall(F.TPMovePlayer, "front") end)
+end })
+Tabs.Move:AddButton({ Title = "★ 把他甩飞(撞飞/推飞 · 自动择优)", Description = "先尝试抢他的网络所有权直接推飞; 抢不到就自动改成「把自己变成高速旋转体撞过去」(公开 fling 脚本的主流做法, 不依赖对方所有权)。⚠ 速度/异常检测严格的游戏可能把你拉回或踢出", Callback = function()
+if not F.Once("fling", 1.5) then return end
+task.spawn(function() pcall(F.FlingPlayer) end)
 end })
 Tabs.TP:AddSection("收藏点位(点=存/传 · 右键(手机长按)=删)")
 F._wpb = {}
