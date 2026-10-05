@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:58 sha 1c94d032 bytes 532364'):format('2026-10-05 23:58','1c94d032',532364))
+print(('[CheatMenu] build 2026-10-06 00:03 sha c8ac15a9 bytes 526682'):format('2026-10-06 00:03','c8ac15a9',526682))
 local F = {}
-F.VERSION = "v16.9.15"
+F.VERSION = "v16.9.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8943,179 +8943,38 @@ pcall(function() r = root:FindFirstChild("rev_" .. tostring(name)) end)
 if r and r:IsA("RemoteEvent") then return r end
 return nil
 end
-F.RemoteFuncByName = function(name)
-local root = F.NetRoot()
-if not root then return nil end
-local r = nil
-pcall(function() r = root:FindFirstChild("ref_" .. tostring(name)) end)
-if r and r:IsA("RemoteFunction") then return r end
-return nil
-end
 F.FireSrv = function(name, ...)
 local remote = F.RemoteByName(name)
 if not remote then return false end
 local args = table.pack(...)
 return (pcall(function() remote:FireServer(table.unpack(args, 1, args.n)) end))
 end
-F.InvokeSrv = function(name, ...)
-local remote = F.RemoteFuncByName(name)
-if not remote then return false, nil end
-local args = table.pack(...)
-local ok, a = pcall(function() return remote:InvokeServer(table.unpack(args, 1, args.n)) end)
-if not ok then return false, nil end
-return true, a
-end
-F.ConnectRemote = function(name, cb)
-local remote = F.RemoteByName(name)
-if not remote then return nil end
-local c = nil
-pcall(function() c = remote.OnClientEvent:Connect(cb) end)
-return c
-end
-F.GymFrames = function()
-if not PG then return nil end
-return PG:FindFirstChild("Frames")
-end
-F.GymWheelSpins = function()
-if typeof(F._wheelSpinsCache) == "number" then return math.max(0, math.floor(F._wheelSpinsCache)) end
-local wheelGui = PG and PG:FindFirstChild("WheelSpin")
-local buttons = wheelGui and wheelGui:FindFirstChild("Buttons")
-local spinButton = buttons and buttons:FindFirstChild("SpinButton")
-local label = spinButton and spinButton:FindFirstChild("SpinsLabel")
-if label and (label:IsA("TextLabel") or label:IsA("TextButton")) then
-local parsed = tonumber(tostring(label.Text or ""):match("(%d+)"))
-if parsed then
-F._wheelSpinsCache = math.max(0, math.floor(parsed))
-return F._wheelSpinsCache
-end
-end
-return 0
-end
-local BattlePassFreeXP = { [1]=500,[2]=1000,[3]=1500,[4]=2000,[5]=2500,[6]=3000,[7]=3500,[8]=4000,[9]=4500,[10]=5000,[11]=5500,[12]=6000,[13]=6500,[14]=7000,[15]=7500 }
-local BattlePassBonusXP = { [1]=8250,[2]=9000,[3]=9750,[4]=10500,[5]=11250 }
-F.ClaimBattlePass = function()
-local state = F._bpState
-if type(state) ~= "table" or typeof(state.XP) ~= "number" then return false end
-if os.clock() - (F._lastBpClaim or 0) < 10 then return false end
-F._lastBpClaim = os.clock()
-state.UnlockedFreeRewards = state.UnlockedFreeRewards or {}
-state.UnlockedPremiumRewards = state.UnlockedPremiumRewards or {}
-state.UnlockedBonusRewards = state.UnlockedBonusRewards or {}
-local did = false
-for id = 1, 15 do
-local needed = BattlePassFreeXP[id]
-if needed and state.XP >= needed and not table.find(state.UnlockedFreeRewards, id) then
-local ok, claimed = F.InvokeSrv("BattlePassAttemptClaim", id, "Free")
-if ok and claimed then table.insert(state.UnlockedFreeRewards, id) did = true end
-task.wait(0.04)
-end
-if state.HasPremium and needed and state.XP >= needed and not table.find(state.UnlockedPremiumRewards, id) then
-local ok, claimed = F.InvokeSrv("BattlePassAttemptClaim", id, "Premium")
-if ok and claimed then table.insert(state.UnlockedPremiumRewards, id) did = true end
-task.wait(0.04)
-end
-end
-for id = 1, 5 do
-local needed = BattlePassBonusXP[id]
-if needed and state.XP >= needed and not table.find(state.UnlockedBonusRewards, id) then
-local ok, claimed = F.InvokeSrv("BattlePassAttemptBonusClaim", id, "Bonus")
-if ok and claimed then table.insert(state.UnlockedBonusRewards, id) did = true end
-task.wait(0.04)
-end
-end
-return did
-end
-F.ClaimWheelSpin = function()
-if os.clock() < (F._wheelBusyUntil or 0) then return false end
-if os.clock() - (F._wheelReqAt or 0) < 5.4 then return false end
-if F.GymWheelSpins() <= 0 then return false end
-F._wheelReqAt = os.clock()
-F._wheelBusyUntil = os.clock() + 5.25
-return F.FireSrv("RequestSpin")
-end
-F.ClaimTick = function()
-local fired = 0
-if not F._freeItemClaimed and os.clock() - (F._freeItemCheckedAt or 0) >= 5 then
-F._freeItemCheckedAt = os.clock()
-if F.FireSrv("CheckFree") then fired = fired + 1 end
-end
-if not F._offlineClaimed then
-local frames = F.GymFrames()
-local offline = frames and frames:FindFirstChild("OfflineFrame")
-if offline and offline.Visible then
-F._offlineClaimed = true
-if F.FireSrv("Offline_Claim") then fired = fired + 1 end
-end
-end
-if not F._groupGiftDone then
-F._groupGiftDone = true
-if WS:FindFirstChild("FreeGift") and F.FireSrv("GroupClaim") then fired = fired + 1 end
-end
-if os.clock() - (F._mailboxClaimAt or 0) >= 60 then
-F._mailboxClaimAt = os.clock()
-for _, id in ipairs({ "2586061570371093144", "7058748194620048013", "5736338153371992847" }) do
-if F.FireSrv("MailClaim", id) then fired = fired + 1 end
-task.wait(0.03)
-end
-end
-if F.ClaimWheelSpin() then fired = fired + 1 end
-if F.ClaimBattlePass() then fired = fired + 1 end
-return fired
-end
-F.ClaimWatch = function(on)
-if not on then
-if F._claimConns then
-for _, c in ipairs(F._claimConns) do pcall(function() c:Disconnect() end) end
-F._claimConns = nil
-end
-return
-end
-if F._claimConns then return end
-F._claimConns = {}
-local function add(name, cb)
-local c = F.ConnectRemote(name, cb)
-if c then F._claimConns[#F._claimConns + 1] = c end
-end
-add("CheckFree", function(claimed)
-F._freeItemClaimed = (claimed == true)
-F._freeItemCheckedAt = os.clock()
-if claimed == false and T.AutoBonus then
-task.defer(function()
-if T.AutoBonus then
-F.FireSrv("ClaimFree")
-F._freeItemClaimed = true
-if F.LogRate("claim_free", 5) then F.Out("[自动领取] 免费商店脑红 ⇒ 已自动领取") end
-end
-end)
-end
-end)
-add("UpdateSpins", function(spins) if typeof(spins) == "number" then F._wheelSpinsCache = math.max(0, math.floor(spins)) end end)
-add("SpinWheel", function() F._wheelBusyUntil = os.clock() + 5.25 end)
-add("BattlePassDataSend", function(state) if type(state) == "table" then F._bpState = state end end)
-if #F._claimConns > 0 then
-F.Out("[自动领取] 已挂奖励监听 " .. tostring(#F._claimConns) .. " 条(照搬参考脚本的 connectRemote 做法)")
-end
-end
 local TrainThread = nil
 function F.AutoTrainEnable()
 if TrainThread then return end
-F.Out("[自动锻炼] 已启动(照搬参考脚本): 手持配重 → 站上举铁机 → 等游戏认可(liftMachine/x 属性) → 自动点 ×2/×5 弹窗")
+F.Out("[自动锻炼] 已启动: 手持配重 + 反复触发锻炼动作 —— 只在原地练, 不移动、不传送、不领奖(要自动领 ×2/×5 奖励请开「自动领取」)")
 TrainThread = task.spawn(function()
 local logAt = 0
 while T.AutoTrain do
 pcall(function()
-Gym.enterGymMachine(false)
-Gym.ensureGymTrainingTool()
-local okG = Gym.waitForLiftMachineRecognition(0.9)
-F.GymClickBonusPopups(false)
-if os.clock() - logAt > 12 then
+local tool = gymEquippedWeightTool()
+local hum = gymHum()
+local ch = gymChar()
+if tool then
+if ch and hum and tool.Parent ~= ch then pcall(function() hum:EquipTool(tool) end) end
+pcall(function() tool:Activate() end)
+F._trainActions = (F._trainActions or 0) + 1
+end
+if os.clock() - logAt > 15 then
 logAt = os.clock()
-F.Out(string.format("[自动锻炼] 机器 x%.1f · gym_speed x%.1f · gym_power x%.1f %s",
-Gym.currentLiftMachineMultiplier(), Gym.currentGymSpeedMultiplier(), Gym.currentGymPowerMultiplier(),
-okG and "⇒ 游戏已认可(正在涨)" or "⇒ 还没认可(换个位置或换台机器)"))
+if tool then
+F.Out("[自动锻炼] 正在练 · 手持 " .. tostring(tool.Name) .. " · 已触发 " .. tostring(F._trainActions or 0) .. " 次")
+else
+F.Out("[自动锻炼] 背包里没找到配重(带 SquatTool 标签或配重名) ⇒ 先自己拿/买一个配重")
+end
 end
 end)
-task.wait(0.4)
+task.wait(0.3)
 end
 TrainThread = nil
 end)
@@ -9169,18 +9028,15 @@ end
 local BonusThread = nil
 function F.AutoBonusEnable()
 if BonusThread and T.AutoBonus then return end
-pcall(function() F.ClaimWatch(true) end)
-F.Out("[自动领取] 已启动(照搬参考脚本): 免费商店脑红 + 离线收益 + 群组礼物 + 邮箱(3 个事件 ID) + 转盘 + 战斗通行证 + ×2/×5 弹窗")
+F.Out("[自动领取] 已启动: 只领锻炼/健身弹出的多倍奖励(×2 / ×5 / ×10), 不领其他任何东西")
 BonusThread = task.spawn(function()
-local logAt, total = 0, 0
+local logAt = 0
 while T.AutoBonus do
 pcall(function()
 local n = F.GymClickBonusPopups(false)
-local fired = F.ClaimTick()
-total = total + fired
-if (n > 0 or fired > 0) and os.clock() - logAt > 20 then
+if n > 0 and os.clock() - logAt > 10 then
 logAt = os.clock()
-F.Out("[自动领取] 本轮触发了 " .. tostring(fired) .. " 个奖励远程 · 点掉 " .. tostring(n) .. " 个弹窗(累计远程 " .. tostring(total) .. ")")
+F.Out("[自动领取] 已领多倍锻炼奖励, 累计 " .. tostring(F._gymBonusClicks or 0) .. " 次")
 end
 end)
 task.wait(0.35)
@@ -9191,7 +9047,6 @@ end
 function F.AutoBonusDisable()
 T.AutoBonus = false
 BonusThread = nil
-pcall(function() F.ClaimWatch(false) end)
 F.Out("[自动领取] 已停止")
 end
 do
@@ -14007,17 +13862,17 @@ if F._cfgSyncing then return end
 if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
 end })
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼(手持配重 + 站上举铁机)", Description = "照搬参考脚本: 自动手持配重 → 走到/站上最近的 LIFT 举铁机 → 等游戏认可(liftMachine 属性 >1) → 自动点 ×2/×5 锻炼弹窗", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼(手持配重 · 只在原地练)", Description = "只在原地: 自动把配重拿上手 + 反复触发锻炼动作。不移动、不传送、不领奖 —— 想自动领 ×2/×5 奖励请开下面的「自动领取」", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
 if v then F.AutoTrainEnable() else F.AutoTrainDisable() end
 end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取(照搬参考脚本的领奖链)", Description = "免费商店脑红 + 离线收益 + 群组礼物 + 邮箱奖励(3 个事件 ID 每 60 秒) + 转盘自动抽 + 战斗通行证领取 + ×2/×5 弹窗", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取锻炼奖励(×2 / ×5 / ×10 多倍)", Description = "只点掉锻炼/健身弹出的多倍奖励按钮(名叫 Bonus/PopBonus, 或写着 ×2/×5/×10 的按钮); 不领其他任何东西", Default = false, Callback = function(v)
 T.AutoBonus = v
 if F._cfgSyncing then return end
 if v then F.AutoBonusEnable() else F.AutoBonusDisable() end
 end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房(自动参加健身房事件)", Description = "照搬参考脚本: 自动传送到最近的 LIFT 举铁机(Teleport (Safe))并站上去反复重进, 站到游戏认可为止", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房(自动参加健身房事件)", Description = "只有这个开关会移动: 自动传送到最近的 LIFT 举铁机(Teleport (Safe))并站上去反复重进, 站到游戏认可为止", Default = false, Callback = function(v)
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
