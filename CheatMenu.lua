@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 02:17 sha 60524ea0 bytes 437432'):format('2026-10-06 02:17','60524ea0',437432))
+print(('[CheatMenu] build 2026-10-06 02:44 sha 4bf2465d bytes 437832'):format('2026-10-06 02:44','4bf2465d',437832))
 local F = {}
-F.VERSION = "v16.9.25"
+F.VERSION = "v16.9.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2302,7 +2302,6 @@ end)
 end)
 return true
 end
-C.PriorityTargets = {}
 function F.PlayerNames()
 local n = {}
 for _, pl in ipairs(Players:GetPlayers()) do
@@ -3289,7 +3288,12 @@ local okS, sc = pcall(debug.info, fn, "s")
 local bag = tostring(okS and sc or ""):lower()
 for _, k in ipairs(F.ANTITP_KEYS) do
 if bag:find(k, 1, true) then
-local ok, orig = pcall(function() return hookfunction(fn, function() return nil end) end)
+local nk = function(...) return nil end
+if type(newcclosure) == "function" then
+local okW, w = pcall(newcclosure, nk)
+if okW and type(w) == "function" then nk = w end
+end
+local ok, orig = pcall(function() return hookfunction(fn, nk) end)
 if ok and type(orig) == "function" then
 st.hooked[fn] = orig
 neutered = neutered + 1
@@ -4687,7 +4691,12 @@ if type(hookfunction) ~= "function" then return false end
 local ok = pcall(function()
 local orig = ls.ClearOutput
 F._logClearOrig = orig
-hookfunction(orig, function(...) return nil end)
+local nk = function(...) return nil end
+if type(newcclosure) == "function" then
+local okW, w = pcall(newcclosure, nk)
+if okW and type(w) == "function" then nk = w end
+end
+hookfunction(orig, nk)
 F._logClearHook = true
 end)
 if F._logClearHook then F.Out("[反封禁·护日志] 已拦 LogService:ClearOutput(反作弊清掉日志的通道)") end
@@ -4742,7 +4751,12 @@ if type(hookfunction) == "function" and not F._godTDHook then
 local orig = hum.TakeDamage
 if type(orig) == "function" then
 F._godTDOrig = orig
-hookfunction(orig, function(self, amount) return nil end)
+local nk = function(...) return nil end
+if type(newcclosure) == "function" then
+local okW, w = pcall(newcclosure, nk)
+if okW and type(w) == "function" then nk = w end
+end
+hookfunction(orig, nk)
 F._godTDHook = true
 end
 end
@@ -9010,7 +9024,6 @@ end
 function Trans.Disable()
 T.Translate = false
 pcall(Trans.WatchOff)
-pcall(F.ChatIMEBoxDisable)
 Trans.HeartbeatOff()
 if Trans.Loop then Trans.Loop = nil end
 if T.ChatTranslate then F.ChatTranslateDisable() end
@@ -9223,6 +9236,7 @@ T.ChatIMEBox = on and true or false
 if on then pcall(F.ChatIMEBoxEnable) else pcall(F.ChatIMEBoxDisable) end
 end
 F.ChatIMEBoxDisable = function()
+T.ChatIMEBox = false
 pcall(function() if F._chatIMEBox and F._chatIMEBox.Parent then F._chatIMEBox:Destroy() end end)
 F._chatIMEBox = nil
 end
