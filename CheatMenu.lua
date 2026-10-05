@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 23:56 sha ad2d3991 bytes 532234'):format('2026-10-05 23:56','ad2d3991',532234))
+print(('[CheatMenu] build 2026-10-05 23:58 sha 1c94d032 bytes 532364'):format('2026-10-05 23:58','1c94d032',532364))
 local F = {}
-F.VERSION = "v16.9.14"
+F.VERSION = "v16.9.15"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8903,6 +8903,10 @@ if not ok or type(descendants) ~= "table" then return 0 end
 for _, object in ipairs(descendants) do
 if object:IsA("GuiButton") and F.GymGuiVisible(object) then
 local multiplier = gymMultForButton(object)
+if multiplier == nil then
+local nm = tostring(object.Name or "")
+if nm == "Bonus" or nm == "PopBonus" then multiplier = 0 end
+end
 if multiplier then
 local last = _bonusBtnAt[object] or 0
 if now - last >= 0.20 then
