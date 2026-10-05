@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-05 18:15 sha 3a6aa8e3 bytes 540114'):format('2026-10-05 18:15','3a6aa8e3',540114))
+print(('[CheatMenu] build 2026-10-05 18:27 sha 99703c76 bytes 542140'):format('2026-10-05 18:27','99703c76',542140))
 local F = {}
-F.VERSION = "v16.7.2"
+F.VERSION = "v16.8.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4671,7 +4671,10 @@ F._invSav, F._invConn = nil, nil
 function F.InvisibleEnable()
 pcall(function()
 local _, hum = GC()
-if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+if hum then
+if F._invSavDistType == nil then F._invSavDistType = hum.DisplayDistanceType end
+hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+end
 end)
 if F._invSav then return end
 local ch = LP.Character
@@ -4697,6 +4700,13 @@ if o:IsA("BasePart") or o:IsA("Decal") then
 if F._invSav[o] == nil then F._invSav[o] = o.Transparency end
 o.Transparency = 1
 end
+end
+end)
+pcall(function()
+local h2 = ch2 and ch2:FindFirstChildOfClass("Humanoid")
+if h2 then
+if F._invSavDistType == nil then F._invSavDistType = h2.DisplayDistanceType end
+h2.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 end
 end)
 end
@@ -4745,9 +4755,10 @@ local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 if hum then
 if F._invSavDist then hum.NameDisplayDistance = F._invSavDist end
 if F._invSavHealthDist then hum.HealthDisplayDistance = F._invSavHealthDist end
+if F._invSavDistType then hum.DisplayDistanceType = F._invSavDistType end
 end
 end)
-F._invSavDist, F._invSavHealthDist = nil, nil
+F._invSavDist, F._invSavHealthDist, F._invSavDistType = nil, nil, nil
 F.Out("[隐身] 已关, 透明度已还原")
 end
 function F.CarryFind()
@@ -14126,6 +14137,17 @@ Tabs.Surv:AddToggle("GodMode", { Title = "★ 上帝模式(无敌 + 锁血 + 不
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
+Tabs.Surv:AddToggle("AntiKnockdown", { Title = "防击倒(被按倒/翻滚时自动站起)", Description = "被强行按倒 / 进入翻滚 / 物理状态时自动拉回站起; 死亡与飞行时不干预; 上帝模式里已含此项, 单独开也可以", Default = false, Callback = function(v)
+T.AntiKnockdown = v
+if F._cfgSyncing then return end
+if v then pcall(F.AntiKnockdownEnable) else pcall(F.AntiKnockdownDisable) end
+end })
+Tabs.Surv:AddToggle("Regen", { Title = "自动回血(掉血后按速度慢慢补满)", Description = "血量低于上限时每秒补回设定值", Default = false, Callback = function(v)
+T.Regen = v
+if F._cfgSyncing then return end
+if v then pcall(RegenEnable) else pcall(RegenDisable) end
+end })
+Tabs.Surv:AddSlider("RegenRate", { Title = "回血速度(每秒)", Min = 1, Max = 500, Default = 10, Rounding = 0, Callback = function(v) C.RegenRate = v end })
 Tabs.Surv:AddButton({ Title = "回满血(一键)", Callback = function()
 if not F.Once("god_refill", 0.8) then return end
 F.GodRefill()
@@ -14395,6 +14417,11 @@ C.CrosshairColor = v
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
 end })
+Tabs.World:AddToggle("FovCircle", { Title = "自瞄 FOV 圈(按自瞄视野画一个圈)", Description = "半径跟随自瞄视野滑块的数值; 纯显示, 不影响判定", Default = false, Callback = function(v)
+T.FovCircle = v
+if F._cfgSyncing then return end
+if v then pcall(F.FovCircleEnable) else pcall(F.FovCircleDisable) end
+end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -14475,6 +14502,11 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动锻炼(健身房)", Description =
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
+end })
+Tabs.AFK:AddToggle("CarryGuard", { Title = "★ 搬运守卫(焊点被拆就重焊 + 东西离手就拉回)", Description = "先站到要搬的东西旁边再开; 游戏判定你放下时自动拽回手上", Default = false, Callback = function(v)
+T.CarryGuard = v
+if F._cfgSyncing then return end
+if v then pcall(F.CarryGuardEnable) else pcall(F.CarryGuardDisable) end
 end })
 Tabs.AFK:AddSection("收起脑红")
 Tabs.AFK:AddButton({ Title = "⑤ ★ 收起脑红(全部 1~30 槽 · 一次全收)", Description = "把放出的脑红全部收回背包(1~30 槽全扫)", Callback = function()
