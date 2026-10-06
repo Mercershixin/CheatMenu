@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 23:28 sha f97a35b4 bytes 473673'):format('2026-10-06 23:28','f97a35b4',473673))
+print(('[CheatMenu] build 2026-10-06 23:42 sha 1d333e9e bytes 474059'):format('2026-10-06 23:42','1d333e9e',474059))
 local F = {}
-F.VERSION = "v16.9.34"
+F.VERSION = "v16.9.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9198,7 +9198,7 @@ return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
 Trans._localFails = 0
-function Trans.Request(text)
+function Trans.Request(text, toLang)
 local rf = Trans.Req()
 if type(rf) ~= "function" then
 F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
@@ -9207,7 +9207,7 @@ end
 local body = HS:JSONEncode({
 model = Trans.MODEL,
 messages = {
-{ role = "system", content = Trans.Prompt(C.TransLang) },
+{ role = "system", content = Trans.Prompt(toLang or "zh") },
 { role = "user", content = text },
 },
 temperature = 0.1, top_p = 0.6, max_tokens = 128, stream = false,
@@ -9458,7 +9458,7 @@ Trans.ShouldV2 = function(s)
 local n = #s
 if n < 2 or n > 300 then return false, "长度" end
 if not s:find("[A-Za-z]") then return false, "无字母" end
-if (C.TransLang or "zh") == "zh" and s:find("[\228-\233]") then return false, "已是中文" end
+if s:find("[\228-\233]") then return false, "已是中文" end
 if s:match("^https?://") or s:match("rbxassetid") or s:match("rbxthumb")
 or s:match("rbxgameasset") or s:match("^rbx") then return false, "资源" end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org")
@@ -10038,7 +10038,7 @@ box.Position = UDim2.new(0.25, 0, 0.9, 0)
 box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 box.BackgroundTransparency = 0.35
 box.TextColor3 = Color3.fromRGB(255, 255, 255)
-box.PlaceholderText = "[CM] 中文聊天框：回车发送(已自动折掉输入法重复上屏)"
+box.PlaceholderText = "[CM] 翻译发出：输入中文 → 回车翻成目标语言发出"
 box.ClearTextOnFocus = false
 box.TextEditable = true
 box.Font = Enum.Font.Code
@@ -10076,12 +10076,12 @@ end
 lastTxt, lastAt = txt, now
 box.Text = ""
 pcall(function() box:ReleaseFocus() end)
-F.ChatSend(txt)
+F.ChatSendTranslated(txt)
 end
 box.FocusLost:Connect(function(enterPressed)
 if enterPressed then send() end
 end)
-F.Out("[IME聊天] 已开：左下角框打中文 → 回车发送（不再翻倍）")
+F.Out("[翻译发出] 已开：左下角框输入中文 → 回车翻成目标语言发出（不再翻倍）")
 end)
 end
 F.ChatBoxSet = function(on)
@@ -10102,6 +10102,22 @@ if ch and ch:IsA("TextChannel") then ch:SendAsync(msg) return end
 local chat = game:GetService("Chat")
 if chat and chat.Chat then chat:Chat(game.Players.LocalPlayer, msg, "All") return end
 F.Out("[IME聊天] 发送失败：本游戏聊天接口不可用")
+end)
+end
+F.ChatSendTranslated = function(msg)
+pcall(function()
+local lang = C.TransLang or "en"
+local tr = Trans.Request(msg, lang)
+if tr and tr ~= "" and tr ~= msg then
+tr = tr:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
+tr = tr:gsub("^%s+", ""):gsub("%s+$", "")
+if tr ~= "" then
+F.ChatSend(tr)
+F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
+return
+end
+end
+F.ChatSend(msg)
 end)
 end
 function F.TranslateDisable() Trans.Disable() end
@@ -12612,17 +12628,14 @@ if chat then pcall(F.ChatTranslateEnable) else pcall(F.ChatTranslateDisable) end
 if bub then pcall(F.BubbleTranslateEnable) else pcall(F.BubbleTranslateDisable) end
 F.Out("[翻译] 范围 = " .. s)
 end })
-Tabs.Trans:AddDropdown("TransLang", { Title = "目标语言", Values = { "zh", "en", "ja", "ko", "th", "ru", "ar", "id" },
-Default = "zh", Callback = function(v)
+Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "en", "ja", "ko", "th", "ru", "ar", "id", "zh" },
+Default = "en", Callback = function(v)
 C.TransLang = v
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
-Trans.Cache = {}
 if F._cfgSyncing then return end
-F.Out("[翻译] 目标语言已切到 " .. tostring(v) .. " ⇒ 正在把界面全部重译一遍")
-task.spawn(function() pcall(Trans.RetranslateAll) end)
+F.Out("[翻译发出] 目标语言已选 " .. tostring(Trans.LANGS[v] or v) .. " —— 中文聊天框输入的中文会翻成它再发出")
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
-Tabs.Trans:AddToggle("ChatIMEBox", { Title = "中文聊天框", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文→目标语言发出)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 pcall(F.ChatBoxSet, v)
 end })
