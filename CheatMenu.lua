@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:38 sha 030d63de bytes 468683'):format('2026-10-07 02:38','030d63de',468683))
+print(('[CheatMenu] build 2026-10-07 02:41 sha 3526bc93 bytes 469378'):format('2026-10-07 02:41','3526bc93',469378))
 local F = {}
-F.VERSION = "v16.9.56"
+F.VERSION = "v16.9.57"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9430,6 +9430,7 @@ local items = {}
 for i = 1, #order do items[i] = groups[order[i]] end
 Trans.Active = Trans.Active + 1
 task.spawn(function()
+local okAll, errAll = pcall(function()
 local ok = false
 if #items > 1 then
 local ctxs, sends = {}, {}
@@ -9461,7 +9462,15 @@ for j = 1, #it.applies do pcall(it.applies[j], tr) end
 end
 end
 end
+end)
+if not okAll then
+Trans._drainErr = (Trans._drainErr or 0) + 1
+if Trans._drainErr <= 3 then
+F.Out("[翻译] ⚠ 翻译任务出错(已自动恢复): " .. tostring(errAll))
+end
+end
 Trans.Active = Trans.Active - 1
+if Trans.Active < 0 then Trans.Active = 0 end
 if Trans.Active < Trans.MAX and #Trans.Queue > 0 then Trans.Drain() end
 end)
 end
@@ -9888,6 +9897,18 @@ Trans._scanRound = Trans._scanRound + 1
 if Trans._scanRound % 10 == 1 then
 F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
 end
+if Trans.Active >= Trans.MAX and #Trans.Queue > 0 then
+Trans._stuck = (Trans._stuck or 0) + 1
+if Trans._stuck >= 3 then
+Trans._stuck = 0
+Trans.Active = 0
+Trans._drainErr = 0
+F.Out("[翻译] ⚠ 队列卡住(并发计数泄漏) ⇒ 已重置并继续翻译")
+Trans.Drain()
+end
+else
+Trans._stuck = 0
+end
 end
 Trans.Stats = function()
 local cacheN = 0
@@ -9973,8 +9994,10 @@ F.Out("[翻译] ✅ 本地模型已就绪(" .. Trans.HOST .. ")")
 else
 F.Out("[翻译] ⏳ 本地模型还没起来(" .. Trans.HOST .. ") ⇒ 已挂监听, 服务一起来自动开翻。请先启动 llama-server")
 end
+if T.TransPanel then
 Trans.PanelSetEnabled(true)
-Trans.PanelAdd("系统", "翻译已启动 · 目标: 界面 + 聊天 → 中文", Color3.fromRGB(255, 210, 120))
+Trans.PanelAdd("系统", "翻译已启动 · 界面 + 聊天 → 中文", Color3.fromRGB(255, 210, 120))
+end
 pcall(Trans.Scan)
 Trans.WatchOn()
 pcall(Trans.ChatWatch)
@@ -12534,19 +12557,12 @@ Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
-Tabs.Trans:AddSection("本地翻译服务")
-Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(界面 + 聊天面板 → 中文)", Default = false, Callback = function(v)
+Tabs.Trans:AddSection("① 界面翻译")
+Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
-Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
-Default = "英文", Callback = function(v)
-local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
-C.TransLang = code
-if F._cfgSyncing then return end
-F.Out("[翻译发出] 目标语言已选 " .. tostring(v))
-end })
-local transStatBtn = Tabs.Trans:AddButton({ Title = "翻译进度: 等待开启翻译", Callback = function()
+local transStatBtn = Tabs.Trans:AddButton({ Title = "状态: 等待开启", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
 end })
 task.spawn(function()
@@ -12554,23 +12570,12 @@ while true do
 task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
-local md = Trans._ready and "✅ 本地模型已连接" or "❌ 未连接本地模型(点下方「模型自检」查原因)"
+local md = Trans._ready and "✅ 模型已连接" or "❌ 未连接模型"
 transStatBtn:SetTitle(string.format("%s · 已翻 %d 条%s", md, Trans._cnt or 0, Trans._diagText or ""))
 end)
 end
 end
 end)
-Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
-task.spawn(function()
-local ok, info = pcall(Trans.Probe)
-F.Out("[翻译] 模型自检: " .. tostring(ok and info or info))
-if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. tostring(info)) end
-end)
-end })
-Tabs.Trans:AddButton({ Title = "显示/隐藏 翻译面板", Callback = function()
-Trans._panelShown = not Trans._panelShown
-pcall(Trans.PanelSetEnabled, Trans._panelShown)
-end })
 Tabs.Trans:AddButton({ Title = "重新扫描界面(立即刷新一遍)", Callback = function()
 Trans._diagOnce = nil
 task.spawn(function()
@@ -12590,6 +12595,31 @@ end
 end
 task.spawn(function() pcall(Trans.Flush) end)
 F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
+end })
+Tabs.Trans:AddSection("② 聊天翻译面板(独立窗口)")
+Tabs.Trans:AddToggle("TransPanel", { Title = "开启聊天译文面板", Default = false, Callback = function(v)
+T.TransPanel = v and true or false
+if F._cfgSyncing then return end
+if v then
+Trans.PanelSetEnabled(true)
+if not T.Translate then pcall(F.TranslateEnable) end
+else
+Trans.PanelSetEnabled(false)
+end
+end })
+Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
+Default = "英文", Callback = function(v)
+local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
+C.TransLang = code
+if F._cfgSyncing then return end
+F.Out("[翻译发出] 目标语言已选 " .. tostring(v))
+end })
+Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
+task.spawn(function()
+local ok, info = pcall(Trans.Probe)
+F.Out("[翻译] 模型自检: " .. tostring(info))
+if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. tostring(info)) end
+end)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
