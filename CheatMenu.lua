@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:31 sha 17e04070 bytes 487525'):format('2026-10-07 04:31','17e04070',487525))
+print(('[CheatMenu] build 2026-10-07 04:41 sha b7b36748 bytes 491956'):format('2026-10-07 04:41','b7b36748',491956))
 local F = {}
-F.VERSION = "v16.9.76"
+F.VERSION = "v16.9.77"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9491,8 +9491,116 @@ if c:IsA("ValueBase") then F.Out("[活动探测] UpdateTimer." .. tostring(c.Nam
 end
 end
 end)
+pcall(function()
+for _, p in ipairs({ "Client.ServicesLoader.WeatherService_Client", "Client.ControllerLoader.WeatherController" }) do
+local m = first(p)
+if m and type(m.Source) == "string" and #m.Source > 0 then
+F.Out("[活动探测] ==== 源码 " .. p .. " (" .. #m.Source .. " 字符, 摘取调度相关行) ====")
+local cnt = 0
+local NL = string.char(10)
+for line in m.Source:gmatch("[^" .. NL .. "]+") do
+if line:find("[Dd]uration") or line:find("[Cc]ycle") or line:find("[Oo]rder") or line:find("[Nn]ext")
+or line:find("[Rr]otation") or line:find("[Ss]chedule") or line:find("[Ww]eather") or line:find("[Tt]ime") then
+F.Out("[活动探测]   " .. line:sub(1, 130))
+cnt = cnt + 1
+if cnt >= 25 then break end
+end
+end
+end
+end
+end)
 F.Out("[活动探测] ===== 结束: 把上面几行发给 AI, 它就知道\"下次活动是什么 + 还有多久\" =====")
 end
+F._weather = {}
+F._weatherHooked = false
+F.EventHookWeather = function()
+if F._weatherHooked then return end
+F._weatherHooked = true
+pcall(function()
+for _, nm in ipairs({ "AddedWeather", "RemovedWeather", "WeatherUpdate" }) do
+local r = F.RemoteByName(nm)
+if r and r:IsA("RemoteEvent") then
+r.OnClientEvent:Connect(function(...)
+local args = { ... }
+for i = 1, #args do
+local a = args[i]
+local name = nil
+if type(a) == "string" then name = a
+elseif type(a) == "table" then pcall(function() name = a.Name or a.name or a.Weather or a.Type end) end
+if name then
+if nm == "RemovedWeather" then F._weather[name] = nil else F._weather[name] = true end
+end
+end
+if #args > 0 and F.LogRate("wthr", 30) then
+F.Out("[活动] 天气广播 " .. nm .. ": " .. tostring(table.concat(args, " | "):sub(1, 90)))
+end
+end)
+end
+end
+end)
+end
+F.EventCurrent = function()
+local names = {}
+for k in pairs(F._weather) do names[#names + 1] = tostring(k) end
+return (#names > 0) and table.concat(names, "+") or "监听中"
+end
+F.EventCountdown = function()
+local s = nil
+pcall(function()
+local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+local u = pg and pg:FindFirstChild("HUD")
+local t = u and u:FindFirstChild("UpdateTimer")
+local lbl = t and t:FindFirstChild("TimerLabel")
+if lbl then s = lbl.Text end
+end)
+if type(s) == "string" then
+local h, m, sec = s:match("(%d+):(%d+):(%d+)")
+if h then return string.format("%s:%s:%s", h, m, sec) end
+return s
+end
+return "?"
+end
+F._fallLoop = nil
+F.FallAutoEnable = function()
+if F._fallLoop then return end
+F.EventHookWeather()
+F.Out("[活动] 自动枫叶已开: 检测到 Fall 天气就去触发活动入口; 吸叶子/领奖/升级 等抓完参数再接(先只做检测+到场)")
+F._fallLoop = task.spawn(function()
+local lastAt = 0
+while T.AutoFall do
+task.wait(5)
+if not T.AutoFall then break end
+pcall(function()
+if not F._weather["Fall"] then return end
+local now = os.clock()
+if now - lastAt < 25 then return end
+lastAt = now
+local target = nil
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("ProximityPrompt") then
+local okA, at = pcall(function() return obj.ActionText end)
+if okA and at == "Spawn now!" then target = obj break end
+end
+end
+end)
+if not target or not target.Parent then
+F.Out("[活动] 枫叶正在(检测到 Fall)但没找到入口 ProximityPrompt, 待命")
+return
+end
+local pl = game:GetService("Players").LocalPlayer
+local ch = pl and pl.Character
+local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+if hrp then pcall(function() hrp.CFrame = target.Parent.CFrame + Vector3.new(0, 4, 0) end) end
+task.wait(0.6)
+local ok = pcall(fireproximityprompt, target, 0)
+F.Out("[活动] 已触发枫叶活动入口(" .. tostring(ok) .. ") · 待抓参数再接吸叶子")
+end)
+end
+F._fallLoop = nil
+end)
+end
+F.FallAutoDisable = function() T.AutoFall = false F._fallLoop = nil end
 Trans.ClearCurrent = function()
 local file = Trans.CurFile()
 local gone = 0
@@ -10185,7 +10293,7 @@ local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
 if txt:find("[8-]") then
-Trans._selfCN[obj] = true
+if not Trans.Reg[obj] then Trans._selfCN[obj] = true end
 return
 end
 if not Trans.Should(txt) then return end
@@ -10197,7 +10305,10 @@ if not T.Translate then return end
 local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
-if now:find("[8-]") then Trans._selfCN[obj] = true return end
+if now:find("[8-]") then
+if not Trans.Reg[obj] then Trans._selfCN[obj] = true end
+return
+end
 if Trans._selfCN[obj] then return end
 if Trans.Cache[now] then
 pcall(function() obj.Text = Trans.Cache[now] end)
@@ -12583,6 +12694,7 @@ Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
+Event   = Window:AddTab({ Title = "活动", Icon = "star" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
 }
 Tabs.World   = Tabs.Visual
@@ -13047,9 +13159,6 @@ if F._cfgSyncing then return end
 if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
 end })
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddButton({ Title = "活动信息(读下次活动·只读)", Callback = function()
-task.spawn(function() pcall(F.EventProbe) end)
-end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -13069,6 +13178,26 @@ Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
+end })
+Tabs.Event:AddSection("活动 / 天气")
+Tabs.Event:AddButton({ Title = "活动信息(读当前+未来活动·只读)", Callback = function()
+task.spawn(function() pcall(F.EventProbe) end)
+end })
+local evStatBtn = Tabs.Event:AddButton({ Title = "活动状态: 等待扫描", Callback = function()
+task.spawn(function() pcall(F.EventProbe) end)
+end })
+task.spawn(function()
+while true do
+task.wait(1)
+if evStatBtn and evStatBtn.SetTitle then
+pcall(function() evStatBtn:SetTitle(string.format("当前活动: %s · 距轮换 %s", F.EventCurrent(), F.EventCountdown())) end)
+end
+end
+end)
+Tabs.Event:AddToggle("AutoFall", { Title = "自动枫叶活动(检测到就去做)", Default = false, Callback = function(v)
+T.AutoFall = v and true or false
+if F._cfgSyncing then return end
+if v then F.FallAutoEnable() else F.FallAutoDisable() end
 end })
 Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
