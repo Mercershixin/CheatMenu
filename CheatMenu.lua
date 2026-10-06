@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:12 sha 24401f73 bytes 468164'):format('2026-10-07 03:12','24401f73',468164))
+print(('[CheatMenu] build 2026-10-07 03:13 sha 459df579 bytes 468181'):format('2026-10-07 03:13','459df579',468181))
 local F = {}
-F.VERSION = "v16.9.65"
+F.VERSION = "v16.9.66"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12583,7 +12583,7 @@ end
 task.spawn(function() pcall(Trans.Flush) end)
 F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
 end })
-Tabs.Trans:AddSection("② 聊天翻译(游戏内直接替换)")
+Tabs.Trans:AddSection("② 翻译发出(打中文 → 翻成目标语言发出)")
 Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
 T.ChatInput = v and true or false
 if F._cfgSyncing then return end
