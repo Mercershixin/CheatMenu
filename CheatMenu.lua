@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 23:48 sha e26cb8bf bytes 473061'):format('2026-10-06 23:48','e26cb8bf',473061))
+print(('[CheatMenu] build 2026-10-07 00:01 sha 09c98413 bytes 474044'):format('2026-10-07 00:01','09c98413',474044))
 local F = {}
-F.VERSION = "v16.9.36"
+F.VERSION = "v16.9.37"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9132,11 +9132,25 @@ if not body then Trans._dirty = true return false end
 local ok, r = pcall(Trans.SaveAtomic, body)
 local done = ok and (r ~= false)
 Trans._dirty = not done
+if done then
+Trans._saveCount = (Trans._saveCount or 0) + 1
+end
 if done and not Trans._savedLog then
 Trans._savedLog = true
 F.Out("[翻译] 缓存已自动保存 " .. tostring(Trans._cnt or 0) .. " 条 → 下次开启/离线直接复用, 不用重翻")
 end
 return done
+end
+Trans.Stats = function()
+local cacheN = 0
+pcall(function() for _ in pairs(Trans.Cache or {}) do cacheN = cacheN + 1 end end)
+local savedAgo = "还没保存过"
+if Trans._savedAt then
+local d = math.floor(os.clock() - Trans._savedAt)
+savedAgo = ((d < 60) and (d .. " 秒前") or (math.floor(d / 60) .. " 分钟前"))
+end
+F.Out("[翻译统计] 本次翻译 " .. tostring(Trans._cnt or 0) .. " 条 · 缓存里共 " .. tostring(cacheN) .. " 条 · 上次自动保存: "
+.. savedAgo .. " · 已自动保存 " .. tostring(Trans._saveCount or 0) .. " 次(自动, 不用手动)")
 end
 function Trans.Save()
 Trans._dirty = true
@@ -10086,7 +10100,7 @@ F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(la
 return
 end
 end
-F.ChatSend(msg)
+F.Out("[翻译发出] ⚠ 翻译失败(本地模型无响应) ⇒ 本次【没有发出任何内容】(防止中文原样发出去) —— 确认「翻译模型开关.bat」在跑后重新输入再发")
 end)
 end
 function F.TranslateDisable() Trans.Disable() end
@@ -12603,6 +12617,9 @@ local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰�
 C.TransLang = code
 if F._cfgSyncing then return end
 F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 中文聊天框输入的中文会翻成它再发出")
+end })
+Tabs.Trans:AddButton({ Title = "翻译统计(点看翻了多少/保存状态)", Callback = function()
+task.spawn(function() pcall(Trans.Stats) end)
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文→目标语言发出)", Default = false, Callback = function(v)
