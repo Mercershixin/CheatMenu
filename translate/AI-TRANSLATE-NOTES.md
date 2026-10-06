@@ -112,14 +112,18 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
   `OWNER == 当前服文件` 的键写进本服文件 ⇒ **绝不把别的游戏的词写进来（不串文件）**。
   当前服没有键且文件不存在时**不创建空文件**。
 - **清空分流**：`ClearCurrent`（只删本服文件 + 内存里本服的键）· `ClearAll`（删全部缓存文件）。
+- ★ **仓库里所有翻译相关文件统一在 `translate/` 子目录**（2026-10-07 用户要求，避免和根目录其它文件搞混）：
+  `translate/README.md` · `translate/AI-TRANSLATE-NOTES.md` · `translate/sync-cache.py` ·
+  `translate/cache/<游戏名>.txt`。脚本本体仍是根目录 `CheatMenu.lua`。
 - **云端兜底（读）**：`CloudPull` 走 `game.HttpGet` 拉
-  `<raw>/cache/<UrlEncoded 游戏名>.txt`（raw → ghfast.top → ghproxy.net 三通道），
+  `<raw>/translate/cache/<UrlEncoded 游戏名>.txt`（raw → ghfast.top → ghproxy.net 三通道），
   **本地缓存为 0 或本地模型没起来时自动触发**；拉到即写进本服文件。
+  ⚠ 同时**保留旧 `cache/` 路径兜底**（`Trans.CLOUD_DIR_OLD`），老缓存文件不会失效。
 - **云端上传（写）**：⛔ **不在游戏内做**（要在脚本/工作目录放 GitHub Token ⇒ 密钥暴露给所有执行器脚本）。
   改走**电脑端脚本** `D:\666\AI工作区\同步翻译缓存到云端.py`（双击同名 .bat）：
-  读本机 workspace 的 `CheatMenu_Cache_*.txt` → PUT 到仓库 `cache/`。
+  读本机 workspace 的 `CheatMenu_Cache_*.txt` → PUT 到仓库 `translate/cache/`。
   - Token 来源：`项目/.workbuddy/publish.token`（本机，不进仓库）。
-  - 该脚本已加入 `push_api.py` 的 FILES，随发版上仓库做异地备份。
+  - 该脚本已加入 `push_api.py` 的 FILES（推为 `translate/sync-cache.py`），随发版上仓库做异地备份。
   - 游戏内也留了「上传本服缓存到云端」按钮，但**只有** workspace 根目录存在
     `CheatMenu_Token.txt` 才生效（默认不创建该文件）。
 - 数字/名字**模板复用**：`You have 5 coins` 翻过后，`You have 12 coins` 直接套改数字（数字个数必须相等才建模板）。
