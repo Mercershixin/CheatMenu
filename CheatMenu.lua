@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:33 sha 6d7bf804 bytes 478203'):format('2026-10-07 00:33','6d7bf804',478203))
+print(('[CheatMenu] build 2026-10-07 00:38 sha d5eea475 bytes 476579'):format('2026-10-07 00:38','d5eea475',476579))
 local F = {}
-F.VERSION = "v16.9.43"
+F.VERSION = "v16.9.44"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9863,35 +9863,6 @@ for _, obj in ipairs(F.walk(workspace, 40000, 500)) do
 local cls = obj.ClassName
 if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
 pcall(Trans.GuiEl, obj)
-elseif cls == "ProximityPrompt" then
-if type(obj.ActionText) == "string" and obj.ActionText ~= "" then
-Trans.Async(obj.ActionText, function(tr) if obj.Parent then pcall(function() obj.ActionText = tr end) end end)
-end
-if type(obj.ObjectText) == "string" and obj.ObjectText ~= "" then
-Trans.Async(obj.ObjectText, function(tr) if obj.Parent then pcall(function() obj.ObjectText = tr end) end end)
-end
-elseif cls == "Dialog" then
-if type(obj.InitialPrompt) == "string" and obj.InitialPrompt ~= "" then
-Trans.Async(obj.InitialPrompt, function(tr) if obj.Parent then pcall(function() obj.InitialPrompt = tr end) end end)
-end
-if type(obj.GoodbyeDialog) == "string" and obj.GoodbyeDialog ~= "" then
-Trans.Async(obj.GoodbyeDialog, function(tr) if obj.Parent then pcall(function() obj.GoodbyeDialog = tr end) end end)
-end
-elseif cls == "DialogChoice" then
-if type(obj.UserDialog) == "string" and obj.UserDialog ~= "" then
-Trans.Async(obj.UserDialog, function(tr) if obj.Parent then pcall(function() obj.UserDialog = tr end) end end)
-end
-if type(obj.ResponseDialog) == "string" and obj.ResponseDialog ~= "" then
-Trans.Async(obj.ResponseDialog, function(tr) if obj.Parent then pcall(function() obj.ResponseDialog = tr end) end end)
-end
-elseif cls == "Tool" then
-if type(obj.ToolTip) == "string" and obj.ToolTip ~= "" then
-Trans.Async(obj.ToolTip, function(tr) if obj.Parent then pcall(function() obj.ToolTip = tr end) end end)
-end
-elseif cls == "Hint" or cls == "Message" then
-if type(obj.Text) == "string" and obj.Text ~= "" then
-Trans.Async(obj.Text, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
-end
 end
 end
 end)
@@ -9993,7 +9964,7 @@ end
 F._chatChanSkip = function(chName)
 if not chName then return false end
 local n = tostring(chName):lower()
-if n:find("world", 1, true) or n:find("global", 1, true) or n:find("世界", 1, true) or n:find("general", 1, true) then return true end
+if n:find("world", 1, true) or n:find("global", 1, true) or n:find("世界", 1, true) or n:find("公告", 1, true) then return true end
 return false
 end
 function F.ChatTranslateEnable()
