@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:53 sha 6ddd73e1 bytes 480620'):format('2026-10-07 03:53','6ddd73e1',480620))
+print(('[CheatMenu] build 2026-10-07 04:01 sha af800ea2 bytes 483331'):format('2026-10-07 04:01','af800ea2',483331))
 local F = {}
-F.VERSION = "v16.9.73"
+F.VERSION = "v16.9.74"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9341,10 +9341,12 @@ F.Out("[翻译] ☁ 云端暂无本服缓存(或网络不通): " .. Trans.CloudP
 end
 return got, used
 end
-Trans.CloudPush = function()
+Trans.CloudPush = function(quiet)
 local tok = Trans.Token()
 if not tok then
+if not quiet then
 F.Out("[翻译] ☁ 上传需要 Token: 把 GitHub Token 存成 " .. Trans.TOKEN_FILE .. " 放在执行器 workspace 根目录(不会写进脚本)")
+end
 return false
 end
 local file = Trans.CurFile()
@@ -9352,11 +9354,18 @@ local pack, n = {}, 0
 for k, v in pairs(Trans.Cache) do
 if Trans.OWNER[k] == file then pack[k] = v n = n + 1 end
 end
-if n == 0 then F.Out("[翻译] ☁ 本服还没有缓存可上传") return false end
+if n == 0 then
+if not quiet then F.Out("[翻译] ☁ 本服还没有缓存可上传") end
+return false
+end
+if quiet and n == Trans._lastCloudN then return false end
 local gk, pid = Trans.GameKey()
 local body = nil
 pcall(function() body = HS:JSONEncode({ v = 3, game = gk, place = pid, c = pack }) end)
-if not body then F.Out("[翻译] ☁ 序列化失败") return false end
+if not body then
+if not quiet then F.Out("[翻译] ☁ 序列化失败") end
+return false
+end
 local api = Trans.GIT_API .. Trans.CloudPath()
 local sha = nil
 local res = Trans.HttpGet(api .. "?t=" .. tostring(os.time()))
@@ -9371,7 +9380,10 @@ local jb = nil
 pcall(function() jb = HS:JSONEncode(msg) end)
 if not jb then return false end
 local rf = Trans.Req()
-if type(rf) ~= "function" then F.Out("[翻译] ☁ 本执行器没有 request, 无法上传") return false end
+if type(rf) ~= "function" then
+if not quiet then F.Out("[翻译] ☁ 本执行器没有 request, 无法上传") end
+return false
+end
 local okP, r = pcall(function()
 return rf({ Url = api, Method = "PUT", Headers = {
 ["Authorization"] = "token " .. tok,
@@ -9381,11 +9393,20 @@ return rf({ Url = api, Method = "PUT", Headers = {
 end)
 local code = (okP and type(r) == "table") and tonumber(r.StatusCode or 0) or 0
 if code == 200 or code == 201 then
+Trans._lastCloudN = n
 F.Out("[翻译] ☁ 已上传本服缓存 " .. n .. " 条 → " .. Trans.CloudPath())
 return true
 end
 F.Out("[翻译] ☁ 上传失败 HTTP " .. tostring(code) .. (okP and "" or (" · " .. tostring(r))))
 return false
+end
+Trans.AutoCloudMaybe = function()
+if T.TransAutoCloud == false then return end
+if Trans.Token() == nil then return end
+local now = os.clock()
+if Trans._lastCloudAt and now - Trans._lastCloudAt < 180 then return end
+Trans._lastCloudAt = now
+task.spawn(function() pcall(Trans.CloudPush, true) end)
 end
 Trans.Token = function()
 if type(readfile) ~= "function" then return nil end
@@ -9398,6 +9419,48 @@ if type(t) ~= "string" then return nil end
 t = t:gsub("%s+", "")
 if t == "" then return nil end
 return t
+end
+F.EventProbe = function()
+F.Out("[活动探测] ===== 只读, 不动游戏状态 =====")
+local RS = game:GetService("ReplicatedStorage")
+local function first(p)
+local node = RS
+for seg in p:gmatch("[^%.]+") do
+node = node and node:FindFirstChild(seg)
+if not node then return nil end
+end
+return node
+end
+local function listNames(node, prefix)
+if not node then return end
+local kids = node:GetChildren()
+F.Out("[活动探测] " .. prefix .. " 子项 " .. #kids .. " 个:")
+for _, c in ipairs(kids) do
+F.Out("[活动探测]   " .. prefix .. tostring(c.Name) .. " (" .. c.ClassName .. ")")
+end
+end
+local function readVals(node, prefix)
+if not node then return end
+for _, c in ipairs(node:GetChildren()) do
+if c:IsA("ValueBase") then
+F.Out("[活动探测] " .. prefix .. tostring(c.Name) .. " = " .. tostring(c.Value))
+elseif c:IsA("Folder") or c:IsA("Configuration") then
+readVals(c, prefix .. c.Name .. ".")
+end
+end
+end
+pcall(function()
+local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+local h = pg and pg:FindFirstChild("HUD")
+local u = h and h:FindFirstChild("UpdateTimer")
+local lbl = u and u:FindFirstChild("TimerLabel")
+if lbl then F.Out("[活动探测] 更新倒计时 HUD = " .. tostring(lbl.Text)) end
+end)
+listNames(first("Client.ControllerLoader.WeatherController.Weathers.SpecialEvents"), "SpecialEvents/")
+listNames(first("Client.ControllerLoader.WeatherController.Weathers.Events"), "WeatherEvents/")
+readVals(first("Shared.Data.Events"), "Events.")
+listNames(first("Shared.Data.Events"), "Events")
+F.Out("[活动探测] ===== 结束: 把上面几行发给 AI, 它就知道\"下次活动是什么 + 还有多久\" =====")
 end
 Trans.ClearCurrent = function()
 local file = Trans.CurFile()
@@ -9528,6 +9591,7 @@ end
 else
 Trans._lastErr = tostring(r)
 end
+if done then Trans.AutoCloudMaybe() end
 return done
 end
 Trans.Save = function() Trans._dirty = true end
@@ -12857,6 +12921,9 @@ if F._cfgSyncing then return end
 if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
 end })
 Tabs.AFK:AddSection("自动化")
+Tabs.AFK:AddButton({ Title = "活动信息(读下次活动·只读)", Callback = function()
+task.spawn(function() pcall(F.EventProbe) end)
+end })
 Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼", Default = false, Callback = function(v)
 T.AutoTrain = v
 if F._cfgSyncing then return end
@@ -12923,10 +12990,19 @@ end })
 Tabs.Trans:AddButton({ Title = "清空全部缓存(所有游戏)", Callback = function()
 task.spawn(function() pcall(Trans.ClearAll) end)
 end })
-Tabs.Trans:AddButton({ Title = "上传本服缓存到云端(需 Token)", Callback = function()
-task.spawn(function() pcall(Trans.CloudPush) end)
+Tabs.Trans:AddToggle("TransAutoCloud", { Title = "自动上传缓存到云端(翻译了就传)", Default = true, Callback = function(v)
+T.TransAutoCloud = v and true or false
+if F._cfgSyncing then return end
+if v then
+F.Out("[翻译] ☁ 自动上传已开: 每 3 分钟或关翻译时, 本服新缓存会自动传到云端")
+else
+F.Out("[翻译] ☁ 自动上传已关")
+end
 end })
-Tabs.Trans:AddButton({ Title = "从云端拉取本服缓存(补全)", Callback = function()
+Tabs.Trans:AddButton({ Title = "☁ 上传本服缓存到云端", Callback = function()
+task.spawn(function() pcall(Trans.CloudPush, false) end)
+end })
+Tabs.Trans:AddButton({ Title = "☁ 从云端拉取本服缓存(补全)", Callback = function()
 task.spawn(function() pcall(Trans.CloudPull, false) end)
 end })
 Tabs.Trans:AddSection("② 翻译发出(打中文 → 翻成目标语言发出)")
