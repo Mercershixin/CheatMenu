@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 20:52 sha 94c6b817 bytes 476767'):format('2026-10-06 20:52','94c6b817',476767))
+print(('[CheatMenu] build 2026-10-06 20:59 sha 6c697cb0 bytes 475665'):format('2026-10-06 20:59','6c697cb0',475665))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9309,13 +9309,14 @@ function Trans.Req()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
--- 多通道翻译：本地 llama-server 优先，失败自动回退远程免费 API（MyMemory）
-Trans.REMOTE = { on = true, base = "https://api.mymemory.translated.net/get", cool = 30 }
-Trans.LANGMAP = { zh = "zh-CN", en = "en", ja = "ja", ko = "ko", th = "th", ru = "ru", ar = "ar", id = "id" }
-Trans._localDead = 0
-function Trans.RequestLocal(text)
+-- 本地多通道：全程本地不联网（短语表 → 缓存 → 本地模型，模型带重试容错）
+Trans._localFails = 0
+function Trans.Request(text)
 local rf = Trans.Req()
-if type(rf) ~= "function" then return nil, "no request" end
+if type(rf) ~= "function" then
+F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
+return nil
+end
 local body = HS:JSONEncode({
 model = Trans.MODEL,
 messages = {
@@ -9324,6 +9325,8 @@ messages = {
 },
 temperature = 0.1, top_p = 0.6, max_tokens = 128, stream = false,
 })
+local attempt
+for attempt = 1, 2 do
 local ok, res = pcall(function()
 return rf({
 Url = Trans.HOST .. "/v1/chat/completions",
@@ -9332,42 +9335,23 @@ Headers = { ["Content-Type"] = "application/json", ["Authorization"] = "Bearer "
 Body = body,
 })
 end)
-if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
-return nil, "HTTP " .. tostring(res and res.StatusCode or "fail")
-end
+if ok and type(res) == "table" and (res.StatusCode or 0) == 200 then
 local ok2, d = pcall(HS.JSONDecode, res.Body)
-if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "bad json" end
+if ok2 and type(d) == "table" and d.choices and d.choices[1] then
 local msg = d.choices[1].message
-return msg and msg.content, nil
+if msg and msg.content then
+Trans._localFails = 0
+return msg.content, nil
 end
-function Trans.RequestRemote(text)
-if not Trans.REMOTE.on then return nil, "远程回退已关" end
-local rf = Trans.Req()
-if type(rf) ~= "function" then return nil, "no request" end
-local target = Trans.LANGMAP[C.TransLang or "zh"] or "zh-CN"
-local q = nil
-pcall(function() q = HS:UrlEncode(text) end)
-if not q then return nil, "urlencode fail" end
-local url = Trans.REMOTE.base .. "?q=" .. q .. "&langpair=en|" .. target
-local ok, res = pcall(function() return rf({ Url = url, Method = "GET" }) end)
-if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
-return nil, "remote HTTP " .. tostring(res and res.StatusCode or "fail")
 end
-local ok2, d = pcall(HS.JSONDecode, res.Body)
-if not ok2 or type(d) ~= "table" then return nil, "remote bad json" end
-local t = d.responseData and d.responseData.translatedText
-if type(t) ~= "string" or t == "" then return nil, "remote empty" end
-return t, nil
 end
-function Trans.Request(text)
-local now = os.clock()
-if now - (Trans._localDead or 0) > Trans.REMOTE.cool then
-local r, err = Trans.RequestLocal(text)
-if r then return r end
-Trans._localDead = now
-F.Out("[翻译·通道] 本地服务不可用(" .. tostring(err) .. ") ⇒ 切远程通道(冷却 " .. Trans.REMOTE.cool .. " 秒)")
+if attempt == 1 then task.wait(0.3) end
 end
-return Trans.RequestRemote(text)
+Trans._localFails = Trans._localFails + 1
+if Trans._localFails <= 3 then
+F.Out("[翻译] ⚠ 本地服务响应失败(已重试 2 次) ⇒ 高频词走本地短语表, 其余等本地服务恢复")
+end
+return nil, "本地服务无响应"
 end
 Trans.RT = { O1 = "\226\159\166", C1 = "\226\159\167" }
 Trans.RT.HasTags = function(s)
