@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:36 sha 333b226c bytes 467175'):format('2026-10-07 02:36','333b226c',467175))
+print(('[CheatMenu] build 2026-10-07 02:38 sha 030d63de bytes 468683'):format('2026-10-07 02:38','030d63de',468683))
 local F = {}
-F.VERSION = "v16.9.55"
+F.VERSION = "v16.9.56"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9030,6 +9030,22 @@ Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
+Trans.OFFICIAL = {
+robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
+experiencechat = true, appchat = true, topbarapp = true, robloxpromptgui = true,
+foundationoverlay = true, screenshotscarousel = true, capturemanager = true,
+captureoverlay = true, momentscreationflow = true, robloxnetworkpausenotification = true,
+toastnotification = true, teleporteffectgui = true, adguiinteractivitycontrols = true,
+immersivebrandedads = true, rewardedvideoadplayer = true, gameinvite = true,
+bulkpurchaseapp = true, inexperiencetransferapp = true, cancelsubscriptionapp = true,
+commercepurchaseapp = true, systemscrim = true, universalsharesheetscreenguiroot = true,
+inexperiencedetailspromptapp = true, inexperienceinterventionapp = true,
+purchasepromptapp = true, publishassetprompt = true, avatareditorpromptsapp = true,
+socialcontexttoast = true, ingamefullscreentitlebarscreen = true,
+headsetdisconnecteddialog = true, shortcutbar = true, emotesmenu = true,
+authmenu = true, permissions = true, notificationbanner = true,
+foundationcursorcontainer = true, onrootedlistener = true, stylesheet = true,
+}
 Trans._sCache = {}
 Trans._sN = 0
 Trans.Req = function()
@@ -9721,15 +9737,13 @@ end
 if Trans._playerAddedConn then pcall(function() Trans._playerAddedConn:Disconnect() end) Trans._playerAddedConn = nil end
 Trans._chatConns = nil
 end
-function F.IsUnderCoreGui(obj)
-local cg = nil
-pcall(function() cg = game:GetService("CoreGui") end)
-if not cg then return false end
+function F.IsOfficialUI(obj)
 local p = obj
 for _ = 1, 20 do
 p = p and p.Parent
 if not p then return false end
-if p == cg then return true end
+local nm = p.Name
+if type(nm) == "string" and Trans.OFFICIAL[string.lower(nm)] then return true end
 end
 return false
 end
@@ -9757,7 +9771,7 @@ if Trans.TextVisible(obj) == false then return end
 local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
-if F.IsUnderCoreGui(obj) then return end
+if F.IsOfficialUI(obj) then return end
 if cls == "TextBox" then
 local editable = true
 pcall(function() editable = obj.TextEditable end)
@@ -9812,13 +9826,22 @@ end
 Trans.Scan = function()
 local LPl = game:GetService("Players").LocalPlayer
 pcall(Trans.RefreshPN)
-local pg = LPl and LPl:FindFirstChild("PlayerGui")
-local roots = {}
-if pg then roots[#roots + 1] = pg end
+local roots, rootNames = {}, {}
+local function addRoot(r, tag)
+if not r then return end
+for i = 1, #roots do if roots[i] == r then return end end
+roots[#roots + 1] = r
+rootNames[#rootNames + 1] = tag
+end
+addRoot(LPl and LPl:FindFirstChild("PlayerGui"), "PlayerGui")
+pcall(function() if gethui then addRoot(gethui(), "gethui") end end)
 pcall(function()
-if gethui then
-local h = gethui()
-if h and h ~= pg then roots[#roots + 1] = h end
+local cg = game:GetService("CoreGui")
+if cg then
+for _, ch in ipairs(cg:GetChildren()) do
+local nm = tostring(ch.Name)
+if not Trans.OFFICIAL[string.lower(nm)] then addRoot(ch, "CoreGui/" .. nm) end
+end
 end
 end)
 if #roots == 0 then return end
@@ -9857,7 +9880,8 @@ end
 if not Trans._diagOnce then
 Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
-F.Out("[翻译·诊断] 可见文本 " .. visN .. " 个 ⇒ 中文 " .. cnN .. " 个(跳过) · 英文待翻 " .. enN .. " 个 " .. s)
+F.Out("[翻译·诊断] 扫了 " .. #roots .. " 个容器(" .. table.concat(rootNames, ",") .. ") ⇒ 可见文本 "
+.. visN .. " 个 · 中文 " .. cnN .. " · 英文待翻 " .. enN .. " " .. s)
 end
 Trans._diagText = " 可见" .. visN .. "/中文" .. cnN .. "/待翻" .. enN
 Trans._scanRound = Trans._scanRound + 1
