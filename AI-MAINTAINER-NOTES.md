@@ -4093,6 +4093,56 @@ v16.9.22 已写回；`T.ACMaster` 因同样原因保留。
 档位覆盖面矩阵（逐能力算"在哪个档位会被打开"，含传递闭包）+ 检查 `T1 ⊆ T2 ⊆ T3`。
 改前一眼看出 `AC.AntiPauseEnable` / `F.HealthIsolateSet` / 护蛋·搬运·防减速 **三个档位都开不到**。
 
+---
+
+## v16.9.28 · 假上报 + 掉线兜底 + 隐身修复（2026-10-06）
+
+### ★★★ 假上报（只在档位③）：**不丢弃，改值后真发**
+
+原来 4 个拦截点命中就 `return nil`（丢弃）⇒ 服务端会察觉"该上报的突然不上报了"（**本身就是异常信号**）。
+现在用 `F.CMX_FakeArgs(...)` 净化参数后调用 `box.orig(...)` **真发出去**：
+
+- `number` 且 `|v| > 120` 或 `NaN` → **改成 16**（正常速度量级）
+- 字符串 / 对象 / 布尔 / nil → **原样**（不动枚举与结构，避免服务端解析错乱）
+
+**覆盖 4 个拦截点**：① `AC` namecall `T.RemoteBlock` ② `AC` namecall `T.HpBlock`
+③ `KickGuard` `F.BLOCK_REMOTE_KEYS` ④ `KickGuard` `SpeedGuard` 关键词（Integrity/Correction/Violation/anticheat/honeypot）。
+
+**⛔ 三条安全铁律**（本版都踩过或差点踩）：
+1. **namecall / `__index` 钩子体没有 pcall 保护** ⇒ 钩子内调用的 helper 必须**整体 pcall**，
+   异常时返回最保守值（nil = 退回"丢弃"）。否则报错会**直接抛给游戏的调用方**。
+2. **不要依赖 `table.pack`**（少数执行器没有）⇒ 用 `select("#", ...)` + `{ ... }`，并补 `args.n = n`。
+3. ⛔ **`...` 不能出现在嵌套函数里**（Luau 直接编译报错）⇒ 变长参数必须在**外层函数**捕获后再给闭包用。
+
+开关 `T.CMX_FakeReport`：档位③ 置 true；档位复位 / 熔断复位 / 急停遍历 `T` 全清。
+
+### 掉线兜底（「被踢/掉线自动回到同一服务器」）
+
+- 原只有 `PlayerRemoving`（掉线时常常不触发）⇒ 加**看门狗**（每 2 秒查 `LP.Parent`，
+  **连续 2 次**脱离才判定，避免传送误判）+ **`TeleportInitFailed` 自动重试**（≤3 次、间隔 3 秒）。
+- ★ **必须在开功能时就把 PlaceId/JobId 存下来** —— 掉线后 `game.JobId` 已经取不到。
+- 关闭时三个连接（`rjConn`/`rjFail`/`rjWatch`）全断并复位计数。
+
+### 隐身的**作用域**（用户报"隐身会隐藏别人名字"的核查与修复）
+
+`Humanoid` 三个显示属性**作用域全在自己身上**：
+
+| 属性 | 含义 | 处置 |
+|---|---|---|
+| `DisplayDistanceType` | 整套"名字/血条是否显示"的模式 | ❌ **已删除写入**（最激进、最像透明特征、最易触发游戏自定义名牌系统的连锁副作用） |
+| `NameDisplayDistance` | 本角色名字显示距离 | ✅ 设 0（`Viewer` 下距离 0 = 看不到，效果等价） |
+| `HealthDisplayDistance` | 本角色血条显示距离 | ✅ 设 0 |
+
+**核查结论**：代码里**没有任何一处**在隐身时修改其他玩家属性（`DisplayDistanceType/NameDisplayDistance`
+的写入只在 LocalPlayer 的 humanoid；ESP 名字用**自建 BillboardGui**，不引用 Transparency/Invisible）。
+"看不到别人名字"的真实原因是**重载脚本后「ESP 总开关」回到默认关**（配置存档已按用户要求删除）
+⇒ 已在隐身日志里加了提示句。
+
+**隐身补强**：透明度遍历扩到 `Texture`；关掉自己身上会暴露位置的特效
+（`BillboardGui`/`Highlight`/`SelectionBox`/`ParticleEmitter`/`Trail`/`Beam`，存原 `Enabled` 逐项还原）；
+`CharacterAdded` 与 `DescendantAdded` 两条路径都覆盖。
+
+
 
 
 
