@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:54 sha 55c5d9c5 bytes 464599'):format('2026-10-07 02:54','55c5d9c5',464599))
+print(('[CheatMenu] build 2026-10-07 02:56 sha 2f4e6924 bytes 470605'):format('2026-10-07 02:56','2f4e6924',470605))
 local F = {}
-F.VERSION = "v16.9.59"
+F.VERSION = "v16.9.60"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9507,86 +9507,261 @@ if #Trans.Queue > 200 then return end
 Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
 Trans.Drain()
 end
-Trans.ChatWatch = function()
-if Trans._chatHooked then return end
-Trans._chatHooked = true
+Trans.PanelBuild = function()
+if Trans._panel and Trans._panel.sg and Trans._panel.sg.Parent then return Trans._panel end
 local LPl = game:GetService("Players").LocalPlayer
-local function mine(msg)
-if not LPl then return false end
-local src = msg and msg.TextSource
-if not src then return false end
-local okS, same = pcall(function() return src.UserId == LPl.UserId end)
-return okS and same
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return nil end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CM_TransPanel"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 999996
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+pcall(function() sg.Parent = pg end)
+local frame = Instance.new("Frame")
+frame.Name = "Root"
+frame.Size = UDim2.new(0, 350, 0, 250)
+frame.Position = UDim2.new(0, 16, 0, 250)
+frame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+frame.BackgroundTransparency = 0.12
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = sg
+local c1 = Instance.new("UICorner")
+c1.CornerRadius = UDim.new(0, 8)
+c1.Parent = frame
+local bar = Instance.new("TextLabel")
+bar.Size = UDim2.new(1, -70, 0, 28)
+bar.Position = UDim2.new(0, 8, 0, 0)
+bar.BackgroundTransparency = 1
+bar.Text = "翻译面板"
+bar.TextColor3 = Color3.fromRGB(240, 240, 245)
+bar.TextSize = 14
+bar.Font = Enum.Font.GothamBold
+bar.TextXAlignment = Enum.TextXAlignment.Left
+bar.Parent = frame
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(1, -16, 0, 16)
+info.Position = UDim2.new(0, 8, 0, 26)
+info.BackgroundTransparency = 1
+info.Text = ""
+info.TextColor3 = Color3.fromRGB(140, 145, 160)
+info.TextSize = 11
+info.Font = Enum.Font.Code
+info.TextXAlignment = Enum.TextXAlignment.Left
+info.Parent = frame
+local hideBtn = Instance.new("TextButton")
+hideBtn.Size = UDim2.new(0, 24, 0, 22)
+hideBtn.Position = UDim2.new(1, -30, 0, 3)
+hideBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+hideBtn.BorderSizePixel = 0
+hideBtn.Text = "—"
+hideBtn.TextColor3 = Color3.fromRGB(230, 230, 235)
+hideBtn.TextSize = 14
+hideBtn.Font = Enum.Font.GothamBold
+hideBtn.Parent = frame
+do
+local cc = Instance.new("UICorner")
+cc.CornerRadius = UDim.new(0, 5)
+cc.Parent = hideBtn
 end
-local function pick(text)
-if type(text) ~= "string" or text == "" then return nil end
-local hit = Trans.Cache[text]
-if type(hit) == "string" and hit ~= "" then return hit end
-if T.Translate and Trans.Should(text) then
-Trans.Async(text, function() end)
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -16, 1, -84)
+scroll.Position = UDim2.new(0, 8, 0, 44)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 4
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 100)
+scroll.Parent = frame
+do
+local lay = Instance.new("UIListLayout")
+lay.Padding = UDim.new(0, 4)
+lay.SortOrder = Enum.SortOrder.LayoutOrder
+lay.Parent = scroll
 end
-return nil
+local box = Instance.new("TextBox")
+box.Name = "CM_ChatInput"
+box.Size = UDim2.new(1, -16, 0, 30)
+box.Position = UDim2.new(0, 8, 1, -38)
+box.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+box.BorderSizePixel = 0
+box.TextColor3 = Color3.fromRGB(240, 240, 245)
+box.PlaceholderColor3 = Color3.fromRGB(140, 140, 152)
+box.TextSize = 13
+box.Font = Enum.Font.Gotham
+box.ClearTextOnFocus = false
+box.Text = ""
+box.PlaceholderText = "输入中文 → 回车 → 翻成目标语言发出"
+box.Parent = frame
+do
+local c2 = Instance.new("UICorner")
+c2.CornerRadius = UDim.new(0, 6)
+c2.Parent = box
 end
-local okTcs = pcall(function()
-local tcs = game:GetService("TextChatService")
-if not tcs then error("no-tcs") end
-tcs.OnIncomingMessage = function(msg)
-if not T.Translate or type(msg) ~= "table" then return nil end
-if mine(msg) then return nil end
-local tr = pick(msg.Text)
-if not tr or tr == msg.Text then return nil end
-local props = nil
-pcall(function()
-props = Instance.new("TextChatMessageProperties")
-props.Text = tr
+box.FocusLost:Connect(function(enterPressed)
+if not enterPressed then return end
+local txt = box.Text
+if not txt or txt == "" then return end
+box.Text = ""
+pcall(function() box:ReleaseFocus() end)
+F.ChatSendTranslated(txt)
 end)
-return props
-end
-tcs.OnBubbleAdded = function(msg, adornee)
-if not T.Translate or type(msg) ~= "table" then return nil end
-if mine(msg) then return nil end
-local tr = pick(msg.Text)
-if not tr or tr == msg.Text then return nil end
-local props = nil
-pcall(function()
-props = Instance.new("TextChatMessageProperties")
-props.Text = tr
+local dragging, dragStart, startPos = false, nil, nil
+bar.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1
+or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = frame.Position
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then dragging = false end
 end)
-return props
 end
 end)
-if not okTcs then
-F.Out("[翻译] ⚠ 本游戏聊天不走 TextChatService ⇒ 聊天无法原地替换(界面翻译不受影响)")
+bar.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+or input.UserInputType == Enum.UserInputType.Touch) then
+local d = input.Position - dragStart
+frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
+startPos.Y.Scale, startPos.Y.Offset + d.Y)
 end
+end)
+local minimized = false
+hideBtn.MouseButton1Click:Connect(function()
+minimized = not minimized
+scroll.Visible = not minimized
+box.Visible = not minimized
+info.Visible = not minimized
+frame.Size = minimized and UDim2.new(0, 350, 0, 30) or UDim2.new(0, 350, 0, 250)
+hideBtn.Text = minimized and "▢" or "—"
+end)
+Trans._panel = { sg = sg, frame = frame, scroll = scroll, box = box, info = info }
+return Trans._panel
+end
+Trans.PanelAdd = function(sender, text, color)
+local p = Trans.PanelBuild()
+if not p then return nil end
+local lb = Instance.new("TextLabel")
+lb.Size = UDim2.new(1, -10, 0, 0)
+lb.AutomaticSize = Enum.AutomaticSize.Y
+lb.BackgroundTransparency = 1
+lb.RichText = true
+lb.TextWrapped = true
+lb.TextXAlignment = Enum.TextXAlignment.Left
+lb.TextYAlignment = Enum.TextYAlignment.Top
+lb.Font = Enum.Font.Gotham
+lb.TextSize = 13
+lb.TextColor3 = color or Color3.fromRGB(235, 235, 240)
+lb.Text = (sender and ("<b>[" .. tostring(sender) .. "]</b> ") or "") .. tostring(text)
+lb.LayoutOrder = (Trans._panelN or 0) + 1
+pcall(function() lb.Parent = p.scroll end)
+Trans._panelN = lb.LayoutOrder
+if Trans._panelN > 120 then
+local kids = p.scroll:GetChildren()
+local removed = 0
+for i = 1, #kids do
+local k = kids[i]
+if k:IsA("TextLabel") then
+k:Destroy()
+removed = removed + 1
+if removed >= 30 then break end
+end
+end
+Trans._panelN = math.max(1, Trans._panelN - removed)
+end
+task.defer(function()
+pcall(function() p.scroll.CanvasPosition = Vector2.new(0, math.max(0, p.scroll.AbsoluteCanvasSize.Y - p.scroll.AbsoluteWindowSize.Y)) end)
+end)
+return lb
+end
+Trans.PanelInfo = function(text)
+local p = Trans._panel
+if p and p.info then pcall(function() p.info.Text = text end) end
+end
+Trans.PanelSetEnabled = function(on)
+if on then
+Trans.PanelBuild()
+else
+local p = Trans._panel
+if p and p.sg then pcall(function() p.sg.Enabled = false end) end
+end
+end
+Trans.PanelDestroy = function()
+local p = Trans._panel
+if p and p.sg then pcall(function() p.sg:Destroy() end) end
+Trans._panel = nil
+Trans._panelN = 0
+end
+Trans.ChatWatch = function()
+if Trans._chatConns then return end
 Trans._chatConns = {}
+local LPl = game:GetService("Players").LocalPlayer
+local function handle(sender, text)
+if not T.Translate or type(text) ~= "string" or text == "" then return end
+if LPl and sender == LPl then return end
+local name = sender and (sender.DisplayName or sender.Name) or "?"
+if text:find("[\228-\233]") then
+Trans.PanelAdd(name, text)
+return
+end
+if not Trans.Should(text) then
+Trans.PanelAdd(name, text)
+return
+end
+local hit = Trans.Cache[text]
+if type(hit) == "string" then
+Trans.PanelAdd(name, hit, Color3.fromRGB(150, 240, 170))
+return
+end
+if not Trans._ready then
+Trans.PanelAdd(name, text)
+return
+end
+local lb = Trans.PanelAdd(name, '<font color="#888888">[翻译中...]</font>')
+Trans.Async(text, function(tr)
+if lb and lb.Parent then
+pcall(function()
+lb.Text = "<b>[" .. tostring(name) .. "]</b> " .. tr
+lb.TextColor3 = Color3.fromRGB(150, 240, 170)
+end)
+end
+end)
+end
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if not tcs then return end
+local chs = tcs:FindFirstChild("TextChannels")
+if not chs then return end
+for _, ch in ipairs(chs:GetChildren()) do
+if ch:IsA("TextChannel") then
+Trans._chatConns[#Trans._chatConns + 1] = ch.MessageReceived:Connect(function(msg)
+if not msg then return end
+local sender = nil
+local src = msg.TextSource
+if src then pcall(function() sender = game:GetService("Players"):GetPlayerByUserId(src.UserId) end) end
+handle(sender, msg.Text)
+end)
+end
+end
+end)
 pcall(function()
 local ps = game:GetService("Players")
 local function hookPl(pl)
-Trans._chatConns[#Trans._chatConns + 1] = pl.Chatted:Connect(function(text)
-if not T.Translate or type(text) ~= "string" or text == "" then return end
-if pl == LPl then return end
-if Trans.Cache[text] then return end
-if Trans.Should(text) then Trans.Async(text, function() end) end
-end)
+Trans._chatConns[#Trans._chatConns + 1] = pl.Chatted:Connect(function(text) handle(pl, text) end)
 end
 for _, pl in ipairs(ps:GetPlayers()) do hookPl(pl) end
 Trans._playerAddedConn = ps.PlayerAdded:Connect(hookPl)
 end)
 end
 Trans.ChatUnwatch = function()
-pcall(function()
-local tcs = game:GetService("TextChatService")
-if tcs then
-tcs.OnIncomingMessage = nil
-tcs.OnBubbleAdded = nil
-end
-end)
 if Trans._chatConns then
 for i = 1, #Trans._chatConns do pcall(function() Trans._chatConns[i]:Disconnect() end) end
-Trans._chatConns = nil
 end
 if Trans._playerAddedConn then pcall(function() Trans._playerAddedConn:Disconnect() end) Trans._playerAddedConn = nil end
-Trans._chatHooked = nil
+Trans._chatConns = nil
 end
 function F.IsOfficialUI(obj)
 local p = obj
@@ -9594,11 +9769,7 @@ for _ = 1, 20 do
 p = p and p.Parent
 if not p then return false end
 local nm = p.Name
-if type(nm) == "string" then
-local ln = string.lower(nm)
-if ln:find("chat") then return false end
-if Trans.OFFICIAL[ln] then return true end
-end
+if type(nm) == "string" and Trans.OFFICIAL[string.lower(nm)] then return true end
 end
 return false
 end
@@ -9695,19 +9866,7 @@ local cg = game:GetService("CoreGui")
 if cg then
 for _, ch in ipairs(cg:GetChildren()) do
 local nm = tostring(ch.Name)
-local ln = string.lower(nm)
-if not Trans.OFFICIAL[ln] then
-addRoot(ch, "CoreGui/" .. nm)
-elseif ln == "robloxgui" then
-pcall(function()
-for _, sub in ipairs(ch:GetChildren()) do
-local sn = string.lower(tostring(sub.Name))
-if sn:find("chat") then addRoot(sub, "CoreGui/RobloxGui/" .. sub.Name) end
-end
-end)
-elseif ln:find("chat") then
-addRoot(ch, "CoreGui/" .. nm)
-end
+if not Trans.OFFICIAL[string.lower(nm)] then addRoot(ch, "CoreGui/" .. nm) end
 end
 end
 end)
@@ -9827,13 +9986,16 @@ local lang = C.TransLang or "en"
 local tr = Trans.Translate(msg, true, lang)
 if not tr then
 F.Out("[翻译发出] ⚠ 翻译失败(本地模型没响应?) ⇒ 本次没发出")
+Trans.PanelAdd("我", "翻译失败: " .. tostring(msg), Color3.fromRGB(255, 120, 120))
 return
 end
 local okSend = F.ChatSend(tr)
 if okSend then
 F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
+Trans.PanelAdd("我", msg .. " → " .. tr, Color3.fromRGB(120, 200, 255))
 else
 F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏没有可用聊天接口")
+Trans.PanelAdd("我", tr .. " (发送失败)", Color3.fromRGB(255, 180, 120))
 end
 end)
 end
@@ -9849,9 +10011,13 @@ F.Out("[翻译] ✅ 本地模型已就绪(" .. Trans.HOST .. ")")
 else
 F.Out("[翻译] ⏳ 本地模型还没起来(" .. Trans.HOST .. ") ⇒ 已挂监听, 服务一起来自动开翻。请先启动 llama-server")
 end
+if T.TransPanel then
+Trans.PanelSetEnabled(true)
+Trans.PanelAdd("系统", "翻译已启动 · 界面 + 聊天 → 中文", Color3.fromRGB(255, 210, 120))
+end
 pcall(Trans.Scan)
 Trans.WatchOn()
-if T.ChatTrans ~= false then pcall(Trans.ChatWatch) end
+pcall(Trans.ChatWatch)
 if not Trans._readyTask then
 Trans._readyTask = task.spawn(function()
 while T.Translate do
@@ -9861,8 +10027,9 @@ if Trans._ready then break end
 if Trans.Health() then
 Trans._ready = true
 F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 开始翻译")
+Trans.PanelAdd("系统", "模型就绪, 开始翻译", Color3.fromRGB(255, 210, 120))
 pcall(Trans.Scan)
-if T.ChatTrans ~= false then pcall(Trans.ChatWatch) end
+pcall(Trans.ChatWatch)
 end
 end
 Trans._readyTask = nil
@@ -9891,6 +10058,7 @@ Trans.WatchOff()
 Trans.ChatUnwatch()
 Trans.Loop = nil
 pcall(Trans.Flush)
+Trans.PanelSetEnabled(false)
 F.Out("[翻译] 已关 · 译文保留在界面上 · 缓存已保存")
 end
 function F.TranslateDisable() Trans.Disable() end
@@ -9898,9 +10066,14 @@ function F.TranslateEnable()
 local ok, r = pcall(Trans.Enable)
 if not ok then F.Out("[翻译] 启动出错: " .. tostring(r)) return nil end
 task.spawn(function()
-local okP, okR, info = pcall(Trans.Probe)
-local msg = tostring(info or okR)
-F.Out("[翻译] 模型自检: " .. msg)
+local okP, info = pcall(Trans.Probe)
+if okP and info then
+Trans.PanelInfo("模型自检: " .. info)
+F.Out("[翻译] 模型自检: " .. info)
+else
+Trans.PanelInfo("模型自检: 未通过(" .. tostring(info) .. ")")
+F.Out("[翻译] 模型自检未通过: " .. tostring(info))
+end
 end)
 return r
 end
@@ -9912,6 +10085,7 @@ function F.ChatIMEBoxEnable() end
 function F.ChatIMEBoxDisable() end
 function F.ChatBoxSet(on)
 T.ChatIMEBox = on and true or false
+Trans.PanelSetEnabled(on and true or false)
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
@@ -12456,15 +12630,15 @@ end
 task.spawn(function() pcall(Trans.Flush) end)
 F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
 end })
-Tabs.Trans:AddSection("② 聊天翻译(游戏内直接替换)")
-Tabs.Trans:AddToggle("ChatTrans", { Title = "聊天翻译(游戏内原地替换)", Default = true, Callback = function(v)
-T.ChatTrans = v and true or false
+Tabs.Trans:AddSection("② 聊天翻译面板(独立窗口)")
+Tabs.Trans:AddToggle("TransPanel", { Title = "开启聊天译文面板", Default = false, Callback = function(v)
+T.TransPanel = v and true or false
 if F._cfgSyncing then return end
 if v then
-pcall(Trans.ChatWatch)
+Trans.PanelSetEnabled(true)
 if not T.Translate then pcall(F.TranslateEnable) end
 else
-pcall(Trans.ChatUnwatch)
+Trans.PanelSetEnabled(false)
 end
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
@@ -12477,7 +12651,9 @@ end })
 Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
 task.spawn(function()
 local okP, okR, info = pcall(Trans.Probe)
-F.Out("[翻译] 模型自检: " .. tostring(info or okR))
+local msg = tostring(info or okR)
+F.Out("[翻译] 模型自检: " .. msg)
+if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. msg) end
 end)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
