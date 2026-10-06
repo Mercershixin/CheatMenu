@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:12 sha 564b10a2 bytes 487617'):format('2026-10-07 05:12','564b10a2',487617))
+print(('[CheatMenu] build 2026-10-07 05:18 sha daa4c41d bytes 487756'):format('2026-10-07 05:18','daa4c41d',487756))
 local F = {}
-F.VERSION = "v16.9.82"
+F.VERSION = "v16.9.83"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9994,7 +9994,7 @@ if i == #vals and filled ~= "" and filled ~= text then return filled end
 end
 return nil
 end
-Trans.Async = function(text, applyFn)
+Trans.Async = function(text, applyFn, urgent)
 if not T.Translate then return end
 if not Trans._ready then return end
 if type(text) ~= "string" or text == "" then return end
@@ -10009,7 +10009,8 @@ end
 local ft = Trans._fail and Trans._fail[text]
 if ft and os.clock() < ft then return end
 if #Trans.Queue > 200 then return end
-Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
+if urgent then table.insert(Trans.Queue, 1, { text = text, apply = applyFn })
+else Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn } end
 Trans.Drain()
 end
 Trans.IsWorldChat = function(msg)
@@ -10161,7 +10162,7 @@ local ok, v = pcall(function() return obj.TextVisible end)
 if ok then return v end
 return nil
 end
-Trans.GuiEl = function(obj)
+Trans.GuiEl = function(obj, urgent)
 if not obj or not obj.Parent then return end
 local cls = obj.ClassName
 if cls ~= "TextLabel" and cls ~= "TextButton" and cls ~= "TextBox" then return end
@@ -10194,14 +10195,14 @@ local ph = nil
 pcall(function() ph = obj.PlaceholderText end)
 if type(ph) == "string" and Trans.Should(ph) then
 Trans.RegField(obj, "PlaceholderText", ph)
-Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
+Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end, urgent)
 end
 if editable == false then
 local body = nil
 pcall(function() body = obj.Text end)
 if type(body) == "string" and Trans.Should(body) then
 Trans.RegField(obj, "Text", body)
-Trans.Async(body, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
+Trans.Async(body, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end, urgent)
 end
 end
 return
@@ -10230,7 +10231,7 @@ return
 end
 local r = Trans.Reg[obj]
 if r and os.clock() - (r.at or 0) < 30 then return end
-pcall(Trans.GuiEl, obj)
+pcall(Trans.GuiEl, obj, true)
 end)
 end)
 end
@@ -10239,7 +10240,7 @@ if r0 and os.clock() - (r0.at or 0) < 30 then return end
 Trans.RegField(obj, "Text", txt)
 Trans.Async(txt, function(tr)
 if obj.Parent and obj.Visible ~= false then pcall(function() obj.Text = tr end) end
-end)
+end, urgent)
 end
 Trans.RegCount = function()
 local n = 0
@@ -10373,7 +10374,7 @@ local pg = LPl and LPl:FindFirstChild("PlayerGui")
 if not pg then return end
 pcall(function()
 Trans._watchConn = pg.DescendantAdded:Connect(function(d)
-task.defer(function() if T.Translate then pcall(Trans.GuiEl, d) end end)
+task.defer(function() if T.Translate then pcall(Trans.GuiEl, d, true) end end)
 end)
 end)
 end
