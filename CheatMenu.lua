@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:09 sha e24d5b9b bytes 469017'):format('2026-10-07 03:09','e24d5b9b',469017))
+print(('[CheatMenu] build 2026-10-07 03:12 sha 24401f73 bytes 468164'):format('2026-10-07 03:12','24401f73',468164))
 local F = {}
-F.VERSION = "v16.9.64"
+F.VERSION = "v16.9.65"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8980,9 +8980,7 @@ local Trans = {}
 Trans.HOST = "http://127.0.0.1:8080"
 Trans.KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 Trans.MODEL = "hymt2-7b"
-Trans.FILE = "CheatMenu_TransCache.json"
-Trans.BAK = "CheatMenu_TransCache.json.bak"
-Trans.TMP = "CheatMenu_TransCache.json.tmp"
+Trans.FILE = "CheatMenu_TransCache.txt"
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
@@ -9195,12 +9193,8 @@ return d
 end
 function Trans.Load()
 local d = Trans.LoadOne(Trans.FILE)
-local fromBak = false
-if d == nil then
-d = Trans.LoadOne(Trans.BAK)
-fromBak = d ~= nil
-if not fromBak then return end
-end
+if d == nil then d = Trans.LoadOne("CheatMenu_TransCache.json") end
+if d == nil then return end
 local n = 0
 local cache = (type(d.c) == "table") and d.c or d
 for k, v in pairs(cache) do
@@ -9208,22 +9202,11 @@ if type(k) == "string" and type(v) == "string" then Trans.Cache[k] = v n = n + 1
 end
 Trans._cnt = n
 Trans._dirty = false
-F.Out("[翻译] 已加载本地缓存 " .. n .. " 条" .. (fromBak and " (来自备份)" or ""))
+F.Out("[翻译] 已加载本地缓存 " .. n .. " 条 ⇒ 这些句子不会再翻")
 end
 Trans.SaveAtomic = function(payload)
 if type(writefile) ~= "function" then return false end
-local had = false
-if type(isfile) == "function" and type(readfile) == "function" then
-pcall(function() had = isfile(Trans.FILE) end)
-end
-if type(renamefile) == "function" then
-if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
-local okW = pcall(function() writefile(Trans.TMP, payload) end)
-if okW then
-local okR = pcall(function() renamefile(Trans.TMP, Trans.FILE) end)
-if okR then return true end
-end
-end
+if type(payload) ~= "string" or payload == "" then return false end
 return pcall(function() writefile(Trans.FILE, payload) end)
 end
 Trans.Flush = function()
@@ -9313,6 +9296,7 @@ end
 if s:find("[\228-\233]") and not s:match("%a%a") then return false end
 if not s:match("%a%a") then return false end
 if s:match("^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$") then return false end
+if s:match("^%s*%a%a?%a?%.?%s*[%d][%d%.,%s]*$") then return false end
 if s:match("%d%s*:%s*%d") then return false end
 if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
@@ -9660,7 +9644,7 @@ end
 Trans.GuiEl = function(obj)
 if not obj or not obj.Parent then return end
 local cls = obj.ClassName
-if cls ~= "TextLabel" and cls ~= "TextButton" and cls ~= "TextBox" then return end
+if cls ~= "TextLabel" and cls ~= "TextBox" then return end
 if obj.Visible == false then return end
 if Trans.TextVisible(obj) == false then return end
 local tt = obj.TextTransparency
@@ -9799,7 +9783,7 @@ for i = 1, #list do
 local o = list[i]
 if typeof(o) == "Instance" then
 local c = o.ClassName
-if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
+if c == "TextLabel" or c == "TextBox" then
 txtN = txtN + 1
 if o.Visible ~= false and Trans.TextVisible(o) ~= false then
 visN = visN + 1
@@ -9925,7 +9909,7 @@ F.Out("[翻译] ⏳ 本地模型还没起来(" .. Trans.HOST .. ") ⇒ 已挂监
 end
 pcall(Trans.Scan)
 Trans.WatchOn()
-if T.ChatTrans ~= false then pcall(Trans.ChatWatch) end
+pcall(Trans.ChatWatch)
 if not Trans._readyTask then
 Trans._readyTask = task.spawn(function()
 while T.Translate do
@@ -9936,7 +9920,7 @@ if Trans.Health() then
 Trans._ready = true
 F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 开始翻译")
 pcall(Trans.Scan)
-if T.ChatTrans ~= false then pcall(Trans.ChatWatch) end
+pcall(Trans.ChatWatch)
 end
 end
 Trans._readyTask = nil
@@ -12600,16 +12584,6 @@ task.spawn(function() pcall(Trans.Flush) end)
 F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
 end })
 Tabs.Trans:AddSection("② 聊天翻译(游戏内直接替换)")
-Tabs.Trans:AddToggle("ChatTrans", { Title = "聊天翻译(游戏内原地替换)", Default = true, Callback = function(v)
-T.ChatTrans = v and true or false
-if F._cfgSyncing then return end
-if v then
-pcall(Trans.ChatWatch)
-if not T.Translate then pcall(F.TranslateEnable) end
-else
-pcall(Trans.ChatUnwatch)
-end
-end })
 Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
 T.ChatInput = v and true or false
 if F._cfgSyncing then return end
