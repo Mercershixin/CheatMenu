@@ -59,6 +59,23 @@ end)
 
 ### 4. `pcall(Trans.SaveAtomic, body)` 的返回值误判
 
+### 5. **父子两层标签**（2026-10-07 实锤：左下角 HUD 重叠的真因）
+- 事故：`HUD.BottomLeft.TotalLuck.TotalLuckLabel` 和它的**子标签** `TotalLuckLabel.Label`
+  是游戏的"拆层画法"（一层 `<font transparency="1">140%</font>` 透明占位、另一层显示文字）。
+  我把**两层都翻**且结果不一致（"运气值" vs "运气"）⇒ **两层文字叠印 = 界面重叠**。
+- 修法（16.9.75）：`GuiEl` 对 TextLabel **整组跳过**——它有 TextLabel 子孙、或它的父级是 TextLabel ⇒ 不翻。
+  这类花式拆层 HUD 一碰就坏，保持原样。
+- 举一反三：看到"同一个位置两层文字"先怀疑父子标签，别两层都改。
+
+### 6. **模板复用只挂在单条路径**（批量绕过 ⇒ 数值类文本反复打模型）
+- 事故：数字模板查 trillion 只在 `Translate(lang=nil)` 里；`Async`→批量路径**完全绕过** ⇒
+  "Run back to collect 57 leaves!" 每秒变数字 ⇒ 永远 cache miss ⇒ 反复发模型（用户截图实锤）。
+- 修法（16.9.75）：抽 `Trans.Lookup(text)`（缓存 + 模板），**Async 在入队前就查**，命中直接回调。
+- ★ 模板必须**类型感知**：槽位分 数字(n)/玩家名(p)，**建模板要求"槽位个数 + 类型序列"两侧一致**。
+  否则中文语序调换（"5 coins for Marco"→"给 Marco 的 5 个金币"）会按位置填错 ⇒ 宁可不复用。
+  实现：`TplBuild`（单遍扫描，返回 模板/值/类型序列），键 = `"\2"..类型序列.."\3"..模板`。
+  回归测试：`D:\666\AI工作区\_tpl_fix_test.py`（从源码提取真实函数，11/11）。
+
 `pcall` 的 `ok` 只表示"没抛异常"，不代表函数返回了 true。
 ```lua
 local ok, r = pcall(Trans.SaveAtomic, body)
