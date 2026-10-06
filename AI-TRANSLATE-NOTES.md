@@ -93,13 +93,15 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 根容器 3 个：`PlayerGui` + `gethui()`（执行器/其他脚本界面）+ **`CoreGui` 的非官方部分**。
 - ⛔ 不要再写"祖先里有 CoreGui 就整个跳过"—— 游戏常把界面挂在 CoreGui。
 - ✅ 用**官方界面白名单**（`RobloxGui`/`PlayerList`/`TopbarApp`/`Chat`… 40+ 个）精确跳过。
-- 只翻 **TextLabel / TextButton / TextBox** 的可见文本；**不要**扫 workspace 的 3D 文字
+- 只翻 **TextLabel / TextBox** 的可见文本（**TextButton 不翻** —— 用户 2026-10-07 要求"UI 按钮不需要翻译"）；**不要**扫 workspace 的 3D 文字
   （BUY/ROLL 之类的 ProximityPrompt、ToolTip、Dialog/Hint/Message —— 用户点名砍掉，且是刷模型的主力）。
 - 诊断行会打印：`扫了 N 个容器(...) ⇒ 可见文本 X · 中文 Y · 英文待翻 Z [样本]`。
 
 ## 五、缓存（保存到本地 + 加载复用）
 
-- 文件 3 个，都在执行器 workspace：`CheatMenu_TransCache.json` / `.bak` / `.tmp`。
+- **只有一个文件**（用户 2026-10-07 要求"这些文件都需要在一个 TXT 里面，不用分开"）：
+  执行器 workspace 下的 **`CheatMenu_TransCache.txt`**。原 `.json` / `.bak` / `.tmp` 三文件方案已废弃，
+  `SaveAtomic` 简化为直接写；`Load` 仍会尝试读旧 `CheatMenu_TransCache.json` 做一次性迁移。
 - 写：**原子写**（先备份旧文件 → 写 .tmp → renamefile）→ 失败退化直接写；`Flush` 每 10s 节流一次。
 - 读：`Trans.Load()` 开翻译时自动读主文件，坏则读 `.bak`，实现"下次开启直接复用、不重翻"。
 - 数字模板复用：`You have 5 coins` 翻过后，`You have 12 coins` 直接套改数字（数字个数必须相等才建模板）。
@@ -127,8 +129,10 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 - 术语表 `Trans.SYS_ZH` 固定译法（Coins→金币 / Train→训练 / Slot→槽位…），保证同一词永远同一译法。
 - 改完必须跑**回归测试**：从源码提取 `ShouldV2` 函数体 → 生成 Lua 用例脚本 → `luau.exe` 跑，
   验证"该跳过的全跳过 + 该翻的全翻"。**别靠手抄，要从源码提取**（避免抄错）。
-- **数字 + 短单位**跳过：`100ms` `5min` `10km` `50kg` `1.5hr` `100HP`
-  ⇒ 正则 `^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$`（数字在前 + 1~3 个字母）。
+- **数字 + 短单位**跳过（用户点名 `k` `m` `b` `q` `S` `sp` 这类货币单位）：
+  - 数字在前：`^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$`（`100k` `5m` `1b` `10q` `50S` `5sp` `100ms` `5min` `10km`）
+  - **字母在前**：`^%s*%a%a?%a?%.?%s*[%d][%d%.,%s]*$`（`Lv5` `HP100` `No.5`）
+  - 中文货币词（`元` `钱` `金币`）本身就是中文 ⇒ 自动跳过。
   ⚠ 单独的 `HP`/`XP` **仍会翻**（用户要求放宽）。
 
 ### ★★★ 中英混合：只翻外文，中文原样保留（2026-10-07）
@@ -177,6 +181,6 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 ### 自动保存
 - `Trans.SaveTick` 每 **30 秒**检查一次（`task.wait(30)`），`Trans._dirty` 为真且翻译开着就 `Flush` 落盘。
 - **关键时机强制保存**：关闭翻译（`Trans.Disable`）、清空缓存前。
-- 文件：`CheatMenu_TransCache.json`（含 `.bak` / `.tmp`，原子写）。
+- 文件：`CheatMenu_TransCache.txt`（单文件；旧 `.json/.bak/.tmp` 已废弃）。
 - ✅ **完全相同的文本 = 缓存直接命中**，不重问模型；`Trans.KEEP` 里的词整句跳过。
 
