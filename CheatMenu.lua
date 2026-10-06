@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 23:13 sha 7f169cd0 bytes 473430'):format('2026-10-06 23:13','7f169cd0',473430))
+print(('[CheatMenu] build 2026-10-06 23:28 sha f97a35b4 bytes 473673'):format('2026-10-06 23:28','f97a35b4',473673))
 local F = {}
-F.VERSION = "v16.9.33"
+F.VERSION = "v16.9.34"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9790,12 +9790,20 @@ local diag = {}
 for _, root in ipairs(roots) do
 if root then
 local txtCnt = 0
+local samples = {}
 for _, obj in ipairs(F.walk(root)) do
 local cls = obj.ClassName
-if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then txtCnt = txtCnt + 1 end
+if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
+txtCnt = txtCnt + 1
+if #samples < 3 then
+local t = obj.Text
+if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 18) end
+end
+end
 pcall(Trans.GuiEl, obj)
 end
-diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt)
+local sampleStr = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or ""
+diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt) .. sampleStr
 end
 end
 if not Trans._diagOnce then
