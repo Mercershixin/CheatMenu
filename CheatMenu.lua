@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:01 sha af800ea2 bytes 483331'):format('2026-10-07 04:01','af800ea2',483331))
+print(('[CheatMenu] build 2026-10-07 04:21 sha b163246e bytes 484366'):format('2026-10-07 04:21','b163246e',484366))
 local F = {}
-F.VERSION = "v16.9.74"
+F.VERSION = "v16.9.75"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9769,57 +9769,65 @@ Trans.Order = keep
 Trans._cnt = #keep
 end
 end
-local tpl, n1 = Trans.TplKey(text)
-if n1 >= 1 and #tpl >= 6 then
-local tplTr, n2 = Trans.TplKey(tr)
-if n2 == n1 then
-Trans.Cache["\2" .. tpl] = tplTr
-Trans.OWNER["\2" .. tpl] = Trans.CurFile()
+local tplS, vals, kinds = Trans.TplBuild(text)
+local tkey = nil
+if #vals >= 1 and #tplS >= 6 then tkey = "\2" .. table.concat(kinds) .. "\3" .. tplS end
+if tkey then
+local tplTr, valsTr, kindsTr = Trans.TplBuild(tr)
+local same = #valsTr == #vals
+if same then
+for k = 1, #kinds do if kinds[k] ~= kindsTr[k] then same = false break end end
+end
+if same then
+Trans.Cache[tkey] = tplTr
+Trans.OWNER[tkey] = Trans.CurFile()
 end
 end
 Trans.Save()
 end
-Trans.TplKey = function(s)
-local n = 0
-if Trans.PN and next(Trans.PN) then
-s = s:gsub("[%a_][%w_]*", function(w)
-if Trans.PN[w] or Trans.PN[string.lower(w)] then n = n + 1 return "\1" end
-return w
-end)
+Trans.TplBuild = function(s)
+local vals, kinds = {}, {}
+local pnOn = Trans.PN and next(Trans.PN) ~= nil
+local out, i, n = {}, 1, #s
+while i <= n do
+local c = s:sub(i, i)
+if c:match("%d") then
+local j = i
+while j <= n and s:sub(j, j):match("%d") do j = j + 1 end
+vals[#vals + 1] = s:sub(i, j - 1)
+kinds[#kinds + 1] = "n"
+out[#out + 1] = "\1"
+i = j
+elseif pnOn and (c:match("%a") or c:match("_")) then
+local j = i + 1
+while j <= n and s:sub(j, j):match("%w") do j = j + 1 end
+local w = s:sub(i, j - 1)
+if Trans.PN[w] or Trans.PN[string.lower(w)] then
+vals[#vals + 1] = w
+kinds[#kinds + 1] = "p"
+out[#out + 1] = "\1"
+else
+out[#out + 1] = w
 end
-s = s:gsub("%d+", function() n = n + 1 return "\1" end)
-return s, n
+i = j
+else
+out[#out + 1] = c
+i = i + 1
 end
-Trans.TplSlots = function(s)
-local vals = {}
-if Trans.PN and next(Trans.PN) then
-s:gsub("[%a_][%w_]*", function(w)
-if Trans.PN[w] or Trans.PN[string.lower(w)] then vals[#vals + 1] = w end
-end)
 end
-s:gsub("%d+", function(d) vals[#vals + 1] = d end)
-return vals
+return table.concat(out), vals, kinds
+end
+Trans.TplKey = function(text)
+local tpl, vals, kinds = Trans.TplBuild(text)
+if #vals < 1 or #tpl < 6 then return nil end
+return "\2" .. table.concat(kinds) .. "\3" .. tpl, vals
 end
 Trans.Translate = function(text, force, lang)
 if type(text) ~= "string" then return nil end
 text = text:gsub("^%s+", ""):gsub("%s+$", "")
 if text == "" then return nil end
 if Trans.KEEP[text] then return nil end
-if not lang then
-local hit = Trans.Cache[text]
-if type(hit) == "string" then return hit end
-local tpl, tn = Trans.TplKey(text)
-if tn >= 1 and #tpl >= 6 then
-local tv = Trans.Cache["\2" .. tpl]
-if type(tv) == "string" then
-local vals = Trans.TplSlots(text)
-local i = 0
-local filled = tv:gsub("\1", function() i = i + 1 return vals[i] or "" end)
-if i == #vals and filled ~= "" then return filled end
-end
-end
-return nil
-end
+if not lang then return Trans.Lookup(text) end
 local ctx = Trans.Pre(text)
 if ctx.noText then return nil end
 local c = Trans.RequestOne(ctx.send, lang)
@@ -9904,6 +9912,18 @@ if type(text) ~= "string" then return end
 Trans._fail = Trans._fail or {}
 Trans._fail[text] = os.clock() + 25
 end
+Trans.Lookup = function(text)
+local hit = Trans.Cache[text]
+if type(hit) == "string" then return hit end
+local tkey, vals = Trans.TplKey(text)
+if tkey and type(Trans.Cache[tkey]) == "string" then
+local tv = Trans.Cache[tkey]
+local i = 0
+local filled = tv:gsub("\1", function() i = i + 1 return vals[i] or "" end)
+if i == #vals and filled ~= "" and filled ~= text then return filled end
+end
+return nil
+end
 Trans.Async = function(text, applyFn)
 if not T.Translate then return end
 if not Trans._ready then return end
@@ -9911,8 +9931,8 @@ if type(text) ~= "string" or text == "" then return end
 if Trans.KEEP[text] then return end
 if not Trans.Should(text) then return end
 if Trans.Pre(text).noText then return end
-local hit = Trans.Cache[text]
-if type(hit) == "string" then
+local hit = Trans.Lookup(text)
+if hit then
 pcall(applyFn, hit)
 return
 end
@@ -10042,6 +10062,22 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
+if cls == "TextLabel" then
+local nested = false
+pcall(function() if obj.Parent and obj.Parent:IsA("TextLabel") then nested = true end end)
+if not nested then
+local kids = nil
+pcall(function() kids = obj:GetChildren() end)
+if kids and #kids > 0 then
+pcall(function()
+for _, d in ipairs(obj:GetDescendants()) do
+if d:IsA("TextLabel") or d:IsA("TextBox") then nested = true break end
+end
+end)
+end
+end
+if nested then return end
+end
 if cls == "TextBox" then
 local editable = true
 pcall(function() editable = obj.TextEditable end)
