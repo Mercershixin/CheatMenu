@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:13 sha 459df579 bytes 468181'):format('2026-10-07 03:13','459df579',468181))
+print(('[CheatMenu] build 2026-10-07 03:20 sha c2b80a79 bytes 468662'):format('2026-10-07 03:20','c2b80a79',468662))
 local F = {}
-F.VERSION = "v16.9.66"
+F.VERSION = "v16.9.67"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8986,7 +8986,7 @@ zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 }
 Trans.BATCH = 6
-Trans.MAX = 3
+Trans.MAX = 5
 Trans.CACHE_MAX = 5000
 Trans.SCAN_EVERY = 6
 Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
@@ -9500,6 +9500,8 @@ local tr = Trans.Translate(it.text, true, "zh")
 if tr then
 Trans.CachePut(it.text, tr)
 for j = 1, #it.applies do pcall(it.applies[j], tr) end
+else
+Trans.MarkFail(it.text)
 end
 end
 end
@@ -9510,11 +9512,17 @@ if Trans._drainErr <= 3 then
 F.Out("[翻译] ⚠ 翻译任务出错(已自动恢复): " .. tostring(errAll))
 end
 end
+Trans._lastDone = os.clock()
 Trans.Active = Trans.Active - 1
 if Trans.Active < 0 then Trans.Active = 0 end
 if Trans.Active < Trans.MAX and #Trans.Queue > 0 then Trans.Drain() end
 end)
 end
+end
+Trans.MarkFail = function(text)
+if type(text) ~= "string" then return end
+Trans._fail = Trans._fail or {}
+Trans._fail[text] = os.clock() + 25
 end
 Trans.Async = function(text, applyFn)
 if not T.Translate then return end
@@ -9527,6 +9535,8 @@ if type(hit) == "string" then
 pcall(applyFn, hit)
 return
 end
+local ft = Trans._fail and Trans._fail[text]
+if ft and os.clock() < ft then return end
 if #Trans.Queue > 200 then return end
 Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
 Trans.Drain()
@@ -9779,6 +9789,7 @@ end
 end
 local txtN, visN, cnN, enN = 0, 0, 0, 0
 local samples = {}
+local hidden = {}
 for i = 1, #list do
 local o = list[i]
 if typeof(o) == "Instance" then
@@ -9799,9 +9810,12 @@ end
 end
 end
 pcall(Trans.GuiEl, o)
+else
+hidden[#hidden + 1] = o
 end
 end
 end
+for i = 1, #hidden do pcall(Trans.GuiEl, hidden[i]) end
 if not Trans._diagOnce then
 Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
@@ -9814,13 +9828,16 @@ if Trans._scanRound % 10 == 1 then
 F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
 end
 if Trans.Active >= Trans.MAX and #Trans.Queue > 0 then
+local idle = os.clock() - (Trans._lastDone or os.clock())
+if idle > 25 then
 Trans._stuck = (Trans._stuck or 0) + 1
-if Trans._stuck >= 3 then
+if Trans._stuck >= 2 then
 Trans._stuck = 0
 Trans.Active = 0
 Trans._drainErr = 0
-F.Out("[翻译] ⚠ 队列卡住(并发计数泄漏) ⇒ 已重置并继续翻译")
+F.Out("[翻译] ⚠ 队列 25 秒无进展(服务疑似卡住) ⇒ 已重置并发计数")
 Trans.Drain()
+end
 end
 else
 Trans._stuck = 0
