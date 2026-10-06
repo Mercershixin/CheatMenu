@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 21:09 sha 661f7512 bytes 476447'):format('2026-10-06 21:09','661f7512',476447))
+print(('[CheatMenu] build 2026-10-06 21:13 sha 6a611e0f bytes 476814'):format('2026-10-06 21:13','6a611e0f',476814))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9818,7 +9818,11 @@ return #items
 end
 function Trans.GuiEl(obj)
 if not obj then return end
+-- 原本不显示的（元素隐藏 / 文字不可见 / 文字透明）：不翻译、也不显示，保持隐藏
 if obj.Visible == false then return end
+if obj.TextVisible == false then return end
+local tt0 = obj.TextTransparency
+if type(tt0) == "number" and tt0 >= 0.95 then return end
 if obj:IsA("TextBox") then
 local ph = obj.PlaceholderText
 if type(ph) == "string" and ph ~= "" and Trans.Should(ph) then
@@ -9841,10 +9845,13 @@ elseif r.last ~= nil and txt ~= r.last then
 r.raw = txt
 end
 Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false then
+if obj.Parent and obj.Visible ~= false and obj.TextVisible ~= false then
+local tt1 = obj.TextTransparency
+if not (type(tt1) == "number" and tt1 >= 0.95) then
 local rec = Trans.Reg[obj]
 if rec then rec.last = tr end
 obj.Text = tr
+end
 end
 end)
 end
