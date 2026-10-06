@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 10:40 sha 2c98e953 bytes 443445'):format('2026-10-06 10:40','2c98e953',443445))
+print(('[CheatMenu] build 2026-10-06 11:00 sha 19a415df bytes 445549'):format('2026-10-06 11:00','19a415df',445549))
 local F = {}
-F.VERSION = "v16.9.29"
+F.VERSION = "v16.9.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10413,6 +10413,54 @@ local per = F.CMX_GameDetectKeys()
 push(per)
 return out, per
 end
+F.CMX_InboundWatchSet = function(on)
+T.CMX_InboundWatch = on and true or false
+if not on then
+if F._inbConns then for _, c in ipairs(F._inbConns) do pcall(function() c:Disconnect() end) end end
+if F._inbAdded then pcall(function() F._inbAdded:Disconnect() end) F._inbAdded = nil end
+F._inbConns, F._inbSeen = {}, {}
+F.Out("[服务端预警] 已停(不再监听服务端下发)")
+return
+end
+if F._inbConns and #F._inbConns > 0 then return end
+F._inbConns, F._inbSeen = F._inbConns or {}, F._inbSeen or {}
+local function isDanger(nm)
+local low = tostring(nm):lower()
+for _, k in ipairs(F.CMX_BAN_KEYS) do if low:find(k, 1, true) then return k end end
+return nil
+end
+local function watch(re)
+if not re or F._inbSeen[re] then return end
+if not (re:IsA("RemoteEvent") or re:IsA("UnreliableRemoteEvent")) then return end
+if not isDanger(re.Name) then return end
+F._inbSeen[re] = true
+local ok, c = pcall(function()
+return re.OnClientEvent:Connect(function(...)
+if not T.CMX_InboundWatch then return end
+F.CMX_InboundHits = (F.CMX_InboundHits or 0) + 1
+if os.clock() - (F._inbLogAt or 0) > 4 then
+F._inbLogAt = os.clock()
+F.Out("[服务端预警] 服务端下发了「" .. tostring(re.Name) .. "」(" .. tostring(select("#", ...))
+.. " 个参数) —— 这是它在判你/通知你的下行通道(累计 " .. tostring(F.CMX_InboundHits) .. " 次)")
+end
+end)
+end)
+if ok and c then F._inbConns[#F._inbConns + 1] = c end
+end
+pcall(function()
+local rs2 = game:GetService("ReplicatedStorage")
+for _, d in ipairs(F.walk(rs2)) do watch(d) end
+end)
+if F._inbAdded then pcall(function() F._inbAdded:Disconnect() end) end
+F._inbAdded = nil
+pcall(function()
+F._inbAdded = game:GetService("ReplicatedStorage").DescendantAdded:Connect(function(d)
+if not T.CMX_InboundWatch then return end
+watch(d)
+end)
+end)
+F.Out("[服务端预警] 已开: 已挂 " .. tostring(#F._inbConns) .. " 个「危险命名」remote 的下发监听(只记录, 不改行为)")
+end
 F.CMX_BanAllApply = function(on)
 local items = {
 { "CMX_BlockReport", F.CMX_BlockReportEnable, F.CMX_BlockReportDisable, "拦上报/封禁远程" },
@@ -11827,7 +11875,7 @@ if v:find("②", 1, true) then lvl = 2 end
 if v:find("③", 1, true) then lvl = 3 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
-pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) end)
+pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
 pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
@@ -11867,6 +11915,7 @@ T.CMX_SpoofIndex = true
 F.Try("CMX_SpoofIndexEnable", F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
 T.CMX_AntiBanAll = true
+pcall(F.CMX_InboundWatchSet, true)
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
 if not (T.HpBlock and T.HealthIsolate) then F._tierHpOwn = true end
@@ -11898,7 +11947,7 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
-"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警",
 "③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
@@ -11957,6 +12006,7 @@ function() pcall(F.CMX_BlockReportDisable) end,
 function() pcall(F.CMX_CutLogDisable) end,
 function() pcall(F.DeepNeuterDisable) end,
 function() T.CMX_FakeReport = false end,
+function() pcall(F.CMX_InboundWatchSet, false) end,
 function() pcall(F.AntiCheatGCRestore) end,
 function() pcall(F.CMX_BanAllApply, false) end,
 function() pcall(AC.ReenableDisabledConns) end,
