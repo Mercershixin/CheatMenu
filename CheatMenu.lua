@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:44 sha 00af6614 bytes 476586'):format('2026-10-07 00:44','00af6614',476586))
+print(('[CheatMenu] build 2026-10-07 00:48 sha b84a7b4a bytes 477313'):format('2026-10-07 00:48','b84a7b4a',477313))
 local F = {}
-F.VERSION = "v16.9.45"
+F.VERSION = "v16.9.46"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12691,6 +12691,26 @@ F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 中文聊�
 end })
 Tabs.Trans:AddButton({ Title = "翻译统计(点看翻了多少/保存状态)", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
+end })
+Tabs.Trans:AddButton({ Title = "重新扫描界面(立即刷新一遍)", Callback = function()
+Trans._diagOnce = nil
+task.spawn(function()
+local ok, err = pcall(Trans.Scan)
+if not ok then F.Out("[翻译] 重新扫描失败: " .. tostring(err)) end
+end)
+end })
+Tabs.Trans:AddButton({ Title = "清空翻译缓存(下次全部重翻)", Callback = function()
+Trans.Cache = {}
+Trans.Order = {}
+Trans._cnt = 0
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+if type(Trans.Reg) == "table" then
+for _o, r in pairs(Trans.Reg) do
+if type(r) == "table" then r.at = 0 r.last = nil end
+end
+end
+task.spawn(function() pcall(Trans.Flush) end)
+F.Out("[翻译] 缓存已清空 ⇒ 已登记的界面文字会重新翻一遍")
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文→目标语言发出)", Default = false, Callback = function(v)
