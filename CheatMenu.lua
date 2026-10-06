@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:04 sha 4eeba3bc bytes 468337'):format('2026-10-07 03:04','4eeba3bc',468337))
+print(('[CheatMenu] build 2026-10-07 03:09 sha e24d5b9b bytes 469017'):format('2026-10-07 03:09','e24d5b9b',469017))
 local F = {}
-F.VERSION = "v16.9.63"
+F.VERSION = "v16.9.64"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9259,7 +9259,7 @@ end
 Trans.Save = function() Trans._dirty = true end
 Trans.SaveTick = function()
 while true do
-task.wait(10)
+task.wait(30)
 if Trans._dirty and T.Translate then pcall(Trans.Flush) end
 end
 end
@@ -9304,9 +9304,15 @@ end
 Trans.ShouldV2 = function(s)
 local n = #s
 if n < 2 or n > 300 then return false end
-if not s:find("[A-Za-z]") then return false end
-if s:find("[\228-\233]") then return false end
 if Trans.PN and Trans.PN[s] then return false end
+if s:find("<%a") or s:find("</%a") then
+local st = s:gsub("<[^<>]->", " ")
+if not st:match("%a%a") then return false end
+s = st
+end
+if s:find("[\228-\233]") and not s:match("%a%a") then return false end
+if not s:match("%a%a") then return false end
+if s:match("^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$") then return false end
 if s:match("%d%s*:%s*%d") then return false end
 if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
@@ -9327,14 +9333,33 @@ end
 Trans.Pre = function(text)
 local ctx = { raw = text, tags = nil }
 local s = text
+local parts = {}
 if s:find("<%a[^<>]->") or s:find("</%a") then
-local tags = {}
 s = s:gsub("<[^<>]->", function(t)
-tags[#tags + 1] = t
-return "\226\159\166" .. tostring(#tags) .. "\226\159\167"
+parts[#parts + 1] = t
+return "\226\159\166" .. tostring(#parts) .. "\226\159\167"
 end)
-if #tags > 0 then ctx.tags = tags end
 end
+if s:find("[\228-\233]") and #parts <= 6 then
+local out, i, n = {}, 1, #s
+while i <= n do
+local b = s:byte(i)
+if b and b >= 228 and b <= 233 then
+local from = i
+while i <= n do
+local b2 = s:byte(i)
+if b2 and b2 >= 228 and b2 <= 233 then i = i + 3 else break end
+end
+parts[#parts + 1] = s:sub(from, i - 1)
+out[#out + 1] = "\226\159\166" .. tostring(#parts) .. "\226\159\167"
+else
+out[#out + 1] = s:sub(i, i)
+i = i + 1
+end
+end
+s = table.concat(out)
+end
+if #parts > 0 then ctx.tags = parts end
 ctx.send = s
 return ctx
 end
