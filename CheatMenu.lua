@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:55 sha cf224bd1 bytes 495926'):format('2026-10-07 04:55','cf224bd1',495926))
+print(('[CheatMenu] build 2026-10-07 05:01 sha b90deac4 bytes 495208'):format('2026-10-07 05:01','b90deac4',495208))
 local F = {}
-F.VERSION = "v16.9.79"
+F.VERSION = "v16.9.80"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9091,7 +9091,6 @@ Trans.GIT_RAW = {
 "https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 }
 Trans.TOKEN_FILE = "CheatMenu_Token.txt"
-Trans._selfCN = {}
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
@@ -10352,7 +10351,6 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
-if Trans._selfCN[obj] then return end
 if cls == "TextLabel" or cls == "TextButton" then
 local nested = false
 pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
@@ -10391,8 +10389,7 @@ end
 local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
-if txt:find("[8-]") then
-if not Trans.Reg[obj] then Trans._selfCN[obj] = true end
+if txt:find("[\228-\233]") then
 return
 end
 if not Trans.Should(txt) then return end
@@ -10404,11 +10401,9 @@ if not T.Translate then return end
 local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
-if now:find("[8-]") then
-if not Trans.Reg[obj] then Trans._selfCN[obj] = true end
+if now:find("[\228-\233]") then
 return
 end
-if Trans._selfCN[obj] then return end
 if Trans.Cache[now] then
 pcall(function() obj.Text = Trans.Cache[now] end)
 return
@@ -10475,27 +10470,6 @@ rootNames[#rootNames + 1] = tag
 end
 addRoot(LPl and LPl:FindFirstChild("PlayerGui"), "PlayerGui")
 pcall(function() if gethui then addRoot(gethui(), "gethui") end end)
-pcall(function()
-local cg = game:GetService("CoreGui")
-if cg then
-for _, ch in ipairs(cg:GetChildren()) do
-local nm = tostring(ch.Name)
-local ln = string.lower(nm)
-if not Trans.OFFICIAL[ln] then
-addRoot(ch, "CoreGui/" .. nm)
-elseif ln == "robloxgui" then
-pcall(function()
-for _, sub in ipairs(ch:GetChildren()) do
-local sn = string.lower(tostring(sub.Name))
-if sn:find("chat") then addRoot(sub, "CoreGui/RobloxGui/" .. sub.Name) end
-end
-end)
-elseif ln:find("chat") then
-addRoot(ch, "CoreGui/" .. nm)
-end
-end
-end
-end)
 if #roots == 0 then return end
 local list = {}
 for i = 1, #roots do
