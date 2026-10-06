@@ -97,15 +97,36 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
   （BUY/ROLL 之类的 ProximityPrompt、ToolTip、Dialog/Hint/Message —— 用户点名砍掉，且是刷模型的主力）。
 - 诊断行会打印：`扫了 N 个容器(...) ⇒ 可见文本 X · 中文 Y · 英文待翻 Z [样本]`。
 
-## 五、缓存（保存到本地 + 加载复用）
+## 五、缓存（多文件 · 按游戏分 · 本地优先 + 云端兜底）
 
-- **只有一个文件**（用户 2026-10-07 要求"这些文件都需要在一个 TXT 里面，不用分开"）：
-  执行器 workspace 下的 **`CheatMenu_TransCache.txt`**。原 `.json` / `.bak` / `.tmp` 三文件方案已废弃，
-  `SaveAtomic` 简化为直接写；`Load` 仍会尝试读旧 `CheatMenu_TransCache.json` 做一次性迁移。
-- 写：**原子写**（先备份旧文件 → 写 .tmp → renamefile）→ 失败退化直接写；`Flush` 每 10s 节流一次。
-- 读：`Trans.Load()` 开翻译时自动读主文件，坏则读 `.bak`，实现"下次开启直接复用、不重翻"。
-- 数字模板复用：`You have 5 coins` 翻过后，`You have 12 coins` 直接套改数字（数字个数必须相等才建模板）。
+★ 2026-10-07 重构（用户要求"不同服务器各生成一个中文名文件 / 互相能读 / 但不要串文件"）。
+
+- **文件命名**：`CheatMenu_Cache_<游戏名>.txt`，`<游戏名>` 取
+  `MarketplaceService:GetProductInfo(PlaceId).Name`（**保留中文**，只清 Windows 非法字符 `\ / : * ? " < > |`）；
+  拿不到名字则退化为 `Place<PlaceId>`。写盘失败会自动退到纯 ASCII 名
+  `CheatMenu_Cache_Place<PlaceId>.txt`（`Trans.AsciiFile`）。
+- **读 = 多文件**：`Load()` 用 `listfiles(".")` 扫出全部 `CheatMenu_Cache_*.txt` **全部读进内存合并**
+  ⇒ 别的游戏翻过的词也能直接命中（"每个都能互相读取"）。另兼容旧单文件
+  `CheatMenu_TransCache.txt` / `.json` 做一次性迁移。
+- **写 = 只写本服**：`Trans.OWNER[key]` 记录每个键**来自哪个文件**；`Flush()` 只把
+  `OWNER == 当前服文件` 的键写进本服文件 ⇒ **绝不把别的游戏的词写进来（不串文件）**。
+  当前服没有键且文件不存在时**不创建空文件**。
+- **清空分流**：`ClearCurrent`（只删本服文件 + 内存里本服的键）· `ClearAll`（删全部缓存文件）。
+- **云端兜底（读）**：`CloudPull` 走 `game.HttpGet` 拉
+  `<raw>/cache/<UrlEncoded 游戏名>.txt`（raw → ghfast.top → ghproxy.net 三通道），
+  **本地缓存为 0 或本地模型没起来时自动触发**；拉到即写进本服文件。
+- **云端上传（写）**：⛔ **不在游戏内做**（要在脚本/工作目录放 GitHub Token ⇒ 密钥暴露给所有执行器脚本）。
+  改走**电脑端脚本** `D:\666\AI工作区\同步翻译缓存到云端.py`（双击同名 .bat）：
+  读本机 workspace 的 `CheatMenu_Cache_*.txt` → PUT 到仓库 `cache/`。
+  - Token 来源：`项目/.workbuddy/publish.token`（本机，不进仓库）。
+  - 该脚本已加入 `push_api.py` 的 FILES，随发版上仓库做异地备份。
+  - 游戏内也留了「上传本服缓存到云端」按钮，但**只有** workspace 根目录存在
+    `CheatMenu_Token.txt` 才生效（默认不创建该文件）。
+- 数字/名字**模板复用**：`You have 5 coins` 翻过后，`You have 12 coins` 直接套改数字（数字个数必须相等才建模板）。
+  （模板键是 `"\2"..tpl`，也带 `OWNER`，随本服文件一起保存。）
 - 所有文件 API 都先 `type(readfile)=="function"` 探测 + `pcall`，不支持的执行器只降级为内存缓存。
+- **验证方式**：`D:\666\AI工作区\_cache_sim.py`（从源码提取真实函数 + 模拟文件系统）跑 20 项断言，
+  覆盖"跨游戏读取 / 只写本服 / 不串文件 / 清空分流 / 旧单文件兼容"。
 
 ## 六、排查手册（症状 → 病因）
 
@@ -218,18 +239,13 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 ### 自动保存
 - `Trans.SaveTick` 每 **30 秒**检查一次（`task.wait(30)`），`Trans._dirty` 为真且翻译开着就 `Flush` 落盘。
 - **关键时机强制保存**：关闭翻译（`Trans.Disable`）、清空缓存前。
-- 文件：`CheatMenu_TransCache.txt`（单文件；旧 `.json/.bak/.tmp` 已废弃）。
+- 文件：本服 `CheatMenu_Cache_<游戏名>.txt`（见 §五；读取时是**全部** `CheatMenu_Cache_*.txt`）。
 - ✅ **完全相同的文本 = 缓存直接命中**，不重问模型；`Trans.KEEP` 里的词整句跳过。
 
 ## 十、并发调度与稳定性（2026-10-07）
 
 ### 服务事实
-- `翻译模型开关.bat` 默认 `-c 8192 -np 8 -b 4096 -ub 1024 -ngl 99 -fa on --cache-reuse 1024`
-  ⇒ **8 个并发槽位**。脚本的 `Trans.MAX` **要与 `-np` 对齐**（2026-10-07 起 = **8**，不留余量）。
-- ★★ **显存硬上限（bat 注释里的实测值）**：`-c 8192 -np 8` **实际占 6156 MiB**，
-  只剩 **2036 MiB** 给 Roblox；**8 并发 0.374 秒/条 · 187 tok/s**。
-  ⇒ **再提 `-c` 会抢 Roblox 显存 ⇒ 必崩**，`-c/-np` 不要动。
-- ★ **线路瓶颈**：`--threads-http` 原为 2（配 8 并发不够）⇒ 2026-10-07 改为 **8**（需重启服务生效）。
+→ 见本文件「★ 硬件与"性能天花板"」小节（当前档 `-c 12288 -np 12`，脚本 `Trans.MAX = 12`）。
 - ⚠ 实测中服务**崩过一次**（llama-server 进程消失、显存回落 444MB）⇒ 之后所有请求失败、队列堆积。
   ⇒ **排查任何翻译问题前，先 `curl http://127.0.0.1:8080/health` 确认服务活着。**
 - 单条短词延迟实测 **0.05~0.19s**（`--cache-reuse` 命中 system prompt 前缀缓存）。
