@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:28 sha 9f44c559 bytes 478098'):format('2026-10-07 00:28','9f44c559',478098))
+print(('[CheatMenu] build 2026-10-07 00:33 sha 6d7bf804 bytes 478203'):format('2026-10-07 00:33','6d7bf804',478203))
 local F = {}
-F.VERSION = "v16.9.42"
+F.VERSION = "v16.9.43"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9815,12 +9815,12 @@ end)
 end
 end
 end
-function Trans.Scan()
+function Trans.Scan(light)
 local pg = LP:FindFirstChild("PlayerGui")
 pcall(Trans.RefreshPN)
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 local roots = { pg }
-if C.TransOfficial then
+if C.TransOfficial and not light then
 pcall(function()
 for _, ch in ipairs(CoreGui:GetChildren()) do
 local nm = tostring(ch.Name)
@@ -9857,6 +9857,7 @@ if not Trans._diagOnce then
 Trans._diagOnce = true
 F.Out("[翻译·诊断] 界面根文本控件: " .. table.concat(diag, " · "))
 end
+if not light then
 pcall(function()
 for _, obj in ipairs(F.walk(workspace, 40000, 500)) do
 local cls = obj.ClassName
@@ -9894,8 +9895,11 @@ end
 end
 end
 end)
+end
+if not light then
 F.Out("[翻译] 扫描完成: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 跳过(不可见 " .. tostring(Trans._skip.invisible)
 .. " / 自己 " .. tostring(Trans._skip.ours) .. " / 官方 " .. tostring(Trans._skip.official) .. ")")
+end
 end
 function Trans.Health()
 local rf = Trans.Req()
@@ -9947,14 +9951,16 @@ if not okScan then F.Out("[翻译] ⚠ 扫描界面时出错: " .. tostring(errS
 Trans.WatchOn()
 Trans.HeartbeatOn()
 Trans.Loop = task.spawn(function()
+local round = 0
 while T.Translate do
 task.wait(15)
 if not T.Translate then break end
-Trans.Scan()
+round = round + 1
+Trans.Scan(round % 4 ~= 0)
 end
 Trans.Loop = nil
 end)
-F.Out("[翻译] 已开: 新出现的文字会立刻翻译, 文字变化即时跟上; 每 15 秒兜底全扫一次(原来每秒全扫, 现在省很多)")
+F.Out("[翻译] 已开: 新出现的文字立刻翻、文字变化即时跟上 · 界面每 15 秒复查一次(世界/官方界面 60 秒一次)")
 return true
 end
 Trans.WatchOn = function()
