@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 20:59 sha 6c697cb0 bytes 475665'):format('2026-10-06 20:59','6c697cb0',475665))
+print(('[CheatMenu] build 2026-10-06 21:09 sha 661f7512 bytes 476447'):format('2026-10-06 21:09','661f7512',476447))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9819,6 +9819,13 @@ end
 function Trans.GuiEl(obj)
 if not obj then return end
 if obj.Visible == false then return end
+if obj:IsA("TextBox") then
+local ph = obj.PlaceholderText
+if type(ph) == "string" and ph ~= "" and Trans.Should(ph) then
+Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
+end
+return
+end
 if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
 if Trans.SkipEl(obj) then return end
 do
@@ -9854,9 +9861,23 @@ if root then
 for _, obj in ipairs(F.walk(root)) do pcall(Trans.GuiEl, obj) end
 end
 end
+-- 世界文本：SurfaceGui / BillboardGui（3D 招牌、书本、公告牌、头顶标签）
+pcall(function()
+for _, obj in ipairs(F.walk(workspace, 20000, 500)) do
+if obj:IsA("SurfaceGui") or obj:IsA("BillboardGui") then
+for _, child in ipairs(obj:GetChildren()) do pcall(Trans.GuiEl, child) end
+end
+end
+end)
+-- 交互提示 ProximityPrompt：按键提示 ActionText + 物件名 ObjectText
 for _, obj in ipairs(workspace:GetChildren()) do
-if obj:IsA("ProximityPrompt") and obj.ActionText and obj.ActionText ~= "" then
+if obj:IsA("ProximityPrompt") then
+if obj.ActionText and obj.ActionText ~= "" then
 Trans.Async(obj.ActionText, function(tr) if obj.Parent then obj.ActionText = tr end end)
+end
+if obj.ObjectText and obj.ObjectText ~= "" then
+Trans.Async(obj.ObjectText, function(tr) if obj.Parent then obj.ObjectText = tr end end)
+end
 end
 end
 F.Out("[翻译] 扫描完成: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 跳过(不可见 " .. tostring(Trans._skip.invisible)
