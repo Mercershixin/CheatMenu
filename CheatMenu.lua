@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:25 sha 9fb02186 bytes 460856'):format('2026-10-07 02:25','9fb02186',460856))
+print(('[CheatMenu] build 2026-10-07 02:27 sha 06a86a83 bytes 460420'):format('2026-10-07 02:27','06a86a83',460420))
 local F = {}
-F.VERSION = "v16.9.52"
+F.VERSION = "v16.9.53"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9571,8 +9571,8 @@ pcall(function() t = o.Text end)
 if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 14) end
 end
 end
-end
 pcall(Trans.GuiEl, o)
+end
 end
 end
 if not Trans._diagOnce then
@@ -9774,15 +9774,8 @@ Trans.Load()
 local name = nil
 pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
 Trans.KeepAdd(name)
-local okH = false
-do
-local rf = Trans.Req()
-if type(rf) == "function" then
-local okP, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
-okH = okP and type(res) == "table" and tonumber(res.StatusCode or 0) == 200
-end
-end
-Trans._ready = okH
+Trans._ready = Trans.Health()
+local okH = Trans._ready
 if okH then
 pcall(Trans.Scan)
 else
@@ -9797,14 +9790,10 @@ while T.Translate do
 task.wait(3)
 if not T.Translate then break end
 if Trans._ready then break end
-local rf = Trans.Req()
-if type(rf) == "function" then
-local okP, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
-if okP and type(res) == "table" and tonumber(res.StatusCode or 0) == 200 then
+if Trans.Health() then
 Trans._ready = true
 F.Out("[翻译] ✅ 本地服务已就绪 ⇒ 立即开始翻译")
 pcall(Trans.Scan)
-end
 end
 end
 Trans._readyTask = nil
