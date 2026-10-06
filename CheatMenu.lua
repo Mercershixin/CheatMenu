@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:32 sha 4944c312 bytes 470697'):format('2026-10-07 03:32','4944c312',470697))
+print(('[CheatMenu] build 2026-10-07 03:44 sha 7fa87825 bytes 480393'):format('2026-10-07 03:44','7fa87825',480393))
 local F = {}
-F.VERSION = "v16.9.71"
+F.VERSION = "v16.9.72"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8981,6 +8981,15 @@ Trans.HOST = "http://127.0.0.1:8080"
 Trans.KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 Trans.MODEL = "hymt2-7b"
 Trans.FILE = "CheatMenu_TransCache.txt"
+Trans.CACHE_PREFIX = "CheatMenu_Cache_"
+Trans.OWNER = {}
+Trans.GIT_API = "https://api.github.com/repos/Mercershixin/CheatMenu/contents/"
+Trans.GIT_RAW = {
+"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
+"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
+"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
+}
+Trans.TOKEN_FILE = "CheatMenu_Token.txt"
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
@@ -9189,36 +9198,289 @@ if type(rf) ~= "function" then return false end
 local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
 return ok and type(res) == "table" and tonumber(res.StatusCode or 0) == 200
 end
-Trans.LoadOne = function(file)
-if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
+Trans.UrlEnc = function(s)
+return (tostring(s):gsub("[^%w%-_%.~]", function(c) return string.format("%%%02X", string.byte(c)) end))
+end
+Trans.B64 = function(s)
+local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local out, n, i = {}, #s, 1
+while i <= n do
+local a = s:byte(i) or 0
+local c = s:byte(i + 1) or 0
+local e = s:byte(i + 2) or 0
+local t = a * 65536 + c * 256 + e
+local q = math.floor(t / 262144) % 64
+out[#out + 1] = b:sub(q + 1, q + 1)
+q = math.floor(t / 4096) % 64
+out[#out + 1] = b:sub(q + 1, q + 1)
+out[#out + 1] = (i + 1 <= n) and b:sub(math.floor(t / 64) % 64 + 1, math.floor(t / 64) % 64 + 1) or "="
+out[#out + 1] = (i + 2 <= n) and b:sub(t % 64 + 1, t % 64 + 1) or "="
+i = i + 3
+end
+return table.concat(out)
+end
+Trans.SafeName = function(s)
+local x = tostring(s or "")
+x = x:gsub('[\\/:*?"<>|]', "_")
+x = x:gsub("%c", "")
+x = x:gsub("%s+", "_")
+x = x:gsub("^_+", ""):gsub("_+$", "")
+if #x > 40 then x = x:sub(1, 40) end
+return x
+end
+Trans.GameKey = function()
+if Trans._gk then return Trans._gk, Trans._gp end
+local pid = "0"
+pcall(function() pid = tostring(game.PlaceId or 0) end)
+local nm = nil
+pcall(function()
+local ok, n = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
+if ok and type(n) == "string" and n ~= "" then nm = n end
+end)
+local key = nm and Trans.SafeName(nm) or nil
+if not key or key == "" or not key:match("%S") then key = "Place" .. pid end
+Trans._gk, Trans._gp = key, pid
+return key, pid
+end
+Trans.CurFile = function()
+if Trans._curFile then return Trans._curFile end
+Trans._curFile = Trans.CACHE_PREFIX .. Trans.GameKey() .. ".txt"
+return Trans._curFile
+end
+Trans.AsciiFile = function()
+local _, pid = Trans.GameKey()
+return Trans.CACHE_PREFIX .. "Place" .. tostring(pid) .. ".txt"
+end
+Trans.CacheFiles = function()
+local out = {}
+if type(listfiles) ~= "function" then return out end
+local ok, list = pcall(listfiles, ".")
+if not ok or type(list) ~= "table" then return out end
+for i = 1, #list do
+local p = tostring(list[i])
+local nm = p:match("([^/\\]+)$") or p
+if nm:sub(1, #Trans.CACHE_PREFIX) == Trans.CACHE_PREFIX and nm:sub(-4) == ".txt" then
+out[#out + 1] = nm
+end
+end
+return out
+end
+Trans.LoadInto = function(file)
+if type(readfile) ~= "function" then return 0 end
 local ex = false
-pcall(function() ex = isfile(file) end)
-if not ex then return nil end
+if type(isfile) == "function" then pcall(function() ex = isfile(file) end) end
+if not ex then return 0 end
 local raw = nil
 pcall(function() raw = readfile(file) end)
-if type(raw) ~= "string" or raw == "" then return nil end
+if type(raw) ~= "string" or raw == "" then return 0 end
 local d = nil
 pcall(function() d = HS:JSONDecode(raw) end)
-if type(d) ~= "table" then return nil end
-return d
+if type(d) ~= "table" then return 0 end
+local cache = (type(d.c) == "table") and d.c or d
+local n = 0
+for k, v in pairs(cache) do
+if type(k) == "string" and type(v) == "string" and Trans.Cache[k] == nil then
+Trans.Cache[k] = v
+Trans.OWNER[k] = file
+n = n + 1
+end
+end
+return n
+end
+Trans.Count = function()
+local n = 0
+for _ in pairs(Trans.Cache) do n = n + 1 end
+return n
+end
+Trans.CloudPath = function()
+return "cache/" .. Trans.UrlEnc(Trans.GameKey()) .. ".txt"
+end
+Trans.HttpGet = function(url)
+local ok, body = pcall(function() return game:HttpGet(url, true) end)
+if not ok then ok, body = pcall(function() return game:HttpGet(url) end) end
+if ok and type(body) == "string" then return body end
+return nil
+end
+Trans.CloudPull = function(quiet)
+local path = Trans.CloudPath()
+local got, used = 0, nil
+for i = 1, #Trans.GIT_RAW do
+local body = Trans.HttpGet(Trans.GIT_RAW[i] .. path .. "?t=" .. tostring(os.time()))
+if type(body) == "string" and #body > 4 and body:find("{", 1, true) then
+local d = nil
+pcall(function() d = HS:JSONDecode(body) end)
+if type(d) == "table" then
+local cache = (type(d.c) == "table") and d.c or d
+local file = Trans.CurFile()
+for k, v in pairs(cache) do
+if type(k) == "string" and type(v) == "string" and Trans.Cache[k] == nil then
+Trans.Cache[k] = v
+Trans.OWNER[k] = file
+got = got + 1
+end
+end
+if got > 0 then used = Trans.GIT_RAW[i] break end
+end
+end
+end
+if got > 0 then
+Trans._cnt = Trans.Count()
+Trans.Save()
+if not quiet then
+F.Out("[翻译] ☁ 云端已拉取本服缓存 " .. got .. " 条 ⇒ 不连模型也能直接命中")
+end
+task.spawn(function() pcall(Trans.Scan) end)
+elseif not quiet then
+F.Out("[翻译] ☁ 云端暂无本服缓存(或网络不通): " .. path)
+end
+return got, used
+end
+Trans.CloudPush = function()
+local tok = Trans.Token()
+if not tok then
+F.Out("[翻译] ☁ 上传需要 Token: 把 GitHub Token 存成 " .. Trans.TOKEN_FILE .. " 放在执行器 workspace 根目录(不会写进脚本)")
+return false
+end
+local file = Trans.CurFile()
+local pack, n = {}, 0
+for k, v in pairs(Trans.Cache) do
+if Trans.OWNER[k] == file then pack[k] = v n = n + 1 end
+end
+if n == 0 then F.Out("[翻译] ☁ 本服还没有缓存可上传") return false end
+local gk, pid = Trans.GameKey()
+local body = nil
+pcall(function() body = HS:JSONEncode({ v = 3, game = gk, place = pid, c = pack }) end)
+if not body then F.Out("[翻译] ☁ 序列化失败") return false end
+local api = Trans.GIT_API .. Trans.CloudPath()
+local sha = nil
+local res = Trans.HttpGet(api .. "?t=" .. tostring(os.time()))
+if type(res) == "string" and res:find("{", 1, true) then
+local d = nil
+pcall(function() d = HS:JSONDecode(res) end)
+if type(d) == "table" and type(d.sha) == "string" then sha = d.sha end
+end
+local msg = { message = "cache: " .. gk .. " (" .. n .. " 条)", content = Trans.B64(body), branch = "main" }
+if sha then msg.sha = sha end
+local jb = nil
+pcall(function() jb = HS:JSONEncode(msg) end)
+if not jb then return false end
+local rf = Trans.Req()
+if type(rf) ~= "function" then F.Out("[翻译] ☁ 本执行器没有 request, 无法上传") return false end
+local okP, r = pcall(function()
+return rf({ Url = api, Method = "PUT", Headers = {
+["Authorization"] = "token " .. tok,
+["Content-Type"] = "application/json",
+["User-Agent"] = "CheatMenu",
+}, Body = jb })
+end)
+local code = (okP and type(r) == "table") and tonumber(r.StatusCode or 0) or 0
+if code == 200 or code == 201 then
+F.Out("[翻译] ☁ 已上传本服缓存 " .. n .. " 条 → " .. Trans.CloudPath())
+return true
+end
+F.Out("[翻译] ☁ 上传失败 HTTP " .. tostring(code) .. (okP and "" or (" · " .. tostring(r))))
+return false
+end
+Trans.Token = function()
+if type(readfile) ~= "function" then return nil end
+local ex = false
+if type(isfile) == "function" then pcall(function() ex = isfile(Trans.TOKEN_FILE) end) end
+if not ex then return nil end
+local t = nil
+pcall(function() t = readfile(Trans.TOKEN_FILE) end)
+if type(t) ~= "string" then return nil end
+t = t:gsub("%s+", "")
+if t == "" then return nil end
+return t
+end
+Trans.ClearCurrent = function()
+local file = Trans.CurFile()
+local gone = 0
+for k in pairs(Trans.Cache) do
+if Trans.OWNER[k] == file then
+Trans.Cache[k] = nil
+Trans.OWNER[k] = nil
+gone = gone + 1
+end
+end
+Trans._cnt = Trans.Count()
+Trans.Order = {}
+for k in pairs(Trans.Cache) do Trans.Order[#Trans.Order + 1] = k end
+Trans._lastSavedN = nil
+if type(delfile) == "function" then
+pcall(function() if isfile and isfile(file) then delfile(file) end end)
+pcall(function() if isfile and isfile(Trans.AsciiFile()) then delfile(Trans.AsciiFile()) end end)
+end
+Trans.ShouldCacheClear()
+if type(Trans.Reg) == "table" then
+for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
+end
+Trans._dirty = false
+F.Out("[翻译] 已清空当前服缓存 " .. gone .. " 条(" .. file .. ") ⇒ 本服文字会重新翻一遍")
+return gone
+end
+Trans.ClearAll = function()
+local n = Trans.Count()
+Trans.Cache, Trans.OWNER, Trans.Order = {}, {}, {}
+Trans._cnt = 0
+Trans._lastSavedN = nil
+Trans._dirty = false
+Trans.ShouldCacheClear()
+local del = 0
+local list = Trans.CacheFiles()
+for i = 1, #list do
+if type(delfile) == "function" then
+local ok = pcall(delfile, list[i])
+if ok then del = del + 1 end
+else
+pcall(function() writefile(list[i], '{"v":3,"c":{}}') end)
+end
+end
+if type(delfile) == "function" then
+pcall(delfile, Trans.FILE)
+pcall(delfile, "CheatMenu_TransCache.json")
+pcall(delfile, "CheatMenu_TransCache.json.bak")
+end
+if type(Trans.Reg) == "table" then
+for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
+end
+F.Out("[翻译] 已清空全部缓存 " .. n .. " 条 · 已删文件 " .. del .. " 个")
+return n
 end
 function Trans.Load()
-local d = Trans.LoadOne(Trans.FILE)
-if d == nil then d = Trans.LoadOne("CheatMenu_TransCache.json") end
-if d == nil then return end
-local n = 0
-local cache = (type(d.c) == "table") and d.c or d
-for k, v in pairs(cache) do
-if type(k) == "string" and type(v) == "string" then Trans.Cache[k] = v n = n + 1 end
+local total, files = 0, 0
+local list = Trans.CacheFiles()
+for i = 1, #list do
+local n = Trans.LoadInto(list[i])
+if n > 0 then total = total + n files = files + 1 end
 end
-Trans._cnt = n
+local n1 = Trans.LoadInto(Trans.FILE)
+if n1 > 0 then total = total + n1 files = files + 1 end
+local n2 = Trans.LoadInto("CheatMenu_TransCache.json")
+if n2 > 0 then total = total + n2 files = files + 1 end
+Trans._cnt = Trans.Count()
 Trans._dirty = false
-F.Out("[翻译] 已加载本地缓存 " .. n .. " 条 ⇒ 这些句子不会再翻")
+if total > 0 then
+F.Out("[翻译] 已加载本地缓存 " .. total .. " 条(来自 " .. files .. " 个文件) ⇒ 这些句子不再重翻")
+else
+F.Out("[翻译] 本地暂无缓存文件 ⇒ 稍后自动尝试从云端拉取")
 end
-Trans.SaveAtomic = function(payload)
+return total
+end
+Trans.SaveAtomic = function(payload, file)
 if type(writefile) ~= "function" then return false end
 if type(payload) ~= "string" or payload == "" then return false end
-return pcall(function() writefile(Trans.FILE, payload) end)
+local f = file or Trans.CurFile()
+local ok, err = pcall(function() writefile(f, payload) end)
+if ok then return true, f end
+local alt = Trans.AsciiFile()
+if f ~= alt then
+local ok2, err2 = pcall(function() writefile(alt, payload) end)
+if ok2 then return true, alt end
+Trans._lastErr = tostring(err2)
+end
+Trans._lastErr = tostring(err)
+return false
 end
 Trans.Flush = function()
 if type(writefile) ~= "function" then
@@ -9226,24 +9488,36 @@ Trans._dirty = false
 Trans._lastErr = "本执行器不支持写文件"
 return false
 end
+local file = Trans.CurFile()
+local pack, n = {}, 0
+for k, v in pairs(Trans.Cache) do
+if Trans.OWNER[k] == file then pack[k] = v n = n + 1 end
+end
+if n == 0 then
+local ex = false
+if type(isfile) == "function" then pcall(function() ex = isfile(file) end) end
+if not ex then
+Trans._dirty = false
+return true
+end
+end
+local gk, pid = Trans.GameKey()
 local body = nil
-local okE = pcall(function() body = HS:JSONEncode({ v = 2, c = Trans.Cache }) end)
+local okE = pcall(function() body = HS:JSONEncode({ v = 3, game = gk, place = pid, c = pack }) end)
 if not okE or not body then
 Trans._lastErr = "缓存序列化失败"
 return false
 end
-local ok, r = pcall(Trans.SaveAtomic, body)
-local done = ok and (r ~= false)
+local ok, r = pcall(Trans.SaveAtomic, body, file)
+local done = ok and (r == true)
 Trans._dirty = not done
 if done then
 Trans._savedAt = os.clock()
-Trans._saveCount = Trans._saveCount + 1
+Trans._saveCount = (Trans._saveCount or 0) + 1
 Trans._lastErr = nil
-local n = 0
-for _ in pairs(Trans.Cache) do n = n + 1 end
 if Trans._lastSavedN ~= n then
 Trans._lastSavedN = n
-F.Out("[翻译] 缓存已保存到本地 " .. n .. " 条 ⇒ 下次开启直接复用, 不重翻")
+F.Out("[翻译] 缓存已保存到 " .. file .. " (" .. n .. " 条本服缓存)")
 end
 else
 Trans._lastErr = tostring(r)
@@ -9397,6 +9671,7 @@ end
 Trans.CachePut = function(text, tr)
 local fresh = Trans.Cache[text] == nil
 Trans.Cache[text] = tr
+Trans.OWNER[text] = Trans.CurFile()
 if fresh then
 Trans._cnt = Trans._cnt + 1
 Trans.Order[#Trans.Order + 1] = text
@@ -9405,8 +9680,9 @@ local drop = math.floor(Trans.CACHE_MAX * 0.5)
 local gone = 0
 for i = 1, #Trans.Order do
 local k = Trans.Order[i]
-if k and Trans.Cache[k] ~= nil then
+if k and Trans.Cache[k] ~= nil and Trans.OWNER[k] == Trans.CurFile() then
 Trans.Cache[k] = nil
+Trans.OWNER[k] = nil
 gone = gone + 1
 if gone >= drop then break end
 end
@@ -9426,7 +9702,10 @@ end
 local tpl, n1 = Trans.TplKey(text)
 if n1 >= 1 and #tpl >= 6 then
 local tplTr, n2 = Trans.TplKey(tr)
-if n2 == n1 then Trans.Cache["\2" .. tpl] = tplTr end
+if n2 == n1 then
+Trans.Cache["\2" .. tpl] = tplTr
+Trans.OWNER["\2" .. tpl] = Trans.CurFile()
+end
 end
 Trans.Save()
 end
@@ -9884,7 +10163,9 @@ F.Out("[翻译统计] 已翻 " .. tostring(Trans._cnt) .. " 条 · 缓存 " .. t
 .. tostring(#Trans.Queue) .. " 条 · 累计请求 " .. tostring(Trans._reqN) .. " 次 · 上次保存: " .. ago
 .. " · 已自动保存 " .. tostring(Trans._saveCount) .. " 次")
 F.Out("[翻译统计] 界面" .. tostring(Trans._diagText or "(还没扫描)") .. " · 模型 " .. (Trans._ready and "已连接" or "未连接")
-.. " · 并发 " .. tostring(Trans.Active or 0) .. "/" .. tostring(Trans.MAX) .. " · 缓存文件 " .. tostring(Trans.FILE))
+.. " · 并发 " .. tostring(Trans.Active or 0) .. "/" .. tostring(Trans.MAX))
+F.Out("[翻译统计] 本服文件 " .. tostring(Trans.CurFile()) .. " · 本服 " .. tostring(Trans.Count()) .. " 条 · 磁盘上共 "
+.. tostring(#Trans.CacheFiles()) .. " 个缓存文件 · 云端路径 " .. tostring(Trans.CloudPath()))
 end
 Trans.WatchOn = function()
 local LPl = game:GetService("Players").LocalPlayer
@@ -9970,6 +10251,9 @@ end
 pcall(Trans.Scan)
 Trans.WatchOn()
 pcall(Trans.ChatWatch)
+if (Trans._cnt or 0) == 0 or not Trans._ready then
+task.spawn(function() pcall(Trans.CloudPull, false) end)
+end
 if not Trans._readyTask then
 Trans._readyTask = task.spawn(function()
 while T.Translate do
@@ -12617,31 +12901,27 @@ F.Out("[翻译] 重新扫描失败: " .. tostring(err))
 end
 end)
 end })
-Tabs.Trans:AddButton({ Title = "保存缓存(立即写入本地文件)", Callback = function()
+Tabs.Trans:AddButton({ Title = "保存缓存(立即写入本服文件)", Callback = function()
 task.spawn(function()
 local ok = pcall(Trans.Flush)
-local n = 0
-for _ in pairs(Trans.Cache or {}) do n = n + 1 end
 if ok and not Trans._lastErr then
-F.Out("[翻译] 缓存已手动保存 " .. n .. " 条 ⇒ " .. tostring(Trans.FILE))
+F.Out("[翻译] 缓存已手动保存 ⇒ " .. tostring(Trans.CurFile()) .. " (" .. tostring(Trans.Count()) .. " 条)")
 else
 F.Out("[翻译] 缓存保存失败: " .. tostring(Trans._lastErr or "未知原因"))
 end
 end)
 end })
-Tabs.Trans:AddButton({ Title = "清空缓存(下次全部重翻)", Callback = function()
-Trans.Cache = {}
-Trans.Order = {}
-Trans._cnt = 0
-Trans._lastSavedN = nil
-Trans.ShouldCacheClear()
-if type(Trans.Reg) == "table" then
-for _o, r in pairs(Trans.Reg) do
-if type(r) == "table" then r.at = 0 end
-end
-end
-task.spawn(function() pcall(Trans.Flush) end)
-F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
+Tabs.Trans:AddButton({ Title = "清空当前服缓存(只删本服)", Callback = function()
+task.spawn(function() pcall(Trans.ClearCurrent) end)
+end })
+Tabs.Trans:AddButton({ Title = "清空全部缓存(所有游戏)", Callback = function()
+task.spawn(function() pcall(Trans.ClearAll) end)
+end })
+Tabs.Trans:AddButton({ Title = "上传本服缓存到云端(需 Token)", Callback = function()
+task.spawn(function() pcall(Trans.CloudPush) end)
+end })
+Tabs.Trans:AddButton({ Title = "从云端拉取本服缓存(补全)", Callback = function()
+task.spawn(function() pcall(Trans.CloudPull, false) end)
 end })
 Tabs.Trans:AddSection("② 翻译发出(打中文 → 翻成目标语言发出)")
 Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
