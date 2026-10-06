@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 21:13 sha 6a611e0f bytes 476814'):format('2026-10-06 21:13','6a611e0f',476814))
+print(('[CheatMenu] build 2026-10-06 21:21 sha bad946d4 bytes 477229'):format('2026-10-06 21:21','bad946d4',477229))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9279,6 +9279,10 @@ if not body then Trans._dirty = true return false end
 local ok, r = pcall(Trans.SaveAtomic, body)
 local done = ok and (r ~= false)
 Trans._dirty = not done
+if done and not Trans._savedLog then
+Trans._savedLog = true
+F.Out("[翻译] 缓存已自动保存 " .. tostring(Trans._cnt or 0) .. " 条 → 下次开启/离线直接复用, 不用重翻")
+end
 return done
 end
 function Trans.Save()
@@ -9777,6 +9781,19 @@ local n = 0
 for o in pairs(Trans.Reg) do if typeof(o) == "Instance" and o.Parent then n = n + 1 end end
 return n
 end
+Trans._sig = setmetatable({}, { __mode = "k" })
+Trans._watch = {}
+Trans.SigWatch = function(obj)
+if not obj or Trans._sig[obj] then return end
+if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
+Trans._sig[obj] = true
+pcall(function()
+local c = obj:GetPropertyChangedSignal("Text"):Connect(function()
+if T.Translate then pcall(function() Trans.GuiEl(obj) end) end
+end)
+Trans._watch[#Trans._watch + 1] = c
+end)
+end
 Trans.GuiElNoReg = function(obj)
 if not obj or obj.Visible == false then return end
 if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
@@ -9844,6 +9861,7 @@ Trans.Reg[obj] = { raw = txt, last = nil }
 elseif r.last ~= nil and txt ~= r.last then
 r.raw = txt
 end
+Trans.SigWatch(obj)
 Trans.Async(txt, function(tr)
 if obj.Parent and obj.Visible ~= false and obj.TextVisible ~= false then
 local tt1 = obj.TextTransparency
@@ -9950,20 +9968,11 @@ F.Out("[翻译] 已开: 新出现的文字会立刻翻译, 文字变化即时跟
 return true
 end
 Trans.WatchOn = function()
-if Trans._watch then return end
-Trans._watch, Trans._sig = {}, {}
+if Trans._watchOn then return end
+Trans._watchOn = true
 local function one(d)
 if not T.Translate or not d then return end
 pcall(function() Trans.GuiEl(d) end)
-if (d:IsA("TextLabel") or d:IsA("TextButton"))
-and not Trans._sig[d] then
-Trans._sig[d] = true
-pcall(function()
-Trans._watch[#Trans._watch + 1] = d:GetPropertyChangedSignal("Text"):Connect(function()
-if T.Translate then pcall(function() Trans.GuiEl(d) end) end
-end)
-end)
-end
 end
 local function watch(root)
 if not root then return end
@@ -9981,7 +9990,9 @@ Trans.WatchOff = function()
 if Trans._watch then
 for _, c in ipairs(Trans._watch) do pcall(function() c:Disconnect() end) end
 end
-Trans._watch, Trans._sig = nil, nil
+Trans._watch = {}
+Trans._sig = setmetatable({}, { __mode = "k" })
+Trans._watchOn = false
 end
 function F.ChatTranslateEnable()
 if F._chatTransHooked then return end
