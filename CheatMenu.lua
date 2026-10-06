@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:05 sha c779dbdf bytes 474194'):format('2026-10-07 00:05','c779dbdf',474194))
+print(('[CheatMenu] build 2026-10-07 00:14 sha 702b3510 bytes 474784'):format('2026-10-07 00:14','702b3510',474784))
 local F = {}
-F.VERSION = "v16.9.38"
+F.VERSION = "v16.9.39"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9149,7 +9149,8 @@ if Trans._savedAt then
 local d = math.floor(os.clock() - Trans._savedAt)
 savedAgo = ((d < 60) and (d .. " 秒前") or (math.floor(d / 60) .. " 分钟前"))
 end
-F.Out("[翻译统计] 本次翻译 " .. tostring(Trans._cnt or 0) .. " 条 · 缓存里共 " .. tostring(cacheN) .. " 条 · 上次自动保存: "
+F.Out("[翻译统计] 本次翻译 " .. tostring(Trans._cnt or 0) .. " 条 · 缓存里共 " .. tostring(cacheN) .. " 条 · 最近10秒发模型 "
+.. tostring(#(Trans._reqWin or {})) .. " 次 · 上次自动保存: "
 .. savedAgo .. " · 已自动保存 " .. tostring(Trans._saveCount or 0) .. " 次(自动, 不用手动)")
 end
 function Trans.Save()
@@ -9182,6 +9183,11 @@ or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
 Trans._localFails = 0
 function Trans.Request(text, toLang)
+Trans._reqN = (Trans._reqN or 0) + 1
+Trans._reqWin = Trans._reqWin or {}
+local _rn = os.clock()
+Trans._reqWin[#Trans._reqWin + 1] = _rn
+while #Trans._reqWin > 0 and _rn - Trans._reqWin[1] > 10 do table.remove(Trans._reqWin, 1) end
 local rf = Trans.Req()
 if type(rf) ~= "function" then
 F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
@@ -9776,21 +9782,25 @@ pcall(function() if gethui and gethui() then roots[#roots + 1] = gethui() end en
 local diag = {}
 for _, root in ipairs(roots) do
 if root then
-local txtCnt = 0
+local txtCnt, visCnt = 0, 0
 local samples = {}
 for _, obj in ipairs(F.walk(root)) do
 local cls = obj.ClassName
 if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
 txtCnt = txtCnt + 1
+local vis = (obj.Visible ~= false) and (obj.TextVisible ~= false)
+if vis then
+visCnt = visCnt + 1
 if #samples < 3 then
 local t = obj.Text
-if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 18) end
+if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 16) end
+end
 end
 end
 pcall(Trans.GuiEl, obj)
 end
-local sampleStr = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or ""
-diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt) .. sampleStr
+local sampleStr = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(无可显示文本)"
+diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt) .. "/可见" .. tostring(visCnt) .. sampleStr
 end
 end
 if not Trans._diagOnce then
@@ -9936,6 +9946,9 @@ end
 if T.ChatTranslate and message and message.Text then
 local src = message.TextSource
 if not src or src.Name ~= LP.Name then
+local _nowc = os.clock()
+if F._chatTransAt and _nowc - F._chatTransAt < 0.25 then return props end
+F._chatTransAt = _nowc
 local tr = Trans.Translate(message.Text, true)
 if tr and tr ~= "" and tr ~= message.Text then
 props = props or Instance.new("TextChatMessageProperties")
