@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:41 sha b7b36748 bytes 491956'):format('2026-10-07 04:41','b7b36748',491956))
+print(('[CheatMenu] build 2026-10-07 04:50 sha d9e0db61 bytes 492091'):format('2026-10-07 04:50','d9e0db61',492091))
 local F = {}
-F.VERSION = "v16.9.77"
+F.VERSION = "v16.9.78"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10246,7 +10246,7 @@ end
 Trans.GuiEl = function(obj)
 if not obj or not obj.Parent then return end
 local cls = obj.ClassName
-if cls ~= "TextLabel" and cls ~= "TextBox" then return end
+if cls ~= "TextLabel" and cls ~= "TextButton" and cls ~= "TextBox" then return end
 if obj.Visible == false then return end
 if Trans.TextVisible(obj) == false then return end
 local tt = obj.TextTransparency
@@ -10254,9 +10254,9 @@ if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
 if Trans._selfCN[obj] then return end
-if cls == "TextLabel" then
+if cls == "TextLabel" or cls == "TextButton" then
 local nested = false
-pcall(function() if obj.Parent and obj.Parent:IsA("TextLabel") then nested = true end end)
+pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
 if not nested then
 local kids = nil
 pcall(function() kids = obj:GetChildren() end)
@@ -10412,7 +10412,7 @@ for i = 1, #list do
 local o = list[i]
 if typeof(o) == "Instance" then
 local c = o.ClassName
-if c == "TextLabel" or c == "TextBox" then
+if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
 txtN = txtN + 1
 if o.Visible ~= false and Trans.TextVisible(o) ~= false then
 visN = visN + 1
@@ -13187,10 +13187,11 @@ local evStatBtn = Tabs.Event:AddButton({ Title = "活动状态: 等待扫描", C
 task.spawn(function() pcall(F.EventProbe) end)
 end })
 task.spawn(function()
+pcall(F.EventHookWeather)
 while true do
 task.wait(1)
 if evStatBtn and evStatBtn.SetTitle then
-pcall(function() evStatBtn:SetTitle(string.format("当前活动: %s · 距轮换 %s", F.EventCurrent(), F.EventCountdown())) end)
+pcall(function() evStatBtn:SetTitle(string.format("当前活动: %s · 服务器重启: %s", F.EventCurrent(), F.EventCountdown())) end)
 end
 end
 end)
