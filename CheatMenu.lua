@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:44 sha 7fa87825 bytes 480393'):format('2026-10-07 03:44','7fa87825',480393))
+print(('[CheatMenu] build 2026-10-07 03:53 sha 6ddd73e1 bytes 480620'):format('2026-10-07 03:53','6ddd73e1',480620))
 local F = {}
-F.VERSION = "v16.9.72"
+F.VERSION = "v16.9.73"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8984,6 +8984,8 @@ Trans.FILE = "CheatMenu_TransCache.txt"
 Trans.CACHE_PREFIX = "CheatMenu_Cache_"
 Trans.OWNER = {}
 Trans.GIT_API = "https://api.github.com/repos/Mercershixin/CheatMenu/contents/"
+Trans.CLOUD_DIR = "translate/cache/"
+Trans.CLOUD_DIR_OLD = "cache/"
 Trans.GIT_RAW = {
 "https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 "https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
@@ -8995,7 +8997,7 @@ zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 }
 Trans.BATCH = 6
-Trans.MAX = 12
+Trans.MAX = 8
 Trans.CACHE_MAX = 5000
 Trans.SCAN_EVERY = 6
 Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
@@ -9293,7 +9295,7 @@ for _ in pairs(Trans.Cache) do n = n + 1 end
 return n
 end
 Trans.CloudPath = function()
-return "cache/" .. Trans.UrlEnc(Trans.GameKey()) .. ".txt"
+return Trans.CLOUD_DIR .. Trans.UrlEnc(Trans.GameKey()) .. ".txt"
 end
 Trans.HttpGet = function(url)
 local ok, body = pcall(function() return game:HttpGet(url, true) end)
@@ -9302,10 +9304,13 @@ if ok and type(body) == "string" then return body end
 return nil
 end
 Trans.CloudPull = function(quiet)
-local path = Trans.CloudPath()
+local key = Trans.UrlEnc(Trans.GameKey())
 local got, used = 0, nil
+local dirs = { Trans.CLOUD_DIR, Trans.CLOUD_DIR_OLD }
+for di = 1, #dirs do
+if got > 0 then break end
 for i = 1, #Trans.GIT_RAW do
-local body = Trans.HttpGet(Trans.GIT_RAW[i] .. path .. "?t=" .. tostring(os.time()))
+local body = Trans.HttpGet(Trans.GIT_RAW[i] .. dirs[di] .. key .. ".txt?t=" .. tostring(os.time()))
 if type(body) == "string" and #body > 4 and body:find("{", 1, true) then
 local d = nil
 pcall(function() d = HS:JSONDecode(body) end)
@@ -9319,7 +9324,8 @@ Trans.OWNER[k] = file
 got = got + 1
 end
 end
-if got > 0 then used = Trans.GIT_RAW[i] break end
+if got > 0 then used = dirs[di] .. key .. ".txt" break end
+end
 end
 end
 end
@@ -9331,7 +9337,7 @@ F.Out("[翻译] ☁ 云端已拉取本服缓存 " .. got .. " 条 ⇒ 不连模�
 end
 task.spawn(function() pcall(Trans.Scan) end)
 elseif not quiet then
-F.Out("[翻译] ☁ 云端暂无本服缓存(或网络不通): " .. path)
+F.Out("[翻译] ☁ 云端暂无本服缓存(或网络不通): " .. Trans.CloudPath())
 end
 return got, used
 end
