@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 23:42 sha 1d333e9e bytes 474059'):format('2026-10-06 23:42','1d333e9e',474059))
+print(('[CheatMenu] build 2026-10-06 23:48 sha e26cb8bf bytes 473061'):format('2026-10-06 23:48','e26cb8bf',473061))
 local F = {}
-F.VERSION = "v16.9.35"
+F.VERSION = "v16.9.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4765,37 +4765,6 @@ end
 end)
 end
 F.savedLight = nil
-F._logClearHook, F._logClearOrig = nil, nil
-F.LockLogClear = function(on)
-local ls = nil
-pcall(function() ls = game:GetService("LogService") end)
-if not ls then return false end
-if on then
-if F._logClearHook then return true end
-if type(hookfunction) ~= "function" then return false end
-local ok = pcall(function()
-local orig = ls.ClearOutput
-F._logClearOrig = orig
-local nk = function(...) return nil end
-if type(newcclosure) == "function" then
-local okW, w = pcall(newcclosure, nk)
-if okW and type(w) == "function" then nk = w end
-end
-hookfunction(orig, nk)
-F._logClearHook = true
-end)
-if F._logClearHook then F.Out("[反封禁·护日志] 已拦 LogService:ClearOutput(反作弊清掉日志的通道)") end
-return F._logClearHook
-else
-if not F._logClearHook then return false end
-pcall(function()
-if F._logClearOrig and type(restorefunction) == "function" then restorefunction(F._logClearOrig) end
-end)
-F._logClearHook, F._logClearOrig = nil, nil
-F.Out("[反封禁·护日志] 已还原")
-return true
-end
-end
 F._godLoop, F._godAt = nil, 0
 F.GodKillDied = function(hum)
 if not hum then return 0 end
@@ -12628,11 +12597,12 @@ if chat then pcall(F.ChatTranslateEnable) else pcall(F.ChatTranslateDisable) end
 if bub then pcall(F.BubbleTranslateEnable) else pcall(F.BubbleTranslateDisable) end
 F.Out("[翻译] 范围 = " .. s)
 end })
-Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "en", "ja", "ko", "th", "ru", "ar", "id", "zh" },
-Default = "en", Callback = function(v)
-C.TransLang = v
+Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
+Default = "英文", Callback = function(v)
+local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
+C.TransLang = code
 if F._cfgSyncing then return end
-F.Out("[翻译发出] 目标语言已选 " .. tostring(Trans.LANGS[v] or v) .. " —— 中文聊天框输入的中文会翻成它再发出")
+F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 中文聊天框输入的中文会翻成它再发出")
 end })
 Tabs.Trans:AddSection("聊天 / 气泡")
 Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文→目标语言发出)", Default = false, Callback = function(v)
@@ -12810,12 +12780,6 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 F._fusing = false
 end
-Tabs.Setting:AddSection("日志防护")
-Tabs.Setting:AddToggle("LockLog", { Title = "护日志", Default = false, Callback = function(v)
-T.LockLog = v
-if F._cfgSyncing then return end
-pcall(F.LockLogClear, v)
-end })
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "热加载", Callback = function()
