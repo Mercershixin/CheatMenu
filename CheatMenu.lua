@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:48 sha b84a7b4a bytes 477313'):format('2026-10-07 00:48','b84a7b4a',477313))
+print(('[CheatMenu] build 2026-10-07 00:52 sha e33754b4 bytes 480651'):format('2026-10-07 00:52','e33754b4',480651))
 local F = {}
-F.VERSION = "v16.9.46"
+F.VERSION = "v16.9.47"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9577,13 +9577,114 @@ return Trans.RT.CleanResidue(fin)
 end
 return nil
 end
+Trans.BatchMax = 6
+Trans.Pre = function(text)
+local ctx = { raw = text }
+local mode = tostring(C.TransRTMode or "\226\145\160")
+local s = text
+if Trans.RT.HasTags(s) then
+if mode:find("\226\145\161", 1, true) then
+s = Trans.RT.Strip(s)
+elseif mode:find("\226\145\162", 1, true) then
+local core
+core, ctx.rtTags = Trans.RT.Tokenize(s)
+s = core
+end
+end
+local gl
+gl, ctx.glHits = Trans.GL.Apply(s)
+ctx.send = gl
+return ctx
+end
+Trans.Post = function(tr, ctx)
+if type(tr) ~= "string" then return nil end
+local fin = Trans.GL.Restore(tr, ctx.glHits)
+if ctx.rtTags and #ctx.rtTags > 0 then return Trans.RT.RestoreChecked(fin, ctx.rtTags) end
+return Trans.RT.CleanResidue(fin)
+end
+Trans.RunBatch = function(items)
+local rf = Trans.Req()
+if type(rf) ~= "function" then return false end
+local sends, ctxs = {}, {}
+for i = 1, #items do
+local c = Trans.Pre(items[i].text)
+ctxs[i] = c
+sends[i] = c.send
+end
+local okS, payload = pcall(HS.JSONEncode, sends)
+if not okS then return false end
+local sys = "You are a translation engine. Translate every string of this JSON array into Chinese. "
+.. "Keep the array length and the order identical, and keep numbers, placeholders, emoji and markup unchanged. "
+.. "Output ONLY the JSON array: no explanation, no code fence, no extra text."
+local body = HS:JSONEncode({
+model = Trans.MODEL,
+messages = { { role = "system", content = sys }, { role = "user", content = payload } },
+temperature = 0.1, top_p = 0.6, max_tokens = 1536, stream = false,
+})
+local ok, res = pcall(function()
+return rf({ Url = Trans.HOST .. "/v1/chat/completions", Method = "POST",
+Headers = { ["Content-Type"] = "application/json", ["Authorization"] = "Bearer " .. Trans.KEY }, Body = body })
+end)
+if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then return false end
+local ok2, d = pcall(HS.JSONDecode, res.Body)
+if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return false end
+local msg = d.choices[1].message
+local content = msg and msg.content
+if type(content) ~= "string" or content == "" then return false end
+content = content:gsub("^%s*```[%w]*%s*", ""):gsub("%s*```%s*$", "")
+local a = content:find("%[", 1, true)
+local b = content:match(".*()%]")
+if not a or not b or b <= a then return false end
+local ok3, arr = pcall(HS.JSONDecode, content:sub(a, b))
+if not ok3 or type(arr) ~= "table" or #arr ~= #items then return false end
+local good = 0
+for i = 1, #items do
+local it = items[i]
+local tr = Trans.Post(arr[i], ctxs[i])
+if tr and tr ~= "" and tr ~= it.text then
+Trans.Cache[it.text] = tr
+Trans.Order = Trans.Order or {}
+Trans.Order[#Trans.Order + 1] = it.text
+Trans._cnt = (Trans._cnt or 0) + 1
+for j = 1, #it.applies do pcall(it.applies[j], tr) end
+good = good + 1
+end
+end
+return good > 0
+end
 Trans.Drain = function()
 while Trans.Active < Trans.Max and #Trans.Queue > 0 do
-local item = table.remove(Trans.Queue, 1)
+local groups, order, rest = {}, {}, {}
+for i = 1, #Trans.Queue do
+local it = Trans.Queue[i]
+local g = groups[it.text]
+if g then
+g.applies[#g.applies + 1] = it.apply
+elseif #order < Trans.BatchMax then
+g = { text = it.text, applies = { it.apply } }
+groups[it.text] = g
+order[#order + 1] = it.text
+else
+rest[#rest + 1] = it
+end
+end
+Trans.Queue = rest
+if #order == 0 then break end
+local items = {}
+for i = 1, #order do items[i] = groups[order[i]] end
 Trans.Active = Trans.Active + 1
 task.spawn(function()
-local ok, tr = pcall(Trans.Translate, item.text, true)
-if ok and tr and tr ~= item.text then pcall(item.apply, tr) end
+local done = false
+if #items > 1 then done = pcall(Trans.RunBatch, items) end
+if not done then
+for i = 1, #items do
+local it = items[i]
+local okT, tr = pcall(Trans.Translate, it.text, true)
+if okT and tr and tr ~= it.text then
+for j = 1, #it.applies do pcall(it.applies[j], tr) end
+end
+end
+end
 Trans.Active = Trans.Active - 1
 if Trans.Active < Trans.Max and #Trans.Queue > 0 then Trans.Drain() end
 end)
