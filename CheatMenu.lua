@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:38 sha d5eea475 bytes 476579'):format('2026-10-07 00:38','d5eea475',476579))
+print(('[CheatMenu] build 2026-10-07 00:44 sha 00af6614 bytes 476586'):format('2026-10-07 00:44','00af6614',476586))
 local F = {}
-F.VERSION = "v16.9.44"
+F.VERSION = "v16.9.45"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8301,7 +8301,7 @@ end
 F.Out("[急停] 已保留(防护类不关): 角色持续 · 自动存档 · 护界面 · 挂机防踢 · 受击/稳身/陷阱防护 · 速度守卫")
 pcall(F.CfgSyncUI)
 if Fluent and Fluent.Notify then
-Fluent:Notify({ Title = "Panic", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
+Fluent:Notify({ Title = "一键全关", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
 end
 F.Out("[CheatMenu] Panic: 全部功能已关闭, 属性/外观/连接已恢复")
 end
