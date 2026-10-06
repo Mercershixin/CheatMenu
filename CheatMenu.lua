@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 01:14 sha f8789bff bytes 459386'):format('2026-10-07 01:14','f8789bff',459386))
+print(('[CheatMenu] build 2026-10-07 02:25 sha 9fb02186 bytes 460856'):format('2026-10-07 02:25','9fb02186',460856))
 local F = {}
-F.VERSION = "v16.9.51"
+F.VERSION = "v16.9.52"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9034,16 +9034,71 @@ Trans.Req = function()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
+Trans.Utf8Clean = function(s)
+if type(s) ~= "string" then return s end
+local out, i, n = {}, 1, #s
+while i <= n do
+local b = s:byte(i)
+if b < 0x80 then
+if b == 9 or b == 10 or b >= 32 then out[#out + 1] = string.char(b) end
+i = i + 1
+elseif b >= 0xC2 and b <= 0xDF then
+local b2 = s:byte(i + 1)
+if b2 and b2 >= 0x80 and b2 <= 0xBF then
+out[#out + 1] = s:sub(i, i + 1)
+i = i + 2
+else
+i = i + 1
+end
+elseif b >= 0xE0 and b <= 0xEF then
+local b2, b3 = s:byte(i + 1), s:byte(i + 2)
+if b2 and b3 and b2 >= 0x80 and b2 <= 0xBF and b3 >= 0x80 and b3 <= 0xBF then
+out[#out + 1] = s:sub(i, i + 2)
+i = i + 3
+else
+i = i + 1
+end
+elseif b >= 0xF0 and b <= 0xF4 then
+local b2, b3, b4 = s:byte(i + 1), s:byte(i + 2), s:byte(i + 3)
+if b2 and b3 and b4 and b2 >= 0x80 and b2 <= 0xBF
+and b3 >= 0x80 and b3 <= 0xBF and b4 >= 0x80 and b4 <= 0xBF then
+out[#out + 1] = s:sub(i, i + 3)
+i = i + 4
+else
+i = i + 1
+end
+else
+i = i + 1
+end
+end
+return table.concat(out)
+end
 Trans.Chat = function(messages, maxTokens)
 local rf = Trans.Req()
 if type(rf) ~= "function" then return nil, "本执行器没有 request 函数" end
-local okB, body = pcall(HS.JSONEncode, {
+local function build(msgs)
+return {
 model = Trans.MODEL,
-messages = messages,
+messages = msgs,
 temperature = 0.1, top_p = 0.6,
 max_tokens = maxTokens or 256, stream = false,
-})
-if not okB then return nil, "请求体编码失败" end
+}
+end
+local okB, body = pcall(HS.JSONEncode, build(messages))
+if not okB then
+local clean = {}
+for i = 1, #messages do
+clean[i] = { role = messages[i].role, content = Trans.Utf8Clean(messages[i].content) }
+end
+okB, body = pcall(HS.JSONEncode, build(clean))
+if not okB then
+if not Trans._encWarned then
+Trans._encWarned = true
+F.Out("[翻译] ⚠ 请求编码失败(已清洗仍不行): " .. tostring(body))
+end
+return nil, "文本含无法编码的字符"
+end
+end
 local ok, res = pcall(function()
 return rf({
 Url = Trans.HOST .. "/v1/chat/completions",
@@ -9085,7 +9140,12 @@ end
 Trans.RequestBatch = function(list, lang)
 Trans._reqN = Trans._reqN + 1
 local okP, payload = pcall(HS.JSONEncode, list)
+if not okP then
+local clean = {}
+for i = 1, #list do clean[i] = Trans.Utf8Clean(list[i]) end
+okP, payload = pcall(HS.JSONEncode, clean)
 if not okP then return nil end
+end
 local sys = Trans.Prompt(lang)
 .. "\nThe user sends a JSON array of strings. Translate every element."
 .. "\nOutput ONLY a JSON array with the SAME length and SAME order. No explanation, no code fence."
@@ -9549,7 +9609,7 @@ if Trans._watchConn then pcall(function() Trans._watchConn:Disconnect() end) Tra
 end
 function F.ChatTranslateEnable()
 if F._chatHook then return end
-local done = pcall(function()
+local done, cerr = pcall(function()
 local tcs = game:GetService("TextChatService")
 if not tcs then error("no-tcs") end
 local prev = tcs.OnIncomingMessage
@@ -9584,7 +9644,7 @@ end)
 if done and F._chatHook then
 F.Out("[翻译] 聊天翻译已开: 命中缓存的句子当场显示译文, 新句子先入队(下一句同文即中文)")
 else
-F.Out("[翻译] 本游戏没有标准聊天服务, 聊天翻译不可用")
+F.Out("[翻译] 聊天翻译不可用: " .. tostring(cerr))
 end
 end
 function F.ChatTranslateDisable()
