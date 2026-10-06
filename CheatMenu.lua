@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:29 sha 1222ef86 bytes 470696'):format('2026-10-07 03:29','1222ef86',470696))
+print(('[CheatMenu] build 2026-10-07 03:32 sha 4944c312 bytes 470697'):format('2026-10-07 03:32','4944c312',470697))
 local F = {}
-F.VERSION = "v16.9.70"
+F.VERSION = "v16.9.71"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8986,7 +8986,7 @@ zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 }
 Trans.BATCH = 6
-Trans.MAX = 8
+Trans.MAX = 12
 Trans.CACHE_MAX = 5000
 Trans.SCAN_EVERY = 6
 Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
