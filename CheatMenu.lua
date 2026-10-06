@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:52 sha e33754b4 bytes 480651'):format('2026-10-07 00:52','e33754b4',480651))
+print(('[CheatMenu] build 2026-10-07 00:56 sha 7139d27f bytes 481914'):format('2026-10-07 00:56','7139d27f',481914))
 local F = {}
-F.VERSION = "v16.9.47"
+F.VERSION = "v16.9.48"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9526,6 +9526,25 @@ else
 return Trans.RT.CleanResidue(f0)
 end
 end
+if text:find("%d") then
+local nums = {}
+local tpl = text:gsub("%d+", function(d) nums[#nums + 1] = d return "%%d" end)
+if #tpl >= 6 then
+local tv = Trans.Cache["\2" .. tpl]
+if type(tv) == "string" then
+local i, filled = 0, tv:gsub("%%d", function() i = i + 1 return nums[i] or "" end)
+if i == #nums and filled ~= "" then
+local f1 = Trans.GL.Restore(filled, glHits)
+if rtTags and #rtTags > 0 then
+local c1 = Trans.RT.RestoreChecked(f1, rtTags)
+if c1 ~= nil then return c1 end
+else
+return Trans.RT.CleanResidue(f1)
+end
+end
+end
+end
+end
 local quick = Trans.QUICK[text:lower()]
 if quick then Trans.Cache[text] = quick return quick end
 if force then Trans._lastAt = 0 end
@@ -9542,6 +9561,15 @@ Trans.Order[#Trans.Order + 1] = text
 Trans._cnt = (Trans._cnt or 0) + 1
 end
 Trans.Cache[text] = r
+if text:find("%d") then
+local nums2 = {}
+local tpl2 = text:gsub("%d+", function(d) nums2[#nums2 + 1] = d return "%%d" end)
+if #tpl2 >= 6 then
+local j2 = 0
+local tplTr = r:gsub("%d+", function() j2 = j2 + 1 return "%%d" end)
+if j2 == #nums2 then Trans.Cache["\2" .. tpl2] = tplTr end
+end
+end
 Trans.CACHE_MAX = Trans.CACHE_MAX or 5000
 if Trans._cnt > Trans.CACHE_MAX * 1.1 then
 local real = 0
@@ -9772,10 +9800,15 @@ end
 if not inCG then return false end
 return hit
 end
+Trans.TV = function(obj)
+local ok, v = pcall(function() return obj.TextVisible end)
+if ok then return v end
+return nil
+end
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 Trans.NO_TRANSLATE_KEYS = { "atlas", "codex", "encyclopedia", "compendium", "index", "图鉴", "索引" }
 Trans.SkipEl = function(obj)
-if obj.TextVisible == false then
+if Trans.TV(obj) == false then
 Trans._skip.invisible = Trans._skip.invisible + 1
 return "TextVisible=false"
 end
@@ -9867,7 +9900,7 @@ end
 function Trans.GuiEl(obj)
 if not obj then return end
 if obj.Visible == false then return end
-if obj.TextVisible == false then return end
+if Trans.TV(obj) == false then return end
 local tt0 = obj.TextTransparency
 if type(tt0) == "number" and tt0 >= 0.95 then return end
 if obj:IsA("TextBox") then
@@ -9904,7 +9937,7 @@ r.at = os.clock()
 end
 Trans.SigWatch(obj)
 Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false and obj.TextVisible ~= false then
+if obj.Parent and obj.Visible ~= false and Trans.TV(obj) ~= false then
 local tt1 = obj.TextTransparency
 if not (type(tt1) == "number" and tt1 >= 0.95) then
 local rec = Trans.Reg[obj]
@@ -9939,7 +9972,7 @@ for _, obj in ipairs(F.walk(root)) do
 local cls = obj.ClassName
 if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
 txtCnt = txtCnt + 1
-local vis = (obj.Visible ~= false) and (obj.TextVisible ~= false)
+local vis = (obj.Visible ~= false) and (Trans.TV(obj) ~= false)
 if vis then
 visCnt = visCnt + 1
 if #samples < 3 then
@@ -12790,9 +12823,20 @@ C.TransLang = code
 if F._cfgSyncing then return end
 F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 中文聊天框输入的中文会翻成它再发出")
 end })
-Tabs.Trans:AddButton({ Title = "翻译统计(点看翻了多少/保存状态)", Callback = function()
+local transStatBtn = Tabs.Trans:AddButton({ Title = "翻译进度: 等待开启翻译", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
 end })
+task.spawn(function()
+while true do
+task.wait(1)
+if transStatBtn and transStatBtn.SetTitle then
+pcall(function()
+transStatBtn:SetTitle(string.format("翻译进度: 已翻 %d 条 · 待翻 %d 条 · 失败 %d 次(点这里看详情)",
+Trans._cnt or 0, #(Trans.Queue or {}), Trans._localFails or 0))
+end)
+end
+end
+end)
 Tabs.Trans:AddButton({ Title = "重新扫描界面(立即刷新一遍)", Callback = function()
 Trans._diagOnce = nil
 task.spawn(function()
