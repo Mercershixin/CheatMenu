@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 22:30 sha 91cbb998 bytes 473073'):format('2026-10-06 22:30','91cbb998',473073))
+print(('[CheatMenu] build 2026-10-06 23:13 sha 7f169cd0 bytes 473430'):format('2026-10-06 23:13','7f169cd0',473430))
 local F = {}
-F.VERSION = "v16.9.32"
+F.VERSION = "v16.9.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9786,10 +9786,21 @@ Trans._skip = { ours = 0, official = 0, invisible = 0 }
 local roots = { pg }
 if C.TransOfficial then roots[#roots + 1] = CoreGui end
 pcall(function() if gethui and gethui() then roots[#roots + 1] = gethui() end end)
+local diag = {}
 for _, root in ipairs(roots) do
 if root then
-for _, obj in ipairs(F.walk(root)) do pcall(Trans.GuiEl, obj) end
+local txtCnt = 0
+for _, obj in ipairs(F.walk(root)) do
+local cls = obj.ClassName
+if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then txtCnt = txtCnt + 1 end
+pcall(Trans.GuiEl, obj)
 end
+diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt)
+end
+end
+if not Trans._diagOnce then
+Trans._diagOnce = true
+F.Out("[翻译·诊断] 界面根文本控件: " .. table.concat(diag, " · "))
 end
 pcall(function()
 for _, obj in ipairs(F.walk(workspace, 20000, 500)) do
@@ -9869,7 +9880,7 @@ F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ �
 end
 if Trans.Loop then Trans.HeartbeatOn() return true end
 pcall(Trans.GL.AddAuto)
-C.TransOfficial = false
+C.TransOfficial = true
 Trans.Prewarm()
 local okScan, errScan = pcall(Trans.Scan)
 if not okScan then F.Out("[翻译] ⚠ 扫描界面时出错: " .. tostring(errScan) .. " —— 但仍会继续监听新出现的文字") end
