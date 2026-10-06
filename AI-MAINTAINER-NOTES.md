@@ -4177,6 +4177,51 @@ v16.9.29 补齐 5 处：`AntiFling.fix` / `LockHealth.apply` / `AntiRagdoll.appl
 - **滑块数值边界**：`AddSlider` 的 `Default` 必须在 `[Min, Max]` 内且 `Min < Max`（v16.9.29 实测 9 个滑块 0 异常）。
 - **已删能力是否被误加回**：对"用户点名删除过"的能力名 `grep -c` 必须为 0（v16.9.29 实测 6 项全 0 ✅）。
 
+---
+
+## v16.9.30 · 事件/钩子全量审计（2026-10-06）
+
+工具 `_audit_hooks_full.py`：四维提取（事件 `:Connect` / 属性变化信号 / 钩子原语 / 元方法槽），
+对标本仓 **103 份**可读公开脚本。
+
+### ★★ 铁律：**语料覆盖率高的事件，未必是游戏能力**
+
+`Activated` 在语料里 **113 份（全场最高）**，但实测 **84 次是 `DropDownButton.Activated`**，
+其余是 `Close`/`Continue`/`Toggle`/`OpenButton`；`MouseButton1Down`(58)/`MouseEnter`(22)/`MouseLeave`(23)/
+`Button1Down`(6) 同样全是 **UI 库自己的按钮**。
+
+⇒ **判"缺事件"之前必须 grep 出挂载行、看清接收者是谁**，只看计数会一次误判 6 项。
+
+其它"看似缺失、实为等价或非通用"的：
+| 语料事件 | 我们的等价做法 |
+|---|---|
+| `Changed`(45) | `GetPropertyChangedSignal`（更精细） |
+| `Destroying`(17) / `AncestryChanged`(10) / `CharacterRemoving`(11) | 显式 `Disconnect` + 关闭链 |
+| `Touched`(11) | `CanTouch = false`（根本不触发，更省） |
+| `CurrentCamera` 属性信号(7) | 每帧现取 `workspace.CurrentCamera`（相机被换也不失效） |
+| `EntityAdded/Removed`、`entityAddedEvent/RemovedEvent`、`LocalAdded` | 某脚本的**自定义事件**，非通用 |
+
+### ★★ 铁律：反作弊必须**出站 + 下行两侧都看**
+
+我们原有反作弊**全在出站侧**（拦/改我们发出去的）。`OnClientEvent` 的 4 处用法**全是
+`getconnections(re.OnClientEvent)` 取连接去 Disable** —— **从不监听** ⇒ 不知道服务端何时在判你。
+
+v16.9.30 补 `F.CMX_InboundWatchSet(on)`：
+- 只给**名字命中 `F.CMX_BAN_KEYS`** 的 remote 挂监听（不做全库，避免几百条连接）；
+- 收到下发只做「计数 + 限频 4 秒日志」（`[服务端预警] 服务端下发了「X」(N 个参数)`）；
+- **绝不改调用**（不像拦截那样 `return nil`）⇒ 不可能因此被判异常；
+- 档位 **②/③ 自动开**，①/关自动断，**熔断里也复位**（`HookFuse` steps 里加了这一条）；
+- `ReplicatedStorage.DescendantAdded` 给新出现的危险命名 remote 补挂。
+
+### 钩子原语对比（我们领先）
+
+`hookfunction` 17 处（语料最多 15 份）· `getconnections` 11 · `hookmetamethod` 8 ·
+`checkcaller` 8 · `newcclosure` 6 · `SetNetworkOwner` 5（语料仅 2 份）· 且有**熔断 + 残留体检**（语料 0 份）。
+
+> ⚠ 工具的坑：`hookmetamethod` 计数为 0 是**假阴性** —— 正则只认引号里的槽名，
+> 而我们的槽名是变量。**凡"某原语计数 0"都要用普通 grep 复核一次**。
+
+
 
 
 
