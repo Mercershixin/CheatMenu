@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:50 sha d9e0db61 bytes 492091'):format('2026-10-07 04:50','d9e0db61',492091))
+print(('[CheatMenu] build 2026-10-07 04:55 sha cf224bd1 bytes 495926'):format('2026-10-07 04:55','cf224bd1',495926))
 local F = {}
-F.VERSION = "v16.9.78"
+F.VERSION = "v16.9.79"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8800,6 +8800,105 @@ if not remote then return false end
 local args = table.pack(...)
 return (pcall(function() remote:FireServer(table.unpack(args, 1, args.n)) end))
 end
+F._spyOn = false
+F._spyHooked = false
+F._spyBuf = {}
+F._spyCount = 0
+F._spyFile = "CheatMenu_Logs/CheatMenu_RemoteLog.txt"
+F.SpySer = function(v, depth)
+if depth == nil then depth = 0 end
+if depth > 12 then return "[...]" end
+local tv = typeof(v)
+if tv == "string" then
+local c = v:gsub("[%c]", "?"):sub(1, 200)
+return string.format("\"%s\"", c:sub(1, 200))
+end
+if tv == "number" or tv == "boolean" then return tostring(v) end
+if tv == "nil" then return "nil" end
+if tv == "Instance" then return string.format("Inst(%s:%s)", v.ClassName, tostring(v.Name)) end
+if tv == "Vector3" then return string.format("V3(%.1f,%.1f,%.1f)", v.X, v.Y, v.Z) end
+if tv == "Vector2" then return string.format("V2(%.1f,%.1f)", v.X, v.Y) end
+if tv == "CFrame" then return string.format("CF(%s)", tostring(v.Position)) end
+if tv == "Color3" then return tostring(v) end
+if tv == "EnumItem" then return tostring(v) end
+if tv == "table" then
+local isArr, maxk = true, 0
+for k in pairs(v) do
+if type(k) ~= "number" or k < 1 or k % 1 ~= 0 then isArr = false break end
+if k > maxk then maxk = k end
+end
+local parts = {}
+if isArr then
+for i = 1, maxk do parts[#parts + 1] = F.SpySer(v[i], depth + 1) end
+return "[" .. table.concat(parts, ",") .. "]"
+else
+for k, val in pairs(v) do parts[#parts + 1] = tostring(k) .. "=" .. F.SpySer(val, depth + 1) end
+return "{" .. table.concat(parts, ",") .. "}"
+end
+end
+return tostring(v)
+end
+F.SpyFlush = function()
+if type(writefile) ~= "function" then return false end
+local body = table.concat(F._spyBuf, "\n")
+if body == "" then return false end
+F._spyBuf = {}
+pcall(function() if type(makefolder) == "function" and type(isfolder) == "function" and not isfolder("CheatMenu_Logs") then makefolder("CheatMenu_Logs") end end)
+local old = ""
+pcall(function() if type(isfile) == "function" and isfile(F._spyFile) then old = readfile(F._spyFile) end end)
+if old ~= "" then old = old .. "\n" end
+return pcall(function() writefile(F._spyFile, old .. body .. "\n") end)
+end
+F.RemoteSpyEnable = function()
+if F._spyHooked then F.Out("[抓包] 已在运行中") return end
+if type(hookfunction) ~= "function" then F.Out("[抓包] 本执行器没有 hookfunction") return end
+local root = F.NetRoot()
+if not root then F.Out("[抓包] 找不到 remote 根节点") return end
+F._spyHooked = true
+F._spyOn = true
+F._spyBuf = {}
+F._spyCount = 0
+local hooked = 0
+for _, r in ipairs(root:GetDescendants()) do
+if r:IsA("RemoteEvent") or r:IsA("RemoteFunction") then
+local isE = r:IsA("RemoteEvent")
+local fn = isE and r.FireServer or r.InvokeServer
+if type(fn) == "function" then
+local nm = r.Name
+local ok = pcall(function()
+local orig
+local wrapper = function(self, ...)
+if F._spyOn then
+F._spyCount = F._spyCount + 1
+local args = { ... }
+local parts = {}
+for i = 1, #args do parts[#parts + 1] = F.SpySer(args[i]) end
+F._spyBuf[#F._spyBuf + 1] = string.format("[%d] %s(%s)", F._spyCount, nm, table.concat(parts, ", "))
+if #F._spyBuf >= 2000 then task.spawn(F.SpyFlush) end
+end
+if orig then return orig(self, ...) end
+end
+local res
+if newcclosure then res = hookfunction(fn, newcclosure(wrapper)) else res = hookfunction(fn, wrapper) end
+orig = res
+end)
+if ok then hooked = hooked + 1 end
+end
+end
+end
+F.Out("[抓包] 已 hook " .. hooked .. " 个远程 → 参数实时写入 " .. F._spyFile .. " (不限条数)")
+task.spawn(function()
+while F._spyOn do
+task.wait(3)
+pcall(F.SpyFlush)
+end
+end)
+end
+F.RemoteSpyDisable = function()
+F._spyOn = false
+pcall(F.SpyFlush)
+F.Out("[抓包] 已停止 · 共抓 " .. tostring(F._spyCount) .. " 次调用 → " .. F._spyFile)
+end
 local TrainThread = nil
 function F.AutoTrainEnable()
 if TrainThread then return end
@@ -13377,6 +13476,11 @@ task.spawn(function()
 pcall(F.CMX_ScanAll)
 Fluent:Notify({ Title = "全扫描完成", Content = "结果已写入日志文件, 直接发给我就行", Duration = 8 })
 end)
+end })
+Tabs.AC:AddToggle("RemoteSpy", { Title = "抓包(全覆盖远程·写txt不限条数)", Default = false, Callback = function(v)
+T.RemoteSpy = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.RemoteSpyEnable) else pcall(F.RemoteSpyDisable) end
 end })
 F.HookResidue = function()
 local layers, ids = 0, {}
