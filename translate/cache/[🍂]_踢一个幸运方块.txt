@@ -1,0 +1,1 @@
+{"place":"89469502395769","game":"[🍂]_踢一个幸运方块","c":{"Mutation under 9%":"词缀浓度低于9%","Luck: 653.73x":"运气值：653.73倍","X2 LUCKY BLOCKS":"X2幸运方块","Tsunami speed":"海啸速度","SLOW TSUNAMI":"缓慢移动的海啸","\u0002Mutation under \u0001%":"词缀浓度低于\u0001%","\u0002X\u0001 LUCKY BLOCKS":"X\u0001幸运方块","\u0002Luck: \u0001.\u0001x":"运气值：\u0001.\u0001倍"},"v":3}
