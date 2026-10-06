@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 22:06 sha c29a5eb6 bytes 479138'):format('2026-10-06 22:06','c29a5eb6',479138))
+print(('[CheatMenu] build 2026-10-06 22:10 sha 9ee3a147 bytes 479521'):format('2026-10-06 22:10','9ee3a147',479521))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9758,6 +9758,7 @@ end
 return false
 end
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
+Trans.NO_TRANSLATE_KEYS = { "atlas", "codex", "encyclopedia", "compendium", "index", "图鉴", "索引" }
 Trans.SkipEl = function(obj)
 if obj.TextVisible == false then
 Trans._skip.invisible = Trans._skip.invisible + 1
@@ -9775,6 +9776,18 @@ end
 if not C.TransOfficial and Trans.IsOfficial(obj) then
 Trans._skip.official = Trans._skip.official + 1
 return "Roblox 官方界面"
+end
+local p, steps = obj, 0
+while p and steps < 8 do
+local nm = tostring(p.Name):lower()
+for _, kw in ipairs(Trans.NO_TRANSLATE_KEYS) do
+if nm:find(kw, 1, true) then
+Trans._skip.index = (Trans._skip.index or 0) + 1
+return "索引/图鉴"
+end
+end
+p = p.Parent
+steps = steps + 1
 end
 return nil
 end
