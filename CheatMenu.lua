@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:32 sha b54c110f bytes 466563'):format('2026-10-07 02:32','b54c110f',466563))
+print(('[CheatMenu] build 2026-10-07 02:36 sha 333b226c bytes 467175'):format('2026-10-07 02:36','333b226c',467175))
 local F = {}
-F.VERSION = "v16.9.54"
+F.VERSION = "v16.9.55"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9230,6 +9230,26 @@ task.wait(10)
 if Trans._dirty and T.Translate then pcall(Trans.Flush) end
 end
 end
+Trans.PN = {}
+Trans.RefreshPN = function()
+local t, n = {}, 0
+pcall(function()
+local list = game:GetService("Players"):GetPlayers()
+n = #list
+for i = 1, n do
+local pl = list[i]
+local nm = pl.Name
+if type(nm) == "string" and #nm >= 3 then t[nm] = true t[string.lower(nm)] = true end
+local dn = pl.DisplayName
+if type(dn) == "string" and #dn >= 3 then t[dn] = true t[string.lower(dn)] = true end
+end
+end)
+if Trans._pnN ~= n then
+Trans._pnN = n
+Trans.ShouldCacheClear()
+end
+Trans.PN = t
+end
 Trans.ShouldCacheClear = function()
 Trans._sCache = {}
 Trans._sN = 0
@@ -9253,6 +9273,7 @@ local n = #s
 if n < 2 or n > 300 then return false end
 if not s:find("[A-Za-z]") then return false end
 if s:find("[\228-\233]") then return false end
+if Trans.PN and Trans.PN[s] then return false end
 if s:match("%d%s*:%s*%d") then return false end
 if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
@@ -9264,9 +9285,6 @@ if core == "" then return false end
 if core:find("_") then return false end
 if core:match("^[%d%.]+$") then return false end
 if core:match("^v%d") then return false end
-if select(2, core:gsub("[^%d]", "")) > 0 and #core <= 16 then return false end
-if core:match("^%u+$") and #core <= 4 then return false end
-if #core >= 3 and not core:find("[aeiouAEIOU]") then return false end
 end
 return true
 end
@@ -9793,6 +9811,7 @@ return n
 end
 Trans.Scan = function()
 local LPl = game:GetService("Players").LocalPlayer
+pcall(Trans.RefreshPN)
 local pg = LPl and LPl:FindFirstChild("PlayerGui")
 local roots = {}
 if pg then roots[#roots + 1] = pg end
@@ -9810,7 +9829,7 @@ if okD and type(d) == "table" then
 for j = 1, #d do list[#list + 1] = d[j] end
 end
 end
-local txtN, visN = 0, 0
+local txtN, visN, cnN, enN = 0, 0, 0, 0
 local samples = {}
 for i = 1, #list do
 local o = list[i]
@@ -9820,10 +9839,15 @@ if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
 txtN = txtN + 1
 if o.Visible ~= false and Trans.TextVisible(o) ~= false then
 visN = visN + 1
-if #samples < 3 then
 local t = nil
 pcall(function() t = o.Text end)
-if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 14) end
+if type(t) == "string" and t ~= "" then
+if t:find("[\228-\233]") then
+cnN = cnN + 1
+elseif Trans.Should(t) then
+enN = enN + 1
+if #samples < 3 then samples[#samples + 1] = t:sub(1, 16) end
+end
 end
 end
 pcall(Trans.GuiEl, o)
@@ -9832,9 +9856,10 @@ end
 end
 if not Trans._diagOnce then
 Trans._diagOnce = true
-local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(无可显示文本)"
-F.Out("[翻译·诊断] PlayerGui 文本控件 " .. txtN .. " 个 / 可见 " .. visN .. " 个 " .. s)
+local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
+F.Out("[翻译·诊断] 可见文本 " .. visN .. " 个 ⇒ 中文 " .. cnN .. " 个(跳过) · 英文待翻 " .. enN .. " 个 " .. s)
 end
+Trans._diagText = " 可见" .. visN .. "/中文" .. cnN .. "/待翻" .. enN
 Trans._scanRound = Trans._scanRound + 1
 if Trans._scanRound % 10 == 1 then
 F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
@@ -12505,8 +12530,8 @@ while true do
 task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
-local md = Trans._ready and "模型✓" or "模型✗"
-transStatBtn:SetTitle(string.format("翻译进度: %s · 已翻 %d 条 · 待翻 %d 条", md, Trans._cnt or 0, #(Trans.Queue or {})))
+local md = Trans._ready and "✅ 本地模型已连接" or "❌ 未连接本地模型(点下方「模型自检」查原因)"
+transStatBtn:SetTitle(string.format("%s · 已翻 %d 条%s", md, Trans._cnt or 0, Trans._diagText or ""))
 end)
 end
 end
