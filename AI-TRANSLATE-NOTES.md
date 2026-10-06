@@ -67,13 +67,19 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 
 ## 三、★ Roblox 官方 / 公开脚本的既有经验
 
-- **聊天翻译用事件，不要用赋值回调**：
-  - ✓ `TextChannel.MessageReceived:Connect(...)` / `Player.Chatted:Connect(...)` —— 事件，一定连得上；
-  - ✗ `TextChatService.OnIncomingMessage = function() end` —— 赋值回调，实测报"没有标准聊天服务"。
-- **原生聊天消息显示后不可修改** ⇒ 想让"第一次看到就是中文"，只能**自建翻译面板**
-  （公开脚本 `sim_trans.lua` 就是这么做的：消息先写"[翻译中...]"，翻完更新那一行）。
-- **发送兜底三条路**（按顺序试）：`TextChannel:SendAsync` → `Chat:Chat(LP, msg, "All")` →
-  `DefaultChatSystemChatEvents.SayMessageRequest`。
+- ★★★ **最终口径（用户 2026-10-07 明确）：界面 = 游戏内原地替换；聊天 = 自建译文面板**。
+  - **界面 / UI 文字**：直接改写控件（`obj.Text = 译文`），**不是**另开窗口显示。
+  - **聊天消息**：用**自建译文面板**（`Trans.Panel*`）显示译文。
+  - ⚠ **踩坑记录**：我一度把面板整套删除、把聊天改成 `OnIncomingMessage` 返回 properties，
+    被用户当场否决（原话「聊天译文面板 用之前版本的」）⇒ 已回滚到面板方案。
+    **教训**：用户说"不是翻译面板"时，指的是**界面**那部分；**聊天面板必须保留**，别自作主张删。
+- **`OnIncomingMessage` 是官方"替换显示"机制**（返回 `TextChatMessageProperties`，`props.Text = 译文`），
+  但它**同步**（渲染关键路径，不能在里面发 HTTP）⇒ 只能"命中缓存才替换"。
+  本项目的聊天仍走**面板**方案，不要改。
+- `TextChannel.MessageReceived` / `Player.Chatted` 可用于**入队翻译**（预热缓存）。
+- ⛔ **白名单会挡住聊天**：`Trans.OFFICIAL` 里的 `chat` / `chatwindow` / `robloxgui`
+  会让聊天 UI 被跳过 ⇒ `F.IsOfficialUI` 必须**先判"祖先名含 chat ⇒ 放行"**（返回 false），
+  Scan 里还要单独把 `RobloxGui` 下名字含 chat 的子节点加进扫描根。
 - Roblox 的 `JSONEncode` 遇到无效 UTF-8 字节是**容忍**的（不会报错），所以"编码失败"几乎都是调用方式问题。
 - 客户端只能翻**客户端看得到**的文字；服务端算好下发的翻不了。
 
@@ -104,3 +110,27 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 | "本地模型没响应"但 `/health` 正常 | 编码环节坏了，不是服务坏了 |
 | 模型 task 号狂涨 | 有每秒变动的文本在反复入队（倒计时/金币数）⇒ 时间格式过滤 + 冷却 |
 | 缓存没变大 / "已保存 N 次"是假的 | `Flush` 的 done 误判（§2.4） |
+
+## 七、过滤规则（哪些**不**该翻）
+
+核心判据：**必须含 2 个连续字母（`%a%a`）** 才翻。这一条同时干掉了"纯数值/货币/单位/符号"。
+- **富文本标签先剥离再判断**：`<font color="#FF0000">` 这种纯标签串里含字母，若不剥离会被误判成"要翻"。
+- 自动跳过：`$1,234` `€5.99` `¥50` `1.5K` `2M` `3.2B` `100%` `+5` `-10` `1/10`、emoji/星号、
+  已是中文、玩家名、时间格式 `3:58`、URL/rbxasset、含 `_` 的标识符、`v1` 版本号、超长(>300)。
+- ✅ 仍会翻：`100 Coins`（→100 金币）/ `Level 5` / `<b>Hello</b>` / `PASS` / `XP` / `HP`。
+- ⛔ **不要**再加大写缩写过滤（`AFK`/`XP`/`HP` 原本被跳，用户明确要求放宽："外文英文一律翻译"）。
+- 术语表 `Trans.SYS_ZH` 固定译法（Coins→金币 / Train→训练 / Slot→槽位…），保证同一词永远同一译法。
+- 改完必须跑**回归测试**：从源码提取 `ShouldV2` 函数体 → 生成 Lua 用例脚本 → `luau.exe` 跑，
+  验证"该跳过的全跳过 + 该翻的全翻"。**别靠手抄，要从源码提取**（避免抄错）。
+
+## 八、备份 / 回滚纪律（本轮的血泪）
+
+- ⛔ **备份必须在"动手前"做**。本轮两次把 `pre-xxx` 备份做成了"改**后**快照"（名不副实），
+  回滚时找不到正确基准 ⇒ 只能从 GitHub 取回。
+- ✅ **从 GitHub 取回历史版本**（本仓的唯一可靠回滚手段）：
+  1. `GET /repos/Mercershixin/CheatMenu/commits?per_page=30` 找 message 含目标**字节数**的那条；
+  2. `https://raw.githubusercontent.com/Mercershixin/CheatMenu/<commit_sha>/CheatMenu.lua` 取回；
+  3. 首行是 `print('...build...')` banner，**去掉首行即源码**（本仓源码零注释，产物≈源码）。
+  ⚠ `git/blobs/<sha>` API 要 **40 位完整 sha**，缩写（12 位）会 422 报错。
+- 本仓**不是 git 仓库**（无 `.git`），同步全靠 `push_api.py` 走 API。
+
