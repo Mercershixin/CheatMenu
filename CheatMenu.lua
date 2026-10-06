@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 01:08 sha f5a30aae bytes 458722'):format('2026-10-07 01:08','f5a30aae',458722))
+print(('[CheatMenu] build 2026-10-07 01:14 sha f8789bff bytes 459386'):format('2026-10-07 01:14','f8789bff',459386))
 local F = {}
-F.VERSION = "v16.9.50"
+F.VERSION = "v16.9.51"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8988,7 +8988,7 @@ zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 }
 Trans.BATCH = 6
-Trans.MAX = 8
+Trans.MAX = 3
 Trans.CACHE_MAX = 5000
 Trans.SCAN_EVERY = 6
 Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
@@ -9374,6 +9374,7 @@ end
 end
 Trans.Async = function(text, applyFn)
 if not T.Translate then return end
+if not Trans._ready then return end
 if type(text) ~= "string" or text == "" then return end
 if Trans.KEEP[text] then return end
 if not Trans.Should(text) then return end
@@ -9721,19 +9722,40 @@ local okP, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Met
 okH = okP and type(res) == "table" and tonumber(res.StatusCode or 0) == 200
 end
 end
-if not okH then
-F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. Trans.HOST .. ") ⇒ 双击「翻译模型开关.bat」把服务起起来再开翻译")
-end
+Trans._ready = okH
+if okH then
 pcall(Trans.Scan)
+else
+F.Out("[翻译] ⏳ 本地翻译服务还没就绪(" .. Trans.HOST .. ") ⇒ 已挂上界面监听, 服务一起来就自动开翻(先不白刷请求)")
+end
 Trans.WatchOn()
 pcall(F.ChatTranslateEnable)
 pcall(F.BubbleTranslateEnable)
+if not Trans._readyTask then
+Trans._readyTask = task.spawn(function()
+while T.Translate do
+task.wait(3)
+if not T.Translate then break end
+if Trans._ready then break end
+local rf = Trans.Req()
+if type(rf) == "function" then
+local okP, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+if okP and type(res) == "table" and tonumber(res.StatusCode or 0) == 200 then
+Trans._ready = true
+F.Out("[翻译] ✅ 本地服务已就绪 ⇒ 立即开始翻译")
+pcall(Trans.Scan)
+end
+end
+end
+Trans._readyTask = nil
+end)
+end
 if not Trans.Loop then
 Trans.Loop = task.spawn(function()
 while T.Translate do
 task.wait(Trans.SCAN_EVERY)
 if not T.Translate then break end
-pcall(Trans.Scan)
+if Trans._ready then pcall(Trans.Scan) end
 end
 Trans.Loop = nil
 end)
@@ -9747,6 +9769,7 @@ return true
 end
 function Trans.Disable()
 T.Translate = false
+Trans._ready = false
 Trans.WatchOff()
 Trans.Loop = nil
 pcall(F.ChatTranslateDisable)
