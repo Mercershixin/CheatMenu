@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 03:03 sha 5b2d20cf bytes 439263'):format('2026-10-06 03:03','5b2d20cf',439263))
+print(('[CheatMenu] build 2026-10-06 10:20 sha 73444002 bytes 443154'):format('2026-10-06 10:20','73444002',443154))
 local F = {}
-F.VERSION = "v16.9.27"
+F.VERSION = "v16.9.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -538,6 +538,22 @@ return F.MetaUninstall("__newindex", "CMLockFields")
 end
 function AC.InstallNamecallHook()
 if AC._nc then return true end
+F.CMX_FakeArgs = function(...)
+if not T.CMX_FakeReport then return nil end
+local n = select("#", ...)
+local args = { ... }
+local ok, changed = pcall(function()
+local c = 0
+for i = 1, n do
+local v = args[i]
+if type(v) == "number" and (v ~= v or math.abs(v) > 120) then args[i] = 16 c = c + 1 end
+end
+return c
+end)
+if not ok then return nil end
+args.n = n
+return args, changed
+end
 local got = F.MetaInstall("__namecall", game, "AC", function(box)
 return function(self, ...)
 local method = getnamecallmethod and getnamecallmethod() or ""
@@ -570,6 +586,17 @@ local msg = "[拦 remote] " .. tostring(name) .. " ← 关键词 " .. tostring(k
 if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, msg) end)
 else pcall(F.Out, msg) end
 end
+local fp, fc = F.CMX_FakeArgs(...)
+if fp then
+AC._fakeSent = (AC._fakeSent or 0) + 1
+if os.clock() - (AC._fakeAt or 0) > 5 then
+AC._fakeAt = os.clock()
+local mf = "[假上报] " .. tostring(name) .. " 不丢弃 ⇒ 已把 " .. tostring(fc)
+.. " 个异常数值改回正常范围后发出(服务端看到的是'一切正常')"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, mf) end) else pcall(F.Out, mf) end
+end
+return box.orig(self, table.unpack(fp, 1, fp.n))
+end
 return nil
 end
 end
@@ -586,9 +613,14 @@ local now2 = os.clock()
 if now2 - (AC._hpLogAt or 0) > 3 then
 AC._hpLogAt = now2
 local m2 = "[拦受伤上报] " .. tostring(hname) .. " ← 关键词 " .. tostring(kw)
-.. " (累计 " .. tostring(AC._hpBlocked) .. " 次) ⇒ 服务端收不到这条, 它就不知道你受伤/死了"
+.. " (累计 " .. tostring(AC._hpBlocked) .. " 次) ⇒ 拦到就改值发出/没开假上报就丢弃"
 if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, m2) end)
 else pcall(F.Out, m2) end
+end
+local fph = F.CMX_FakeArgs(...)
+if fph then
+AC._fakeSent = (AC._fakeSent or 0) + 1
+return box.orig(self, table.unpack(fph, 1, fph.n))
 end
 return nil
 end
@@ -2025,6 +2057,8 @@ if not allow then
 for _, kk in ipairs(F.BLOCK_REMOTE_KEYS) do
 if string.find(low0, kk, 1, true) then
 KG.blocked9 = (KG.blocked9 or 0) + 1
+local fp9 = F.CMX_FakeArgs(...)
+if fp9 then KG.blocked9fake = (KG.blocked9fake or 0) + 1 return box.orig(self, table.unpack(fp9, 1, fp9.n)) end
 return nil
 end
 end
@@ -2049,6 +2083,8 @@ or string.find(nm, "Violation", 1, true)
 or string.find(nm, "anticheat", 1, true)
 or string.find(nm, "honeypot", 1, true)) then
 KG.blocked6 = (KG.blocked6 or 0) + 1
+local fp6 = F.CMX_FakeArgs(...)
+if fp6 then return box.orig(self, table.unpack(fp6, 1, fp6.n)) end
 return nil
 end
 end
@@ -2286,19 +2322,53 @@ pcall(F.CMX_RestoreRO)
 end
 function F.KickRejoinDisable()
 if KG.rjConn then pcall(function() KG.rjConn:Disconnect() end) KG.rjConn = nil end
+if KG.rjFail then pcall(function() KG.rjFail:Disconnect() end) KG.rjFail = nil end
+if KG.rjWatch then pcall(function() KG.rjWatch:Disconnect() end) KG.rjWatch = nil end
+KG.rjTries, KG.rjMiss, KG.rjBusy = 0, 0, false
 T.KickRejoin = false
 end
 function F.KickRejoinEnable()
 if KG.rjConn then return true end
-KG.rjConn = Players.PlayerRemoving:Connect(function(p)
-if p ~= LP then return end
-if not T.KickRejoin then return end
+KG.rjPlace, KG.rjJob = game.PlaceId, tostring(game.JobId or "")
+KG.rjTries, KG.rjMiss, KG.rjBusy = 0, 0, false
+local function rjGo(why)
+if not T.KickRejoin or KG.rjBusy then return end
+KG.rjBusy = true
 pcall(function()
 local ts = game:GetService("TeleportService")
-if game.PlaceId and game.JobId and game.JobId ~= "" then
-ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP)
+local plc, job = KG.rjPlace, KG.rjJob
+local ok = false
+if plc and job and job ~= "" then
+KG.rjTries = (KG.rjTries or 0) + 1
+F.Out("[回服] 检测到" .. tostring(why) .. " ⇒ 正在回到同一服务器(第 " .. tostring(KG.rjTries) .. " 次)")
+ok = pcall(function() ts:TeleportToPlaceInstance(plc, job, LP) end)
 end
+if not ok and plc then pcall(function() ts:Teleport(plc, LP) end) end
 end)
+KG.rjBusy = false
+end
+KG.rjConn = Players.PlayerRemoving:Connect(function(p)
+if p ~= LP then return end
+rjGo("被踢/玩家被移除")
+end)
+pcall(function()
+KG.rjFail = game:GetService("TeleportService").TeleportInitFailed:Connect(function(plr, code, msg)
+if plr ~= LP or not T.KickRejoin then return end
+if (KG.rjTries or 0) >= 3 then
+F.Out("[回服] 传送连续失败(" .. tostring(code) .. " " .. tostring(msg) .. ") ⇒ 已停手, 请手动重进")
+return
+end
+task.delay(3, function() rjGo("传送失败重试") end)
+end)
+end)
+KG.rjWatch = RS.Heartbeat:Connect(function()
+if not T.KickRejoin then return end
+local now = os.clock()
+if now - (KG.rjAt or 0) < 2 then return end
+KG.rjAt = now
+if LP ~= nil and LP.Parent == Players then KG.rjMiss = 0 return end
+KG.rjMiss = (KG.rjMiss or 0) + 1
+if KG.rjMiss >= 2 then rjGo("掉线(本机玩家已脱离 Players)") end
 end)
 return true
 end
@@ -3866,24 +3936,22 @@ end
 end
 F._invSav, F._invConn = nil, nil
 function F.InvisibleEnable()
-pcall(function()
-local _, hum = GC()
-if hum then
-if F._invSavDistType == nil then F._invSavDistType = hum.DisplayDistanceType end
-hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-end
-end)
 if F._invSav then return end
 local ch = LP.Character
 if not ch then F.Out("[隐身] 现在没有角色, 等进游戏再开") return end
 F._invSav = {}
+F._invSavFx = {}
 local n = 0
 pcall(function()
 for _, o in ipairs(ch:GetDescendants()) do
-if o:IsA("BasePart") or o:IsA("Decal") then
+if o:IsA("BasePart") or o:IsA("Decal") or o:IsA("Texture") then
 F._invSav[o] = o.Transparency
 o.Transparency = 1
 n = n + 1
+elseif o:IsA("BillboardGui") or o:IsA("Highlight") or o:IsA("SelectionBox")
+or o:IsA("ParticleEmitter") or o:IsA("Trail") or o:IsA("Beam") then
+F._invSavFx[o] = o.Enabled
+o.Enabled = false
 end
 end
 end)
@@ -3893,17 +3961,14 @@ task.wait(0.3)
 if not F._invSav then return end
 pcall(function()
 for _, o in ipairs(ch2:GetDescendants()) do
-if o:IsA("BasePart") or o:IsA("Decal") then
+if o:IsA("BasePart") or o:IsA("Decal") or o:IsA("Texture") then
 if F._invSav[o] == nil then F._invSav[o] = o.Transparency end
 o.Transparency = 1
+elseif o:IsA("BillboardGui") or o:IsA("Highlight") or o:IsA("SelectionBox")
+or o:IsA("ParticleEmitter") or o:IsA("Trail") or o:IsA("Beam") then
+if F._invSavFx[o] == nil then F._invSavFx[o] = o.Enabled end
+o.Enabled = false
 end
-end
-end)
-pcall(function()
-local h2 = ch2 and ch2:FindFirstChildOfClass("Humanoid")
-if h2 then
-if F._invSavDistType == nil then F._invSavDistType = h2.DisplayDistanceType end
-h2.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 end
 end)
 end
@@ -3911,9 +3976,13 @@ pcall(function() F._invConns[1] = LP.CharacterAdded:Connect(apply) end)
 pcall(function()
 F._invConns[2] = ch.DescendantAdded:Connect(function(o)
 if not F._invSav then return end
-if o:IsA("BasePart") or o:IsA("Decal") then
+if o:IsA("BasePart") or o:IsA("Decal") or o:IsA("Texture") then
 F._invSav[o] = o.Transparency
 pcall(function() o.Transparency = 1 end)
+elseif o:IsA("BillboardGui") or o:IsA("Highlight") or o:IsA("SelectionBox")
+or o:IsA("ParticleEmitter") or o:IsA("Trail") or o:IsA("Beam") then
+if F._invSavFx and F._invSavFx[o] == nil then F._invSavFx[o] = o.Enabled end
+pcall(function() o.Enabled = false end)
 end
 end)
 end)
@@ -3931,7 +4000,9 @@ if not T.Invisible then pcall(F.InvisibleDisable) return end
 local _, _, root = GC()
 if root and root.Transparency ~= 1 then pcall(function() root.Transparency = 1 end) end
 end)
-F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制给所有人) + 名字/血条距离=0"
+F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制给所有人) + 自己名字/血条距离=0"
+.. " —— 只作用于你自己, 不改任何其他玩家的名字/血条/显示"
+.. " —— 看不到别人的名字请开「ESP 总开关」(重载后它会回到默认关, 与本功能无关)"
 .. " —— 服务端若有「透明检测」会把你拉回, 那不是脚本的问题")
 end
 function F.InvisibleDisable()
@@ -3946,13 +4017,18 @@ if typeof(o) == "Instance" and o.Parent then pcall(function() o.Transparency = t
 end
 end
 F._invSav = nil
+if F._invSavFx then
+for o, en in pairs(F._invSavFx) do
+if typeof(o) == "Instance" and o.Parent then pcall(function() o.Enabled = en end) end
+end
+end
+F._invSavFx = nil
 pcall(function()
 local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 if hum then
 if F._invSavDist then hum.NameDisplayDistance = F._invSavDist end
 if F._invSavHealthDist then hum.HealthDisplayDistance = F._invSavHealthDist end
-if F._invSavDistType then hum.DisplayDistanceType = F._invSavDistType end
 end
 end)
 F._invSavDist, F._invSavHealthDist, F._invSavDistType = nil, nil, nil
@@ -7665,11 +7741,24 @@ end
 local ts = game:GetService("TeleportService")
 pcall(function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) end
+F._tpTries = 0
 F._tpFailConn = ts.TeleportInitFailed:Connect(function(plr, code, msg)
 if plr ~= LP then return end
-F.Out("[重进] 传送失败: " .. tostring(code) .. " · " .. tostring(msg) .. " ⇒ 手动从 Roblox 菜单重进吧")
+F._tpTries = (F._tpTries or 0) + 1
+if F._tpTries > 3 then
+F.Out("[重进] 传送连续失败 " .. tostring(F._tpTries) .. " 次(" .. tostring(code) .. " " .. tostring(msg)
+.. ") ⇒ 已停手, 请手动从 Roblox 菜单重进")
+return
+end
+F.Out("[重进] 传送失败(第 " .. tostring(F._tpTries) .. " 次): " .. tostring(code) .. " · " .. tostring(msg) .. " ⇒ 3 秒后自动重试")
+local job0 = tostring(game.JobId or "")
+task.delay(3, function()
+pcall(function()
+if job0 ~= "" then ts:TeleportToPlaceInstance(game.PlaceId, job0, LP) else ts:Teleport(game.PlaceId, LP) end
 end)
-task.delay(20, function()
+end)
+end)
+task.delay(30, function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) F._tpFailConn = nil end
 end)
 end)
@@ -11733,7 +11822,7 @@ if v:find("②", 1, true) then lvl = 2 end
 if v:find("③", 1, true) then lvl = 3 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
-pcall(function() T.CMX_AntiBanAll = false F.CMX_BanAllApply(false) end)
+pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) end)
 pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
@@ -11783,6 +11872,7 @@ pcall(AC.AntiPauseEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 if lvl >= 3 then
+T.CMX_FakeReport = true
 T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
 T.BypassTier = "④ 绕过层全开: 防护(稳身·受击·陷阱) + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回(清检测脚本) + 深度中和"
@@ -11804,7 +11894,7 @@ Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
 "② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停",
-"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(getgc 按名中和) + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) ⇒ 最激进",
+"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
@@ -11861,6 +11951,7 @@ function() pcall(F.CMX_HashFreezeDisable) end,
 function() pcall(F.CMX_BlockReportDisable) end,
 function() pcall(F.CMX_CutLogDisable) end,
 function() pcall(F.DeepNeuterDisable) end,
+function() T.CMX_FakeReport = false end,
 function() pcall(F.AntiCheatGCRestore) end,
 function() pcall(F.CMX_BanAllApply, false) end,
 function() pcall(AC.ReenableDisabledConns) end,
