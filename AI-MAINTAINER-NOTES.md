@@ -4221,6 +4221,40 @@ v16.9.30 补 `F.CMX_InboundWatchSet(on)`：
 > ⚠ 工具的坑：`hookmetamethod` 计数为 0 是**假阴性** —— 正则只认引号里的槽名，
 > 而我们的槽名是变量。**凡"某原语计数 0"都要用普通 grep 复核一次**。
 
+---
+
+## v16.9.31 · 关键路径开关失败不许静默（2026-10-06）
+
+### ★★ 铁律：`F.Try` 用于关键路径，裸 `pcall` 只用于"尽力而为"
+
+`F.Try(name, fn)` ≡ `pcall(fn, ...)` **+ 失败打一行日志**。
+
+| 场景 | 用什么 | 理由 |
+|---|---|---|
+| 档位 / 防护 / 急停 / 绕过 / 一键全关 的 Enable/Disable | **`F.Try`** | 一漏就是残留；失败必须能从日志查出来 |
+| `pcall(function() g:Destroy() end)` · `pcall(c:Disconnect)` | 裸 `pcall` | 失败属**预期**，逐个打日志＝噪音（会淹没有效信息） |
+| `F.HookFuse` 内部 | 裸 `pcall` | 每次换档都跑，失败日志会变噪声 |
+
+v16.9.31 转换 19 处：`GuardSet`(2) · `ProtectApply`(2) · `BypassTierApply`(2) · `CarryGuardDisable`(1) ·
+`AllInOneDisableAll`(5) · `ACWriteTierApply`(7)。**语义完全等价**（都是 pcall），只是失败不再无声。
+
+### ★★ 铁律：求函数体范围时关键字集**必须含 `if/do/repeat/until`**
+
+只数 `function`/`end`，任何 `if` 块的 `end` 都会把深度**提前归零** ⇒ 范围被截断
+（本轮 `F.ProtectTierApply` 被截成 5 行，实际约 60 行）。
+正确集合：`function|if|do|repeat|end|until`。
+
+### 新角度审查清单（`_audit_deep.py`，13 项全干净）
+
+重复定义 0 · 隐式全局 0 · `local` 后置引用 0 · `clamp` 倒置 0 · 异常字节 0（NUL/零宽/BOM/NBSP/全角空格）·
+热循环内 `GetService` 0 · 短 `task.wait` 仅 1 处（Gym 识别，**有超时上限**）· 循环内无守卫日志 0 ·
+中文标点误入代码 0。
+
+**判据要点**：
+- 隐式全局**必须加掩码 + 括号深度**，否则表构造字段（`Title = "..."`）与多行续行会大面积误报。
+- ZWJ 出现是**正常的** —— 游戏名表里有 `🧟‍♂️` / `🏴‍☠️`，emoji 多人/旗帜序列**必须**用 ZWJ。
+- **别把"88% 的 pcall 结果被丢弃"当缺陷** —— 抽样全是"尽力而为"包（销毁已销毁对象、断开已断开的连接）。
+
 
 
 
