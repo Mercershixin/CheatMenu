@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 21:42 sha 5adb0e4a bytes 479011'):format('2026-10-06 21:42','5adb0e4a',479011))
+print(('[CheatMenu] build 2026-10-06 22:06 sha c29a5eb6 bytes 479138'):format('2026-10-06 22:06','c29a5eb6',479138))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -2151,21 +2151,22 @@ if T.InstantInteract and key == "RequiresLineOfSight" and v == true then
 KG.blocked4 = (KG.blocked4 or 0) + 1
 return nil
 end
-if KG.blockSet[self] and T.SpeedGuard then
-if key == "Anchored" and v == true then
+if KG.blockSet[self] then
+local antiPin = (T.TrapWarn or T.HitGuard)
+if antiPin and key == "Anchored" and v == true then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
-if key == "PlatformStand" and v == true then
+if antiPin and key == "PlatformStand" and v == true then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
-if (key == "WalkSpeed" or key == "JumpPower" or key == "JumpHeight")
+if T.SpeedGuard and (key == "WalkSpeed" or key == "JumpPower" or key == "JumpHeight")
 and type(v) == "number" and v <= 0.01 then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
-if key == "AutoRotate" and v == false then
+if T.SpeedGuard and key == "AutoRotate" and v == false then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
@@ -2173,7 +2174,7 @@ if key == "PlatformStand" and v == false and T.FlyOn then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
-if key == "Health" and type(v) == "number" then
+if (T.God or T.LockHealth or T.NoDeath) and key == "Health" and type(v) == "number" then
 local hv = nil
 pcall(function() hv = rawget(self, "Health") end)
 if type(hv) == "number" and v < hv then
@@ -5432,8 +5433,8 @@ pcall(function() F.GuardSet(false, false, false, false) end)
 F.Try("SpeedGuardDisable", F.SpeedGuardDisable)
 F.Try("SpoofDisable", F.SpoofDisable)
 else
-T.GuardOn = true
-pcall(function() F.GuardSet(true, true, true, false) end)
+T.GuardOn = false
+pcall(function() F.GuardSet(true, true, false, false) end)
 T.SpeedGuard = true
 F.Try("SpeedGuardEnable", F.SpeedGuardEnable)
 T.Spoof = true
