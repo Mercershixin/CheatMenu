@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:56 sha 2f4e6924 bytes 470605'):format('2026-10-07 02:56','2f4e6924',470605))
+print(('[CheatMenu] build 2026-10-07 02:58 sha f5c46fd6 bytes 470734'):format('2026-10-07 02:58','f5c46fd6',470734))
 local F = {}
-F.VERSION = "v16.9.60"
+F.VERSION = "v16.9.61"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9304,9 +9304,14 @@ end
 Trans.ShouldV2 = function(s)
 local n = #s
 if n < 2 or n > 300 then return false end
-if not s:find("[A-Za-z]") then return false end
-if s:find("[\228-\233]") then return false end
 if Trans.PN and Trans.PN[s] then return false end
+if s:find("<%a") or s:find("</%a") then
+local st = s:gsub("<[^<>]->", " ")
+if not st:match("%a%a") then return false end
+s = st
+end
+if not s:match("%a%a") then return false end
+if s:find("[\228-\233]") then return false end
 if s:match("%d%s*:%s*%d") then return false end
 if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
