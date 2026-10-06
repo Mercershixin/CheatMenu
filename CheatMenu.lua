@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 22:10 sha 9ee3a147 bytes 479521'):format('2026-10-06 22:10','9ee3a147',479521))
+print(('[CheatMenu] build 2026-10-06 22:30 sha 91cbb998 bytes 473073'):format('2026-10-06 22:30','91cbb998',473073))
 local F = {}
-F.VERSION = "v16.9.31"
+F.VERSION = "v16.9.32"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6070,33 +6070,20 @@ mutedVolumes = nil
 end
 local savedLag = nil
 local LAG_FX = { "BlurEffect", "SunRaysEffect", "ColorCorrectionEffect", "BloomEffect", "DepthOfFieldEffect", "Atmosphere" }
--- ============================================================
--- 守卫增强 · 多物品守护（纯新增模块）
--- 定位：补齐 42_egg_carry.lua 现有护蛋只盯「当前手持那一个」的空白
--- 来源：学习偷蛋 / 偷脑红类脚本（Steal a Brainrot / Steal an Egg）的防护做法后补强 ——
---       同类脚本的守护面是「整包物品 + 被击瞬间」，而不只是手里那一个
--- 原则：不修改任何现有函数；与 MyEggSet / CarryGuard 可同时开，也可单独用
--- 约定：零缩进、不新增顶层 local（只挂 F 表）、自建连接并在关闭时断开、默认不自动开启
--- ============================================================
-
 F.GuardPlus = F.GuardPlus or {}
 F.GuardPlus.VERSION = "1.0"
 F.GuardPlus.on = false
 F.GuardPlus.opts = {
-poll = 0.05,        -- 轮询间隔（秒）
-hitReload = true,   -- 受击瞬间也重装（防「被打掉手里的东西」）
-hitWindow = 0.6,    -- 判定为「刚被打」的时间窗（秒）
-breakHits = 10,     -- 同一窗口内重装超过该次数就自动停手（防死循环）
-breakWin = 5,       -- 统计窗口（秒）
-breakCool = 6,      -- 停手时长（秒）
+poll = 0.05,
+hitReload = true,
+hitWindow = 0.6,
+breakHits = 10,
+breakWin = 5,
+breakCool = 6,
 }
-
--- 取当前角色与人形（复用主脚本的 GC 助手）
 function F.GuardPlus.Char()
 return GC()
 end
-
--- 在背包里按名字找 Tool
 function F.GuardPlus.FindInBag(name)
 local ch = F.GuardPlus.Char()
 if not ch then return nil end
@@ -6106,8 +6093,6 @@ local t = bag:FindFirstChild(name)
 if t and t:IsA("Tool") then return t end
 return nil
 end
-
--- 安全装备：先确认工具确实还在背包里再装备，避免重复装备被服务端反复卸下
 function F.GuardPlus.Equip(name)
 pcall(function()
 local ch, hum = F.GuardPlus.Char()
@@ -6117,48 +6102,35 @@ if not t then return end
 hum:EquipTool(t)
 end)
 end
-
--- 当前手持 Tool 的名字
 function F.GuardPlus.HeldName()
 local ch = F.GuardPlus.Char()
 if not ch then return nil end
 local t = ch:FindFirstChildOfClass("Tool")
 return t and t.Name or nil
 end
-
--- 主循环：由 Heartbeat 驱动，内部按 opts.poll 节流
 function F.GuardPlus.Tick()
 if not F.GuardPlus.on then return end
 local o = F.GuardPlus.opts
 local now = os.clock()
 if now - (F.GuardPlus._gpAt or 0) < o.poll then return end
 F.GuardPlus._gpAt = now
-
 local ch, hum = F.GuardPlus.Char()
 if not (ch and hum) then
 F.GuardPlus._gpHeldName, F.GuardPlus._gpLastHp = nil, nil
 return
 end
-
--- 1) 受击检测：血量下降即视为「刚被打」
 local hp = hum.Health
 if F.GuardPlus._gpLastHp and hp < F.GuardPlus._gpLastHp - 0.01 then
 F.GuardPlus._gpHitAt = now
 end
 F.GuardPlus._gpLastHp = hp
-
--- 2) 记录手持物；只要还是手持状态就直接返回
 local name = F.GuardPlus.HeldName()
 if name then
 F.GuardPlus._gpHeldName = name
 return
 end
-
--- 3) 手持物从「有」变「无」 ⇒ 被卸下或被打掉
 local prev = F.GuardPlus._gpHeldName
-if not prev then return end                     -- 本来就没拿东西，不处理
-
--- 4) 防死循环：同窗口内重装次数超限就自动停手（沿用护蛋已有的保护思路）
+if not prev then return end
 if now < (F.GuardPlus._gpBreakUntil or 0) then return end
 if now - (F.GuardPlus._gpWin or 0) > o.breakWin then
 F.GuardPlus._gpWin = now
@@ -6172,14 +6144,12 @@ F.Out("[守卫增强] 服务端在反复卸下你的物品(" .. tostring(o.break
 .. tostring(o.breakHits) .. " 次) ⇒ 已自动停手 " .. tostring(o.breakCool) .. " 秒, 避免死循环抢装")
 return
 end
-
--- 5) 判定重装理由并执行
 local why = "被卸下"
 if o.hitReload and (now - (F.GuardPlus._gpHitAt or 0)) <= o.hitWindow then
 why = "受击瞬间"
 end
 task.spawn(function()
-task.wait(0.05)                              -- 等服务端把 Tool 放回背包后再抢
+task.wait(0.05)
 F.GuardPlus.Equip(prev)
 end)
 F.GuardPlus._gpReloads = (F.GuardPlus._gpReloads or 0) + 1
@@ -6189,8 +6159,6 @@ F.Out("[守卫增强] 「" .. tostring(prev) .. "」" .. why .. " ⇒ 已自动�
 .. tostring(F.GuardPlus._gpReloads) .. " 次)")
 end
 end
-
--- 开关：on 为 false 或 nil 表示关闭；opts 可选，只接受与默认值同类型的覆盖
 function F.GuardPlus.Set(on, opts)
 on = on and true or false
 if type(opts) == "table" then
@@ -6204,7 +6172,6 @@ if on == F.GuardPlus.on then
 F.Out("[守卫增强] 已经是" .. (on and "开启" or "关闭") .. "状态")
 return on
 end
-
 if on then
 F.GuardPlus._gpWin = os.clock()
 F.GuardPlus._gpHits = 0
@@ -6228,8 +6195,6 @@ F.Out("[守卫增强] 已关")
 end
 return F.GuardPlus.on
 end
-
--- 状态查询（供菜单 / 控制台排查）
 function F.GuardPlus.Status()
 return {
 on = F.GuardPlus.on,
@@ -6238,36 +6203,15 @@ conn = F.GuardPlus._gpConn ~= nil,
 held = F.GuardPlus._gpHeldName,
 }
 end
-
--- 控制台快捷入口（与既有 CMX 命名不冲突）
 pcall(function()
 if type(getgenv) == "function" then
 local g = getgenv()
 if type(g) == "table" then g.GuardPlus = F.GuardPlus end
 end
 end)
-
--- 默认不自动开启，遵守项目「加载后不自动开启任何功能」的约定
 F.Out("[守卫增强] 模块就绪 v" .. tostring(F.GuardPlus.VERSION) .. " · 控制台 GuardPlus.Set(true) 开启")
--- ============================================================
--- 偷取类游戏操作集（纯新增模块）
--- 内容：
---   ① 工具 Remote 挖掘与直调   —— 学习自 ToxicifyHub：不模拟点击，从 Tool 内部取 Remote 直接调用
---   ② 反命中脉冲（Desync）      —— 学习自 Steal a Brainrot 社区通例，但收敛为「受击瞬间才抖动」
---   ③ 基地物品位置锁定          —— 学习自 Base Lock 思路，监控物品被移出原位后拉回
--- 原则：不修改任何现有函数；默认全部关闭（需要显式开启）；每项都有限流与退出条件
--- 约定：零缩进、零顶层 local、所有回调走 pcall
--- 风险提示：②③ 会改动发往服务端的位置/物理数据，风险等级高于「防护档」，
---           默认关闭，请自行评估后再开，不要在未被授权的服务器使用。
--- ============================================================
-
 F.StealOps = F.StealOps or {}
 F.StealOps.VERSION = "1.0"
-
--- ============================================================
--- ① 工具 Remote 挖掘
--- ============================================================
--- 遍历一个 Tool 内部所有远程对象；另外扫描其脚本里的字符串常量（很多游戏把 remote 名写死在脚本里）
 function F.StealOps.DumpToolRemotes(toolName)
 local out = { remotes = {}, strings = {}, tool = nil }
 local ch = GC()
@@ -6282,20 +6226,18 @@ return out
 end
 local tool = bag:FindFirstChild(toolName)
 if not tool then
-pcall(function() tool = ch:FindFirstChild(toolName) end)   -- 也许正拿在手上
+pcall(function() tool = ch:FindFirstChild(toolName) end)
 end
 if not (tool and tool:IsA("Tool")) then
 F.Out("[操作集] 背包/手上都没有工具「" .. tostring(toolName) .. "」")
 return out
 end
 out.tool = tool
-
--- 1a. 直接找 RemoteEvent / RemoteFunction
 local okScan, errScan = pcall(function()
 for _, d in ipairs(tool:GetDescendants()) do
 if d:IsA("RemoteEvent") or d:IsA("RemoteFunction") or d:IsA("UnreliableRemoteEvent") then
 local p = nil
-pcall(function() p = d:GetFullName() end)          -- 个别执行器上 GetFullName 可能受限
+pcall(function() p = d:GetFullName() end)
 if not p then pcall(function() p = tool.Name .. "." .. d.Name end) end
 out.remotes[#out.remotes + 1] = { obj = d, path = p or d.Name, cls = d.ClassName }
 end
@@ -6304,8 +6246,6 @@ end)
 if not okScan then
 F.Out("[操作集] 扫描远程对象时出错(已捕获): " .. tostring(errScan))
 end
-
--- 1b. 扫描脚本里的字符串常量（remote 名常写死在脚本中）
 pcall(function()
 for _, d in ipairs(tool:GetDescendants()) do
 if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
@@ -6322,7 +6262,6 @@ end
 end
 end
 end)
-
 F.Out("[操作集] 工具「" .. toolName .. "」内远程对象 " .. tostring(#out.remotes)
 .. " 个；脚本字符串常量 " .. tostring((function() local n = 0 for _ in pairs(out.strings) do n = n + 1 end return n end)()) .. " 条")
 for i = 1, math.min(#out.remotes, 8) do
@@ -6330,8 +6269,6 @@ F.Out("[操作集]   远程 " .. i .. ": " .. out.remotes[i].cls .. " " .. out.r
 end
 return out
 end
-
--- 直接调用工具内的某个远程对象
 function F.StealOps.FireToolRemote(toolName, remoteName, ...)
 local d = F.StealOps.DumpToolRemotes(toolName)
 if #d.remotes == 0 then return false end
@@ -6345,7 +6282,7 @@ return false
 end
 local args = { ... }
 local ok, err = pcall(function()
-local unpackFn = table.unpack or unpack            -- 取一次，避免空参数时短路走错分支
+local unpackFn = table.unpack or unpack
 if target:IsA("RemoteFunction") then
 target:InvokeServer(unpackFn(args))
 else
@@ -6359,29 +6296,21 @@ F.Out("[操作集] " .. (ok and "已调用" or "调用失败") .. " " .. tostrin
 .. " (参数 " .. tostring(#args) .. " 个)")
 return ok
 end
-
--- ============================================================
--- ② 反命中脉冲（受击瞬间才抖动，不做持续 desync）
--- ============================================================
 F.StealOps.desync = { on = false, hits = 0, burstUntil = 0 }
 F.StealOps.desyncOpts = {
-burst = 0.18,       -- 单次脉冲持续时间（秒）
-amp = 1.4,          -- 抖动幅度（格）
-rate = 2,           -- 每秒最多触发几次脉冲（限流，避免持续 desync 被服务端识别）
-enabled = false,    -- 总开关（默认关）
+burst = 0.18,
+amp = 1.4,
+rate = 2,
+enabled = false,
 }
-
 function F.StealOps.DesyncTick()
 local o = F.StealOps.desyncOpts
 if not (F.StealOps.desync.on and o.enabled) then return end
 local now = os.clock()
 local _, hum, root = GC()
 if not (hum and root) then return end
-
--- 受击判定
 local hp = hum.Health
 if F.StealOps._dsLastHp and hp < F.StealOps._dsLastHp - 0.01 then
--- 限流：一秒内最多 rate 次
 if now - (F.StealOps._dsLastBurst or 0) >= (1 / math.max(1, o.rate)) then
 F.StealOps._dsLastBurst = now
 F.StealOps.desync.burstUntil = now + o.burst
@@ -6389,8 +6318,6 @@ F.StealOps.desync.hits = F.StealOps.desync.hits + 1
 end
 end
 F.StealOps._dsLastHp = hp
-
--- 脉冲期间在两点间快速抖动
 if now < (F.StealOps.desync.burstUntil or 0) then
 local base = F.StealOps._dsBase
 if not base then
@@ -6406,7 +6333,6 @@ else
 F.StealOps._dsBase = nil
 end
 end
-
 function F.StealOps.DesyncSet(on, opts)
 on = on and true or false
 if type(opts) == "table" then
@@ -6426,7 +6352,7 @@ F.StealOps._dsBase = nil
 F.StealOps.desync.hits = 0
 if F.StealOps._dsConn then pcall(function() F.StealOps._dsConn:Disconnect() end) end
 F.StealOps._dsConn = RS.Heartbeat:Connect(function() pcall(F.StealOps.DesyncTick) end)
-F.StealOps.desyncOpts.enabled = true               -- 与 on 同步，否则 Tick 会直接返回
+F.StealOps.desyncOpts.enabled = true
 F.StealOps.desync.on = true
 F.Out("[操作集] 反命中脉冲已开(受击瞬间才抖, 非持续 desync): 幅度 " .. tostring(F.StealOps.desyncOpts.amp)
 .. " 格 · 每次 " .. tostring(F.StealOps.desyncOpts.burst) .. " 秒 · 每秒最多 "
@@ -6442,19 +6368,13 @@ F.Out("[操作集] 反命中脉冲已关")
 end
 return F.StealOps.desync.on
 end
-
--- ============================================================
--- ③ 基地物品位置锁定
--- ============================================================
 F.StealOps.base = { on = false, saved = {}, restored = 0 }
 F.StealOps.baseOpts = {
-radius = 60,        -- 以「记录点」为圆心的守护半径（格）
-tol = 6,            -- 位移超过该值才认为「被移走」（格）
-maxRestore = 60,    -- 单次开启内最多拉回次数（防死循环）
-poll = 0.12,        -- 轮询间隔（秒）
+radius = 60,
+tol = 6,
+maxRestore = 60,
+poll = 0.12,
 }
-
--- 把当前站在的坐标附近的可搬动物品记为「我的基地物品」
 function F.StealOps.BaseLockMark()
 local _, _, root = GC()
 if not root then
@@ -6467,7 +6387,6 @@ local n = 0
 F.StealOps.base.saved = {}
 F.StealOps.base.center = center
 pcall(function()
--- 复用主脚本的分片遍历（自带上限与让出），避免在主线程裸扫全树
 local okWalk, list = pcall(function() return F.walk(workspace, 3000) end)
 if not okWalk or type(list) ~= "table" then list = workspace:GetChildren() end
 for _, d in ipairs(list) do
@@ -6478,7 +6397,7 @@ if d:IsA("BasePart") then pos = d.Position
 elseif d.PrimaryPart then pos = d.PrimaryPart.Position end
 if pos and (pos - center).Magnitude <= o.radius then
 local r = d:IsA("BasePart") and d or d.PrimaryPart
-if r and not r.Anchored then                 -- 只记「可被搬动」的
+if r and not r.Anchored then
 n = n + 1
 F.StealOps.base.saved[#F.StealOps.base.saved + 1] = {
 obj = d, root = r, pos = pos, name = d.Name,
@@ -6492,7 +6411,6 @@ F.Out("[操作集] 基地锁定: 已记录 " .. tostring(n) .. " 个可搬动物
 .. tostring(o.radius) .. " 格)")
 return n
 end
-
 function F.StealOps.BaseLockTick()
 local o = F.StealOps.baseOpts
 if not F.StealOps.base.on then return end
@@ -6525,7 +6443,6 @@ end
 end
 end
 end
-
 function F.StealOps.BaseLockSet(on, opts)
 on = on and true or false
 if type(opts) == "table" then
@@ -6560,10 +6477,6 @@ F.Out("[操作集] 基地锁定已关")
 end
 return F.StealOps.base.on
 end
-
--- ============================================================
--- 状态查询与统一关闭
--- ============================================================
 function F.StealOps.Status()
 return {
 dump_ready = type(decompile) == "function" or type(getscriptbytecode) == "function",
@@ -6574,22 +6487,17 @@ base_marked = #F.StealOps.base.saved,
 base_restored = F.StealOps.base.restored,
 }
 end
-
 function F.StealOps.DisableAll()
 pcall(function() F.StealOps.DesyncSet(false) end)
 pcall(function() F.StealOps.BaseLockSet(false) end)
 F.Out("[操作集] 已全部关闭")
 end
-
--- 控制台入口
 pcall(function()
 if type(getgenv) == "function" then
 local g = getgenv()
 if type(g) == "table" then g.StealOps = F.StealOps end
 end
 end)
-
--- 默认全部关闭
 F.Out("[操作集] 模块就绪 v" .. tostring(F.StealOps.VERSION)
 .. " · StealOps.DumpToolRemotes(工具名) / StealOps.DesyncSet(true) / StealOps.BaseLockSet(true)")
 local function AntilagDisable()
@@ -7645,17 +7553,6 @@ end)
 end)
 F.Out("[加速] 坐上载具会自动给载具推力 " .. tostring(tonumber(C.SpeedValue) or 60) .. " 格/秒(与加速同一个速度值)")
 end
--- ============================================================
--- Drawing 版 ESP（纯新增模块 · Visual 页补强）
--- 为什么加：现有 ESP 走 WorldToViewportPoint + BillboardGui，全部是**实例**。
---           实例会被反作弊遍历 CoreGui/PlayerGui 扫到，且画不了连线/圆。
---           Drawing 是原生绘制，**不产生任何实例**，还支持线段/矩形/圆/文字。
---           对照：按页采集的明文样本里 20% 的 ESP 用 Drawing API。
--- 原则：不修改现有 ESP（可与 F.EspSet 并存）；默认关闭
--- 约定：零缩进、零顶层 local、对象复用（不每帧 new）、关闭时统一 Remove
--- 依赖：执行器需提供全局 Drawing；缺失时提示并拒绝开启
--- ============================================================
-
 F.EspDraw = F.EspDraw or {}
 F.EspDraw.VERSION = "1.0"
 F.EspDraw.on = false
@@ -7664,18 +7561,15 @@ F.EspDraw.opts = {
 box = true, name = true, dist = true, tracer = true,
 thick = 1, colorSelf = false,
 }
-
 function F.EspDraw.Available()
 return type(Drawing) == "table" and type(Drawing.new) == "function"
 end
-
 function F.EspDraw.Obj(kind)
 if not F.EspDraw.Available() then return nil end
 local ok, o = pcall(function() return Drawing.new(kind) end)
 if ok and o then return o end
 return nil
 end
-
 function F.EspDraw.Make(pl)
 local rec = {}
 rec.box = F.EspDraw.Obj("Square")
@@ -7691,14 +7585,12 @@ end)
 F.EspDraw.items[pl] = rec
 return rec
 end
-
 function F.EspDraw.Release(rec)
 if not rec then return end
 for _, k in ipairs({ "box", "name", "dist", "tracer" }) do
 if rec[k] then pcall(function() rec[k]:Remove() end) rec[k] = nil end
 end
 end
-
 function F.EspDraw.Hide(rec)
 if not rec then return end
 pcall(function()
@@ -7708,8 +7600,6 @@ if rec.dist then rec.dist.Visible = false end
 if rec.tracer then rec.tracer.Visible = false end
 end)
 end
-
--- 每帧更新（对象复用：只在 Make 时创建，之后只改属性）
 function F.EspDraw.Tick()
 if not (F.EspDraw.on and F.EspDraw.Available()) then return end
 local cam = workspace.CurrentCamera
@@ -7719,8 +7609,7 @@ local vw, vh = vp.X, vp.Y
 local list = Players:GetPlayers()
 local o = F.EspDraw.opts
 local myRoot = nil
-pcall(function() local _, _, r = GC() myRoot = r end)     -- 每帧只取一次
-
+pcall(function() local _, _, r = GC() myRoot = r end)
 for i = 1, #list do
 local pl = list[i]
 local draw = (pl ~= LP) or o.colorSelf
@@ -7783,8 +7672,6 @@ end
 if not shown then F.EspDraw.Hide(rec) end
 end
 end
-
--- 清理已离场玩家
 for pl, rec in pairs(F.EspDraw.items) do
 local still = false
 for i = 1, #list do
@@ -7796,7 +7683,6 @@ F.EspDraw.items[pl] = nil
 end
 end
 end
-
 function F.EspDraw.Set(on, opts)
 on = on and true or false
 if type(opts) == "table" then
@@ -7828,21 +7714,18 @@ F.Out("[Drawing ESP] 已关(所有绘制对象已释放)")
 end
 return F.EspDraw.on
 end
-
 function F.EspDraw.Status()
 local n = 0
 for _ in pairs(F.EspDraw.items) do n = n + 1 end
 return { available = F.EspDraw.Available(), on = F.EspDraw.on, tracked = n,
 conn = F.EspDraw._conn ~= nil }
 end
-
 pcall(function()
 if type(getgenv) == "function" then
 local g = getgenv()
 if type(g) == "table" then g.EspDraw = F.EspDraw end
 end
 end)
-
 F.Out("[Drawing ESP] 模块就绪 v" .. tostring(F.EspDraw.VERSION)
 .. " · Drawing " .. (F.EspDraw.Available() and "可用" or "不可用") .. " · EspDraw.Set(true) 开启")
 F.EspTick = function()
@@ -9314,7 +9197,6 @@ function Trans.Req()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
--- 本地多通道：全程本地不联网（短语表 → 缓存 → 本地模型，模型带重试容错）
 Trans._localFails = 0
 function Trans.Request(text)
 local rf = Trans.Req()
@@ -9851,7 +9733,6 @@ return #items
 end
 function Trans.GuiEl(obj)
 if not obj then return end
--- 原本不显示的（元素隐藏 / 文字不可见 / 文字透明）：不翻译、也不显示，保持隐藏
 if obj.Visible == false then return end
 if obj.TextVisible == false then return end
 local tt0 = obj.TextTransparency
@@ -9861,7 +9742,6 @@ local ph = obj.PlaceholderText
 if type(ph) == "string" and ph ~= "" and Trans.Should(ph) then
 Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
 end
--- 只读显示框（TextEditable=false）的正文也翻；可编辑输入框不碰用户输入
 local editable = true
 pcall(function() editable = obj.TextEditable end)
 if editable == false then
@@ -9911,7 +9791,6 @@ if root then
 for _, obj in ipairs(F.walk(root)) do pcall(Trans.GuiEl, obj) end
 end
 end
--- 世界文本：一次性深度遍历 workspace，识别所有文本承载类型（含嵌套 Frame、3D 交互/对话/物品提示）
 pcall(function()
 for _, obj in ipairs(F.walk(workspace, 20000, 500)) do
 local cls = obj.ClassName
