@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:27 sha 06a86a83 bytes 460420'):format('2026-10-07 02:27','06a86a83',460420))
+print(('[CheatMenu] build 2026-10-07 02:32 sha b54c110f bytes 466563'):format('2026-10-07 02:32','b54c110f',466563))
 local F = {}
-F.VERSION = "v16.9.53"
+F.VERSION = "v16.9.54"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9025,6 +9025,8 @@ Trans._localFails = 0
 Trans._dirty = false
 Trans._scanRound = 0
 Trans._diagOnce = nil
+Trans._ready = false
+Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
@@ -9044,29 +9046,17 @@ if b == 9 or b == 10 or b >= 32 then out[#out + 1] = string.char(b) end
 i = i + 1
 elseif b >= 0xC2 and b <= 0xDF then
 local b2 = s:byte(i + 1)
-if b2 and b2 >= 0x80 and b2 <= 0xBF then
-out[#out + 1] = s:sub(i, i + 1)
-i = i + 2
-else
-i = i + 1
-end
+if b2 and b2 >= 0x80 and b2 <= 0xBF then out[#out + 1] = s:sub(i, i + 1) i = i + 2 else i = i + 1 end
 elseif b >= 0xE0 and b <= 0xEF then
 local b2, b3 = s:byte(i + 1), s:byte(i + 2)
 if b2 and b3 and b2 >= 0x80 and b2 <= 0xBF and b3 >= 0x80 and b3 <= 0xBF then
-out[#out + 1] = s:sub(i, i + 2)
-i = i + 3
-else
-i = i + 1
-end
+out[#out + 1] = s:sub(i, i + 2) i = i + 3
+else i = i + 1 end
 elseif b >= 0xF0 and b <= 0xF4 then
 local b2, b3, b4 = s:byte(i + 1), s:byte(i + 2), s:byte(i + 3)
-if b2 and b3 and b4 and b2 >= 0x80 and b2 <= 0xBF
-and b3 >= 0x80 and b3 <= 0xBF and b4 >= 0x80 and b4 <= 0xBF then
-out[#out + 1] = s:sub(i, i + 3)
-i = i + 4
-else
-i = i + 1
-end
+if b2 and b3 and b4 and b2 >= 0x80 and b2 <= 0xBF and b3 >= 0x80 and b3 <= 0xBF and b4 >= 0x80 and b4 <= 0xBF then
+out[#out + 1] = s:sub(i, i + 3) i = i + 4
+else i = i + 1 end
 else
 i = i + 1
 end
@@ -9091,13 +9081,7 @@ for i = 1, #messages do
 clean[i] = { role = messages[i].role, content = Trans.Utf8Clean(messages[i].content) }
 end
 okB, body = pcall(HS.JSONEncode, build(clean))
-if not okB then
-if not Trans._encWarned then
-Trans._encWarned = true
-F.Out("[翻译] ⚠ 请求编码失败(已清洗仍不行): " .. tostring(body))
-end
-return nil, "文本含无法编码的字符"
-end
+if not okB then return nil, "文本含无法编码的字符" end
 end
 local ok, res = pcall(function()
 return rf({
@@ -9109,9 +9093,8 @@ Body = body,
 end)
 if not ok then return nil, "HTTP 请求异常" end
 if type(res) ~= "table" then return nil, "HTTP 无返回" end
-if tonumber(res.StatusCode or res.Status or 0) ~= 200 then
-return nil, "HTTP " .. tostring(res.StatusCode or res.Status or 0)
-end
+local code = tonumber(res.StatusCode or res.Status or 0)
+if code ~= 200 then return nil, "HTTP " .. tostring(code) end
 local ok2, d = pcall(HS.JSONDecode, res.Body)
 if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "返回解析失败" end
 local msg = d.choices[1].message
@@ -9133,7 +9116,7 @@ if attempt == 1 then task.wait(0.25) end
 end
 Trans._localFails = Trans._localFails + 1
 if Trans._localFails <= 3 then
-F.Out("[翻译] ⚠ 本地翻译服务无响应(" .. tostring(lastErr) .. ") ⇒ 界面保留原文, 请确认「翻译模型开关.bat」在跑")
+F.Out("[翻译] ⚠ 本地模型没响应(" .. tostring(lastErr) .. ") ⇒ 请确认 llama-server 在 " .. Trans.HOST .. " 跑着")
 end
 return nil, lastErr
 end
@@ -9162,6 +9145,24 @@ local ok3, arr = pcall(HS.JSONDecode, c:sub(a, b))
 if not ok3 or type(arr) ~= "table" or #arr ~= #list then return nil end
 Trans._localFails = 0
 return arr
+end
+Trans.Probe = function()
+local rf = Trans.Req()
+if type(rf) ~= "function" then return false, "本执行器没有 request 函数" end
+local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+if not ok or type(res) ~= "table" then return false, "连不上 " .. Trans.HOST end
+if tonumber(res.StatusCode or 0) ~= 200 then return false, "health HTTP " .. tostring(res.StatusCode) end
+local t0 = os.clock()
+local word = Trans.RequestOne("Settings", "zh")
+local dt = os.clock() - t0
+if not word then return false, "服务在但翻译失败" end
+return true, string.format("就绪 · 试译 Settings→%s · 首次耗时 %.2fs", word, dt)
+end
+Trans.Health = function()
+local rf = Trans.Req()
+if type(rf) ~= "function" then return false end
+local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+return ok and type(res) == "table" and tonumber(res.StatusCode or 0) == 200
 end
 Trans.LoadOne = function(file)
 if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
@@ -9207,8 +9208,7 @@ local okR = pcall(function() renamefile(Trans.TMP, Trans.FILE) end)
 if okR then return true end
 end
 end
-local okD = pcall(function() writefile(Trans.FILE, payload) end)
-return okD
+return pcall(function() writefile(Trans.FILE, payload) end)
 end
 Trans.Flush = function()
 local body = nil
@@ -9447,6 +9447,262 @@ if #Trans.Queue > 200 then return end
 Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
 Trans.Drain()
 end
+Trans.PanelBuild = function()
+if Trans._panel and Trans._panel.sg and Trans._panel.sg.Parent then return Trans._panel end
+local LPl = game:GetService("Players").LocalPlayer
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return nil end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CM_TransPanel"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 999996
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+pcall(function() sg.Parent = pg end)
+local frame = Instance.new("Frame")
+frame.Name = "Root"
+frame.Size = UDim2.new(0, 350, 0, 250)
+frame.Position = UDim2.new(0, 16, 0, 250)
+frame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+frame.BackgroundTransparency = 0.12
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = sg
+local c1 = Instance.new("UICorner")
+c1.CornerRadius = UDim.new(0, 8)
+c1.Parent = frame
+local bar = Instance.new("TextLabel")
+bar.Size = UDim2.new(1, -70, 0, 28)
+bar.Position = UDim2.new(0, 8, 0, 0)
+bar.BackgroundTransparency = 1
+bar.Text = "翻译面板"
+bar.TextColor3 = Color3.fromRGB(240, 240, 245)
+bar.TextSize = 14
+bar.Font = Enum.Font.GothamBold
+bar.TextXAlignment = Enum.TextXAlignment.Left
+bar.Parent = frame
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(1, -16, 0, 16)
+info.Position = UDim2.new(0, 8, 0, 26)
+info.BackgroundTransparency = 1
+info.Text = ""
+info.TextColor3 = Color3.fromRGB(140, 145, 160)
+info.TextSize = 11
+info.Font = Enum.Font.Code
+info.TextXAlignment = Enum.TextXAlignment.Left
+info.Parent = frame
+local hideBtn = Instance.new("TextButton")
+hideBtn.Size = UDim2.new(0, 24, 0, 22)
+hideBtn.Position = UDim2.new(1, -30, 0, 3)
+hideBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+hideBtn.BorderSizePixel = 0
+hideBtn.Text = "—"
+hideBtn.TextColor3 = Color3.fromRGB(230, 230, 235)
+hideBtn.TextSize = 14
+hideBtn.Font = Enum.Font.GothamBold
+hideBtn.Parent = frame
+do
+local cc = Instance.new("UICorner")
+cc.CornerRadius = UDim.new(0, 5)
+cc.Parent = hideBtn
+end
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -16, 1, -84)
+scroll.Position = UDim2.new(0, 8, 0, 44)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 4
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 100)
+scroll.Parent = frame
+do
+local lay = Instance.new("UIListLayout")
+lay.Padding = UDim.new(0, 4)
+lay.SortOrder = Enum.SortOrder.LayoutOrder
+lay.Parent = scroll
+end
+local box = Instance.new("TextBox")
+box.Name = "CM_ChatInput"
+box.Size = UDim2.new(1, -16, 0, 30)
+box.Position = UDim2.new(0, 8, 1, -38)
+box.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+box.BorderSizePixel = 0
+box.TextColor3 = Color3.fromRGB(240, 240, 245)
+box.PlaceholderColor3 = Color3.fromRGB(140, 140, 152)
+box.TextSize = 13
+box.Font = Enum.Font.Gotham
+box.ClearTextOnFocus = false
+box.Text = ""
+box.PlaceholderText = "输入中文 → 回车 → 翻成目标语言发出"
+box.Parent = frame
+do
+local c2 = Instance.new("UICorner")
+c2.CornerRadius = UDim.new(0, 6)
+c2.Parent = box
+end
+box.FocusLost:Connect(function(enterPressed)
+if not enterPressed then return end
+local txt = box.Text
+if not txt or txt == "" then return end
+box.Text = ""
+pcall(function() box:ReleaseFocus() end)
+F.ChatSendTranslated(txt)
+end)
+local dragging, dragStart, startPos = false, nil, nil
+bar.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1
+or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = frame.Position
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then dragging = false end
+end)
+end
+end)
+bar.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+or input.UserInputType == Enum.UserInputType.Touch) then
+local d = input.Position - dragStart
+frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
+startPos.Y.Scale, startPos.Y.Offset + d.Y)
+end
+end)
+local minimized = false
+hideBtn.MouseButton1Click:Connect(function()
+minimized = not minimized
+scroll.Visible = not minimized
+box.Visible = not minimized
+info.Visible = not minimized
+frame.Size = minimized and UDim2.new(0, 350, 0, 30) or UDim2.new(0, 350, 0, 250)
+hideBtn.Text = minimized and "▢" or "—"
+end)
+Trans._panel = { sg = sg, frame = frame, scroll = scroll, box = box, info = info }
+return Trans._panel
+end
+Trans.PanelAdd = function(sender, text, color)
+local p = Trans.PanelBuild()
+if not p then return nil end
+local lb = Instance.new("TextLabel")
+lb.Size = UDim2.new(1, -10, 0, 0)
+lb.AutomaticSize = Enum.AutomaticSize.Y
+lb.BackgroundTransparency = 1
+lb.RichText = true
+lb.TextWrapped = true
+lb.TextXAlignment = Enum.TextXAlignment.Left
+lb.TextYAlignment = Enum.TextYAlignment.Top
+lb.Font = Enum.Font.Gotham
+lb.TextSize = 13
+lb.TextColor3 = color or Color3.fromRGB(235, 235, 240)
+lb.Text = (sender and ("<b>[" .. tostring(sender) .. "]</b> ") or "") .. tostring(text)
+lb.LayoutOrder = (Trans._panelN or 0) + 1
+pcall(function() lb.Parent = p.scroll end)
+Trans._panelN = lb.LayoutOrder
+if Trans._panelN > 120 then
+local kids = p.scroll:GetChildren()
+local removed = 0
+for i = 1, #kids do
+local k = kids[i]
+if k:IsA("TextLabel") then
+k:Destroy()
+removed = removed + 1
+if removed >= 30 then break end
+end
+end
+Trans._panelN = math.max(1, Trans._panelN - removed)
+end
+task.defer(function()
+pcall(function() p.scroll.CanvasPosition = Vector2.new(0, math.max(0, p.scroll.AbsoluteCanvasSize.Y - p.scroll.AbsoluteWindowSize.Y)) end)
+end)
+return lb
+end
+Trans.PanelInfo = function(text)
+local p = Trans._panel
+if p and p.info then pcall(function() p.info.Text = text end) end
+end
+Trans.PanelSetEnabled = function(on)
+if on then
+Trans.PanelBuild()
+else
+local p = Trans._panel
+if p and p.sg then pcall(function() p.sg.Enabled = false end) end
+end
+end
+Trans.PanelDestroy = function()
+local p = Trans._panel
+if p and p.sg then pcall(function() p.sg:Destroy() end) end
+Trans._panel = nil
+Trans._panelN = 0
+end
+Trans.ChatWatch = function()
+if Trans._chatConns then return end
+Trans._chatConns = {}
+local LPl = game:GetService("Players").LocalPlayer
+local function handle(sender, text)
+if not T.Translate or type(text) ~= "string" or text == "" then return end
+if LPl and sender == LPl then return end
+local name = sender and (sender.DisplayName or sender.Name) or "?"
+if text:find("[\228-\233]") then
+Trans.PanelAdd(name, text)
+return
+end
+if not Trans.Should(text) then
+Trans.PanelAdd(name, text)
+return
+end
+local hit = Trans.Cache[text]
+if type(hit) == "string" then
+Trans.PanelAdd(name, hit, Color3.fromRGB(150, 240, 170))
+return
+end
+if not Trans._ready then
+Trans.PanelAdd(name, text)
+return
+end
+local lb = Trans.PanelAdd(name, '<font color="#888888">[翻译中...]</font>')
+Trans.Async(text, function(tr)
+if lb and lb.Parent then
+pcall(function()
+lb.Text = "<b>[" .. tostring(name) .. "]</b> " .. tr
+lb.TextColor3 = Color3.fromRGB(150, 240, 170)
+end)
+end
+end)
+end
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if not tcs then return end
+local chs = tcs:FindFirstChild("TextChannels")
+if not chs then return end
+for _, ch in ipairs(chs:GetChildren()) do
+if ch:IsA("TextChannel") then
+Trans._chatConns[#Trans._chatConns + 1] = ch.MessageReceived:Connect(function(msg)
+if not msg then return end
+local sender = nil
+local src = msg.TextSource
+if src then pcall(function() sender = game:GetService("Players"):GetPlayerByUserId(src.UserId) end) end
+handle(sender, msg.Text)
+end)
+end
+end
+end)
+pcall(function()
+local ps = game:GetService("Players")
+local function hookPl(pl)
+Trans._chatConns[#Trans._chatConns + 1] = pl.Chatted:Connect(function(text) handle(pl, text) end)
+end
+for _, pl in ipairs(ps:GetPlayers()) do hookPl(pl) end
+Trans._playerAddedConn = ps.PlayerAdded:Connect(hookPl)
+end)
+end
+Trans.ChatUnwatch = function()
+if Trans._chatConns then
+for i = 1, #Trans._chatConns do pcall(function() Trans._chatConns[i]:Disconnect() end) end
+end
+if Trans._playerAddedConn then pcall(function() Trans._playerAddedConn:Disconnect() end) Trans._playerAddedConn = nil end
+Trans._chatConns = nil
+end
 function F.IsUnderCoreGui(obj)
 local cg = nil
 pcall(function() cg = game:GetService("CoreGui") end)
@@ -9508,8 +9764,7 @@ if not Trans.Should(txt) then return end
 if not Trans.Hooked[obj] then
 Trans.Hooked[obj] = true
 pcall(function()
-local sig = obj:GetPropertyChangedSignal("Text")
-sig:Connect(function()
+obj:GetPropertyChangedSignal("Text"):Connect(function()
 if not T.Translate then return end
 local now = nil
 pcall(function() now = obj.Text end)
@@ -9580,7 +9835,7 @@ Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(无可显示文本)"
 F.Out("[翻译·诊断] PlayerGui 文本控件 " .. txtN .. " 个 / 可见 " .. visN .. " 个 " .. s)
 end
-Trans._scanRound = (Trans._scanRound or 0) + 1
+Trans._scanRound = Trans._scanRound + 1
 if Trans._scanRound % 10 == 1 then
 F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
 end
@@ -9589,7 +9844,7 @@ Trans.Stats = function()
 local cacheN = 0
 for _ in pairs(Trans.Cache) do cacheN = cacheN + 1 end
 local ago = "还没保存过"
-if Trans._savedAt and Trans._savedAt > 0 then ago = string.format("%.0f 秒前", os.clock() - Trans._savedAt) end
+if Trans._savedAt > 0 then ago = string.format("%.0f 秒前", os.clock() - Trans._savedAt) end
 F.Out("[翻译统计] 已翻 " .. tostring(Trans._cnt) .. " 条 · 缓存 " .. tostring(cacheN) .. " 条 · 待翻 "
 .. tostring(#Trans.Queue) .. " 条 · 累计请求 " .. tostring(Trans._reqN) .. " 次 · 上次保存: " .. ago
 .. " · 已自动保存 " .. tostring(Trans._saveCount) .. " 次")
@@ -9607,61 +9862,6 @@ end
 Trans.WatchOff = function()
 if Trans._watchConn then pcall(function() Trans._watchConn:Disconnect() end) Trans._watchConn = nil end
 end
-function F.ChatTranslateEnable()
-if F._chatHook then return end
-local done, cerr = pcall(function()
-local tcs = game:GetService("TextChatService")
-if not tcs then error("no-tcs") end
-local prev = tcs.OnIncomingMessage
-F._chatPrev = type(prev) == "function" and prev or nil
-tcs.OnIncomingMessage = function(message)
-local props = nil
-if F._chatPrev then
-local okp, r = pcall(F._chatPrev, message)
-if okp and typeof(r) == "Instance" then props = r end
-end
-if not props then pcall(function() props = Instance.new("TextChatMessageProperties") end) end
-if not props or not message or not T.Translate then return props end
-local txt = message.Text
-if type(txt) ~= "string" or txt == "" then return props end
-local LPl = game:GetService("Players").LocalPlayer
-local src = message.TextSource
-if src and LPl and src.UserId == LPl.UserId then return props end
-local ch = message.TextChannel
-local chName = ch and ch.Name or ""
-if chName:find("world", 1, true) or chName:find("global", 1, true)
-or chName:find("世界", 1, true) or chName:find("公告", 1, true) then return props end
-local hit = Trans.Cache[txt]
-if type(hit) == "string" then
-pcall(function() props.Text = hit end)
-elseif Trans.Should(txt) then
-Trans.Async(txt, function() end)
-end
-return props
-end
-F._chatHook = true
-end)
-if done and F._chatHook then
-F.Out("[翻译] 聊天翻译已开: 命中缓存的句子当场显示译文, 新句子先入队(下一句同文即中文)")
-else
-F.Out("[翻译] 聊天翻译不可用: " .. tostring(cerr))
-end
-end
-function F.ChatTranslateDisable()
-if F._chatHook then
-pcall(function()
-local tcs = game:GetService("TextChatService")
-if tcs then tcs.OnIncomingMessage = F._chatPrev end
-end)
-F._chatHook, F._chatPrev = nil, nil
-end
-end
-function F.BubbleTranslateEnable()
-if F._chatHook then return end
-pcall(F.ChatTranslateEnable)
-F.Out("[翻译] 气泡翻译与聊天同源(头顶气泡与聊天窗口用的是同一条消息)")
-end
-function F.BubbleTranslateDisable() end
 F.ChatSend = function(msg)
 local sent = false
 pcall(function()
@@ -9669,8 +9869,7 @@ local tcs = game:GetService("TextChatService")
 local tch = tcs and tcs:FindFirstChild("TextChannels")
 local ch = tch and (tch:FindFirstChild("RBXGeneral") or tch:FindFirstChild("SayChannel"))
 if ch and ch:IsA("TextChannel") then
-local okS = pcall(function() ch:SendAsync(msg) end)
-if okS then sent = true end
+if pcall(function() ch:SendAsync(msg) end) then sent = true end
 end
 end)
 if not sent then
@@ -9684,8 +9883,7 @@ end)
 end
 if not sent then
 pcall(function()
-local rs = game:GetService("ReplicatedStorage")
-local legacy = rs:FindFirstChild("DefaultChatSystemChatEvents")
+local legacy = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
 local req = legacy and legacy:FindFirstChild("SayMessageRequest")
 if req then
 req:FireServer(msg, "All")
@@ -9700,73 +9898,19 @@ task.spawn(function()
 local lang = C.TransLang or "en"
 local tr = Trans.Translate(msg, true, lang)
 if not tr then
-F.Out("[翻译发出] ⚠ 翻译失败 ⇒ 本次没有发出(原文没丢) —— 检查「翻译模型开关.bat」是否在跑, 再重试")
+F.Out("[翻译发出] ⚠ 翻译失败(本地模型没响应?) ⇒ 本次没发出")
+Trans.PanelAdd("我", "翻译失败: " .. tostring(msg), Color3.fromRGB(255, 120, 120))
 return
 end
 local okSend = F.ChatSend(tr)
 if okSend then
 F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
+Trans.PanelAdd("我", msg .. " → " .. tr, Color3.fromRGB(120, 200, 255))
 else
-F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏没有可用聊天接口 ⇒ 发送失败")
+F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏没有可用聊天接口")
+Trans.PanelAdd("我", tr .. " (发送失败)", Color3.fromRGB(255, 180, 120))
 end
 end)
-end
-F.ChatIMEBoxEnable = function()
-if F._imeBox and F._imeBox.Parent then return end
-local LPl = game:GetService("Players").LocalPlayer
-local pg = LPl and LPl:FindFirstChild("PlayerGui")
-if not pg then return end
-local sg = Instance.new("ScreenGui")
-sg.Name = "CM_ChatIME"
-sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true
-sg.DisplayOrder = 999998
-pcall(function() sg:SetAttribute("CMOwned", true) end)
-pcall(function() sg.Parent = pg end)
-local box = Instance.new("TextBox")
-box.Name = "CM_ChatInput"
-box.Size = UDim2.new(0, 330, 0, 34)
-box.Position = UDim2.new(0, 16, 1, -64)
-box.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-box.BackgroundTransparency = 0.15
-box.BorderSizePixel = 0
-box.TextColor3 = Color3.fromRGB(240, 240, 245)
-box.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
-box.TextSize = 14
-box.Font = Enum.Font.Gotham
-box.ClearTextOnFocus = false
-box.Text = ""
-box.PlaceholderText = "[翻译发出] 输入中文 → 回车 → 翻成目标语言发出"
-box.Parent = sg
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
-corner.Parent = box
-box.FocusLost:Connect(function(enterPressed)
-if not enterPressed then return end
-local txt = box.Text
-if not txt or txt == "" then return end
-box.Text = ""
-pcall(function() box:ReleaseFocus() end)
-F.ChatSendTranslated(txt)
-end)
-F._imeBox = sg
-F.Out("[翻译发出] 已开: 左下角输入中文 → 回车 → 自动翻成目标语言发出")
-end
-F.ChatIMEBoxDisable = function()
-pcall(function() if F._imeBox and F._imeBox.Parent then F._imeBox:Destroy() end end)
-F._imeBox = nil
-end
-F.ChatBoxSet = function(on)
-T.ChatIMEBox = on and true or false
-if on then pcall(F.ChatIMEBoxEnable) else pcall(F.ChatIMEBoxDisable) end
-end
-Trans.Health = function()
-local rf = Trans.Req()
-if type(rf) ~= "function" then return false, "no-request" end
-local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
-if not ok or type(res) ~= "table" then return false, "request-failed" end
-if tonumber(res.StatusCode or 0) ~= 200 then return false, "HTTP " .. tostring(res.StatusCode) end
-return true
 end
 function Trans.Enable()
 T.Translate = true
@@ -9775,15 +9919,16 @@ local name = nil
 pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
 Trans.KeepAdd(name)
 Trans._ready = Trans.Health()
-local okH = Trans._ready
-if okH then
-pcall(Trans.Scan)
+if Trans._ready then
+F.Out("[翻译] ✅ 本地模型已就绪(" .. Trans.HOST .. ")")
 else
-F.Out("[翻译] ⏳ 本地翻译服务还没就绪(" .. Trans.HOST .. ") ⇒ 已挂上界面监听, 服务一起来就自动开翻(先不白刷请求)")
+F.Out("[翻译] ⏳ 本地模型还没起来(" .. Trans.HOST .. ") ⇒ 已挂监听, 服务一起来自动开翻。请先启动 llama-server")
 end
+Trans.PanelSetEnabled(true)
+Trans.PanelAdd("系统", "翻译已启动 · 目标: 界面 + 聊天 → 中文", Color3.fromRGB(255, 210, 120))
+pcall(Trans.Scan)
 Trans.WatchOn()
-pcall(F.ChatTranslateEnable)
-pcall(F.BubbleTranslateEnable)
+pcall(Trans.ChatWatch)
 if not Trans._readyTask then
 Trans._readyTask = task.spawn(function()
 while T.Translate do
@@ -9792,8 +9937,10 @@ if not T.Translate then break end
 if Trans._ready then break end
 if Trans.Health() then
 Trans._ready = true
-F.Out("[翻译] ✅ 本地服务已就绪 ⇒ 立即开始翻译")
+F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 开始翻译")
+Trans.PanelAdd("系统", "模型就绪, 开始翻译", Color3.fromRGB(255, 210, 120))
 pcall(Trans.Scan)
+pcall(Trans.ChatWatch)
 end
 end
 Trans._readyTask = nil
@@ -9813,21 +9960,44 @@ if not Trans._tickOn then
 Trans._tickOn = true
 task.spawn(Trans.SaveTick)
 end
-F.Out("[翻译] 已开: 界面 + 聊天 + 气泡 全翻 · 界面每 " .. Trans.SCAN_EVERY .. " 秒复查一次")
 return true
 end
 function Trans.Disable()
 T.Translate = false
 Trans._ready = false
 Trans.WatchOff()
+Trans.ChatUnwatch()
 Trans.Loop = nil
-pcall(F.ChatTranslateDisable)
-pcall(F.BubbleTranslateDisable)
 pcall(Trans.Flush)
+Trans.PanelSetEnabled(false)
 F.Out("[翻译] 已关 · 译文保留在界面上 · 缓存已保存")
 end
 function F.TranslateDisable() Trans.Disable() end
-function F.TranslateEnable() return Trans.Enable() end
+function F.TranslateEnable()
+local ok, r = pcall(Trans.Enable)
+if not ok then F.Out("[翻译] 启动出错: " .. tostring(r)) return nil end
+task.spawn(function()
+local okP, info = pcall(Trans.Probe)
+if okP and info then
+Trans.PanelInfo("模型自检: " .. info)
+F.Out("[翻译] 模型自检: " .. info)
+else
+Trans.PanelInfo("模型自检: 未通过(" .. tostring(info) .. ")")
+F.Out("[翻译] 模型自检未通过: " .. tostring(info))
+end
+end)
+return r
+end
+function F.ChatTranslateEnable() return Trans.Enable() end
+function F.ChatTranslateDisable() end
+function F.BubbleTranslateEnable() end
+function F.BubbleTranslateDisable() end
+function F.ChatIMEBoxEnable() end
+function F.ChatIMEBoxDisable() end
+function F.ChatBoxSet(on)
+T.ChatIMEBox = on and true or false
+Trans.PanelSetEnabled(on and true or false)
+end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
 local disables = {
@@ -12316,7 +12486,7 @@ if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
 Tabs.Trans:AddSection("本地翻译服务")
-Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(界面 + 聊天 + 气泡 全翻)", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(界面 + 聊天面板 → 中文)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
@@ -12325,7 +12495,7 @@ Default = "英文", Callback = function(v)
 local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
 C.TransLang = code
 if F._cfgSyncing then return end
-F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 输入的中文会翻成它再发出")
+F.Out("[翻译发出] 目标语言已选 " .. tostring(v))
 end })
 local transStatBtn = Tabs.Trans:AddButton({ Title = "翻译进度: 等待开启翻译", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
@@ -12335,12 +12505,23 @@ while true do
 task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
-transStatBtn:SetTitle(string.format("翻译进度: 已翻 %d 条 · 待翻 %d 条 · 缓存命中不重复翻(点这里看详情)",
-Trans._cnt or 0, #(Trans.Queue or {})))
+local md = Trans._ready and "模型✓" or "模型✗"
+transStatBtn:SetTitle(string.format("翻译进度: %s · 已翻 %d 条 · 待翻 %d 条", md, Trans._cnt or 0, #(Trans.Queue or {})))
 end)
 end
 end
 end)
+Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
+task.spawn(function()
+local ok, info = pcall(Trans.Probe)
+F.Out("[翻译] 模型自检: " .. tostring(ok and info or info))
+if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. tostring(info)) end
+end)
+end })
+Tabs.Trans:AddButton({ Title = "显示/隐藏 翻译面板", Callback = function()
+Trans._panelShown = not Trans._panelShown
+pcall(Trans.PanelSetEnabled, Trans._panelShown)
+end })
 Tabs.Trans:AddButton({ Title = "重新扫描界面(立即刷新一遍)", Callback = function()
 Trans._diagOnce = nil
 task.spawn(function()
@@ -12360,10 +12541,6 @@ end
 end
 task.spawn(function() pcall(Trans.Flush) end)
 F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
-end })
-Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文 → 目标语言发出)", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-pcall(F.ChatBoxSet, v)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
