@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:16 sha 36d6995c bytes 475734'):format('2026-10-07 00:16','36d6995c',475734))
+print(('[CheatMenu] build 2026-10-07 00:19 sha 3e9f3ca8 bytes 475937'):format('2026-10-07 00:19','3e9f3ca8',475937))
 local F = {}
-F.VERSION = "v16.9.40"
+F.VERSION = "v16.9.41"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9808,7 +9808,7 @@ Trans._diagOnce = true
 F.Out("[翻译·诊断] 界面根文本控件: " .. table.concat(diag, " · "))
 end
 pcall(function()
-for _, obj in ipairs(F.walk(workspace, 20000, 500)) do
+for _, obj in ipairs(F.walk(workspace, 40000, 500)) do
 local cls = obj.ClassName
 if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
 pcall(Trans.GuiEl, obj)
@@ -9836,6 +9836,10 @@ end
 elseif cls == "Tool" then
 if type(obj.ToolTip) == "string" and obj.ToolTip ~= "" then
 Trans.Async(obj.ToolTip, function(tr) if obj.Parent then pcall(function() obj.ToolTip = tr end) end end)
+end
+elseif cls == "Hint" or cls == "Message" then
+if type(obj.Text) == "string" and obj.Text ~= "" then
+Trans.Async(obj.Text, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
 end
 end
 end
