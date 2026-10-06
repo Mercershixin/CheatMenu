@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:01 sha 09c98413 bytes 474044'):format('2026-10-07 00:01','09c98413',474044))
+print(('[CheatMenu] build 2026-10-07 00:05 sha c779dbdf bytes 474194'):format('2026-10-07 00:05','c779dbdf',474194))
 local F = {}
-F.VERSION = "v16.9.37"
+F.VERSION = "v16.9.38"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9442,6 +9442,7 @@ local n = #s
 if n < 2 or n > 300 then return false, "长度" end
 if not s:find("[A-Za-z]") then return false, "无字母" end
 if s:find("[\228-\233]") then return false, "已是中文" end
+if s:match("%d%s*:%s*%d") then return false, "时间/计时器" end
 if s:match("^https?://") or s:match("rbxassetid") or s:match("rbxthumb")
 or s:match("rbxgameasset") or s:match("^rbx") then return false, "资源" end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org")
@@ -9745,9 +9746,12 @@ end
 if txt and Trans.Should(txt) then
 local r = Trans.Reg[obj]
 if r == nil then
-Trans.Reg[obj] = { raw = txt, last = nil }
-elseif r.last ~= nil and txt ~= r.last then
+Trans.Reg[obj] = { raw = txt, last = nil, at = os.clock() }
+elseif os.clock() - (r.at or 0) < 30 then
+return
+elseif txt ~= r.raw or r.last == nil then
 r.raw = txt
+r.at = os.clock()
 end
 Trans.SigWatch(obj)
 Trans.Async(txt, function(tr)
