@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:01 sha b90deac4 bytes 495208'):format('2026-10-07 05:01','b90deac4',495208))
+print(('[CheatMenu] build 2026-10-07 05:08 sha 9e1312ef bytes 487694'):format('2026-10-07 05:08','9e1312ef',487694))
 local F = {}
-F.VERSION = "v16.9.80"
+F.VERSION = "v16.9.81"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9519,186 +9519,6 @@ t = t:gsub("%s+", "")
 if t == "" then return nil end
 return t
 end
-F.EventProbe = function()
-F.Out("[活动探测] ===== 只读, 不动游戏状态 =====")
-local RS = game:GetService("ReplicatedStorage")
-local function first(p)
-local node = RS
-for seg in p:gmatch("[^%.]+") do
-node = node and node:FindFirstChild(seg)
-if not node then return nil end
-end
-return node
-end
-local function listNames(node, prefix)
-if not node then return end
-local kids = node:GetChildren()
-F.Out("[活动探测] " .. prefix .. " 子项 " .. #kids .. " 个:")
-for _, c in ipairs(kids) do
-F.Out("[活动探测]   " .. prefix .. tostring(c.Name) .. " (" .. c.ClassName .. ")")
-end
-end
-local function readVals(node, prefix)
-if not node then return end
-for _, c in ipairs(node:GetChildren()) do
-if c:IsA("ValueBase") then
-F.Out("[活动探测] " .. prefix .. tostring(c.Name) .. " = " .. tostring(c.Value))
-elseif c:IsA("Folder") or c:IsA("Configuration") then
-readVals(c, prefix .. c.Name .. ".")
-end
-end
-end
-pcall(function()
-local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-local h = pg and pg:FindFirstChild("HUD")
-local u = h and h:FindFirstChild("UpdateTimer")
-local lbl = u and u:FindFirstChild("TimerLabel")
-if lbl then F.Out("[活动探测] 更新倒计时 HUD = " .. tostring(lbl.Text)) end
-end)
-listNames(first("Client.ControllerLoader.WeatherController.Weathers.SpecialEvents"), "SpecialEvents/")
-listNames(first("Client.ControllerLoader.WeatherController.Weathers.Events"), "WeatherEvents/")
-readVals(first("Shared.Data.Events"), "Events.")
-listNames(first("Shared.Data.Events"), "Events")
-pcall(function()
-local wc = first("Client.ControllerLoader.WeatherController")
-if wc then
-local okA, at = pcall(function() return wc:GetAttributes() end)
-if okA and type(at) == "table" then
-for k, v in pairs(at) do F.Out("[活动探测] WeatherController 属性 " .. tostring(k) .. " = " .. tostring(v)) end
-end
-for _, c in ipairs(wc:GetChildren()) do
-if c:IsA("ValueBase") then F.Out("[活动探测] WeatherController." .. tostring(c.Name) .. " = " .. tostring(c.Value)) end
-local okA2, a2 = pcall(function() return c:GetAttributes() end)
-if okA2 and type(a2) == "table" then
-for k, v in pairs(a2) do F.Out("[活动探测] " .. tostring(c.Name) .. " 属性 " .. tostring(k) .. " = " .. tostring(v)) end
-end
-end
-end
-end)
-pcall(function()
-local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-local h = pg and pg:FindFirstChild("HUD")
-local u = h and h:FindFirstChild("UpdateTimer")
-if u then
-local okA, at = pcall(function() return u:GetAttributes() end)
-if okA and type(at) == "table" then
-for k, v in pairs(at) do F.Out("[活动探测] UpdateTimer 属性 " .. tostring(k) .. " = " .. tostring(v)) end
-end
-for _, c in ipairs(u:GetChildren()) do
-if c:IsA("ValueBase") then F.Out("[活动探测] UpdateTimer." .. tostring(c.Name) .. " = " .. tostring(c.Value)) end
-end
-end
-end)
-pcall(function()
-for _, p in ipairs({ "Client.ServicesLoader.WeatherService_Client", "Client.ControllerLoader.WeatherController" }) do
-local m = first(p)
-if m and type(m.Source) == "string" and #m.Source > 0 then
-F.Out("[活动探测] ==== 源码 " .. p .. " (" .. #m.Source .. " 字符, 摘取调度相关行) ====")
-local cnt = 0
-local NL = string.char(10)
-for line in m.Source:gmatch("[^" .. NL .. "]+") do
-if line:find("[Dd]uration") or line:find("[Cc]ycle") or line:find("[Oo]rder") or line:find("[Nn]ext")
-or line:find("[Rr]otation") or line:find("[Ss]chedule") or line:find("[Ww]eather") or line:find("[Tt]ime") then
-F.Out("[活动探测]   " .. line:sub(1, 130))
-cnt = cnt + 1
-if cnt >= 25 then break end
-end
-end
-end
-end
-end)
-F.Out("[活动探测] ===== 结束: 把上面几行发给 AI, 它就知道\"下次活动是什么 + 还有多久\" =====")
-end
-F._weather = {}
-F._weatherHooked = false
-F.EventHookWeather = function()
-if F._weatherHooked then return end
-F._weatherHooked = true
-pcall(function()
-for _, nm in ipairs({ "AddedWeather", "RemovedWeather", "WeatherUpdate" }) do
-local r = F.RemoteByName(nm)
-if r and r:IsA("RemoteEvent") then
-r.OnClientEvent:Connect(function(...)
-local args = { ... }
-for i = 1, #args do
-local a = args[i]
-local name = nil
-if type(a) == "string" then name = a
-elseif type(a) == "table" then pcall(function() name = a.Name or a.name or a.Weather or a.Type end) end
-if name then
-if nm == "RemovedWeather" then F._weather[name] = nil else F._weather[name] = true end
-end
-end
-if #args > 0 and F.LogRate("wthr", 30) then
-F.Out("[活动] 天气广播 " .. nm .. ": " .. tostring(table.concat(args, " | "):sub(1, 90)))
-end
-end)
-end
-end
-end)
-end
-F.EventCurrent = function()
-local names = {}
-for k in pairs(F._weather) do names[#names + 1] = tostring(k) end
-return (#names > 0) and table.concat(names, "+") or "监听中"
-end
-F.EventCountdown = function()
-local s = nil
-pcall(function()
-local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-local u = pg and pg:FindFirstChild("HUD")
-local t = u and u:FindFirstChild("UpdateTimer")
-local lbl = t and t:FindFirstChild("TimerLabel")
-if lbl then s = lbl.Text end
-end)
-if type(s) == "string" then
-local h, m, sec = s:match("(%d+):(%d+):(%d+)")
-if h then return string.format("%s:%s:%s", h, m, sec) end
-return s
-end
-return "?"
-end
-F._fallLoop = nil
-F.FallAutoEnable = function()
-if F._fallLoop then return end
-F.EventHookWeather()
-F.Out("[活动] 自动枫叶已开: 检测到 Fall 天气就去触发活动入口; 吸叶子/领奖/升级 等抓完参数再接(先只做检测+到场)")
-F._fallLoop = task.spawn(function()
-local lastAt = 0
-while T.AutoFall do
-task.wait(5)
-if not T.AutoFall then break end
-pcall(function()
-if not F._weather["Fall"] then return end
-local now = os.clock()
-if now - lastAt < 25 then return end
-lastAt = now
-local target = nil
-pcall(function()
-for _, obj in ipairs(workspace:GetDescendants()) do
-if obj:IsA("ProximityPrompt") then
-local okA, at = pcall(function() return obj.ActionText end)
-if okA and at == "Spawn now!" then target = obj break end
-end
-end
-end)
-if not target or not target.Parent then
-F.Out("[活动] 枫叶正在(检测到 Fall)但没找到入口 ProximityPrompt, 待命")
-return
-end
-local pl = game:GetService("Players").LocalPlayer
-local ch = pl and pl.Character
-local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-if hrp then pcall(function() hrp.CFrame = target.Parent.CFrame + Vector3.new(0, 4, 0) end) end
-task.wait(0.6)
-local ok = pcall(fireproximityprompt, target, 0)
-F.Out("[活动] 已触发枫叶活动入口(" .. tostring(ok) .. ") · 待抓参数再接吸叶子")
-end)
-end
-F._fallLoop = nil
-end)
-end
-F.FallAutoDisable = function() T.AutoFall = false F._fallLoop = nil end
 Trans.ClearCurrent = function()
 local file = Trans.CurFile()
 local gone = 0
@@ -12767,7 +12587,6 @@ Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
-Event   = Window:AddTab({ Title = "活动", Icon = "star" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
 }
 Tabs.World   = Tabs.Visual
@@ -13251,27 +13070,6 @@ Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
-end })
-Tabs.Event:AddSection("活动 / 天气")
-Tabs.Event:AddButton({ Title = "活动信息(读当前+未来活动·只读)", Callback = function()
-task.spawn(function() pcall(F.EventProbe) end)
-end })
-local evStatBtn = Tabs.Event:AddButton({ Title = "活动状态: 等待扫描", Callback = function()
-task.spawn(function() pcall(F.EventProbe) end)
-end })
-task.spawn(function()
-pcall(F.EventHookWeather)
-while true do
-task.wait(1)
-if evStatBtn and evStatBtn.SetTitle then
-pcall(function() evStatBtn:SetTitle(string.format("当前活动: %s · 服务器重启: %s", F.EventCurrent(), F.EventCountdown())) end)
-end
-end
-end)
-Tabs.Event:AddToggle("AutoFall", { Title = "自动枫叶活动(检测到就去做)", Default = false, Callback = function(v)
-T.AutoFall = v and true or false
-if F._cfgSyncing then return end
-if v then F.FallAutoEnable() else F.FallAutoDisable() end
 end })
 Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
