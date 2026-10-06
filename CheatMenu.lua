@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:18 sha daa4c41d bytes 487756'):format('2026-10-07 05:18','daa4c41d',487756))
+print(('[CheatMenu] build 2026-10-07 05:32 sha 72829d00 bytes 490057'):format('2026-10-07 05:32','72829d00',490057))
 local F = {}
-F.VERSION = "v16.9.83"
+F.VERSION = "v16.9.84"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9104,7 +9104,7 @@ Output ONLY the translation: no explanation, no quotes, no extra words.
 Preserve the original line breaks and number of lines.
 Keep numbers, emoji, URLs and player names unchanged.
 Translate game terms CONSISTENTLY:
-Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地, Mutation->词缀, Level->等级,
+Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地,
 Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,
 Squat->举铁, Train->训练, Bonus->加成,
 Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,
@@ -9148,6 +9148,39 @@ FOV = true, TPS = true, RGB = true, PNG = true, JPG = true, URL = true,
 API = true, SDK = true, GPU = true, CPU = true, RAM = true, FPS = true,
 Ping = true, ping = true, PING = true, Lv = true, LV = true, Exp = true,
 CPS = true, KPS = true, MPS = true, DPI = true, OBS = true, VR = true,
+}
+Trans.NOTRANSLATE = {
+level = true, lvl = true, lv = true, levels = true, max = true,
+mastery = true, tier = true, tiers = true,
+enchanted = true, mutation = true, mutations = true,
+molten = true, frozen = true, electrified = true, wet = true,
+phantom = true, divine = true, heavenly = true, godly = true,
+mythic = true, legendary = true, epic = true, rare = true, common = true,
+rarity = true, undead = true, demon = true, shadow = true, astral = true,
+eternal = true, infinity = true, plasma = true, radioactive = true,
+void = true, cosmic = true, celestial = true,
+}
+Trans.TRANSLATE_WORDS = {
+collect = true, withdraw = true, sell = true, claim = true, train = true,
+equip = true, unequip = true, equipped = true, use = true, send = true,
+buy = true, shop = true, store = true, trade = true, trading = true,
+confirm = true, cancel = true, close = true, sort = true, spin = true,
+summon = true, fuse = true, remove = true, restock = true, proceed = true,
+accept = true, decline = true, skip = true, start = true, continue = true,
+save = true, reset = true, upgrade = true, unlock = true, join = true,
+leave = true, back = true, next = true, menu = true, settings = true,
+details = true, feedback = true, favorites = true, power = true, speed = true,
+luck = true, cash = true, gold = true, coins = true, gems = true,
+damage = true, health = true, score = true, reward = true, bonus = true,
+price = true, value = true, locked = true, hacked = true, completed = true,
+inventory = true, quest = true, quests = true, world = true, worlds = true,
+weather = true, goals = true, best = true, secret = true, premium = true,
+flat = true, name = true, combo = true, index = true, anything = true,
+event = true, none = true, title = true, info = true, stats = true,
+hello = true, welcome = true, yes = true, no = true, ok = true, play = true,
+free = true, ready = true, go = true, stop = true, wait = true, help = true,
+weekly = true, summer = true, winter = true, fall = true, jungle = true,
+volcanic = true, nerd = true, limited = true, daily = true,
 }
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
@@ -9714,6 +9747,11 @@ return w
 end)
 if not st:match("%a%a") then return false end
 end
+local nt = s:gsub("%a+", function(w)
+if Trans.NOTRANSLATE[string.lower(w)] then return " " end
+return w
+end)
+if not nt:match("%a%a") then return false end
 if s:match("^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$") then return false end
 if s:match("^%s*%a%a?%a?%.?%s*[%d][%d%.,%s]*$") then return false end
 if s:match("^%a[%a0-9]*%-[%a0-9%-]*$") and not s:find("%u") then return false end
@@ -9728,6 +9766,7 @@ if core == "" then return false end
 if core:find("_") then return false end
 if core:match("^[%d%.]+$") then return false end
 if core:match("^v%d") then return false end
+if core:match("^%u%l+$") and #core >= 3 and not Trans.TRANSLATE_WORDS[string.lower(core)] then return false end
 end
 return true
 end
@@ -10225,7 +10264,7 @@ if type(now) ~= "string" or now == "" then return end
 if now:find("[\228-\233]") then
 return
 end
-if Trans.Cache[now] then
+if Trans.Should(now) and Trans.Cache[now] then
 pcall(function() obj.Text = Trans.Cache[now] end)
 return
 end
