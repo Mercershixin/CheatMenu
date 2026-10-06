@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:22 sha 014cf299 bytes 469239'):format('2026-10-07 03:22','014cf299',469239))
+print(('[CheatMenu] build 2026-10-07 03:25 sha 1bc426a0 bytes 470696'):format('2026-10-07 03:25','1bc426a0',470696))
 local F = {}
-F.VERSION = "v16.9.68"
+F.VERSION = "v16.9.69"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9001,8 +9001,11 @@ Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命,
 Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
 Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
 Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
-Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
-Keep CPS as "CPS".]]
+Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败,
+Tab->标签页, Menu->菜单, Home->主页, Back->返回, Next->下一步, Skip->跳过,
+Join->加入, Leave->离开, Start->开始, Continue->继续, Confirm->确认, Cancel->取消,
+Save->保存, Reset->重置, Equip->装备, Unequip->卸下, Upgrade->升级, Unlock->解锁.
+Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.Prompt = function(code)
 if not code or code == "zh" then return Trans.SYS_ZH end
 local lang = Trans.LANGS[code] or "Chinese"
@@ -9028,6 +9031,14 @@ Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
+Trans.KEEPWORD = {
+HUD = true, FPS = true, GUI = true, UI = true, ESP = true, DPS = true,
+AFK = true, NPC = true, PvP = true, PvE = true, PVP = true, PVE = true,
+FOV = true, TPS = true, RGB = true, PNG = true, JPG = true, URL = true,
+API = true, SDK = true, GPU = true, CPU = true, RAM = true, FPS = true,
+Ping = true, ping = true, PING = true, Lv = true, LV = true, Exp = true,
+CPS = true, KPS = true, MPS = true, DPI = true, OBS = true, VR = true,
+}
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
 experiencechat = true, appchat = true, topbarapp = true, robloxpromptgui = true,
@@ -9295,8 +9306,16 @@ s = st
 end
 if s:find("[\228-\233]") and not s:match("%a%a") then return false end
 if not s:match("%a%a") then return false end
+if Trans.KEEPWORD and s:find("%u") then
+local st = s:gsub("%f[%a][A-Za-z][A-Za-z0-9]*%f[%A]", function(w)
+if Trans.KEEPWORD[w] then return " " end
+return w
+end)
+if not st:match("%a%a") then return false end
+end
 if s:match("^%s*[%d][%d%.,%s]*%a%a?%a?%.?%s*$") then return false end
 if s:match("^%s*%a%a?%a?%.?%s*[%d][%d%.,%s]*$") then return false end
+if s:match("^%a[%a0-9]*%-[%a0-9%-]*$") and not s:find("%u") then return false end
 if s:match("%d%s*:%s*%d") then return false end
 if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
 if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
@@ -9324,6 +9343,15 @@ parts[#parts + 1] = t
 return "\226\159\166" .. tostring(#parts) .. "\226\159\167"
 end)
 end
+if s:find("%u") then
+s = s:gsub("%f[%a]([A-Za-z][A-Za-z0-9]*)%f[%A]", function(w)
+if Trans.KEEPWORD and Trans.KEEPWORD[w] then
+parts[#parts + 1] = w
+return "\226\159\166" .. tostring(#parts) .. "\226\159\167"
+end
+return w
+end)
+end
 if s:find("[\228-\233]") and #parts <= 6 then
 local out, i, n = {}, 1, #s
 while i <= n do
@@ -9345,6 +9373,7 @@ s = table.concat(out)
 end
 if #parts > 0 then ctx.tags = parts end
 ctx.send = s
+if not s:match("%a%a") then ctx.noText = true end
 return ctx
 end
 Trans.Post = function(tr, ctx)
@@ -9443,6 +9472,7 @@ end
 return nil
 end
 local ctx = Trans.Pre(text)
+if ctx.noText then return nil end
 local c = Trans.RequestOne(ctx.send, lang)
 if not c then return nil end
 local out = Trans.Post(c, ctx)
@@ -9531,6 +9561,7 @@ if not Trans._ready then return end
 if type(text) ~= "string" or text == "" then return end
 if Trans.KEEP[text] then return end
 if not Trans.Should(text) then return end
+if Trans.Pre(text).noText then return end
 local hit = Trans.Cache[text]
 if type(hit) == "string" then
 pcall(applyFn, hit)
