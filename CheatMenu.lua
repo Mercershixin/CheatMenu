@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 21:21 sha bad946d4 bytes 477229'):format('2026-10-06 21:21','bad946d4',477229))
+print(('[CheatMenu] build 2026-10-06 21:29 sha 105fffa5 bytes 478321'):format('2026-10-06 21:29','105fffa5',478321))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9717,6 +9717,8 @@ end
 end
 function Trans.Async(text, applyFn)
 if not T.Translate then return end
+if type(text) ~= "string" or text == "" then return end
+if not Trans.Should(text) then return end
 local hit = Trans.Cache[text] or Trans.QUICK[text:lower()]
 if hit then pcall(applyFn, hit) return end
 if #Trans.Queue > 200 then return end
@@ -9886,25 +9888,40 @@ if root then
 for _, obj in ipairs(F.walk(root)) do pcall(Trans.GuiEl, obj) end
 end
 end
--- 世界文本：SurfaceGui / BillboardGui（3D 招牌、书本、公告牌、头顶标签）
+-- 世界文本：一次性深度遍历 workspace，识别所有文本承载类型（含嵌套 Frame、3D 交互/对话/物品提示）
 pcall(function()
 for _, obj in ipairs(F.walk(workspace, 20000, 500)) do
-if obj:IsA("SurfaceGui") or obj:IsA("BillboardGui") then
-for _, child in ipairs(obj:GetChildren()) do pcall(Trans.GuiEl, child) end
+local cls = obj.ClassName
+if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
+pcall(Trans.GuiEl, obj)
+elseif cls == "ProximityPrompt" then
+if type(obj.ActionText) == "string" and obj.ActionText ~= "" then
+Trans.Async(obj.ActionText, function(tr) if obj.Parent then pcall(function() obj.ActionText = tr end) end end)
+end
+if type(obj.ObjectText) == "string" and obj.ObjectText ~= "" then
+Trans.Async(obj.ObjectText, function(tr) if obj.Parent then pcall(function() obj.ObjectText = tr end) end end)
+end
+elseif cls == "Dialog" then
+if type(obj.InitialPrompt) == "string" and obj.InitialPrompt ~= "" then
+Trans.Async(obj.InitialPrompt, function(tr) if obj.Parent then pcall(function() obj.InitialPrompt = tr end) end end)
+end
+if type(obj.GoodbyeDialog) == "string" and obj.GoodbyeDialog ~= "" then
+Trans.Async(obj.GoodbyeDialog, function(tr) if obj.Parent then pcall(function() obj.GoodbyeDialog = tr end) end end)
+end
+elseif cls == "DialogChoice" then
+if type(obj.UserDialog) == "string" and obj.UserDialog ~= "" then
+Trans.Async(obj.UserDialog, function(tr) if obj.Parent then pcall(function() obj.UserDialog = tr end) end end)
+end
+if type(obj.ResponseDialog) == "string" and obj.ResponseDialog ~= "" then
+Trans.Async(obj.ResponseDialog, function(tr) if obj.Parent then pcall(function() obj.ResponseDialog = tr end) end end)
+end
+elseif cls == "Tool" then
+if type(obj.ToolTip) == "string" and obj.ToolTip ~= "" then
+Trans.Async(obj.ToolTip, function(tr) if obj.Parent then pcall(function() obj.ToolTip = tr end) end end)
+end
 end
 end
 end)
--- 交互提示 ProximityPrompt：按键提示 ActionText + 物件名 ObjectText
-for _, obj in ipairs(workspace:GetChildren()) do
-if obj:IsA("ProximityPrompt") then
-if obj.ActionText and obj.ActionText ~= "" then
-Trans.Async(obj.ActionText, function(tr) if obj.Parent then obj.ActionText = tr end end)
-end
-if obj.ObjectText and obj.ObjectText ~= "" then
-Trans.Async(obj.ObjectText, function(tr) if obj.Parent then obj.ObjectText = tr end end)
-end
-end
-end
 F.Out("[翻译] 扫描完成: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 跳过(不可见 " .. tostring(Trans._skip.invisible)
 .. " / 自己 " .. tostring(Trans._skip.ours) .. " / 官方 " .. tostring(Trans._skip.official) .. ")")
 end
