@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:02 sha feb36030 bytes 465901'):format('2026-10-07 03:02','feb36030',465901))
+print(('[CheatMenu] build 2026-10-07 03:04 sha 4eeba3bc bytes 468337'):format('2026-10-07 03:04','4eeba3bc',468337))
 local F = {}
-F.VERSION = "v16.9.62"
+F.VERSION = "v16.9.63"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9959,10 +9959,77 @@ function F.ChatTranslateEnable() return Trans.Enable() end
 function F.ChatTranslateDisable() end
 function F.BubbleTranslateEnable() end
 function F.BubbleTranslateDisable() end
-function F.ChatIMEBoxEnable() end
-function F.ChatIMEBoxDisable() end
+F.ChatInputBuild = function()
+if F._ciGui and F._ciGui.Parent then return F._ciGui end
+local LPl = game:GetService("Players").LocalPlayer
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return nil end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CM_ChatInput"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 999
+pcall(function() sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling end)
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+local frame = Instance.new("Frame")
+frame.Name = "Bar"
+frame.Size = UDim2.new(0, 440, 0, 46)
+frame.Position = UDim2.new(0.5, -220, 1, -84)
+frame.BackgroundColor3 = Color3.fromRGB(26, 26, 30)
+frame.BackgroundTransparency = 0.12
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = sg
+pcall(function() frame.Draggable = true end)
+local cr = Instance.new("UICorner")
+cr.CornerRadius = UDim.new(0, 8)
+cr.Parent = frame
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(96, 96, 108)
+stroke.Thickness = 1
+stroke.Transparency = 0.35
+stroke.Parent = frame
+local box = Instance.new("TextBox")
+box.Name = "CM_ChatInputBox"
+box.Size = UDim2.new(1, -20, 1, -14)
+box.Position = UDim2.new(0, 10, 0, 7)
+box.BackgroundTransparency = 1
+box.TextColor3 = Color3.fromRGB(238, 238, 244)
+box.PlaceholderText = "输入中文 → 回车 → 翻成目标语言后发出"
+box.PlaceholderColor3 = Color3.fromRGB(140, 140, 152)
+box.Font = Enum.Font.Gotham
+box.TextSize = 16
+box.TextXAlignment = Enum.TextXAlignment.Left
+box.ClearTextOnFocus = false
+box.Text = ""
+box.Parent = frame
+box.FocusLost:Connect(function(enter)
+if not enter then return end
+local txt = box.Text
+box.Text = ""
+if type(txt) ~= "string" then return end
+txt = txt:gsub("^%s+", ""):gsub("%s+$", "")
+if txt == "" then return end
+task.spawn(function() pcall(F.ChatSendTranslated, txt) end)
+end)
+pcall(function() sg.Parent = pg end)
+F._ciGui = sg
+F._ciBox = box
+return sg
+end
+F.ChatInputShow = function(on)
+if not on then
+if F._ciGui then pcall(function() F._ciGui.Enabled = false end) end
+return
+end
+local sg = F.ChatInputBuild()
+if sg then pcall(function() sg.Enabled = true end) end
+end
+function F.ChatIMEBoxEnable() F.ChatInputShow(true) end
+function F.ChatIMEBoxDisable() F.ChatInputShow(false) end
 function F.ChatBoxSet(on)
 T.ChatIMEBox = on and true or false
+F.ChatInputShow(on)
 end
 local function UnloadAll()
 for k in pairs(T) do T[k] = false end
@@ -12517,6 +12584,11 @@ if not T.Translate then pcall(F.TranslateEnable) end
 else
 pcall(Trans.ChatUnwatch)
 end
+end })
+Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
+T.ChatInput = v and true or false
+if F._cfgSyncing then return end
+pcall(F.ChatInputShow, v)
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
 Default = "英文", Callback = function(v)
