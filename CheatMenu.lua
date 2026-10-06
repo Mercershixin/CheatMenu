@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:08 sha 9e1312ef bytes 487694'):format('2026-10-07 05:08','9e1312ef',487694))
+print(('[CheatMenu] build 2026-10-07 05:12 sha 564b10a2 bytes 487617'):format('2026-10-07 05:12','564b10a2',487617))
 local F = {}
-F.VERSION = "v16.9.81"
+F.VERSION = "v16.9.82"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9338,8 +9338,8 @@ pcall(function()
 local ok, n = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
 if ok and type(n) == "string" and n ~= "" then nm = n end
 end)
-local key = nm and Trans.SafeName(nm) or nil
-if not key or key == "" or not key:match("%S") then key = "Place" .. pid end
+Trans._gname = nm
+local key = "Place" .. pid
 Trans._gk, Trans._gp = key, pid
 return key, pid
 end
