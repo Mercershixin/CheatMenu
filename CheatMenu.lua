@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 04:21 sha b163246e bytes 484366'):format('2026-10-07 04:21','b163246e',484366))
+print(('[CheatMenu] build 2026-10-07 04:31 sha 17e04070 bytes 487525'):format('2026-10-07 04:31','17e04070',487525))
 local F = {}
-F.VERSION = "v16.9.75"
+F.VERSION = "v16.9.76"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8992,6 +8992,7 @@ Trans.GIT_RAW = {
 "https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 }
 Trans.TOKEN_FILE = "CheatMenu_Token.txt"
+Trans._selfCN = {}
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
 th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
@@ -9460,6 +9461,36 @@ listNames(first("Client.ControllerLoader.WeatherController.Weathers.SpecialEvent
 listNames(first("Client.ControllerLoader.WeatherController.Weathers.Events"), "WeatherEvents/")
 readVals(first("Shared.Data.Events"), "Events.")
 listNames(first("Shared.Data.Events"), "Events")
+pcall(function()
+local wc = first("Client.ControllerLoader.WeatherController")
+if wc then
+local okA, at = pcall(function() return wc:GetAttributes() end)
+if okA and type(at) == "table" then
+for k, v in pairs(at) do F.Out("[活动探测] WeatherController 属性 " .. tostring(k) .. " = " .. tostring(v)) end
+end
+for _, c in ipairs(wc:GetChildren()) do
+if c:IsA("ValueBase") then F.Out("[活动探测] WeatherController." .. tostring(c.Name) .. " = " .. tostring(c.Value)) end
+local okA2, a2 = pcall(function() return c:GetAttributes() end)
+if okA2 and type(a2) == "table" then
+for k, v in pairs(a2) do F.Out("[活动探测] " .. tostring(c.Name) .. " 属性 " .. tostring(k) .. " = " .. tostring(v)) end
+end
+end
+end
+end)
+pcall(function()
+local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+local h = pg and pg:FindFirstChild("HUD")
+local u = h and h:FindFirstChild("UpdateTimer")
+if u then
+local okA, at = pcall(function() return u:GetAttributes() end)
+if okA and type(at) == "table" then
+for k, v in pairs(at) do F.Out("[活动探测] UpdateTimer 属性 " .. tostring(k) .. " = " .. tostring(v)) end
+end
+for _, c in ipairs(u:GetChildren()) do
+if c:IsA("ValueBase") then F.Out("[活动探测] UpdateTimer." .. tostring(c.Name) .. " = " .. tostring(c.Value)) end
+end
+end
+end)
 F.Out("[活动探测] ===== 结束: 把上面几行发给 AI, 它就知道\"下次活动是什么 + 还有多久\" =====")
 end
 Trans.ClearCurrent = function()
@@ -9715,6 +9746,19 @@ end
 end
 s = table.concat(out)
 end
+if Trans.PN and next(Trans.PN) then
+s = s:gsub("%f[%a_][%a_][%w_]*", function(w)
+if Trans.PN[w] or Trans.PN[string.lower(w)] then
+parts[#parts + 1] = w
+return "\226\159\166" .. tostring(#parts) .. "\226\159\167"
+end
+return w
+end)
+end
+s = s:gsub("%f[%d]%d+%.?%d*%a%a?%a?%f[%A]", function(t)
+parts[#parts + 1] = t
+return "\226\159\166" .. tostring(#parts) .. "\226\159\167"
+end)
 if #parts > 0 then ctx.tags = parts end
 ctx.send = s
 if not s:match("%a%a") then ctx.noText = true end
@@ -9942,6 +9986,38 @@ if #Trans.Queue > 200 then return end
 Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
 Trans.Drain()
 end
+Trans.IsWorldChat = function(msg)
+if type(msg) ~= "table" then return false end
+local okC, chName = pcall(function() return msg.TextChannel and msg.TextChannel.Name or "" end)
+local ch = okC and tostring(chName) or ""
+local low = string.lower(ch)
+if low:find("world", 1, true) or low:find("global", 1, true) or low:find("cross", 1, true)
+or ch:find("世界", 1, true) or ch:find("全服", 1, true) or ch:find("全区", 1, true) then
+return true
+end
+local txt = msg.Text
+if type(txt) == "string" then
+local tag = txt:match("^%s*[%[【]([^%]】]+)[%]】]")
+if tag then
+local tl = string.lower(tag)
+if tl:find("world", 1, true) or tl:find("global", 1, true) or tag:find("世界", 1, true)
+or tag:find("全服", 1, true) or tag:find("全区", 1, true) or tag:find("跨服", 1, true) then
+return true
+end
+end
+end
+local src = msg.TextSource
+if src then
+local found = false
+pcall(function()
+for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
+if pl.UserId == src.UserId then found = true break end
+end
+end)
+if not found then return true end
+end
+return false
+end
 Trans.ChatWatch = function()
 if Trans._chatHooked then return end
 Trans._chatHooked = true
@@ -9968,6 +10044,13 @@ if not tcs then error("no-tcs") end
 tcs.OnIncomingMessage = function(msg)
 if not T.Translate or type(msg) ~= "table" then return nil end
 if mine(msg) then return nil end
+if Trans.IsWorldChat(msg) then
+if not Trans._worldNote then
+Trans._worldNote = true
+F.Out("[翻译] ☁ 世界/跨服频道已跳过(只翻本地频道与同服玩家)")
+end
+return nil
+end
 local tr = pick(msg.Text)
 if not tr or tr == msg.Text then return nil end
 local props = nil
@@ -10062,6 +10145,7 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
+if Trans._selfCN[obj] then return end
 if cls == "TextLabel" then
 local nested = false
 pcall(function() if obj.Parent and obj.Parent:IsA("TextLabel") then nested = true end end)
@@ -10100,6 +10184,10 @@ end
 local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
+if txt:find("[8-]") then
+Trans._selfCN[obj] = true
+return
+end
 if not Trans.Should(txt) then return end
 if not Trans.Hooked[obj] then
 Trans.Hooked[obj] = true
@@ -10109,6 +10197,8 @@ if not T.Translate then return end
 local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
+if now:find("[8-]") then Trans._selfCN[obj] = true return end
+if Trans._selfCN[obj] then return end
 if Trans.Cache[now] then
 pcall(function() obj.Text = Trans.Cache[now] end)
 return
