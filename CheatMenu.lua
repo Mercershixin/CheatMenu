@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 03:20 sha c2b80a79 bytes 468662'):format('2026-10-07 03:20','c2b80a79',468662))
+print(('[CheatMenu] build 2026-10-07 03:22 sha 014cf299 bytes 469239'):format('2026-10-07 03:22','014cf299',469239))
 local F = {}
-F.VERSION = "v16.9.67"
+F.VERSION = "v16.9.68"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9451,6 +9451,7 @@ return nil
 end
 Trans.Drain = function()
 while Trans.Active < Trans.MAX and #Trans.Queue > 0 do
+if Trans._urgent then break end
 local groups, order, rest = {}, {}, {}
 for i = 1, #Trans.Queue do
 local it = Trans.Queue[i]
@@ -9851,6 +9852,8 @@ if Trans._savedAt > 0 then ago = string.format("%.0f 秒前", os.clock() - Trans
 F.Out("[翻译统计] 已翻 " .. tostring(Trans._cnt) .. " 条 · 缓存 " .. tostring(cacheN) .. " 条 · 待翻 "
 .. tostring(#Trans.Queue) .. " 条 · 累计请求 " .. tostring(Trans._reqN) .. " 次 · 上次保存: " .. ago
 .. " · 已自动保存 " .. tostring(Trans._saveCount) .. " 次")
+F.Out("[翻译统计] 界面" .. tostring(Trans._diagText or "(还没扫描)") .. " · 模型 " .. (Trans._ready and "已连接" or "未连接")
+.. " · 并发 " .. tostring(Trans.Active or 0) .. "/" .. tostring(Trans.MAX) .. " · 缓存文件 " .. tostring(Trans.FILE))
 end
 Trans.WatchOn = function()
 local LPl = game:GetService("Players").LocalPlayer
@@ -9899,16 +9902,25 @@ end
 F.ChatSendTranslated = function(msg)
 task.spawn(function()
 local lang = C.TransLang or "en"
+if not Trans._ready then
+if not Trans.Health() then
+F.Out("[翻译发出] ⚠ 本地模型没响应 ⇒ 先双击「翻译模型开关.bat」把服务起起来再发(原文留在框里不丢)")
+return
+end
+Trans._ready = true
+end
+Trans._urgent = true
 local tr = Trans.Translate(msg, true, lang)
+Trans._urgent = false
 if not tr then
-F.Out("[翻译发出] ⚠ 翻译失败(本地模型没响应?) ⇒ 本次没发出")
+F.Out("[翻译发出] ⚠ 翻译失败 ⇒ 本次没发出(原文留在框里不丢)")
 return
 end
 local okSend = F.ChatSend(tr)
 if okSend then
 F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
 else
-F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏没有可用聊天接口")
+F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏不允许客户端发言")
 end
 end)
 end
