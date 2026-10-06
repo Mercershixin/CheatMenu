@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:56 sha 7139d27f bytes 481914'):format('2026-10-07 00:56','7139d27f',481914))
+print(('[CheatMenu] build 2026-10-07 01:03 sha b1b6aef0 bytes 457974'):format('2026-10-07 01:03','b1b6aef0',457974))
 local F = {}
-F.VERSION = "v16.9.48"
+F.VERSION = "v16.9.49"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8981,13 +8981,17 @@ Trans.HOST = "http://127.0.0.1:8080"
 Trans.KEY = "rk_4a56fc43faa5edb9f7a0cafd4ad3e91f"
 Trans.MODEL = "hymt2-7b"
 Trans.FILE = "CheatMenu_TransCache.json"
-Trans.Cache = {}
-Trans.Queue = {}
-Trans.Active = 0
-Trans.Max = 8
-Trans.Loop = nil
-Trans._lastAt = 0
-Trans.SYS_PROMPT = [[Translate the following game UI text into Chinese.
+Trans.BAK = "CheatMenu_TransCache.json.bak"
+Trans.TMP = "CheatMenu_TransCache.json.tmp"
+Trans.LANGS = {
+zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
+th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
+}
+Trans.BATCH = 6
+Trans.MAX = 8
+Trans.CACHE_MAX = 5000
+Trans.SCAN_EVERY = 6
+Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
 Output ONLY the translation: no explanation, no quotes, no extra words.
 Preserve the original line breaks and number of lines.
 Keep numbers, emoji, URLs and player names unchanged.
@@ -9000,209 +9004,46 @@ Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Ma
 Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
 Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
 Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败.
-Keep CPS as "CPS".
-Currency symbols ($, €, ¥) must ALWAYS be kept EXACTLY as-is.
-The word Robux is kept as-is too.
-If the text is already Chinese or contains CJK, output it unchanged.]]
-Trans.QUICK = {
-["play"] = "开始", ["settings"] = "设置", ["shop"] = "商店", ["buy"] = "购买", ["sell"] = "售卖",
-["sell all"] = "全部售卖", ["claim"] = "领取", ["collect"] = "收取", ["level"] = "等级",
-["reward"] = "奖励", ["rewards"] = "奖励", ["free"] = "免费", ["coins"] = "金币", ["cash"] = "金币",
-["gold"] = "金币", ["gems"] = "宝石", ["yes"] = "是", ["no"] = "否", ["ok"] = "确定", ["confirm"] = "确认",
-["cancel"] = "取消", ["close"] = "关闭", ["back"] = "返回", ["next"] = "下一步", ["continue"] = "继续",
-["start"] = "开始", ["upgrade"] = "升级", ["rebirth"] = "重生", ["spin"] = "转盘", ["skip"] = "跳过",
-["inventory"] = "背包", ["trade"] = "交易", ["quest"] = "任务", ["rank"] = "段位", ["damage"] = "伤害",
-["health"] = "生命", ["open"] = "开启", ["max"] = "最大", ["unlock"] = "解锁", ["locked"] = "已锁定",
-["owned"] = "已拥有", ["equipped"] = "已装备", ["win"] = "胜利", ["lose"] = "失败", ["ready"] = "准备",
-["equip"] = "装备", ["use"] = "使用", ["slots"] = "槽位", ["plot"] = "基地", ["gems shop"] = "宝石商店",
-["op"] = "强力", ["afk"] = "挂机", ["dps"] = "输出", ["pvp"] = "对战", ["pve"] = "刷怪",
-["reset"] = "重置", ["leave"] = "离开", ["join"] = "加入", ["create"] = "创建", ["delete"] = "删除",
-["save"] = "保存", ["load"] = "加载", ["exit"] = "退出", ["pause"] = "暂停", ["retry"] = "重试",
-["accept"] = "接受", ["decline"] = "拒绝", ["on"] = "开", ["off"] = "关", ["auto"] = "自动",
-["all"] = "全部", ["none"] = "无", ["random"] = "随机", ["custom"] = "自定义", ["default"] = "默认",
-["new"] = "新建", ["high"] = "高", ["low"] = "低", ["fast"] = "快速", ["slow"] = "缓慢",
-["easy"] = "简单", ["hard"] = "困难", ["normal"] = "普通", ["wave"] = "波次", ["boss"] = "首领",
-["enemy"] = "敌人", ["player"] = "玩家", ["team"] = "队伍", ["solo"] = "单人", ["lobby"] = "大厅",
-["waiting"] = "等待中", ["loading"] = "加载中", ["error"] = "错误", ["warning"] = "警告", ["success"] = "成功",
-["failed"] = "失败", ["score"] = "得分", ["points"] = "积分", ["speed"] = "速度", ["power"] = "力量",
-["defense"] = "防御", ["weapon"] = "武器", ["item"] = "物品", ["skill"] = "技能", ["ability"] = "能力",
-["buff"] = "增益", ["mana"] = "法力", ["energy"] = "能量", ["ammo"] = "弹药", ["reload"] = "换弹",
-["attack"] = "攻击", ["jump"] = "跳跃", ["run"] = "奔跑", ["sprint"] = "冲刺", ["fly"] = "飞行",
-["interact"] = "互动", ["pick up"] = "拾取", ["drop"] = "丢弃", ["build"] = "建造", ["craft"] = "制作",
-["mine"] = "挖掘", ["teleport"] = "传送", ["map"] = "地图", ["objective"] = "目标", ["mission"] = "任务",
-["daily"] = "每日", ["weekly"] = "每周", ["event"] = "活动", ["rare"] = "稀有", ["epic"] = "史诗",
-["legendary"] = "传说", ["pass"] = "通行证", ["season"] = "赛季", ["pack"] = "礼包", ["chest"] = "宝箱",
-["crate"] = "宝箱", ["gacha"] = "抽卡", ["roll"] = "抽取", ["bonus"] = "加成", ["login"] = "登录",
-["profile"] = "资料", ["friends"] = "好友", ["party"] = "组队", ["guild"] = "公会", ["chat"] = "聊天",
-["message"] = "消息", ["options"] = "选项", ["controls"] = "操作", ["graphics"] = "画质", ["audio"] = "音频",
-["volume"] = "音量", ["language"] = "语言", ["fullscreen"] = "全屏", ["fps"] = "帧率", ["ping"] = "延迟",
-["kick"] = "踢出", ["ban"] = "封禁", ["report"] = "举报", ["mute"] = "静音", ["invite"] = "邀请",
-["vote"] = "投票",
-}
-Trans.LANGS = {
-zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
-th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
-}
-function Trans.Prompt(code)
-if not code or code == "zh" then return Trans.SYS_PROMPT end
+Keep CPS as "CPS".]]
+Trans.Prompt = function(code)
+if not code or code == "zh" then return Trans.SYS_ZH end
 local lang = Trans.LANGS[code] or "Chinese"
-return "Translate the following game UI text into " .. lang
+return "Translate the following text into " .. lang
 .. ". Output ONLY the translation: no explanation, no quotes, no extra words."
 .. " Keep numbers, emoji, URLs and player names unchanged."
 end
-Trans.LoadOne = function(file)
-if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
-local ex = false
-pcall(function() ex = isfile(file) end)
-if not ex then return nil end
-local raw, d = nil, nil
-pcall(function() raw = readfile(file) end)
-if type(raw) ~= "string" or raw == "" then return nil end
-pcall(function() d = HS:JSONDecode(raw) end)
-if type(d) ~= "table" then return nil end
-return d
-end
-function Trans.Load()
-Trans.Order = Trans.Order or {}
-local d, fromBak = Trans.LoadOne(Trans.FILE), false
-if d == nil then
-d = Trans.LoadOne(Trans.BAK)
-fromBak = d ~= nil
-if fromBak then
-F.Out("[翻译] ⚠ 缓存主文件损坏/读不出 ⇒ 已从备份 .bak 恢复(可能少了最近几条)")
-else
-local ex = false
-pcall(function() ex = (type(isfile)=="function") and isfile(Trans.FILE) end)
-if ex then F.Out("[翻译] ⚠ 缓存文件损坏且没有可用备份 ⇒ 本次从空缓存开始") end
-return
-end
-end
-local n = 0
-local cache, order = nil, nil
-if type(d.c) == "table" then cache, order = d.c, d.o else cache = d end
-for k, v in pairs(cache) do
-if type(k) == "string" and type(v) == "string" then Trans.Cache[k] = v n = n + 1 end
-end
-Trans._ordSeen = {}
-if type(order) == "table" then
-for i = 1, #order do
-local k = order[i]
-if type(k) == "string" and Trans.Cache[k] and not Trans._ordSeen[k] then
-Trans._ordSeen[k] = true
-Trans.Order[#Trans.Order + 1] = k
-end
-end
-end
-for k in pairs(Trans.Cache) do
-if not Trans._ordSeen[k] then Trans._ordSeen[k] = true Trans.Order[#Trans.Order + 1] = k end
-end
-Trans._cnt = n
+Trans.Cache = {}
+Trans.Order = {}
+Trans._cnt = 0
+Trans._saveCount = 0
+Trans._savedAt = 0
+Trans.Queue = {}
+Trans.Active = 0
+Trans.Loop = nil
+Trans._reqN = 0
+Trans._localFails = 0
 Trans._dirty = false
-F.Out("[翻译] 已加载本地缓存 " .. n .. " 条" .. (fromBak and " (来自备份)" or ""))
-end
-Trans.BAK = "CheatMenu_TransCache.json.bak"
-Trans.TMP = "CheatMenu_TransCache.json.tmp"
-Trans.SaveAtomic = function(payload)
-if type(writefile) ~= "function" then return false end
-local had = false
-if type(isfile) == "function" and type(readfile) == "function" then
-pcall(function() had = isfile(Trans.FILE) end)
-end
-if type(renamefile) == "function" then
-if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
-local ok = pcall(function() writefile(Trans.TMP, payload) end)
-if not ok then return false end
-local ok2 = pcall(function() renamefile(Trans.TMP, Trans.FILE) end)
-if ok2 then return true end
-pcall(function() writefile(Trans.FILE, payload) end)
-return true
-end
-if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
-pcall(function() writefile(Trans.FILE, payload) end)
-return true
-end
-function Trans.Flush()
-Trans._dirtyOld = nil
-Trans._savedAt = os.clock()
-local body = nil
-pcall(function()
-body = HS:JSONEncode({ v = 2, c = Trans.Cache, o = Trans.Order or {} })
-end)
-if not body then Trans._dirty = true return false end
-local ok, r = pcall(Trans.SaveAtomic, body)
-local done = ok and (r ~= false)
-Trans._dirty = not done
-if done then
-Trans._saveCount = (Trans._saveCount or 0) + 1
-end
-if done and not Trans._savedLog then
-Trans._savedLog = true
-F.Out("[翻译] 缓存已自动保存 " .. tostring(Trans._cnt or 0) .. " 条 → 下次开启/离线直接复用, 不用重翻")
-end
-return done
-end
-Trans.Stats = function()
-local cacheN = 0
-pcall(function() for _ in pairs(Trans.Cache or {}) do cacheN = cacheN + 1 end end)
-local savedAgo = "还没保存过"
-if Trans._savedAt then
-local d = math.floor(os.clock() - Trans._savedAt)
-savedAgo = ((d < 60) and (d .. " 秒前") or (math.floor(d / 60) .. " 分钟前"))
-end
-F.Out("[翻译统计] 本次翻译 " .. tostring(Trans._cnt or 0) .. " 条 · 缓存里共 " .. tostring(cacheN) .. " 条 · 最近10秒发模型 "
-.. tostring(#(Trans._reqWin or {})) .. " 次 · 上次自动保存: "
-.. savedAgo .. " · 已自动保存 " .. tostring(Trans._saveCount or 0) .. " 次(自动, 不用手动)")
-end
-function Trans.Save()
-Trans._dirty = true
-local now = os.clock()
-local last = Trans._savedAt or 0
-if now - last < 5 then
-Trans._dirtyOld = Trans._dirtyOld or now
-if now - Trans._dirtyOld < 25 then return end
-end
-Trans.Flush()
-end
-Trans.HeartbeatOn = function()
-if Trans._hbOn then return end
-Trans._hbOn = true
-task.spawn(function()
-while Trans._hbOn do
-task.wait(10)
-if not Trans._hbOn then break end
-if Trans._dirty and Trans._dirtyOld and (os.clock() - Trans._dirtyOld) >= 8 then
-pcall(Trans.Flush)
-end
-end
-end)
-end
-Trans.HeartbeatOff = function() Trans._hbOn = false end
-function Trans.Req()
+Trans._scanRound = 0
+Trans._diagOnce = nil
+Trans.Reg = setmetatable({}, { __mode = "k" })
+Trans.Hooked = setmetatable({}, { __mode = "k" })
+Trans.KEEP = {}
+Trans._sCache = {}
+Trans._sN = 0
+Trans.Req = function()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
-Trans._localFails = 0
-function Trans.Request(text, toLang)
-Trans._reqN = (Trans._reqN or 0) + 1
-Trans._reqWin = Trans._reqWin or {}
-local _rn = os.clock()
-Trans._reqWin[#Trans._reqWin + 1] = _rn
-while #Trans._reqWin > 0 and _rn - Trans._reqWin[1] > 10 do table.remove(Trans._reqWin, 1) end
+Trans.Chat = function(messages, maxTokens)
 local rf = Trans.Req()
-if type(rf) ~= "function" then
-F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
-return nil
-end
-local body = HS:JSONEncode({
+if type(rf) ~= "function" then return nil, "本执行器没有 request 函数" end
+local okB, body = pcall(HS.JSONEncode, {
 model = Trans.MODEL,
-messages = {
-{ role = "system", content = Trans.Prompt(toLang or "zh") },
-{ role = "user", content = text },
-},
-temperature = 0.1, top_p = 0.6, max_tokens = 128, stream = false,
+messages = messages,
+temperature = 0.1, top_p = 0.6,
+max_tokens = maxTokens or 256, stream = false,
 })
-local attempt
-for attempt = 1, 2 do
+if not okB then return nil, "请求体编码失败" end
 local ok, res = pcall(function()
 return rf({
 Url = Trans.HOST .. "/v1/chat/completions",
@@ -9211,484 +9052,275 @@ Headers = { ["Content-Type"] = "application/json", ["Authorization"] = "Bearer "
 Body = body,
 })
 end)
-if ok and type(res) == "table" and (res.StatusCode or 0) == 200 then
+if not ok then return nil, "HTTP 请求异常" end
+if type(res) ~= "table" then return nil, "HTTP 无返回" end
+if tonumber(res.StatusCode or res.Status or 0) ~= 200 then
+return nil, "HTTP " .. tostring(res.StatusCode or res.Status or 0)
+end
 local ok2, d = pcall(HS.JSONDecode, res.Body)
-if ok2 and type(d) == "table" and d.choices and d.choices[1] then
+if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "返回解析失败" end
 local msg = d.choices[1].message
-if msg and msg.content then
-Trans._localFails = 0
-return msg.content, nil
+local content = msg and msg.content
+if type(content) ~= "string" or content == "" then return nil, "模型返回空" end
+return content, nil
 end
-end
-end
-if attempt == 1 then task.wait(0.3) end
+Trans.RequestOne = function(text, lang)
+Trans._reqN = Trans._reqN + 1
+local lastErr
+for attempt = 1, 2 do
+local c, err = Trans.Chat({
+{ role = "system", content = Trans.Prompt(lang) },
+{ role = "user", content = text },
+}, 256)
+if c then Trans._localFails = 0 return c, nil end
+lastErr = err
+if attempt == 1 then task.wait(0.25) end
 end
 Trans._localFails = Trans._localFails + 1
 if Trans._localFails <= 3 then
-F.Out("[翻译] ⚠ 本地服务响应失败(已重试 2 次) ⇒ 高频词走本地短语表, 其余等本地服务恢复")
+F.Out("[翻译] ⚠ 本地翻译服务无响应(" .. tostring(lastErr) .. ") ⇒ 界面保留原文, 请确认「翻译模型开关.bat」在跑")
 end
-return nil, "本地服务无响应"
+return nil, lastErr
 end
-Trans.RT = { O1 = "\226\159\166", C1 = "\226\159\167" }
-Trans.RT.HasTags = function(s)
-return type(s) == "string" and s:find("<%a[^<>]*>") ~= nil or (type(s) == "string" and s:find("</%a") ~= nil)
+Trans.RequestBatch = function(list, lang)
+Trans._reqN = Trans._reqN + 1
+local okP, payload = pcall(HS.JSONEncode, list)
+if not okP then return nil end
+local sys = Trans.Prompt(lang)
+.. "\nThe user sends a JSON array of strings. Translate every element."
+.. "\nOutput ONLY a JSON array with the SAME length and SAME order. No explanation, no code fence."
+local c = Trans.Chat({
+{ role = "system", content = sys },
+{ role = "user", content = payload },
+}, 1536)
+if not c then Trans._localFails = Trans._localFails + 1 return nil end
+c = c:gsub("^%s*```[%w]*%s*", ""):gsub("%s*```%s*$", "")
+local a = c:find("%[", 1, true)
+local b = c:match(".*()%]")
+if not a or not b or b <= a then return nil end
+local ok3, arr = pcall(HS.JSONDecode, c:sub(a, b))
+if not ok3 or type(arr) ~= "table" or #arr ~= #list then return nil end
+Trans._localFails = 0
+return arr
 end
-Trans.RT.Strip = function(s)
-if type(s) ~= "string" then return s end
-return (s:gsub("<[^<>]->", ""))
+Trans.LoadOne = function(file)
+if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
+local ex = false
+pcall(function() ex = isfile(file) end)
+if not ex then return nil end
+local raw = nil
+pcall(function() raw = readfile(file) end)
+if type(raw) ~= "string" or raw == "" then return nil end
+local d = nil
+pcall(function() d = HS:JSONDecode(raw) end)
+if type(d) ~= "table" then return nil end
+return d
 end
-Trans.RT.Tokenize = function(s)
-local tags = {}
-local core = s:gsub("<[^<>]->", function(t)
-tags[#tags + 1] = t
-return Trans.RT.O1 .. #tags .. Trans.RT.C1
-end)
-return core, tags
+function Trans.Load()
+local d = Trans.LoadOne(Trans.FILE)
+local fromBak = false
+if d == nil then
+d = Trans.LoadOne(Trans.BAK)
+fromBak = d ~= nil
+if not fromBak then return end
 end
-Trans.RT.Restore = function(s, tags)
-if type(s) ~= "string" or not tags or #tags == 0 then return s end
-local o, c = Trans.RT.O1, Trans.RT.C1
-local function put(i)
-local t = tags[tonumber(i)]
-return t or ""
-end
-s = s:gsub(o .. "%s*(%d+)%s*" .. c, put)
-s = s:gsub("[%[%(]%s*(%d+)%s*[%]%)]", put)
-return s
-end
-Trans.RT.CleanResidue = function(s)
-if type(s) ~= "string" then return s end
-local o, c = Trans.RT.O1, Trans.RT.C1
-local go, gc = Trans.GL.O1, Trans.GL.C1
-s = s:gsub(o .. "%s*%d+%s*" .. c, "")
-s = s:gsub(go .. "%s*%d+%s*" .. gc, "")
-s = s:gsub(o, ""):gsub(c, "")
-s = s:gsub(go, ""):gsub(gc, "")
-s = (s:gsub("[%[%(]%s*%d+%s*[%]%)]", ""))
-return s
-end
-Trans.RT.RestoreChecked = function(translated, tags)
-if type(translated) ~= "string" then return nil end
-if not tags or #tags == 0 then return translated end
-local out = Trans.RT.Restore(translated, tags)
-local miss = 0
-for i = 1, #tags do
-if not out:find(tags[i], 1, true) then miss = miss + 1 end
-end
-if miss > 0 then
-F.Out("[翻译·富文本] 标签校验不过(缺 " .. tostring(miss) .. "/" .. tostring(#tags)
-.. " 个) ⇒ 放弃本次译文, 界面保留原文(绝不写坏富文本)")
-return nil
-end
-return Trans.RT.CleanResidue(out)
-end
-Trans.RT.Count = function(s)
 local n = 0
-if type(s) == "string" then for _ in s:gmatch("<[^<>]->") do n = n + 1 end end
-return n
+local cache = (type(d.c) == "table") and d.c or d
+for k, v in pairs(cache) do
+if type(k) == "string" and type(v) == "string" then Trans.Cache[k] = v n = n + 1 end
 end
-Trans.RT.Audit = function()
-local broken, tagged, richOff = 0, 0, 0
-pcall(function()
-for _, g in ipairs(game:GetService("CoreGui"):GetDescendants()) do
-if (g:IsA("TextLabel") or g:IsA("TextButton")) and type(g.Text) == "string" then
-if Trans.RT.HasTags(g.Text) then
-tagged = tagged + 1
-if g.RichText ~= true then richOff = richOff + 1 end
-local o, c = Trans.RT.Count(g.Text:gsub("<[^<>]->", "")), 0
-if c > o then broken = broken + 1 end
+Trans._cnt = n
+Trans._dirty = false
+F.Out("[翻译] 已加载本地缓存 " .. n .. " 条" .. (fromBak and " (来自备份)" or ""))
 end
+Trans.SaveAtomic = function(payload)
+if type(writefile) ~= "function" then return false end
+local had = false
+if type(isfile) == "function" and type(readfile) == "function" then
+pcall(function() had = isfile(Trans.FILE) end)
 end
-end
-end)
-F.Out("[翻译·富文本] 带标签的文本控件 " .. tostring(tagged) .. " 个, 其中 RichText 没开 " .. tostring(richOff)
-.. " 个(这些标签会当纯文本显示), 标签不配对 " .. tostring(broken) .. " 个")
-return tagged
-end
-Trans.GL = {}
-Trans.GL.PRESET = {
-["brainrot"] = "脑红", ["rebirth"] = "重生", ["pet"] = "宠物", ["pets"] = "宠物",
-["egg"] = "蛋", ["eggs"] = "蛋", ["cash"] = "现金", ["coins"] = "金币", ["coin"] = "金币",
-["gems"] = "宝石", ["gem"] = "宝石", ["plot"] = "基地", ["podium"] = "展台",
-["steal"] = "偷取", ["team"] = "队伍", ["round"] = "回合", ["shop"] = "商店",
-["inventory"] = "背包", ["upgrade"] = "升级", ["quest"] = "任务", ["reward"] = "奖励",
-["damage"] = "伤害", ["health"] = "生命值", ["server"] = "服务器",
-["leaderboard"] = "排行榜", ["trading"] = "交易", ["trade"] = "交易",
-["purchase"] = "购买", ["equip"] = "装备", ["unlock"] = "解锁", ["locked"] = "已锁定",
-["owned"] = "已拥有", ["equipped"] = "已装备", ["sell"] = "出售", ["buy"] = "购买",
-}
-Trans.GL.KEEP = {}
-Trans.GL.O1 = "\226\159\170"
-Trans.GL.C1 = "\226\159\171"
-Trans.GL.Ena = function()
-if C.TransUseGL == false then return false end
-return true
-end
-Trans.GL.CIPat = function(term)
-local parts = {}
-for i = 1, #term do
-local ch = term:sub(i, i)
-if ch:match("%a") then
-parts[#parts + 1] = "[" .. ch:lower() .. ch:upper() .. "]"
-else
-parts[#parts + 1] = ch:gsub("(%W)", "%%%1")
+if type(renamefile) == "function" then
+if had then pcall(function() writefile(Trans.BAK, readfile(Trans.FILE)) end) end
+local okW = pcall(function() writefile(Trans.TMP, payload) end)
+if okW then
+local okR = pcall(function() renamefile(Trans.TMP, Trans.FILE) end)
+if okR then return true end
 end
 end
-return table.concat(parts)
+local okD = pcall(function() writefile(Trans.FILE, payload) end)
+return okD
 end
-Trans.GL.Sorted = function()
-local out = {}
-for k in pairs(Trans.GL.PRESET) do out[#out + 1] = k end
-for k in pairs(Trans.GL.KEEP) do out[#out + 1] = k end
-table.sort(out, function(a, b) return #a > #b end)
-return out
+Trans.Flush = function()
+local body = nil
+pcall(function() body = HS:JSONEncode({ v = 2, c = Trans.Cache }) end)
+if not body then return false end
+local ok = pcall(Trans.SaveAtomic, body)
+local done = ok and true or false
+Trans._dirty = not done
+if done then
+Trans._savedAt = os.clock()
+Trans._saveCount = Trans._saveCount + 1
 end
-Trans.GL.Apply = function(text)
-if not Trans.GL.Ena() then return text, nil end
-local hits = {}
-local out = text
-local terms = Trans.GL.Sorted()
-for i = 1, #terms do
-local t = terms[i]
-if t ~= "" and out:lower():find(t, 1, true) then
-local want = Trans.GL.KEEP[t] or Trans.GL.PRESET[t]
-if want then
-local pat = "()(%f[%a]" .. Trans.GL.CIPat(t) .. "%f[%A])"
-out = out:gsub(pat, function()
-hits[#hits + 1] = want
-return Trans.GL.O1 .. #hits .. Trans.GL.C1
-end)
+return done
+end
+Trans.Save = function() Trans._dirty = true end
+Trans.SaveTick = function()
+while true do
+task.wait(10)
+if Trans._dirty and T.Translate then pcall(Trans.Flush) end
 end
 end
-end
-if #hits == 0 then return out, nil end
-return out, hits
-end
-Trans.GL.Restore = function(s, hits)
-if type(s) ~= "string" or not hits or #hits == 0 then return s end
-local o, c = Trans.GL.O1, Trans.GL.C1
-local function put(i)
-local w = hits[tonumber(i)]
-return w or ""
-end
-s = s:gsub(o .. "%s*(%d+)%s*" .. c, put)
-s = s:gsub("[%[%(]%s*(%d+)%s*[%]%)]", put)
-return s
-end
-Trans.GL.Add = function(term, want)
-term = tostring(term or ""):gsub("^%s+", ""):gsub("%s+$", "")
-if term == "" then return false end
-local k = term:lower()
-if want == nil or want == "" then
-Trans.GL.KEEP[k] = term
-else
-Trans.GL.KEEP[k] = nil
-Trans.GL.PRESET[k] = want
-end
-Trans.QUICK[k] = nil
-Trans.Cache = {}
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
-task.spawn(function() pcall(Trans.RetranslateAll) end)
-F.Out("[翻译·词条] 已加: " .. term .. " -> " .. tostring(Trans.GL.KEEP[k] or Trans.GL.PRESET[k]))
-return true
-end
-Trans.GL.Del = function(term)
-local k = tostring(term or ""):lower()
-local hadP, hadK = Trans.GL.PRESET[k] ~= nil, Trans.GL.KEEP[k] ~= nil
-Trans.GL.PRESET[k], Trans.GL.KEEP[k] = nil, nil
-Trans.Cache = {}
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
-task.spawn(function() pcall(Trans.RetranslateAll) end)
-F.Out("[翻译·词条] 已删: " .. tostring(term) .. (hadP or hadK and "" or " (本来就没有)"))
-return hadP or hadK
-end
-Trans.GL.Count = function()
-local n = 0
-for _ in pairs(Trans.GL.PRESET) do n = n + 1 end
-for _ in pairs(Trans.GL.KEEP) do n = n + 1 end
-return n
-end
-Trans.GL.AddAuto = function()
-local n = 0
-local name = nil
-pcall(function()
-if F.CMX_GameName then name = (F.CMX_GameName()) end
-end)
-if type(name) == "string" and #name >= 3 then
-if Trans.GL.Add(name, nil) then n = n + 1 end
-end
-local per = nil
-pcall(function()
-if F.CMX_GameDetectKeys then per = (F.CMX_GameDetectKeys()) end
-end)
-if type(per) == "table" then
-for i = 1, #per do
-local w = per[i]
-if type(w) == "string" and #w >= 5 and not w:find(" ") then
-if Trans.GL.Add(w, nil) then n = n + 1 end
-end
-end
-end
-F.Out("[翻译·词条] 自动加入 " .. tostring(n) .. " 条(游戏名 + 本游戏检测命名) —— 这些词保持原文不翻译"
-.. " · 当前词条共 " .. tostring(Trans.GL.Count()) .. " 条")
-return n
-end
-Trans.KNOWN = function(w)
-if type(w) ~= "string" or w == "" then return false end
-local k = w:lower()
-if Trans.QUICK and Trans.QUICK[k] ~= nil then return true end
-if Trans.GL then
-if Trans.GL.PRESET and Trans.GL.PRESET[k] ~= nil then return true end
-if Trans.GL.KEEP and Trans.GL.KEEP[k] ~= nil then return true end
-end
-return false
-end
-Trans.ShouldV2 = function(s)
-local n = #s
-if n < 2 or n > 300 then return false, "长度" end
-if not s:find("[A-Za-z]") then return false, "无字母" end
-if Trans.PN and Trans.PN[s] then return false, "玩家名" end
-if s:find("[\228-\233]") then return false, "已是中文" end
-if s:match("%d%s*:%s*%d") then return false, "时间/计时器" end
-if s:match("^https?://") or s:match("rbxassetid") or s:match("rbxthumb")
-or s:match("rbxgameasset") or s:match("^rbx") then return false, "资源" end
-if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org")
-or s:match("%.io") or s:match("%.gg") or s:match("%w@%w+%.%w") then return false, "网址" end
-if s:match("^[/\\#]") then return false, "路径" end
-if s:find("€", 1, true) or s:find("¥", 1, true) then return false, "货币符" end
-if #s <= 12 and s:match("%%[%a%%]") then return false, "格式占位符" end
-if not s:find("%s") then
-local core = s:gsub("^[%p%s]+", ""):gsub("[%p%s]+$", "")
-if core == "" then return false, "空" end
-if Trans.KNOWN(core) then return true end
-if core:find("_") then return false, "标识符(下划线)" end
-if core:match("^[%d%.]+$") then return false, "纯数字" end
-if core:match("^v%d") then return false, "版本号" end
-local letters = select(1, core:gsub("[^A-Za-z]", ""))
-local digits = select(1, core:gsub("[^%d]", ""))
-local nlet, ndig = #letters, #digits
-if ndig > 0 and #core <= 16 then return false, "含数字的短串" end
-if core:match("^[IVXLCM]+$") and #core <= 7 then return false, "罗马数字" end
-if core:match("^%u+$") and #core <= 4 then return false, "大写缩写" end
-if nlet >= 3 and not core:find("[aeiouAEIOU]") then return false, "无元音乱码" end
-end
-return true
-end
-Trans._sCache = {}
-Trans._sN = 0
-Trans.SHOULD_CACHE_MAX = 4000
 Trans.ShouldCacheClear = function()
 Trans._sCache = {}
 Trans._sN = 0
 end
-function Trans.Should(s)
+Trans.Should = function(s)
 if type(s) ~= "string" then return false end
 local hit = Trans._sCache[s]
 if hit ~= nil then return hit end
 local ok = Trans.ShouldV2(s:gsub("^%s+", ""):gsub("%s+$", "")) and true or false
-if Trans._sN < Trans.SHOULD_CACHE_MAX then
+if Trans._sN < 4000 then
 Trans._sCache[s] = ok
 Trans._sN = Trans._sN + 1
 else
-Trans.ShouldCacheClear()
-Trans._sCache[s] = ok
+Trans._sCache = { [s] = ok }
 Trans._sN = 1
 end
 return ok
 end
-function Trans.Translate(text, force)
-if (not T.Translate and not force) or type(text) ~= "string" or text == "" then return nil end
-text = text:gsub("^%s+", ""):gsub("%s+$", "")
-if text == "" then return nil end
-if not force and not Trans.Should(Trans.RT.HasTags(text) and Trans.RT.Strip(text) or text) then return nil end
-local rtTags, rtMode = nil, tostring(C.TransRTMode or "\226\145\160")
-if Trans.RT.HasTags(text) then
-if rtMode:find("\226\145\161", 1, true) then
-text = Trans.RT.Strip(text)
-elseif rtMode:find("\226\145\162", 1, true) then
-local core
-core, rtTags = Trans.RT.Tokenize(text)
-text = core
+Trans.ShouldV2 = function(s)
+local n = #s
+if n < 2 or n > 300 then return false end
+if not s:find("[A-Za-z]") then return false end
+if s:find("[\228-\233]") then return false end
+if s:match("%d%s*:%s*%d") then return false end
+if s:match("^https?://") or s:find("rbxasset", 1, true) or s:find("rbxthumb", 1, true) then return false end
+if s:find("www%.%w+") or s:match("%.com") or s:match("%.net") or s:match("%.org") then return false end
+if s:find(":", 1, true) and s:find("//", 1, true) then return false end
+if s:match("^[%d%p%s]+$") then return false end
+if not s:find("%s") then
+local core = s:gsub("^[%p%s]+", ""):gsub("[%p%s]+$", "")
+if core == "" then return false end
+if core:find("_") then return false end
+if core:match("^[%d%.]+$") then return false end
+if core:match("^v%d") then return false end
+if select(2, core:gsub("[^%d]", "")) > 0 and #core <= 16 then return false end
+if core:match("^%u+$") and #core <= 4 then return false end
+if #core >= 3 and not core:find("[aeiouAEIOU]") then return false end
+end
+return true
+end
+Trans.KeepAdd = function(w)
+if type(w) == "string" and #w >= 3 then Trans.KEEP[w] = true end
+end
+Trans.Pre = function(text)
+local ctx = { raw = text, tags = nil }
+local s = text
+if s:find("<%a[^<>]->") or s:find("</%a") then
+local tags = {}
+s = s:gsub("<[^<>]->", function(t)
+tags[#tags + 1] = t
+return "\226\159\166" .. tostring(#tags) .. "\226\159\167"
+end)
+if #tags > 0 then ctx.tags = tags end
+end
+ctx.send = s
+return ctx
+end
+Trans.Post = function(tr, ctx)
+if type(tr) ~= "string" then return nil end
+local out = tr
+if out:find("\226\159\166") then
+out = out:gsub("\226\159\166%s*(%d+)%s*\226\159\167", function(i)
+local t = ctx.tags and ctx.tags[tonumber(i)]
+return t or ""
+end)
+if ctx.tags then
+for i = 1, #ctx.tags do
+if not out:find(ctx.tags[i], 1, true) then return nil end
 end
 end
-local glHits = nil
-local glossed
-glossed, glHits = Trans.GL.Apply(text)
-text = glossed
-if not force and not Trans.Should(text) then return nil end
-if Trans.Cache[text] then
-local hit0 = Trans.Cache[text]
-local f0 = Trans.GL.Restore(hit0, glHits)
-if rtTags and #rtTags > 0 then
-local c0 = Trans.RT.RestoreChecked(f0, rtTags)
-if c0 ~= nil then return c0 end
-else
-return Trans.RT.CleanResidue(f0)
+end
+out = out:gsub("^%s+", ""):gsub("%s+$", "")
+if out == "" then return nil end
+return out
+end
+Trans.CachePut = function(text, tr)
+local fresh = Trans.Cache[text] == nil
+Trans.Cache[text] = tr
+if fresh then
+Trans._cnt = Trans._cnt + 1
+Trans.Order[#Trans.Order + 1] = text
+if Trans._cnt > Trans.CACHE_MAX then
+local drop = math.floor(Trans.CACHE_MAX * 0.5)
+local gone = 0
+for i = 1, #Trans.Order do
+local k = Trans.Order[i]
+if k and Trans.Cache[k] ~= nil then
+Trans.Cache[k] = nil
+gone = gone + 1
+if gone >= drop then break end
+end
+end
+local keep, seen = {}, {}
+for i = 1, #Trans.Order do
+local k = Trans.Order[i]
+if k and Trans.Cache[k] ~= nil and not seen[k] then
+seen[k] = true
+keep[#keep + 1] = k
+end
+end
+Trans.Order = keep
+Trans._cnt = #keep
 end
 end
 if text:find("%d") then
 local nums = {}
 local tpl = text:gsub("%d+", function(d) nums[#nums + 1] = d return "%%d" end)
 if #tpl >= 6 then
-local tv = Trans.Cache["\2" .. tpl]
-if type(tv) == "string" then
-local i, filled = 0, tv:gsub("%%d", function() i = i + 1 return nums[i] or "" end)
-if i == #nums and filled ~= "" then
-local f1 = Trans.GL.Restore(filled, glHits)
-if rtTags and #rtTags > 0 then
-local c1 = Trans.RT.RestoreChecked(f1, rtTags)
-if c1 ~= nil then return c1 end
-else
-return Trans.RT.CleanResidue(f1)
-end
-end
-end
-end
-end
-local quick = Trans.QUICK[text:lower()]
-if quick then Trans.Cache[text] = quick return quick end
-if force then Trans._lastAt = 0 end
-local now = os.clock()
-if not force and (now - (Trans._lastAt or 0)) < (C.TransInterval or 0.15) then return nil end
-Trans._lastAt = now
-local r = Trans.Request(text)
-if r and r ~= "" and r ~= text then
-r = r:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
-r = r:gsub("^%s+", ""):gsub("%s+$", "")
-if Trans.Cache[text] == nil then
-Trans.Order = Trans.Order or {}
-Trans.Order[#Trans.Order + 1] = text
-Trans._cnt = (Trans._cnt or 0) + 1
-end
-Trans.Cache[text] = r
-if text:find("%d") then
-local nums2 = {}
-local tpl2 = text:gsub("%d+", function(d) nums2[#nums2 + 1] = d return "%%d" end)
-if #tpl2 >= 6 then
-local j2 = 0
-local tplTr = r:gsub("%d+", function() j2 = j2 + 1 return "%%d" end)
-if j2 == #nums2 then Trans.Cache["\2" .. tpl2] = tplTr end
-end
-end
-Trans.CACHE_MAX = Trans.CACHE_MAX or 5000
-if Trans._cnt > Trans.CACHE_MAX * 1.1 then
-local real = 0
-for _ in pairs(Trans.Cache) do real = real + 1 end
-Trans._cnt = real
-if real > Trans.CACHE_MAX then
-local target = math.floor(Trans.CACHE_MAX / 4)
-local removed = 0
-local ord = Trans.Order or {}
-for i = 1, #ord do
-local k = ord[i]
-if Trans.Cache[k] ~= nil then
-Trans.Cache[k] = nil
-removed = removed + 1
-if removed >= target then break end
-end
-end
-local keep = {}
-for k in pairs(Trans.Cache) do keep[#keep + 1] = k end
-Trans.Order = keep
-Trans._cnt = #keep
-F.Out("[翻译] 缓存超过 " .. Trans.CACHE_MAX .. " 条, 已按最早顺序清理 " .. removed .. " 条")
+local j = 0
+local tplTr = tr:gsub("%d+", function() j = j + 1 return "%%d" end)
+if j == #nums then Trans.Cache["\2" .. tpl] = tplTr end
 end
 end
 Trans.Save()
-local fin = Trans.GL.Restore(r, glHits)
-if rtTags and #rtTags > 0 then
-local checked = Trans.RT.RestoreChecked(fin, rtTags)
-if checked == nil then return nil end
-return checked
 end
-return Trans.RT.CleanResidue(fin)
+Trans.Translate = function(text, force, lang)
+if type(text) ~= "string" then return nil end
+text = text:gsub("^%s+", ""):gsub("%s+$", "")
+if text == "" then return nil end
+if Trans.KEEP[text] then return nil end
+local hit = Trans.Cache[text]
+if type(hit) == "string" then return hit end
+if text:find("%d") then
+local nums = {}
+local tpl = text:gsub("%d+", function(d) nums[#nums + 1] = d return "%%d" end)
+if #tpl >= 6 then
+local tv = Trans.Cache["\2" .. tpl]
+if type(tv) == "string" then
+local i = 0
+local filled = tv:gsub("%%d", function() i = i + 1 return nums[i] or "" end)
+if i == #nums and filled ~= "" then return filled end
 end
+end
+end
+if not lang then return nil end
+local ctx = Trans.Pre(text)
+local c = Trans.RequestOne(ctx.send, lang)
+if not c then return nil end
+local out = Trans.Post(c, ctx)
+if out and out ~= text then return out end
 return nil
 end
-Trans.BatchMax = 6
-Trans.Pre = function(text)
-local ctx = { raw = text }
-local mode = tostring(C.TransRTMode or "\226\145\160")
-local s = text
-if Trans.RT.HasTags(s) then
-if mode:find("\226\145\161", 1, true) then
-s = Trans.RT.Strip(s)
-elseif mode:find("\226\145\162", 1, true) then
-local core
-core, ctx.rtTags = Trans.RT.Tokenize(s)
-s = core
-end
-end
-local gl
-gl, ctx.glHits = Trans.GL.Apply(s)
-ctx.send = gl
-return ctx
-end
-Trans.Post = function(tr, ctx)
-if type(tr) ~= "string" then return nil end
-local fin = Trans.GL.Restore(tr, ctx.glHits)
-if ctx.rtTags and #ctx.rtTags > 0 then return Trans.RT.RestoreChecked(fin, ctx.rtTags) end
-return Trans.RT.CleanResidue(fin)
-end
-Trans.RunBatch = function(items)
-local rf = Trans.Req()
-if type(rf) ~= "function" then return false end
-local sends, ctxs = {}, {}
-for i = 1, #items do
-local c = Trans.Pre(items[i].text)
-ctxs[i] = c
-sends[i] = c.send
-end
-local okS, payload = pcall(HS.JSONEncode, sends)
-if not okS then return false end
-local sys = "You are a translation engine. Translate every string of this JSON array into Chinese. "
-.. "Keep the array length and the order identical, and keep numbers, placeholders, emoji and markup unchanged. "
-.. "Output ONLY the JSON array: no explanation, no code fence, no extra text."
-local body = HS:JSONEncode({
-model = Trans.MODEL,
-messages = { { role = "system", content = sys }, { role = "user", content = payload } },
-temperature = 0.1, top_p = 0.6, max_tokens = 1536, stream = false,
-})
-local ok, res = pcall(function()
-return rf({ Url = Trans.HOST .. "/v1/chat/completions", Method = "POST",
-Headers = { ["Content-Type"] = "application/json", ["Authorization"] = "Bearer " .. Trans.KEY }, Body = body })
-end)
-if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then return false end
-local ok2, d = pcall(HS.JSONDecode, res.Body)
-if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return false end
-local msg = d.choices[1].message
-local content = msg and msg.content
-if type(content) ~= "string" or content == "" then return false end
-content = content:gsub("^%s*```[%w]*%s*", ""):gsub("%s*```%s*$", "")
-local a = content:find("%[", 1, true)
-local b = content:match(".*()%]")
-if not a or not b or b <= a then return false end
-local ok3, arr = pcall(HS.JSONDecode, content:sub(a, b))
-if not ok3 or type(arr) ~= "table" or #arr ~= #items then return false end
-local good = 0
-for i = 1, #items do
-local it = items[i]
-local tr = Trans.Post(arr[i], ctxs[i])
-if tr and tr ~= "" and tr ~= it.text then
-Trans.Cache[it.text] = tr
-Trans.Order = Trans.Order or {}
-Trans.Order[#Trans.Order + 1] = it.text
-Trans._cnt = (Trans._cnt or 0) + 1
-for j = 1, #it.applies do pcall(it.applies[j], tr) end
-good = good + 1
-end
-end
-return good > 0
-end
 Trans.Drain = function()
-while Trans.Active < Trans.Max and #Trans.Queue > 0 do
+while Trans.Active < Trans.MAX and #Trans.Queue > 0 do
 local groups, order, rest = {}, {}, {}
 for i = 1, #Trans.Queue do
 local it = Trans.Queue[i]
 local g = groups[it.text]
 if g then
 g.applies[#g.applies + 1] = it.apply
-elseif #order < Trans.BatchMax then
+elseif #order < Trans.BATCH then
 g = { text = it.text, applies = { it.apply } }
 groups[it.text] = g
 order[#order + 1] = it.text
@@ -9702,611 +9334,391 @@ local items = {}
 for i = 1, #order do items[i] = groups[order[i]] end
 Trans.Active = Trans.Active + 1
 task.spawn(function()
-local done = false
-if #items > 1 then done = pcall(Trans.RunBatch, items) end
-if not done then
+local ok = false
+if #items > 1 then
+local ctxs, sends = {}, {}
+for i = 1, #items do
+local c = Trans.Pre(items[i].text)
+ctxs[i] = c
+sends[i] = c.send
+end
+local arr = Trans.RequestBatch(sends, "zh")
+if arr then
+ok = true
 for i = 1, #items do
 local it = items[i]
-local okT, tr = pcall(Trans.Translate, it.text, true)
-if okT and tr and tr ~= it.text then
+local tr = Trans.Post(arr[i], ctxs[i])
+if tr and tr ~= it.text then
+Trans.CachePut(it.text, tr)
+for j = 1, #it.applies do pcall(it.applies[j], tr) end
+end
+end
+end
+end
+if not ok then
+for i = 1, #items do
+local it = items[i]
+local tr = Trans.Translate(it.text, true, "zh")
+if tr then
+Trans.CachePut(it.text, tr)
 for j = 1, #it.applies do pcall(it.applies[j], tr) end
 end
 end
 end
 Trans.Active = Trans.Active - 1
-if Trans.Active < Trans.Max and #Trans.Queue > 0 then Trans.Drain() end
+if Trans.Active < Trans.MAX and #Trans.Queue > 0 then Trans.Drain() end
 end)
 end
 end
-function Trans.Async(text, applyFn)
+Trans.Async = function(text, applyFn)
 if not T.Translate then return end
 if type(text) ~= "string" or text == "" then return end
+if Trans.KEEP[text] then return end
 if not Trans.Should(text) then return end
-local hit = Trans.Cache[text] or Trans.QUICK[text:lower()]
-if hit then pcall(applyFn, hit) return end
+local hit = Trans.Cache[text]
+if type(hit) == "string" then
+pcall(applyFn, hit)
+return
+end
 if #Trans.Queue > 200 then return end
 Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn }
 Trans.Drain()
 end
-function Trans.Prewarm()
-task.spawn(function()
-local ok, r = pcall(Trans.Translate, "warmup", true)
-if ok and r then Trans.Cache["warmup"] = r end
-F.Out("[翻译] 服务预热完成(system prompt 的 KV 缓存已就绪)")
-end)
+function F.IsUnderCoreGui(obj)
+local cg = nil
+pcall(function() cg = game:GetService("CoreGui") end)
+if not cg then return false end
+local p = obj
+for _ = 1, 20 do
+p = p and p.Parent
+if not p then return false end
+if p == cg then return true end
 end
-Trans.PN = {}
-Trans.RefreshPN = function()
-local t, n = {}, 0
-pcall(function()
-local list = game:GetService("Players"):GetPlayers()
-n = #list
-for i = 1, n do
-local pl = list[i]
-local nm = pl.Name
-if type(nm) == "string" and #nm >= 3 then t[nm] = true t[string.lower(nm)] = true end
-local dn = pl.DisplayName
-if type(dn) == "string" and #dn >= 3 then t[dn] = true t[string.lower(dn)] = true end
+return false
 end
-end)
-if Trans._pnN ~= n then
-Trans._pnN = n
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
-end
-Trans.PN = t
-end
-Trans.IsOurs = function(obj)
-local p, steps = obj, 0
-while p and steps < 16 do
+function F.IsOurGui(obj)
+local p = obj
+for _ = 1, 14 do
+p = p and p.Parent
+if not p then return false end
 if p:IsA("ScreenGui") then
 local ok, v = pcall(function() return p:GetAttribute("CMOwned") end)
 if ok and v == true then return true end
 end
-p = p.Parent
-steps = steps + 1
 end
 return false
 end
-Trans.OFFICIAL = {
-robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
-experiencechat = true, appchat = true, topbarapp = true, robloxpromptgui = true,
-foundationoverlay = true, screenshotscarousel = true, capturemanager = true,
-captureoverlay = true, momentscreationflow = true, robloxnetworkpausenotification = true,
-toastnotification = true, teleporteffectgui = true, adguiinteractivitycontrols = true,
-immersivebrandedads = true, rewardedvideoadplayer = true, gameinvite = true,
-bulkpurchaseapp = true, inexperiencetransferapp = true, cancelsubscriptionapp = true,
-commercepurchaseapp = true, systemscrim = true, universalsharesheetscreenguiroot = true,
-inexperiencedetailspromptapp = true, inexperienceinterventionapp = true,
-purchasepromptapp = true, publishassetprompt = true, avatareditorpromptsapp = true,
-socialcontexttoast = true, ingamefullscreentitlebarscreen = true,
-headsetdisconnecteddialog = true, shortcutbar = true, emotesmenu = true,
-authmenu = true, permissions = true, notificationbanner = true, cursorcontainer = true,
-foundationcursorcontainer = true, onrootedlistener = true, stylesheet = true,
-corescriptlocalization = true, playereventlisteners = true,
-}
-Trans.IsOfficial = function(obj)
-local cg = nil
-pcall(function() cg = game:GetService("CoreGui") end)
-if not cg then return false end
-local p, steps, inCG, hit = obj, 0, false, false
-while p and steps < 20 do
-p = p.Parent
-steps = steps + 1
-if p == nil then break end
-if p == cg then inCG = true break end
-local nm = p.Name
-if type(nm) == "string" and Trans.OFFICIAL[string.lower(nm)] then hit = true end
-end
-if not inCG then return false end
-return hit
-end
-Trans.TV = function(obj)
+Trans.TextVisible = function(obj)
 local ok, v = pcall(function() return obj.TextVisible end)
 if ok then return v end
 return nil
 end
-Trans._skip = { ours = 0, official = 0, invisible = 0 }
-Trans.NO_TRANSLATE_KEYS = { "atlas", "codex", "encyclopedia", "compendium", "index", "图鉴", "索引" }
-Trans.SkipEl = function(obj)
-if Trans.TV(obj) == false then
-Trans._skip.invisible = Trans._skip.invisible + 1
-return "TextVisible=false"
-end
+Trans.GuiEl = function(obj)
+if not obj or not obj.Parent then return end
+local cls = obj.ClassName
+if cls ~= "TextLabel" and cls ~= "TextButton" and cls ~= "TextBox" then return end
+if obj.Visible == false then return end
+if Trans.TextVisible(obj) == false then return end
 local tt = obj.TextTransparency
-if type(tt) == "number" and tt >= 0.95 then
-Trans._skip.invisible = Trans._skip.invisible + 1
-return "文字不可见"
+if type(tt) == "number" and tt >= 0.95 then return end
+if F.IsOurGui(obj) then return end
+if F.IsUnderCoreGui(obj) then return end
+if cls == "TextBox" then
+local editable = true
+pcall(function() editable = obj.TextEditable end)
+local ph = nil
+pcall(function() ph = obj.PlaceholderText end)
+if type(ph) == "string" and Trans.Should(ph) then
+Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
 end
-if Trans.IsOurs(obj) then
-Trans._skip.ours = Trans._skip.ours + 1
-return "我们自己的界面"
-end
-if Trans.IsOfficial(obj) then
-Trans._skip.official = Trans._skip.official + 1
-return "Roblox 官方界面"
-end
-local p, steps = obj, 0
-while p and steps < 8 do
-local nm = tostring(p.Name):lower()
-for _, kw in ipairs(Trans.NO_TRANSLATE_KEYS) do
-if nm:find(kw, 1, true) then
-Trans._skip.index = (Trans._skip.index or 0) + 1
-return "索引/图鉴"
+if editable == false then
+local body = nil
+pcall(function() body = obj.Text end)
+if type(body) == "string" and Trans.Should(body) then
+Trans.Async(body, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
 end
 end
-p = p.Parent
-steps = steps + 1
+return
 end
-return nil
+local txt = nil
+pcall(function() txt = obj.Text end)
+if type(txt) ~= "string" or txt == "" then return end
+if not Trans.Should(txt) then return end
+if not Trans.Hooked[obj] then
+Trans.Hooked[obj] = true
+pcall(function()
+local sig = obj:GetPropertyChangedSignal("Text")
+sig:Connect(function()
+if not T.Translate then return end
+local now = nil
+pcall(function() now = obj.Text end)
+if type(now) ~= "string" or now == "" then return end
+if Trans.Cache[now] then
+pcall(function() obj.Text = Trans.Cache[now] end)
+return
 end
-Trans.Reg = setmetatable({}, { __mode = "k" })
+local r = Trans.Reg[obj]
+if r and os.clock() - (r.at or 0) < 30 then return end
+pcall(Trans.GuiEl, obj)
+end)
+end)
+end
+local r0 = Trans.Reg[obj]
+if r0 and os.clock() - (r0.at or 0) < 30 then return end
+Trans.Reg[obj] = { raw = txt, at = os.clock() }
+Trans.Async(txt, function(tr)
+if obj.Parent and obj.Visible ~= false then pcall(function() obj.Text = tr end) end
+end)
+end
 Trans.RegCount = function()
 local n = 0
 for o in pairs(Trans.Reg) do if typeof(o) == "Instance" and o.Parent then n = n + 1 end end
 return n
 end
-Trans._sig = setmetatable({}, { __mode = "k" })
-Trans._watch = {}
-Trans.SigWatch = function(obj)
-if not obj or Trans._sig[obj] then return end
-if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
-Trans._sig[obj] = true
-pcall(function()
-local c = obj:GetPropertyChangedSignal("Text"):Connect(function()
-if T.Translate then pcall(function() Trans.GuiEl(obj) end) end
-end)
-Trans._watch[#Trans._watch + 1] = c
-end)
-end
-Trans.GuiElNoReg = function(obj)
-if not obj or obj.Visible == false then return end
-if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
-if Trans.SkipEl(obj) then return end
-local txt = obj.Text
-if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
-txt = Trans.RT.Strip(txt)
-end
-if txt and Trans.Should(txt) then
-Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false then
-local r = Trans.Reg[obj]
-if r then r.last = tr end
-obj.Text = tr
-end
-end)
-end
-end
-Trans.RetranslateAll = function()
-local items = {}
-for obj, r in pairs(Trans.Reg) do
-if typeof(obj) == "Instance" and obj.Parent and type(r.raw) == "string" then
-items[#items + 1] = { o = obj, raw = r.raw }
-else
-Trans.Reg[obj] = nil
-end
-end
-if #items == 0 then
-F.Out("[翻译] 还没有登记过任何界面控件(先让它扫一遍界面)")
-return 0
-end
-for i = 1, #items do
-local it = items[i]
-pcall(function() it.o.Text = it.raw end)
-pcall(Trans.GuiElNoReg, it.o)
-end
-F.Out("[翻译] 已把 " .. tostring(#items) .. " 个控件还原成原文并重新翻译(切语言/改词条后用这个)")
-return #items
-end
-function Trans.GuiEl(obj)
-if not obj then return end
-if obj.Visible == false then return end
-if Trans.TV(obj) == false then return end
-local tt0 = obj.TextTransparency
-if type(tt0) == "number" and tt0 >= 0.95 then return end
-if obj:IsA("TextBox") then
-local ph = obj.PlaceholderText
-if type(ph) == "string" and ph ~= "" and Trans.Should(ph) then
-Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
-end
-local editable = true
-pcall(function() editable = obj.TextEditable end)
-if editable == false then
-local txt = obj.Text
-if type(txt) == "string" and txt ~= "" and Trans.Should(txt) then
-Trans.Async(txt, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
-end
-end
-return
-end
-if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
-if Trans.SkipEl(obj) then return end
-do
-local txt = obj.Text
-if type(txt) == "string" and Trans.RT.HasTags(txt) and obj.RichText ~= true then
-txt = Trans.RT.Strip(txt)
-end
-if txt and Trans.Should(txt) then
-local r = Trans.Reg[obj]
-if r == nil then
-Trans.Reg[obj] = { raw = txt, last = nil, at = os.clock() }
-elseif os.clock() - (r.at or 0) < 30 then
-return
-elseif txt ~= r.raw or r.last == nil then
-r.raw = txt
-r.at = os.clock()
-end
-Trans.SigWatch(obj)
-Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false and Trans.TV(obj) ~= false then
-local tt1 = obj.TextTransparency
-if not (type(tt1) == "number" and tt1 >= 0.95) then
-local rec = Trans.Reg[obj]
-if rec then rec.last = tr end
-obj.Text = tr
-end
-end
-end)
-end
-end
-end
-function Trans.Scan(light)
-local pg = LP:FindFirstChild("PlayerGui")
-pcall(Trans.RefreshPN)
-Trans._skip = { ours = 0, official = 0, invisible = 0 }
-local roots = { pg }
-if C.TransOfficial and not light then
-pcall(function()
-for _, ch in ipairs(CoreGui:GetChildren()) do
-local nm = tostring(ch.Name)
-if not Trans.OFFICIAL[string.lower(nm)] then roots[#roots + 1] = ch end
-end
-end)
-end
-pcall(function() if gethui and gethui() then roots[#roots + 1] = gethui() end end)
-local diag = {}
-for _, root in ipairs(roots) do
-if root then
-local txtCnt, visCnt = 0, 0
+Trans.Scan = function()
+local LPl = game:GetService("Players").LocalPlayer
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return end
+local ok, list = pcall(function() return pg:GetDescendants() end)
+if not ok or type(list) ~= "table" then return end
+local txtN, visN = 0, 0
 local samples = {}
-for _, obj in ipairs(F.walk(root)) do
-local cls = obj.ClassName
-if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
-txtCnt = txtCnt + 1
-local vis = (obj.Visible ~= false) and (Trans.TV(obj) ~= false)
-if vis then
-visCnt = visCnt + 1
+for i = 1, #list do
+local o = list[i]
+if typeof(o) == "Instance" then
+local c = o.ClassName
+if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
+txtN = txtN + 1
+if o.Visible ~= false and Trans.TextVisible(o) ~= false then
+visN = visN + 1
 if #samples < 3 then
-local t = obj.Text
-if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 16) end
+local t = nil
+pcall(function() t = o.Text end)
+if type(t) == "string" and t ~= "" then samples[#samples + 1] = t:sub(1, 14) end
 end
 end
 end
-pcall(Trans.GuiEl, obj)
-end
-local sampleStr = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(无可显示文本)"
-diag[#diag + 1] = tostring(root.ClassName) .. "=" .. tostring(txtCnt) .. "/可见" .. tostring(visCnt) .. sampleStr
+pcall(Trans.GuiEl, o)
 end
 end
 if not Trans._diagOnce then
 Trans._diagOnce = true
-F.Out("[翻译·诊断] 界面根文本控件: " .. table.concat(diag, " · "))
+local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(无可显示文本)"
+F.Out("[翻译·诊断] PlayerGui 文本控件 " .. txtN .. " 个 / 可见 " .. visN .. " 个 " .. s)
 end
-if not light then
-pcall(function()
-for _, obj in ipairs(F.walk(workspace, 40000, 500)) do
-local cls = obj.ClassName
-if cls == "TextLabel" or cls == "TextButton" or cls == "TextBox" then
-pcall(Trans.GuiEl, obj)
+Trans._scanRound = (Trans._scanRound or 0) + 1
+if Trans._scanRound % 10 == 1 then
+F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
 end
 end
-end)
-end
-if not light then
-F.Out("[翻译] 扫描完成: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 跳过(不可见 " .. tostring(Trans._skip.invisible)
-.. " / 自己 " .. tostring(Trans._skip.ours) .. " / 官方 " .. tostring(Trans._skip.official) .. ")")
-end
-end
-function Trans.Health()
-local rf = Trans.Req()
-if type(rf) ~= "function" then return false, "执行器没有 request" end
-local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
-if not ok or type(res) ~= "table" then return false, "请求失败" end
-if (res.StatusCode or 0) ~= 200 then return false, "HTTP " .. tostring(res.StatusCode) end
-return true, tostring(res.Body or ""):sub(1, 120)
-end
-Trans.RestoreAll = function()
-if type(Trans.Reg) ~= "table" then return 0 end
-local n = 0
-for obj, r in pairs(Trans.Reg) do
-if typeof(obj) == "Instance" and obj.Parent and type(r.raw) == "string" then
-pcall(function()
-if obj.Text ~= r.raw then obj.Text = r.raw end
-end)
-n = n + 1
-end
-end
-Trans.Reg = setmetatable({}, { __mode = "k" })
-if n > 0 then F.Out("[翻译] 已关 · 界面还原成原文 " .. n .. " 个控件") end
-return n
-end
-function Trans.Disable()
-T.Translate = false
-pcall(Trans.WatchOff)
-Trans.HeartbeatOff()
-if Trans.Loop then Trans.Loop = nil end
-if T.ChatTranslate then F.ChatTranslateDisable() end
-if T.BubbleTranslate then F.BubbleTranslateDisable() end
-pcall(Trans.RestoreAll)
-pcall(Trans.Flush)
-end
-function Trans.Enable()
-T.Translate = true
-Trans.Load()
-local ok, body = Trans.Health()
-if not ok then
-F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ 双击打开「翻译模型开关.bat」把服务起起来再开翻译")
-end
-if Trans.Loop then Trans.HeartbeatOn() return true end
-pcall(Trans.GL.AddAuto)
-pcall(Trans.RefreshPN)
-C.TransOfficial = true
-Trans.Prewarm()
-local okScan, errScan = pcall(Trans.Scan)
-if not okScan then F.Out("[翻译] ⚠ 扫描界面时出错: " .. tostring(errScan) .. " —— 但仍会继续监听新出现的文字") end
-Trans.WatchOn()
-Trans.HeartbeatOn()
-Trans.Loop = task.spawn(function()
-local round = 0
-while T.Translate do
-task.wait(15)
-if not T.Translate then break end
-round = round + 1
-Trans.Scan(round % 4 ~= 0)
-end
-Trans.Loop = nil
-end)
-F.Out("[翻译] 已开: 新出现的文字立刻翻、文字变化即时跟上 · 界面每 15 秒复查一次(世界/官方界面 60 秒一次)")
-return true
+Trans.Stats = function()
+local cacheN = 0
+for _ in pairs(Trans.Cache) do cacheN = cacheN + 1 end
+local ago = "还没保存过"
+if Trans._savedAt and Trans._savedAt > 0 then ago = string.format("%.0f 秒前", os.clock() - Trans._savedAt) end
+F.Out("[翻译统计] 已翻 " .. tostring(Trans._cnt) .. " 条 · 缓存 " .. tostring(cacheN) .. " 条 · 待翻 "
+.. tostring(#Trans.Queue) .. " 条 · 累计请求 " .. tostring(Trans._reqN) .. " 次 · 上次保存: " .. ago
+.. " · 已自动保存 " .. tostring(Trans._saveCount) .. " 次")
 end
 Trans.WatchOn = function()
-if Trans._watchOn then return end
-Trans._watchOn = true
-local function one(d)
-if not T.Translate or not d then return end
-pcall(function() Trans.GuiEl(d) end)
-end
-local function watch(root)
-if not root then return end
+local LPl = game:GetService("Players").LocalPlayer
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return end
 pcall(function()
-Trans._watch[#Trans._watch + 1] = root.DescendantAdded:Connect(function(d)
-task.defer(function() one(d) end)
+Trans._watchConn = pg.DescendantAdded:Connect(function(d)
+task.defer(function() if T.Translate then pcall(Trans.GuiEl, d) end end)
 end)
 end)
-end
-pcall(function() watch(LP:FindFirstChild("PlayerGui")) end)
-pcall(function() watch(game:GetService("CoreGui")) end)
-pcall(function() if gethui then watch(gethui()) end end)
 end
 Trans.WatchOff = function()
-if Trans._watch then
-for _, c in ipairs(Trans._watch) do pcall(function() c:Disconnect() end) end
-end
-Trans._watch = {}
-Trans._sig = setmetatable({}, { __mode = "k" })
-Trans._watchOn = false
-end
-F._chatChanSkip = function(chName)
-if not chName then return false end
-local n = tostring(chName):lower()
-if n:find("world", 1, true) or n:find("global", 1, true) or n:find("世界", 1, true) or n:find("公告", 1, true) then return true end
-return false
+if Trans._watchConn then pcall(function() Trans._watchConn:Disconnect() end) Trans._watchConn = nil end
 end
 function F.ChatTranslateEnable()
-if F._chatTransHooked then return end
-local tcs = game:GetService("TextChatService")
-if not tcs then F.Out("[翻译] 本游戏没有 TextChatService, 聊天翻译不可用") return end
-pcall(function()
-local chans = {}
-local ch = tcs:FindFirstChild("TextChannels")
-if ch then for _, c in ipairs(ch:GetChildren()) do chans[#chans + 1] = c.Name end end
-F.Out("[聊天翻译·诊断] 频道列表: " .. ((#chans > 0) and table.concat(chans, " · ") or "(无)"))
-end)
-local prevIn = tcs.OnIncomingMessage
-if not (type(prevIn) == "function" and prevIn._cmOwner == "CM") then F._oldOnIncoming = prevIn end
-local hookedIn
+if F._chatConn then return end
 local ok = pcall(function()
-hookedIn = function(message)
-local props = nil
-if F._oldOnIncoming then
-local ok2, p = pcall(F._oldOnIncoming, message)
-if ok2 then props = p end
-end
-if T.ChatTranslate and message and message.Text then
+local tcs = game:GetService("TextChatService")
+if not tcs then error("no-tcs") end
+F._chatConn = tcs.MessageReceived:Connect(function(message)
+if not T.Translate or not message then return end
+local txt = message.Text
+if type(txt) ~= "string" or txt == "" then return end
+local LPl = game:GetService("Players").LocalPlayer
 local src = message.TextSource
-if not src or src.Name ~= LP.Name then
-local chName = nil
-pcall(function() chName = message.TextChannel and message.TextChannel.Name end)
-if chName then
-F._chatChans = F._chatChans or {}
-if not F._chatChans[chName] then
-F._chatChans[chName] = true
-F.Out("[聊天翻译·诊断] 见到频道 \"" .. tostring(chName) .. "\" 的消息: " .. tostring(message.Text):sub(1, 24))
-end
-end
-if F._chatChanSkip and F._chatChanSkip(chName) then return props end
-local _nowc = os.clock()
-if F._chatTransAt and _nowc - F._chatTransAt < 0.25 then return props end
-F._chatTransAt = _nowc
-local tr = Trans.Translate(message.Text, true)
-if tr and tr ~= "" and tr ~= message.Text then
-props = props or Instance.new("TextChatMessageProperties")
-props.Text = message.Text .. "\n【" .. tr .. "】"
-end
-local pref = nil
-pcall(function() pref = message.PrefixText end)
-if type(pref) == "string" and pref ~= "" and Trans.Should(pref) then
-local trp = Trans.Translate(pref, true)
-if trp and trp ~= "" and trp ~= pref then
-props = props or Instance.new("TextChatMessageProperties")
-props.PrefixText = trp
-end
-end
-end
-end
-return props
-end
-hookedIn._cmOwner = "CM"
-tcs.OnIncomingMessage = hookedIn
+if src and LPl and src.UserId == LPl.UserId then return end
+local ch = message.TextChannel
+local chName = ch and ch.Name or ""
+if chName:find("world", 1, true) or chName:find("global", 1, true)
+or chName:find("世界", 1, true) or chName:find("公告", 1, true) then return end
+if not Trans.Should(txt) then return end
+if Trans.Cache[txt] then return end
+Trans.Async(txt, function() end)
 end)
-if ok then F._chatTransHooked = true F.Out("[翻译] 公屏聊天翻译已开启") end
+end)
+if ok and F._chatConn then
+F.Out("[翻译] 聊天翻译已开(世界频道跳过, 只翻本地频道)")
+else
+F.Out("[翻译] 本游戏没有标准聊天服务, 聊天翻译不可用")
+end
 end
 function F.ChatTranslateDisable()
-if not F._chatTransHooked then return end
-pcall(function()
-local tcs = game:GetService("TextChatService")
-if tcs and tcs.OnIncomingMessage and tcs.OnIncomingMessage._cmOwner == "CM" then
-tcs.OnIncomingMessage = F._oldOnIncoming
-end
-end)
-F._chatTransHooked = false
+if F._chatConn then pcall(function() F._chatConn:Disconnect() end) F._chatConn = nil end
 end
 function F.BubbleTranslateEnable()
-if F._bubbleTransHooked then return end
-local tcs = game:GetService("TextChatService")
-if not tcs then return end
-local prevBb = tcs.OnBubbleAdded
-if not (type(prevBb) == "function" and prevBb._cmOwner == "CM") then F._oldOnBubble = prevBb end
-local hookedBb
-local ok = pcall(function()
-hookedBb = function(message, adornee)
-local props = nil
-if F._oldOnBubble then
-local ok2, p = pcall(F._oldOnBubble, message, adornee)
-if ok2 then props = p end
-end
-if T.BubbleTranslate and message and message.Text then
-local src = message.TextSource
-if not src or src.Name ~= LP.Name then
-local tr = Trans.Translate(message.Text, true)
-if tr and tr ~= "" and tr ~= message.Text then
-props = props or Instance.new("BubbleChatMessageProperties")
-props.Text = tr
-end
-end
-end
-return props
-end
-hookedBb._cmOwner = "CM"
-tcs.OnBubbleAdded = hookedBb
+if F._bubConn then return end
+local LPl = game:GetService("Players").LocalPlayer
+if not LPl then return end
+pcall(function()
+F._bubConn = LPl.Chatted:Connect(function(message)
+if not T.Translate or type(message) ~= "string" or message == "" then return end
+if not Trans.Should(message) then return end
+if not Trans.Cache[message] then Trans.Async(message, function() end) end
 end)
-if ok then F._bubbleTransHooked = true F.Out("[翻译] 气泡翻译已开启") end
+end)
 end
 function F.BubbleTranslateDisable()
-if not F._bubbleTransHooked then return end
+if F._bubConn then pcall(function() F._bubConn:Disconnect() end) F._bubConn = nil end
+end
+F.ChatSend = function(msg)
+local sent = false
 pcall(function()
 local tcs = game:GetService("TextChatService")
-if tcs and tcs.OnBubbleAdded and tcs.OnBubbleAdded._cmOwner == "CM" then
-tcs.OnBubbleAdded = F._oldOnBubble
+local tch = tcs and tcs:FindFirstChild("TextChannels")
+local ch = tch and (tch:FindFirstChild("RBXGeneral") or tch:FindFirstChild("SayChannel"))
+if ch and ch:IsA("TextChannel") then
+local okS = pcall(function() ch:SendAsync(msg) end)
+if okS then sent = true end
 end
 end)
-F._bubbleTransHooked = false
+if not sent then
+pcall(function()
+local chat = game:GetService("Chat")
+if chat and chat.Chat then
+chat:Chat(game:GetService("Players").LocalPlayer, msg, "All")
+sent = true
+end
+end)
+end
+return sent
+end
+F.ChatSendTranslated = function(msg)
+task.spawn(function()
+local lang = C.TransLang or "en"
+local tr = Trans.Translate(msg, true, lang)
+if not tr then
+F.Out("[翻译发出] ⚠ 翻译失败 ⇒ 本次没有发出(原文没丢) —— 检查「翻译模型开关.bat」是否在跑, 再重试")
+return
+end
+local okSend = F.ChatSend(tr)
+if okSend then
+F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
+else
+F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏没有可用聊天接口 ⇒ 发送失败")
+end
+end)
 end
 F.ChatIMEBoxEnable = function()
-if F._chatIMEBox then return end
-pcall(function()
+if F._imeBox and F._imeBox.Parent then return end
+local LPl = game:GetService("Players").LocalPlayer
+local pg = LPl and LPl:FindFirstChild("PlayerGui")
+if not pg then return end
 local sg = Instance.new("ScreenGui")
-sg.Name = "CM_ChatIMEBox"
+sg.Name = "CM_ChatIME"
 sg.ResetOnSpawn = false
-sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-sg.Parent = (gethui and pcall(gethui) and gethui()) or game:GetService("CoreGui")
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 999998
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+pcall(function() sg.Parent = pg end)
 local box = Instance.new("TextBox")
 box.Name = "CM_ChatInput"
-box.Size = UDim2.new(0.5, 0, 0, 32)
-box.Position = UDim2.new(0.25, 0, 0.9, 0)
-box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-box.BackgroundTransparency = 0.35
-box.TextColor3 = Color3.fromRGB(255, 255, 255)
-box.PlaceholderText = "[CM] 翻译发出：输入中文 → 回车翻成目标语言发出"
+box.Size = UDim2.new(0, 330, 0, 34)
+box.Position = UDim2.new(0, 16, 1, -64)
+box.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+box.BackgroundTransparency = 0.15
+box.BorderSizePixel = 0
+box.TextColor3 = Color3.fromRGB(240, 240, 245)
+box.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+box.TextSize = 14
+box.Font = Enum.Font.Gotham
 box.ClearTextOnFocus = false
-box.TextEditable = true
-box.Font = Enum.Font.Code
-box.TextSize = 16
+box.Text = ""
+box.PlaceholderText = "[翻译发出] 输入中文 → 回车 → 翻成目标语言发出"
 box.Parent = sg
-F._chatIMEBox = sg
-local luLast, luAt = "", 0
-pcall(function()
-box:GetPropertyChangedSignal("Text"):Connect(function()
-pcall(function()
-local t = box.Text
-if t == luLast then return end
-local prev = luLast
-local now = os.clock()
-luLast = t
-if now - luAt < 0.12 and #prev >= 1 and #t == #prev + 1
-and t:sub(1, #prev) == prev and t:sub(-1) == prev:sub(-1) then
-box.Text = prev
-luLast = prev
-return
-end
-luAt = now
-end)
-end)
-end)
-local lastTxt, lastAt = nil, 0
-local function send()
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 6)
+corner.Parent = box
+box.FocusLost:Connect(function(enterPressed)
+if not enterPressed then return end
 local txt = box.Text
 if not txt or txt == "" then return end
-local now = os.clock()
-if txt == lastTxt and (now - lastAt) < 0.6 then
-box.Text = ""
-return
-end
-lastTxt, lastAt = txt, now
 box.Text = ""
 pcall(function() box:ReleaseFocus() end)
 F.ChatSendTranslated(txt)
+end)
+F._imeBox = sg
+F.Out("[翻译发出] 已开: 左下角输入中文 → 回车 → 自动翻成目标语言发出")
 end
-box.FocusLost:Connect(function(enterPressed)
-if enterPressed then send() end
-end)
-F.Out("[翻译发出] 已开：左下角框输入中文 → 回车翻成目标语言发出（不再翻倍）")
-end)
+F.ChatIMEBoxDisable = function()
+pcall(function() if F._imeBox and F._imeBox.Parent then F._imeBox:Destroy() end end)
+F._imeBox = nil
 end
 F.ChatBoxSet = function(on)
 T.ChatIMEBox = on and true or false
 if on then pcall(F.ChatIMEBoxEnable) else pcall(F.ChatIMEBoxDisable) end
 end
-F.ChatIMEBoxDisable = function()
-T.ChatIMEBox = false
-pcall(function() if F._chatIMEBox and F._chatIMEBox.Parent then F._chatIMEBox:Destroy() end end)
-F._chatIMEBox = nil
+Trans.Health = function()
+local rf = Trans.Req()
+if type(rf) ~= "function" then return false, "no-request" end
+local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+if not ok or type(res) ~= "table" then return false, "request-failed" end
+if tonumber(res.StatusCode or 0) ~= 200 then return false, "HTTP " .. tostring(res.StatusCode) end
+return true
 end
-F.ChatSend = function(msg)
-pcall(function()
-local tcs = game:GetService("TextChatService")
-local ch = tcs and tcs:FindFirstChild("TextChannels")
-and (tcs.TextChannels:FindFirstChild("RBXGeneral") or tcs.TextChannels:FindFirstChild("SayChannel"))
-if ch and ch:IsA("TextChannel") then ch:SendAsync(msg) return end
-local chat = game:GetService("Chat")
-if chat and chat.Chat then chat:Chat(game.Players.LocalPlayer, msg, "All") return end
-F.Out("[IME聊天] 发送失败：本游戏聊天接口不可用")
+function Trans.Enable()
+T.Translate = true
+Trans.Load()
+local name = nil
+pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
+Trans.KeepAdd(name)
+local okH = false
+do
+local rf = Trans.Req()
+if type(rf) == "function" then
+local okP, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
+okH = okP and type(res) == "table" and tonumber(res.StatusCode or 0) == 200
+end
+end
+if not okH then
+F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. Trans.HOST .. ") ⇒ 双击「翻译模型开关.bat」把服务起起来再开翻译")
+end
+pcall(Trans.Scan)
+Trans.WatchOn()
+pcall(F.ChatTranslateEnable)
+pcall(F.BubbleTranslateEnable)
+if not Trans.Loop then
+Trans.Loop = task.spawn(function()
+while T.Translate do
+task.wait(Trans.SCAN_EVERY)
+if not T.Translate then break end
+pcall(Trans.Scan)
+end
+Trans.Loop = nil
 end)
 end
-F.ChatSendTranslated = function(msg)
-pcall(function()
-local lang = C.TransLang or "en"
-local tr = Trans.Request(msg, lang)
-if tr and tr ~= "" and tr ~= msg then
-tr = tr:gsub("^%s*(翻译|译文|中文|汉化)%s*[:：]%s*", "")
-tr = tr:gsub("^%s+", ""):gsub("%s+$", "")
-if tr ~= "" then
-F.ChatSend(tr)
-F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
-return
+if not Trans._tickOn then
+Trans._tickOn = true
+task.spawn(Trans.SaveTick)
 end
+F.Out("[翻译] 已开: 界面 + 聊天 + 气泡 全翻 · 界面每 " .. Trans.SCAN_EVERY .. " 秒复查一次")
+return true
 end
-F.Out("[翻译发出] ⚠ 翻译失败(本地模型无响应) ⇒ 本次【没有发出任何内容】(防止中文原样发出去) —— 确认「翻译模型开关.bat」在跑后重新输入再发")
-end)
+function Trans.Disable()
+T.Translate = false
+Trans.WatchOff()
+Trans.Loop = nil
+pcall(F.ChatTranslateDisable)
+pcall(F.BubbleTranslateDisable)
+pcall(Trans.Flush)
+F.Out("[翻译] 已关 · 译文保留在界面上 · 缓存已保存")
 end
 function F.TranslateDisable() Trans.Disable() end
 function F.TranslateEnable() return Trans.Enable() end
@@ -12798,30 +12210,16 @@ if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
 Tabs.Trans:AddSection("本地翻译服务")
-Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("Translate", { Title = "翻译总开关(界面 + 聊天 + 气泡 全翻)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
-if v then
-F.TranslateEnable()
-else
-F.TranslateDisable()
-end
-end })
-Tabs.Trans:AddDropdown("TransScope", { Title = "翻译范围", Values = { "只翻译界面", "界面 + 公屏聊天", "界面 + 公屏 + 气泡(全部)" }, Default = "只翻译界面", Callback = function(v)
-local s = tostring(v)
-local chat = s:find("公屏", 1, true) ~= nil
-local bub = s:find("气泡", 1, true) ~= nil
-T.ChatTranslate, T.BubbleTranslate = chat, bub
-if F._cfgSyncing then return end
-if chat then pcall(F.ChatTranslateEnable) else pcall(F.ChatTranslateDisable) end
-if bub then pcall(F.BubbleTranslateEnable) else pcall(F.BubbleTranslateDisable) end
-F.Out("[翻译] 范围 = " .. s)
+if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
 Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
 Default = "英文", Callback = function(v)
 local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
 C.TransLang = code
 if F._cfgSyncing then return end
-F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 中文聊天框输入的中文会翻成它再发出")
+F.Out("[翻译发出] 目标语言已选 " .. tostring(v) .. " —— 输入的中文会翻成它再发出")
 end })
 local transStatBtn = Tabs.Trans:AddButton({ Title = "翻译进度: 等待开启翻译", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
@@ -12831,8 +12229,8 @@ while true do
 task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
-transStatBtn:SetTitle(string.format("翻译进度: 已翻 %d 条 · 待翻 %d 条 · 失败 %d 次(点这里看详情)",
-Trans._cnt or 0, #(Trans.Queue or {}), Trans._localFails or 0))
+transStatBtn:SetTitle(string.format("翻译进度: 已翻 %d 条 · 待翻 %d 条 · 缓存命中不重复翻(点这里看详情)",
+Trans._cnt or 0, #(Trans.Queue or {})))
 end)
 end
 end
@@ -12848,17 +12246,16 @@ Tabs.Trans:AddButton({ Title = "清空翻译缓存(下次全部重翻)", Callbac
 Trans.Cache = {}
 Trans.Order = {}
 Trans._cnt = 0
-if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+Trans.ShouldCacheClear()
 if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do
-if type(r) == "table" then r.at = 0 r.last = nil end
+if type(r) == "table" then r.at = 0 end
 end
 end
 task.spawn(function() pcall(Trans.Flush) end)
-F.Out("[翻译] 缓存已清空 ⇒ 已登记的界面文字会重新翻一遍")
+F.Out("[翻译] 缓存已清空 ⇒ 界面文字会重新翻一遍")
 end })
-Tabs.Trans:AddSection("聊天 / 气泡")
-Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文→目标语言发出)", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("ChatIMEBox", { Title = "翻译发出(输入中文 → 目标语言发出)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 pcall(F.ChatBoxSet, v)
 end })
