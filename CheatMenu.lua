@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 20:23 sha 6900189e bytes 472918'):format('2026-10-06 20:23','6900189e',472918))
+print(('[CheatMenu] build 2026-10-06 20:52 sha 94c6b817 bytes 476767'):format('2026-10-06 20:52','94c6b817',476767))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9163,6 +9163,28 @@ Trans.QUICK = {
 ["owned"] = "已拥有", ["equipped"] = "已装备", ["win"] = "胜利", ["lose"] = "失败", ["ready"] = "准备",
 ["equip"] = "装备", ["use"] = "使用", ["slots"] = "槽位", ["plot"] = "基地", ["gems shop"] = "宝石商店",
 ["op"] = "强力", ["afk"] = "挂机", ["dps"] = "输出", ["pvp"] = "对战", ["pve"] = "刷怪",
+["reset"] = "重置", ["leave"] = "离开", ["join"] = "加入", ["create"] = "创建", ["delete"] = "删除",
+["save"] = "保存", ["load"] = "加载", ["exit"] = "退出", ["pause"] = "暂停", ["retry"] = "重试",
+["accept"] = "接受", ["decline"] = "拒绝", ["on"] = "开", ["off"] = "关", ["auto"] = "自动",
+["all"] = "全部", ["none"] = "无", ["random"] = "随机", ["custom"] = "自定义", ["default"] = "默认",
+["new"] = "新建", ["high"] = "高", ["low"] = "低", ["fast"] = "快速", ["slow"] = "缓慢",
+["easy"] = "简单", ["hard"] = "困难", ["normal"] = "普通", ["wave"] = "波次", ["boss"] = "首领",
+["enemy"] = "敌人", ["player"] = "玩家", ["team"] = "队伍", ["solo"] = "单人", ["lobby"] = "大厅",
+["waiting"] = "等待中", ["loading"] = "加载中", ["error"] = "错误", ["warning"] = "警告", ["success"] = "成功",
+["failed"] = "失败", ["score"] = "得分", ["points"] = "积分", ["speed"] = "速度", ["power"] = "力量",
+["defense"] = "防御", ["weapon"] = "武器", ["item"] = "物品", ["skill"] = "技能", ["ability"] = "能力",
+["buff"] = "增益", ["mana"] = "法力", ["energy"] = "能量", ["ammo"] = "弹药", ["reload"] = "换弹",
+["attack"] = "攻击", ["jump"] = "跳跃", ["run"] = "奔跑", ["sprint"] = "冲刺", ["fly"] = "飞行",
+["interact"] = "互动", ["pick up"] = "拾取", ["drop"] = "丢弃", ["build"] = "建造", ["craft"] = "制作",
+["mine"] = "挖掘", ["teleport"] = "传送", ["map"] = "地图", ["objective"] = "目标", ["mission"] = "任务",
+["daily"] = "每日", ["weekly"] = "每周", ["event"] = "活动", ["rare"] = "稀有", ["epic"] = "史诗",
+["legendary"] = "传说", ["pass"] = "通行证", ["season"] = "赛季", ["pack"] = "礼包", ["chest"] = "宝箱",
+["crate"] = "宝箱", ["gacha"] = "抽卡", ["roll"] = "抽取", ["bonus"] = "加成", ["login"] = "登录",
+["profile"] = "资料", ["friends"] = "好友", ["party"] = "组队", ["guild"] = "公会", ["chat"] = "聊天",
+["message"] = "消息", ["options"] = "选项", ["controls"] = "操作", ["graphics"] = "画质", ["audio"] = "音频",
+["volume"] = "音量", ["language"] = "语言", ["fullscreen"] = "全屏", ["fps"] = "帧率", ["ping"] = "延迟",
+["kick"] = "踢出", ["ban"] = "封禁", ["report"] = "举报", ["mute"] = "静音", ["invite"] = "邀请",
+["vote"] = "投票",
 }
 Trans.LANGS = {
 zh = "Chinese", en = "English", ja = "Japanese", ko = "Korean",
@@ -9287,12 +9309,13 @@ function Trans.Req()
 return (type(syn) == "table" and syn.request) or AC.cap("request")
 or (type(http) == "table" and http.request) or AC.cap("http_request")
 end
-function Trans.Request(text)
+-- 多通道翻译：本地 llama-server 优先，失败自动回退远程免费 API（MyMemory）
+Trans.REMOTE = { on = true, base = "https://api.mymemory.translated.net/get", cool = 30 }
+Trans.LANGMAP = { zh = "zh-CN", en = "en", ja = "ja", ko = "ko", th = "th", ru = "ru", ar = "ar", id = "id" }
+Trans._localDead = 0
+function Trans.RequestLocal(text)
 local rf = Trans.Req()
-if type(rf) ~= "function" then
-F.Out("[翻译] ❌ 执行器没有 request 函数, 本地服务用不了(只能用 HttpService, 而它到不了 localhost)")
-return nil
-end
+if type(rf) ~= "function" then return nil, "no request" end
 local body = HS:JSONEncode({
 model = Trans.MODEL,
 messages = {
@@ -9316,6 +9339,35 @@ local ok2, d = pcall(HS.JSONDecode, res.Body)
 if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "bad json" end
 local msg = d.choices[1].message
 return msg and msg.content, nil
+end
+function Trans.RequestRemote(text)
+if not Trans.REMOTE.on then return nil, "远程回退已关" end
+local rf = Trans.Req()
+if type(rf) ~= "function" then return nil, "no request" end
+local target = Trans.LANGMAP[C.TransLang or "zh"] or "zh-CN"
+local q = nil
+pcall(function() q = HS:UrlEncode(text) end)
+if not q then return nil, "urlencode fail" end
+local url = Trans.REMOTE.base .. "?q=" .. q .. "&langpair=en|" .. target
+local ok, res = pcall(function() return rf({ Url = url, Method = "GET" }) end)
+if not ok or type(res) ~= "table" or (res.StatusCode or 0) ~= 200 then
+return nil, "remote HTTP " .. tostring(res and res.StatusCode or "fail")
+end
+local ok2, d = pcall(HS.JSONDecode, res.Body)
+if not ok2 or type(d) ~= "table" then return nil, "remote bad json" end
+local t = d.responseData and d.responseData.translatedText
+if type(t) ~= "string" or t == "" then return nil, "remote empty" end
+return t, nil
+end
+function Trans.Request(text)
+local now = os.clock()
+if now - (Trans._localDead or 0) > Trans.REMOTE.cool then
+local r, err = Trans.RequestLocal(text)
+if r then return r end
+Trans._localDead = now
+F.Out("[翻译·通道] 本地服务不可用(" .. tostring(err) .. ") ⇒ 切远程通道(冷却 " .. Trans.REMOTE.cool .. " 秒)")
+end
+return Trans.RequestRemote(text)
 end
 Trans.RT = { O1 = "\226\159\166", C1 = "\226\159\167" }
 Trans.RT.HasTags = function(s)
