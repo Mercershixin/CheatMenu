@@ -9080,9 +9080,10 @@ local pg = LP:FindFirstChild("PlayerGui")
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 local roots = { pg }
 if C.TransOfficial then roots[#roots + 1] = CoreGui end
+pcall(function() if gethui and gethui() then roots[#roots + 1] = gethui() end end)
 for _, root in ipairs(roots) do
 if root then
-for _, obj in ipairs(F.walk(root)) do Trans.GuiEl(obj) end
+for _, obj in ipairs(F.walk(root)) do pcall(Trans.GuiEl, obj) end
 end
 end
 for _, obj in ipairs(workspace:GetChildren()) do
@@ -9090,6 +9091,8 @@ if obj:IsA("ProximityPrompt") and obj.ActionText and obj.ActionText ~= "" then
 Trans.Async(obj.ActionText, function(tr) if obj.Parent then obj.ActionText = tr end end)
 end
 end
+F.Out("[翻译] 扫描完成: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 跳过(不可见 " .. tostring(Trans._skip.invisible)
+.. " / 自己 " .. tostring(Trans._skip.ours) .. " / 官方 " .. tostring(Trans._skip.official) .. ")")
 end
 function Trans.Health()
 local rf = Trans.Req()
@@ -9135,14 +9138,15 @@ if Trans.Loop then Trans.HeartbeatOn() return true end
 pcall(Trans.GL.AddAuto)
 C.TransOfficial = false
 Trans.Prewarm()
-Trans.Scan()
+local okScan, errScan = pcall(Trans.Scan)
+if not okScan then F.Out("[翻译] ⚠ 扫描界面时出错: " .. tostring(errScan) .. " —— 但仍会继续监听新出现的文字") end
 Trans.WatchOn()
 Trans.HeartbeatOn()
 Trans.Loop = task.spawn(function()
 while T.Translate do
 task.wait(15)
 if not T.Translate then break end
-Trans.Scan()
+pcall(Trans.Scan)
 end
 Trans.Loop = nil
 end)
