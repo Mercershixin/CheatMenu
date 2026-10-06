@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 10:20 sha 73444002 bytes 443154'):format('2026-10-06 10:20','73444002',443154))
+print(('[CheatMenu] build 2026-10-06 10:40 sha 2c98e953 bytes 443445'):format('2026-10-06 10:40','2c98e953',443445))
 local F = {}
-F.VERSION = "v16.9.28"
+F.VERSION = "v16.9.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1843,6 +1843,7 @@ function F.AntiFlingEnable()
 if T.AntiFling and #F._flingConns > 0 then return end
 T.AntiFling = true
 local function fix()
+if not T.AntiFling then pcall(F.AntiFlingDisable) return end
 local _, _, root = GC()
 if not root then return end
 local lim = math.max(8000, (tonumber(C.SpeedValue) or 0) * 2.5, (tonumber(C.FlyValue) or 0) * 2.5)
@@ -2996,6 +2997,7 @@ end
 local function GodEnable()
 if GodConn then return end
 local function apply()
+if not T.LockHealth then pcall(LockHealthDisable) return end
 local _, hum = GC()
 if not hum then return end
 if hum.MaxHealth ~= 1e6 then pcall(function() hum.MaxHealth = 1e6 end) end
@@ -3019,6 +3021,7 @@ function F.AntiRagdollEnable()
 if F._antiRagdollConn then return end
 local arLast, arLastHum = 0, nil
 local function apply(force)
+if not T.AntiRagdoll then pcall(F.AntiRagdollDisable) return end
 local ch, hum = GC()
 if not hum then return end
 if not force then
@@ -4673,6 +4676,7 @@ end
 end)
 local ncLast = 0
 local function noclip()
+if not T.NoClip then pcall(F.NoClipDisable) return end
 local ch = LP.Character
 if not ch then return end
 local now = os.clock()
@@ -6389,6 +6393,7 @@ lbl.Parent = sg
 F._hudGui = sg
 local frames, lastT = 0, os.clock()
 F._hudConn = RS.RenderStepped:Connect(function()
+if not T.Hud then pcall(F.HudDisable) return end
 frames = frames + 1
 local now = os.clock()
 if now - lastT >= 1 then
