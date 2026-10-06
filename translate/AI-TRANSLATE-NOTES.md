@@ -258,6 +258,22 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 - ⚠ 主动取舍：白名单没覆盖到的单个大写词会被「少翻」（冷门词），这是为「不把玩家名翻错」主动接受的代价。
 - 回归测试从源码提取 `ShouldV2` + 三个表，56 用例全过（`luau.exe` 实跑）。
 
+### ★ 词库扩充 + 游戏自汉化保护（2026-10-07，16.9.85）
+- 用户要求：「给词库学习下，哪些不建议翻译/二次翻译/过度翻译/游戏自带中文/服务器已翻译，这些不用翻」。
+- **词库扩充**（从云端缓存 `translate/cache/` 808 条里，把「单个首字母大写词」逐一分类，47 个既不在黑白名单的词全部补齐）：
+  - 黑名单 `NOTRANSLATE` 补 22 词：词缀/类型标签 `abyssal/alien/golden/diamond/rainbow/virus/legend`
+    + 游戏编造专有名词 `ballberto/bangello/burguro/cordraculo/croakumber/dumbelloni/fryuro/
+    garamararam/kerbaros/moggatron/orcalero/rockokoko/stadoini/tralaledon/triregnus`。
+  - 白名单 `TRANSLATE_WORDS` 补 23 词（该翻的普通词，避免被名字规则误拦）：
+    `brainrots/claimed/confirmation/exclusive/odds/perfect/rebirth/regular/sign/toggle/upgrades/
+    bacon/candy/carnival/farmer/kicky/woody/rocky/meowl/omega/patagotitan/rexosaurus/soccerdino`。
+- **游戏自汉化保护 `_selfCN`**（解决「二次翻译」竞态）：
+  - `Trans._selfCN[obj]`（弱引用）：控件文本**读到中文**时标记；`GuiEl` 开头 `if _selfCN[obj] then return end`。
+  - 区分「我们翻的中文」vs「游戏翻的中文」：写回统一走 `Trans.WriteText(obj, prop, val, expect)`，
+    写回时打 `_writing[obj]` 时间戳；读中文时若 `_writing` < 3 秒（刚写回）则不标记，否则标记 `_selfCN`。
+  - `WriteText` 还带 `expect`（原文）校验：写回前读当前文本，若 != 原文（游戏已改）则不覆盖 —— 防翻译延迟期被游戏抢先汉化。
+- 回归：`ShouldV2` 88 用例全过 + `WriteText` expect/_writing 逻辑测试通过 + 编译门禁通过。
+
 ## 八、备份 / 回滚纪律（本轮的血泪）
 
 - ⛔ **备份必须在"动手前"做**。本轮两次把 `pre-xxx` 备份做成了"改**后**快照"（名不副实），
