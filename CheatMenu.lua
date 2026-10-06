@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-06 11:00 sha 19a415df bytes 445549'):format('2026-10-06 11:00','19a415df',445549))
+print(('[CheatMenu] build 2026-10-06 11:23 sha 5b317239 bytes 445945'):format('2026-10-06 11:23','5b317239',445945))
 local F = {}
-F.VERSION = "v16.9.30"
+F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3190,9 +3190,9 @@ end
 function F.GuardSet(steady, hit, trap, atp, strong, bypass)
 if steady or hit then
 F.Try("CharEventsEnable", F.CharEventsEnable)
-pcall(F.MetaHookEnsure)
+F.Try("MetaHookEnsure", F.MetaHookEnsure)
 else
-pcall(F.CharEventsDisable)
+F.Try("CharEventsDisable", F.CharEventsDisable)
 end
 T.SteadyOn, T.HitGuard = steady, hit
 T.TrapWarn, T.SpeedAntiTP = trap, atp
@@ -5425,8 +5425,8 @@ deep = string.find(v, "④", 1, true) ~= nil,
 if not wants.guard then
 T.GuardOn, T.SpeedGuard, T.Spoof = false, false, false
 pcall(function() F.GuardSet(false, false, false, false) end)
-pcall(F.SpeedGuardDisable)
-pcall(F.SpoofDisable)
+F.Try("SpeedGuardDisable", F.SpeedGuardDisable)
+F.Try("SpoofDisable", F.SpoofDisable)
 else
 T.GuardOn = true
 pcall(function() F.GuardSet(true, true, true, false) end)
@@ -5733,7 +5733,7 @@ F._carryWatch = nil
 end
 end
 function F.CarryGuardDisable()
-pcall(F.CarryWatchDisable)
+F.Try("CarryWatchDisable", F.CarryWatchDisable)
 if F._cgConn then pcall(function() F._cgConn:Disconnect() end) F._cgConn = nil end
 F._egg, F._eggPart, F._eggHand = nil, nil, nil
 F._eggGone, F._eggBack, F._carry, F._carryBack = nil, 0, nil, 0
@@ -5916,11 +5916,11 @@ if F._npConn then pcall(function() F._npConn:Disconnect() end) F._npConn = nil e
 pcall(F.PosSrcProbeOff)
 end
 function F.AllInOneDisableAll()
-pcall(F.SpeedGuardDisable)
-pcall(F.CarryGuardDisable)
-pcall(F.GuardOnDisable)
-pcall(F.SpeedFreeDisable)
-pcall(F.SpoofDisable)
+F.Try("SpeedGuardDisable", F.SpeedGuardDisable)
+F.Try("CarryGuardDisable", F.CarryGuardDisable)
+F.Try("GuardOnDisable", F.GuardOnDisable)
+F.Try("SpeedFreeDisable", F.SpeedFreeDisable)
+F.Try("SpoofDisable", F.SpoofDisable)
 end
 function F.SpoofEnable()
 if F._spoofOn then return end
@@ -10534,18 +10534,18 @@ local on = v:find("②", 1, true) ~= nil or v:find("③", 1, true) ~= nil
 local deep = v:find("③", 1, true) ~= nil
 F.Out("[防护·改写档] = " .. v)
 if on then
-pcall(F.MetaHookEnsure)
-pcall(AC.InstallNamecallHook)
-pcall(AC.InstallIndexMask)
-pcall(AC.InstallSetmetatableHook)
+F.Try("MetaHookEnsure", F.MetaHookEnsure)
+F.Try("InstallNamecallHook", AC.InstallNamecallHook)
+F.Try("InstallIndexMask", AC.InstallIndexMask)
+F.Try("InstallSetmetatableHook", AC.InstallSetmetatableHook)
 pcall(function() AC.DisableACConnections(true) end)
 pcall(function() AC.WatchNewScriptsEnable() end)
 pcall(function() AC.WatchNewRemotesEnable() end)
 F.Out("[防护·改写档] 已注入: 元表钩(__namecall/__index/setmetatable) + 拦 remote + 断了可疑监听 + 新脚本/新远程监视")
 else
-pcall(AC.UninstallNamecallHook)
-pcall(AC.UninstallIndexMask)
-pcall(AC.UninstallSetmetatableHook)
+F.Try("UninstallNamecallHook", AC.UninstallNamecallHook)
+F.Try("UninstallIndexMask", AC.UninstallIndexMask)
+F.Try("UninstallSetmetatableHook", AC.UninstallSetmetatableHook)
 pcall(function() AC.WatchNewScriptsDisable() end)
 pcall(function() AC.WatchNewRemotesDisable() end)
 F.Out("[防护·改写档] 已还原: 元表钩已卸, 不再改写游戏")
@@ -11614,9 +11614,9 @@ F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
 if steady or hit then
 F.Try("CharEventsEnable", F.CharEventsEnable)
-pcall(F.MetaHookEnsure)
+F.Try("MetaHookEnsure", F.MetaHookEnsure)
 else
-pcall(F.CharEventsDisable)
+F.Try("CharEventsDisable", F.CharEventsDisable)
 end
 if steady then pcall(F.SteadyEnable) else pcall(F.SteadyDisable) end
 if hit then pcall(function() F.HitGuardEnable(T.HitStrong) end) else pcall(F.HitGuardDisable) end
