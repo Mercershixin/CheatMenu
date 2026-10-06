@@ -124,6 +124,9 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
   读本机 workspace 的 `CheatMenu_Cache_*.txt` → PUT 到仓库 `translate/cache/`。
   - Token 来源：`项目/.workbuddy/publish.token`（本机，不进仓库）。
   - 该脚本已加入 `push_api.py` 的 FILES（推为 `translate/sync-cache.py`），随发版上仓库做异地备份。
+  - ★ 2026-10-07 起**游戏内也能上传/下载**（用户不想去别处点）：Token 放执行器 workspace 根目录
+    `CheatMenu_Token.txt`（不进公开脚本）；`TransAutoCloud` 开关默认开，`Flush` 后
+    `AutoCloudMaybe` 自动传（180s 节流 + 条数不变不重推）。电脑端 bat 留作备份。
   - 游戏内也留了「上传本服缓存到云端」按钮，但**只有** workspace 根目录存在
     `CheatMenu_Token.txt` 才生效（默认不创建该文件）。
 - 数字/名字**模板复用**：`You have 5 coins` 翻过后，`You have 12 coins` 直接套改数字（数字个数必须相等才建模板）。
