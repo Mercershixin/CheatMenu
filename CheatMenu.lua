@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 02:41 sha 3526bc93 bytes 469378'):format('2026-10-07 02:41','3526bc93',469378))
+print(('[CheatMenu] build 2026-10-07 02:47 sha fa8e00d0 bytes 470605'):format('2026-10-07 02:47','fa8e00d0',470605))
 local F = {}
-F.VERSION = "v16.9.57"
+F.VERSION = "v16.9.58"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9090,13 +9090,13 @@ temperature = 0.1, top_p = 0.6,
 max_tokens = maxTokens or 256, stream = false,
 }
 end
-local okB, body = pcall(HS.JSONEncode, build(messages))
+local okB, body = pcall(function() return HS:JSONEncode(build(messages)) end)
 if not okB then
 local clean = {}
 for i = 1, #messages do
 clean[i] = { role = messages[i].role, content = Trans.Utf8Clean(messages[i].content) }
 end
-okB, body = pcall(HS.JSONEncode, build(clean))
+okB, body = pcall(function() return HS:JSONEncode(build(clean)) end)
 if not okB then return nil, "文本含无法编码的字符" end
 end
 local ok, res = pcall(function()
@@ -9111,7 +9111,7 @@ if not ok then return nil, "HTTP 请求异常" end
 if type(res) ~= "table" then return nil, "HTTP 无返回" end
 local code = tonumber(res.StatusCode or res.Status or 0)
 if code ~= 200 then return nil, "HTTP " .. tostring(code) end
-local ok2, d = pcall(HS.JSONDecode, res.Body)
+local ok2, d = pcall(function() return HS:JSONDecode(res.Body) end)
 if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "返回解析失败" end
 local msg = d.choices[1].message
 local content = msg and msg.content
@@ -9138,11 +9138,11 @@ return nil, lastErr
 end
 Trans.RequestBatch = function(list, lang)
 Trans._reqN = Trans._reqN + 1
-local okP, payload = pcall(HS.JSONEncode, list)
+local okP, payload = pcall(function() return HS:JSONEncode(list) end)
 if not okP then
 local clean = {}
 for i = 1, #list do clean[i] = Trans.Utf8Clean(list[i]) end
-okP, payload = pcall(HS.JSONEncode, clean)
+okP, payload = pcall(function() return HS:JSONEncode(clean) end)
 if not okP then return nil end
 end
 local sys = Trans.Prompt(lang)
@@ -9157,7 +9157,7 @@ c = c:gsub("^%s*```[%w]*%s*", ""):gsub("%s*```%s*$", "")
 local a = c:find("%[", 1, true)
 local b = c:match(".*()%]")
 if not a or not b or b <= a then return nil end
-local ok3, arr = pcall(HS.JSONDecode, c:sub(a, b))
+local ok3, arr = pcall(function() return HS:JSONDecode(c:sub(a, b)) end)
 if not ok3 or type(arr) ~= "table" or #arr ~= #list then return nil end
 Trans._localFails = 0
 return arr
@@ -9227,15 +9227,32 @@ end
 return pcall(function() writefile(Trans.FILE, payload) end)
 end
 Trans.Flush = function()
+if type(writefile) ~= "function" then
+Trans._dirty = false
+Trans._lastErr = "本执行器不支持写文件"
+return false
+end
 local body = nil
-pcall(function() body = HS:JSONEncode({ v = 2, c = Trans.Cache }) end)
-if not body then return false end
-local ok = pcall(Trans.SaveAtomic, body)
-local done = ok and true or false
+local okE = pcall(function() body = HS:JSONEncode({ v = 2, c = Trans.Cache }) end)
+if not okE or not body then
+Trans._lastErr = "缓存序列化失败"
+return false
+end
+local ok, r = pcall(Trans.SaveAtomic, body)
+local done = ok and (r ~= false)
 Trans._dirty = not done
 if done then
 Trans._savedAt = os.clock()
 Trans._saveCount = Trans._saveCount + 1
+Trans._lastErr = nil
+local n = 0
+for _ in pairs(Trans.Cache) do n = n + 1 end
+if Trans._lastSavedN ~= n then
+Trans._lastSavedN = n
+F.Out("[翻译] 缓存已保存到本地 " .. n .. " 条 ⇒ 下次开启直接复用, 不重翻")
+end
+else
+Trans._lastErr = tostring(r)
 end
 return done
 end
@@ -12557,7 +12574,7 @@ Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
-Tabs.Trans:AddSection("① 界面翻译")
+Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
@@ -12576,17 +12593,34 @@ end)
 end
 end
 end)
-Tabs.Trans:AddButton({ Title = "重新扫描界面(立即刷新一遍)", Callback = function()
+Tabs.Trans:AddButton({ Title = "扫描界面(立即重扫一次)", Callback = function()
 Trans._diagOnce = nil
 task.spawn(function()
 local ok, err = pcall(Trans.Scan)
-if not ok then F.Out("[翻译] 重新扫描失败: " .. tostring(err)) end
+if ok then
+F.Out("[翻译] 已重新扫描界面: 登记 " .. tostring(Trans.RegCount()) .. " 个控件 · 待翻 " .. tostring(#(Trans.Queue or {})))
+else
+F.Out("[翻译] 重新扫描失败: " .. tostring(err))
+end
 end)
 end })
-Tabs.Trans:AddButton({ Title = "清空翻译缓存(下次全部重翻)", Callback = function()
+Tabs.Trans:AddButton({ Title = "保存缓存(立即写入本地文件)", Callback = function()
+task.spawn(function()
+local ok = pcall(Trans.Flush)
+local n = 0
+for _ in pairs(Trans.Cache or {}) do n = n + 1 end
+if ok and not Trans._lastErr then
+F.Out("[翻译] 缓存已手动保存 " .. n .. " 条 ⇒ " .. tostring(Trans.FILE))
+else
+F.Out("[翻译] 缓存保存失败: " .. tostring(Trans._lastErr or "未知原因"))
+end
+end)
+end })
+Tabs.Trans:AddButton({ Title = "清空缓存(下次全部重翻)", Callback = function()
 Trans.Cache = {}
 Trans.Order = {}
 Trans._cnt = 0
+Trans._lastSavedN = nil
 Trans.ShouldCacheClear()
 if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do
@@ -12616,9 +12650,10 @@ F.Out("[翻译发出] 目标语言已选 " .. tostring(v))
 end })
 Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
 task.spawn(function()
-local ok, info = pcall(Trans.Probe)
-F.Out("[翻译] 模型自检: " .. tostring(info))
-if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. tostring(info)) end
+local okP, okR, info = pcall(Trans.Probe)
+local msg = tostring(info or okR)
+F.Out("[翻译] 模型自检: " .. msg)
+if Trans.PanelInfo then Trans.PanelInfo("模型自检: " .. msg) end
 end)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
