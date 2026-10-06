@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:19 sha 3e9f3ca8 bytes 475937'):format('2026-10-07 00:19','3e9f3ca8',475937))
+print(('[CheatMenu] build 2026-10-07 00:28 sha 9f44c559 bytes 478098'):format('2026-10-07 00:28','9f44c559',478098))
 local F = {}
-F.VERSION = "v16.9.41"
+F.VERSION = "v16.9.42"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9447,6 +9447,7 @@ Trans.ShouldV2 = function(s)
 local n = #s
 if n < 2 or n > 300 then return false, "长度" end
 if not s:find("[A-Za-z]") then return false, "无字母" end
+if Trans.PN and Trans.PN[s] then return false, "玩家名" end
 if s:find("[\228-\233]") then return false, "已是中文" end
 if s:match("%d%s*:%s*%d") then return false, "时间/计时器" end
 if s:match("^https?://") or s:match("rbxassetid") or s:match("rbxthumb")
@@ -9605,6 +9606,26 @@ if ok and r then Trans.Cache["warmup"] = r end
 F.Out("[翻译] 服务预热完成(system prompt 的 KV 缓存已就绪)")
 end)
 end
+Trans.PN = {}
+Trans.RefreshPN = function()
+local t, n = {}, 0
+pcall(function()
+local list = game:GetService("Players"):GetPlayers()
+n = #list
+for i = 1, n do
+local pl = list[i]
+local nm = pl.Name
+if type(nm) == "string" and #nm >= 3 then t[nm] = true t[string.lower(nm)] = true end
+local dn = pl.DisplayName
+if type(dn) == "string" and #dn >= 3 then t[dn] = true t[string.lower(dn)] = true end
+end
+end)
+if Trans._pnN ~= n then
+Trans._pnN = n
+if Trans.ShouldCacheClear then Trans.ShouldCacheClear() end
+end
+Trans.PN = t
+end
 Trans.IsOurs = function(obj)
 local p, steps = obj, 0
 while p and steps < 16 do
@@ -9617,17 +9638,38 @@ steps = steps + 1
 end
 return false
 end
+Trans.OFFICIAL = {
+robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
+experiencechat = true, appchat = true, topbarapp = true, robloxpromptgui = true,
+foundationoverlay = true, screenshotscarousel = true, capturemanager = true,
+captureoverlay = true, momentscreationflow = true, robloxnetworkpausenotification = true,
+toastnotification = true, teleporteffectgui = true, adguiinteractivitycontrols = true,
+immersivebrandedads = true, rewardedvideoadplayer = true, gameinvite = true,
+bulkpurchaseapp = true, inexperiencetransferapp = true, cancelsubscriptionapp = true,
+commercepurchaseapp = true, systemscrim = true, universalsharesheetscreenguiroot = true,
+inexperiencedetailspromptapp = true, inexperienceinterventionapp = true,
+purchasepromptapp = true, publishassetprompt = true, avatareditorpromptsapp = true,
+socialcontexttoast = true, ingamefullscreentitlebarscreen = true,
+headsetdisconnecteddialog = true, shortcutbar = true, emotesmenu = true,
+authmenu = true, permissions = true, notificationbanner = true, cursorcontainer = true,
+foundationcursorcontainer = true, onrootedlistener = true, stylesheet = true,
+corescriptlocalization = true, playereventlisteners = true,
+}
 Trans.IsOfficial = function(obj)
 local cg = nil
 pcall(function() cg = game:GetService("CoreGui") end)
 if not cg then return false end
-local p, steps = obj, 0
-while p and steps < 16 do
+local p, steps, inCG, hit = obj, 0, false, false
+while p and steps < 20 do
 p = p.Parent
 steps = steps + 1
-if p == cg then return true end
+if p == nil then break end
+if p == cg then inCG = true break end
+local nm = p.Name
+if type(nm) == "string" and Trans.OFFICIAL[string.lower(nm)] then hit = true end
 end
-return false
+if not inCG then return false end
+return hit
 end
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 Trans.NO_TRANSLATE_KEYS = { "atlas", "codex", "encyclopedia", "compendium", "index", "图鉴", "索引" }
@@ -9645,7 +9687,7 @@ if Trans.IsOurs(obj) then
 Trans._skip.ours = Trans._skip.ours + 1
 return "我们自己的界面"
 end
-if not C.TransOfficial and Trans.IsOfficial(obj) then
+if Trans.IsOfficial(obj) then
 Trans._skip.official = Trans._skip.official + 1
 return "Roblox 官方界面"
 end
@@ -9775,9 +9817,17 @@ end
 end
 function Trans.Scan()
 local pg = LP:FindFirstChild("PlayerGui")
+pcall(Trans.RefreshPN)
 Trans._skip = { ours = 0, official = 0, invisible = 0 }
 local roots = { pg }
-if C.TransOfficial then roots[#roots + 1] = CoreGui end
+if C.TransOfficial then
+pcall(function()
+for _, ch in ipairs(CoreGui:GetChildren()) do
+local nm = tostring(ch.Name)
+if not Trans.OFFICIAL[string.lower(nm)] then roots[#roots + 1] = ch end
+end
+end)
+end
 pcall(function() if gethui and gethui() then roots[#roots + 1] = gethui() end end)
 local diag = {}
 for _, root in ipairs(roots) do
@@ -9889,6 +9939,7 @@ F.Out("[翻译] ⚠ 本地翻译服务没起来(" .. tostring(body) .. ") ⇒ �
 end
 if Trans.Loop then Trans.HeartbeatOn() return true end
 pcall(Trans.GL.AddAuto)
+pcall(Trans.RefreshPN)
 C.TransOfficial = true
 Trans.Prewarm()
 local okScan, errScan = pcall(Trans.Scan)
