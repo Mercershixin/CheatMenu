@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 01:03 sha b1b6aef0 bytes 457974'):format('2026-10-07 01:03','b1b6aef0',457974))
+print(('[CheatMenu] build 2026-10-07 01:08 sha f5a30aae bytes 458722'):format('2026-10-07 01:08','f5a30aae',458722))
 local F = {}
-F.VERSION = "v16.9.49"
+F.VERSION = "v16.9.50"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9290,6 +9290,7 @@ if type(text) ~= "string" then return nil end
 text = text:gsub("^%s+", ""):gsub("%s+$", "")
 if text == "" then return nil end
 if Trans.KEEP[text] then return nil end
+if not lang then
 local hit = Trans.Cache[text]
 if type(hit) == "string" then return hit end
 if text:find("%d") then
@@ -9304,7 +9305,8 @@ if i == #nums and filled ~= "" then return filled end
 end
 end
 end
-if not lang then return nil end
+return nil
+end
 local ctx = Trans.Pre(text)
 local c = Trans.RequestOne(ctx.send, lang)
 if not c then return nil end
@@ -9401,10 +9403,8 @@ local p = obj
 for _ = 1, 14 do
 p = p and p.Parent
 if not p then return false end
-if p:IsA("ScreenGui") then
 local ok, v = pcall(function() return p:GetAttribute("CMOwned") end)
 if ok and v == true then return true end
-end
 end
 return false
 end
@@ -9478,9 +9478,22 @@ end
 Trans.Scan = function()
 local LPl = game:GetService("Players").LocalPlayer
 local pg = LPl and LPl:FindFirstChild("PlayerGui")
-if not pg then return end
-local ok, list = pcall(function() return pg:GetDescendants() end)
-if not ok or type(list) ~= "table" then return end
+local roots = {}
+if pg then roots[#roots + 1] = pg end
+pcall(function()
+if gethui then
+local h = gethui()
+if h and h ~= pg then roots[#roots + 1] = h end
+end
+end)
+if #roots == 0 then return end
+local list = {}
+for i = 1, #roots do
+local okD, d = pcall(function() return roots[i]:GetDescendants() end)
+if okD and type(d) == "table" then
+for j = 1, #d do list[#list + 1] = d[j] end
+end
+end
 local txtN, visN = 0, 0
 local samples = {}
 for i = 1, #list do
@@ -9534,50 +9547,60 @@ Trans.WatchOff = function()
 if Trans._watchConn then pcall(function() Trans._watchConn:Disconnect() end) Trans._watchConn = nil end
 end
 function F.ChatTranslateEnable()
-if F._chatConn then return end
-local ok = pcall(function()
+if F._chatHook then return end
+local done = pcall(function()
 local tcs = game:GetService("TextChatService")
 if not tcs then error("no-tcs") end
-F._chatConn = tcs.MessageReceived:Connect(function(message)
-if not T.Translate or not message then return end
+local prev = tcs.OnIncomingMessage
+F._chatPrev = type(prev) == "function" and prev or nil
+tcs.OnIncomingMessage = function(message)
+local props = nil
+if F._chatPrev then
+local okp, r = pcall(F._chatPrev, message)
+if okp and typeof(r) == "Instance" then props = r end
+end
+if not props then pcall(function() props = Instance.new("TextChatMessageProperties") end) end
+if not props or not message or not T.Translate then return props end
 local txt = message.Text
-if type(txt) ~= "string" or txt == "" then return end
+if type(txt) ~= "string" or txt == "" then return props end
 local LPl = game:GetService("Players").LocalPlayer
 local src = message.TextSource
-if src and LPl and src.UserId == LPl.UserId then return end
+if src and LPl and src.UserId == LPl.UserId then return props end
 local ch = message.TextChannel
 local chName = ch and ch.Name or ""
 if chName:find("world", 1, true) or chName:find("global", 1, true)
-or chName:find("世界", 1, true) or chName:find("公告", 1, true) then return end
-if not Trans.Should(txt) then return end
-if Trans.Cache[txt] then return end
+or chName:find("世界", 1, true) or chName:find("公告", 1, true) then return props end
+local hit = Trans.Cache[txt]
+if type(hit) == "string" then
+pcall(function() props.Text = hit end)
+elseif Trans.Should(txt) then
 Trans.Async(txt, function() end)
+end
+return props
+end
+F._chatHook = true
 end)
-end)
-if ok and F._chatConn then
-F.Out("[翻译] 聊天翻译已开(世界频道跳过, 只翻本地频道)")
+if done and F._chatHook then
+F.Out("[翻译] 聊天翻译已开: 命中缓存的句子当场显示译文, 新句子先入队(下一句同文即中文)")
 else
 F.Out("[翻译] 本游戏没有标准聊天服务, 聊天翻译不可用")
 end
 end
 function F.ChatTranslateDisable()
-if F._chatConn then pcall(function() F._chatConn:Disconnect() end) F._chatConn = nil end
+if F._chatHook then
+pcall(function()
+local tcs = game:GetService("TextChatService")
+if tcs then tcs.OnIncomingMessage = F._chatPrev end
+end)
+F._chatHook, F._chatPrev = nil, nil
+end
 end
 function F.BubbleTranslateEnable()
-if F._bubConn then return end
-local LPl = game:GetService("Players").LocalPlayer
-if not LPl then return end
-pcall(function()
-F._bubConn = LPl.Chatted:Connect(function(message)
-if not T.Translate or type(message) ~= "string" or message == "" then return end
-if not Trans.Should(message) then return end
-if not Trans.Cache[message] then Trans.Async(message, function() end) end
-end)
-end)
+if F._chatHook then return end
+pcall(F.ChatTranslateEnable)
+F.Out("[翻译] 气泡翻译与聊天同源(头顶气泡与聊天窗口用的是同一条消息)")
 end
-function F.BubbleTranslateDisable()
-if F._bubConn then pcall(function() F._bubConn:Disconnect() end) F._bubConn = nil end
-end
+function F.BubbleTranslateDisable() end
 F.ChatSend = function(msg)
 local sent = false
 pcall(function()
@@ -9594,6 +9617,17 @@ pcall(function()
 local chat = game:GetService("Chat")
 if chat and chat.Chat then
 chat:Chat(game:GetService("Players").LocalPlayer, msg, "All")
+sent = true
+end
+end)
+end
+if not sent then
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+local legacy = rs:FindFirstChild("DefaultChatSystemChatEvents")
+local req = legacy and legacy:FindFirstChild("SayMessageRequest")
+if req then
+req:FireServer(msg, "All")
 sent = true
 end
 end)
