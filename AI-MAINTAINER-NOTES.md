@@ -4142,6 +4142,41 @@ v16.9.22 已写回；`T.ACMaster` 因同样原因保留。
 （`BillboardGui`/`Highlight`/`SelectionBox`/`ParticleEmitter`/`Trail`/`Beam`，存原 `Enabled` 逐项还原）；
 `CharacterAdded` 与 `DescendantAdded` 两条路径都覆盖。
 
+---
+
+## v16.9.29 · 方法级全量对比 + 循环自守卫（2026-10-06）
+
+### ★★ 铁律：常驻循环必须带"标志关了自动退出"的**自守卫**
+
+每个 `RS.Heartbeat/RenderStepped/Stepped:Connect(...)` 的回调体开头应有
+`if not T.X then pcall(F.XDisable) return end` —— **不能只靠外部 Disable 断开**。
+
+只靠外部是**单点依赖**；漏一次 Disable 的后果按功能不同可能是灾难级：
+- 反甩循环残留 ⇒ 每帧把水平速度清零 ⇒ **人走不动**
+- 穿墙循环残留 ⇒ `CanCollide` 一直 false ⇒ **掉地图**
+- 锁血循环残留 ⇒ `MaxHealth` 一直 1e6
+
+v16.9.29 补齐 5 处：`AntiFling.fix` / `LockHealth.apply` / `AntiRagdoll.apply` / `NoClip.noclip` / `HUD 循环`。
+工具 `_audit_loops.py`（33 个循环一览）。
+
+⚠ **工具局限**：`RS.X:Connect(具名函数)` 的守卫在具名函数体内 ⇒ 工具会误报，**必须回原文看具名函数的体**。
+
+### 方法级横向对比的固定结论（75 种手法 × 103 份语料，工具 `_corpus_gap.py`）
+
+**"我们是否有"那列必须 grep 复核**（正则过宽/过窄都会误判；语料采用率那列可信）。
+
+| 分类 | 内容 |
+|---|---|
+| 等效已有（非缺口） | `TweenService` 平滑传送(47.6%)→自研逐帧 lerp 且**能中途打断**；`Drawing`(20.4%)→BillboardGui+Highlight+GUI 圆环；玩家列表→下拉选人 |
+| **用户点名删过，绝不许加回**（grep 必须保持 0） | ESP 骨骼(22.3%)/追踪线(14.6%)/方框(9.7%)/Chams(7.8%)、身份FFlag伪装(11.7%)、栈伪装(11.7%)、配置存档(8.7%) |
+| **我们领先（语料 0%）** | 假上报 · 反暂停 · 熔断+残留体检+复检 · 反 RemoteSpy 蜜罐自检 · 哈希冻结 · 脚本自动更新 · 本地 LLM 翻译三层 |
+| 真缺（未删、语料≥5%，**需用户点头**） | 按键绑定(9.7%) · TriggerBot(12.6%) · 自动换弹(12.6%) · 自动种植/农场循环(14.6%) · 无后坐力(8.7%) · 自动购买升级(8.7%) |
+
+### 另两个可复用的一次性检查
+
+- **滑块数值边界**：`AddSlider` 的 `Default` 必须在 `[Min, Max]` 内且 `Min < Max`（v16.9.29 实测 9 个滑块 0 异常）。
+- **已删能力是否被误加回**：对"用户点名删除过"的能力名 `grep -c` 必须为 0（v16.9.29 实测 6 项全 0 ✅）。
+
 
 
 
