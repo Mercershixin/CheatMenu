@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:32 sha 72829d00 bytes 490057'):format('2026-10-07 05:32','72829d00',490057))
+print(('[CheatMenu] build 2026-10-07 05:44 sha 68c29d83 bytes 491422'):format('2026-10-07 05:44','68c29d83',491422))
 local F = {}
-F.VERSION = "v16.9.84"
+F.VERSION = "v16.9.85"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9140,6 +9140,8 @@ Trans._ready = false
 Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
+Trans._selfCN = setmetatable({}, { __mode = "k" })
+Trans._writing = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
 Trans.KEEPWORD = {
 HUD = true, FPS = true, GUI = true, UI = true, ESP = true, DPS = true,
@@ -9159,6 +9161,12 @@ mythic = true, legendary = true, epic = true, rare = true, common = true,
 rarity = true, undead = true, demon = true, shadow = true, astral = true,
 eternal = true, infinity = true, plasma = true, radioactive = true,
 void = true, cosmic = true, celestial = true,
+abyssal = true, alien = true, golden = true, diamond = true, rainbow = true,
+virus = true, legend = true,
+ballberto = true, bangello = true, burguro = true, cordraculo = true,
+croakumber = true, dumbelloni = true, fryuro = true, garamararam = true,
+kerbaros = true, moggatron = true, orcalero = true, rockokoko = true,
+stadoini = true, tralaledon = true, triregnus = true,
 }
 Trans.TRANSLATE_WORDS = {
 collect = true, withdraw = true, sell = true, claim = true, train = true,
@@ -9181,6 +9189,11 @@ hello = true, welcome = true, yes = true, no = true, ok = true, play = true,
 free = true, ready = true, go = true, stop = true, wait = true, help = true,
 weekly = true, summer = true, winter = true, fall = true, jungle = true,
 volcanic = true, nerd = true, limited = true, daily = true,
+brainrots = true, claimed = true, confirmation = true, exclusive = true,
+odds = true, perfect = true, rebirth = true, regular = true, sign = true,
+toggle = true, upgrades = true, bacon = true, candy = true, carnival = true,
+farmer = true, kicky = true, woody = true, rocky = true, meowl = true,
+omega = true, patagotitan = true, rexosaurus = true, soccerdino = true,
 }
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
@@ -10201,6 +10214,15 @@ local ok, v = pcall(function() return obj.TextVisible end)
 if ok then return v end
 return nil
 end
+Trans.WriteText = function(obj, prop, val, expect)
+if Trans._writing then Trans._writing[obj] = os.clock() end
+if expect ~= nil then
+local cur = nil
+pcall(function() cur = obj[prop] end)
+if cur ~= expect then return end
+end
+pcall(function() obj[prop] = val end)
+end
 Trans.GuiEl = function(obj, urgent)
 if not obj or not obj.Parent then return end
 local cls = obj.ClassName
@@ -10211,6 +10233,7 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
+if Trans._selfCN[obj] then return end
 if cls == "TextLabel" or cls == "TextButton" then
 local nested = false
 pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
@@ -10234,14 +10257,14 @@ local ph = nil
 pcall(function() ph = obj.PlaceholderText end)
 if type(ph) == "string" and Trans.Should(ph) then
 Trans.RegField(obj, "PlaceholderText", ph)
-Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end, urgent)
+Trans.Async(ph, function(tr) if obj.Parent then Trans.WriteText(obj, "PlaceholderText", tr, ph) end end, urgent)
 end
 if editable == false then
 local body = nil
 pcall(function() body = obj.Text end)
 if type(body) == "string" and Trans.Should(body) then
 Trans.RegField(obj, "Text", body)
-Trans.Async(body, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end, urgent)
+Trans.Async(body, function(tr) if obj.Parent then Trans.WriteText(obj, "Text", tr, body) end end, urgent)
 end
 end
 return
@@ -10250,6 +10273,9 @@ local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
 if txt:find("[\228-\233]") then
+if not (Trans._writing[obj] and os.clock() - Trans._writing[obj] < 3) then
+Trans._selfCN[obj] = true
+end
 return
 end
 if not Trans.Should(txt) then return end
@@ -10262,10 +10288,13 @@ local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
 if now:find("[\228-\233]") then
+if not (Trans._writing[obj] and os.clock() - Trans._writing[obj] < 3) then
+Trans._selfCN[obj] = true
+end
 return
 end
 if Trans.Should(now) and Trans.Cache[now] then
-pcall(function() obj.Text = Trans.Cache[now] end)
+Trans.WriteText(obj, "Text", Trans.Cache[now], now)
 return
 end
 local r = Trans.Reg[obj]
@@ -10278,7 +10307,7 @@ local r0 = Trans.Reg[obj]
 if r0 and os.clock() - (r0.at or 0) < 30 then return end
 Trans.RegField(obj, "Text", txt)
 Trans.Async(txt, function(tr)
-if obj.Parent and obj.Visible ~= false then pcall(function() obj.Text = tr end) end
+if obj.Parent and obj.Visible ~= false then Trans.WriteText(obj, "Text", tr, txt) end
 end, urgent)
 end
 Trans.RegCount = function()
