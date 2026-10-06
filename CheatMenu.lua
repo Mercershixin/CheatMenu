@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 00:14 sha 702b3510 bytes 474784'):format('2026-10-07 00:14','702b3510',474784))
+print(('[CheatMenu] build 2026-10-07 00:16 sha 36d6995c bytes 475734'):format('2026-10-07 00:16','36d6995c',475734))
 local F = {}
-F.VERSION = "v16.9.39"
+F.VERSION = "v16.9.40"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9929,10 +9929,22 @@ Trans._watch = {}
 Trans._sig = setmetatable({}, { __mode = "k" })
 Trans._watchOn = false
 end
+F._chatChanSkip = function(chName)
+if not chName then return false end
+local n = tostring(chName):lower()
+if n:find("world", 1, true) or n:find("global", 1, true) or n:find("世界", 1, true) or n:find("general", 1, true) then return true end
+return false
+end
 function F.ChatTranslateEnable()
 if F._chatTransHooked then return end
 local tcs = game:GetService("TextChatService")
 if not tcs then F.Out("[翻译] 本游戏没有 TextChatService, 聊天翻译不可用") return end
+pcall(function()
+local chans = {}
+local ch = tcs:FindFirstChild("TextChannels")
+if ch then for _, c in ipairs(ch:GetChildren()) do chans[#chans + 1] = c.Name end end
+F.Out("[聊天翻译·诊断] 频道列表: " .. ((#chans > 0) and table.concat(chans, " · ") or "(无)"))
+end)
 local prevIn = tcs.OnIncomingMessage
 if not (type(prevIn) == "function" and prevIn._cmOwner == "CM") then F._oldOnIncoming = prevIn end
 local hookedIn
@@ -9946,6 +9958,16 @@ end
 if T.ChatTranslate and message and message.Text then
 local src = message.TextSource
 if not src or src.Name ~= LP.Name then
+local chName = nil
+pcall(function() chName = message.TextChannel and message.TextChannel.Name end)
+if chName then
+F._chatChans = F._chatChans or {}
+if not F._chatChans[chName] then
+F._chatChans[chName] = true
+F.Out("[聊天翻译·诊断] 见到频道 \"" .. tostring(chName) .. "\" 的消息: " .. tostring(message.Text):sub(1, 24))
+end
+end
+if F._chatChanSkip and F._chatChanSkip(chName) then return props end
 local _nowc = os.clock()
 if F._chatTransAt and _nowc - F._chatTransAt < 0.25 then return props end
 F._chatTransAt = _nowc
