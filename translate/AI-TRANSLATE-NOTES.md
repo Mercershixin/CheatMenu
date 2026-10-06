@@ -241,6 +241,23 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
 以及 `Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.`
 （SYS_ZH 802 → 1081 字符，每请求多约 100 token；8 并发仍远低于 8192 上下文。）
 
+### ★ 等级 / 附魔 / 词缀 / 玩家名 不翻译（2026-10-07，16.9.84）
+- 用户反馈：游戏里的「红名（玩家名）、等级（Level/Lvl/Mastery/Tier）、附魔（Enchanted/Mutation 及词缀标签）」被翻了，不需要翻。
+- 实现三件套：
+  1. `Trans.NOTRANSLATE` 黑名单（小写键）：`level/lvl/lv/max/mastery/tier` + 全部词缀标签
+     （`enchanted/mutation/molten/frozen/electrified/wet/phantom/divine/heavenly/godly/mythic/
+     legendary/epic/rare/common/rarity/undead/demon/shadow/astral/eternal/infinity/plasma/
+     radioactive/void/cosmic/celestial`）。
+     `ShouldV2` 里「把黑名单词替换成空格后，若再无连续字母（`%a%a`）→ 不翻」——
+     这样 `Level 12` / `Lvl 75 MAX` / `17500 MASTERY` / `S TIER` 被拦，但 `Level Up Now`（升级）仍翻。
+  2. `Trans.TRANSLATE_WORDS` 白名单（小写键）：单个「首字母大写、其余小写」的词，
+     若**不在**白名单 → 视为专有名词（玩家名/宠物名）不翻。
+     白名单 = 常见按钮/属性/对话词（`collect/close/sell/claim/settings/hello/welcome/…`）。
+  3. 删术语表 `SYS_ZH` 里的 `Mutation->词缀`、`Level->等级`；监听器里缓存命中前补 `Should` 检查
+     （防旧缓存里的错译如 `Matteo→马特奥` 再生效）。
+- ⚠ 主动取舍：白名单没覆盖到的单个大写词会被「少翻」（冷门词），这是为「不把玩家名翻错」主动接受的代价。
+- 回归测试从源码提取 `ShouldV2` + 三个表，56 用例全过（`luau.exe` 实跑）。
+
 ## 八、备份 / 回滚纪律（本轮的血泪）
 
 - ⛔ **备份必须在"动手前"做**。本轮两次把 `pre-xxx` 备份做成了"改**后**快照"（名不副实），
