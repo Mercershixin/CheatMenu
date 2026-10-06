@@ -1,4 +1,4 @@
-print(('[CheatMenu] build 2026-10-06 21:29 sha 105fffa5 bytes 478321'):format('2026-10-06 21:29','105fffa5',478321))
+print(('[CheatMenu] build 2026-10-06 21:42 sha 5adb0e4a bytes 479011'):format('2026-10-06 21:42','5adb0e4a',479011))
 local F = {}
 F.VERSION = "v16.9.31"
 F._flyDisabledInfJump = nil
@@ -9847,6 +9847,15 @@ local ph = obj.PlaceholderText
 if type(ph) == "string" and ph ~= "" and Trans.Should(ph) then
 Trans.Async(ph, function(tr) if obj.Parent then pcall(function() obj.PlaceholderText = tr end) end end)
 end
+-- 只读显示框（TextEditable=false）的正文也翻；可编辑输入框不碰用户输入
+local editable = true
+pcall(function() editable = obj.TextEditable end)
+if editable == false then
+local txt = obj.Text
+if type(txt) == "string" and txt ~= "" and Trans.Should(txt) then
+Trans.Async(txt, function(tr) if obj.Parent then pcall(function() obj.Text = tr end) end end)
+end
+end
 return
 end
 if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
@@ -10032,6 +10041,15 @@ local tr = Trans.Translate(message.Text, true)
 if tr and tr ~= "" and tr ~= message.Text then
 props = props or Instance.new("TextChatMessageProperties")
 props.Text = message.Text .. "\n【" .. tr .. "】"
+end
+local pref = nil
+pcall(function() pref = message.PrefixText end)
+if type(pref) == "string" and pref ~= "" and Trans.Should(pref) then
+local trp = Trans.Translate(pref, true)
+if trp and trp ~= "" and trp ~= pref then
+props = props or Instance.new("TextChatMessageProperties")
+props.PrefixText = trp
+end
 end
 end
 end
