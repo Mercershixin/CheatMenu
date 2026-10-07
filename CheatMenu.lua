@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:37 sha bf4fbf30 bytes 506451'):format('2026-10-07 17:37','bf4fbf30',506451))
+print(('[CheatMenu] build 2026-10-07 17:41 sha c0d54960 bytes 506560'):format('2026-10-07 17:41','c0d54960',506560))
 local F = {}
-F.VERSION = "v16.10.16"
+F.VERSION = "v16.10.17"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12978,24 +12978,29 @@ goHome()
 F.Out("[甩飞] 结束")
 end)
 else
-F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「旋转撞击」: 把自己变成高速旋转体撞过去")
-F.Out("[甩飞] 原理: 自己角色的所有权一定在自己手里, 高速旋转撞击会由服务端复制给所有人(公开 fling 脚本的主流做法)")
+F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「TP 贴脸旋转撞击」: 直接瞬移到他身上高速自转把他撞飞(不再用速度飞过去)")
 F._flingHit = true
 task.spawn(function()
 local n = 0
-while F._flingHit and n < 50 do
+while F._flingHit and n < 60 do
 n = n + 1
 local _, myHum, myRoot = GC()
 if not (myRoot and myRoot.Parent) then break end
 if not (tRoot and tRoot.Parent) then break end
 pcall(function()
 myRoot.AssemblyAngularVelocity = Vector3.new(0, 9000, 0)
-local d = tRoot.Position - myRoot.Position
-local flat = Vector3.new(d.X, 0, d.Z)
-if flat.Magnitude > 0.5 then
-myRoot.AssemblyLinearVelocity = flat.Unit * 55 + Vector3.new(0, 12, 0)
+local tp2 = tRoot.Position
+local flat = Vector3.new(tp2.X - myRoot.Position.X, 0, tp2.Z - myRoot.Position.Z)
+myRoot:PivotTo(CFrame.new(tp2))
+if flat.Magnitude > 0.05 then
+myRoot.AssemblyLinearVelocity = flat.Unit * 80 + Vector3.new(0, 15, 0)
+else
+myRoot.AssemblyLinearVelocity = Vector3.new(0, 15, 0)
 end
 end)
+local tv = 0
+pcall(function() tv = tRoot.AssemblyLinearVelocity.Magnitude end)
+if tv > 250 then break end
 task.wait(0.05)
 end
 F.FlingStop()
