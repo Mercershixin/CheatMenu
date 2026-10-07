@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:42 sha ff216f31 bytes 520668'):format('2026-10-07 18:42','ff216f31',520668))
+print(('[CheatMenu] build 2026-10-07 18:47 sha 473649a5 bytes 518683'):format('2026-10-07 18:47','473649a5',518683))
 local F = {}
-F.VERSION = "v16.10.28"
+F.VERSION = "v16.10.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9385,6 +9385,10 @@ Kick Power->踢球力量, Kick->踢, Kickback->踢飞,
 Tab->标签页, Menu->菜单, Home->主页, Back->返回, Next->下一步, Skip->跳过,
 Join->加入, Leave->离开, Start->开始, Continue->继续, Confirm->确认, Cancel->取消,
 Save->保存, Reset->重置, Equip->装备, Unequip->卸下, Upgrade->升级, Unlock->解锁.
+Progress->进度, Completed->已完成, New->新, Coming Soon->即将推出, Locked->已锁定, Unlocked->已解锁,
+Owned->已拥有, Purchased->已购买, Sold->已售出, Attack->攻击, Defense->防御, Speed->速度, Power->力量,
+Odds->概率, Luck->幸运, Rebirth->重生, Exclusive->专属, Regular->普通, Event->活动, Pass->通行证,
+Daily->每日, Weekly->每周, Seasonal->赛季, Season->赛季, Tasks->任务, In Progress->进行中.
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.Prompt = function(code)
 if not code or code == "zh" then return Trans.SYS_ZH end
@@ -9435,33 +9439,6 @@ ballberto = true, bangello = true, burguro = true, cordraculo = true,
 croakumber = true, dumbelloni = true, fryuro = true, garamararam = true,
 kerbaros = true, moggatron = true, orcalero = true, rockokoko = true,
 stadoini = true, tralaledon = true, triregnus = true,
-}
-Trans.TRANSLATE_WORDS = {
-collect = true, withdraw = true, sell = true, claim = true, train = true,
-equip = true, unequip = true, equipped = true, use = true, send = true,
-buy = true, shop = true, store = true, trade = true, trading = true,
-confirm = true, cancel = true, close = true, sort = true, spin = true,
-summon = true, fuse = true, remove = true, restock = true, proceed = true,
-accept = true, decline = true, skip = true, start = true, continue = true,
-save = true, reset = true, upgrade = true, unlock = true, join = true,
-leave = true, back = true, next = true, menu = true, settings = true,
-details = true, feedback = true, favorites = true, power = true, speed = true,
-luck = true, cash = true, gold = true, coins = true, gems = true,
-damage = true, health = true, score = true, reward = true, bonus = true,
-price = true, value = true, locked = true, hacked = true, completed = true,
-inventory = true, quest = true, quests = true, world = true, worlds = true,
-weather = true, goals = true, best = true, secret = true, premium = true,
-flat = true, name = true, combo = true, index = true, anything = true,
-event = true, none = true, title = true, info = true, stats = true,
-hello = true, welcome = true, yes = true, no = true, ok = true, play = true,
-free = true, ready = true, go = true, stop = true, wait = true, help = true,
-weekly = true, summer = true, winter = true, fall = true, jungle = true,
-volcanic = true, nerd = true, limited = true, daily = true,
-brainrots = true, claimed = true, confirmation = true, exclusive = true,
-odds = true, perfect = true, rebirth = true, regular = true, sign = true,
-toggle = true, upgrades = true, bacon = true, candy = true, carnival = true,
-farmer = true, kicky = true, woody = true, rocky = true, meowl = true,
-omega = true, patagotitan = true, rexosaurus = true, soccerdino = true,
 }
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
@@ -10177,7 +10154,6 @@ if core == "" then return false end
 if core:find("_") then return false end
 if core:match("^[%d%.]+$") then return false end
 if core:match("^v%d") then return false end
-if core:match("^%u%l+$") and #core >= 3 and not Trans.TRANSLATE_WORDS[string.lower(core)] then return false end
 end
 return true
 end
@@ -10681,22 +10657,6 @@ Trans._indexLogged = true
 F.Out("[翻译] 已识别图鉴/索引类面板 ⇒ 里面的内容全部不翻(已跳过 " .. tostring(Trans._indexSkip) .. " 条)")
 end
 return
-end
-if cls == "TextLabel" or cls == "TextButton" then
-local nested = false
-pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
-if not nested then
-local kids = nil
-pcall(function() kids = obj:GetChildren() end)
-if kids and #kids > 0 then
-pcall(function()
-for _, d in ipairs(obj:GetDescendants()) do
-if d:IsA("TextLabel") or d:IsA("TextBox") then nested = true break end
-end
-end)
-end
-end
-if nested then return end
 end
 if cls == "TextBox" then
 if Trans._selfCN[obj] then return end
