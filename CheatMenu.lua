@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 01:00 sha 3c15d8dc bytes 540307'):format('2026-10-08 01:00','3c15d8dc',540307))
+print(('[CheatMenu] build 2026-10-08 01:11 sha d38ff61e bytes 542045'):format('2026-10-08 01:11','d38ff61e',542045))
 local F = {}
-F.VERSION = "v16.10.68"
+F.VERSION = "v16.10.69"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4625,28 +4625,60 @@ local o = nil
 if root then pcall(function() o = root:FindFirstChild(nm) end) end
 if o then pcall(function() o:Destroy() end) end
 end
+if F._heliJoint and F._heliC0 then
+pcall(function() F._heliJoint.C0 = F._heliC0 end)
+end
 F._heliAo, F._heliBg, F._heliBv, F._heliAtt = nil, nil, nil, nil
-F._heliAng, F._heliBaseY = nil, nil
+F._heliAng, F._heliBaseY, F._heliYaw = nil, nil, nil
+F._heliJoint, F._heliC0, F._heliUseRoot, F._heliMode = nil, nil, nil, nil
 if hum then
 pcall(function() hum.PlatformStand = (F._heliWasPS == true) end)
 pcall(function() hum.AutoRotate = (F._heliWasAR ~= false) end)
 end
 F._heliWasPS, F._heliWasAR = nil, nil
 end
+F.HeliMode = function()
+local m = tostring(C.HeliMode or "")
+if m:find("不飞行转", 1, true) then return 1 end
+if m:find("飞行转", 1, true) then return 2 end
+return 1
+end
 F.HeliSet = function(on)
-if on then pcall(F.BypassAutoRaise, "你开了直升机") end
+if on then pcall(F.BypassAutoRaise, "你开了旋转角色") end
 T.HeliOn = on and true or false
 F.HeliDestroy()
 if not T.HeliOn then return end
 local _, hum, root = GC()
 if not (hum and root) then
-F.Out("[直升机] 开不了: 还没拿到角色(重生中?) ⇒ 稍后重开")
+F.Out("[旋转] 开不了: 还没拿到角色(重生中?) ⇒ 稍后重开")
 return
 end
 F._heliWasPS = hum.PlatformStand
 F._heliWasAR = hum.AutoRotate
-pcall(function() hum.PlatformStand = true end)
+local mode = F.HeliMode()
+F._heliMode = mode
+local joint = nil
+pcall(function()
+joint = root:FindFirstChild("RootJoint")
+if joint == nil then
+for _, d in ipairs(root:GetChildren()) do
+if d:IsA("Motor6D") then joint = d break end
+end
+end
+end)
+if joint then
+F._heliJoint = joint
+F._heliC0 = joint.C0
+F._heliUseRoot = false
+else
+F._heliUseRoot = true
+end
 F._heliAng, F._heliBaseY = 0, root.Position.Y
+local y0 = 0
+pcall(function() local _, yy = root.CFrame:ToEulerAnglesYXZ() y0 = yy end)
+F._heliYaw = math.deg(tonumber(y0) or 0)
+if F._heliYaw ~= F._heliYaw then F._heliYaw = 0 end
+if mode == 2 then
 local okD = pcall(function()
 local att = Instance.new("Attachment")
 att.Name = "CMHeliAtt"
@@ -4659,6 +4691,7 @@ ao.Attachment0 = att
 ao.MaxTorque = 1e9
 ao.Responsiveness = 200
 pcall(function() ao.RigidityEnabled = true end)
+ao.CFrame = CFrame.Angles(0, math.rad(F._heliYaw), 0)
 ao.Parent = root
 F._heliAo = ao
 local bv = Instance.new("LinearVelocity")
@@ -4679,6 +4712,7 @@ local bg = Instance.new("BodyGyro")
 bg.Name = "CMHeliBg"
 bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
 bg.D, bg.P = 50, 3000
+bg.CFrame = CFrame.Angles(0, math.rad(F._heliYaw), 0)
 bg.Parent = root
 F._heliBg = bg
 local bv2 = Instance.new("BodyVelocity")
@@ -4686,22 +4720,35 @@ bv2.Name = "CMHeliBv"
 bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
 bv2.Velocity = Vector3.zero
 bv2.Parent = root
-F._heliBv = bv2
 end)
 end
-F.Out("[直升机] 已开: 人横躺 + 绕竖直轴旋转 + 悬停; WASD 可水平移动(视角相对), 视野/相机本功能完全不碰(仍由鼠标控制); 关掉后走路/跳跃立刻恢复原样")
+end
+if F._heliUseRoot then
+F.Out("[旋转] ⚠ 没找到 RootJoint ⇒ 退化为整体旋转(极少情况下视角会跟着转)")
+end
+if mode == 1 then
+F.Out("[旋转] 已开 · 不飞行转: 模型原地自转, 视角/走路/跳跃完全不受影响")
+else
+F.Out("[旋转] 已开 · 飞行转: 模型横躺旋转" .. (T.FlyOn and "(移动交给「飞行」)" or " + 悬空(WASD 可移动)") .. ", 视角不碰")
+end
 F._heliConn = F.DriveConnect(function(dt)
 if not T.HeliOn then return end
-if T.FlyOn then return end
 local _, h, r = GC()
 if not (h and r) then return end
 local spin = tonumber(C.HeliSpin) or 720
 if spin < 0 then spin = 0 end
 F._heliAng = ((F._heliAng or 0) + spin * dt) % 360
-local tilt = math.rad(tonumber(C.HeliTilt) or 90)
-local cf = CFrame.Angles(0, math.rad(F._heliAng), 0) * CFrame.Angles(tilt, 0, 0)
-if F._heliAo then pcall(function() F._heliAo.CFrame = cf end) end
-if F._heliBg then pcall(function() F._heliBg.CFrame = cf end) end
+local tilt = (F._heliMode == 2) and math.rad(90) or 0
+local R = CFrame.Angles(0, math.rad(F._heliAng), 0) * CFrame.Angles(tilt, 0, 0)
+if F._heliJoint and F._heliC0 then
+pcall(function() F._heliJoint.C0 = F._heliC0 * R end)
+else
+pcall(function() h.AutoRotate = false end)
+pcall(function() r.CFrame = CFrame.new(r.Position) * R end)
+end
+if F._heliMode ~= 2 then return end
+if T.FlyOn then return end
+if h.PlatformStand ~= true then pcall(function() h.PlatformStand = true end) end
 local mv = Vector3.zero
 local cam = workspace.CurrentCamera
 if cam then
@@ -4731,7 +4778,7 @@ pcall(function()
 F._heliRebuild = LP.CharacterAdded:Connect(function()
 task.wait(0.6)
 if not T.HeliOn then return end
-F.Out("[直升机] 检测到重生 ⇒ 已自动重装")
+F.Out("[旋转] 检测到重生 ⇒ 已自动重装")
 pcall(function() F.HeliSet(true) end)
 end)
 end)
@@ -14078,9 +14125,17 @@ F.GodRefill()
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddToggle("HeliOn", { Title = "直升机(人横躺 · 绕竖直轴旋转 · 悬空)", Default = false, Callback = function(v) F.HeliSet(v) end })
-Tabs.Move:AddSlider("HeliSpin", { Title = "直升机 · 转速(度/秒)", Min = 30, Max = 3000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
-Tabs.Move:AddSlider("HeliHeight", { Title = "直升机 · 悬停高度", Min = 0, Max = 200, Default = 12, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
+Tabs.Move:AddToggle("HeliOn", { Title = "旋转角色(只转模型 · 你的视角不动)", Default = false, Callback = function(v) F.HeliSet(v) end })
+Tabs.Move:AddDropdown("HeliMode", { Title = "旋转模式", Values = {
+"不飞行转(站着自转 · 照常走路跳跃)",
+"飞行转(横躺旋转 · 悬空/配飞行 · WASD移动)",
+}, Default = "不飞行转(站着自转 · 照常走路跳跃)", Callback = function(v)
+C.HeliMode = tostring(v)
+if F._cfgSyncing then return end
+if T.HeliOn then pcall(F.HeliSet, true) end
+end })
+Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速(度/秒)", Min = 30, Max = 3000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
+Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 悬停高度(仅飞行转)", Min = 0, Max = 200, Default = 12, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
 local op = Fluent and Fluent.Options
