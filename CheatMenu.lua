@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 14:05 sha 9fd18f7e bytes 496608'):format('2026-10-07 14:05','9fd18f7e',496608))
+print(('[CheatMenu] build 2026-10-07 15:05 sha fff1dd2d bytes 499717'):format('2026-10-07 15:05','fff1dd2d',499717))
 local F = {}
-F.VERSION = "v16.10.7"
+F.VERSION = "v16.10.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8224,6 +8224,56 @@ pcall(chunk)
 end)
 return true
 end
+F.AutoRejoinSaveState = function()
+if type(writefile) ~= "function" then return end
+local state = {}
+for k, v in pairs(T) do
+if type(v) == "boolean" and v then state[k] = true end
+end
+pcall(function() writefile("CheatMenu_State.txt", HS:JSONEncode(state)) end)
+end
+F.AutoRejoinQueue = function()
+local qot = AC.cap("queue_on_teleport")
+if type(qot) ~= "function" then return false end
+local code = [[
+pcall(function()
+if type(writefile) == "function" then writefile("CheatMenu_RejoinFlag.txt", "1") end
+local src = nil
+pcall(function() src = readfile("CheatMenu_main.lua") end)
+if type(src) ~= "string" or #src < 100000 then
+local urls = {
+"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
+}
+for _, u in ipairs(urls) do
+local ok, body = pcall(game.HttpGet, game, u .. "?t=" .. tostring(os.time()))
+if ok and type(body) == "string" and #body > 100000 then src = body break end
+end
+end
+if type(src) == "string" and #src > 100000 then
+local chunk = (loadstring or load)(src, "@CheatMenu_rejoin")
+if chunk then chunk() end
+end
+end)
+]]
+return pcall(qot, code)
+end
+F.AutoRejoinEnable = function()
+T.AutoRejoin = true
+F.AutoRejoinSaveState()
+if F.AutoRejoinQueue() then
+F.Out("[换服] 已开: 被换服后会自动重载脚本 + 恢复你开着的功能")
+else
+F.Out("[换服] ⚠ 本执行器不支持自动重载(缺 queue_on_teleport)")
+end
+end
+F.AutoRejoinDisable = function()
+T.AutoRejoin = false
+pcall(function() if delfile then delfile("CheatMenu_State.txt") end end)
+pcall(function() if delfile then delfile("CheatMenu_RejoinFlag.txt") end end)
+F.Out("[换服] 已关")
+end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true }
@@ -13581,6 +13631,11 @@ T.KickRejoin = v
 if F._cfgSyncing then return end
 if v then pcall(F.KickRejoinEnable) else pcall(F.KickRejoinDisable) end
 end })
+Tabs.Setting:AddToggle("AutoRejoin", { Title = "换服自动重载(被传送走后自动恢复脚本+功能)", Default = false, Callback = function(v)
+T.AutoRejoin = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.AutoRejoinEnable) else pcall(F.AutoRejoinDisable) end
+end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器", Callback = function()
 if not F.Once("rejoin", 6) then return end
 F.RejoinNow()
@@ -13954,6 +14009,35 @@ end
 local n2 = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (界面同步 " .. tostring(n2) .. " 个)")
 pcall(F.ApplySavedOn)
+end)
+pcall(function()
+if type(isfile) ~= "function" or not isfile("CheatMenu_RejoinFlag.txt") then return end
+pcall(function() if delfile then delfile("CheatMenu_RejoinFlag.txt") end end)
+local raw = nil
+pcall(function() raw = readfile("CheatMenu_State.txt") end)
+local d = nil
+if type(raw) == "string" then pcall(function() d = HS:JSONDecode(raw) end) end
+local c2 = 0
+if type(d) == "table" then
+local op2 = Fluent and Fluent.Options
+for k, v in pairs(d) do
+if v == true and k ~= "AutoRejoin" and type(T[k]) == "boolean" then
+T[k] = true
+c2 = c2 + 1
+local opt = nil
+pcall(function() opt = op2 and op2[k] end)
+if opt ~= nil then pcall(F.OptSet, opt, true) end
+end
+end
+end
+pcall(F.ApplySavedOn)
+if type(d) == "table" and d.AutoRejoin == true then
+T.AutoRejoin = true
+local optA = nil
+pcall(function() optA = Fluent and Fluent.Options and Fluent.Options.AutoRejoin end)
+if optA ~= nil then pcall(F.OptSet, optA, true) end
+end
+F.Out("[换服] ✅ 已自动重载脚本, 恢复 " .. tostring(c2) .. " 个功能")
 end)
 end)
 end)
