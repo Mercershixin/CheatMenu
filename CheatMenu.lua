@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:56 sha 99c995d0 bytes 525152'):format('2026-10-07 19:56','99c995d0',525152))
+print(('[CheatMenu] build 2026-10-07 20:03 sha 79025a83 bytes 528221'):format('2026-10-07 20:03','79025a83',528221))
 local F = {}
-F.VERSION = "v16.10.41"
+F.VERSION = "v16.10.42"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9395,35 +9395,67 @@ return t
 end
 F.GlossApplyCache = function()
 local t = Trans.GLOSS_TBL or F.GlossLoad()
-local add = 0
-for en, zh in pairs(t) do
-if Trans.Cache[en] == nil then Trans.Cache[en] = zh add = add + 1 end
+local merged = {}
+local bl = F.GlossParse(table.concat(Trans.GLOSSARY, "\n"))
+for k, v in pairs(bl) do merged[k] = v end
+for k, v in pairs(t) do merged[k] = v end
+Trans.GLOSS_MERGED = merged
+local add, tot = 0, 0
+for en, zh in pairs(merged) do
+tot = tot + 1
+if Trans.Cache[en] ~= zh then Trans.Cache[en] = zh add = add + 1 end
 local lc = en:lower()
-if lc ~= en and Trans.Cache[lc] == nil then Trans.Cache[lc] = zh add = add + 1 end
+if lc ~= en and Trans.Cache[lc] ~= zh then Trans.Cache[lc] = zh add = add + 1 end
 end
-return add, t
+return add, tot
 end
 F.GlossPromptFor = function(text, maxN)
-local t = Trans.GLOSS_TBL
+local t = Trans.GLOSS_MERGED or Trans.GLOSS_TBL
 if type(t) ~= "table" then return "", 0 end
 if Trans._noGloss then return "", 0 end
 local low = tostring(text or ""):lower()
 if low == "" then return "", 0 end
-local hits, n = {}, 0
+local cand = {}
 for en, zh in pairs(t) do
-if #en >= 3 and low:find(en:lower(), 1, true) then
-hits[#hits + 1] = en .. "->" .. zh
-n = n + 1
-if n >= (maxN or 6) then break end
+local e = en:lower()
+if low:find(e, 1, true) then
+local multi = en:find(" ", 1, true) ~= nil
+if multi or #en >= 8 then
+cand[#cand + 1] = { en = en, zh = zh, multi = multi }
 end
 end
-if #hits == 0 then return "", 0 end
-return "\nTranslate game terms CONSISTENTLY:\n" .. table.concat(hits, ", "), #hits
 end
-Trans.SYS_BASE = [[Translate the following game UI text into Chinese.
+if #cand == 0 then return "", 0 end
+table.sort(cand, function(a, b)
+if a.multi ~= b.multi then return a.multi end
+if #a.en ~= #b.en then return #a.en > #b.en end
+return a.en < b.en
+end)
+local picked = {}
+for i = 1, #cand do
+local c = cand[i]
+local covered = false
+for k = 1, #picked do
+if picked[k].en:lower():find(c.en:lower(), 1, true) then covered = true break end
+end
+if not covered then
+picked[#picked + 1] = c
+if #picked >= (maxN or 6) then break end
+end
+end
+if #picked == 0 then return "", 0 end
+local out = {}
+for i = 1, #picked do out[i] = picked[i].en .. "->" .. picked[i].zh end
+return "\nTranslate game terms CONSISTENTLY (these exact phrases only):\n" .. table.concat(out, ", "), #picked
+end
+Trans.SYS_BASE = [[Translate the following game UI text into Simplified Chinese.
+Use natural, idiomatic Chinese as seen in Chinese games; do NOT translate word by word.
+Keep it as short as the original. Never add or drop information.
+Judge words by the game's context (a game about blocks: "Block" = 方块, not 格挡).
 Output ONLY the translation: no explanation, no quotes, no extra words.
 Preserve the original line breaks and number of lines.
 Keep numbers, emoji, URLs and player names unchanged.
+If the text is already Chinese, return it unchanged.
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.GLOSS_HEAD = "\nTranslate game terms CONSISTENTLY:\n"
 Trans.GLOSSARY = {
@@ -9448,7 +9480,7 @@ Trans.GLOSSARY = {
 "Tier->阶位, Mutation->变异, Enchant->附魔, Craft->合成, Forge->锻造, Refine->精炼, Enhance->强化, Awaken->觉醒,",
 "Pet->宠物, Egg->蛋, Hatch->孵化, Mount->坐骑, Skin->皮肤, Crate->宝箱, Chest->宝箱, Spin->抽奖, Wheel->转盘,",
 "Key->钥匙, Token->代币, Ticket->门票, Voucher->兑换券, Mission->任务, Challenge->挑战, Milestone->里程碑,",
-"Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴击, Dodge->闪避, Block->格挡, Heal->治疗,",
+"Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴击, Dodge->闪避, Block Damage->格挡, Lucky Block->幸运方块, Friend Boost->好友加成, Friends Boost->好友加成, Heal->治疗,",
 "Buff->增益, Debuff->减益, Cooldown->冷却, Energy->能量, Stamina->体力, Team->队伍, Squad->小队, Guild->公会,",
 "Friend->好友, Party->组队, Gift->礼物, Mail->邮件, Notification->通知, Options->选项, Graphics->画质, Audio->音效,",
 "Controls->操作, Quit->退出, Exit->退出, Resume->继续, Retry->重试, Loading->加载中, Please Wait->请稍候, Connecting->连接中.",
@@ -10582,11 +10614,24 @@ pcall(function() obj[prop] = val end)
 end
 Trans._selfCN = setmetatable({}, { __mode = "k" })
 Trans._lastWrote = setmetatable({}, { __mode = "k" })
+Trans._selfCNPath = {}
+Trans._pathCache = setmetatable({}, { __mode = "k" })
+Trans.PathOf = function(o)
+local c = Trans._pathCache[o]
+if c ~= nil then return c end
+local p = ""
+pcall(function() p = tostring(o:GetFullName()) end)
+if #p > 160 then p = p:sub(-160) end
+Trans._pathCache[o] = p
+return p
+end
 Trans.MarkSelfCN = function(obj, txt)
 if type(txt) ~= "string" then return end
 if not txt:find("[\228-\233]") or txt:find("%a%a") then return end
 if Trans._lastWrote[obj] == txt then return end
 Trans._selfCN[obj] = true
+local p = Trans.PathOf(obj)
+if p ~= "" then Trans._selfCNPath[p] = true end
 end
 Trans.GuiEl = function(obj, urgent)
 if not obj or not obj.Parent then return end
@@ -10604,6 +10649,10 @@ if not Trans._indexLogged and Trans._indexSkip >= 5 then
 Trans._indexLogged = true
 F.Out("[翻译] 已识别图鉴/索引类面板 ⇒ 里面的内容全部不翻(已跳过 " .. tostring(Trans._indexSkip) .. " 条)")
 end
+return
+end
+if Trans._selfCNPath[Trans.PathOf(obj)] then
+Trans._selfCN[obj] = true
 return
 end
 if cls == "TextBox" then
@@ -10698,6 +10747,28 @@ end
 Trans.Reg = {}
 return n
 end
+Trans._wGui = setmetatable({}, { __mode = "k" })
+Trans._wGuiConn = nil
+Trans.WorldGuiAdd = function(d)
+if typeof(d) ~= "Instance" then return end
+local c = d.ClassName
+if c == "BillboardGui" or c == "SurfaceGui" then Trans._wGui[d] = true end
+end
+Trans.WorldGuiOn = function()
+if Trans._wGuiConn then return end
+local n = 0
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+local c = d.ClassName
+if c == "BillboardGui" or c == "SurfaceGui" then
+Trans._wGui[d] = true
+n = n + 1
+end
+end
+end)
+pcall(function() Trans._wGuiConn = workspace.DescendantAdded:Connect(Trans.WorldGuiAdd) end)
+F.Out("[翻译] 已收录 " .. tostring(n) .. " 个世界告示牌(BillboardGui/SurfaceGui) ⇒ 地图上的牌子文字也会翻")
+end
 Trans.Scan = function()
 local LPl = game:GetService("Players").LocalPlayer
 pcall(Trans.RefreshPN)
@@ -10718,6 +10789,29 @@ if okD and type(d) == "table" then
 for j = 1, #d do list[#list + 1] = d[j] end
 end
 end
+pcall(function()
+if type(Trans._wGui) ~= "table" then return end
+local wn = 0
+for g in pairs(Trans._wGui) do
+if not g.Parent then Trans._wGui[g] = nil
+elseif g.Enabled ~= false and wn < 400 then
+local ok2, ds = pcall(function() return g:GetDescendants() end)
+if ok2 and type(ds) == "table" then
+for k = 1, #ds do
+local c2 = ds[k]
+if typeof(c2) == "Instance" then
+local cc = c2.ClassName
+if cc == "TextLabel" or cc == "TextButton" then
+list[#list + 1] = c2
+wn = wn + 1
+if wn >= 400 then break end
+end
+end
+end
+end
+end
+end
+end)
 local txtN, visN, cnN, enN = 0, 0, 0, 0
 local uniqN = 0
 local seenEn = {}
@@ -10926,12 +11020,13 @@ end)
 end
 function Trans.Enable()
 if T.TransModel == nil then T.TransModel = true end
+pcall(function() Trans.WorldGuiOn() end)
 pcall(function()
 F.GlossLoad(true)
-local _added = F.GlossApplyCache()
+local _added, _tot = F.GlossApplyCache()
 local _ctx = Trans.SlotCtx()
 F.Out("[术语表] 已加载 " .. tostring(Trans.GLOSS_N or 0) .. " 条(来自 " .. Trans.GLOSS_FILE
-.. ") ⇒ 全部当「本地固定译法」直接命中, 不占模型上下文 · 新增缓存 " .. tostring(_added) .. " 条")
+.. ") + 内置修正表 ⇒ 合并 " .. tostring(_tot or 0) .. " 条固定译法, 全部直接命中不占上下文 · 本次新增缓存 " .. tostring(_added) .. " 条")
 local _p = Trans.Prompt("zh", Trans.BATCH, "Settings Progress")
 F.Out("[翻译] 参数: 每槽上下文 " .. tostring(_ctx) .. " token · 输出预留 " .. tostring(Trans.OutNeed(Trans.BATCH, _ctx))
 .. " token · 提示词 " .. tostring(#Trans.SYS_BASE) .. " 字符(术语表不进提示词, 只在文本里命中时才贴几条)")
