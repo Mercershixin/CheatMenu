@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:56 sha c6f9f906 bytes 524985'):format('2026-10-07 20:56','c6f9f906',524985))
+print(('[CheatMenu] build 2026-10-07 21:00 sha a2e862fc bytes 525697'):format('2026-10-07 21:00','a2e862fc',525697))
 local F = {}
-F.VERSION = "v16.10.47"
+F.VERSION = "v16.10.48"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9894,6 +9894,14 @@ local n = 0
 for _ in pairs(Trans.Cache) do n = n + 1 end
 return n
 end
+Trans.OwnedCount = function()
+local file = Trans.CurFile()
+local n = 0
+for k in pairs(Trans.Cache) do
+if Trans.OWNER[k] == file then n = n + 1 end
+end
+return n
+end
 Trans.ClearCurrent = function()
 local file = Trans.CurFile()
 local gone = 0
@@ -9909,8 +9917,13 @@ Trans.Order = {}
 for k in pairs(Trans.Cache) do Trans.Order[#Trans.Order + 1] = k end
 Trans._lastSavedN = nil
 if type(delfile) == "function" then
-pcall(function() if isfile and isfile(file) then delfile(file) end end)
-pcall(function() if isfile and isfile(Trans.AsciiFile()) then delfile(Trans.AsciiFile()) end end)
+pcall(function() if type(isfile) == "function" and isfile(file) then delfile(file) end end)
+pcall(function() if type(isfile) == "function" and isfile(Trans.AsciiFile()) then delfile(Trans.AsciiFile()) end end)
+end
+local still = false
+if type(isfile) == "function" then pcall(function() still = isfile(file) == true end) end
+if still and type(writefile) == "function" then
+pcall(function() writefile(file, '{"v":3,"c":{}}') end)
 end
 Trans.ShouldCacheClear()
 Trans._fail = {}
@@ -9918,7 +9931,9 @@ if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
 end
 Trans._dirty = false
-F.Out("[翻译] 已清空当前服缓存 " .. gone .. " 条(" .. file .. ") ⇒ 本服文字会重新翻一遍")
+local owned = Trans.OwnedCount()
+F.Out("[翻译] 已清空当前服缓存 " .. gone .. " 条(" .. file .. ") ⇒ 本服缓存现剩 " .. owned
+.. " 条 · 另有 " .. tostring(Trans.Count() - owned) .. " 条是内建术语表/官方译法(不占本服文件) ⇒ 本服文字会重新翻一遍")
 return gone
 end
 Trans.ClearAll = function()
@@ -10620,7 +10635,7 @@ local src = nil
 pcall(function() src = obj.Text end)
 if type(src) == "string" and #src > 0 and type(official) == "string" and #official > 0 then
 if Trans.Cache[src] ~= official then
-Trans.Cache[src] = official
+Trans.CachePut(src, official)
 Trans._dirty = true
 end
 end
@@ -14074,14 +14089,14 @@ task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
 if Trans.IsMobile then
-transStatBtn:SetTitle(string.format("📱 云缓存 · 已汉化 %d · 已保存 %d 次", Trans._cnt or 0, Trans._saveCount or 0))
+transStatBtn:SetTitle(string.format("📱 云缓存 · 已汉化 %d · 本服 %d 条 · 已保存 %d 次", Trans._cnt or 0, Trans.OwnedCount(), Trans._saveCount or 0))
 elseif T.TransModel ~= true then
-transStatBtn:SetTitle(string.format("📄 缓存汉化 · 已汉化 %d · 已保存 %d 次", Trans._cnt or 0, Trans._saveCount or 0))
+transStatBtn:SetTitle(string.format("📄 缓存汉化 · 已汉化 %d · 本服 %d 条 · 已保存 %d 次", Trans._cnt or 0, Trans.OwnedCount(), Trans._saveCount or 0))
 elseif Trans._ready then
-transStatBtn:SetTitle(string.format("✅ 待翻译 %d · 已翻译 %d · 已保存 %d 次",
-#(Trans.Queue or {}), Trans._cnt or 0, Trans._saveCount or 0))
+transStatBtn:SetTitle(string.format("✅ 待翻译 %d · 已翻译 %d · 本服 %d 条",
+#(Trans.Queue or {}), Trans._cnt or 0, Trans.OwnedCount()))
 else
-transStatBtn:SetTitle(string.format("📄 模型没连 · 先用缓存(已汉化 %d) · 起来自动翻新词", Trans._cnt or 0))
+transStatBtn:SetTitle(string.format("📄 模型没连 · 先用缓存(已汉化 %d · 本服 %d 条) · 起来自动翻新词", Trans._cnt or 0, Trans.OwnedCount()))
 end
 end)
 end
