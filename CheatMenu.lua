@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 09:23 sha 94e343ad bytes 491362'):format('2026-10-07 09:23','94e343ad',491362))
+print(('[CheatMenu] build 2026-10-07 10:06 sha cec6be60 bytes 491882'):format('2026-10-07 10:06','cec6be60',491882))
 local F = {}
-F.VERSION = "v16.9.87"
+F.VERSION = "v16.9.88"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4831,6 +4831,7 @@ pcall(LockHealthEnable)
 pcall(NoDeathEnable)
 pcall(F.AntiRagdollEnable)
 pcall(function() F.HealthIsolateSet(true) end)
+pcall(F.HpBlockSet, true)
 F.GodTickLoop()
 pcall(function()
 local _, hum = GC()
@@ -4843,13 +4844,14 @@ pcall(function() hum.RequiresNeck = false end)
 F.GodKillDied(hum)
 end
 end)
-F.Out("[上帝模式] 已开(无敌 + 锁血 + 不死 + 防击倒 + 禁用Dead状态 + 断死亡事件 + 拦上报)")
+F.Out("[上帝模式] 已开(无敌 + 锁血 + 不死 + 防击倒 + 禁用Dead状态 + 断死亡事件 + 血量隔离 + 拦受伤上报)")
 else
 pcall(GodDisable)
 pcall(LockHealthDisable)
 pcall(NoDeathDisable)
 pcall(F.AntiRagdollDisable)
 pcall(function() F.HealthIsolateSet(false) end)
+pcall(F.HpBlockSet, false)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
 pcall(function()
 if F._godTDHook and F._godTDOrig and type(restorefunction) == "function" then
@@ -12549,6 +12551,23 @@ if not tp then F.Out("[甩飞] 目标当前没有角色") return end
 local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
 if not tRoot then F.Out("[甩飞] 目标没有 HumanoidRootPart") return end
 local tHum = tp:FindFirstChildOfClass("Humanoid")
+local _, _, myRoot0 = GC()
+local homeCF = nil
+if myRoot0 and myRoot0.Parent then
+local okp, cf = pcall(function() return myRoot0:GetPivot() end)
+if okp and cf then homeCF = cf end
+end
+local function goHome()
+if not homeCF then return end
+local _, _, r = GC()
+if r and r.Parent then
+pcall(function()
+r.AssemblyLinearVelocity = Vector3.zero
+r.AssemblyAngularVelocity = Vector3.zero
+r:PivotTo(homeCF)
+end)
+end
+end
 local ok, why = F.GrabOwner(tRoot)
 F.Out("[甩飞] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
 if ok then
@@ -12567,6 +12586,7 @@ task.wait(0.05)
 end
 task.wait(0.6)
 pcall(function() if tHum and tHum.Parent then tHum.PlatformStand = false end end)
+goHome()
 F.Out("[甩飞] 结束")
 end)
 else
@@ -12591,7 +12611,8 @@ end)
 task.wait(0.05)
 end
 F.FlingStop()
-F.Out("[甩飞] 结束(撞击模式已停, 自身自转/Speed 已归零)")
+goHome()
+F.Out("[甩飞] 结束(撞击模式已停, 自身自转/Speed 已归零, 已回到原地)")
 end)
 end
 end
