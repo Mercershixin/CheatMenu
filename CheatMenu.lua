@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 10:41 sha 5794f87e bytes 487914'):format('2026-10-07 10:41','5794f87e',487914))
+print(('[CheatMenu] build 2026-10-07 11:19 sha bd362480 bytes 488547'):format('2026-10-07 11:19','bd362480',488547))
 local F = {}
-F.VERSION = "v16.9.93"
+F.VERSION = "v16.9.94"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9864,6 +9864,7 @@ end
 local arr = Trans.RequestBatch(sends, "zh")
 if arr then
 ok = true
+Trans._batchOk = (Trans._batchOk or 0) + 1
 for i = 1, #items do
 local it = items[i]
 local tr = Trans.Post(arr[i], ctxs[i])
@@ -9872,6 +9873,8 @@ Trans.CachePut(it.text, tr)
 for j = 1, #it.applies do pcall(it.applies[j], tr) end
 end
 end
+else
+Trans._batchFail = (Trans._batchFail or 0) + 1
 end
 end
 if not ok then
@@ -10270,6 +10273,8 @@ for j = 1, #d do list[#list + 1] = d[j] end
 end
 end
 local txtN, visN, cnN, enN = 0, 0, 0, 0
+local uniqN = 0
+local seenEn = {}
 local samples = {}
 for i = 1, #list do
 local o = list[i]
@@ -10287,6 +10292,7 @@ cnN = cnN + 1
 Trans.MarkSelfCN(o, t)
 elseif Trans.Should(t) then
 enN = enN + 1
+if not seenEn[t] then seenEn[t] = true uniqN = uniqN + 1 end
 if #samples < 3 then samples[#samples + 1] = t:sub(1, 16) end
 end
 end
@@ -10308,10 +10314,18 @@ Fluent:Notify({ Title = "翻译", Content = "没扫到英文(可见 " .. visN ..
 end
 end
 end
-Trans._diagText = " 可见" .. visN .. "/中文" .. cnN .. "/待翻" .. enN
+Trans._diagText = " 可见" .. visN .. "/中文" .. cnN .. "/待翻" .. enN .. "(去重" .. uniqN .. ")"
 Trans._scanRound = Trans._scanRound + 1
 if Trans._scanRound % 10 == 1 then
-F.Out("[翻译] 扫描: 可见文本 " .. visN .. " 个 · 已登记 " .. tostring(Trans.RegCount()) .. " 个 · 待翻 " .. tostring(#Trans.Queue))
+local now = os.clock()
+local dt = now - (Trans._rateAt or now)
+local dc = (Trans._cnt or 0) - (Trans._rateCnt or 0)
+local rate = (dt > 0.5) and string.format("%.1f", dc / dt) or "-"
+Trans._rateAt = now
+Trans._rateCnt = Trans._cnt or 0
+F.Out("[翻译] 扫描: 可见 " .. visN .. " · 中文 " .. cnN .. " · 英文待翻 " .. enN .. "(去重 " .. uniqN
+.. ") · 队列 " .. tostring(#Trans.Queue) .. " · 已翻 " .. tostring(Trans._cnt or 0) .. " · 速率 " .. rate
+.. "条/s · 批 " .. tostring(Trans._batchOk or 0) .. "/" .. tostring(Trans._batchFail or 0))
 end
 if Trans.Active >= Trans.MAX and #Trans.Queue > 0 then
 local idle = os.clock() - (Trans._lastDone or os.clock())
