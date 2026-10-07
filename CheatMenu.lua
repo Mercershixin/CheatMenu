@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:10 sha a88b981f bytes 526836'):format('2026-10-07 21:10','a88b981f',526836))
+print(('[CheatMenu] build 2026-10-07 21:16 sha 5b0ea9e1 bytes 527304'):format('2026-10-07 21:16','5b0ea9e1',527304))
 local F = {}
-F.VERSION = "v16.10.50"
+F.VERSION = "v16.10.51"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10572,10 +10572,13 @@ Trans._selfCN = setmetatable({}, { __mode = "k" })
 Trans._lastWrote = setmetatable({}, { __mode = "k" })
 Trans._selfCNPath = {}
 Trans._pathCache = setmetatable({}, { __mode = "k" })
+Trans._vHookN = 0
 Trans._vHook = setmetatable({}, { __mode = "k" })
 Trans.HookVisible = function(obj)
 if Trans._vHook[obj] then return end
+if Trans._vHookN >= 1200 then return end
 Trans._vHook[obj] = true
+Trans._vHookN = Trans._vHookN + 1
 pcall(function()
 obj:GetPropertyChangedSignal("Visible"):Connect(function()
 if T.Translate and obj.Visible ~= false then pcall(Trans.GuiEl, obj, true) end
@@ -10873,21 +10876,30 @@ end)
 pcall(function() Trans._wGuiConn = workspace.DescendantAdded:Connect(Trans.WorldGuiAdd) end)
 F.Out("[翻译] 已收录 " .. tostring(n) .. " 个世界告示牌(BillboardGui/SurfaceGui) ⇒ 地图上的牌子文字也会翻")
 end
+Trans._preSeen = {}
+Trans._preSeenN = 0
 Trans.PreAdd = function(text)
 if not Trans._ready then return false end
+if (Trans._preBudget or 0) <= 0 then return false end
 if type(text) ~= "string" or text == "" then return false end
-if #Trans.Queue > 240 then return false end
+if Trans._preSeen[text] then return false end
+if Trans._preSeenN >= 6000 then Trans._preSeen = {} Trans._preSeenN = 0 end
+Trans._preSeen[text] = true
+Trans._preSeenN = Trans._preSeenN + 1
+if #Trans.Queue > 120 then return false end
 if Trans.Lookup(text) then return false end
 if not Trans.Should(text) then return false end
 Trans.Async(text, function() end)
+Trans._preBudget = Trans._preBudget - 1
 Trans._preN = (Trans._preN or 0) + 1
 if not Trans._preLogged and Trans._preN >= 20 then
 Trans._preLogged = true
-F.Out("[翻译] 已开始预翻屏幕外的文字 ⇒ 它们一出现就直接是中文, 不用等")
+F.Out("[翻译] 已开始预翻屏幕外的文字(限速 12 条/轮, 不会把显卡吃满) ⇒ 它们一出现就直接是中文")
 end
 return true
 end
 Trans.Scan = function()
+Trans._preBudget = 12
 local LPl = game:GetService("Players").LocalPlayer
 pcall(Trans.RefreshPN)
 local roots, rootNames = {}, {}
