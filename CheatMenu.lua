@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 15:57 sha 3d764664 bytes 500743'):format('2026-10-07 15:57','3d764664',500743))
+print(('[CheatMenu] build 2026-10-07 16:06 sha 128a0eda bytes 505376'):format('2026-10-07 16:06','128a0eda',505376))
 local F = {}
-F.VERSION = "v16.10.12"
+F.VERSION = "v16.10.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8178,15 +8178,109 @@ if type(v) == "boolean" and v then state[k] = true end
 end
 pcall(function() writefile("CheatMenu_State.txt", HS:JSONEncode(state)) end)
 end
+F.SrcVerOf = function(s)
+if type(s) ~= "string" then return nil end
+local i = s:find("F.VERSION", 1, true)
+if not i then return nil end
+return s:sub(i, i + 48):match("v(%d+%.%d+%.%d+)")
+end
+F.CacheVer = function()
+local v = nil
+pcall(function()
+if type(readfile) ~= "function" or type(isfile) ~= "function" or not isfile("CheatMenu_main.lua") then return end
+local s = readfile("CheatMenu_main.lua")
+if type(s) == "string" and #s > 100000 then v = F.SrcVerOf(s) end
+end)
+return v
+end
+F.CacheSync = function()
+task.spawn(function()
+task.wait(8)
+local cur = tostring(F.VERSION or ""):gsub("^v", "")
+local cv = F.CacheVer()
+if not cv then return end
+if F.VerNum(cv) >= F.VerNum(cur) then return end
+local got, gv = nil, nil
+local urls = F.REMOTE_URLS
+for i = 1, #urls do
+if got then break end
+local ok, body = pcall(function() return game:HttpGet(urls[i] .. "?t=" .. tostring(os.time())) end)
+if ok and type(body) == "string" and #body > 100000 and body:sub(1, 9) ~= "<!DOCTYPE" and not body:find("404: Not Found", 1, true) then
+local v = F.SrcVerOf(body)
+if v and F.VerNum(v) >= F.VerNum(cur) then got, gv = body, v end
+end
+end
+if got then
+F.CacheWrite(got)
+F.Out("[缓存] 重进用的主脚本缓存是旧版 v" .. cv .. " ⇒ 已刷新为 v" .. tostring(gv))
+else
+pcall(function() if type(delfile) == "function" then delfile("CheatMenu_main.lua") end end)
+F.Out("[缓存] 缓存 v" .. cv .. " 陈旧、这次又拉不到新版 ⇒ 已删除(免得重进时加载旧版)")
+end
+end)
+end
+F.CacheWrite = function(body)
+if type(writefile) ~= "function" or type(body) ~= "string" or #body < 100000 then return false end
+return (pcall(writefile, "CheatMenu_main.lua", body))
+end
+F.ReloadFresh = function()
+if F._reloading then return false end
+F._reloading = true
+local keep, n = {}, 0
+for k, v in pairs(T) do
+if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
+end
+local src, sv = nil, nil
+pcall(function()
+if type(readfile) == "function" and type(isfile) == "function" and isfile("CheatMenu_main.lua") then
+local s = readfile("CheatMenu_main.lua")
+if type(s) == "string" and #s > 100000 then src = s end
+end
+end)
+if src then sv = F.SrcVerOf(src) end
+local cur = tostring(F.VERSION or ""):gsub("^v", "")
+if not src or F.VerNum(sv or "0") < F.VerNum(cur) then
+F._reloading = false
+F.Out("[重载] 本地缓存" .. (src and ("是旧版 v" .. tostring(sv)) or "不存在") .. " ⇒ 改走联网拉最新版")
+return F.HotReload(true)
+end
+local chunk = (loadstring or load)(src, "@CheatMenu_local")
+if not chunk then
+F._reloading = false
+F.Out("[重载] 本地缓存编译失败 ⇒ 改走联网拉最新版")
+return F.HotReload(true)
+end
+pcall(function() if getgenv then getgenv().CM_RELOAD_KEEP = keep end end)
+F.Out("[重载] 用本地缓存 v" .. tostring(sv) .. " 重新注入(已记下 " .. tostring(n) .. " 个开着的功能)")
+pcall(F.UnloadAll)
+task.wait(0.6)
+pcall(chunk)
+return true
+end
 F.AutoRejoinQueue = function()
 local qot = AC.cap("queue_on_teleport")
 if type(qot) ~= "function" then return false end
 local code = [[
 pcall(function()
 if type(writefile) == "function" then writefile("CheatMenu_RejoinFlag.txt", "1") end
-local src = nil
-pcall(function() src = readfile("CheatMenu_main.lua") end)
-if type(src) ~= "string" or #src < 100000 then
+local function vn(v)
+local a, b, c = tostring(v or ""):match("^(%d+)%.(%d+)%.(%d+)$")
+if not a then return 0 end
+return tonumber(a) * 1000000 + tonumber(b) * 1000 + tonumber(c)
+end
+local function fver(s)
+if type(s) ~= "string" then return nil end
+local i = s:find("F.VERSION", 1, true)
+if not i then return nil end
+return s:sub(i, i + 48):match("v(%d+%.%d+%.%d+)")
+end
+local src, sv = nil, nil
+pcall(function()
+if type(readfile) == "function" then
+local s = readfile("CheatMenu_main.lua")
+if type(s) == "string" and #s > 100000 then src, sv = s, fver(s) end
+end
+end)
 local urls = {
 "https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 "https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
@@ -8194,7 +8288,14 @@ local urls = {
 }
 for _, u in ipairs(urls) do
 local ok, body = pcall(game.HttpGet, game, u .. "?t=" .. tostring(os.time()))
-if ok and type(body) == "string" and #body > 100000 then src = body break end
+if ok and type(body) == "string" and #body > 100000
+and body:sub(1, 9) ~= "<!DOCTYPE" and not body:find("404: Not Found", 1, true) then
+local rv = fver(body)
+if rv and (not src or vn(rv) > vn(sv)) then
+src, sv = body, rv
+pcall(function() if type(writefile) == "function" then writefile("CheatMenu_main.lua", body) end end)
+end
+break
 end
 end
 if type(src) == "string" and #src > 100000 then
@@ -8208,6 +8309,17 @@ end
 F.AutoRejoinEnable = function()
 T.AutoRejoin = true
 F.AutoRejoinSaveState()
+if not F._stateLoop then
+F._stateLoop = true
+task.spawn(function()
+while T.AutoRejoin do
+task.wait(10)
+if not T.AutoRejoin then break end
+pcall(F.AutoRejoinSaveState)
+end
+F._stateLoop = false
+end)
+end
 if F.AutoRejoinQueue() then
 F.Out("[换服] 已开: 被换服后会自动重载脚本 + 恢复你开着的功能")
 else
@@ -8326,6 +8438,8 @@ if jid == "" then
 F.Out("[重进] 拿不到当前服务器 ID(JobId 为空: 多半在 Studio / 非公共服) 本次没执行")
 return false
 end
+pcall(F.AutoRejoinSaveState)
+local queued = F.AutoRejoinQueue()
 local ts = game:GetService("TeleportService")
 pcall(function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) end
@@ -8335,7 +8449,9 @@ if plr ~= LP then return end
 F._tpTries = (F._tpTries or 0) + 1
 if F._tpTries > 3 then
 F.Out("[重进] 传送连续失败 " .. tostring(F._tpTries) .. " 次(" .. tostring(code) .. " " .. tostring(msg)
-.. ") ⇒ 已停手, 请手动从 Roblox 菜单重进")
+.. ") ⇒ 传送这条路走不通, 自动改为脚本内重新注入")
+if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) F._tpFailConn = nil end
+pcall(F.ReloadFresh)
 return
 end
 F.Out("[重进] 传送失败(第 " .. tostring(F._tpTries) .. " 次): " .. tostring(code) .. " · " .. tostring(msg) .. " ⇒ 3 秒后自动重试")
@@ -8350,9 +8466,18 @@ task.delay(30, function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) F._tpFailConn = nil end
 end)
 end)
-F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")")
+F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")"
+.. (queued and " · 已登记: 回来后自动重载脚本+恢复功能" or " · ⚠ 本执行器没有 queue_on_teleport, 回来后要手动加载"))
 local ok = pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, jid, LP) end)
 if ok then
+task.delay(12, function()
+if (F._tpTries or 0) > 0 then return end
+if tostring(game.JobId or "") ~= jid then return end
+if LP == nil or LP.Parent ~= Players then return end
+F.Out("[重进] ⚠ 传了 12 秒人还在原服(传到自己所在服务器常被服务器忽略) ⇒ 自动改为脚本内重新注入")
+pcall(function() if F._tpFailConn then F._tpFailConn:Disconnect() F._tpFailConn = nil end end)
+pcall(F.ReloadFresh)
+end)
 pcall(function() Fluent:Notify({ Title = "重新进入", Content = "正在回到当前服务器…", Duration = 3 }) end)
 return true
 end
@@ -8361,7 +8486,8 @@ local ok2 = pcall(function() ts:Teleport(game.PlaceId, LP) end)
 if ok2 then
 pcall(function() Fluent:Notify({ Title = "重新进入", Content = "已改为重进游戏(可能换服)", Duration = 3 }) end)
 else
-F.Out("[重进] 两种方式都被挡 请手动从 Roblox 菜单重进")
+F.Out("[重进] 传送两种方式都被挡 ⇒ 自动改为脚本内重新注入")
+pcall(F.ReloadFresh)
 end
 return ok2
 end
@@ -14081,3 +14207,4 @@ end)
 F.Try("AntiAFKEnable", F.AntiAFKEnable)
 F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
+pcall(F.CacheSync)
