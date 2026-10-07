@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 23:38 sha 76e40f10 bytes 540543'):format('2026-10-07 23:38','76e40f10',540543))
+print(('[CheatMenu] build 2026-10-07 23:48 sha 9e8e5ee0 bytes 544574'):format('2026-10-07 23:48','9e8e5ee0',544574))
 local F = {}
-F.VERSION = "v16.10.62"
+F.VERSION = "v16.10.63"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8778,6 +8778,92 @@ F.Out("[换服] 本执行器打不开浏览器 ⇒ 链接已复制到剪贴板, 
 end
 return ok
 end
+F.RandomWorld = function()
+local K1 = { "randomworld", "random_world", "random world", "worldrandom", "shuffleworld" }
+local K2 = { "random", "shuffle", "reroll" }
+local K3 = { "world", "世界", "随机" }
+local best, bestScore, all = nil, 0, {}
+local function sc(root, tag)
+if not root then return end
+local ok, list = pcall(function() return root:GetDescendants() end)
+if not ok or type(list) ~= "table" then return end
+for i = 1, #list do
+local d = list[i]
+local cls = d.ClassName
+if cls == "TextButton" or cls == "ImageButton" then
+local nm, tx, full = "", "", ""
+pcall(function() nm = tostring(d.Name) end)
+pcall(function() tx = tostring(d.Text or "") end)
+pcall(function() full = tostring(d:GetFullName()) end)
+if not full:find("Fluent", 1, true) and not full:find("CheatMenu", 1, true) then
+local low = (nm .. " " .. tx):lower()
+local score = 0
+for _, k in ipairs(K1) do if low:find(k, 1, true) then score = score + 10 break end end
+if score == 0 then
+for _, k in ipairs(K2) do if low:find(k, 1, true) then score = score + 5 break end end
+end
+for _, k in ipairs(K3) do if low:find(k, 1, true) then score = score + 3 break end end
+if score > 0 then
+all[#all + 1] = string.format("%2d分 | %s | 名=%s | 文本=%s", score, full:sub(1, 78), nm:sub(1, 26), tx:sub(1, 26))
+if score > bestScore then bestScore = score best = d end
+end
+end
+end
+if i % 300 == 0 then task.wait() end
+end
+end
+sc(LP:FindFirstChild("PlayerGui"), "PlayerGui")
+pcall(function() if gethui then sc(gethui(), "gethui") end end)
+pcall(function() sc(game:GetService("CoreGui"), "CoreGui") end)
+F.Out("[随机世界] 候选按钮 " .. tostring(#all) .. " 个:")
+for i = 1, math.min(#all, 30) do F.Out("   " .. all[i]) end
+if not best then
+F.Out("[随机世界] 没找到疑似按钮 ⇒ 请先在游戏里把那个界面打开再点本按钮, 并把上面候选行发我")
+pcall(function() F.LogFlush("随机世界") end)
+return false
+end
+local nmB = "" pcall(function() nmB = tostring(best:GetFullName()) end)
+local job0 = tostring(game.JobId or "")
+local pos0 = nil pcall(function() local ch = LP.Character local r = ch and ch:FindFirstChild("HumanoidRootPart") if r then pos0 = r.Position end end)
+local hit, how = false, ""
+if type(firesignal) == "function" then
+pcall(function() firesignal(best.Activated) hit = true how = "firesignal(Activated)" end)
+if not hit then pcall(function() firesignal(best.MouseButton1Click) hit = true how = "firesignal(MouseButton1Click)" end) end
+end
+if not hit and type(getconnections) == "function" then
+pcall(function()
+for _, c in ipairs(getconnections(best.Activated)) do
+if c.Function then task.spawn(c.Function) hit = true how = "调 Activated 连接" break end
+end
+end)
+if not hit then
+pcall(function()
+for _, c in ipairs(getconnections(best.MouseButton1Click)) do
+if c.Function then task.spawn(c.Function) hit = true how = "调 MouseButton1Click 连接" break end
+end
+end)
+end
+end
+F.Out("[随机世界] " .. (hit and ("已触发(" .. how .. ")") or "触发失败(执行器没给 firesignal / getconnections)")
+.. " ⇒ " .. nmB:sub(1, 100))
+pcall(function() F.LogFlush("随机世界") end)
+if hit then
+task.delay(6, function()
+local job1 = tostring(game.JobId or "")
+local pos1 = nil pcall(function() local ch = LP.Character local r = ch and ch:FindFirstChild("HumanoidRootPart") if r then pos1 = r.Position end end)
+local moved = ""
+if pos0 and pos1 then moved = string.format(" · 位移 %.0f 格", (pos1 - pos0).Magnitude) end
+if job1 ~= job0 then
+F.Out("[随机世界] 已换服务器(JobId 变了) ⇒ 成功" .. moved)
+else
+F.Out("[随机世界] 仍在同一间服务器 ⇒ 世界没换。" .. moved
+.. " 若位移也很小, 说明这个按钮走的是本服内匹配(服务器优先把你放回原世界) —— 按你说的, 先拉黑其他人再点一次")
+end
+pcall(function() F.LogFlush("随机世界") end)
+end)
+end
+return hit
+end
 F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
@@ -14682,6 +14768,10 @@ end })
 Tabs.Setting:AddButton({ Title = "打开换服链接(进上次随机那间)", Callback = function()
 if not F.Once("hoplink", 3) then return end
 pcall(F.HopOpenLink)
+end })
+Tabs.Setting:AddButton({ Title = "随机世界(点游戏自己的按钮)", Callback = function()
+if not F.Once("randworld", 5) then return end
+pcall(F.RandomWorld)
 end })
 Tabs.Setting:AddButton({ Title = "一键全关", Callback = function()
 if not F.Once("alloff", 2) then return end
