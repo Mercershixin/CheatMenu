@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 12:07 sha 5000866a bytes 488827'):format('2026-10-07 12:07','5000866a',488827))
+print(('[CheatMenu] build 2026-10-07 12:19 sha ddcce6d2 bytes 489066'):format('2026-10-07 12:19','ddcce6d2',489066))
 local F = {}
-F.VERSION = "v16.9.95"
+F.VERSION = "v16.9.96"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9429,6 +9429,7 @@ pcall(function() if isfile and isfile(file) then delfile(file) end end)
 pcall(function() if isfile and isfile(Trans.AsciiFile()) then delfile(Trans.AsciiFile()) end end)
 end
 Trans.ShouldCacheClear()
+Trans._fail = {}
 if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
 end
@@ -9442,6 +9443,8 @@ Trans.Cache, Trans.OWNER, Trans.Order = {}, {}, {}
 Trans._cnt = 0
 Trans._lastSavedN = nil
 Trans._dirty = false
+Trans._fail = {}
+Trans.NumTpl = {}
 Trans.ShouldCacheClear()
 local del = 0
 local list = Trans.CacheFiles()
@@ -9457,6 +9460,7 @@ if type(delfile) == "function" then
 pcall(delfile, Trans.FILE)
 pcall(delfile, "CheatMenu_TransCache.json")
 pcall(delfile, "CheatMenu_TransCache.json.bak")
+pcall(delfile, "CheatMenu_NumTpl.txt")
 end
 if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
@@ -9575,6 +9579,11 @@ if Trans._dirty and T.Translate then pcall(Trans.Flush) end
 if Trans._numTplDirty then
 Trans._numTplDirty = false
 pcall(Trans.NumTplSave)
+end
+if Trans._fail then
+for k, t in pairs(Trans._fail) do
+if os.clock() > t then Trans._fail[k] = nil end
+end
 end
 end
 end
@@ -10174,6 +10183,7 @@ end
 if nested then return end
 end
 if cls == "TextBox" then
+if Trans._selfCN[obj] then return end
 local editable = true
 pcall(function() editable = obj.TextEditable end)
 local ph = nil
