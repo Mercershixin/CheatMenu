@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 01:35 sha 3fad68e0 bytes 541854'):format('2026-10-08 01:35','3fad68e0',541854))
+print(('[CheatMenu] build 2026-10-08 01:46 sha 88db0179 bytes 544114'):format('2026-10-08 01:46','88db0179',544114))
 local F = {}
-F.VERSION = "v16.10.70"
+F.VERSION = "v16.10.71"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4625,14 +4625,32 @@ local o = nil
 if root then pcall(function() o = root:FindFirstChild(nm) end) end
 if o then pcall(function() o:Destroy() end) end
 end
-if F._heliJoint and F._heliC0 then
+if F._heliJoint and F._heliC0 and F._heliKind == "own" then
 pcall(function() F._heliJoint.C0 = F._heliC0 end)
+end
+if F._heliKind == "made" and F._heliJoint then
+pcall(function() F._heliJoint:Destroy() end)
+end
+if F._heliWC then
+pcall(function() F._heliWC.Enabled = true end)
+end
+if F._heliCollOff then
+if T.FlyOn and type(F._flyCollOff) == "table" then
+for bp, v in pairs(F._heliCollOff) do if v == true then F._flyCollOff[bp] = v end end
+else
+for bp, v in pairs(F._heliCollOff) do
+if bp and bp.Parent then pcall(function() bp.CanCollide = v end) end
+end
+end
+F._heliCollOff = nil
 end
 F._heliAo, F._heliBg, F._heliBv, F._heliAtt = nil, nil, nil, nil
 F._heliAng, F._heliBaseY, F._heliYaw = nil, nil, nil
 F._heliPX, F._heliPY, F._heliPZ = nil, nil, nil
+F._heliH = nil
 F._heliC0r, F._heliC0v, F._heliC1inv = nil, nil, nil
 F._heliJoint, F._heliC0, F._heliUseRoot, F._heliMode = nil, nil, nil, nil
+F._heliKind, F._heliWC = nil, nil
 if hum then
 pcall(function() hum.PlatformStand = (F._heliWasPS == true) end)
 pcall(function() hum.AutoRotate = (F._heliWasAR ~= false) end)
@@ -4650,7 +4668,7 @@ if on then pcall(F.BypassAutoRaise, "你开了旋转角色") end
 T.HeliOn = on and true or false
 F.HeliDestroy()
 if not T.HeliOn then return end
-local _, hum, root = GC()
+local ch, hum, root = GC()
 if not (hum and root) then
 F.Out("[旋转] 开不了: 还没拿到角色(重生中?) ⇒ 稍后重开")
 return
@@ -4659,45 +4677,99 @@ F._heliWasPS = hum.PlatformStand
 F._heliWasAR = hum.AutoRotate
 local mode = F.HeliMode()
 F._heliMode = mode
-local joint = nil
+local joint, wc = nil, nil
 pcall(function()
-joint = root:FindFirstChild("RootJoint")
-if joint == nil then
-for _, d in ipairs(root:GetChildren()) do
-if d:IsA("Motor6D") then joint = d break end
+local best, bestScore = nil, -1
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("JointInstance") then
+if d.Part0 == root then
+local nm = string.lower(d.Name)
+local sc = 0
+if nm:find("root", 1, true) then sc = sc + 5 end
+if d:IsA("Motor6D") then sc = sc + 3 end
+if sc > bestScore then best, bestScore = d, sc end
+end
+elseif d:IsA("WeldConstraint") then
+if wc == nil and (d.Part0 == root or d.Part1 == root) then wc = d end
 end
 end
+joint = best
 end)
 if joint then
 F._heliJoint = joint
-F._heliC0 = joint.C0
-F._heliC0r = joint.C0 - joint.C0.Position
-F._heliC0v = joint.C0.Position
+F._heliKind = "own"
+elseif wc then
+pcall(function()
+local other = (wc.Part0 == root) and wc.Part1 or wc.Part0
+if other then
+local m = Instance.new("Motor6D")
+m.Name = "CMHeliJoint"
+m.Part0 = root
+m.Part1 = other
+m.C0 = CFrame.new()
+m.C1 = root.CFrame:Inverse() * other.CFrame
+m.Parent = root
+F._heliJoint = m
+F._heliKind = "made"
+F._heliWC = wc
+wc.Enabled = false
+end
+end)
+end
+if F._heliJoint then
+pcall(function()
+F._heliC0 = F._heliJoint.C0
+F._heliC0r = F._heliJoint.C0 - F._heliJoint.C0.Position
+F._heliC0v = F._heliJoint.C0.Position
 local c1v = Vector3.zero
-pcall(function() c1v = joint.C1:Inverse().Position end)
+pcall(function() c1v = F._heliJoint.C1:Inverse().Position end)
 if type(c1v.Magnitude) == "number" and c1v.Magnitude <= 5 then
 F._heliC1inv = c1v
 else
 F._heliC1inv = Vector3.zero
 end
+end)
 F._heliUseRoot = false
 else
 F._heliUseRoot = true
 end
+do
+local kids, n = {}, 0
+pcall(function()
+for _, k in ipairs(root:GetChildren()) do
+n = n + 1
+if n <= 8 then kids[#kids + 1] = k.Name .. ":" .. k.ClassName end
+end
+end)
+F.Out("[旋转] 骨架: root=" .. root.ClassName .. " 子级" .. tostring(n) .. "[" .. table.concat(kids, ", ") .. "] ⇒ "
+.. (F._heliJoint and (F._heliJoint.Name .. "(" .. F._heliJoint.ClassName .. ")"
+.. (F._heliKind == "made" and "·自建" or "")) or "无可用关节(退化为整体旋转)"))
+end
+if mode == 2 and F._heliCollOff == nil then
+F._heliCollOff = {}
+pcall(function()
+for _, bp in ipairs(ch:GetDescendants()) do
+if bp:IsA("BasePart") then
+F._heliCollOff[bp] = bp.CanCollide
+bp.CanCollide = false
+end
+end
+end)
+end
 local p0 = root.Position
 F._heliAng, F._heliBaseY = 0, p0.Y
 F._heliPX, F._heliPY, F._heliPZ = p0.X, p0.Y, p0.Z
+F._heliH = tonumber(C.HeliHeight) or 0
+if F._heliH ~= F._heliH then F._heliH = 0 end
 local y0 = 0
 pcall(function() local _, yy = root.CFrame:ToEulerAnglesYXZ() y0 = yy end)
 F._heliYaw = math.deg(tonumber(y0) or 0)
 if F._heliYaw ~= F._heliYaw then F._heliYaw = 0 end
-if F._heliUseRoot then
-F.Out("[旋转] ⚠ 没找到 RootJoint ⇒ 退化为整体旋转(极少情况下视角会跟着转)")
-end
 if mode == 1 then
 F.Out("[旋转] 已开 · 不飞行转: 模型原地自转, 视角/走路/跳跃完全不受影响")
 else
-F.Out("[旋转] 已开 · 飞行转: 绝对水平旋转 + 恒定高度悬停(不用物理, 不抖, 身体中心不偏)" .. (T.FlyOn and " · 移动交给「飞行」" or " · WASD 可移动"))
+F.Out("[旋转] 已开 · 飞行转: 绝对水平旋转 · 不自动升降(原地悬停)" .. (T.FlyOn and " · 移动交给「飞行」" or " · WASD 平移 · 空格升 / 左Ctrl 降")
+.. " · 已暂时关闭身体碰撞(不再撞地面/墙 ⇒ 不抖不卡)")
 end
 F._heliConn = F.DriveConnect(function(dt)
 if not T.HeliOn then return end
@@ -4735,15 +4807,20 @@ end
 local cur = r.Position
 local px = (F._heliPX or cur.X) + mv.X * dt
 local pz = (F._heliPZ or cur.Z) + mv.Z * dt
-local tY = (F._heliBaseY or cur.Y) + (tonumber(C.HeliHeight) or 12)
+local vv = tonumber(C.FlyValue) or 60
+if UIS:IsKeyDown(Enum.KeyCode.Space) then F._heliH = (F._heliH or 0) + vv * dt end
+if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then F._heliH = (F._heliH or 0) - vv * dt end
+local hh = F._heliH or 0
+if hh > 300 then hh = 300 elseif hh < -200 then hh = -200 end
+F._heliH = hh
+local tY = (F._heliBaseY or cur.Y) + hh
 local cy = F._heliPY or cur.Y
 local ny = cy + (tY - cy) * math.clamp(dt * 8, 0, 1)
 if math.abs(tY - ny) < 0.02 then ny = tY end
 F._heliPX, F._heliPY, F._heliPZ = px, ny, pz
 pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() r.AssemblyAngularVelocity = Vector3.zero end)
-local base = CFrame.new(px, ny, pz) * CFrame.Angles(0, math.rad(F._heliYaw or 0), 0)
-pcall(function() r.CFrame = F._heliUseRoot and (base * R) or base end)
+pcall(function() r.CFrame = CFrame.new(px, ny, pz) * CFrame.Angles(0, math.rad(F._heliYaw or 0), 0) end)
 end)
 if not F._heliRebuild then
 pcall(function()
@@ -14107,7 +14184,7 @@ if F._cfgSyncing then return end
 if T.HeliOn then pcall(F.HeliSet, true) end
 end })
 Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速(度/秒)", Min = 30, Max = 3000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
-Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 悬停高度(仅飞行转)", Min = 0, Max = 200, Default = 12, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
+Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 初始悬停高度(0=不自动升)", Min = 0, Max = 200, Default = 0, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
 local op = Fluent and Fluent.Options
