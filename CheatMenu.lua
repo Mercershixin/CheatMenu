@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:18 sha 9dfb1f83 bytes 508014'):format('2026-10-07 18:18','9dfb1f83',508014))
+print(('[CheatMenu] build 2026-10-07 18:21 sha 2b2d0023 bytes 508227'):format('2026-10-07 18:21','2b2d0023',508227))
 local F = {}
-F.VERSION = "v16.10.24"
+F.VERSION = "v16.10.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7717,7 +7717,8 @@ if F.EspDraw._conn then pcall(function() F.EspDraw._conn:Disconnect() end) F.Esp
 for pl, rec in pairs(F.EspDraw.items) do F.EspDraw.Release(rec) end
 F.EspDraw.items = {}
 F.EspDraw.on = false
-F.Out("[Drawing ESP] 已关(所有绘制对象已释放)")
+pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end end)
+F.Out("[Drawing ESP] 已关(所有绘制对象已释放 + 已清空 Drawing 缓存, 不留残影)")
 end
 return F.EspDraw.on
 end
@@ -11126,6 +11127,7 @@ T.ChatIMEBox = on and true or false
 F.ChatInputShow(on)
 end
 local function UnloadAll()
+pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end end)
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
