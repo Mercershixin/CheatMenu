@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 22:57 sha 4c6b5ce7 bytes 536467'):format('2026-10-07 22:57','4c6b5ce7',536467))
+print(('[CheatMenu] build 2026-10-07 23:01 sha 1429dcef bytes 538411'):format('2026-10-07 23:01','1429dcef',538411))
 local F = {}
-F.VERSION = "v16.10.59"
+F.VERSION = "v16.10.60"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8664,11 +8664,14 @@ if cursor and cursor ~= "" then url = url .. "&cursor=" .. tostring(cursor) end
 local raw = F.ServerFetch(url)
 if not raw then
 F.Out("[换服] ⚠ 拿不到服务器列表(HTTP 被挡或网络不通) ⇒ 本次没执行")
+pcall(function() F.LogFlush("换服") end)
 return false
 end
 local okD, dec = pcall(function() return hs:JSONDecode(raw) end)
 if not (okD and type(dec) == "table" and type(dec.data) == "table") then
-F.Out("[换服] ⚠ 服务器列表解析失败 ⇒ 本次没执行")
+local head = tostring(raw):sub(1, 160):gsub("[\r\n]+", " ")
+F.Out("[换服] ⚠ 服务器列表解析失败(返回的不是 JSON) ⇒ 本次没执行 · 响应开头: " .. head)
+pcall(function() F.LogFlush("换服") end)
 return false
 end
 local n = 0
@@ -8691,11 +8694,39 @@ if type(cursor) ~= "string" or cursor == "" or cursor == "null" then break end
 end
 if #cands == 0 then
 F.Out("[换服] 没找到别的服务器(这游戏可能只有这一间, 或其它都满了) ⇒ 本次没执行")
+pcall(function() F.LogFlush("换服") end)
 return false
 end
-local pick = cands[math.random(1, #cands)]
-F.Out("[换服] 可选 " .. tostring(#cands) .. " 间 ⇒ 随机去 " .. tostring(pick):sub(1, 12)
+local pick = tostring(cands[math.random(1, #cands)])
+local link = "https://www.roblox.com/games/start?placeId=" .. tostring(pid) .. "&gameInstanceId=" .. pick
+F.Out("[换服] 可选 " .. tostring(#cands) .. " 间 ⇒ 随机去 " .. pick:sub(1, 12)
 .. " (已排除当前这间 " .. me:sub(1, 12) .. ")")
+if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
+pcall(function()
+F._hopFailConn = ts.TeleportInitFailed:Connect(function(plr, result, msg)
+if plr ~= LP then return end
+if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
+local rs = tostring(result)
+local why = ""
+if rs:find("Restricted") then
+why = "Roblox 侧拒绝(错误码 773「受限」: 该网络/账号/游戏不允许传送到这间) ⇒ 已把「直接加入这一间」的链接复制到剪贴板, 粘贴到浏览器地址栏回车即可进这间"
+elseif rs:find("GameFull") then
+why = "目标服务器满了 ⇒ 再点一次「随机换服」换一间"
+elseif rs:find("NotFound") or rs:find("Closed") or rs:find("Offline") then
+why = "目标服务器已关闭 ⇒ 再点一次「随机换服」换一间"
+else
+why = "已把这一间的直连链接复制到剪贴板备用"
+end
+if setclipboard then pcall(setclipboard, link) end
+F.Out("[换服] ❌ 传送未成功: " .. rs .. " · " .. tostring(msg) .. " ⇒ " .. why)
+F.Out("[换服] 直连链接(浏览器打开即可进那一间): " .. link)
+pcall(function() F.LogFlush("换服失败") end)
+pcall(function() Fluent:Notify({ Title = "换服未成功", Content = rs .. " · 换服链接已复制到剪贴板", Duration = 6 }) end)
+end)
+end)
+task.delay(20, function()
+if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
+end)
 pcall(function() Trans.Flush() end)
 local ok = pcall(function() ts:TeleportToPlaceInstance(pid, pick, LP) end)
 if ok then
@@ -8707,7 +8738,9 @@ if ok2 then
 F.Out("[换服] 指定服务器传送被挡 ⇒ 已改为随机传送(可能回到同一间)")
 pcall(function() Fluent:Notify({ Title = "随机换服", Content = "已改为随机传送(可能同服)", Duration = 3 }) end)
 else
-F.Out("[换服] 两种传送方式都被挡 ⇒ 本次没执行")
+if setclipboard then pcall(setclipboard, link) end
+F.Out("[换服] 两种传送方式都被挡 ⇒ 直连链接已复制到剪贴板: " .. link)
+pcall(function() F.LogFlush("换服") end)
 end
 return ok2
 end
