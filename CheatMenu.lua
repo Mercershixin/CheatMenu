@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:21 sha 2b2d0023 bytes 508227'):format('2026-10-07 18:21','2b2d0023',508227))
+print(('[CheatMenu] build 2026-10-07 18:33 sha 1e5a3821 bytes 511025'):format('2026-10-07 18:33','1e5a3821',511025))
 local F = {}
-F.VERSION = "v16.10.25"
+F.VERSION = "v16.10.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2629,8 +2629,11 @@ local from = cam and cam.CFrame.Position or root0.Position
 local range = tonumber(C.CombatRange) or 200
 local fovpx = tonumber(C.CombatFOV) or 400
 local pov = (tostring(C.CombatMode or ""):find("正面", 1, true) ~= nil)
+local prio = tostring(C.CombatPriority or "")
 local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
 local cur = F._combatNow
+local myTeam = nil
+if T.CombatTeamCheck then pcall(function() myTeam = LP.Team end) end
 local best, bestPart, bestScore, blocked, why = nil, nil, math.huge, 0, "没有敌人"
 local prefer = nil
 local wantPart = tostring(C.AimPart or "")
@@ -2651,17 +2654,36 @@ for ci = 1, n do
 local ch = buf[ci]
 local okc, h, root = F.CombatAliveBody(ch)
 if okc then
+local skip = false
+if T.CombatTeamCheck and myTeam ~= nil then
+pcall(function()
+local pl = Players:GetPlayerFromCharacter(ch)
+if pl and pl.Team == myTeam then skip = true end
+end)
+end
+if not skip then
 local dist = (root.Position - root0.Position).Magnitude
 if dist <= range then
-local score = nil
-if pov and cam then
+local score, off, onScreen = nil, nil, false
+if cam then
 local sp, os = cam:WorldToViewportPoint(root.Position)
 local dx, dy = sp.X - vp.X / 2, sp.Y - vp.Y / 2
-local off = math.sqrt(dx * dx + dy * dy)
-if os and off <= fovpx then score = off end
+off = math.sqrt(dx * dx + dy * dy)
+onScreen = os and true or false
+end
+if pov then
+if onScreen and off and off <= fovpx then
+if prio:find("血量最低", 1, true) then score = (h and h.Health) or 0
+elseif prio:find("血量最高", 1, true) then score = -((h and h.Health) or 0)
+elseif prio:find("距离最近", 1, true) then score = dist
+else score = off end
+end
 if not score then why = "不在正面圈里" end
 else
-score = dist
+if prio:find("血量最低", 1, true) then score = (h and h.Health) or 0
+elseif prio:find("血量最高", 1, true) then score = -((h and h.Health) or 0)
+elseif prio:find("准心最近", 1, true) and onScreen then score = off
+else score = dist end
 end
 if score then
 if ch == cur then score = score - 1e6 end
@@ -2676,6 +2698,7 @@ end
 end
 else
 why = "超出锁定距离"
+end
 end
 end
 end
@@ -8447,7 +8470,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.ClickTPDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -11131,7 +11154,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.ClickTPDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13010,6 +13033,33 @@ local ok = pcall(function() part:SetNetworkOwner(LP) end)
 if not ok then return false, "抢所有权被拒(执行器或服务端不允许)" end
 return true, nil
 end
+F._clickTPConn = nil
+function F.ClickTPEnable()
+if F._clickTPConn then return end
+local ok, mouse = pcall(function() return LP:GetMouse() end)
+if not ok or not mouse then
+F.Out("[点击传送] 本环境拿不到鼠标对象 ⇒ 无法开启(桌面端才有鼠标)")
+return
+end
+F._clickTPConn = mouse.Button1Down:Connect(function()
+if not T.ClickTP then return end
+if F._typing then return end
+if F.MenuOpen and F.MenuOpen() then return end
+if not mouse.Target then return end
+local _, hum, root = GC()
+if not (root and hum and hum.Health > 0) then return end
+local hit = mouse.Hit
+if not hit then return end
+pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.CFrame = CFrame.new(hit.Position + Vector3.new(0, 4, 0))
+end)
+end)
+F.Out("[点击传送] 已开: 鼠标左键点到哪就传到哪(点到 UI / 天空不会传)")
+end
+function F.ClickTPDisable()
+if F._clickTPConn then pcall(function() F._clickTPConn:Disconnect() end) F._clickTPConn = nil end
+end
 F.FlingStop = function()
 F._flingHit = false
 if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
@@ -13237,6 +13287,22 @@ Tabs.Combat:AddToggle("CombatSkipInvincible", { Title = "不打无敌/出生保�
 T.CombatSkipInvincible = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打无敌/出生保护 = " .. (v and "开" or "关"))
+end })
+Tabs.Combat:AddDropdown("CombatPriority", { Title = "目标优先级", Values = {
+"自动(跟随锁定模式 · 推荐)",
+"距离最近",
+"准心最近",
+"血量最低",
+"血量最高",
+}, Default = "自动(跟随锁定模式 · 推荐)", Callback = function(v)
+C.CombatPriority = tostring(v)
+if F._cfgSyncing then return end
+F.Out("[战斗] 目标优先级 = " .. tostring(v))
+end })
+Tabs.Combat:AddToggle("CombatTeamCheck", { Title = "不打队友(队伍相同自动跳过)", Default = false, Callback = function(v)
+T.CombatTeamCheck = v
+if F._cfgSyncing then return end
+F.Out("[战斗] 不打队友 = " .. (v and "开(队伍相同的人不会锁)" or "关"))
 end })
 Tabs.Combat:AddToggle("AutoFire", { Title = "自动开火", Default = false, Callback = function(v)
 T.AutoFire = v
@@ -13547,6 +13613,11 @@ if F._cfgSyncing then return end
 F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
+end })
+Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(鼠标左键点哪传哪 · 无限远)", Default = false, Callback = function(v)
+T.ClickTP = v
+if F._cfgSyncing then return end
+if v then pcall(F.ClickTPEnable) else pcall(F.ClickTPDisable) end
 end })
 Tabs.TP:AddSection("针对玩家")
 Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
