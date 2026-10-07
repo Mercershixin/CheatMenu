@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:41 sha c0d54960 bytes 506560'):format('2026-10-07 17:41','c0d54960',506560))
+print(('[CheatMenu] build 2026-10-07 17:47 sha 5041ec1a bytes 507196'):format('2026-10-07 17:47','5041ec1a',507196))
 local F = {}
-F.VERSION = "v16.10.17"
+F.VERSION = "v16.10.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12926,6 +12926,7 @@ return true, nil
 end
 F.FlingStop = function()
 F._flingHit = false
+if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
 pcall(function()
 local _, _, r = GC()
 if r and r.Parent then r.AssemblyAngularVelocity = Vector3.zero end
@@ -12978,34 +12979,49 @@ goHome()
 F.Out("[甩飞] 结束")
 end)
 else
-F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「TP 贴脸旋转撞击」: 直接瞬移到他身上高速自转把他撞飞(不再用速度飞过去)")
+F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「每帧贴脸撞击」: 每帧瞬移到他身上 + 极大速度, 靠服务器物理把他甩出去")
 F._flingHit = true
 task.spawn(function()
-local n = 0
-while F._flingHit and n < 60 do
-n = n + 1
-local _, myHum, myRoot = GC()
-if not (myRoot and myRoot.Parent) then break end
-if not (tRoot and tRoot.Parent) then break end
-pcall(function()
-myRoot.AssemblyAngularVelocity = Vector3.new(0, 9000, 0)
-local tp2 = tRoot.Position
-local flat = Vector3.new(tp2.X - myRoot.Position.X, 0, tp2.Z - myRoot.Position.Z)
-myRoot:PivotTo(CFrame.new(tp2))
-if flat.Magnitude > 0.05 then
-myRoot.AssemblyLinearVelocity = flat.Unit * 80 + Vector3.new(0, 15, 0)
-else
-myRoot.AssemblyLinearVelocity = Vector3.new(0, 15, 0)
+local _, _, myRoot = GC()
+if not (myRoot and myRoot.Parent) then goHome() F.Out("[甩飞] 没有自己的角色, 本次没动") return end
+local myChar = myRoot.Parent
+local saved = {}
+if myChar then
+for _, p in ipairs(myChar:GetDescendants()) do
+if p:IsA("BasePart") then
+saved[p] = p.CanCollide
+pcall(function() p.CanCollide = false end)
 end
-end)
-local tv = 0
-pcall(function() tv = tRoot.AssemblyLinearVelocity.Magnitude end)
-if tv > 250 then break end
-task.wait(0.05)
 end
-F.FlingStop()
+end
+local done = false
+local function wrapOut(msg)
+if done then return end
+done = true
+if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
+if myChar then
+for p, v in pairs(saved) do
+if p.Parent then pcall(function() p.CanCollide = v end) end
+end
+end
 goHome()
-F.Out("[甩飞] 结束(撞击模式已停, 自身自转/Speed 已归零, 已回到原地)")
+F.Out("[甩飞] " .. msg)
+end
+local t0 = os.clock()
+F._flingConn = RS.Heartbeat:Connect(function()
+if done then return end
+if not F._flingHit then wrapOut("已手动停止 · 自身已复位 · 已回到原地") return end
+if os.clock() - t0 > 1.0 then wrapOut("结束(贴脸撞击 1 秒 · 自身已复位 · 已回到原地)") return end
+local r = myRoot
+if not (r and r.Parent) then wrapOut("自己没角色了 · 已回到原地") return end
+local tr = tRoot
+if not (tr and tr.Parent) then wrapOut("目标没了 · 已回到原地") return end
+pcall(function()
+r.CFrame = tr.CFrame
+r.AssemblyLinearVelocity = Vector3.new(1e5, 1e5, 1e5)
+r.AssemblyAngularVelocity = Vector3.new(1e5, 1e5, 1e5)
+end)
+end)
 end)
 end
 end
