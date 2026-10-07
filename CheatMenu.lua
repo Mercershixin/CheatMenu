@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:55 sha 1cb00751 bytes 526589'):format('2026-10-07 18:55','1cb00751',526589))
+print(('[CheatMenu] build 2026-10-07 19:01 sha bfd9b8e7 bytes 526881'):format('2026-10-07 19:01','bfd9b8e7',526881))
 local F = {}
-F.VERSION = "v16.10.31"
+F.VERSION = "v16.10.32"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -201,7 +201,7 @@ local checkcaller   = checkcaller or function() return false end
 local getnamecallmethod = getnamecallmethod
 local dbgGetConstants = (debug and (debug.getconstants or debug.getconsts)) or getconstants or getconsts
 local dbgGetUpvalues  = (debug and (debug.getupvalues or debug.getupvals)) or getupvalues or getupvals
-local T = {}
+local T = { TransModel = true }
 local C = {}
 local _gcCh, _gcHum, _gcRoot
 local function GC()
@@ -10837,9 +10837,11 @@ if t:find("[\228-\233]") then
 cnN = cnN + 1
 Trans.MarkSelfCN(o, t)
 elseif Trans.Should(t) then
+if not Trans.Lookup(t) then
 enN = enN + 1
 if not seenEn[t] then seenEn[t] = true uniqN = uniqN + 1 end
 if #samples < 3 then samples[#samples + 1] = t:sub(1, 16) end
+end
 end
 end
 end
@@ -10852,6 +10854,9 @@ Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
 F.Out("[翻译·诊断] 扫了 " .. #roots .. " 个容器(" .. table.concat(rootNames, ",") .. ") ⇒ 可见文本 "
 .. visN .. " 个 · 中文 " .. cnN .. " · 英文待翻 " .. enN .. " " .. s)
+if enN > 0 and T.TransModel ~= true then
+F.Out("[翻译] ⚠ 有 " .. tostring(enN) .. " 条新词缓存里没有, 现在没在翻(当前=只用缓存) ⇒ 到翻译页打开「连本地模型实时翻译新词」即可翻译")
+end
 if Fluent and Fluent.Notify then
 if enN > 0 then
 Fluent:Notify({ Title = "翻译", Content = "扫描到 " .. enN .. " 个英文待翻，正在翻译… 样本 " .. s, Duration = 8 })
@@ -10870,7 +10875,7 @@ local rate = (dt > 0.5) and string.format("%.1f", dc / dt) or "-"
 Trans._rateAt = now
 Trans._rateCnt = Trans._cnt or 0
 F.Out("[翻译] 扫描: 可见 " .. visN .. " · 中文 " .. cnN .. " · 英文待翻 " .. enN .. "(去重 " .. uniqN
-.. ") · 队列 " .. tostring(#Trans.Queue) .. " · 已翻 " .. tostring(Trans._cnt or 0) .. " · 速率 " .. rate
+.. ") · 队列 " .. tostring(#Trans.Queue) .. " · 缓存 " .. tostring(Trans.Count()) .. " 条 · 速率 " .. rate
 .. "条/s · 批 " .. tostring(Trans._batchOk or 0) .. "/" .. tostring(Trans._batchFail or 0))
 end
 if Trans.Active >= Trans.MAX and #Trans.Queue > 0 then
@@ -14062,7 +14067,7 @@ Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
-Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(不开=只用缓存汉化)", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(关掉=只用缓存, 不发请求)", Default = true, Callback = function(v)
 T.TransModel = v and true or false
 if F._cfgSyncing then return end
 if T.Translate then pcall(Trans.ApplyMode, false) end
