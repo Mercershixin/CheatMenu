@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 23:53 sha 122a7066 bytes 540543'):format('2026-10-07 23:53','122a7066',540543))
+print(('[CheatMenu] build 2026-10-08 00:22 sha bf5a62f9 bytes 533707'):format('2026-10-08 00:22','bf5a62f9',533707))
 local F = {}
-F.VERSION = "v16.10.64"
+F.VERSION = "v16.10.65"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8634,150 +8634,6 @@ pcall(F.ReloadFresh)
 end
 return ok2
 end
-F.ServerFetch = function(url)
-local ok, r = pcall(function() return game:HttpGet(url) end)
-if ok and type(r) == "string" and #r > 2 and r:sub(1, 1) == "{" then return r end
-local rf = Trans.Req()
-if type(rf) == "function" then
-local ok2, res = pcall(rf, { Url = url, Method = "GET" })
-if ok2 and type(res) == "table" and tonumber(res.StatusCode or 0) == 200 then
-local b = res.Body or res.body
-if type(b) == "string" and #b > 2 then return b end
-end
-end
-return nil
-end
-function F.RandomServerHop()
-local ts = game:GetService("TeleportService")
-local hs = game:GetService("HttpService")
-local pid = game.PlaceId
-local me = tostring(game.JobId or "")
-if type(pid) ~= "number" or pid == 0 or me == "" then
-F.Out("[换服] 拿不到 PlaceId/JobId(Studio 或非公共服) ⇒ 本次没执行")
-return false
-end
-F._hopTriedAlt = nil
-local base = "https://games.roblox.com/v1/games/" .. tostring(pid) .. "/servers/Public?sortOrder=Asc&limit=100"
-local cursor, cands = nil, {}
-for _page = 1, 3 do
-local url = base
-if cursor and cursor ~= "" then url = url .. "&cursor=" .. tostring(cursor) end
-local raw = F.ServerFetch(url)
-if not raw then
-F.Out("[换服] ⚠ 拿不到服务器列表(HTTP 被挡或网络不通) ⇒ 本次没执行")
-pcall(function() F.LogFlush("换服") end)
-return false
-end
-local okD, dec = pcall(function() return hs:JSONDecode(raw) end)
-if not (okD and type(dec) == "table" and type(dec.data) == "table") then
-local head = tostring(raw):sub(1, 160):gsub("[\r\n]+", " ")
-F.Out("[换服] ⚠ 服务器列表解析失败(返回的不是 JSON) ⇒ 本次没执行 · 响应开头: " .. head)
-pcall(function() F.LogFlush("换服") end)
-return false
-end
-local n = 0
-for i = 1, #dec.data do
-local sv = dec.data[i]
-if type(sv) == "table" then
-local id = tostring(sv.id or "")
-local pl = tonumber(sv.playing)
-local mx = tonumber(sv.maxPlayers)
-local notFull = (pl == nil or mx == nil or mx <= 0 or pl < mx)
-if id ~= "" and id ~= me and notFull then
-cands[#cands + 1] = id
-n = n + 1
-end
-end
-end
-if n > 0 then break end
-cursor = dec.nextPageCursor
-if type(cursor) ~= "string" or cursor == "" or cursor == "null" then break end
-end
-if #cands == 0 then
-F.Out("[换服] 没找到别的服务器(这游戏可能只有这一间, 或其它都满了) ⇒ 本次没执行")
-pcall(function() F.LogFlush("换服") end)
-return false
-end
-local pick = tostring(cands[math.random(1, #cands)])
-local link = "https://www.roblox.com/games/start?placeId=" .. tostring(pid) .. "&gameInstanceId=" .. pick
-F._hopLink = link
-F.Out("[换服] 可选 " .. tostring(#cands) .. " 间 ⇒ 随机去 " .. pick:sub(1, 12)
-.. " (已排除当前这间 " .. me:sub(1, 12) .. ")")
-if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
-pcall(function()
-F._hopFailConn = ts.TeleportInitFailed:Connect(function(plr, result, msg)
-if plr ~= LP then return end
-local rs = tostring(result)
-if (rs:find("Unauthorized") or rs:find("Restricted")) and not F._hopTriedAlt then
-F._hopTriedAlt = true
-F.Out("[换服] 指定服务器被 Roblox 拒绝(" .. rs .. ") ⇒ 换用原生「随机换服」API 再试一次")
-local okA = pcall(function() ts:Teleport(pid, LP) end)
-if okA then return end
-end
-if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
-local why = ""
-if rs:find("Restricted") then
-why = "Roblox 侧拒绝(错误码 773「受限」: 该网络/账号/游戏不允许传送到这间) ⇒ 已把「直接加入这一间」的链接复制到剪贴板, 粘贴到浏览器地址栏回车即可进这间"
-elseif rs:find("GameFull") then
-why = "目标服务器满了 ⇒ 再点一次「随机换服」换一间"
-elseif rs:find("NotFound") or rs:find("Closed") or rs:find("Offline") then
-why = "目标服务器已关闭 ⇒ 再点一次「随机换服」换一间"
-else
-why = "已把这一间的直连链接复制到剪贴板备用"
-end
-if setclipboard then pcall(setclipboard, link) end
-F.Out("[换服] ❌ 传送未成功: " .. rs .. " · " .. tostring(msg) .. " ⇒ " .. why)
-F.Out("[换服] 直连链接(浏览器打开即可进那一间): " .. link)
-if rs:find("Unauthorized") then
-F.Out("[换服] 说明: 两条传送 API(指定服务器 / 原生随机)都被 Roblox 判为「Unauthorized」"
-.. " ⇒ 这个游戏开了 Roblox 的「安全传送(Secure Teleports)」, 客户端发起的传送一律被官方拒绝, "
-.. "令牌只能由游戏服务端签发, 所以脚本层面无法绕过(参考脚本 Bk/Tx/Xa 也都只用同一种方法, 无解)。")
-F.Out("[换服] 请点「打开换服链接」按钮, 或把剪贴板里的链接粘到浏览器地址栏回车 —— 这是当前唯一通路。")
-end
-pcall(function() F.LogFlush("换服失败") end)
-pcall(function() Fluent:Notify({ Title = "换服未成功", Content = "已复制换服链接 · 点「打开换服链接」按钮, 或粘到浏览器", Duration = 8 }) end)
-end)
-end)
-task.delay(20, function()
-if F._hopFailConn then pcall(function() F._hopFailConn:Disconnect() end) F._hopFailConn = nil end
-end)
-pcall(function() Trans.Flush() end)
-local ok = pcall(function() ts:TeleportToPlaceInstance(pid, pick, LP) end)
-if ok then
-pcall(function() Fluent:Notify({ Title = "随机换服", Content = "正在前往另一间服务器…", Duration = 3 }) end)
-return true
-end
-local ok2 = pcall(function() ts:Teleport(pid, LP) end)
-if ok2 then
-F.Out("[换服] 指定服务器传送被挡 ⇒ 已改为随机传送(可能回到同一间)")
-pcall(function() Fluent:Notify({ Title = "随机换服", Content = "已改为随机传送(可能同服)", Duration = 3 }) end)
-else
-if setclipboard then pcall(setclipboard, link) end
-F.Out("[换服] 两种传送方式都被挡 ⇒ 直连链接已复制到剪贴板: " .. link)
-pcall(function() F.LogFlush("换服") end)
-end
-return ok2
-end
-F.HopOpenLink = function()
-local link = F._hopLink
-if type(link) ~= "string" or link == "" then
-F.Out("[换服] 还没有换服链接 ⇒ 先点一次「随机换服」")
-return false
-end
-local gs = game:GetService("GuiService")
-local ok = false
-pcall(function() gs:OpenURL(link) ok = true end)
-if not ok then
-pcall(function() gs:OpenBrowserWindow(link) ok = true end)
-end
-if ok then
-F.Out("[换服] 已打开换服链接 ⇒ 在打开页面里点「Play/加入」即可进入随机到的那一间: " .. link)
-else
-if setclipboard then pcall(setclipboard, link) end
-F.Out("[换服] 本执行器打不开浏览器 ⇒ 链接已复制到剪贴板, 粘到浏览器地址栏回车: " .. link)
-end
-return ok
-end
 F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
@@ -14674,14 +14530,6 @@ end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器", Callback = function()
 if not F.Once("rejoin", 6) then return end
 F.RejoinNow()
-end })
-Tabs.Setting:AddButton({ Title = "随机换服(去另一间服务器)", Callback = function()
-if not F.Once("hop", 8) then return end
-pcall(F.RandomServerHop)
-end })
-Tabs.Setting:AddButton({ Title = "打开换服链接(进上次随机那间)", Callback = function()
-if not F.Once("hoplink", 3) then return end
-pcall(F.HopOpenLink)
 end })
 Tabs.Setting:AddButton({ Title = "一键全关", Callback = function()
 if not F.Once("alloff", 2) then return end
