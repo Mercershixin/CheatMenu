@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:04 sha c3289407 bytes 524983'):format('2026-10-07 21:04','c3289407',524983))
+print(('[CheatMenu] build 2026-10-07 21:10 sha a88b981f bytes 526836'):format('2026-10-07 21:10','a88b981f',526836))
 local F = {}
-F.VERSION = "v16.10.49"
+F.VERSION = "v16.10.50"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10303,7 +10303,16 @@ while i <= n do
 local c = s:sub(i, i)
 if c:match("%d") then
 local j = i
-while j <= n and s:sub(j, j):match("%d") do j = j + 1 end
+while j <= n do
+local cj = s:sub(j, j)
+if cj:match("%d") then
+j = j + 1
+elseif (cj == "." or cj == ",") and s:sub(j + 1, j + 1):match("%d") then
+j = j + 1
+else
+break
+end
+end
 vals[#vals + 1] = s:sub(i, j - 1)
 kinds[#kinds + 1] = "n"
 out[#out + 1] = "\1"
@@ -10326,6 +10335,25 @@ i = i + 1
 end
 end
 return table.concat(out), vals, kinds
+end
+Trans.TplFromCache = function()
+local n = 0
+for k, v in pairs(Trans.Cache) do
+if type(k) == "string" and type(v) == "string" then
+local tplS, vals, kinds = Trans.TplBuild(k)
+if #vals == 1 and kinds[1] == "n" and #tplS >= 8 then
+local tplTr, v2, k2 = Trans.TplBuild(v)
+if #v2 == 1 and k2[1] == "n" and v2[1] == vals[1] then
+if Trans.NumTpl[tplS] ~= tplTr then
+Trans.NumTpl[tplS] = tplTr
+n = n + 1
+end
+end
+end
+end
+end
+if n > 0 then Trans._numTplDirty = true end
+return n
 end
 Trans.Translate = function(text, force, lang)
 if type(text) ~= "string" then return nil end
@@ -10544,6 +10572,16 @@ Trans._selfCN = setmetatable({}, { __mode = "k" })
 Trans._lastWrote = setmetatable({}, { __mode = "k" })
 Trans._selfCNPath = {}
 Trans._pathCache = setmetatable({}, { __mode = "k" })
+Trans._vHook = setmetatable({}, { __mode = "k" })
+Trans.HookVisible = function(obj)
+if Trans._vHook[obj] then return end
+Trans._vHook[obj] = true
+pcall(function()
+obj:GetPropertyChangedSignal("Visible"):Connect(function()
+if T.Translate and obj.Visible ~= false then pcall(Trans.GuiEl, obj, true) end
+end)
+end)
+end
 Trans.PathOf = function(o)
 local c = Trans._pathCache[o]
 if c ~= nil then return c end
@@ -10835,6 +10873,20 @@ end)
 pcall(function() Trans._wGuiConn = workspace.DescendantAdded:Connect(Trans.WorldGuiAdd) end)
 F.Out("[翻译] 已收录 " .. tostring(n) .. " 个世界告示牌(BillboardGui/SurfaceGui) ⇒ 地图上的牌子文字也会翻")
 end
+Trans.PreAdd = function(text)
+if not Trans._ready then return false end
+if type(text) ~= "string" or text == "" then return false end
+if #Trans.Queue > 240 then return false end
+if Trans.Lookup(text) then return false end
+if not Trans.Should(text) then return false end
+Trans.Async(text, function() end)
+Trans._preN = (Trans._preN or 0) + 1
+if not Trans._preLogged and Trans._preN >= 20 then
+Trans._preLogged = true
+F.Out("[翻译] 已开始预翻屏幕外的文字 ⇒ 它们一出现就直接是中文, 不用等")
+end
+return true
+end
 Trans.Scan = function()
 local LPl = game:GetService("Players").LocalPlayer
 pcall(Trans.RefreshPN)
@@ -10906,6 +10958,12 @@ end
 end
 end
 pcall(Trans.GuiEl, o)
+Trans.HookVisible(o)
+else
+local th = nil
+pcall(function() th = o.Text end)
+if type(th) == "string" and th ~= "" and not th:find("[\228-\233]") then Trans.PreAdd(th) end
+Trans.HookVisible(o)
 end
 end
 end
@@ -11037,6 +11095,11 @@ end)
 T.Translate = true
 Trans.Load()
 pcall(Trans.NumTplLoad)
+local _ntc = 0
+pcall(function() _ntc = Trans.TplFromCache() end)
+if _ntc > 0 then
+F.Out("[翻译] 数字模板: 已从缓存句子补建 " .. tostring(_ntc) .. " 条 ⇒ 同一句话换个数字也能瞬间出中文")
+end
 local name = nil
 pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
 Trans.KeepAdd(name)
