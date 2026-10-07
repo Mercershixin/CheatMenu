@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 12:24 sha eef35d35 bytes 488481'):format('2026-10-07 12:24','eef35d35',488481))
+print(('[CheatMenu] build 2026-10-07 12:34 sha 1d3ad502 bytes 488593'):format('2026-10-07 12:34','1d3ad502',488593))
 local F = {}
-F.VERSION = "v16.9.97"
+F.VERSION = "v16.9.98"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10357,7 +10357,7 @@ if Trans._stuck >= 2 then
 Trans._stuck = 0
 Trans.Active = 0
 Trans._drainErr = 0
-F.Out("[翻译] ⚠ 队列 25 秒无进展(服务疑似卡住) ⇒ 已重置并发计数")
+F.Out("[翻译] ⚠ 队列 25 秒无进展(服务疑似卡死) ⇒ 已重置并发计数; 若反复出现, 模型服务可能死锁了 —— 双击「翻译模型开关.bat」重启一次即可恢复")
 Trans.Drain()
 end
 end
