@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:52 sha 1dba129a bytes 524792'):format('2026-10-07 19:52','1dba129a',524792))
+print(('[CheatMenu] build 2026-10-07 19:56 sha 99c995d0 bytes 525152'):format('2026-10-07 19:56','99c995d0',525152))
 local F = {}
-F.VERSION = "v16.10.40"
+F.VERSION = "v16.10.41"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9160,13 +9160,15 @@ F[key] = n
 return n
 end
 F.Blast = function(node, maxSlot, perFrame)
-perFrame = perFrame or 3
-local n = 0
+maxSlot = tonumber(maxSlot) or 30
+perFrame = tonumber(perFrame) or maxSlot
+if perFrame < 1 then perFrame = 1 end
+local n, fails = 0, 0
 for i = 1, maxSlot do
-if pcall(function() node:FireServer(i) end) then n = n + 1 end
+if pcall(function() node:FireServer(i) end) then n = n + 1 else fails = fails + 1 end
 if i % perFrame == 0 then task.wait() end
 end
-return n
+return n, fails
 end
 function F.WithdrawAll(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
@@ -9176,8 +9178,9 @@ if not node then return end
 local t0 = os.clock()
 local n = F.Blast(node, maxSlot)
 local cost = os.clock() - t0
-F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S_Interact(共 " .. tostring(n) .. " 次 · 耗时 " .. string.format("%.2f", cost) .. " 秒)")
-pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次 · " .. string.format("%.2f", cost) .. " 秒)", Duration = 10 }) end)
+F.Out("[收起脑红] 已一次全发槽位 1~" .. tostring(maxSlot) .. " 的 rev_S_Interact(成功 " .. tostring(n) .. " 次 · 耗时 "
+.. string.format("%.3f", cost) .. " 秒 · 不等帧, 已到物理极限)")
+pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已一次全发 1~" .. tostring(maxSlot) .. "(" .. tostring(n) .. " 次 · " .. string.format("%.3f", cost) .. " 秒)", Duration = 10 }) end)
 end)
 end
 function F.CollectAllFindPlot()
@@ -9245,10 +9248,13 @@ F.Out("[收集货币] 已原地发送 " .. tostring(nb) .. " 次(未 TP · 耗�
 return
 end
 local slots = F.CollectAllSlots(plot)
-F.Out("[收集货币] 基地「" .. tostring(plot.Name) .. "」(" .. tostring(cname) .. ") · 槽位 " .. tostring(#slots) .. " 个 ⇒ 逐个 TP 过去收")
+F.Out("[收集货币] 基地「" .. tostring(plot.Name) .. "」(" .. tostring(cname) .. ") · 槽位 " .. tostring(#slots) .. " 个 ⇒ 流水线 TP 收(每帧 1 槽)")
 local t0 = os.clock()
-local n, tp = 0, 0
+local n, tp, prev = 0, 0, nil
 for i = 1, maxSlot do
+if prev then
+if pcall(function() node:FireServer(prev) end) then n = n + 1 end
+end
 local s = slots[i]
 if s then
 local pos = F.CollectAllSlotPos(s)
@@ -9256,15 +9262,18 @@ if pos then
 tp = tp + 1
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
-task.wait(0.06)
 end
 end
-if pcall(function() node:FireServer(i) end) then n = n + 1 end
-task.wait(0.02)
+prev = i
+task.wait()
+end
+if prev then
+if pcall(function() node:FireServer(prev) end) then n = n + 1 end
 end
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() root.CFrame = origin end)
-F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地 · 耗时 " .. string.format("%.2f", os.clock() - t0) .. " 秒")
+F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地 · 耗时 "
+.. string.format("%.2f", os.clock() - t0) .. " 秒(流水线: 每帧 1 槽, 已到物理下限; 服务器要看到新位置至少要 1 帧)")
 pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已 TP 逐个槽位收完(" .. tostring(n) .. " 次)并回到原地", Duration = 8 }) end)
 end)
 end
