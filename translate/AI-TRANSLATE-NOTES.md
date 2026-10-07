@@ -267,12 +267,16 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
   - 白名单 `TRANSLATE_WORDS` 补 23 词（该翻的普通词，避免被名字规则误拦）：
     `brainrots/claimed/confirmation/exclusive/odds/perfect/rebirth/regular/sign/toggle/upgrades/
     bacon/candy/carnival/farmer/kicky/woody/rocky/meowl/omega/patagotitan/rexosaurus/soccerdino`。
-- **游戏自汉化保护 `_selfCN`**（解决「二次翻译」竞态）：
-  - `Trans._selfCN[obj]`（弱引用）：控件文本**读到中文**时标记；`GuiEl` 开头 `if _selfCN[obj] then return end`。
-  - 区分「我们翻的中文」vs「游戏翻的中文」：写回统一走 `Trans.WriteText(obj, prop, val, expect)`，
-    写回时打 `_writing[obj]` 时间戳；读中文时若 `_writing` < 3 秒（刚写回）则不标记，否则标记 `_selfCN`。
-  - `WriteText` 还带 `expect`（原文）校验：写回前读当前文本，若 != 原文（游戏已改）则不覆盖 —— 防翻译延迟期被游戏抢先汉化。
-- 回归：`ShouldV2` 88 用例全过 + `WriteText` expect/_writing 逻辑测试通过 + 编译门禁通过。
+- **游戏自汉化保护（16.9.85 加 → 16.9.86 回退）**：
+  - ⛔ **`_selfCN` 机制已回退**：16.9.85 用 `_writing` 3 秒窗口区分「我们翻的中文」vs「游戏翻的中文」，
+    但 `Scan` 周期是 **6 秒** ⇒ 我们自己翻成中文的控件，6 秒后 `_writing` 过期，被误标 `_selfCN`
+    ⇒ `GuiEl` 开头 `if _selfCN[obj] then return` 把**全部控件拦死** ⇒ 翻译整体停摆（用户反馈「又不翻译了」）。
+    已删 `_selfCN`/`_writing`，恢复「读到中文就跳过」的简单逻辑。
+  - ⚠ **教训**：任何「控件文本含中文 ⇒ 标记不碰」的机制，必须能区分「中文是我们写的译文」还是「游戏/服务器写的」，
+    否则会把自己翻过的控件全标死。用「时间窗口」不可靠（窗口 vs 扫描周期错配就会误标）。
+  - 保留 `Trans.WriteText(obj, prop, val, expect)` 的 `expect` 校验（写回前确认文本没被游戏改过才覆盖），
+    这个本身安全、不导致停摆。
+- 回归：`ShouldV2` 88 用例全过 + 编译门禁通过。
 
 ## 八、备份 / 回滚纪律（本轮的血泪）
 
