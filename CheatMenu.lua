@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:16 sha 5b0ea9e1 bytes 527304'):format('2026-10-07 21:16','5b0ea9e1',527304))
+print(('[CheatMenu] build 2026-10-07 21:25 sha 1ed807de bytes 529367'):format('2026-10-07 21:25','1ed807de',529367))
 local F = {}
-F.VERSION = "v16.10.51"
+F.VERSION = "v16.10.52"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9643,6 +9643,13 @@ kerbaros = true, moggatron = true, orcalero = true, rockokoko = true,
 stadoini = true, tralaledon = true, triregnus = true,
 hacked = true, hack = true, hacker = true, hackers = true,
 glitched = true, corrupted = true, infected = true,
+og = true,
+luck = true, power = true, speed = true, weight = true, multiplier = true,
+boost = true, buff = true, debuff = true, duration = true, cooldown = true,
+crit = true, critical = true, odds = true, chance = true, damage = true,
+regen = true, regeneration = true, stamina = true, agility = true,
+strength = true, defense = true, defence = true, accuracy = true,
+capacity = true, slot = true, slots = true, income = true, earnings = true,
 }
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
@@ -9962,6 +9969,62 @@ end
 F.Out("[翻译] 已清空全部缓存 " .. n .. " 条 · 已清文件 " .. del .. " 个(其中 " .. wipe .. " 个改为空文件" .. (left > 0 and (" · " .. left .. " 个没删掉") or "") .. ")")
 return n
 end
+Trans.RestoreStale = function()
+local back = {}
+for k, v in pairs(Trans.Cache) do
+if type(k) == "string" and type(v) == "string" and #v > 0 and not Trans.Should(k) then
+back[v] = k
+end
+end
+if next(back) == nil then return 0 end
+local LPl = game:GetService("Players").LocalPlayer
+local roots = {}
+pcall(function() if LPl then roots[#roots + 1] = LPl:FindFirstChild("PlayerGui") end end)
+pcall(function() if gethui then roots[#roots + 1] = gethui() end end)
+local n = 0
+for i = 1, #roots do
+if roots[i] then
+local ok, ds = pcall(function() return roots[i]:GetDescendants() end)
+if ok and type(ds) == "table" then
+for j = 1, #ds do
+local o = ds[j]
+if typeof(o) == "Instance" then
+local c = o.ClassName
+if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
+local t = nil
+pcall(function() t = o.Text end)
+local src = (type(t) == "string") and back[t] or nil
+if src then
+if pcall(function() o.Text = src end) then n = n + 1 end
+end
+end
+end
+end
+end
+end
+end
+if n > 0 then
+F.Out("[翻译] 已把 " .. tostring(n) .. " 处按当前规则不该翻的文字还原成原文(如 经典版→OG 这类)")
+end
+return n
+end
+Trans.PurgeTpl = function()
+local tdrop = 0
+for t in pairs(Trans.NumTpl) do
+if type(t) == "string" then
+local probe = t:gsub("\1", "0")
+if not Trans.Should(probe) then
+Trans.NumTpl[t] = nil
+tdrop = tdrop + 1
+end
+end
+end
+if tdrop > 0 then
+Trans._numTplDirty = true
+F.Out("[翻译] 数字模板自检: 已淘汰 " .. tostring(tdrop) .. " 条不该翻的旧模板(属性/词缀/OG 这类)")
+end
+return tdrop
+end
 Trans.PurgeStale = function()
 local drop = 0
 for k in pairs(Trans.Cache) do
@@ -9988,6 +10051,7 @@ local n1 = Trans.LoadInto(Trans.FILE)
 if n1 > 0 then total = total + n1 files = files + 1 end
 local n2 = Trans.LoadInto("CheatMenu_TransCache.json")
 if n2 > 0 then total = total + n2 files = files + 1 end
+pcall(Trans.RestoreStale)
 pcall(Trans.PurgeStale)
 Trans._cnt = Trans.Count()
 Trans._dirty = false
@@ -10618,6 +10682,7 @@ Trans.OfficialCN = function(obj)
 local src = nil
 pcall(function() src = obj.Text end)
 if type(src) ~= "string" or #src == 0 then return nil end
+if not Trans.Should(src) then return nil end
 local plain = Trans.StripTags(src)
 local ours = (Trans._lastWrote[obj] == src)
 local ct = nil
@@ -11107,6 +11172,7 @@ end)
 T.Translate = true
 Trans.Load()
 pcall(Trans.NumTplLoad)
+pcall(Trans.PurgeTpl)
 local _ntc = 0
 pcall(function() _ntc = Trans.TplFromCache() end)
 if _ntc > 0 then
