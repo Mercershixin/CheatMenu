@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 15:05 sha fff1dd2d bytes 499717'):format('2026-10-07 15:05','fff1dd2d',499717))
+print(('[CheatMenu] build 2026-10-07 15:26 sha 45e0b93b bytes 500814'):format('2026-10-07 15:26','45e0b93b',500814))
 local F = {}
-F.VERSION = "v16.10.8"
+F.VERSION = "v16.10.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8974,6 +8974,27 @@ F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S
 pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
 end)
 end
+function F.CollectAll(maxSlot)
+maxSlot = tonumber(maxSlot) or 30
+task.spawn(function()
+local node = game:GetService("ReplicatedStorage")
+for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
+local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
+if not (ok and child) then
+F.Out("[收集货币] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_B_Collect (" .. tostring(seg) .. " 找不到)")
+return
+end
+node = child
+end
+local n = 0
+for i = 1, maxSlot do
+if pcall(function() node:FireServer(i) end) then n = n + 1 end
+task.wait(0.08)
+end
+F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
+pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位收货币(" .. tostring(n) .. " 次)", Duration = 10 }) end)
+end)
+end
 local SUFFIX = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15, qa = 1e15, qi = 1e18, sx = 1e21, sp = 1e24, no = 1e30, dc = 1e33 }
 function F.ParseNum(v)
 if typeof(v) == "number" then return v end
@@ -13351,6 +13372,10 @@ Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
+end })
+Tabs.AFK:AddButton({ Title = "收集货币(一键收脑红赚的钱)", Callback = function()
+if not F.Once("collectall", 2) then return end
+task.spawn(function() pcall(F.CollectAll, 30) end)
 end })
 Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
