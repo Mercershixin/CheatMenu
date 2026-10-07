@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:32 sha ea64bcd6 bytes 532238'):format('2026-10-07 21:32','ea64bcd6',532238))
+print(('[CheatMenu] build 2026-10-07 21:37 sha 0254ec6a bytes 532979'):format('2026-10-07 21:37','0254ec6a',532979))
 local F = {}
-F.VERSION = "v16.10.54"
+F.VERSION = "v16.10.55"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -416,6 +416,17 @@ local function MetaSlotOf(s)
 local k = tostring(s or ""):match("([^%.]+)$")
 return k or tostring(s or "")
 end
+F.MetaSlot = {}
+F.MetaRebuild = function(slot)
+local st = F.MetaSlot[slot]
+if not st then return end
+local fn = function(self, ...) return st.native(self, ...) end
+for i = 1, #st.order do
+st.order[i].box.orig = fn
+fn = st.order[i].raw
+end
+st.top = fn
+end
 function F.MetaInstall(slot, target, id, wrapperFactory)
 if not (hookmetamethod and newcclosure and getrawmetatable) then return nil end
 if type(slot) ~= "string" or type(id) ~= "string" or target == nil then return nil end
@@ -428,29 +439,45 @@ end
 local bucket = F.MetaLayers[slot]
 if not bucket then bucket = {} F.MetaLayers[slot] = bucket end
 if bucket[id] then F.MetaUninstall(slot, id) end
+local st = F.MetaSlot[slot]
+if not st then
 local mt = getrawmetatable(target)
 if type(mt) ~= "table" or type(mt[slot]) ~= "function" then return nil end
+local origFn = nil
+local dis = nil
+local okW = pcall(function()
+dis = newcclosure(function(self, ...)
+local cur = F.MetaSlot[slot]
+if not cur or not cur.top then return origFn(self, ...) end
+return cur.top(self, ...)
+end)
+end)
+if not (okW and type(dis) == "function") then return nil end
+local got
+local okH = pcall(function() got = hookmetamethod(target, slot, dis) end)
+if not (okH and type(got) == "function") then return nil end
+origFn = got
+st = { target = target, slot = slot, order = {}, byId = {}, native = got, dispatcher = dis, top = nil }
+F.MetaSlot[slot] = st
+if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, dis) end
+end
 local box = { alive = true, orig = nil, id = id, slot = slot }
 local raw = wrapperFactory(box)
-if type(raw) ~= "function" then return nil end
+if type(raw) ~= "function" then
+if #st.order == 0 then
+pcall(function() hookmetamethod(st.target, slot, st.native) end)
+F.MetaSlot[slot] = nil
+F.MetaLayers[slot] = nil
+F.MetaTargets[slot] = nil
+end
+return nil
+end
 local rec = { id = id, slot = slot, target = target, box = box, raw = raw, alive = true }
-local mk = newcclosure
-local wrapped
-local okW = pcall(function()
-wrapped = mk(function(self, ...)
-if not rec.alive then return box.orig(self, ...) end
-return raw(self, ...)
-end)
-end)
-if not (okW and type(wrapped) == "function") then return nil end
-local origFn
-local okH = pcall(function() origFn = hookmetamethod(target, slot, wrapped) end)
-if not (okH and type(origFn) == "function") then return nil end
-box.orig = origFn
-rec.wrapper = wrapped
-if F.CMX_MarkOwn then pcall(F.CMX_MarkOwn, wrapped) end
 bucket[id] = rec
-return wrapped
+st.byId[id] = rec
+st.order[#st.order + 1] = rec
+F.MetaRebuild(slot)
+return st.dispatcher
 end
 function F.MetaUninstall(slot, id)
 slot = MetaSlotOf(slot)
@@ -461,17 +488,21 @@ if not rec or not rec.alive then return false end
 rec.alive = false
 rec.box.alive = false
 bucket[id] = nil
-local mt = getrawmetatable(rec.target)
-if type(mt) == "table" and mt[slot] == rec.wrapper then
-local ok = pcall(function() hookmetamethod(rec.target, slot, rec.box.orig) end)
+local st = F.MetaSlot[slot]
+if not st then return true end
+if st.byId then st.byId[id] = nil end
+for i = #st.order, 1, -1 do
+if st.order[i] == rec then table.remove(st.order, i) break end
+end
+if #st.order == 0 then
+pcall(function() hookmetamethod(st.target, slot, st.native) end)
 pcall(F.CMX_RestoreRO)
-return ok
+F.MetaSlot[slot] = nil
+F.MetaLayers[slot] = nil
+F.MetaTargets[slot] = nil
+return true
 end
-for _, other in pairs(bucket) do
-if other.alive and other.box and other.box.orig == rec.wrapper then
-other.box.orig = rec.box.orig
-end
-end
+F.MetaRebuild(slot)
 return true
 end
 function F.MetaActive(slot, id)
@@ -11343,6 +11374,7 @@ if killed > 0 then F.Out("[卸载] 兜底清掉 " .. tostring(killed) .. " 个�
 pcall(F.Conn.ClearAll)
 F.MetaLayers = {}
 F.MetaTargets = {}
+F.MetaSlot = {}
 F.Out("[CheatMenu] 已干净卸载")
 pcall(function() F.LogFlush("卸载") end)
 task.delay(0.8, function()
