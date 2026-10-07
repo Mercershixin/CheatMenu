@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 10:33 sha aa799fd6 bytes 486817'):format('2026-10-07 10:33','aa799fd6',486817))
+print(('[CheatMenu] build 2026-10-07 10:38 sha 67eaa893 bytes 487891'):format('2026-10-07 10:38','67eaa893',487891))
 local F = {}
-F.VERSION = "v16.9.91"
+F.VERSION = "v16.9.92"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9824,7 +9824,13 @@ return nil
 end
 Trans.Drain = function()
 while Trans.Active < Trans.MAX and #Trans.Queue > 0 do
-if Trans._urgent then break end
+if Trans._urgent then
+if os.clock() - (Trans._urgentAt or 0) > 10 then
+Trans._urgent = false
+else
+break
+end
+end
 local groups, order, rest = {}, {}, {}
 for i = 1, #Trans.Queue do
 local it = Trans.Queue[i]
@@ -9930,7 +9936,7 @@ return
 end
 local ft = Trans._fail and Trans._fail[text]
 if ft and os.clock() < ft then return end
-if #Trans.Queue > 200 then return end
+if #Trans.Queue > 2000 then return end
 if urgent then table.insert(Trans.Queue, 1, { text = text, apply = applyFn })
 else Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn } end
 Trans.Drain()
@@ -10079,6 +10085,22 @@ if ok and v == true then return true end
 end
 return false
 end
+Trans.InIndexPanel = function(obj)
+local p = obj
+for _ = 1, 20 do
+p = p and p.Parent
+if not p then return false end
+local nm = p.Name
+if type(nm) == "string" then
+local ln = string.lower(nm)
+if ln:find("index", 1, true) or ln:find("collection", 1, true)
+or ln:find("codex", 1, true) or nm:find("图鉴", 1, true) then
+return true
+end
+end
+end
+return false
+end
 Trans.TextVisible = function(obj)
 local ok, v = pcall(function() return obj.TextVisible end)
 if ok then return v end
@@ -10112,6 +10134,14 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
+if Trans.InIndexPanel(obj) then
+Trans._indexSkip = (Trans._indexSkip or 0) + 1
+if not Trans._indexLogged and Trans._indexSkip >= 5 then
+Trans._indexLogged = true
+F.Out("[翻译] 已识别图鉴/索引类面板 ⇒ 里面的内容全部不翻(已跳过 " .. tostring(Trans._indexSkip) .. " 条)")
+end
+return
+end
 if cls == "TextLabel" or cls == "TextButton" then
 local nested = false
 pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
@@ -10367,8 +10397,10 @@ end
 Trans._ready = true
 end
 Trans._urgent = true
-local tr = Trans.Translate(msg, true, lang)
+Trans._urgentAt = os.clock()
+local okU, tr = pcall(Trans.Translate, msg, true, lang)
 Trans._urgent = false
+if not okU then tr = nil end
 if not tr then
 F.Out("[翻译发出] ⚠ 翻译失败 ⇒ 本次没发出(原文留在框里不丢)")
 return
@@ -10402,12 +10434,18 @@ Trans._readyTask = task.spawn(function()
 while T.Translate do
 task.wait(3)
 if not T.Translate then break end
-if Trans._ready then break end
+if Trans._ready then
+if not Trans.Health() then
+Trans._ready = false
+F.Out("[翻译] ⚠ 本地模型没响应了(服务被关/掉线) ⇒ 它一起来会自动继续翻")
+end
+else
 if Trans.Health() then
 Trans._ready = true
-F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 开始翻译")
+F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 继续翻译")
 pcall(Trans.Scan)
 pcall(Trans.ChatWatch)
+end
 end
 end
 Trans._readyTask = nil
@@ -10418,7 +10456,10 @@ Trans.Loop = task.spawn(function()
 while T.Translate do
 task.wait(Trans.SCAN_EVERY)
 if not T.Translate then break end
-if Trans._ready then pcall(Trans.Scan) end
+if Trans._ready then
+pcall(Trans.Scan)
+if not Trans._urgent and Trans.Active < Trans.MAX and #Trans.Queue > 0 then pcall(Trans.Drain) end
+end
 end
 Trans.Loop = nil
 end)
