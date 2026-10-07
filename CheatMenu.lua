@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:37 sha 0254ec6a bytes 532979'):format('2026-10-07 21:37','0254ec6a',532979))
+print(('[CheatMenu] build 2026-10-07 21:42 sha e4159e9f bytes 533903'):format('2026-10-07 21:42','e4159e9f',533903))
 local F = {}
-F.VERSION = "v16.10.55"
+F.VERSION = "v16.10.56"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10492,7 +10492,18 @@ if out and out ~= text then return out end
 return nil
 end
 Trans.Drain = function()
-while Trans.Active < Trans.MAX and #Trans.Queue > 0 do
+local cap = Trans.MAX
+local f = Trans._fps or 0
+if f > 0 and f < 45 then
+cap = 1
+if not Trans._fpsNote then
+Trans._fpsNote = true
+F.Out("[翻译] 游戏帧率偏低(" .. tostring(f) .. " fps) ⇒ 翻译已自动降到最低速让路(不占显卡), 帧率一恢复就自动全速")
+end
+elseif f > 0 and f < 55 then
+cap = 3
+end
+while Trans.Active < cap and #Trans.Queue > 0 do
 if Trans._urgent then
 if os.clock() - (Trans._urgentAt or 0) > 10 then
 Trans._urgent = false
@@ -11029,6 +11040,28 @@ F.Out("[翻译] 已开始预翻屏幕外的文字(限速 12 条/轮, 不会把�
 end
 return true
 end
+Trans.FpsOn = function()
+if Trans._fpsTask then return end
+pcall(function()
+if not Trans._fpsConn then
+Trans._fpsConn = RS.RenderStepped:Connect(function() Trans._fpsFrames = (Trans._fpsFrames or 0) + 1 end)
+end
+end)
+Trans._fpsTask = task.spawn(function()
+while T.Translate do
+task.wait(1)
+Trans._fps = Trans._fpsFrames or 0
+Trans._fpsFrames = 0
+end
+Trans._fpsTask = nil
+end)
+end
+Trans.FpsOff = function()
+if Trans._fpsConn then pcall(function() Trans._fpsConn:Disconnect() end) Trans._fpsConn = nil end
+Trans._fpsTask = nil
+Trans._fps = 0
+Trans._fpsNote = nil
+end
 Trans.Scan = function()
 Trans._preBudget = 12
 local LPl = game:GetService("Players").LocalPlayer
@@ -11260,6 +11293,7 @@ end
 pcall(Trans.Scan)
 Trans.WatchOn()
 task.spawn(Trans.LocInit)
+pcall(Trans.FpsOn)
 if not Trans.Loop then
 Trans.Loop = task.spawn(function()
 while T.Translate do
@@ -11291,6 +11325,7 @@ function Trans.Disable()
 T.Translate = false
 Trans._ready = false
 Trans.WatchOff()
+pcall(Trans.FpsOff)
 Trans.Loop = nil
 pcall(Trans.Flush)
 local n = 0
