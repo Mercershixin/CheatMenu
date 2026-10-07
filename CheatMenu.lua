@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:39 sha 40931846 bytes 516317'):format('2026-10-07 18:39','40931846',516317))
+print(('[CheatMenu] build 2026-10-07 18:42 sha ff216f31 bytes 520668'):format('2026-10-07 18:42','ff216f31',520668))
 local F = {}
-F.VERSION = "v16.10.27"
+F.VERSION = "v16.10.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8470,7 +8470,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -11154,7 +11154,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13203,6 +13203,96 @@ F.BulletTrackDisable = function()
 if F._btAdded then pcall(function() F._btAdded:Disconnect() end) F._btAdded = nil end
 if F._btConn then pcall(function() F._btConn:Disconnect() end) F._btConn = nil end
 end
+F._aiList = setmetatable({}, { __mode = "k" })
+F._aiAdded, F._autoIxConn = nil, nil
+F.AutoInteractEnable = function()
+if F._autoIxConn then return end
+if type(fireproximityprompt) ~= "function" then
+F.Out("[自动互动] 本执行器没有 fireproximityprompt ⇒ 无法自动触发")
+return
+end
+local function addP(d)
+if typeof(d) == "Instance" then
+local ok, isP = pcall(function() return d:IsA("ProximityPrompt") end)
+if ok and isP then F._aiList[d] = true end
+end
+end
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do addP(d) end
+end)
+F._aiAdded = workspace.DescendantAdded:Connect(addP)
+F._autoIxConn = RS.Heartbeat:Connect(function()
+if not T.AutoInteract then F.AutoInteractDisable() return end
+if os.clock() - (F._aiAt or 0) < 0.25 then return end
+F._aiAt = os.clock()
+local _, _, r = GC()
+if not (r and r.Parent) then return end
+for pp in pairs(F._aiList) do
+if not pp.Parent then
+F._aiList[pp] = nil
+elseif pp.Enabled ~= false then
+pcall(function()
+local anc = pp:FindFirstAncestorWhichIsA("BasePart") or pp:FindFirstAncestorWhichIsA("Model")
+if not anc then return end
+local pos = anc:IsA("BasePart") and anc.Position or anc:GetPivot().Position
+local md = tonumber(pp.MaxActivationDistance) or 10
+if (pos - r.Position).Magnitude <= md then fireproximityprompt(pp) end
+end)
+end
+end
+end)
+F.Out("[自动互动] 已开: 附近可点的按钮/接近提示会自动触发(不用手动按)")
+end
+F.AutoInteractDisable = function()
+if F._aiAdded then pcall(function() F._aiAdded:Disconnect() end) F._aiAdded = nil end
+if F._autoIxConn then pcall(function() F._autoIxConn:Disconnect() end) F._autoIxConn = nil end
+end
+F._wallClimbConn = nil
+F.WallClimbEnable = function()
+if F._wallClimbConn then return end
+F._wallClimbConn = RS.Heartbeat:Connect(function()
+if not T.WallClimb then F.WallClimbDisable() return end
+local ch, hum, root = GC()
+if not (ch and hum and root and hum.Health > 0) then return end
+pcall(function()
+local rp = RaycastParams.new()
+pcall(function() rp.FilterType = Enum.RaycastFilterType.Exclude end)
+rp.FilterDescendantsInstances = { ch }
+local hit = workspace:Raycast(root.Position, root.CFrame.LookVector * 3, rp)
+if hit and math.abs(hit.Normal.Y) < 0.5 then
+hum:ChangeState(Enum.HumanoidStateType.Freefall)
+local v = root.AssemblyLinearVelocity
+root.AssemblyLinearVelocity = Vector3.new(v.X, tonumber(C.WallClimbSpeed) or 50, v.Z)
+end
+end)
+end)
+F.Out("[爬墙] 已开: 面朝竖直墙面时自动向上爬(速度 " .. tostring(tonumber(C.WallClimbSpeed) or 50) .. ")")
+end
+F.WallClimbDisable = function()
+if F._wallClimbConn then pcall(function() F._wallClimbConn:Disconnect() end) F._wallClimbConn = nil end
+end
+F.SpawnTP = function()
+local _, hum, root = GC()
+if not (root and hum and hum.Health > 0) then F.Out("[出生点] 现在没有角色(没进游戏/正在重生)") return end
+local sp = nil
+pcall(function() sp = workspace:FindFirstChildOfClass("SpawnLocation") end)
+if not sp then
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("SpawnLocation") then sp = d break end
+end
+end)
+end
+if not sp then
+F.Out("[出生点] 这个世界里没有 SpawnLocation(有些游戏用脚本临时生成) ⇒ 传不了")
+return
+end
+local ok = pcall(function()
+root.AssemblyLinearVelocity = Vector3.zero
+root.CFrame = CFrame.new(sp.Position + Vector3.new(0, 4, 0))
+end)
+F.Out(ok and ("[出生点] 已传送到出生点 (" .. sp:GetFullName() .. ")") or "[出生点] 传送失败(被冻住/被拉回)")
+end
 F.FlingStop = function()
 F._flingHit = false
 if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
@@ -13622,6 +13712,11 @@ T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
 end })
+Tabs.Move:AddToggle("AutoInteract", { Title = "自动互动(附近按钮/提示自动点)", Default = false, Callback = function(v)
+T.AutoInteract = v
+if F._cfgSyncing then return end
+if v then pcall(F.AutoInteractEnable) else pcall(F.AutoInteractDisable) end
+end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v)
 T.Invisible = v
 if F._cfgSyncing then return end
@@ -13648,6 +13743,12 @@ if F._cfgSyncing then return end
 if v then F.HideEnable() else F.HideDisable() end
 end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
+Tabs.Move:AddToggle("WallClimb", { Title = "爬墙(面朝墙自动上爬)", Default = false, Callback = function(v)
+T.WallClimb = v
+if F._cfgSyncing then return end
+if v then pcall(F.WallClimbEnable) else pcall(F.WallClimbDisable) end
+end })
+Tabs.Move:AddSlider("WallClimbSpeed", { Title = "爬墙速度", Min = 5, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.WallClimbSpeed = v end })
 end
 do
 Tabs.Visual:AddSection("ESP 透视")
@@ -13747,6 +13848,9 @@ end })
 end
 do
 Tabs.TP:AddSection("传送")
+Tabs.TP:AddButton({ Title = "传送到出生点", Callback = function()
+task.spawn(function() pcall(F.SpawnTP) end)
+end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
 Tabs.TP:AddButton({ Title = "传送到目标(无距离限制)", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
