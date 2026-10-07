@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 15:26 sha 45e0b93b bytes 500814'):format('2026-10-07 15:26','45e0b93b',500814))
+print(('[CheatMenu] build 2026-10-07 15:29 sha 35880263 bytes 498369'):format('2026-10-07 15:29','35880263',498369))
 local F = {}
-F.VERSION = "v16.10.9"
+F.VERSION = "v16.10.10"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -997,7 +997,7 @@ if not hookfunction then return false end
 local ts = game:GetService("TeleportService")
 local old
 local wrapper = function(self, placeId, player, ...)
-if not checkcaller() and not (T.KickRejoin and placeId == game.PlaceId) then
+if not checkcaller() then
 return nil
 end
 return old(self, placeId, player, ...)
@@ -1885,7 +1885,7 @@ end
 F._flingBackup = nil
 end
 end
-local KG = { hooked = false, target = nil, rjConn = nil, blocked = 0 }
+local KG = { hooked = false, target = nil, blocked = 0 }
 F.MetaHookUninstall = function() pcall(F.KickGuardPathsDisable) end
 function F.DeepNeuterEnable()
 T.DeepNeuter = true
@@ -2323,60 +2323,6 @@ end
 KG.mtHooked, KG.mt = nil, nil
 KG.lastReport = nil
 pcall(F.CMX_RestoreRO)
-end
-function F.KickRejoinDisable()
-if KG.rjConn then pcall(function() KG.rjConn:Disconnect() end) KG.rjConn = nil end
-if KG.rjFail then pcall(function() KG.rjFail:Disconnect() end) KG.rjFail = nil end
-if KG.rjWatch then pcall(function() KG.rjWatch:Disconnect() end) KG.rjWatch = nil end
-KG.rjTries, KG.rjMiss, KG.rjBusy = 0, 0, false
-T.KickRejoin = false
-end
-function F.KickRejoinEnable()
-if KG.rjConn then return true end
-KG.rjPlace, KG.rjJob = game.PlaceId, tostring(game.JobId or "")
-KG.rjTries, KG.rjMiss, KG.rjBusy = 0, 0, false
-local function rjGo(why)
-if not T.KickRejoin or KG.rjBusy then return end
-KG.rjBusy = true
-pcall(function()
-local ts = game:GetService("TeleportService")
-local plc, job = KG.rjPlace, KG.rjJob
-local ok = false
-if plc and job and job ~= "" then
-KG.rjTries = (KG.rjTries or 0) + 1
-F.Out("[回服] 检测到" .. tostring(why) .. " ⇒ 正在回到同一服务器(第 " .. tostring(KG.rjTries) .. " 次)")
-ok = pcall(function() ts:TeleportToPlaceInstance(plc, job, LP) end)
-end
-if not ok and plc then pcall(function() ts:Teleport(plc, LP) end) end
-end)
-KG.rjBusy = false
-end
-KG.rjConn = Players.PlayerRemoving:Connect(function(p)
-if p ~= LP then return end
-rjGo("被踢/玩家被移除")
-end)
-pcall(function()
-KG.rjFail = game:GetService("TeleportService").TeleportInitFailed:Connect(function(plr, code, msg)
-pcall(function()
-if plr ~= LP or not T.KickRejoin then return end
-if (KG.rjTries or 0) >= 3 then
-F.Out("[回服] 传送连续失败(" .. tostring(code) .. " " .. tostring(msg) .. ") ⇒ 已停手, 请手动重进")
-return
-end
-task.delay(3, function() rjGo("传送失败重试") end)
-end)
-end)
-end)
-KG.rjWatch = RS.Heartbeat:Connect(function()
-if not T.KickRejoin then return end
-local now = os.clock()
-if now - (KG.rjAt or 0) < 2 then return end
-KG.rjAt = now
-if LP ~= nil and LP.Parent == Players then KG.rjMiss = 0 return end
-KG.rjMiss = (KG.rjMiss or 0) + 1
-if KG.rjMiss >= 2 then rjGo("掉线(本机玩家已脱离 Players)") end
-end)
-return true
 end
 function F.PlayerNames()
 local n = {}
@@ -8291,7 +8237,7 @@ for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.KickRejoinDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -10878,7 +10824,7 @@ F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoP
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
-F.InfiniteJumpDisable, F.KickRejoinDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
+F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
 AC._neutFns = {}
 F._cfgSyncing = false
@@ -10904,7 +10850,6 @@ end
 end
 F.Out("[卸载] 已执行 " .. tostring(okN) .. " 项关闭操作"
 .. (badN > 0 and (" · ⚠ 有 " .. tostring(badN) .. " 项报错(功能可能残留, 把日志发给维护者)") or " · 全部无报错"))
-pcall(function() if KG and KG.rjConn then KG.rjConn:Disconnect() KG.rjConn = nil end end)
 pcall(function()
 if AC._stblOld and hookfunction then hookfunction(setmetatable, AC._stblOld) end
 AC._stblOld = nil
@@ -13650,11 +13595,6 @@ end })
 Tabs.Setting:AddButton({ Title = "强制重载", Callback = function()
 if not F.Once("reloadforce", 3) then return end
 F.HotReload(true)
-end })
-Tabs.Setting:AddToggle("KickRejoin", { Title = "被踢/掉线自动回到同一服务器", Default = false, Callback = function(v)
-T.KickRejoin = v
-if F._cfgSyncing then return end
-if v then pcall(F.KickRejoinEnable) else pcall(F.KickRejoinDisable) end
 end })
 Tabs.Setting:AddToggle("AutoRejoin", { Title = "换服自动重载(被传送走后自动恢复脚本+功能)", Default = false, Callback = function(v)
 T.AutoRejoin = v and true or false
