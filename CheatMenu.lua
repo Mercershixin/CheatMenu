@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:55 sha 7a1d6cab bytes 507304'):format('2026-10-07 17:55','7a1d6cab',507304))
+print(('[CheatMenu] build 2026-10-07 18:00 sha 7f2220ef bytes 508084'):format('2026-10-07 18:00','7f2220ef',508084))
 local F = {}
-F.VERSION = "v16.10.19"
+F.VERSION = "v16.10.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3916,9 +3916,30 @@ end
 end
 end)
 F._invConns = {}
+F._invMeta = function(ch2)
+pcall(function()
+local hum = ch2:FindFirstChildOfClass("Humanoid")
+if not hum then return end
+if F._invSavDistType == nil then F._invSavDistType = hum.DisplayDistanceType end
+pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+local anim = hum:FindFirstChildOfClass("Animator") or hum
+if not F._invAnimObj then
+F._invAnimObj = Instance.new("Animation")
+F._invAnimObj.AnimationId = "rbxassetid://282574440"
+end
+if F._invTrack then pcall(function() F._invTrack:Stop() F._invTrack:Destroy() end) F._invTrack = nil end
+F._invTrack = anim:LoadAnimation(F._invAnimObj)
+F._invTrack.Priority = Enum.AnimationPriority.Action
+F._invTrack.Looped = true
+F._invTrack:Play()
+F._invTrack:AdjustSpeed(0)
+F._invTrack.TimePosition = 0.3
+end)
+end
 local function apply(ch2)
 task.wait(0.3)
 if not F._invSav then return end
+pcall(function() F._invMeta(ch2) end)
 pcall(function()
 for _, o in ipairs(ch2:GetDescendants()) do
 if o:IsA("BasePart") or o:IsA("Decal") or o:IsA("Texture") then
@@ -3946,24 +3967,23 @@ pcall(function() o.Enabled = false end)
 end
 end)
 end)
-pcall(function()
-local hum = ch:FindFirstChildOfClass("Humanoid")
-if hum then
-F._invSavDist = hum.NameDisplayDistance
-F._invSavHealthDist = hum.HealthDisplayDistance
-hum.NameDisplayDistance = 0
-hum.HealthDisplayDistance = 0
-end
-end)
+pcall(function() F._invMeta(ch) end)
 F._invConn = RS.Heartbeat:Connect(function()
 if not T.Invisible then pcall(F.InvisibleDisable) return end
 local _, _, root = GC()
 if root and root.Transparency ~= 1 then pcall(function() root.Transparency = 1 end) end
+pcall(function()
+if F._invTrack then
+if not F._invTrack.IsPlaying then F._invTrack:Play() end
+F._invTrack:AdjustSpeed(0)
+F._invTrack.TimePosition = 0.3
+end
 end)
-F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制给所有人) + 自己名字/血条距离=0"
-.. " —— 只作用于你自己, 不改任何其他玩家的名字/血条/显示"
-.. " —— 看不到别人的名字请开「ESP 总开关」(重载后它会回到默认关, 与本功能无关)"
-.. " —— 服务端若有「透明检测」会把你拉回, 那不是脚本的问题")
+end)
+F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制给所有人)"
+.. " + 只隐藏你自己的名字板(DisplayDistanceType=None, 不再去改「名字显示距离」——那会连别人的名字一起隐掉)"
+.. " + 附加「动画隐身」: 冻结 rbxassetid://282574440 在 0.3s, 让模型视觉上消失"
+.. " —— 全部只作用于你自己的角色; 服务端若有透明检测会把你拉回, 那不是脚本的问题")
 end
 function F.InvisibleDisable()
 if F._invConns then
@@ -3984,11 +4004,14 @@ end
 end
 F._invSavFx = nil
 pcall(function()
+if F._invTrack then F._invTrack:Stop() F._invTrack:Destroy() end
+end)
+F._invTrack = nil
+pcall(function()
 local ch = LP.Character
 local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-if hum then
-if F._invSavDist then hum.NameDisplayDistance = F._invSavDist end
-if F._invSavHealthDist then hum.HealthDisplayDistance = F._invSavHealthDist end
+if hum and F._invSavDistType ~= nil then
+pcall(function() hum.DisplayDistanceType = F._invSavDistType end)
 end
 end)
 F._invSavDist, F._invSavHealthDist, F._invSavDistType = nil, nil, nil
@@ -12933,6 +12956,7 @@ if r and r.Parent then r.AssemblyAngularVelocity = Vector3.zero end
 end)
 end
 F.FlingPlayer = function()
+pcall(F.FlingStop)
 local pl, err = F.GetTargetPlayer()
 if not pl then F.Out("[甩飞] " .. tostring(err)) return end
 local tp = pl.Character
@@ -13522,15 +13546,12 @@ or "[T键传送] 已关闭, T 键不再传送")
 end })
 Tabs.Move:AddSection("针对玩家")
 Tabs.Move:AddButton({ Title = "用绳子把他拉过来", Callback = function()
-if not F.Once("pull", 1.5) then return end
 task.spawn(function() pcall(F.PullPlayer) end)
 end })
 Tabs.Move:AddButton({ Title = "把他瞬间 TP 到我面前", Callback = function()
-if not F.Once("tpmove", 1.5) then return end
 task.spawn(function() pcall(F.TPMovePlayer, "front") end)
 end })
 Tabs.Move:AddButton({ Title = "把他甩飞", Callback = function()
-if not F.Once("fling", 1.5) then return end
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
 Tabs.TP:AddSection("收藏点位")
