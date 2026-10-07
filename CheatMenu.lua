@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 02:02 sha ee8c3958 bytes 545613'):format('2026-10-08 02:02','ee8c3958',545613))
+print(('[CheatMenu] build 2026-10-08 02:38 sha 1b93e237 bytes 547556'):format('2026-10-08 02:38','1b93e237',547556))
 local F = {}
-F.VERSION = "v16.10.73"
+F.VERSION = "v16.10.74"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4655,6 +4655,7 @@ F._heliAng, F._heliBaseY, F._heliYaw = nil, nil, nil
 F._heliPX, F._heliPY, F._heliPZ = nil, nil, nil
 F._heliH = nil
 F._heliC0r, F._heliC0v, F._heliC1inv = nil, nil, nil
+F._heliP0, F._heliPiv = nil, nil
 F._heliJoint, F._heliC0, F._heliUseRoot, F._heliMode = nil, nil, nil, nil
 F._heliKind, F._heliWC, F._heliWCE = nil, nil, nil
 if hum then
@@ -4662,6 +4663,17 @@ pcall(function() hum.PlatformStand = (F._heliWasPS == true) end)
 pcall(function() hum.AutoRotate = (F._heliWasAR ~= false) end)
 end
 F._heliWasPS, F._heliWasAR = nil, nil
+end
+F.HeliAxis = function()
+local m = tostring(C.HeliAxis or "")
+if m:find("长轴", 1, true) then return 2 end
+if m:find("横轴", 1, true) then return 3 end
+return 1
+end
+F.HeliPivot = function()
+local m = tostring(C.HeliPivot or "")
+if m:find("头部", 1, true) then return 2 end
+return 1
 end
 F.HeliMode = function()
 local m = tostring(C.HeliMode or "")
@@ -4767,6 +4779,22 @@ else
 F._heliUseRoot = true
 end
 do
+local p0, piv = nil, nil
+pcall(function()
+if F._heliC0v and F._heliC0r and F._heliC1inv then
+p0 = F._heliC0v + (F._heliC0r * F._heliC1inv)
+end
+end)
+if F.HeliPivot() == 2 then
+pcall(function()
+local hd = ch:FindFirstChild("Head")
+if hd and hd:IsA("BasePart") then piv = root.CFrame:Inverse() * hd.CFrame.Position end
+end)
+end
+F._heliP0 = p0
+F._heliPiv = piv or p0
+end
+do
 local kids, n = {}, 0
 pcall(function()
 for _, k in ipairs(root:GetChildren()) do
@@ -4809,7 +4837,7 @@ if F._heliYaw ~= F._heliYaw then F._heliYaw = 0 end
 if mode == 1 then
 F.Out("[旋转] 已开 · 不飞行转: 模型原地自转, 视角/走路/跳跃完全不受影响")
 else
-F.Out("[旋转] 已开 · 飞行转: 绝对水平旋转 · 不自动升降(原地悬停)" .. (T.FlyOn and " · 移动交给「飞行」" or " · WASD 平移 · 空格升 / 左Ctrl 降")
+F.Out("[旋转] 已开 · 飞行转: 轴=" .. tostring(C.HeliAxis or "竖直轴") .. " · 支点=" .. tostring(C.HeliPivot or "身体中心") .. " · 不自动升降(原地悬停)" .. (T.FlyOn and " · 移动交给「飞行」" or " · WASD 平移 · 空格升 / 左Ctrl 降")
 .. " · 已暂时关闭身体碰撞(不再撞地面/墙 ⇒ 不抖不卡)")
 end
 F._heliConn = F.DriveConnect(function(dt)
@@ -4819,11 +4847,23 @@ if not (h and r) then return end
 local spin = tonumber(C.HeliSpin) or 720
 if spin < 0 then spin = 0 end
 F._heliAng = ((F._heliAng or 0) + spin * dt) % 360
-local tilt = (F._heliMode == 2) and math.rad(90) or 0
-local R = CFrame.Angles(0, math.rad(F._heliAng), 0) * CFrame.Angles(tilt, 0, 0)
-if F._heliJoint and F._heliC0r then
+local tilt = 0
+if F._heliMode == 2 then
+tilt = math.rad(math.clamp(tonumber(C.HeliTilt) or 90, 0, 90))
+end
+local axis = F.HeliAxis()
+local R
+if axis == 2 then
+R = CFrame.Angles(tilt, 0, 0) * CFrame.Angles(0, math.rad(F._heliAng), 0)
+elseif axis == 3 then
+R = CFrame.Angles(math.rad(F._heliAng), 0, 0)
+else
+R = CFrame.Angles(0, math.rad(F._heliAng), 0) * CFrame.Angles(tilt, 0, 0)
+end
+if F._heliJoint and F._heliC0r and F._heliP0 then
 local Rc0 = F._heliC0r * R
-local off = F._heliC0v + (F._heliC0r * F._heliC1inv) - (Rc0 * F._heliC1inv)
+local piv = F._heliPiv or F._heliP0
+local off = piv + (Rc0 * (F._heliP0 - piv)) - (Rc0 * F._heliC1inv)
 pcall(function() F._heliJoint.C0 = CFrame.new(off) * Rc0 end)
 else
 pcall(function() h.AutoRotate = false end)
@@ -4848,7 +4888,7 @@ end
 local cur = r.Position
 local px = (F._heliPX or cur.X) + mv.X * dt
 local pz = (F._heliPZ or cur.Z) + mv.Z * dt
-local vv = tonumber(C.FlyValue) or 60
+local vv = 18
 if UIS:IsKeyDown(Enum.KeyCode.Space) then F._heliH = (F._heliH or 0) + vv * dt end
 if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then F._heliH = (F._heliH or 0) - vv * dt end
 local hh = F._heliH or 0
@@ -14225,7 +14265,25 @@ C.HeliMode = tostring(v)
 if F._cfgSyncing then return end
 if T.HeliOn then pcall(F.HeliSet, true) end
 end })
-Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速(度/秒)", Min = 30, Max = 3000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
+Tabs.Move:AddDropdown("HeliAxis", { Title = "旋转轴", Values = {
+"竖直轴(水平打转 · 推荐)",
+"长轴(滚筒翻滚)",
+"横轴(前后翻)",
+}, Default = "竖直轴(水平打转 · 推荐)", Callback = function(v)
+C.HeliAxis = tostring(v)
+if F._cfgSyncing then return end
+if T.HeliOn then pcall(F.HeliSet, true) end
+end })
+Tabs.Move:AddDropdown("HeliPivot", { Title = "支点(绕哪里转)", Values = {
+"身体中心(原地自转 · 推荐)",
+"头部(头定点 · 身体绕头画一圈)",
+}, Default = "身体中心(原地自转 · 推荐)", Callback = function(v)
+C.HeliPivot = tostring(v)
+if F._cfgSyncing then return end
+if T.HeliOn then pcall(F.HeliSet, true) end
+end })
+Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速(度/秒 · 上限 3 万)", Min = 30, Max = 30000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
+Tabs.Move:AddSlider("HeliTilt", { Title = "旋转 · 倾角(仅飞行转 · 0=立着 90=横躺)", Min = 0, Max = 90, Default = 90, Rounding = 0, Callback = function(v) C.HeliTilt = v end })
 Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 初始悬停高度(0=不自动升)", Min = 0, Max = 200, Default = 0, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
