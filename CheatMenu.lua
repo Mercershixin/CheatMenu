@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:09 sha 9289ada2 bytes 505821'):format('2026-10-07 17:09','9289ada2',505821))
+print(('[CheatMenu] build 2026-10-07 17:19 sha 8089f1f0 bytes 506303'):format('2026-10-07 17:19','8089f1f0',506303))
 local F = {}
-F.VERSION = "v16.10.14"
+F.VERSION = "v16.10.15"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9042,25 +9042,45 @@ BonusThread = nil
 F.Out("[自动领取] 已停止")
 end
 do
-function F.WithdrawAll(maxSlot)
-maxSlot = tonumber(maxSlot) or 30
-task.spawn(function()
-local node = game:GetService("ReplicatedStorage")
-for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_S_Interact" }) do
+F.RevResolve = function(leaf)
+local node = RStorage
+for _, seg in ipairs({ "Shared", "Packages", "Network", leaf }) do
 local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
-if not (ok and child) then
-F.Out("[收起脑红] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_S_Interact (" .. tostring(seg) .. " 找不到)")
-return
-end
+if not (ok and child) then return nil, seg end
 node = child
 end
+return node
+end
+F.RevCached = function(key, leaf, tag)
+local c = F[key]
+if typeof(c) == "Instance" and c.Parent then return c end
+local n, miss = F.RevResolve(leaf)
+if not n then
+F.Out("[" .. tostring(tag or "远程") .. "] 路径断了: ReplicatedStorage.Shared.Packages.Network." .. leaf .. " (" .. tostring(miss) .. " 找不到)")
+return nil
+end
+F[key] = n
+return n
+end
+F.Blast = function(node, maxSlot, perFrame)
+perFrame = perFrame or 3
 local n = 0
 for i = 1, maxSlot do
 if pcall(function() node:FireServer(i) end) then n = n + 1 end
-task.wait(0.08)
+if i % perFrame == 0 then task.wait() end
 end
-F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S_Interact(共 " .. tostring(n) .. " 次)")
-pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
+return n
+end
+function F.WithdrawAll(maxSlot)
+maxSlot = tonumber(maxSlot) or 30
+task.spawn(function()
+local node = F.RevCached("_revS", "rev_S_Interact", "收起脑红")
+if not node then return end
+local t0 = os.clock()
+local n = F.Blast(node, maxSlot)
+local cost = os.clock() - t0
+F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S_Interact(共 " .. tostring(n) .. " 次 · 耗时 " .. string.format("%.2f", cost) .. " 秒)")
+pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次 · " .. string.format("%.2f", cost) .. " 秒)", Duration = 10 }) end)
 end)
 end
 function F.CollectAllFindPlot()
@@ -9114,27 +9134,22 @@ end
 function F.CollectAll(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
 task.spawn(function()
-local node = RStorage
-for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
-local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
-if not (ok and child) then
-F.Out("[收集货币] 路径断了: ReplicatedStorage.Shared.Packages.Network.rev_B_Collect (" .. tostring(seg) .. " 找不到)")
-return
-end
-node = child
-end
+local node = F.RevCached("_revB", "rev_B_Collect", "收集货币")
+if not node then return end
 local _, hum, root = GC()
 if not root then F.Out("[收集货币] 没角色(没进游戏/重生中), 本次没动") return end
 local origin = root.CFrame
 local plot, cname = F.CollectAllFindPlot()
 if not plot then
 F.Out("[收集货币] ⚠ 找不到你的基地(试过 Plots/Plot/Bases/Base.., Owner 属性都非你) ⇒ 降级为原地直接发 remote")
-for i = 1, maxSlot do pcall(function() node:FireServer(i) end) task.wait(0.08) end
-F.Out("[收集货币] 已原地发送 " .. tostring(maxSlot) .. " 次(未 TP)")
+local t0b = os.clock()
+local nb = F.Blast(node, maxSlot)
+F.Out("[收集货币] 已原地发送 " .. tostring(nb) .. " 次(未 TP · 耗时 " .. string.format("%.2f", os.clock() - t0b) .. " 秒)")
 return
 end
 local slots = F.CollectAllSlots(plot)
 F.Out("[收集货币] 基地「" .. tostring(plot.Name) .. "」(" .. tostring(cname) .. ") · 槽位 " .. tostring(#slots) .. " 个 ⇒ 逐个 TP 过去收")
+local t0 = os.clock()
 local n, tp = 0, 0
 for i = 1, maxSlot do
 local s = slots[i]
@@ -9144,15 +9159,15 @@ if pos then
 tp = tp + 1
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
-task.wait(0.1)
+task.wait(0.06)
 end
 end
 if pcall(function() node:FireServer(i) end) then n = n + 1 end
-task.wait(0.08)
+task.wait(0.02)
 end
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() root.CFrame = origin end)
-F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地")
+F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地 · 耗时 " .. string.format("%.2f", os.clock() - t0) .. " 秒")
 pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已 TP 逐个槽位收完(" .. tostring(n) .. " 次)并回到原地", Duration = 8 }) end)
 end)
 end
