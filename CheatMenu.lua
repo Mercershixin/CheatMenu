@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:49 sha 4ac8b8b5 bytes 524551'):format('2026-10-07 20:49','4ac8b8b5',524551))
+print(('[CheatMenu] build 2026-10-07 20:56 sha c6f9f906 bytes 524985'):format('2026-10-07 20:56','c6f9f906',524985))
 local F = {}
-F.VERSION = "v16.10.46"
+F.VERSION = "v16.10.47"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10559,25 +10559,32 @@ if ok and tr then Trans._locTr = tr end
 end)
 pcall(Trans.PrefetchOfficial)
 end
-Trans.OfficialCN = function(obj)
-local ct = nil
-if pcall(function() ct = obj.ContentText end) and type(ct) == "string" and #ct > 0 then
-local s0 = nil
-pcall(function() s0 = obj.Text end)
-if ct ~= s0 and ct:find("[\228-\233]") then return ct end
+Trans.StripTags = function(s)
+if type(s) ~= "string" then return "" end
+return (s:gsub("<[^<>]->", ""))
 end
-if not Trans._locTr then return nil end
+Trans.OfficialCN = function(obj)
 local src = nil
 pcall(function() src = obj.Text end)
 if type(src) ~= "string" or #src == 0 then return nil end
+local plain = Trans.StripTags(src)
+local ours = (Trans._lastWrote[obj] == src)
+local ct = nil
+if pcall(function() ct = obj.ContentText end) and type(ct) == "string" and #ct > 0 then
+if (not ours) and ct ~= src and ct ~= plain and ct:find("[\228-\233]") then return ct end
+end
+if not Trans._locTr then return nil end
 local hit = Trans._locMap[src]
 if hit == nil then
+local res = nil
 local ok, a, b = pcall(function() return Trans._locTr:Translate(obj, src) end)
-if ok and type(a) == "string" and a ~= src and b ~= false and a:find("[\228-\233]") then
-hit = a
-else
-hit = false
+if ok and type(a) == "string" and a ~= src and a ~= plain and b ~= false and a:find("[\228-\233]") then
+res = a
+elseif plain ~= src and #plain > 0 then
+local ok2, a2, b2 = pcall(function() return Trans._locTr:Translate(obj, plain) end)
+if ok2 and type(a2) == "string" and a2 ~= plain and b2 ~= false and a2:find("[\228-\233]") then res = a2 end
 end
+hit = res or false
 if Trans._locN < 6000 then
 Trans._locMap[src] = hit
 Trans._locN = Trans._locN + 1
