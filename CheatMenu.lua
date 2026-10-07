@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 10:38 sha 67eaa893 bytes 487891'):format('2026-10-07 10:38','67eaa893',487891))
+print(('[CheatMenu] build 2026-10-07 10:41 sha 5794f87e bytes 487914'):format('2026-10-07 10:41','5794f87e',487914))
 local F = {}
-F.VERSION = "v16.9.92"
+F.VERSION = "v16.9.93"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9105,6 +9105,7 @@ Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Ma
 Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
 Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
 Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败,
+Kick Power->踢球力量, Kick->踢, Kickback->踢飞,
 Tab->标签页, Menu->菜单, Home->主页, Back->返回, Next->下一步, Skip->跳过,
 Join->加入, Leave->离开, Start->开始, Continue->继续, Confirm->确认, Cancel->取消,
 Save->保存, Reset->重置, Equip->装备, Unequip->卸下, Upgrade->升级, Unlock->解锁.
@@ -10112,16 +10113,15 @@ local cur = nil
 pcall(function() cur = obj[prop] end)
 if cur ~= expect then return end
 end
-pcall(function() Trans._wroteAt[obj] = os.clock() end)
+pcall(function() Trans._lastWrote[obj] = val end)
 pcall(function() obj[prop] = val end)
 end
 Trans._selfCN = setmetatable({}, { __mode = "k" })
-Trans._wroteAt = setmetatable({}, { __mode = "k" })
+Trans._lastWrote = setmetatable({}, { __mode = "k" })
 Trans.MarkSelfCN = function(obj, txt)
 if type(txt) ~= "string" then return end
 if not txt:find("[\228-\233]") or txt:find("%a%a") then return end
-local at = Trans._wroteAt[obj]
-if at and os.clock() - at < 3 then return end
+if Trans._lastWrote[obj] == txt then return end
 Trans._selfCN[obj] = true
 end
 Trans.GuiEl = function(obj, urgent)
