@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 16:06 sha 128a0eda bytes 505376'):format('2026-10-07 16:06','128a0eda',505376))
+print(('[CheatMenu] build 2026-10-07 17:09 sha 9289ada2 bytes 505821'):format('2026-10-07 17:09','9289ada2',505821))
 local F = {}
-F.VERSION = "v16.10.13"
+F.VERSION = "v16.10.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -177,6 +177,12 @@ local CS       = game:GetService("CollectionService")
 local RStorage = game:GetService("ReplicatedStorage")
 local WS       = game:GetService("Workspace")
 local LP = Players.LocalPlayer
+if not LP then
+local _lpT0 = os.clock()
+repeat task.wait(0.2) until (Players.LocalPlayer and game:IsLoaded()) or os.clock() - _lpT0 > 60
+LP = Players.LocalPlayer
+task.wait(0.5)
+end
 F._touchDown = false
 pcall(function()
 UIS.TouchStarted:Connect(function() F._touchDown = true end)
@@ -6626,7 +6632,7 @@ end
 function F.OnCharacter()
 if T.CharPersist == false then return end
 task.wait(0.2)
-F.RecordOriginals()
+pcall(F.RecordOriginals)
 pcall(function()
 local _, _, hb = GC()
 if hb then F.HideBaseY = hb.Position.Y end
@@ -8299,6 +8305,14 @@ break
 end
 end
 if type(src) == "string" and #src > 100000 then
+pcall(function()
+local plrs = game:GetService("Players")
+local t0 = os.clock()
+while (not plrs.LocalPlayer or not game:IsLoaded()) and os.clock() - t0 < 60 do
+task.wait(0.2)
+end
+task.wait(0.5)
+end)
 local chunk = (loadstring or load)(src, "@CheatMenu_rejoin")
 if chunk then chunk() end
 end
@@ -8426,8 +8440,11 @@ if not F._orig.jumpHeight and hum.JumpHeight then F._orig.jumpHeight = hum.JumpH
 local mh = tonumber(hum.MaxHealth)
 if not F._orig.maxHealth and mh and mh == mh and mh ~= math.huge then F._orig.maxHealth = mh end
 end
-if not F._orig.maxZoom then F._orig.maxZoom = LP.CameraMaxZoomDistance end
-if not F._orig.minZoom then F._orig.minZoom = LP.CameraMinZoomDistance end
+local plr = LP or Players.LocalPlayer
+if plr then
+if not F._orig.maxZoom then F._orig.maxZoom = plr.CameraMaxZoomDistance end
+if not F._orig.minZoom then F._orig.minZoom = plr.CameraMinZoomDistance end
+end
 local cam = workspace.CurrentCamera
 if cam and not F._orig.fov then F._orig.fov = cam.FieldOfView end
 if not F._baseWalk and F._orig.walk then F._baseWalk = F._orig.walk end
@@ -13815,7 +13832,7 @@ pcall(F.UnloadAll)
 pcall(function() F.LogFlush("卸载") end)
 end)
 end })
-F.RecordOriginals()
+pcall(F.RecordOriginals)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
 local _plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
