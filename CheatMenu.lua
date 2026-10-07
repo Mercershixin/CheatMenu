@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:00 sha 7f2220ef bytes 508084'):format('2026-10-07 18:00','7f2220ef',508084))
+print(('[CheatMenu] build 2026-10-07 18:08 sha 81c04ccd bytes 506725'):format('2026-10-07 18:08','81c04ccd',506725))
 local F = {}
-F.VERSION = "v16.10.20"
+F.VERSION = "v16.10.21"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1871,11 +1871,22 @@ pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
 end
 end
 fix()
+local function attachVel()
+local _, _, r = GC()
+if not r then return end
+if F._flingVelConn then pcall(function() F._flingVelConn:Disconnect() end) F._flingVelConn = nil end
+pcall(function() F._flingVelConn = r:GetPropertyChangedSignal("AssemblyLinearVelocity"):Connect(fix) end)
+if not F._flingVelConn then
+pcall(function() F._flingVelConn = r:GetPropertyChangedSignal("Velocity"):Connect(fix) end)
+end
+end
 table.insert(F._flingConns, RS.Heartbeat:Connect(fix))
-table.insert(F._flingConns, LP.CharacterAdded:Connect(function() task.wait(0.3) fix() end))
+attachVel()
+table.insert(F._flingConns, LP.CharacterAdded:Connect(function() task.wait(0.3) fix() attachVel() end))
 end
 function F.AntiFlingDisable()
 T.AntiFling = false
+if F._flingVelConn then pcall(function() F._flingVelConn:Disconnect() end) F._flingVelConn = nil end
 for _, c in ipairs(F._flingConns) do pcall(function() c:Disconnect() end) end
 F._flingConns = {}
 if F._flingBackup then
@@ -5009,7 +5020,20 @@ local tchar = target.Character
 if not tchar then return end
 local troot = tchar:FindFirstChild("HumanoidRootPart")
 if not troot then return end
-smoothTP(troot.CFrame + Vector3.new(0, 3, 0))
+local dest = troot.CFrame + Vector3.new(0, 3, 0)
+local dist = (troot.Position - root.Position).Magnitude
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.CFrame = dest end)
+task.spawn(function()
+for _ = 1, 12 do
+if not (root and root.Parent) then break end
+if (root.Position - dest.Position).Magnitude < 6 then break end
+pcall(function() root.CFrame = dest end)
+task.wait(0.05)
+end
+end)
+F.Out("[传送] 已直接瞬移到「" .. tostring(target.Name) .. "」(距离 " .. string.format("%.0f", dist)
+.. " 格 · 无距离限制) —— 若被拉回, 说明本服的位移由服务端裁决, 不是脚本限制")
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -13052,64 +13076,6 @@ end)
 end)
 end
 end
-F.PullPlayer = function()
-local pl, err = F.GetTargetPlayer()
-if not pl then F.Out("[拉人] " .. tostring(err)) return end
-local tp = pl.Character
-local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
-if not tRoot then F.Out("[拉人] 目标没有 HumanoidRootPart") return end
-local ok, why = F.GrabOwner(tRoot)
-F.Out("[拉人] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
-task.spawn(function()
-for _ = 1, 30 do
-local _, _, myRoot = GC()
-if not (myRoot and myRoot.Parent and tRoot and tRoot.Parent) then break end
-pcall(function()
-local to = myRoot.Position - tRoot.Position
-local d = to.Magnitude
-if d > 4 then
-tRoot.AssemblyLinearVelocity = Vector3.zero
-tRoot.CFrame = CFrame.new(tRoot.Position + to.Unit * math.min(d - 3, 14))
-end
-end)
-task.wait(0.06)
-end
-F.Out("[拉人] 结束 —— 人没过来就是本服抢不到他的所有权(说明这个游戏不支持)")
-end)
-end
-F.TPMovePlayer = function(mode)
-local pl, err = F.GetTargetPlayer()
-if not pl then F.Out("[动他] " .. tostring(err)) return end
-local tp = pl.Character
-local tRoot = tp:FindFirstChild("HumanoidRootPart") or tp.PrimaryPart
-if not tRoot then F.Out("[动他] 目标没有 HumanoidRootPart") return end
-local ok, why = F.GrabOwner(tRoot)
-F.Out("[动他] 目标「" .. pl.Name .. "」· 抢所有权: " .. (ok and "成功" or ("失败 ⇒ " .. tostring(why))))
-if not ok then return end
-if mode == "front" then
-local _, _, myRoot = GC()
-if not myRoot then return end
-local dest = myRoot.CFrame * CFrame.new(0, 0, -4)
-pcall(function()
-tRoot.AssemblyLinearVelocity = Vector3.zero
-tRoot.CFrame = dest
-end)
-local t0 = os.clock()
-while os.clock() - t0 < 0.3 do
-pcall(function()
-if (tRoot.Position - dest.Position).Magnitude > 10 then tRoot.CFrame = dest end
-end)
-task.wait(0.05)
-end
-F.Out("[动他] 已把「" .. pl.Name .. "」瞬移到你面前(所有人都会看到他过来了)")
-elseif mode == "up" then
-pcall(function()
-tRoot.CFrame = CFrame.new(tRoot.Position + Vector3.new(0, 400, 0))
-tRoot.AssemblyLinearVelocity = Vector3.new(0, 3e4, 0)
-end)
-F.Out("[动他] 已把「" .. pl.Name .. "」扔到上方 400 格")
-end
-end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -13528,8 +13494,7 @@ end
 do
 Tabs.TP:AddSection("传送")
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
-Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
-if not F.Once("tp_target", 1.5) then return end
+Tabs.TP:AddButton({ Title = "传送到目标(无距离限制)", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then F.Out("[传送] 先在左边「目标玩家」里选一个人") return end
 local pl = Players:FindFirstChild(tostring(name))
@@ -13544,14 +13509,8 @@ F._tpMouseOn = v and true or false
 F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
 or "[T键传送] 已关闭, T 键不再传送")
 end })
-Tabs.Move:AddSection("针对玩家")
-Tabs.Move:AddButton({ Title = "用绳子把他拉过来", Callback = function()
-task.spawn(function() pcall(F.PullPlayer) end)
-end })
-Tabs.Move:AddButton({ Title = "把他瞬间 TP 到我面前", Callback = function()
-task.spawn(function() pcall(F.TPMovePlayer, "front") end)
-end })
-Tabs.Move:AddButton({ Title = "把他甩飞", Callback = function()
+Tabs.TP:AddSection("针对玩家")
+Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
 Tabs.TP:AddSection("收藏点位")
