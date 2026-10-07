@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:33 sha 1e5a3821 bytes 511025'):format('2026-10-07 18:33','1e5a3821',511025))
+print(('[CheatMenu] build 2026-10-07 18:39 sha 40931846 bytes 516317'):format('2026-10-07 18:39','40931846',516317))
 local F = {}
-F.VERSION = "v16.10.26"
+F.VERSION = "v16.10.27"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8470,7 +8470,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.ClickTPDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -11154,7 +11154,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.ClickTPDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13060,6 +13060,149 @@ end
 function F.ClickTPDisable()
 if F._clickTPConn then pcall(function() F._clickTPConn:Disconnect() end) F._clickTPConn = nil end
 end
+F._flingLoopOn = false
+F.FlingLoopStart = function()
+if F._flingLoopOn then return end
+F._flingLoopOn = true
+task.spawn(function()
+while F._flingLoopOn and T.LoopFling do
+local pl = F.GetTargetPlayer()
+if pl then pcall(F.FlingPlayer, pl) end
+task.wait(tonumber(C.FlingInterval) or 1.5)
+end
+F._flingLoopOn = false
+end)
+F.Out("[循环甩飞] 已开: 每 " .. tostring(tonumber(C.FlingInterval) or 1.5) .. " 秒对当前目标甩一次")
+end
+F.FlingLoopStop = function()
+F._flingLoopOn = false
+pcall(F.FlingStop)
+F.Out("[循环甩飞] 已关")
+end
+F._flingAllBusy = false
+F.FlingAll = function()
+if F._flingAllBusy then F.Out("[甩飞所有人] 上一轮还没跑完, 稍等") return end
+F._flingAllBusy = true
+task.spawn(function()
+local n, list = 0, Players:GetPlayers()
+for _, pl in ipairs(list) do
+if pl ~= LP and pl.Character then
+n = n + 1
+pcall(F.FlingPlayer, pl)
+task.wait(tonumber(C.FlingInterval) or 1.5)
+end
+end
+F._flingAllBusy = false
+F.Out("[甩飞所有人] 已对 " .. tostring(n) .. " 个玩家逐个甩飞")
+end)
+end
+F._btParts = setmetatable({}, { __mode = "k" })
+F._btConn, F._btAdded = nil, nil
+F.BulletTrackIsBullet = function(name)
+local n = tostring(name):lower()
+if n == "" then return false end
+local kws = { "bullet", "projectile", "pellet", "rocket", "arrow", "bolt", "shell", "tracer", "子弹", "弹道" }
+for i = 1, #kws do
+if n:find(kws[i], 1, true) then return true end
+end
+return false
+end
+F.BulletTrackTarget = function()
+local ch = F._combatNow
+if ch and ch.Parent then
+local r = ch:FindFirstChild("HumanoidRootPart") or ch.PrimaryPart
+if r then return r end
+end
+local op = Fluent and Fluent.Options and Fluent.Options.TPTarget
+local name = op and op.Value
+if name then
+local ok, pl = pcall(function() return Players:FindFirstChild(tostring(name)) end)
+if ok and pl and pl.Character then
+local r = pl.Character:FindFirstChild("HumanoidRootPart") or pl.Character.PrimaryPart
+if r then return r end
+end
+end
+return nil
+end
+F.BulletTrackEnable = function()
+if F._btAdded then return end
+F.Out("[子弹追踪] 已开: 正在寻找投射物系统…")
+task.spawn(function()
+local hit = false
+pcall(function()
+local mods = {}
+for _, d in ipairs(RStorage:GetDescendants()) do
+if d:IsA("ModuleScript") then
+local n = d.Name:lower()
+if n:find("projectile", 1, true) or n:find("bullet", 1, true) or n:find("weapon", 1, true) or n:find("gun", 1, true) then
+mods[#mods + 1] = d
+end
+end
+end
+local wrap = newcclosure or function(f) return f end
+for _, m in ipairs(mods) do
+local r = nil
+pcall(function() r = require(m) end)
+if type(r) == "table" and type(r.SimulateProjectile) == "function" and not r.__cmBtHooked then
+local orig = r.SimulateProjectile
+r.SimulateProjectile = wrap(function(...)
+local args = { ... }
+local dirs, origin = args[5], args[6]
+if T.BulletTrack and type(dirs) == "table" and origin then
+local tgt = F.BulletTrackTarget()
+if tgt then
+local wp = origin.WorldPosition or origin
+if typeof(wp) == "Vector3" then
+local u = (tgt.Position - wp).Unit
+for i = 1, #dirs do dirs[i] = u end
+end
+end
+end
+return orig(...)
+end)
+r.__cmBtHooked = true
+hit = true
+F.Out("[子弹追踪] ✅ 已 hook 投射物系统: " .. m:GetFullName() .. " ⇒ 射出的子弹会自动拐向目标")
+break
+end
+end
+end)
+if not hit then
+F.Out("[子弹追踪] 未找到投射物模块 ⇒ 已切到「飞行部件追踪」(对新增的子弹类部件逐帧改向)")
+end
+end)
+F._btAdded = workspace.DescendantAdded:Connect(function(d)
+if not T.BulletTrack then return end
+if typeof(d) ~= "Instance" then return end
+local ok, isPart = pcall(function() return d:IsA("BasePart") end)
+if ok and isPart and not F._btParts[d] and F.BulletTrackIsBullet(d.Name) then
+F._btParts[d] = true
+end
+end)
+F._btConn = RS.Heartbeat:Connect(function()
+if not T.BulletTrack then return end
+local tgt = F.BulletTrackTarget()
+local tp = tgt and tgt.Position
+for p in pairs(F._btParts) do
+if not p.Parent then
+F._btParts[p] = nil
+elseif tp then
+pcall(function()
+local d = tp - p.Position
+if d.Magnitude > 1 then
+local sp = p.AssemblyLinearVelocity.Magnitude
+if sp < 1 then sp = 250 end
+p.AssemblyLinearVelocity = d.Unit * sp
+end
+end)
+end
+end
+end)
+end
+F.BulletTrackDisable = function()
+if F._btAdded then pcall(function() F._btAdded:Disconnect() end) F._btAdded = nil end
+if F._btConn then pcall(function() F._btConn:Disconnect() end) F._btConn = nil end
+end
 F.FlingStop = function()
 F._flingHit = false
 if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
@@ -13068,9 +13211,10 @@ local _, _, r = GC()
 if r and r.Parent then r.AssemblyAngularVelocity = Vector3.zero end
 end)
 end
-F.FlingPlayer = function()
+F.FlingPlayer = function(targetPlayer)
 pcall(F.FlingStop)
-local pl, err = F.GetTargetPlayer()
+local pl, err
+if targetPlayer then pl = targetPlayer else pl, err = F.GetTargetPlayer() end
 if not pl then F.Out("[甩飞] " .. tostring(err)) return end
 local tp = pl.Character
 if not tp then F.Out("[甩飞] 目标当前没有角色") return end
@@ -13319,6 +13463,11 @@ local cam = tostring(v):find("转视角", 1, true) ~= nil
 T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
+end })
+Tabs.Combat:AddToggle("BulletTrack", { Title = "子弹追踪(子弹自动拐向目标)", Default = false, Callback = function(v)
+T.BulletTrack = v
+if F._cfgSyncing then return end
+if v then pcall(F.BulletTrackEnable) else pcall(F.BulletTrackDisable) end
 end })
 Tabs.Surv:AddSection("生命 / 保命")
 Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
@@ -13623,6 +13772,15 @@ Tabs.TP:AddSection("针对玩家")
 Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
+Tabs.TP:AddToggle("LoopFling", { Title = "循环甩飞(一直甩当前目标)", Default = false, Callback = function(v)
+T.LoopFling = v
+if F._cfgSyncing then return end
+if v then pcall(F.FlingLoopStart) else pcall(F.FlingLoopStop) end
+end })
+Tabs.TP:AddButton({ Title = "甩飞所有人(全场逐个甩)", Callback = function()
+task.spawn(function() pcall(F.FlingAll) end)
+end })
+Tabs.TP:AddSlider("FlingInterval", { Title = "甩飞间隔(秒)", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
 Tabs.TP:AddSection("收藏点位")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
