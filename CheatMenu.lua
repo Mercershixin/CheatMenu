@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:22 sha 491669c2 bytes 509889'):format('2026-10-07 19:22','491669c2',509889))
+print(('[CheatMenu] build 2026-10-07 19:33 sha 1cfd95c0 bytes 516387'):format('2026-10-07 19:33','1cfd95c0',516387))
 local F = {}
-F.VERSION = "v16.10.37"
+F.VERSION = "v16.10.38"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3643,6 +3643,7 @@ F.TRAP_KEYS = { "trap", "bear", "spike", "snare", "landmine", "mine", "banana", 
 F._trapConn = nil
 function F.TrapGuardDisable()
 pcall(F.TrapTagWatch, false)
+if F._trapPromptConn then pcall(function() F._trapPromptConn:Disconnect() end) F._trapPromptConn = nil end
 if F._trapAddConn then pcall(function() F._trapAddConn:Disconnect() end) F._trapAddConn = nil end
 if F._trapConnOff then
 local back = 0
@@ -3662,6 +3663,41 @@ pcall(function() if obj and obj.Parent then obj.CanTouch = bak.touch end end)
 end
 F._trapBak = nil
 end
+end
+F.TrapAutoRemoveEnable = function()
+T.TrapAutoRemove = true
+if F._trapAutoConn then return end
+local ok, PPS = pcall(function() return game:GetService("ProximityPromptService") end)
+if not (ok and PPS) then F.Out("[反陷阱·自动拆] 拿不到 ProximityPromptService ⇒ 本执行器/本游戏不支持") return end
+F._trapAutoN = 0
+F._trapAutoConn = PPS.PromptShown:Connect(function(pp)
+if not T.TrapAutoRemove then return end
+pcall(function()
+if not (pp and pp.Parent) then return end
+local anc = pp:FindFirstAncestorWhichIsA("BasePart") or pp:FindFirstAncestorWhichIsA("Model")
+local an = string.lower(tostring(anc and anc.Name or ""))
+local pn = string.lower(tostring(pp.Name) .. " " .. tostring(pp.ActionText or "") .. " " .. tostring(pp.ObjectText or ""))
+local named = an:find("trap", 1, true) or (anc and (F.TrapTagged(anc) or F.TrapNameHit(anc)))
+local removeLike = pn:find("unplace", 1, true) or pn:find("remove", 1, true) or pn:find("disarm", 1, true)
+or pn:find("defuse", 1, true) or pn:find("拆除", 1, true) or pn:find("卸", 1, true)
+if not (named and removeLike) then return end
+pp.HoldDuration = 0
+pp.RequiresLineOfSight = false
+pp.MaxActivationDistance = 1000000
+if type(fireproximityprompt) == "function" then pcall(fireproximityprompt, pp) end
+F._trapAutoN = (F._trapAutoN or 0) + 1
+if os.clock() - (F._trapAutoLog or 0) > 3 then
+F._trapAutoLog = os.clock()
+F.Out("[反陷阱·自动拆] 已拆掉附近陷阱 " .. tostring(F._trapAutoN) .. " 个 · 最近: " .. tostring(anc and anc.Name or pp.Name))
+end
+end)
+end)
+F.Out("[反陷阱·自动拆] 已开: 靠近你的陷阱若带「拆除」提示(Unplace/Remove)会被自动点掉")
+end
+F.TrapAutoRemoveDisable = function()
+T.TrapAutoRemove = false
+if F._trapAutoConn then pcall(function() F._trapAutoConn:Disconnect() end) F._trapAutoConn = nil end
+F.Out("[反陷阱·自动拆] 已关(恢复为「只不触发」)")
 end
 function F.TrapGuardEnable()
 if F._trapConn then return end
@@ -3785,6 +3821,33 @@ F._trapHits = (F._trapHits or 0) + hits
 F.Out("[陷阱] 附近 " .. tostring(hits) .. " 个陷阱已处理(陷阱自身+你的身体双重拦截) · 累计 " .. tostring(F._trapHits))
 end
 end)
+pcall(function()
+if F._trapPromptConn then return end
+local PPS = game:GetService("ProximityPromptService")
+F._trapPromptConn = PPS.PromptShown:Connect(function(pp)
+if not T.TrapWarn then return end
+pcall(function()
+if not (pp and pp.Parent) then return end
+local anc = pp:FindFirstAncestorWhichIsA("BasePart") or pp:FindFirstAncestorWhichIsA("Model") or pp.Parent
+if not anc then return end
+local named = F.TrapTagged(anc) or F.TrapNameHit(anc)
+if not named then return end
+if anc:IsA("BasePart") then
+if not F.TrapIsMine(anc) then pcall(function() F.TrapKillTouch(anc) end) end
+else
+for _, d in ipairs(anc:GetDescendants()) do
+if d:IsA("BasePart") and not F.TrapIsMine(d) then pcall(function() F.TrapKillTouch(d) end) end
+end
+end
+F._trapPromptN = (F._trapPromptN or 0) + 1
+if os.clock() - (F._trapPromptLog or 0) > 5 then
+F._trapPromptLog = os.clock()
+F.Out("[反陷阱] 即时处理了 " .. tostring(F._trapPromptN) .. " 个刚出现的陷阱提示(不等轮询) · 最近: " .. tostring(anc.Name))
+end
+end)
+end)
+end)
+if T.TrapAutoRemove and F.TrapAutoRemoveEnable then pcall(F.TrapAutoRemoveEnable) end
 end
 F._steadyConn = nil
 local STEADY_STATES = { "Ragdoll", "FallingDown" }
@@ -5389,7 +5452,13 @@ T.MyEgg = on and true or false
 if F._eggLoop then F._eggLoop = false end
 if not on then
 F._myEgg = nil
+if F._eggDropConns then
+for _, c in ipairs(F._eggDropConns) do pcall(function() c:Disconnect() end) end
+F._eggDropConns = nil
+F.Out("[护蛋] 已关(掉落广播监听已断开)")
+else
 F.Out("[护蛋] 已关")
+end
 return
 end
 F.Out("[护蛋] 已开: 只盯你自己拿起的那一个 —— 它掉地/被夺就立刻瞬间偷回手里(不会去抢别人的)。每 0.05 秒检查一次, 掉了立刻重拿/重新装备")
@@ -5447,6 +5516,33 @@ F._eggCharConn = ch.ChildAdded:Connect(function(c)
 if c:IsA("Tool") then hookTool(c) end
 end)
 end
+end)
+if F._eggDropConns then
+for _, c in ipairs(F._eggDropConns) do pcall(function() c:Disconnect() end) end
+end
+F._eggDropConns = {}
+F._eggForce = false
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+local n = 0
+for _, d in ipairs(rs:GetDescendants()) do
+if n >= 12 then break end
+if d:IsA("RemoteEvent") then
+local nm = string.lower(tostring(d.Name))
+local hit = nm:find("dropped", 1, true) or nm:find("owner", 1, true) or nm:find("carry", 1, true)
+if hit then
+n = n + 1
+local ok, c = pcall(function()
+return d.OnClientEvent:Connect(function()
+if not T.MyEgg then return end
+F._eggForce = true
+end)
+end)
+if ok and c then F._eggDropConns[#F._eggDropConns + 1] = c end
+end
+end
+end
+if n > 0 then F.Out("[护蛋] 已挂 " .. tostring(n) .. " 条「蛋掉落/归属变更」广播 ⇒ 服务端一提示就立刻找回(不等轮询)") end
 end)
 F._eggLoop = true
 task.spawn(function()
@@ -5555,39 +5651,104 @@ if egg and egg.Parent then
 local inHand = false
 pcall(function() inHand = (egg.Parent == ch) or egg:IsDescendantOf(ch) end)
 if not inHand then
-local part = egg:IsA("Model") and (egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart")) or (egg:IsA("BasePart") and egg) or nil
+local function partOf(o)
+local r = nil
 pcall(function()
-if part then
+if o then
+r = o:IsA("Model") and (o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")) or (o:IsA("BasePart") and o) or nil
+end
+end)
+return r
+end
+local function promptOf(from, radius)
+local pp = nil
+pcall(function()
+if not from then return end
+pp = from:FindFirstChildOfClass("ProximityPrompt")
+if not pp and from.Parent then pp = from.Parent:FindFirstChildOfClass("ProximityPrompt") end
+if not pp and from.IsDescendantOf and from:IsDescendantOf(workspace) then
 local op = OverlapParams.new()
 op.FilterType = Enum.RaycastFilterType.Exclude
 op.FilterDescendantsInstances = { ch }
-local pp = part:FindFirstChildOfClass("ProximityPrompt")
-or (part.Parent and part.Parent:FindFirstChildOfClass("ProximityPrompt"))
-if not pp then
-for _, q in ipairs(workspace:GetPartBoundsInRadius(part.Position, 6, op)) do
+local hit = workspace:GetPartBoundsInRadius(from.Position, radius or 220, op)
+for _, q in ipairs(hit) do
 pp = q:FindFirstChildOfClass("ProximityPrompt")
+if not pp and q.Parent then pp = q.Parent:FindFirstChildOfClass("ProximityPrompt") end
 if pp then break end
 end
 end
-if pp and pp.Enabled then
+end)
+return pp
+end
+local function firePrompt(pp)
+if not (pp and pp.Parent) then return false end
+pcall(function()
 pp.HoldDuration = 0
 pp.RequiresLineOfSight = false
 pp.MaxActivationDistance = 1000000
+end)
+if type(fireproximityprompt) == "function" then
+local ok = pcall(fireproximityprompt, pp)
+if ok then return true end
+end
+local done = false
+pcall(function()
 pp:InputHoldBegin()
+done = true
+end)
+if done then
 task.wait()
-pp:InputHoldEnd()
+pcall(function() pp:InputHoldEnd() end)
+end
+return done
+end
+local pp = promptOf(partOf(egg), 220)
+if not pp then
+pcall(function()
+local best, bd, rt = nil, 1e9, nil
+pcall(function() local _, _, r = GC() if r then rt = r end end)
+if rt then
+for _, d in ipairs(workspace:GetDescendants()) do
+if d:IsA("Model") or d:IsA("BasePart") or d:IsA("Tool") then
+local nm = string.lower(tostring(d.Name))
+if nm:find("egg", 1, true) or nm:find("carry", 1, true) then
+local bp = partOf(d)
+if bp then
+local dd = (bp.Position - rt.Position).Magnitude
+if dd < bd then best, bd = bp, dd end
+end
+end
+end
+end
+end
+if best then
+pp = promptOf(best, 220)
+F._eggFoundFar = bd
+end
+end)
+end
+if pp and pp.Enabled ~= false then
+if firePrompt(pp) then
 F._eggHits = (F._eggHits or 0) + 1
 if os.clock() - (F._eggStealLogAt or 0) > 3 then
 F._eggStealLogAt = os.clock()
 F.Out("[护蛋] 掉了一次 ⇒ 已瞬间偷回(累计 " .. tostring(F._eggHits) .. " 次)")
 end
+elseif os.clock() - (F._eggMissLogAt or 0) > 8 then
+F._eggMissLogAt = os.clock()
+F.Out("[护蛋] ⚠ 蛋离手, 找到触发点但点不动 ⇒ 游戏可能要求「手持/面向」; 把日志这段发我")
+end
+elseif os.clock() - (F._eggMissLogAt or 0) > 8 then
+F._eggMissLogAt = os.clock()
+pcall(function() Fluent:Notify({ Title = "护蛋", Content = "蛋离手了, 但 220 格内和全图都没找到可触发的拿取点", Duration = 6 }) end)
+F.Out("[护蛋] ⚠ 蛋离手但 220 格内 + 全图同类都没找到拿取点 ⇒ 该游戏的拿取不走 ProximityPrompt; 建议开「瞬间交互」或「自动互动」")
 end
 end
-end)
 end
 end
-end
-task.wait(F._myEgg and 0.05 or 0.25)
+local fast = F._eggForce
+F._eggForce = false
+task.wait(F._myEgg and 0.05 or (fast and 0.05 or 0.25))
 end
 F._eggLoop = nil
 end)
@@ -8291,7 +8452,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -10746,7 +10907,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13395,6 +13556,11 @@ pcall(F.MyEggSet, false)
 pcall(F.CarryGuardDisable)
 end
 F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/反回拉/护蛋/搬运保护 = " .. (v and "开" or "关"))
+end })
+Tabs.Move:AddToggle("TrapAutoRemove", { Title = "自动拆除附近陷阱(有「拆除」提示就点掉)", Default = false, Callback = function(v)
+T.TrapAutoRemove = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.TrapAutoRemoveEnable) else pcall(F.TrapAutoRemoveDisable) end
 end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
