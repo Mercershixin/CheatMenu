@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:00 sha a2e862fc bytes 525697'):format('2026-10-07 21:00','a2e862fc',525697))
+print(('[CheatMenu] build 2026-10-07 21:04 sha c3289407 bytes 524983'):format('2026-10-07 21:04','c3289407',524983))
 local F = {}
-F.VERSION = "v16.10.48"
+F.VERSION = "v16.10.49"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9614,7 +9614,6 @@ Trans._dirty = false
 Trans._scanRound = 0
 Trans._diagOnce = nil
 Trans._ready = false
-Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
@@ -9803,18 +9802,6 @@ if not ok3 or type(arr) ~= "table" or #arr ~= #list then return nil end
 Trans._localFails = 0
 return arr
 end
-Trans.Probe = function()
-local rf = Trans.Req()
-if type(rf) ~= "function" then return false, "本执行器没有 request 函数" end
-local ok, res = pcall(function() return rf({ Url = Trans.HOST .. "/health", Method = "GET" }) end)
-if not ok or type(res) ~= "table" then return false, "连不上 " .. Trans.HOST end
-if tonumber(res.StatusCode or 0) ~= 200 then return false, "health HTTP " .. tostring(res.StatusCode) end
-local t0 = os.clock()
-local word = Trans.RequestOne("Settings", "zh")
-local dt = os.clock() - t0
-if not word then return false, "服务在但翻译失败" end
-return true, string.format("就绪 · 试译 Settings→%s · 首次耗时 %.2fs", word, dt)
-end
 Trans.Health = function()
 local rf = Trans.Req()
 if type(rf) ~= "function" then return false end
@@ -9945,26 +9932,34 @@ Trans._dirty = false
 Trans._fail = {}
 Trans.NumTpl = {}
 Trans.ShouldCacheClear()
-local del = 0
+local del, wipe, left = 0, 0, 0
 local list = Trans.CacheFiles()
+list[#list + 1] = Trans.FILE
+list[#list + 1] = "CheatMenu_TransCache.json"
+list[#list + 1] = "CheatMenu_TransCache.json.bak"
+list[#list + 1] = "CheatMenu_NumTpl.txt"
+list[#list + 1] = Trans.AsciiFile()
 for i = 1, #list do
-if type(delfile) == "function" then
-local ok = pcall(delfile, list[i])
-if ok then del = del + 1 end
+local f = list[i]
+if type(f) == "string" and f ~= "" then
+if type(delfile) == "function" then pcall(delfile, f) end
+local ex = false
+if type(isfile) == "function" then pcall(function() ex = isfile(f) == true end) end
+if ex then
+if type(writefile) == "function" then
+if pcall(writefile, f, '{"v":3,"c":{}}') then wipe = wipe + 1 del = del + 1 else left = left + 1 end
 else
-pcall(function() writefile(list[i], '{"v":3,"c":{}}') end)
+left = left + 1
+end
+else
+del = del + 1
 end
 end
-if type(delfile) == "function" then
-pcall(delfile, Trans.FILE)
-pcall(delfile, "CheatMenu_TransCache.json")
-pcall(delfile, "CheatMenu_TransCache.json.bak")
-pcall(delfile, "CheatMenu_NumTpl.txt")
 end
 if type(Trans.Reg) == "table" then
 for _o, r in pairs(Trans.Reg) do if type(r) == "table" then r.at = 0 end end
 end
-F.Out("[翻译] 已清空全部缓存 " .. n .. " 条 · 已删文件 " .. del .. " 个")
+F.Out("[翻译] 已清空全部缓存 " .. n .. " 条 · 已清文件 " .. del .. " 个(其中 " .. wipe .. " 个改为空文件" .. (left > 0 and (" · " .. left .. " 个没删掉") or "") .. ")")
 return n
 end
 Trans.PurgeStale = function()
@@ -11033,7 +11028,8 @@ F.GlossLoad(true)
 local _added, _tot = F.GlossApplyCache()
 local _ctx = Trans.SlotCtx()
 F.Out("[术语表] 已加载 " .. tostring(Trans.GLOSS_N or 0) .. " 条(来自 " .. Trans.GLOSS_FILE
-.. ") + 内置修正表 ⇒ 合并 " .. tostring(_tot or 0) .. " 条固定译法, 全部直接命中不占上下文 · 本次新增缓存 " .. tostring(_added) .. " 条")
+.. ") + 内置修正表 ⇒ 合并 " .. tostring(_tot or 0) .. " 条固定译法 · 本次自动覆盖旧缓存 " .. tostring(_added)
+.. " 条(规则/译法有更新也走这里 ⇒ 不用手动清空缓存)")
 local _p = Trans.Prompt("zh", Trans.BATCH, "Settings Progress")
 F.Out("[翻译] 参数: 每槽上下文 " .. tostring(_ctx) .. " token · 输出预留 " .. tostring(Trans.OutNeed(Trans.BATCH, _ctx))
 .. " token · 提示词 " .. tostring(#Trans.SYS_BASE) .. " 字符(术语表不进提示词, 只在文本里命中时才贴几条)")
@@ -11098,13 +11094,6 @@ function F.TranslateDisable() Trans.Disable() end
 function F.TranslateEnable()
 local ok, r = pcall(Trans.Enable)
 if not ok then F.Out("[翻译] 启动出错: " .. tostring(r)) return nil end
-if not Trans.IsMobile and T.TransModel == true then
-task.spawn(function()
-local okP, okR, info = pcall(Trans.Probe)
-local msg = tostring(info or okR)
-F.Out("[翻译] 模型自检: " .. msg)
-end)
-end
 return r
 end
 local function UnloadAll()
@@ -14128,12 +14117,6 @@ task.spawn(function() pcall(Trans.ClearCurrent) end)
 end })
 Tabs.Trans:AddButton({ Title = "清空全部缓存(所有游戏)", Callback = function()
 task.spawn(function() pcall(Trans.ClearAll) end)
-end })
-Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
-task.spawn(function()
-local okP, okR, info = pcall(Trans.Probe)
-F.Out("[翻译] 模型自检: " .. tostring(info or okR))
-end)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
 F.ProtectTierApply = function(v)
