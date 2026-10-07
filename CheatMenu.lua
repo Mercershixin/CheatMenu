@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:09 sha 6b0019f3 bytes 517262'):format('2026-10-07 19:09','6b0019f3',517262))
+print(('[CheatMenu] build 2026-10-07 19:16 sha d8d1f401 bytes 517904'):format('2026-10-07 19:16','d8d1f401',517904))
 local F = {}
-F.VERSION = "v16.10.34"
+F.VERSION = "v16.10.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10783,6 +10783,10 @@ pcall(Trans.NumTplLoad)
 local name = nil
 pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
 Trans.KeepAdd(name)
+pcall(function()
+local op = Fluent and Fluent.Options and Fluent.Options.TransModel
+if op and op.Value ~= nil then T.TransModel = (op.Value == true) end
+end)
 if Trans.IsMobile then
 Trans._ready = false
 F.Out("[翻译] 📱 手机/平板: 本地缓存模式 ⇒ 只用本机已缓存的译文汉化(不连本地模型、不走网络)")
@@ -10797,6 +10801,7 @@ Trans.Loop = task.spawn(function()
 while T.Translate do
 task.wait(Trans.SCAN_EVERY)
 if not T.Translate then break end
+if T.TransModel == true and not Trans._ready and not Trans._readyTask and not Trans.IsMobile then pcall(Trans.ApplyMode, true) end
 pcall(Trans.Scan)
 if Trans._ready and not Trans._urgent and Trans.Active < Trans.MAX and #Trans.Queue > 0 then pcall(Trans.Drain) end
 end
@@ -10807,6 +10812,15 @@ if not Trans._tickOn then
 Trans._tickOn = true
 task.spawn(Trans.SaveTick)
 end
+task.delay(2, function()
+if T.Translate and T.TransModel == true and not Trans._ready and not Trans._readyTask and not Trans.IsMobile then
+if not Trans.Health() then
+F.Out("[翻译] ⚠ 开着「连本地模型」但连不上 " .. tostring(Trans.HOST) .. " ⇒ 先用缓存; 模型起来会自动接上")
+else
+pcall(Trans.ApplyMode, false)
+end
+end
+end)
 return true
 end
 function Trans.Disable()
