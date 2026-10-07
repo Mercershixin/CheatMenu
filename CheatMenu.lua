@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:12 sha bf0a51ac bytes 507672'):format('2026-10-07 18:12','bf0a51ac',507672))
+print(('[CheatMenu] build 2026-10-07 18:15 sha 8761476c bytes 507206'):format('2026-10-07 18:15','8761476c',507206))
 local F = {}
-F.VERSION = "v16.10.22"
+F.VERSION = "v16.10.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4685,70 +4685,51 @@ end
 noclip()
 F.NoClipConn = RS.Stepped:Connect(noclip)
 end
-F.HideConn, F.HideBaseY = nil, nil
+F.HideConn, F._hideHip, F._hideCharConn = nil, nil, nil
 function F.HideDisable()
 if F.HideConn then F.HideConn:Disconnect() F.HideConn = nil end
-pcall(function() if F._hideFloor and F._hideFloor.Parent then F._hideFloor:Destroy() end end)
-F._hideFloor = nil
 if F._hideCharConn then pcall(function() F._hideCharConn:Disconnect() end) F._hideCharConn = nil end
 pcall(function()
-local _, _, r = GC()
-if r and F.HideBaseY then r.CFrame = CFrame.new(r.Position.X, F.HideBaseY, r.Position.Z) end
+local _, hum = GC()
+if hum and F._hideHip ~= nil then hum.HipHeight = F._hideHip end
 end)
+F._hideHip = nil
 end
 function F.HideEnable()
 if F.HideConn then return end
-local _, _, root = GC()
-if root then F.HideBaseY = root.Position.Y end
+local _, hum0, root0 = GC()
+if not (hum0 and root0) then F.Out("[藏地下] 现在没有角色, 等进游戏再开") return end
+local function hideDepth()
+local d = math.abs(math.min(math.max(tonumber(C.HideDepth) or 5, -60), 60))
+if d < 3 then d = 3 end
+return d
+end
+local function apply()
+local _, hum = GC()
+if not hum then return end
+if F._hideHip == nil then F._hideHip = hum.HipHeight end
+pcall(function() hum.HipHeight = -hideDepth() end)
+end
+apply()
 if not F._hideCharConn then
 pcall(function()
 F._hideCharConn = LP.CharacterAdded:Connect(function()
 task.wait(0.8)
 if not T.Hide then return end
-local _, _, r = GC()
-if r then F.HideBaseY = r.Position.Y end
-F.Out("[藏地下] 检测到重生 ⇒ 已按新位置重置基准高度")
+F._hideHip = nil
+apply()
+F.Out("[藏地下] 检测到重生 ⇒ 已按新角色重新下沉")
 end)
 end)
 end
-pcall(function()
-if F._hideFloor and F._hideFloor.Parent then F._hideFloor:Destroy() end
-local pf = Instance.new("Part")
-pf.Name = "CM_AirWalk"
-pf.Size = Vector3.new(6, 1, 6)
-pf.Anchored = true
-pf.CanCollide = true
-pf.Transparency = 1
-pf.CanQuery = false
-pf.CanTouch = false
-local _, _, r0 = GC()
-if r0 then pf.CFrame = CFrame.new(r0.Position.X, r0.Position.Y - 3.5, r0.Position.Z) end
-pf.Parent = workspace
-F._hideFloor = pf
-end)
 F.HideConn = RS.Heartbeat:Connect(function()
 if not T.Hide then F.HideDisable() return end
-local _, hum, r = GC()
-if not (hum and r) then return end
-local depth = math.min(math.max(tonumber(C.HideDepth) or 5, -60), 60)
-local ty = F.HideBaseY - depth
-if math.abs(r.Position.Y - ty) > 6 then
-pcall(function() r.CFrame = CFrame.new(r.Position.X, ty, r.Position.Z) end)
-end
-pcall(function()
-local pf = F._hideFloor
-if pf and pf.Parent then
-pf.CFrame = CFrame.new(r.Position.X, ty - 3.5, r.Position.Z)
-end
+if os.clock() - (F._hideAt or 0) < 0.1 then return end
+F._hideAt = os.clock()
+apply()
 end)
-local cam = workspace.CurrentCamera
-if cam then
-local cp = cam.CFrame.Position
-if cp.Y < F.HideBaseY - 2 then
-cam.CFrame = CFrame.new(cp.X, F.HideBaseY, cp.Z) * (cam.CFrame - cam.CFrame.Position)
-end
-end
-end)
+F.Out("[藏地下] 已开: 模型整体下沉 " .. tostring(hideDepth())
+.. " 格 —— 你的 HumanoidRootPart 还在原位, 所以移动/跳跃/交互完全正常; 别人看到的是你沉在地下的模型(不靠改透明度, 透明度检测抓不到)")
 end
 F.savedLight = nil
 F._godLoop, F._godAt = nil, 0
