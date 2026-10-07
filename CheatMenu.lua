@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:58 sha 2b431dc9 bytes 532995'):format('2026-10-07 21:58','2b431dc9',532995))
+print(('[CheatMenu] build 2026-10-07 22:46 sha f55d1845 bytes 533389'):format('2026-10-07 22:46','f55d1845',533389))
 local F = {}
-F.VERSION = "v16.10.57"
+F.VERSION = "v16.10.58"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2257,6 +2257,9 @@ end)
 if not KG.mtHooked then return end
 KG.blockSet = {}
 KG.logConn = RS.Heartbeat:Connect(function()
+local gt = os.clock()
+if gt - (KG._logGate or 0) < 0.25 then return end
+KG._logGate = gt
 local n = KG.blocked or 0
 if n ~= (KG.lastReport or 0) and F.LogRate("lastReport") then
 KG.lastReport = n
@@ -9383,7 +9386,7 @@ th = "Thai", ru = "Russian", ar = "Arabic", id = "Indonesian",
 Trans.BATCH = 6
 Trans.MAX = 8
 Trans.CACHE_MAX = 5000
-Trans.SCAN_EVERY = 6
+Trans.SCAN_EVERY = 10
 Trans.GLOSS_FILE = "CheatMenu_Glossary.txt"
 F.GlossParse = function(txt)
 local tbl, n = {}, 0
@@ -9920,11 +9923,15 @@ for _ in pairs(Trans.Cache) do n = n + 1 end
 return n
 end
 Trans.OwnedCount = function()
+local now = os.clock()
+local c = Trans._ocN
+if c ~= nil and Trans._ocAt and (now - Trans._ocAt) < 2 then return c end
 local file = Trans.CurFile()
 local n = 0
 for k in pairs(Trans.Cache) do
 if Trans.OWNER[k] == file then n = n + 1 end
 end
+Trans._ocN, Trans._ocAt = n, now
 return n
 end
 Trans.ClearCurrent = function()
@@ -11031,6 +11038,9 @@ end
 return true
 end
 Trans.Scan = function()
+local _scNow = os.clock()
+if Trans._scanAt and (_scNow - Trans._scanAt) < 5 then return end
+Trans._scanAt = _scNow
 Trans._preBudget = 12
 local LPl = game:GetService("Players").LocalPlayer
 pcall(Trans.RefreshPN)
@@ -11079,6 +11089,7 @@ local uniqN = 0
 local seenEn = {}
 local samples = {}
 for i = 1, #list do
+if i % 200 == 0 then task.wait() end
 local o = list[i]
 if typeof(o) == "Instance" then
 local c = o.ClassName
@@ -11205,7 +11216,7 @@ Trans.StartReadyWatcher = function()
 if Trans._readyTask or Trans.IsMobile then return end
 Trans._readyTask = task.spawn(function()
 while T.Translate and T.TransModel == true do
-task.wait(3)
+task.wait(10)
 if not (T.Translate and T.TransModel == true) then break end
 if Trans._ready then
 if not Trans.Health() then
@@ -14283,7 +14294,7 @@ task.spawn(function() pcall(Trans.Stats) end)
 end })
 task.spawn(function()
 while true do
-task.wait(1)
+task.wait(2)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
 if Trans.IsMobile then
