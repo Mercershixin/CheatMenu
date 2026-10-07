@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 13:42 sha 32a3ae10 bytes 496899'):format('2026-10-07 13:42','32a3ae10',496899))
+print(('[CheatMenu] build 2026-10-07 14:05 sha 9fd18f7e bytes 496608'):format('2026-10-07 14:05','9fd18f7e',496608))
 local F = {}
-F.VERSION = "v16.10.6"
+F.VERSION = "v16.10.7"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11019,23 +11019,7 @@ end)
 F._touchToggle = sg
 F.Out("[移动端] 已加常驻「菜单」按钮(可拖动)")
 end)
-pcall(function()
-local w = F.Window
-local ap = w and w.AcrylicPaint
-local fr = ap and ap.Frame
-if fr then
-for _, c in ipairs(fr:GetChildren()) do
-pcall(function()
-if c:IsA("Frame") then
-c.BackgroundTransparency = 1
-elseif c:IsA("ImageLabel") then
-c.ImageTransparency = 1
-end
-end)
-end
-pcall(function() fr.BackgroundTransparency = 1 end)
-end
-end)
+pcall(function() Fluent:ToggleTransparency(true) end)
 local function buildMenu()
 function F.CMX_G(n)
 if type(n) ~= "string" then return nil end
