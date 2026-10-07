@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 08:13 sha c34497b3 bytes 491011'):format('2026-10-07 08:13','c34497b3',491011))
+print(('[CheatMenu] build 2026-10-07 09:23 sha 94e343ad bytes 491362'):format('2026-10-07 09:23','94e343ad',491362))
 local F = {}
-F.VERSION = "v16.9.86"
+F.VERSION = "v16.9.87"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10391,6 +10391,13 @@ Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
 F.Out("[翻译·诊断] 扫了 " .. #roots .. " 个容器(" .. table.concat(rootNames, ",") .. ") ⇒ 可见文本 "
 .. visN .. " 个 · 中文 " .. cnN .. " · 英文待翻 " .. enN .. " " .. s)
+if Fluent and Fluent.Notify then
+if enN > 0 then
+Fluent:Notify({ Title = "翻译", Content = "扫描到 " .. enN .. " 个英文待翻，正在翻译… 样本 " .. s, Duration = 8 })
+else
+Fluent:Notify({ Title = "翻译", Content = "没扫到英文(可见 " .. visN .. " · 中文 " .. cnN .. ") ⇒ 界面可能已是中文", Duration = 8 })
+end
+end
 end
 Trans._diagText = " 可见" .. visN .. "/中文" .. cnN .. "/待翻" .. enN
 Trans._scanRound = Trans._scanRound + 1
