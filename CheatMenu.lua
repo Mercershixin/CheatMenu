@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 00:27 sha d1b3d1d1 bytes 535754'):format('2026-10-08 00:27','d1b3d1d1',535754))
+print(('[CheatMenu] build 2026-10-08 01:00 sha 3c15d8dc bytes 540307'):format('2026-10-08 01:00','3c15d8dc',540307))
 local F = {}
-F.VERSION = "v16.10.66"
+F.VERSION = "v16.10.68"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4616,6 +4616,127 @@ F._flyDisabledInfJump = nil
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
 end
 end
+F.HeliDestroy = function()
+if F._heliConn then pcall(function() F._heliConn:Disconnect() end) F._heliConn = nil end
+if F._heliRebuild then pcall(function() F._heliRebuild:Disconnect() end) F._heliRebuild = nil end
+local _, hum, root = GC()
+for _, nm in ipairs({ "CMHeliAo", "CMHeliBg", "CMHeliBv", "CMHeliAtt", "CMHeliAttOld" }) do
+local o = nil
+if root then pcall(function() o = root:FindFirstChild(nm) end) end
+if o then pcall(function() o:Destroy() end) end
+end
+F._heliAo, F._heliBg, F._heliBv, F._heliAtt = nil, nil, nil, nil
+F._heliAng, F._heliBaseY = nil, nil
+if hum then
+pcall(function() hum.PlatformStand = (F._heliWasPS == true) end)
+pcall(function() hum.AutoRotate = (F._heliWasAR ~= false) end)
+end
+F._heliWasPS, F._heliWasAR = nil, nil
+end
+F.HeliSet = function(on)
+if on then pcall(F.BypassAutoRaise, "你开了直升机") end
+T.HeliOn = on and true or false
+F.HeliDestroy()
+if not T.HeliOn then return end
+local _, hum, root = GC()
+if not (hum and root) then
+F.Out("[直升机] 开不了: 还没拿到角色(重生中?) ⇒ 稍后重开")
+return
+end
+F._heliWasPS = hum.PlatformStand
+F._heliWasAR = hum.AutoRotate
+pcall(function() hum.PlatformStand = true end)
+F._heliAng, F._heliBaseY = 0, root.Position.Y
+local okD = pcall(function()
+local att = Instance.new("Attachment")
+att.Name = "CMHeliAtt"
+att.Parent = root
+F._heliAtt = att
+local ao = Instance.new("AlignOrientation")
+ao.Name = "CMHeliAo"
+ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+ao.Attachment0 = att
+ao.MaxTorque = 1e9
+ao.Responsiveness = 200
+pcall(function() ao.RigidityEnabled = true end)
+ao.Parent = root
+F._heliAo = ao
+local bv = Instance.new("LinearVelocity")
+bv.Name = "CMHeliBv"
+bv.Attachment0 = att
+bv.MaxForce = 1e9
+bv.VectorVelocity = Vector3.zero
+bv.Parent = root
+F._heliBv = bv
+end)
+if not okD then
+pcall(function()
+local att2 = Instance.new("Attachment")
+att2.Name = "CMHeliAttOld"
+att2.Parent = root
+F._heliAtt = att2
+local bg = Instance.new("BodyGyro")
+bg.Name = "CMHeliBg"
+bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+bg.D, bg.P = 50, 3000
+bg.Parent = root
+F._heliBg = bg
+local bv2 = Instance.new("BodyVelocity")
+bv2.Name = "CMHeliBv"
+bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+bv2.Velocity = Vector3.zero
+bv2.Parent = root
+F._heliBv = bv2
+end)
+end
+F.Out("[直升机] 已开: 人横躺 + 绕竖直轴旋转 + 悬停; WASD 可水平移动(视角相对), 视野/相机本功能完全不碰(仍由鼠标控制); 关掉后走路/跳跃立刻恢复原样")
+F._heliConn = F.DriveConnect(function(dt)
+if not T.HeliOn then return end
+if T.FlyOn then return end
+local _, h, r = GC()
+if not (h and r) then return end
+local spin = tonumber(C.HeliSpin) or 720
+if spin < 0 then spin = 0 end
+F._heliAng = ((F._heliAng or 0) + spin * dt) % 360
+local tilt = math.rad(tonumber(C.HeliTilt) or 90)
+local cf = CFrame.Angles(0, math.rad(F._heliAng), 0) * CFrame.Angles(tilt, 0, 0)
+if F._heliAo then pcall(function() F._heliAo.CFrame = cf end) end
+if F._heliBg then pcall(function() F._heliBg.CFrame = cf end) end
+local mv = Vector3.zero
+local cam = workspace.CurrentCamera
+if cam then
+local look, right = cam.CFrame.LookVector, cam.CFrame.RightVector
+if UIS:IsKeyDown(Enum.KeyCode.W) then mv = mv + look end
+if UIS:IsKeyDown(Enum.KeyCode.S) then mv = mv - look end
+if UIS:IsKeyDown(Enum.KeyCode.A) then mv = mv - right end
+if UIS:IsKeyDown(Enum.KeyCode.D) then mv = mv + right end
+mv = Vector3.new(mv.X, 0, mv.Z)
+if mv.Magnitude > 0.01 then mv = mv.Unit * (tonumber(C.FlyValue) or 60) end
+end
+local targetY = (F._heliBaseY or r.Position.Y) + (tonumber(C.HeliHeight) or 12)
+if F._heliBv then
+local dy = targetY - r.Position.Y
+local v = Vector3.new(mv.X, dy * 6, mv.Z)
+pcall(function()
+if F._heliBv:IsA("LinearVelocity") then
+F._heliBv.VectorVelocity = v
+else
+F._heliBv.Velocity = v
+end
+end)
+end
+end)
+if not F._heliRebuild then
+pcall(function()
+F._heliRebuild = LP.CharacterAdded:Connect(function()
+task.wait(0.6)
+if not T.HeliOn then return end
+F.Out("[直升机] 检测到重生 ⇒ 已自动重装")
+pcall(function() F.HeliSet(true) end)
+end)
+end)
+end
+end
 function F.FlySet(on)
 if on then pcall(F.BypassAutoRaise, "你开了飞行") end
 T.FlyOn = on and true or false
@@ -8512,7 +8633,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -13957,6 +14078,9 @@ F.GodRefill()
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
+Tabs.Move:AddToggle("HeliOn", { Title = "直升机(人横躺 · 绕竖直轴旋转 · 悬空)", Default = false, Callback = function(v) F.HeliSet(v) end })
+Tabs.Move:AddSlider("HeliSpin", { Title = "直升机 · 转速(度/秒)", Min = 30, Max = 3000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
+Tabs.Move:AddSlider("HeliHeight", { Title = "直升机 · 悬停高度", Min = 0, Max = 200, Default = 12, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
 local op = Fluent and Fluent.Options
