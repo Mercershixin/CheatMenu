@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:08 sha 81c04ccd bytes 506725'):format('2026-10-07 18:08','81c04ccd',506725))
+print(('[CheatMenu] build 2026-10-07 18:12 sha bf0a51ac bytes 507672'):format('2026-10-07 18:12','bf0a51ac',507672))
 local F = {}
-F.VERSION = "v16.10.21"
+F.VERSION = "v16.10.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6632,20 +6632,36 @@ F._origCamMode = nil
 end
 end
 local LockHealthConn = nil
-LockHealthDisable = function() if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end end
+LockHealthDisable = function()
+if LockHealthConn then LockHealthConn:Disconnect() LockHealthConn = nil end
+if F._lhSig then pcall(function() F._lhSig:Disconnect() end) F._lhSig = nil end
+F._lhAttach = nil
+end
 LockHealthEnable = function()
 if LockHealthConn then return end
-LockHealthConn = RS.Heartbeat:Connect(function()
+local function lockNow()
 pcall(function()
-if not T.LockHealth then LockHealthDisable() return end
-if os.clock() - (F._thr4402 or 0) < 0.05 then return end
-F._thr4402 = os.clock()
+if not T.LockHealth then return end
 local _, hum = GC()
-if hum and hum.Health > 0 then
+if not hum or hum.Health <= 0 then return end
 local target = C.LockHealthValue or 100
 if hum.Health ~= target then hum.Health = target end
-end
 end)
+end
+local function attach()
+local _, hum = GC()
+if not hum then return end
+if F._lhSig then pcall(function() F._lhSig:Disconnect() end) F._lhSig = nil end
+pcall(function() F._lhSig = hum.HealthChanged:Connect(lockNow) end)
+end
+F._lhAttach = attach
+attach()
+LockHealthConn = RS.Heartbeat:Connect(function()
+if not T.LockHealth then LockHealthDisable() return end
+if os.clock() - (F._thr4402 or 0) < 1 then return end
+F._thr4402 = os.clock()
+if F._lhAttach then pcall(F._lhAttach) end
+lockNow()
 end)
 end
 local RegenConn = nil
@@ -6665,15 +6681,34 @@ end)
 end)
 end
 local NoDeathConn = nil
-NoDeathDisable = function() if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end end
+NoDeathDisable = function()
+if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end
+if F._ndSig then pcall(function() F._ndSig:Disconnect() end) F._ndSig = nil end
+F._ndAttach = nil
+end
 NoDeathEnable = function()
 if NoDeathConn then return end
+local function reviveNow()
+pcall(function()
+if not T.NoDeath then return end
+local _, hum = GC()
+if hum and hum.Health <= 0 then hum.Health = hum.MaxHealth end
+end)
+end
+local function attach()
+local _, hum = GC()
+if not hum then return end
+if F._ndSig then pcall(function() F._ndSig:Disconnect() end) F._ndSig = nil end
+pcall(function() F._ndSig = hum.HealthChanged:Connect(reviveNow) end)
+end
+F._ndAttach = attach
+attach()
 NoDeathConn = RS.Heartbeat:Connect(function()
 if not T.NoDeath then NoDeathDisable() return end
-if os.clock() - (F._thr4456 or 0) < 0.1 then return end
+if os.clock() - (F._thr4456 or 0) < 1 then return end
 F._thr4456 = os.clock()
-local _, hum = GC()
-if hum and hum.Health <= 0 then pcall(function() hum.Health = hum.MaxHealth end) end
+if F._ndAttach then pcall(F._ndAttach) end
+reviveNow()
 end)
 end
 function F.OnCharacter()
