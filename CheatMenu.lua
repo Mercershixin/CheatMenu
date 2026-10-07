@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:27 sha 187c5b10 bytes 530308'):format('2026-10-07 21:27','187c5b10',530308))
+print(('[CheatMenu] build 2026-10-07 21:32 sha ea64bcd6 bytes 532238'):format('2026-10-07 21:32','ea64bcd6',532238))
 local F = {}
-F.VERSION = "v16.10.53"
+F.VERSION = "v16.10.54"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9972,7 +9972,8 @@ end
 Trans.RestoreStale = function()
 local back = {}
 for k, v in pairs(Trans.Cache) do
-if type(k) == "string" and type(v) == "string" and #v > 0 and not Trans.Should(k) then
+if type(k) == "string" and type(v) == "string" and #v > 0 and #k <= 24
+and not k:find("%s") and not Trans.Should(k) and not Trans.OFFICIAL_SRC[k] then
 back[v] = k
 end
 end
@@ -10672,7 +10673,7 @@ Trans._vHookN = 0
 Trans._vHook = setmetatable({}, { __mode = "k" })
 Trans.HookVisible = function(obj)
 if Trans._vHook[obj] then return end
-if Trans._vHookN >= 1200 then return end
+if Trans._vHookN >= 600 then return end
 Trans._vHook[obj] = true
 Trans._vHookN = Trans._vHookN + 1
 pcall(function()
@@ -10767,6 +10768,7 @@ end
 local src = nil
 pcall(function() src = obj.Text end)
 if type(src) == "string" and #src > 0 and type(official) == "string" and #official > 0 then
+Trans.OFFICIAL_SRC[src] = true
 if Trans.Cache[src] ~= official then
 Trans.CachePut(src, official)
 Trans._dirty = true
@@ -10778,6 +10780,7 @@ if p ~= "" then Trans._selfCNPath[p] = true end
 Trans.RevertOfficial(obj)
 end
 Trans._prefetched = false
+Trans.OFFICIAL_SRC = {}
 Trans.PrefetchOfficial = function()
 if Trans._prefetched then return end
 Trans._prefetched = true
@@ -14856,3 +14859,41 @@ F.Try("AntiAFKEnable", F.AntiAFKEnable)
 F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
 pcall(F.CacheSync)
+F.PerfCheck = function()
+local on = {}
+for k, v in pairs(T) do
+if v == true and type(k) == "string" then on[#on + 1] = k end
+end
+table.sort(on)
+local hb, rsc, stc = -1, -1, -1
+pcall(function() if type(getconnections) == "function" then hb = #getconnections(RS.Heartbeat) end end)
+pcall(function() if type(getconnections) == "function" then rsc = #getconnections(RS.RenderStepped) end end)
+pcall(function() if type(getconnections) == "function" then stc = #getconnections(RS.Stepped) end end)
+local layers = {}
+pcall(function()
+if type(F.MetaLayers) == "table" then
+for slot, bucket in pairs(F.MetaLayers) do
+local n = 0
+for _ in pairs(bucket) do n = n + 1 end
+if n > 0 then layers[#layers + 1] = tostring(slot) .. "×" .. tostring(n) end
+end
+end
+end)
+local frames = 0
+local conn = nil
+pcall(function() conn = RS.RenderStepped:Connect(function() frames = frames + 1 end) end)
+task.wait(1)
+if conn then pcall(function() conn:Disconnect() end) end
+F.Out("[性能体检] 实测 FPS≈" .. tostring(frames) .. " · 每帧连接 Heartbeat=" .. tostring(hb)
+.. " RenderStepped=" .. tostring(rsc) .. " Stepped=" .. tostring(stc))
+F.Out("[性能体检] 元表钩子层数: " .. ((#layers > 0) and table.concat(layers, " ") or "无")
+.. " (每多一层, 游戏每次访问 game 都要多穿一次 Lua)")
+F.Out("[性能体检] 当前开着的功能 " .. tostring(#on) .. " 个: " .. table.concat(on, ", "))
+if T.TransModel == true then
+F.Out("[性能体检] ⚠ 开着「连本地模型」—— 本地模型跑在你这块显卡上, 和游戏抢 GPU, 是最容易掉帧的一项")
+end
+if #layers >= 3 then
+F.Out("[性能体检] ⚠ 元表钩子叠了 " .. tostring(#layers) .. " 组 —— 层数越多每次 game 访问越慢, 不玩某项时关掉它最有效")
+end
+end
+task.delay(12, function() pcall(F.PerfCheck) end)
