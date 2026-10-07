@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:16 sha d8d1f401 bytes 517904'):format('2026-10-07 19:16','d8d1f401',517904))
+print(('[CheatMenu] build 2026-10-07 19:18 sha fa8ba5d4 bytes 514311'):format('2026-10-07 19:18','fa8ba5d4',514311))
 local F = {}
-F.VERSION = "v16.10.35"
+F.VERSION = "v16.10.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5274,85 +5274,6 @@ end
 return n > 0
 end
 F.TP_MOUSE_REACH = 1e6
-F.TP_MOUSE_AIR = 4000
-F.TP_MOUSE_FAR = 500
-function F.MouseWorldPos()
-local cam = workspace.CurrentCamera
-if not cam then return nil, "nocam" end
-local px, py
-pcall(function()
-local m = LP:GetMouse()
-px, py = m.X, m.Y
-end)
-if not px then
-pcall(function()
-local loc = UIS:GetMouseLocation()
-px, py = loc.X, loc.Y
-end)
-end
-if not px then return nil, "nomouse" end
-local ray = nil
-local okRay = pcall(function() ray = cam:ScreenPointToRay(px, py) end)
-if (not okRay or not ray) then
-local okL, r2 = pcall(function() return cam:ViewportPointToRay(px, py) end)
-if okL then ray = r2 end
-end
-if not ray then return nil, "noray" end
-local params = RaycastParams.new()
-if not pcall(function() params.FilterType = Enum.RaycastFilterType.Exclude end) then
-pcall(function() params.FilterType = Enum.RaycastFilterType.Blacklist end)
-end
-local _, _, root = GC()
-if root and root.Parent then
-pcall(function() params.FilterDescendantsInstances = { root.Parent } end)
-end
-local hit = nil
-pcall(function() hit = workspace:Raycast(ray.Origin, ray.Direction * F.TP_MOUSE_REACH, params) end)
-if hit and hit.Position then
-return hit.Position, "hit", (hit.Position - ray.Origin).Magnitude
-end
-return ray.Origin + ray.Direction * F.TP_MOUSE_AIR, "air", F.TP_MOUSE_AIR
-end
-function F.TPMouse()
-local pos, kind, dist = F.MouseWorldPos()
-if not pos then
-F.Out("[T键传送] 拿不到鼠标指向的位置(" .. tostring(kind) .. ") 本次没动")
-return false
-end
-if kind == "air" then
-F.Out("[T键传送] 没瞄到实体(指着天空/远处未加载) ⇒ 为避免传送到空中, 本次没动; 请瞄向地面或建筑再按 T")
-return false
-end
-local _, hum, root = GC()
-if not root then
-F.Out("[T键传送] 现在没有角色(没进游戏 / 正在重生) 本次没动")
-return false
-end
-pcall(F.SrvOwnTake, false)
-local dest = pos + Vector3.new(0, 3, 0)
-smoothTP(CFrame.new(dest))
-if hum then pcall(function() hum.PlatformStand = false end) end
-local ok = false
-pcall(function()
-local _, _, r2 = GC()
-if r2 then ok = (r2.Position - dest).Magnitude < 8 end
-end)
-local far = (tonumber(dist) or 0) >= F.TP_MOUSE_FAR
-F.Out(string.format("[T键传送] %s · %.0f 格 -> (%.0f, %.0f, %.0f) 到位: %s",
-(kind == "air") and ("鼠标方向上没有实体, 沿视线送 " .. tostring(F.TP_MOUSE_AIR) .. " 格") or "鼠标指向点",
-tonumber(dist) or 0, dest.X, dest.Y, dest.Z, ok and "是" or "否"))
-if far then
-F.Out("[T键传送] 提示: 这次距离 " .. string.format("%.0f", tonumber(dist) or 0)
-.. " 格, 属于「跨半张地图」级别 ⇒ 服务端大概率判为传送而把你拉回(游戏规则, 不是脚本没生效);"
-.. " 想稳一点就把鼠标指近些的地面/建筑, 或先开「加速防拉回」档")
-end
-if not ok then
-local _, srv = F.AuthorityGuard(false)
-F.Out(srv and "[T键传送] 这个游戏 AuthorityMode=Server(位移由服务端裁决), 传不到是游戏规则, 不是脚本没生效"
-or "[T键传送] 没到位: 多半被拉回 / 角色被冻住, 再按一次 T")
-end
-return ok
-end
 F.II_SAVED, F.II_CONN, F.II_SHOWN, F.II_COUNT = nil, nil, nil, 0
 function F.InstantInteractApply(pp)
 if not F.II_SAVED then return end
@@ -7050,14 +6971,6 @@ F._savedMouseIcon = nil
 end
 end
 end
-pcall(function()
-UIS.InputBegan:Connect(function(input, processed)
-if processed then return end
-if not F._tpMouseOn then return end
-if input.KeyCode ~= Enum.KeyCode.T then return end
-F.TPMouse()
-end)
-end)
 F._hlObjs, F._hlAdded, F._hlLoop = {}, nil, nil
 F.CMX_HLMode = function() return tostring(C.BodyHLMode or "①") end
 F.ROLE_KILLER = { "knife","dagger","murder","assassin","刀","杀手" }
@@ -8468,7 +8381,6 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
-F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
@@ -10946,7 +10858,6 @@ F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F
 function()
 AC._neutFns = {}
 F._cfgSyncing = false
-F._tpMouseOn = false
 pcall(function()
 local g = getgenv and getgenv()
 if type(g) == "table" and F._inst and g[F.INSTANCE_KEY] == F._inst then
@@ -13750,13 +13661,6 @@ if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已
 if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.Name .. "」现在没有角色(在复活/已死)") return end
 TeleportToPlayer(pl)
 end })
-Tabs.TP:AddToggle("TPMouse", { Title = "T 键传送到鼠标位置", Default = false, Callback = function(v)
-T.TPMouse = v
-if F._cfgSyncing then return end
-F._tpMouseOn = v and true or false
-F.Out(v and "[T键传送] 已开启, 游戏里按 T 传送到鼠标位置(再点一次可关)"
-or "[T键传送] 已关闭, T 键不再传送")
-end })
 Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(鼠标左键点哪传哪 · 无限远)", Default = false, Callback = function(v)
 T.ClickTP = v
 if F._cfgSyncing then return end
@@ -14322,7 +14226,7 @@ wasOpen = now
 end
 end)
 end
-F.CFG_NOSYNC = { AimOn = true, TPMouse = true }
+F.CFG_NOSYNC = { AimOn = true }
 F.CFG_APPLY_SKIP = { TransLang = true, TransScope = true }
 F.ApplySavedOn = function(quiet)
 if F._applyingSaved then return 0 end
