@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 13:25 sha dd03ea01 bytes 496607'):format('2026-10-07 13:25','dd03ea01',496607))
+print(('[CheatMenu] build 2026-10-07 13:42 sha 32a3ae10 bytes 496899'):format('2026-10-07 13:42','32a3ae10',496899))
 local F = {}
-F.VERSION = "v16.10.5"
+F.VERSION = "v16.10.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10917,7 +10917,7 @@ Title = "CheatMenu",
 SubTitle = F.VERSION,
 TabWidth = _phone and math.clamp(math.floor(_w / 8), 50, 66) or 100,
 Size = UDim2.fromOffset(_w, _h),
-Acrylic = true,
+Acrylic = false,
 Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
@@ -11019,7 +11019,23 @@ end)
 F._touchToggle = sg
 F.Out("[移动端] 已加常驻「菜单」按钮(可拖动)")
 end)
-pcall(function() Fluent:ToggleTransparency(true) end)
+pcall(function()
+local w = F.Window
+local ap = w and w.AcrylicPaint
+local fr = ap and ap.Frame
+if fr then
+for _, c in ipairs(fr:GetChildren()) do
+pcall(function()
+if c:IsA("Frame") then
+c.BackgroundTransparency = 1
+elseif c:IsA("ImageLabel") then
+c.ImageTransparency = 1
+end
+end)
+end
+pcall(function() fr.BackgroundTransparency = 1 end)
+end
+end)
 local function buildMenu()
 function F.CMX_G(n)
 if type(n) ~= "string" then return nil end
