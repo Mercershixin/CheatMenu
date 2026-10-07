@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:47 sha 473649a5 bytes 518683'):format('2026-10-07 18:47','473649a5',518683))
+print(('[CheatMenu] build 2026-10-07 18:52 sha 1c99695c bytes 523349'):format('2026-10-07 18:52','1c99695c',523349))
 local F = {}
-F.VERSION = "v16.10.29"
+F.VERSION = "v16.10.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8470,7 +8470,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 F._tpMouseOn = false
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -9389,6 +9389,15 @@ Progress->进度, Completed->已完成, New->新, Coming Soon->即将推出, Loc
 Owned->已拥有, Purchased->已购买, Sold->已售出, Attack->攻击, Defense->防御, Speed->速度, Power->力量,
 Odds->概率, Luck->幸运, Rebirth->重生, Exclusive->专属, Regular->普通, Event->活动, Pass->通行证,
 Daily->每日, Weekly->每周, Seasonal->赛季, Season->赛季, Tasks->任务, In Progress->进行中.
+Teleport->传送, Spawn->出生点, Leaderboard->排行榜, Season Pass->赛季通行证, Bundle->礼包, Offer->优惠,
+Daily Reward->每日奖励, Login->登录, Sign Up->注册, Level Up->升级, Max Level->满级, Rank Up->段位提升,
+Tier->阶位, Mutation->变异, Enchant->附魔, Craft->合成, Forge->锻造, Refine->精炼, Enhance->强化, Awaken->觉醒,
+Pet->宠物, Egg->蛋, Hatch->孵化, Mount->坐骑, Skin->皮肤, Crate->宝箱, Chest->宝箱, Spin->抽奖, Wheel->转盘,
+Key->钥匙, Token->代币, Ticket->门票, Voucher->兑换券, Mission->任务, Challenge->挑战, Milestone->里程碑,
+Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴击, Dodge->闪避, Block->格挡, Heal->治疗,
+Buff->增益, Debuff->减益, Cooldown->冷却, Energy->能量, Stamina->体力, Team->队伍, Squad->小队, Guild->公会,
+Friend->好友, Party->组队, Gift->礼物, Mail->邮件, Notification->通知, Options->选项, Graphics->画质, Audio->音效,
+Controls->操作, Quit->退出, Exit->退出, Resume->继续, Retry->重试, Loading->加载中, Please Wait->请稍候, Connecting->连接中.
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.Prompt = function(code)
 if not code or code == "zh" then return Trans.SYS_ZH end
@@ -11114,7 +11123,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13253,6 +13262,112 @@ root.CFrame = CFrame.new(sp.Position + Vector3.new(0, 4, 0))
 end)
 F.Out(ok and ("[出生点] 已传送到出生点 (" .. sp:GetFullName() .. ")") or "[出生点] 传送失败(被冻住/被拉回)")
 end
+F._nrSaved = {}
+F.NoRecoilEnable = function()
+if type(getgc) ~= "function" or type(rawset) ~= "function" then
+F.Out("[无后坐力] 本执行器缺 getgc/rawset ⇒ 无法开启")
+return
+end
+local kws = { "recoil", "viewkick", "camshake", "shake", "spread", "bloom", "sway", "kickback", "crosshairkick" }
+local n = 0
+pcall(function()
+for _, t in pairs(getgc(true)) do
+if type(t) == "table" then
+for k, f in pairs(t) do
+if type(k) == "string" and type(f) == "function" then
+local lk = k:lower()
+local hit = false
+for i = 1, #kws do
+if lk:find(kws[i], 1, true) then hit = true break end
+end
+if hit then
+F._nrSaved[t] = F._nrSaved[t] or {}
+if not F._nrSaved[t][k] then
+F._nrSaved[t][k] = f
+pcall(function() rawset(t, k, function() end) end)
+n = n + 1
+end
+end
+end
+end
+end
+end
+end)
+if n == 0 then
+F.Out("[无后坐力] 没扫到后坐力函数(可能这游戏没有, 或先开一枪再开本功能)")
+else
+F.Out("[无后坐力] 已开: 已把 " .. tostring(n) .. " 个后坐力/镜头抖动函数置空")
+end
+end
+F.NoRecoilDisable = function()
+local n = 0
+pcall(function()
+for t, kv in pairs(F._nrSaved) do
+for k, f in pairs(kv) do
+pcall(function() rawset(t, k, f) end)
+n = n + 1
+end
+end
+end)
+F._nrSaved = {}
+F.Out("[无后坐力] 已关: 已还原 " .. tostring(n) .. " 个函数")
+end
+F._pierceOrig, F._pierceHooked = nil, false
+F.PierceTarget = function()
+local ch = F._combatNow
+if ch and ch.Parent then return ch end
+return nil
+end
+F.PierceEnable = function()
+if F._pierceHooked then return end
+if type(hookfunction) ~= "function" then
+F.Out("[穿透弹] 本执行器没有 hookfunction ⇒ 无法开启")
+return
+end
+local WR = workspace
+if type(WR.Raycast) ~= "function" then
+F.Out("[穿透弹] 拿不到 workspace.Raycast ⇒ 无法开启")
+return
+end
+local wrap = newcclosure or function(f) return f end
+local orig
+local hookFn = wrap(function(self, origin, direction, params)
+if T.Pierce then
+local tgt = F.PierceTarget()
+if tgt then
+local np = nil
+pcall(function()
+np = RaycastParams.new()
+pcall(function() np.FilterType = Enum.RaycastFilterType.Include end)
+pcall(function() np.FilterType = Enum.RaycastFilterType.Whitelist end)
+np.FilterDescendantsInstances = { tgt }
+np.IgnoreWater = true
+end)
+if np then return orig(self, origin, direction, np) end
+end
+end
+return orig(self, origin, direction, params)
+end)
+local ok, ret = pcall(function() return hookfunction(WR.Raycast, hookFn) end)
+if not ok then
+F.Out("[穿透弹] hook 失败: " .. tostring(ret))
+return
+end
+orig = ret
+F._pierceOrig = ret
+F._pierceHooked = true
+F.Out("[穿透弹] 已开: 射线只命中锁定目标 ⇒ 打穿墙和其他人(需先用自瞄锁定目标)")
+end
+F.PierceDisable = function()
+if not F._pierceHooked then return end
+pcall(function()
+if type(hookfunction) == "function" and F._pierceOrig then
+hookfunction(workspace.Raycast, F._pierceOrig)
+end
+end)
+F._pierceOrig, F._pierceHooked = nil, false
+F.Out("[穿透弹] 已关: 射线已还原")
+end
 F.FlingStop = function()
 F._flingHit = false
 if F._flingConn then pcall(function() F._flingConn:Disconnect() end) F._flingConn = nil end
@@ -13518,6 +13633,16 @@ Tabs.Combat:AddToggle("BulletTrack", { Title = "子弹追踪(子弹自动拐向�
 T.BulletTrack = v
 if F._cfgSyncing then return end
 if v then pcall(F.BulletTrackEnable) else pcall(F.BulletTrackDisable) end
+end })
+Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(镜头不抖/枪口不上跳)", Default = false, Callback = function(v)
+T.NoRecoil = v
+if F._cfgSyncing then return end
+if v then pcall(F.NoRecoilEnable) else pcall(F.NoRecoilDisable) end
+end })
+Tabs.Combat:AddToggle("Pierce", { Title = "穿透弹(打穿墙和其他人 · 需先开自瞄锁定)", Default = false, Callback = function(v)
+T.Pierce = v
+if F._cfgSyncing then return end
+if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
 end })
 Tabs.Surv:AddSection("生命 / 保命")
 Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
