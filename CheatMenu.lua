@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 10:06 sha cec6be60 bytes 491882'):format('2026-10-07 10:06','cec6be60',491882))
+print(('[CheatMenu] build 2026-10-07 10:15 sha aafdd6c6 bytes 493899'):format('2026-10-07 10:15','aafdd6c6',493899))
 local F = {}
-F.VERSION = "v16.9.88"
+F.VERSION = "v16.9.89"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9698,10 +9698,40 @@ if done then Trans.AutoCloudMaybe() end
 return done
 end
 Trans.Save = function() Trans._dirty = true end
+Trans.NumTplSave = function()
+if type(writefile) ~= "function" then return end
+local ok, r = pcall(function()
+local pack = {}
+for k, v in pairs(Trans.NumTpl) do pack[k] = v end
+return writefile("CheatMenu_NumTpl.txt", HS:JSONEncode(pack))
+end)
+if not ok then Trans._numTplSaveErr = tostring(r) end
+end
+Trans.NumTplLoad = function()
+if type(readfile) ~= "function" then return end
+local raw = nil
+pcall(function() if type(isfile) ~= "function" or isfile("CheatMenu_NumTpl.txt") then raw = readfile("CheatMenu_NumTpl.txt") end end)
+if type(raw) ~= "string" or raw == "" then return end
+local d = nil
+pcall(function() d = HS:JSONDecode(raw) end)
+if type(d) ~= "table" then return end
+local n = 0
+for k, v in pairs(d) do
+if type(k) == "string" and type(v) == "string" and Trans.NumTpl[k] == nil then
+Trans.NumTpl[k] = v
+n = n + 1
+end
+end
+if n > 0 then F.Out("[翻译] 数字模板已从磁盘补载 " .. tostring(n) .. " 条") end
+end
 Trans.SaveTick = function()
 while true do
 task.wait(30)
 if Trans._dirty and T.Translate then pcall(Trans.Flush) end
+if Trans._numTplDirty then
+Trans._numTplDirty = false
+pcall(Trans.NumTplSave)
+end
 end
 end
 Trans.PN = {}
@@ -9905,6 +9935,15 @@ Trans.Cache[tkey] = tplTr
 Trans.OWNER[tkey] = Trans.CurFile()
 end
 end
+if #vals == 1 and kinds[1] == "n" and #tplS >= 8 then
+local tplTr2, valsTr2, kindsTr2 = Trans.TplBuild(tr)
+if #valsTr2 == 1 and kindsTr2[1] == "n" and valsTr2[1] == vals[1] then
+if Trans.NumTpl[tplS] ~= tplTr2 then
+Trans.NumTpl[tplS] = tplTr2
+Trans._numTplDirty = true
+end
+end
+end
 Trans.Save()
 end
 Trans.TplBuild = function(s)
@@ -10046,6 +10085,31 @@ if i == #vals and filled ~= "" and filled ~= text then return filled end
 end
 return nil
 end
+Trans.Lookup = function(text)
+local hit = Trans.Cache[text]
+if type(hit) == "string" then return hit end
+local tkey, vals = Trans.TplKey(text)
+if tkey and type(Trans.Cache[tkey]) == "string" then
+local tv = Trans.Cache[tkey]
+local i = 0
+local filled = tv:gsub("\1", function() i = i + 1 return vals[i] or "" end)
+if i == #vals and filled ~= "" and filled ~= text then return filled end
+end
+return nil
+end
+Trans.NumTplHit = function(text)
+if not text or #text > 200 then return nil end
+local hasD = text:find("%d", 1)
+if not hasD then return nil end
+local tpl, vals, kinds = Trans.TplBuild(text)
+if #vals ~= 1 or kinds[1] ~= "n" or #tpl < 8 then return nil end
+local trTpl = Trans.NumTpl[tpl]
+if type(trTpl) ~= "string" or trTpl == "" then return nil end
+local filled = trTpl:gsub("\1", vals[1])
+if filled == "" or filled == text then return nil end
+return filled
+end
+Trans.NumTpl = {}
 Trans.Async = function(text, applyFn, urgent)
 if not T.Translate then return end
 if not Trans._ready then return end
@@ -10056,6 +10120,11 @@ if Trans.Pre(text).noText then return end
 local hit = Trans.Lookup(text)
 if hit then
 pcall(applyFn, hit)
+return
+end
+local nhit = Trans.NumTplHit(text)
+if nhit then
+pcall(applyFn, nhit)
 return
 end
 local ft = Trans._fail and Trans._fail[text]
@@ -10289,14 +10358,10 @@ if Trans.Should(now) and Trans.Cache[now] then
 Trans.WriteText(obj, "Text", Trans.Cache[now], now)
 return
 end
-local r = Trans.Reg[obj]
-if r and os.clock() - (r.at or 0) < 30 then return end
 pcall(Trans.GuiEl, obj, true)
 end)
 end)
 end
-local r0 = Trans.Reg[obj]
-if r0 and os.clock() - (r0.at or 0) < 30 then return end
 Trans.RegField(obj, "Text", txt)
 Trans.Async(txt, function(tr)
 if obj.Parent and obj.Visible ~= false then Trans.WriteText(obj, "Text", tr, txt) end
@@ -10361,7 +10426,6 @@ end
 end
 local txtN, visN, cnN, enN = 0, 0, 0, 0
 local samples = {}
-local hidden = {}
 for i = 1, #list do
 local o = list[i]
 if typeof(o) == "Instance" then
@@ -10382,12 +10446,9 @@ end
 end
 end
 pcall(Trans.GuiEl, o)
-else
-hidden[#hidden + 1] = o
 end
 end
 end
-for i = 1, #hidden do pcall(Trans.GuiEl, hidden[i]) end
 if not Trans._diagOnce then
 Trans._diagOnce = true
 local s = (#samples > 0) and ("[" .. table.concat(samples, "|") .. "]") or "(没有可翻的英文)"
@@ -10507,6 +10568,7 @@ end
 function Trans.Enable()
 T.Translate = true
 Trans.Load()
+pcall(Trans.NumTplLoad)
 local name = nil
 pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
 Trans.KeepAdd(name)
