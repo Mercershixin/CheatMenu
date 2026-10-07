@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 05:44 sha 68c29d83 bytes 491422'):format('2026-10-07 05:44','68c29d83',491422))
+print(('[CheatMenu] build 2026-10-07 08:13 sha c34497b3 bytes 491011'):format('2026-10-07 08:13','c34497b3',491011))
 local F = {}
-F.VERSION = "v16.9.85"
+F.VERSION = "v16.9.86"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9140,8 +9140,6 @@ Trans._ready = false
 Trans._probeInfo = ""
 Trans.Reg = setmetatable({}, { __mode = "k" })
 Trans.Hooked = setmetatable({}, { __mode = "k" })
-Trans._selfCN = setmetatable({}, { __mode = "k" })
-Trans._writing = setmetatable({}, { __mode = "k" })
 Trans.KEEP = {}
 Trans.KEEPWORD = {
 HUD = true, FPS = true, GUI = true, UI = true, ESP = true, DPS = true,
@@ -10215,7 +10213,6 @@ if ok then return v end
 return nil
 end
 Trans.WriteText = function(obj, prop, val, expect)
-if Trans._writing then Trans._writing[obj] = os.clock() end
 if expect ~= nil then
 local cur = nil
 pcall(function() cur = obj[prop] end)
@@ -10233,7 +10230,6 @@ local tt = obj.TextTransparency
 if type(tt) == "number" and tt >= 0.95 then return end
 if F.IsOurGui(obj) then return end
 if F.IsOfficialUI(obj) then return end
-if Trans._selfCN[obj] then return end
 if cls == "TextLabel" or cls == "TextButton" then
 local nested = false
 pcall(function() if obj.Parent and (obj.Parent:IsA("TextLabel") or obj.Parent:IsA("TextButton")) then nested = true end end)
@@ -10273,9 +10269,6 @@ local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
 if txt:find("[\228-\233]") then
-if not (Trans._writing[obj] and os.clock() - Trans._writing[obj] < 3) then
-Trans._selfCN[obj] = true
-end
 return
 end
 if not Trans.Should(txt) then return end
@@ -10288,9 +10281,6 @@ local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
 if now:find("[\228-\233]") then
-if not (Trans._writing[obj] and os.clock() - Trans._writing[obj] < 3) then
-Trans._selfCN[obj] = true
-end
 return
 end
 if Trans.Should(now) and Trans.Cache[now] then
