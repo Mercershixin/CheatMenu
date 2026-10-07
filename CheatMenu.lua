@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 12:19 sha ddcce6d2 bytes 489066'):format('2026-10-07 12:19','ddcce6d2',489066))
+print(('[CheatMenu] build 2026-10-07 12:24 sha eef35d35 bytes 488481'):format('2026-10-07 12:24','eef35d35',488481))
 local F = {}
-F.VERSION = "v16.9.96"
+F.VERSION = "v16.9.97"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5296,8 +5296,8 @@ F.Out("[T键传送] 拿不到鼠标指向的位置(" .. tostring(kind) .. ") 本
 return false
 end
 if kind == "air" then
-F.Out("[T键传送] 射线一路没打到任何实体(指着天空, 或这游戏开了流式加载、远处还没生成) => 沿视线方向送 "
-.. tostring(F.TP_MOUSE_AIR) .. " 格")
+F.Out("[T键传送] 没瞄到实体(指着天空/远处未加载) ⇒ 为避免传送到空中, 本次没动; 请瞄向地面或建筑再按 T")
+return false
 end
 local _, hum, root = GC()
 if not root then
@@ -10366,17 +10366,8 @@ Trans._stuck = 0
 end
 end
 Trans.Stats = function()
-local cacheN = 0
-for _ in pairs(Trans.Cache) do cacheN = cacheN + 1 end
-local ago = "还没保存过"
-if Trans._savedAt > 0 then ago = string.format("%.0f 秒前", os.clock() - Trans._savedAt) end
-F.Out("[翻译统计] 已翻 " .. tostring(Trans._cnt) .. " 条 · 缓存 " .. tostring(cacheN) .. " 条 · 待翻 "
-.. tostring(#Trans.Queue) .. " 条 · 累计请求 " .. tostring(Trans._reqN) .. " 次 · 上次保存: " .. ago
-.. " · 已自动保存 " .. tostring(Trans._saveCount) .. " 次")
-F.Out("[翻译统计] 界面" .. tostring(Trans._diagText or "(还没扫描)") .. " · 模型 " .. (Trans._ready and "已连接" or "未连接")
-.. " · 并发 " .. tostring(Trans.Active or 0) .. "/" .. tostring(Trans.MAX))
-F.Out("[翻译统计] 本服文件 " .. tostring(Trans.CurFile()) .. " · 本服 " .. tostring(Trans.Count()) .. " 条 · 磁盘上共 "
-.. tostring(#Trans.CacheFiles()) .. " 个缓存文件")
+F.Out("[翻译] 待翻译 " .. tostring(#Trans.Queue) .. " 条 · 已翻译 " .. tostring(Trans._cnt or 0)
+.. " 条 · 已保存 " .. tostring(Trans._saveCount or 0) .. " 次")
 end
 Trans.WatchOn = function()
 local LPl = game:GetService("Players").LocalPlayer
@@ -12610,6 +12601,13 @@ pcall(function()
 tRoot.AssemblyLinearVelocity = Vector3.zero
 tRoot.CFrame = dest
 end)
+local t0 = os.clock()
+while os.clock() - t0 < 0.3 do
+pcall(function()
+if (tRoot.Position - dest.Position).Magnitude > 10 then tRoot.CFrame = dest end
+end)
+task.wait(0.05)
+end
 F.Out("[动他] 已把「" .. pl.Name .. "」瞬移到你面前(所有人都会看到他过来了)")
 elseif mode == "up" then
 pcall(function()
