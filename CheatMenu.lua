@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:43 sha a265ea34 bytes 521006'):format('2026-10-07 19:43','a265ea34',521006))
+print(('[CheatMenu] build 2026-10-07 19:52 sha 1dba129a bytes 524792'):format('2026-10-07 19:52','1dba129a',524792))
 local F = {}
-F.VERSION = "v16.10.39"
+F.VERSION = "v16.10.40"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3847,7 +3847,6 @@ end
 end)
 end)
 end)
-if T.TrapAutoRemove and F.TrapAutoRemoveEnable then pcall(F.TrapAutoRemoveEnable) end
 end
 F._steadyConn = nil
 local STEADY_STATES = { "Ragdoll", "FallingDown" }
@@ -5747,7 +5746,7 @@ end
 elseif os.clock() - (F._eggMissLogAt or 0) > 8 then
 F._eggMissLogAt = os.clock()
 pcall(function() Fluent:Notify({ Title = "护蛋", Content = "蛋离手了, 但 220 格内和全图都没找到可触发的拿取点", Duration = 6 }) end)
-F.Out("[护蛋] ⚠ 蛋离手但 220 格内 + 全图同类都没找到拿取点 ⇒ 该游戏的拿取不走 ProximityPrompt; 建议开「瞬间交互」或「自动互动」")
+F.Out("[护蛋] ⚠ 蛋离手但 220 格内 + 全图同类都没找到拿取点 ⇒ 该游戏的拿取不走 ProximityPrompt; 建议开「瞬间偷蛋 / 瞬间交互」")
 end
 end
 end
@@ -8458,7 +8457,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -9344,82 +9343,211 @@ Trans.BATCH = 6
 Trans.MAX = 8
 Trans.CACHE_MAX = 5000
 Trans.SCAN_EVERY = 6
-Trans.SYS_ZH = [[Translate the following game UI text into Chinese.
+Trans.GLOSS_FILE = "CheatMenu_Glossary.txt"
+F.GlossParse = function(txt)
+local tbl, n = {}, 0
+for line in tostring(txt or ""):gmatch("[^\r\n]+") do
+local seg = line
+local h = seg:find("#", 1, true)
+if h then seg = seg:sub(1, h - 1) end
+for pair in seg:gmatch("[^,]+") do
+local a, b = pair:match("^%s*(.-)%s*->%s*(.-)%s*$")
+if a and b and a ~= "" and b ~= "" then
+tbl[a] = b
+n = n + 1
+end
+end
+end
+return tbl, n
+end
+F.GlossLoad = function(force)
+if Trans.GLOSS_TBL and not force then return Trans.GLOSS_TBL end
+local txt = nil
+if type(readfile) == "function" then
+local ex = false
+pcall(function()
+if type(isfile) == "function" then ex = isfile(Trans.GLOSS_FILE) == true else ex = true end
+end)
+if ex then pcall(function() txt = readfile(Trans.GLOSS_FILE) end) end
+end
+if type(txt) ~= "string" or #txt < 20 then
+txt = table.concat(Trans.GLOSSARY, "\n")
+pcall(function()
+if type(writefile) == "function" then
+writefile(Trans.GLOSS_FILE, "# CheatMenu 术语表(本地固定译法, 直接当缓存用 —— 不占模型上下文)\n"
+.. "# 格式: 英文->中文   多条用逗号分隔   # 开头是注释\n" .. txt .. "\n")
+end
+end)
+F.Out("[术语表] 已生成 " .. Trans.GLOSS_FILE .. " (可自行编辑追加, 重载脚本生效)")
+end
+local t, n = F.GlossParse(txt)
+Trans.GLOSS_TBL, Trans.GLOSS_N = t, n
+return t
+end
+F.GlossApplyCache = function()
+local t = Trans.GLOSS_TBL or F.GlossLoad()
+local add = 0
+for en, zh in pairs(t) do
+if Trans.Cache[en] == nil then Trans.Cache[en] = zh add = add + 1 end
+local lc = en:lower()
+if lc ~= en and Trans.Cache[lc] == nil then Trans.Cache[lc] = zh add = add + 1 end
+end
+return add, t
+end
+F.GlossPromptFor = function(text, maxN)
+local t = Trans.GLOSS_TBL
+if type(t) ~= "table" then return "", 0 end
+if Trans._noGloss then return "", 0 end
+local low = tostring(text or ""):lower()
+if low == "" then return "", 0 end
+local hits, n = {}, 0
+for en, zh in pairs(t) do
+if #en >= 3 and low:find(en:lower(), 1, true) then
+hits[#hits + 1] = en .. "->" .. zh
+n = n + 1
+if n >= (maxN or 6) then break end
+end
+end
+if #hits == 0 then return "", 0 end
+return "\nTranslate game terms CONSISTENTLY:\n" .. table.concat(hits, ", "), #hits
+end
+Trans.SYS_BASE = [[Translate the following game UI text into Chinese.
 Output ONLY the translation: no explanation, no quotes, no extra words.
 Preserve the original line breaks and number of lines.
 Keep numbers, emoji, URLs and player names unchanged.
-Translate game terms CONSISTENTLY:
-Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地,
-Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,
-Squat->举铁, Train->训练, Bonus->加成,
-Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,
-Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,
-Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,
-Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,
-Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败,
-Kick Power->踢球力量, Kick->踢, Kickback->踢飞,
-Tab->标签页, Menu->菜单, Home->主页, Back->返回, Next->下一步, Skip->跳过,
-Join->加入, Leave->离开, Start->开始, Continue->继续, Confirm->确认, Cancel->取消,
-Save->保存, Reset->重置, Equip->装备, Unequip->卸下, Upgrade->升级, Unlock->解锁.
-Progress->进度, Completed->已完成, New->新, Coming Soon->即将推出, Locked->已锁定, Unlocked->已解锁,
-Owned->已拥有, Purchased->已购买, Sold->已售出, Attack->攻击, Defense->防御, Speed->速度, Power->力量,
-Odds->概率, Luck->幸运, Rebirth->重生, Exclusive->专属, Regular->普通, Event->活动, Pass->通行证,
-Daily->每日, Weekly->每周, Seasonal->赛季, Season->赛季, Tasks->任务, In Progress->进行中.
-Teleport->传送, Spawn->出生点, Leaderboard->排行榜, Season Pass->赛季通行证, Bundle->礼包, Offer->优惠,
-Daily Reward->每日奖励, Login->登录, Sign Up->注册, Level Up->升级, Max Level->满级, Rank Up->段位提升,
-Tier->阶位, Mutation->变异, Enchant->附魔, Craft->合成, Forge->锻造, Refine->精炼, Enhance->强化, Awaken->觉醒,
-Pet->宠物, Egg->蛋, Hatch->孵化, Mount->坐骑, Skin->皮肤, Crate->宝箱, Chest->宝箱, Spin->抽奖, Wheel->转盘,
-Key->钥匙, Token->代币, Ticket->门票, Voucher->兑换券, Mission->任务, Challenge->挑战, Milestone->里程碑,
-Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴击, Dodge->闪避, Block->格挡, Heal->治疗,
-Buff->增益, Debuff->减益, Cooldown->冷却, Energy->能量, Stamina->体力, Team->队伍, Squad->小队, Guild->公会,
-Friend->好友, Party->组队, Gift->礼物, Mail->邮件, Notification->通知, Options->选项, Graphics->画质, Audio->音效,
-Controls->操作, Quit->退出, Exit->退出, Resume->继续, Retry->重试, Loading->加载中, Please Wait->请稍候, Connecting->连接中.
-Health->生命值, Armor->护甲, Weapon->武器, Melee->近战, Ranged->远程,
-Gun->枪, Pistol->手枪, Rifle->步枪, Shotgun->霰弹枪, Sniper->狙击枪,
-Bow->弓, Arrow->箭, Sword->剑, Axe->斧头, Dagger->匕首,
-Wand->法杖, Clip->弹匣, Fire Rate->射速, Recoil->后坐力, Spread->散布,
-Accuracy->精准度, Crit->暴击, Kill Streak->连杀, Assist->助攻, Revive->救起队友,
-Knockdown->击倒, Stun->眩晕, Poison->中毒, Burn->灼烧, Freeze->冰冻,
-Slow->减速, Immunity->免疫, Invincible->无敌, Arena->竞技场, Duel->决斗,
-Boss->首领, Minion->小怪, Elite->精英, Wave->波次, Draw->平局,
-Class->职业, Perk->特长, Ability->技能, Ultimate->终极技能, Mana->法力,
-Parry->招架, Counter->反击, Hitbox->判定框, Respawn Time->复活时间, Lifesteal->吸血,
-Thorns->反伤,
-Currency->货币, Credit->信用点, Point->积分, Cost->花费, Discount->折扣,
-Pack->礼包, Deal->优惠, Sale->特卖, Limited Time->限时, Restock->补货,
-In Stock->有货, Out of Stock->缺货, Purchase->购买, Refund->退款, Balance->余额,
-Earn->赚取, Spend->花费, Free Gift->免费礼物, Daily Shop->每日商店, Bundle Price->礼包价格,
-Config->配置, Keybind->快捷键, Hotkey->热键, Toggle->开关, Slider->滑块,
-Dropdown->下拉菜单, Default->默认, Apply->应用, Previous->上一个, Page->页面,
-Search->搜索, Filter->筛选, Sort->排序, Refresh->刷新, Language->语言,
-Fullscreen->全屏, Mute->静音, Volume->音量, Brightness->亮度, Quality->画质,
-Zoom->缩放, Copy->复制, Paste->粘贴, Clear->清空, Send->发送,
-Prestige->声望, Ascend->飞升, Trophy->奖杯, Medal->奖章, Title->称号,
-Complete->完成, Battle Pass->战斗通行证, Progress Bar->进度条, Requirement->要求, Goal->目标,
-Milestone Reward->里程碑奖励, Claim All->一键领取,
-Clan->氏族, Invite->邀请, Ban->封禁, Report->举报, Add Friend->加好友,
-Chat->聊天, Message->消息, Trade Request->交易请求, Gift Send->赠送,
-Build->建造, Place->放置, Rotate->旋转, Undo->撤销, Redo->重做,
-Resource->资源, Wood->木头, Stone->石头, Iron->铁, Diamond->钻石,
-Ore->矿石, Mine->挖矿, Recipe->配方, Smelt->冶炼, Fuel->燃料,
-Storage->仓库, Capacity->容量, Repair->修理, Destroy->摧毁, Plot Owner->基地主人,
-Vehicle->载具, Car->汽车, Bike->摩托车, Boat->船, Plane->飞机,
-Helicopter->直升机, Drive->驾驶, Ride->乘坐, Boost->加速, Nitro->氮气,
-Brake->刹车, Garage->车库, Customize->自定义, Paint->涂装,
-Pet Inventory->宠物背包, Fusion->融合, Evolve->进化, Rarity->稀有度, Common->普通,
-Uncommon->少见, Rare->稀有, Epic->史诗, Legendary->传说, Mythical->神话,
-Secret->秘密, Exotic->异域, Duplicate->重复, Collection->图鉴, Index->图鉴,
-Error->错误, Failed->失败, Success->成功, Warning->警告, Available Now->现已可用,
-Sold Out->售罄, Not Enough->数量不足, Too Far->距离太远, Cooldown Active->冷却中, Expired->已过期,
-Code->兑换码, Redeem->兑换, Redeem Code->兑换码, Lucky->幸运, Jackpot->头奖,
-Prize->奖品, Rare Drop->稀有掉落, Drop Rate->掉落率, Daily Login->每日登录, Reward Wheel->奖励转盘,
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
-Trans.Prompt = function(code)
-if not code or code == "zh" then return Trans.SYS_ZH end
+Trans.GLOSS_HEAD = "\nTranslate game terms CONSISTENTLY:\n"
+Trans.GLOSSARY = {
+"Brainrot->脑红, Timmy->蒂米, Slot->槽位, Plot->基地,",
+"Collect->收取, Withdraw->收起, Sell->售卖, Claim->领取, Gym->健身房, Lift Machine->举铁机,",
+"Squat->举铁, Train->训练, Bonus->加成,",
+"Coins->金币, Gold->金币, Cash->金币, Gems->宝石, XP->经验, HP->生命, MP->法力,",
+"Loot->战利品, Kill->击杀, Death->死亡, Respawn->复活, Round->回合, Match->对局,",
+"Objective->目标, Score->得分, Streak->连杀, Loadout->配装, Inventory->背包, Shop->商店,",
+"Trade->交易, Quest->任务, Reward->奖励, Rank->段位, Damage->伤害, Shield->护盾,",
+"Ammo->弹药, Reload->换弹, Headshot->爆头, Victory->胜利, Defeat->失败,",
+"Kick Power->踢球力量, Kick->踢, Kickback->踢飞,",
+"Tab->标签页, Menu->菜单, Home->主页, Back->返回, Next->下一步, Skip->跳过,",
+"Join->加入, Leave->离开, Start->开始, Continue->继续, Confirm->确认, Cancel->取消,",
+"Save->保存, Reset->重置, Equip->装备, Unequip->卸下, Upgrade->升级, Unlock->解锁.",
+"Progress->进度, Completed->已完成, New->新, Coming Soon->即将推出, Locked->已锁定, Unlocked->已解锁,",
+"Owned->已拥有, Purchased->已购买, Sold->已售出, Attack->攻击, Defense->防御, Speed->速度, Power->力量,",
+"Odds->概率, Luck->幸运, Rebirth->重生, Exclusive->专属, Regular->普通, Event->活动, Pass->通行证,",
+"Daily->每日, Weekly->每周, Seasonal->赛季, Season->赛季, Tasks->任务, In Progress->进行中.",
+"Teleport->传送, Spawn->出生点, Leaderboard->排行榜, Season Pass->赛季通行证, Bundle->礼包, Offer->优惠,",
+"Daily Reward->每日奖励, Login->登录, Sign Up->注册, Level Up->升级, Max Level->满级, Rank Up->段位提升,",
+"Tier->阶位, Mutation->变异, Enchant->附魔, Craft->合成, Forge->锻造, Refine->精炼, Enhance->强化, Awaken->觉醒,",
+"Pet->宠物, Egg->蛋, Hatch->孵化, Mount->坐骑, Skin->皮肤, Crate->宝箱, Chest->宝箱, Spin->抽奖, Wheel->转盘,",
+"Key->钥匙, Token->代币, Ticket->门票, Voucher->兑换券, Mission->任务, Challenge->挑战, Milestone->里程碑,",
+"Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴击, Dodge->闪避, Block->格挡, Heal->治疗,",
+"Buff->增益, Debuff->减益, Cooldown->冷却, Energy->能量, Stamina->体力, Team->队伍, Squad->小队, Guild->公会,",
+"Friend->好友, Party->组队, Gift->礼物, Mail->邮件, Notification->通知, Options->选项, Graphics->画质, Audio->音效,",
+"Controls->操作, Quit->退出, Exit->退出, Resume->继续, Retry->重试, Loading->加载中, Please Wait->请稍候, Connecting->连接中.",
+"Health->生命值, Armor->护甲, Weapon->武器, Melee->近战, Ranged->远程,",
+"Gun->枪, Pistol->手枪, Rifle->步枪, Shotgun->霰弹枪, Sniper->狙击枪,",
+"Bow->弓, Arrow->箭, Sword->剑, Axe->斧头, Dagger->匕首,",
+"Wand->法杖, Clip->弹匣, Fire Rate->射速, Recoil->后坐力, Spread->散布,",
+"Accuracy->精准度, Crit->暴击, Kill Streak->连杀, Assist->助攻, Revive->救起队友,",
+"Knockdown->击倒, Stun->眩晕, Poison->中毒, Burn->灼烧, Freeze->冰冻,",
+"Slow->减速, Immunity->免疫, Invincible->无敌, Arena->竞技场, Duel->决斗,",
+"Boss->首领, Minion->小怪, Elite->精英, Wave->波次, Draw->平局,",
+"Class->职业, Perk->特长, Ability->技能, Ultimate->终极技能, Mana->法力,",
+"Parry->招架, Counter->反击, Hitbox->判定框, Respawn Time->复活时间, Lifesteal->吸血,",
+"Thorns->反伤,",
+"Currency->货币, Credit->信用点, Point->积分, Cost->花费, Discount->折扣,",
+"Pack->礼包, Deal->优惠, Sale->特卖, Limited Time->限时, Restock->补货,",
+"In Stock->有货, Out of Stock->缺货, Purchase->购买, Refund->退款, Balance->余额,",
+"Earn->赚取, Spend->花费, Free Gift->免费礼物, Daily Shop->每日商店, Bundle Price->礼包价格,",
+"Config->配置, Keybind->快捷键, Hotkey->热键, Toggle->开关, Slider->滑块,",
+"Dropdown->下拉菜单, Default->默认, Apply->应用, Previous->上一个, Page->页面,",
+"Search->搜索, Filter->筛选, Sort->排序, Refresh->刷新, Language->语言,",
+"Fullscreen->全屏, Mute->静音, Volume->音量, Brightness->亮度, Quality->画质,",
+"Zoom->缩放, Copy->复制, Paste->粘贴, Clear->清空, Send->发送,",
+"Prestige->声望, Ascend->飞升, Trophy->奖杯, Medal->奖章, Title->称号,",
+"Complete->完成, Battle Pass->战斗通行证, Progress Bar->进度条, Requirement->要求, Goal->目标,",
+"Milestone Reward->里程碑奖励, Claim All->一键领取,",
+"Clan->氏族, Invite->邀请, Ban->封禁, Report->举报, Add Friend->加好友,",
+"Chat->聊天, Message->消息, Trade Request->交易请求, Gift Send->赠送,",
+"Build->建造, Place->放置, Rotate->旋转, Undo->撤销, Redo->重做,",
+"Resource->资源, Wood->木头, Stone->石头, Iron->铁, Diamond->钻石,",
+"Ore->矿石, Mine->挖矿, Recipe->配方, Smelt->冶炼, Fuel->燃料,",
+"Storage->仓库, Capacity->容量, Repair->修理, Destroy->摧毁, Plot Owner->基地主人,",
+"Vehicle->载具, Car->汽车, Bike->摩托车, Boat->船, Plane->飞机,",
+"Helicopter->直升机, Drive->驾驶, Ride->乘坐, Boost->加速, Nitro->氮气,",
+"Brake->刹车, Garage->车库, Customize->自定义, Paint->涂装,",
+"Pet Inventory->宠物背包, Fusion->融合, Evolve->进化, Rarity->稀有度, Common->普通,",
+"Uncommon->少见, Rare->稀有, Epic->史诗, Legendary->传说, Mythical->神话,",
+"Secret->秘密, Exotic->异域, Duplicate->重复, Collection->图鉴, Index->图鉴,",
+"Error->错误, Failed->失败, Success->成功, Warning->警告, Available Now->现已可用,",
+"Sold Out->售罄, Not Enough->数量不足, Too Far->距离太远, Cooldown Active->冷却中, Expired->已过期,",
+"Code->兑换码, Redeem->兑换, Redeem Code->兑换码, Lucky->幸运, Jackpot->头奖,",
+"Prize->奖品, Rare Drop->稀有掉落, Drop Rate->掉落率, Daily Login->每日登录, Reward Wheel->奖励转盘,",
+}
+Trans.SlotCtx = function()
+if Trans._slotCtx then return Trans._slotCtx end
+Trans._slotCtx = 1024
+pcall(function()
+local rf = Trans.Req()
+if type(rf) ~= "function" then return end
+local res = rf({ Url = Trans.HOST .. "/props", Method = "GET", Headers = { ["Authorization"] = "Bearer " .. Trans.KEY } })
+if type(res) ~= "table" or tonumber(res.StatusCode or 0) ~= 200 then return end
+local d = HS:JSONDecode(res.Body)
+local g = (type(d) == "table") and d.default_generation_settings or nil
+local n = g and tonumber(g.n_ctx)
+if n and n > 0 then
+Trans._slotCtx = n
+Trans._slotTotal = (type(d) == "table") and tonumber(d.total_slots) or nil
+end
+end)
+return Trans._slotCtx
+end
+Trans.CHARS_PER_TOK = 1.5
+Trans.OutNeed = function(batchN, ctx)
+local n = math.max(1, tonumber(batchN) or 1)
+local need = 48 + n * 44
+local cap = math.floor((tonumber(ctx) or 1024) * 0.45)
+if need > cap then need = cap end
+if need < 96 then need = 96 end
+return need
+end
+Trans.SysBudget = function(batchN)
+local ctx = Trans.SlotCtx()
+local need = Trans.OutNeed(batchN or Trans.BATCH, ctx)
+local tok = ctx - need - 48
+if tok < 200 then tok = 200 end
+return math.floor(tok * Trans.CHARS_PER_TOK)
+end
+Trans.OutTokens = function(promptChars, batchN)
+local ctx = Trans.SlotCtx()
+local est = math.floor((tonumber(promptChars) or 0) / Trans.CHARS_PER_TOK) + 24
+local out = ctx - est - 12
+if out < 48 then out = 48 end
+local cap = math.max(96, Trans.OutNeed(batchN or 1, ctx))
+if out > cap then out = cap end
+return out
+end
+Trans.Prompt = function(code, batchN, needText)
+if code and code ~= "zh" then
 local lang = Trans.LANGS[code] or "Chinese"
 return "Translate the following text into " .. lang
 .. ". Output ONLY the translation: no explanation, no quotes, no extra words."
 .. " Keep numbers, emoji, URLs and player names unchanged."
+end
+if Trans._noGloss then
+Trans._glossN = 0
+return Trans.SYS_BASE
+end
+local budget = Trans.SysBudget(batchN)
+local extra, hitN = "", 0
+if type(F.GlossPromptFor) == "function" then
+extra, hitN = F.GlossPromptFor(needText, 6)
+end
+if extra ~= "" and (#Trans.SYS_BASE + #extra) <= budget then
+Trans._glossN, Trans._glossBudget = hitN, budget
+return Trans.SYS_BASE .. extra
+end
+Trans._glossN, Trans._glossBudget = 0, budget
+return Trans.SYS_BASE
 end
 Trans.Cache = {}
 Trans.Order = {}
@@ -9544,7 +9672,19 @@ end)
 if not ok then return nil, "HTTP 请求异常" end
 if type(res) ~= "table" then return nil, "HTTP 无返回" end
 local code = tonumber(res.StatusCode or res.Status or 0)
-if code ~= 200 then return nil, "HTTP " .. tostring(code) end
+if code ~= 200 then
+local em = nil
+pcall(function()
+local e = HS:JSONDecode(res.Body)
+if type(e) == "table" and type(e.error) == "table" then em = e.error.message end
+end)
+local why = "HTTP " .. tostring(code) .. (em and (" | " .. tostring(em):sub(1, 160)) or "")
+if os.clock() - (Trans._errLogAt or 0) > 5 then
+Trans._errLogAt = os.clock()
+F.Out("[翻译] ⚠ 服务端拒绝请求: " .. why)
+end
+return nil, why
+end
 local ok2, d = pcall(function() return HS:JSONDecode(res.Body) end)
 if not ok2 or type(d) ~= "table" or not d.choices or not d.choices[1] then return nil, "返回解析失败" end
 local msg = d.choices[1].message
@@ -9557,9 +9697,9 @@ Trans._reqN = Trans._reqN + 1
 local lastErr
 for attempt = 1, 2 do
 local c, err = Trans.Chat({
-{ role = "system", content = Trans.Prompt(lang) },
+{ role = "system", content = Trans.Prompt(lang, 1, text) },
 { role = "user", content = text },
-}, 256)
+}, Trans.OutTokens(#Trans.Prompt(lang, 1, text) + #text, 1))
 if c then Trans._localFails = 0 return c, nil end
 lastErr = err
 if attempt == 1 then task.wait(0.25) end
@@ -9579,13 +9719,27 @@ for i = 1, #list do clean[i] = Trans.Utf8Clean(list[i]) end
 okP, payload = pcall(function() return HS:JSONEncode(clean) end)
 if not okP then return nil end
 end
-local sys = Trans.Prompt(lang)
+local function buildSys()
+return Trans.Prompt(lang, #list, table.concat(list, " "))
 .. "\nThe user sends a JSON array of strings. Translate every element."
 .. "\nOutput ONLY a JSON array with the SAME length and SAME order. No explanation, no code fence."
-local c = Trans.Chat({
+end
+local sys = buildSys()
+local c, cerr = Trans.Chat({
 { role = "system", content = sys },
 { role = "user", content = payload },
-}, 1536)
+}, Trans.OutTokens(#sys + #payload, #list))
+if (not c) and type(cerr) == "string" and not Trans._noGloss
+and (cerr:find("exceed", 1, true) or cerr:find("context size", 1, true)) then
+Trans._noGloss = true
+Trans._slotCtx = nil
+sys = buildSys()
+c, cerr = Trans.Chat({
+{ role = "system", content = sys },
+{ role = "user", content = payload },
+}, Trans.OutTokens(#sys + #payload, #list))
+F.Out("[翻译] 提示词超出每槽上下文 ⇒ 本会话已自动停用术语表并重试(翻译不受影响)")
+end
 if not c then Trans._localFails = Trans._localFails + 1 return nil end
 c = c:gsub("^%s*```[%w]*%s*", ""):gsub("%s*```%s*$", "")
 local a = c:find("%[", 1, true)
@@ -10763,6 +10917,16 @@ end)
 end
 function Trans.Enable()
 if T.TransModel == nil then T.TransModel = true end
+pcall(function()
+F.GlossLoad(true)
+local _added = F.GlossApplyCache()
+local _ctx = Trans.SlotCtx()
+F.Out("[术语表] 已加载 " .. tostring(Trans.GLOSS_N or 0) .. " 条(来自 " .. Trans.GLOSS_FILE
+.. ") ⇒ 全部当「本地固定译法」直接命中, 不占模型上下文 · 新增缓存 " .. tostring(_added) .. " 条")
+local _p = Trans.Prompt("zh", Trans.BATCH, "Settings Progress")
+F.Out("[翻译] 参数: 每槽上下文 " .. tostring(_ctx) .. " token · 输出预留 " .. tostring(Trans.OutNeed(Trans.BATCH, _ctx))
+.. " token · 提示词 " .. tostring(#Trans.SYS_BASE) .. " 字符(术语表不进提示词, 只在文本里命中时才贴几条)")
+end)
 T.Translate = true
 Trans.Load()
 pcall(Trans.NumTplLoad)
@@ -10914,7 +11078,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -13069,48 +13233,6 @@ if F._btConn then pcall(function() F._btConn:Disconnect() end) F._btConn = nil e
 end
 F._aiList = setmetatable({}, { __mode = "k" })
 F._aiAdded, F._autoIxConn = nil, nil
-F.AutoInteractEnable = function()
-if F._autoIxConn then return end
-if type(fireproximityprompt) ~= "function" then
-F.Out("[自动互动] 本执行器没有 fireproximityprompt ⇒ 无法自动触发")
-return
-end
-local function addP(d)
-if typeof(d) == "Instance" then
-local ok, isP = pcall(function() return d:IsA("ProximityPrompt") end)
-if ok and isP then F._aiList[d] = true end
-end
-end
-pcall(function()
-for _, d in ipairs(workspace:GetDescendants()) do addP(d) end
-end)
-F._aiAdded = workspace.DescendantAdded:Connect(addP)
-F._autoIxConn = RS.Heartbeat:Connect(function()
-if not T.AutoInteract then F.AutoInteractDisable() return end
-if os.clock() - (F._aiAt or 0) < 0.25 then return end
-F._aiAt = os.clock()
-local _, _, r = GC()
-if not (r and r.Parent) then return end
-for pp in pairs(F._aiList) do
-if not pp.Parent then
-F._aiList[pp] = nil
-elseif pp.Enabled ~= false then
-pcall(function()
-local anc = pp:FindFirstAncestorWhichIsA("BasePart") or pp:FindFirstAncestorWhichIsA("Model")
-if not anc then return end
-local pos = anc:IsA("BasePart") and anc.Position or anc:GetPivot().Position
-local md = tonumber(pp.MaxActivationDistance) or 10
-if (pos - r.Position).Magnitude <= md then fireproximityprompt(pp) end
-end)
-end
-end
-end)
-F.Out("[自动互动] 已开: 附近可点的按钮/接近提示会自动触发(不用手动按)")
-end
-F.AutoInteractDisable = function()
-if F._aiAdded then pcall(function() F._aiAdded:Disconnect() end) F._aiAdded = nil end
-if F._autoIxConn then pcall(function() F._autoIxConn:Disconnect() end) F._autoIxConn = nil end
-end
 F._wallClimbConn = nil
 F.WallClimbEnable = function()
 if F._wallClimbConn then return end
@@ -13669,11 +13791,6 @@ pcall(F.CarryGuardDisable)
 end
 F.Out("[防护] 稳身/反攻击/反陷阱/反拉回/防减速/反回拉/护蛋/搬运保护 = " .. (v and "开" or "关"))
 end })
-Tabs.Move:AddToggle("TrapAutoRemove", { Title = "自动拆除附近陷阱(有「拆除」提示就点掉)", Default = false, Callback = function(v)
-T.TrapAutoRemove = v and true or false
-if F._cfgSyncing then return end
-if v then pcall(F.TrapAutoRemoveEnable) else pcall(F.TrapAutoRemoveDisable) end
-end })
 F.ProtectApply = function()
 local steady, hit = T.SteadyOn == true, T.HitGuard == true
 if steady or hit then
@@ -13684,7 +13801,13 @@ F.Try("CharEventsDisable", F.CharEventsDisable)
 end
 if steady then pcall(F.SteadyEnable) else pcall(F.SteadyDisable) end
 if hit then pcall(function() F.HitGuardEnable(T.HitStrong) end) else pcall(F.HitGuardDisable) end
-if T.TrapWarn then pcall(F.TrapGuardEnable) else pcall(F.TrapGuardDisable) end
+if T.TrapWarn then
+pcall(F.TrapGuardEnable)
+pcall(F.TrapAutoRemoveEnable)
+else
+pcall(F.TrapGuardDisable)
+pcall(F.TrapAutoRemoveDisable)
+end
 if T.SpeedAntiTP then pcall(F.SpeedAntiTPEnable) else pcall(F.SpeedAntiTPDisable) end
 F.Out(string.format("[防护] 稳身=%s · 反攻击(受击保护)=%s · 反陷阱=%s · 防拉回=%s",
 steady and "开" or "关",
@@ -13696,11 +13819,6 @@ local changed = (T.InstantInteract ~= nil) and (T.InstantInteract ~= v)
 T.InstantInteract = v
 if F._cfgSyncing or not changed then return end
 if v then F.InstantInteractEnable() else F.InstantInteractDisable() end
-end })
-Tabs.Move:AddToggle("AutoInteract", { Title = "自动互动(附近按钮/提示自动点)", Default = false, Callback = function(v)
-T.AutoInteract = v
-if F._cfgSyncing then return end
-if v then pcall(F.AutoInteractEnable) else pcall(F.AutoInteractDisable) end
 end })
 Tabs.Move:AddToggle("Invisible", { Title = "隐身", Default = false, Callback = function(v)
 T.Invisible = v
