@@ -4261,3 +4261,24 @@ v16.9.31 转换 19 处：`GuardSet`(2) · `ProtectApply`(2) · `BypassTierApply`
 
 
 
+
+## 参考源码库（外部学习源，2026-10-07 收录）
+
+- 仓库：https://github.com/chinzhuoxuan3-byte/Scirpt-Source —— 国内公开脚本源码合集（47 个明文源码，约 4.5MB）
+- 本地副本：`D:\666\AI工作区\refs\Scirpt-Source\`
+- 拉取方式（本机 git 走死代理 `127.0.0.1:10808` 直接失败）：
+  用 jsDelivr —— `https://cdn.jsdelivr.net/gh/chinzhuoxuan3-byte/Scirpt-Source@main/<URL编码文件名>`
+  （`ghfast.top` 透传同样可用；测试时 gcore.jsdelivr / raw.gitmirror 不通）
+
+### 扫描结论（47 文件关键词覆盖）
+Highlight 39/47 · 传送/TP 34/47 · 飞行 38/47 · 速度 31/47 · 远程监听 31/47 · 无敌锁血 26/47 ·
+自瞄 24/47 · 反检测 23/47 · 甩飞 20/47 · 挂机防踢 19/47 · 元表钩子 17/47 · 自动收集 16/47
+
+### 已确认可复用手法
+- **甩飞（主流做法 = 完全不碰目标）**：① 记下自己原位；② 每帧把自己 `HRP.CFrame` 贴到目标 `CFrame`
+  （可带偏移，或**每帧换角度**：`targetRoot.CFrame * CFrame.Angles(0, math.rad(i*18), 0)`）；
+  ③ 自己速度给到 `Velocity*10000` 量级（或 `1e5`）；④ 结束回原位。
+  ⇒ **`SetNetworkOwner`（抢所有权）在 47 个文件里只出现 1 次** ⇒ 公开脚本基本不走"抢所有权"这条路。
+- **反甩飞**参考：`hrp:GetPropertyChangedSignal("Velocity")` 里 `Magnitude > 300` 就清零（事件驱动）。
+  本项目用 Heartbeat 轮询 + 阈值 8000，**更不容易误清正常击退**。
+- **已落地**：`F.FlingPlayer` 的路②（抢不到所有权时）已改为「每帧换角度贴脸 + 1e5 速度 + 1 秒上限 + 回原位」。
