@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:47 sha 5041ec1a bytes 507196'):format('2026-10-07 17:47','5041ec1a',507196))
+print(('[CheatMenu] build 2026-10-07 17:55 sha 7a1d6cab bytes 507304'):format('2026-10-07 17:55','7a1d6cab',507304))
 local F = {}
-F.VERSION = "v16.10.18"
+F.VERSION = "v16.10.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12979,7 +12979,7 @@ goHome()
 F.Out("[甩飞] 结束")
 end)
 else
-F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「每帧贴脸撞击」: 每帧瞬移到他身上 + 极大速度, 靠服务器物理把他甩出去")
+F.Out("[甩飞] 抢不到他的所有权 ⇒ 改用「每帧绕圈贴脸撞击」: 每帧换个角度瞬移到他身上 + 极大速度, 靠服务器物理把他甩出去")
 F._flingHit = true
 task.spawn(function()
 local _, _, myRoot = GC()
@@ -13008,6 +13008,7 @@ goHome()
 F.Out("[甩飞] " .. msg)
 end
 local t0 = os.clock()
+local spin = 0
 F._flingConn = RS.Heartbeat:Connect(function()
 if done then return end
 if not F._flingHit then wrapOut("已手动停止 · 自身已复位 · 已回到原地") return end
@@ -13016,8 +13017,10 @@ local r = myRoot
 if not (r and r.Parent) then wrapOut("自己没角色了 · 已回到原地") return end
 local tr = tRoot
 if not (tr and tr.Parent) then wrapOut("目标没了 · 已回到原地") return end
+spin = spin + 1
+local ang = CFrame.Angles(0, math.rad(spin * 18), 0)
 pcall(function()
-r.CFrame = tr.CFrame
+r.CFrame = tr.CFrame * ang
 r.AssemblyLinearVelocity = Vector3.new(1e5, 1e5, 1e5)
 r.AssemblyAngularVelocity = Vector3.new(1e5, 1e5, 1e5)
 end)
