@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 10:26 sha 0795b1a3 bytes 486203'):format('2026-10-07 10:26','0795b1a3',486203))
+print(('[CheatMenu] build 2026-10-07 10:33 sha aa799fd6 bytes 486817'):format('2026-10-07 10:33','aa799fd6',486817))
 local F = {}
-F.VERSION = "v16.9.90"
+F.VERSION = "v16.9.91"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10090,7 +10090,17 @@ local cur = nil
 pcall(function() cur = obj[prop] end)
 if cur ~= expect then return end
 end
+pcall(function() Trans._wroteAt[obj] = os.clock() end)
 pcall(function() obj[prop] = val end)
+end
+Trans._selfCN = setmetatable({}, { __mode = "k" })
+Trans._wroteAt = setmetatable({}, { __mode = "k" })
+Trans.MarkSelfCN = function(obj, txt)
+if type(txt) ~= "string" then return end
+if not txt:find("[\228-\233]") or txt:find("%a%a") then return end
+local at = Trans._wroteAt[obj]
+if at and os.clock() - at < 3 then return end
+Trans._selfCN[obj] = true
 end
 Trans.GuiEl = function(obj, urgent)
 if not obj or not obj.Parent then return end
@@ -10140,9 +10150,11 @@ end
 local txt = nil
 pcall(function() txt = obj.Text end)
 if type(txt) ~= "string" or txt == "" then return end
-if txt:find("[\228-\233]") then
+if txt:find("[\228-\233]") and not txt:find("%a%a") then
+Trans.MarkSelfCN(obj, txt)
 return
 end
+if Trans._selfCN[obj] then return end
 if not Trans.Should(txt) then return end
 if not Trans.Hooked[obj] then
 Trans.Hooked[obj] = true
@@ -10152,9 +10164,11 @@ if not T.Translate then return end
 local now = nil
 pcall(function() now = obj.Text end)
 if type(now) ~= "string" or now == "" then return end
-if now:find("[\228-\233]") then
+Trans.MarkSelfCN(obj, now)
+if now:find("[\228-\233]") and not now:find("%a%a") then
 return
 end
+if Trans._selfCN[obj] then return end
 if Trans.Should(now) and Trans.Cache[now] then
 Trans.WriteText(obj, "Text", Trans.Cache[now], now)
 return
@@ -10240,6 +10254,7 @@ pcall(function() t = o.Text end)
 if type(t) == "string" and t ~= "" then
 if t:find("[\228-\233]") then
 cnN = cnN + 1
+Trans.MarkSelfCN(o, t)
 elseif Trans.Should(t) then
 enN = enN + 1
 if #samples < 3 then samples[#samples + 1] = t:sub(1, 16) end
