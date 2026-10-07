@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 01:46 sha 88db0179 bytes 544114'):format('2026-10-08 01:46','88db0179',544114))
+print(('[CheatMenu] build 2026-10-08 01:53 sha 69cad6ca bytes 544930'):format('2026-10-08 01:53','69cad6ca',544930))
 local F = {}
-F.VERSION = "v16.10.71"
+F.VERSION = "v16.10.72"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4632,7 +4632,13 @@ if F._heliKind == "made" and F._heliJoint then
 pcall(function() F._heliJoint:Destroy() end)
 end
 if F._heliWC then
-pcall(function() F._heliWC.Enabled = true end)
+pcall(function()
+if F._heliWCE == nil then
+F._heliWC.Enabled = true
+else
+F._heliWC.Enabled = (F._heliWCE == true)
+end
+end)
 end
 if F._heliCollOff then
 if T.FlyOn and type(F._flyCollOff) == "table" then
@@ -4650,7 +4656,7 @@ F._heliPX, F._heliPY, F._heliPZ = nil, nil, nil
 F._heliH = nil
 F._heliC0r, F._heliC0v, F._heliC1inv = nil, nil, nil
 F._heliJoint, F._heliC0, F._heliUseRoot, F._heliMode = nil, nil, nil, nil
-F._heliKind, F._heliWC = nil, nil
+F._heliKind, F._heliWC, F._heliWCE = nil, nil, nil
 if hum then
 pcall(function() hum.PlatformStand = (F._heliWasPS == true) end)
 pcall(function() hum.AutoRotate = (F._heliWasAR ~= false) end)
@@ -4677,11 +4683,14 @@ F._heliWasPS = hum.PlatformStand
 F._heliWasAR = hum.AutoRotate
 local mode = F.HeliMode()
 F._heliMode = mode
-local joint, wc = nil, nil
+local joint, wc, other = nil, nil, nil
+local kinds = {}
 pcall(function()
 local best, bestScore = nil, -1
 for _, d in ipairs(ch:GetDescendants()) do
+local cn = d.ClassName
 if d:IsA("JointInstance") then
+kinds[cn] = (kinds[cn] or 0) + 1
 if d.Part0 == root then
 local nm = string.lower(d.Name)
 local sc = 0
@@ -4689,8 +4698,23 @@ if nm:find("root", 1, true) then sc = sc + 5 end
 if d:IsA("Motor6D") then sc = sc + 3 end
 if sc > bestScore then best, bestScore = d, sc end
 end
-elseif d:IsA("WeldConstraint") then
-if wc == nil and (d.Part0 == root or d.Part1 == root) then wc = d end
+elseif d:IsA("WeldConstraint") or d:IsA("Constraint") then
+kinds[cn] = (kinds[cn] or 0) + 1
+local p0, p1 = nil, nil
+if d:IsA("WeldConstraint") then
+p0, p1 = d.Part0, d.Part1
+else
+local a0, a1 = nil, nil
+pcall(function() a0 = d.Attachment0 end)
+pcall(function() a1 = d.Attachment1 end)
+if a0 then p0 = a0.Parent end
+if a1 then p1 = a1.Parent end
+end
+if p0 == root and p1 ~= nil and p1 ~= root then
+if wc == nil then wc, other = d, p1 end
+elseif p1 == root and p0 ~= nil and p0 ~= root then
+if wc == nil then wc, other = d, p0 end
+end
 end
 end
 joint = best
@@ -4698,10 +4722,8 @@ end)
 if joint then
 F._heliJoint = joint
 F._heliKind = "own"
-elseif wc then
+elseif wc and other then
 pcall(function()
-local other = (wc.Part0 == root) and wc.Part1 or wc.Part0
-if other then
 local m = Instance.new("Motor6D")
 m.Name = "CMHeliJoint"
 m.Part0 = root
@@ -4712,8 +4734,8 @@ m.Parent = root
 F._heliJoint = m
 F._heliKind = "made"
 F._heliWC = wc
+F._heliWCE = wc.Enabled
 wc.Enabled = false
-end
 end)
 end
 if F._heliJoint then
@@ -4738,12 +4760,17 @@ local kids, n = {}, 0
 pcall(function()
 for _, k in ipairs(root:GetChildren()) do
 n = n + 1
-if n <= 8 then kids[#kids + 1] = k.Name .. ":" .. k.ClassName end
+if n <= 16 then kids[#kids + 1] = k.Name .. ":" .. k.ClassName end
 end
 end)
-F.Out("[旋转] 骨架: root=" .. root.ClassName .. " 子级" .. tostring(n) .. "[" .. table.concat(kids, ", ") .. "] ⇒ "
-.. (F._heliJoint and (F._heliJoint.Name .. "(" .. F._heliJoint.ClassName .. ")"
-.. (F._heliKind == "made" and "·自建" or "")) or "无可用关节(退化为整体旋转)"))
+local ks = {}
+pcall(function()
+for kk, vv in pairs(kinds) do ks[#ks + 1] = kk .. "=" .. tostring(vv) end
+end)
+F.Out("[旋转] 骨架: root=" .. root.ClassName .. " 子级" .. tostring(n) .. "[" .. table.concat(kids, ", ") .. "]")
+F.Out("[旋转] 连接件统计: " .. ((#ks > 0) and table.concat(ks, ", ") or "一个都没有")
+.. " ⇒ " .. (F._heliJoint and (F._heliJoint.Name .. "(" .. F._heliJoint.ClassName .. ")"
+.. (F._heliKind == "made" and "·自建接管" or "")) or "无连接件可用"))
 end
 if mode == 2 and F._heliCollOff == nil then
 F._heliCollOff = {}
@@ -4820,7 +4847,8 @@ if math.abs(tY - ny) < 0.02 then ny = tY end
 F._heliPX, F._heliPY, F._heliPZ = px, ny, pz
 pcall(function() r.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() r.AssemblyAngularVelocity = Vector3.zero end)
-pcall(function() r.CFrame = CFrame.new(px, ny, pz) * CFrame.Angles(0, math.rad(F._heliYaw or 0), 0) end)
+local base = CFrame.new(px, ny, pz) * CFrame.Angles(0, math.rad(F._heliYaw or 0), 0)
+pcall(function() r.CFrame = F._heliUseRoot and (base * R) or base end)
 end)
 if not F._heliRebuild then
 pcall(function()
