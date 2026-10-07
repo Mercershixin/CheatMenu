@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 22:46 sha f55d1845 bytes 533389'):format('2026-10-07 22:46','f55d1845',533389))
+print(('[CheatMenu] build 2026-10-07 22:57 sha 4c6b5ce7 bytes 536467'):format('2026-10-07 22:57','4c6b5ce7',536467))
 local F = {}
-F.VERSION = "v16.10.58"
+F.VERSION = "v16.10.59"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8634,6 +8634,83 @@ pcall(F.ReloadFresh)
 end
 return ok2
 end
+F.ServerFetch = function(url)
+local ok, r = pcall(function() return game:HttpGet(url) end)
+if ok and type(r) == "string" and #r > 2 and r:sub(1, 1) == "{" then return r end
+local rf = Trans.Req()
+if type(rf) == "function" then
+local ok2, res = pcall(rf, { Url = url, Method = "GET" })
+if ok2 and type(res) == "table" and tonumber(res.StatusCode or 0) == 200 then
+local b = res.Body or res.body
+if type(b) == "string" and #b > 2 then return b end
+end
+end
+return nil
+end
+function F.RandomServerHop()
+local ts = game:GetService("TeleportService")
+local hs = game:GetService("HttpService")
+local pid = game.PlaceId
+local me = tostring(game.JobId or "")
+if type(pid) ~= "number" or pid == 0 or me == "" then
+F.Out("[换服] 拿不到 PlaceId/JobId(Studio 或非公共服) ⇒ 本次没执行")
+return false
+end
+local base = "https://games.roblox.com/v1/games/" .. tostring(pid) .. "/servers/Public?sortOrder=Asc&limit=100"
+local cursor, cands = nil, {}
+for _page = 1, 3 do
+local url = base
+if cursor and cursor ~= "" then url = url .. "&cursor=" .. tostring(cursor) end
+local raw = F.ServerFetch(url)
+if not raw then
+F.Out("[换服] ⚠ 拿不到服务器列表(HTTP 被挡或网络不通) ⇒ 本次没执行")
+return false
+end
+local okD, dec = pcall(function() return hs:JSONDecode(raw) end)
+if not (okD and type(dec) == "table" and type(dec.data) == "table") then
+F.Out("[换服] ⚠ 服务器列表解析失败 ⇒ 本次没执行")
+return false
+end
+local n = 0
+for i = 1, #dec.data do
+local sv = dec.data[i]
+if type(sv) == "table" then
+local id = tostring(sv.id or "")
+local pl = tonumber(sv.playing)
+local mx = tonumber(sv.maxPlayers)
+local notFull = (pl == nil or mx == nil or mx <= 0 or pl < mx)
+if id ~= "" and id ~= me and notFull then
+cands[#cands + 1] = id
+n = n + 1
+end
+end
+end
+if n > 0 then break end
+cursor = dec.nextPageCursor
+if type(cursor) ~= "string" or cursor == "" or cursor == "null" then break end
+end
+if #cands == 0 then
+F.Out("[换服] 没找到别的服务器(这游戏可能只有这一间, 或其它都满了) ⇒ 本次没执行")
+return false
+end
+local pick = cands[math.random(1, #cands)]
+F.Out("[换服] 可选 " .. tostring(#cands) .. " 间 ⇒ 随机去 " .. tostring(pick):sub(1, 12)
+.. " (已排除当前这间 " .. me:sub(1, 12) .. ")")
+pcall(function() Trans.Flush() end)
+local ok = pcall(function() ts:TeleportToPlaceInstance(pid, pick, LP) end)
+if ok then
+pcall(function() Fluent:Notify({ Title = "随机换服", Content = "正在前往另一间服务器…", Duration = 3 }) end)
+return true
+end
+local ok2 = pcall(function() ts:Teleport(pid, LP) end)
+if ok2 then
+F.Out("[换服] 指定服务器传送被挡 ⇒ 已改为随机传送(可能回到同一间)")
+pcall(function() Fluent:Notify({ Title = "随机换服", Content = "已改为随机传送(可能同服)", Duration = 3 }) end)
+else
+F.Out("[换服] 两种传送方式都被挡 ⇒ 本次没执行")
+end
+return ok2
+end
 F.Conn = { list = {} }
 function F.Conn.ClearAll()
 for _, c in pairs(F.Conn.list) do pcall(function() c:Disconnect() end) end
@@ -14526,6 +14603,10 @@ end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器", Callback = function()
 if not F.Once("rejoin", 6) then return end
 F.RejoinNow()
+end })
+Tabs.Setting:AddButton({ Title = "随机换服(去另一间服务器)", Callback = function()
+if not F.Once("hop", 8) then return end
+pcall(F.RandomServerHop)
 end })
 Tabs.Setting:AddButton({ Title = "一键全关", Callback = function()
 if not F.Once("alloff", 2) then return end
