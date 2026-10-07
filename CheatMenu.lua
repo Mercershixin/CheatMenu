@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 01:53 sha 69cad6ca bytes 544930'):format('2026-10-08 01:53','69cad6ca',544930))
+print(('[CheatMenu] build 2026-10-08 02:02 sha ee8c3958 bytes 545613'):format('2026-10-08 02:02','ee8c3958',545613))
 local F = {}
-F.VERSION = "v16.10.72"
+F.VERSION = "v16.10.73"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4686,20 +4686,17 @@ F._heliMode = mode
 local joint, wc, other = nil, nil, nil
 local kinds = {}
 pcall(function()
-local best, bestScore = nil, -1
+local bD, bS, bO, bK = nil, -1e9, nil, nil
 for _, d in ipairs(ch:GetDescendants()) do
 local cn = d.ClassName
-if d:IsA("JointInstance") then
+local isJoint = d:IsA("JointInstance")
+local isConn = (not isJoint) and (d:IsA("WeldConstraint") or d:IsA("Constraint"))
+if isJoint or isConn then
 kinds[cn] = (kinds[cn] or 0) + 1
-if d.Part0 == root then
-local nm = string.lower(d.Name)
-local sc = 0
-if nm:find("root", 1, true) then sc = sc + 5 end
-if d:IsA("Motor6D") then sc = sc + 3 end
-if sc > bestScore then best, bestScore = d, sc end
-end
-elseif d:IsA("WeldConstraint") or d:IsA("Constraint") then
-kinds[cn] = (kinds[cn] or 0) + 1
+local o = nil
+if isJoint then
+if d.Part0 == root then o = d.Part1 end
+else
 local p0, p1 = nil, nil
 if d:IsA("WeldConstraint") then
 p0, p1 = d.Part0, d.Part1
@@ -4710,14 +4707,28 @@ pcall(function() a1 = d.Attachment1 end)
 if a0 then p0 = a0.Parent end
 if a1 then p1 = a1.Parent end
 end
-if p0 == root and p1 ~= nil and p1 ~= root then
-if wc == nil then wc, other = d, p1 end
-elseif p1 == root and p0 ~= nil and p0 ~= root then
-if wc == nil then wc, other = d, p0 end
+if p0 == root then o = p1 elseif p1 == root then o = p0 end
+end
+if o ~= nil and o ~= root and o:IsA("BasePart") then
+local sc = 0
+local on = string.lower(o.Name)
+if on:find("torso", 1, true) or on:find("hip", 1, true) or on:find("spine", 1, true)
+or on:find("chest", 1, true) or on:find("upper", 1, true) or on:find("lower", 1, true)
+or on:find("root", 1, true) or on:find("humanoid", 1, true) then sc = sc + 50 end
+pcall(function() sc = sc - (root.Position - o.Position).Magnitude * 0.5 end)
+if isJoint then
+sc = sc + 2
+local jn = string.lower(d.Name)
+if jn:find("root", 1, true) then sc = sc + 5 end
+if d:IsA("Motor6D") then sc = sc + 1 end
+end
+if sc > bS then bD, bS, bO, bK = d, sc, o, (isJoint and "own" or "made") end
 end
 end
 end
-joint = best
+if bD then
+if bK == "own" then joint = bD else wc, other = bD, bO end
+end
 end)
 if joint then
 F._heliJoint = joint
@@ -4769,8 +4780,11 @@ for kk, vv in pairs(kinds) do ks[#ks + 1] = kk .. "=" .. tostring(vv) end
 end)
 F.Out("[旋转] 骨架: root=" .. root.ClassName .. " 子级" .. tostring(n) .. "[" .. table.concat(kids, ", ") .. "]")
 F.Out("[旋转] 连接件统计: " .. ((#ks > 0) and table.concat(ks, ", ") or "一个都没有")
-.. " ⇒ " .. (F._heliJoint and (F._heliJoint.Name .. "(" .. F._heliJoint.ClassName .. ")"
-.. (F._heliKind == "made" and "·自建接管" or "")) or "无连接件可用"))
+.. " ⇒ " .. (F._heliJoint and ((F._heliJoint.Name .. "(" .. F._heliJoint.ClassName .. ")")
+.. (F._heliKind == "made"
+and (" · 自建接管 连到 " .. tostring(other and other.Name) .. " · 已停用 " .. tostring(wc and wc.Name))
+or (" · 直接改它 连到 " .. tostring(F._heliJoint.Part1 and F._heliJoint.Part1.Name))))
+or "无连接件可用"))
 end
 if mode == 2 and F._heliCollOff == nil then
 F._heliCollOff = {}
