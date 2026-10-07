@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:33 sha 1cfd95c0 bytes 516387'):format('2026-10-07 19:33','1cfd95c0',516387))
+print(('[CheatMenu] build 2026-10-07 19:43 sha a265ea34 bytes 521006'):format('2026-10-07 19:43','a265ea34',521006))
 local F = {}
-F.VERSION = "v16.10.38"
+F.VERSION = "v16.10.39"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -201,7 +201,7 @@ local checkcaller   = checkcaller or function() return false end
 local getnamecallmethod = getnamecallmethod
 local dbgGetConstants = (debug and (debug.getconstants or debug.getconsts)) or getconstants or getconsts
 local dbgGetUpvalues  = (debug and (debug.getupvalues or debug.getupvals)) or getupvalues or getupvals
-local T = { TransModel = true }
+local T = { TransModel = true, NetLog = true }
 local C = {}
 local _gcCh, _gcHum, _gcRoot
 local function GC()
@@ -3745,7 +3745,7 @@ end
 F._trapConn = RS.Heartbeat:Connect(function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
-if now - (F._trapAt or 0) < 0.7 then return end
+if now - (F._trapAt or 0) < 1.5 then return end
 F._trapAt = now
 local _, _, root = GC()
 if not root then return end
@@ -5586,7 +5586,13 @@ end
 end)
 if best then
 F._myEgg = best
-F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」")
+pcall(function()
+if F._eggParentConn then pcall(function() F._eggParentConn:Disconnect() end) end
+F._eggParentConn = best:GetPropertyChangedSignal("Parent"):Connect(function()
+F._eggForce = true
+end)
+end)
+F.Out("[护蛋] 已锁定你手上的「" .. tostring(best.Name) .. "」(挂了「离手事件」⇒ 一被卸下立刻找回, 不等轮询)")
 pcall(function()
 local bp = best:IsA("Model") and (best.PrimaryPart or best:FindFirstChildWhichIsA("BasePart")) or (best:IsA("BasePart") and best) or nil
 if bp then
@@ -8439,7 +8445,7 @@ return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
-TrapWarn = true, SpeedGuard = true }
+TrapWarn = true, SpeedGuard = true, TransModel = true, NetLog = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -8452,7 +8458,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -10756,6 +10762,7 @@ Trans._readyTask = nil
 end)
 end
 function Trans.Enable()
+if T.TransModel == nil then T.TransModel = true end
 T.Translate = true
 Trans.Load()
 pcall(Trans.NumTplLoad)
@@ -10907,7 +10914,7 @@ pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end
 for k in pairs(T) do T[k] = false end
 local disables = {
 F.AntiFlingDisable, F.AntiRagdollDisable, F.AntiKnockdownDisable,
-F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
+F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.AutoInteractDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.HudDisable, F.CrosshairDisable, F.FovCircleDisable,
 F.CharPersistDisable, F.LivePlayersDisable,
 F.AntiAFKDisable, F.KickGuardPathsDisable,
 AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
@@ -12551,6 +12558,108 @@ end
 F.Out("[扫描·游戏接口·整段] 共整段摘出 " .. tostring(dumped) .. " 个脚本")
 end)
 end
+F.NETLOG_MAX = 1200
+F.NetLogSig = function(v)
+local t = type(v)
+if t == "string" then
+local x = v:gsub("%s+", " ")
+if #x > 26 then x = x:sub(1, 26) .. ".." end
+return 'str:"' .. x .. '"'
+elseif t == "number" then
+if v == math.floor(v) and math.abs(v) < 1e9 then return "num:" .. tostring(v) end
+return "num:~" .. tostring(math.floor(v))
+elseif t == "boolean" then return "bool:" .. tostring(v)
+elseif t == "nil" then return "nil"
+elseif t == "table" then return "table(" .. tostring(#v) .. ")"
+elseif t == "Vector3" then return "Vec3"
+elseif t == "CFrame" then return "CFrame"
+elseif t == "Color3" then return "Color3"
+elseif t == "Instance" then
+local c = "?"
+pcall(function() c = v.ClassName end)
+return "Inst:" .. c
+else return t end
+end
+F.NetLogHit = function(self, method, packed, n)
+if T.NetLog ~= true then return end
+local isInst = false
+pcall(function() isInst = (typeof(self) == "Instance") end)
+if not isInst then return end
+local cls = self.ClassName
+if cls ~= "RemoteEvent" and cls ~= "RemoteFunction" and cls ~= "UnreliableRemoteEvent" then return end
+local key = method .. "|" .. self:GetFullName()
+local rec = F._netSeen and F._netSeen[key]
+if rec then
+rec.n = rec.n + 1
+return
+end
+if (F._netTotal or 0) >= (F.NETLOG_MAX or 1200) then return end
+local sig = {}
+for i = 1, n do sig[i] = F.NetLogSig(packed[i]) end
+local full = "?"
+pcall(function()
+full = self:GetFullName()
+if #full > 118 then full = ".." .. full:sub(-116) end
+end)
+rec = { method = method, path = full, sig = table.concat(sig, ", "), n = 1 }
+F._netSeen[key] = rec
+F._netTotal = (F._netTotal or 0) + 1
+F._netOrder[#F._netOrder + 1] = key
+end
+F.NetLogEnable = function()
+if F._netHooked then T.NetLog = true return end
+if type(F._netSeen) ~= "table" then F._netSeen, F._netOrder, F._netTotal = {}, {}, 0 end
+local got = F.MetaInstall("__namecall", game, "CMNetLog", function(box)
+return function(self, ...)
+if T.NetLog ~= true then return box.orig(self, ...) end
+local m = getnamecallmethod and getnamecallmethod() or ""
+if m == "FireServer" or m == "InvokeServer" or m == "FireClient" or m == "InvokeClient" then
+local n = select("#", ...)
+if n > 0 then pcall(F.NetLogHit, self, m, table.pack(...), n) end
+end
+return box.orig(self, ...)
+end
+end)
+F._netHooked = got and true or false
+T.NetLog = true
+if F._netHooked then
+F.Out("[远程记录] 已开: 去重记录远程调用的「参数签名」 —— 同一条只存一次(上限 " .. tostring(F.NETLOG_MAX)
+.. " 条), 不憋内存 · 结果随「一键全扫描」一起输出")
+else
+F.Out("[远程记录] ⚠ 本执行器不支持元表钩(hookmetamethod) ⇒ 无法记录调用参数")
+end
+end
+F.NetLogDisable = function()
+T.NetLog = false
+if F._netHooked then pcall(function() F.MetaUninstall("__namecall", "CMNetLog") end) end
+F._netHooked = nil
+F.Out("[远程记录] 已关(已记到的结果仍可扫描输出)")
+end
+F.NetLogClear = function()
+F._netSeen, F._netOrder, F._netTotal = {}, {}, 0
+F.Out("[远程记录] 已清空记录")
+end
+F.NetLogReport = function()
+local order = F._netOrder or {}
+F.Out("[扫描·远程调用] ===== 记录到的远程调用参数(去重 " .. tostring(#order) .. " / " .. tostring(F.NETLOG_MAX) .. " 条) =====")
+if #order == 0 then
+F.Out("[扫描·远程调用] (还没记到 —— 开着「远程调用记录」去游戏里点几下再扫)")
+return
+end
+local list = {}
+for i = 1, #order do
+local r = F._netSeen[order[i]]
+if r then list[#list + 1] = r end
+end
+table.sort(list, function(a, b)
+if a.n ~= b.n then return a.n > b.n end
+return a.path < b.path
+end)
+for i = 1, #list do
+local r = list[i]
+F.Out("[扫描·远程调用] " .. tostring(r.n) .. "x " .. r.method .. " " .. r.path .. "  (" .. r.sig .. ")")
+end
+end
 F.CMX_ScanAll = function()
 pcall(F.RemoteList)
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
@@ -12599,6 +12708,9 @@ F.Out("[扫描] 没扫到名字像上报/封禁的远程")
 end
 end)
 pcall(F.ScanRoles)
+task.wait()
+pcall(F.NetLogReport)
+task.wait()
 pcall(function()
 local n = F.NpcScan()
 F.Out("[扫描·NPC] 场上识别到 " .. tostring(n) .. " 个 NPC/傀儡")
@@ -13968,6 +14080,12 @@ pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描")
+Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录(进游戏自动开 · 去重 · 随扫描输出)", Default = true, Callback = function(v)
+T.NetLog = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.NetLogEnable) else pcall(F.NetLogDisable) end
+end })
+Tabs.AC:AddButton({ Title = "清空远程调用记录", Callback = function() pcall(F.NetLogClear) end })
 Tabs.AC:AddButton({ Title = "一键全扫描", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
@@ -14436,5 +14554,8 @@ end)
 end)
 F.Try("AntiAFKEnable", F.AntiAFKEnable)
 F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
+task.delay(6, function()
+if T.NetLog ~= false then pcall(F.NetLogEnable) end
+end)
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
 pcall(F.CacheSync)
