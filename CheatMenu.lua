@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 00:22 sha bf5a62f9 bytes 533707'):format('2026-10-08 00:22','bf5a62f9',533707))
+print(('[CheatMenu] build 2026-10-08 00:27 sha d1b3d1d1 bytes 535754'):format('2026-10-08 00:27','d1b3d1d1',535754))
 local F = {}
-F.VERSION = "v16.10.65"
+F.VERSION = "v16.10.66"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3199,6 +3199,8 @@ end
 end)
 end
 end)
+F._risk = (#scripts > 0) and 2 or ((#conns > 0) and 1 or 0)
+F._riskScripts, F._riskConns = #scripts, #conns
 if verbose then
 F.Out(string.format("[客户端检测] 按名字扫到脚本 %d 个 · Heartbeat 上可疑连接 %d 条(共 %d 条连接)",
 #scripts, #conns, (function() local n = 0 pcall(function() n = #getconnections(RS.Heartbeat) end) return n end)()))
@@ -3230,6 +3232,10 @@ F.Out("   ★ 结论: 没有检测脚本, 但 Heartbeat 上有 " .. tostring(#co
 else
 F.Out("   ★ 结论: 客户端有防加速检测(脚本 " .. tostring(#scripts) .. " 个) ⇒ 先开「加速防拉回」档再加速")
 end
+F.Out("   ⇒ 档位联动: " .. (((#scripts == 0) and (#conns == 0))
+and "本服无检测 ⇒ 开加速/飞行时不自动升档(省性能), 被拉回再手动开「防护档位」"
+or ("开加速/飞行时会自动升到 ② 反拉回+伪装(检测脚本 "
+.. tostring(#scripts) .. " 个 · 可疑连接 " .. tostring(#conns) .. " 条)")))
 end
 return #scripts, #conns
 end
@@ -5425,8 +5431,22 @@ F.BypassAutoRaise = function(why)
 pcall(function()
 local t = tostring(T.BypassTier or "")
 if string.find(t, "②", 1, true) or string.find(t, "③", 1, true) or string.find(t, "④", 1, true) then return end
+if F._risk == nil then task.spawn(function() pcall(F.ScanClientChecks, false) end) end
+local risk = tonumber(F._risk)
+if risk == 0 then
+F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服客户端没扫到防加速/拉回检测(脚本 0 · 可疑连接 0)"
+.. " ⇒ 不自动升档(保持现状, 省性能)。若真被拉回, 手动把「防护档位」开到 ②")
+return
+end
+local rs, rc = tonumber(F._riskScripts) or 0, tonumber(F._riskConns) or 0
+if risk == nil then
 T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
-F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 自动把档位升到 ②(反拉回+伪装), 免得被服务端拉回/换位置")
+F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服还没扫过检测 ⇒ 按保守值自动升到 ②(反拉回+伪装)")
+else
+T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
+F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服检测: 脚本 " .. tostring(rs) .. " 个 · 可疑连接 "
+.. tostring(rc) .. " 条 ⇒ 自动升到 ② 反拉回+伪装, 免得被服务端拉回/换位置")
+end
 pcall(F.BypassTierApply, T.BypassTier)
 end)
 end
@@ -14016,6 +14036,21 @@ pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速", Default = false, Callback = function(v) F.SpeedSet(v) end })
+Tabs.Move:AddButton({ Title = "本服检测 / 档位自检(加速飞行前点一下)", Callback = function()
+if not F.Once("riskcheck", 4) then return end
+task.spawn(function()
+local a, b = F.ScanClientChecks(true)
+local lvl = ((a or 0) > 0) and 2 or (((b or 0) > 0) and 1 or 0)
+F.Out("[档位自检] 检测等级=" .. tostring(lvl) .. " · 绕过档位=" .. tostring(T.BypassTier or "关")
+.. " · 防护档位=" .. tostring(T.ACMaster or "关"))
+if lvl == 0 then
+F.Out("[档位自检] ⇒ 本服客户端没扫到防加速/拉回 ⇒ 加速/飞行可以放心用, 不需要开防护档(省性能)")
+else
+F.Out("[档位自检] ⇒ 本服有检测 ⇒ 建议先开「防护档位」②(反拉回+伪装), 仍被拉回再升 ③")
+end
+pcall(function() F.LogFlush("档位自检") end)
+end)
+end })
 Tabs.Move:AddSlider("SpeedValue", { Title = "加速速度", Min = 16, Max = 5000, Default = 60, Rounding = 0, Callback = function(v) C.SpeedValue = v F.SyncSpeedInput("speed", v) if T.SpeedOn then F.SpeedApply() end end })
 Tabs.Move:AddInput("SpeedValueIn", { Title = "加速速度 · 直接输入数字", Default = "60", Placeholder = "例如 500", Numeric = true, Callback = function(v)
 if F._slInGuard then return end
