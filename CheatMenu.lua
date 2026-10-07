@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:15 sha 8761476c bytes 507206'):format('2026-10-07 18:15','8761476c',507206))
+print(('[CheatMenu] build 2026-10-07 18:18 sha 9dfb1f83 bytes 508014'):format('2026-10-07 18:18','9dfb1f83',508014))
 local F = {}
-F.VERSION = "v16.10.23"
+F.VERSION = "v16.10.24"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3025,11 +3025,11 @@ end
 end
 function F.AntiKnockdownEnable()
 if F._antiKnockConn then return end
-F._antiKnockConn = RS.Heartbeat:Connect(function()
-if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
-local _, hum, root = GC()
-if not (hum and root) then return end
-if hum.Health <= 0 then return end
+local function fixNow()
+pcall(function()
+if not T.AntiKnockdown then return end
+local _, hum = GC()
+if not hum or hum.Health <= 0 then return end
 if T.FlyOn then return end
 local fixed = false
 if hum.PlatformStand then
@@ -3053,8 +3053,29 @@ end
 end
 end)
 end
+local function attach()
+local _, hum = GC()
+if not hum then return end
+if F._akState then pcall(function() F._akState:Disconnect() end) F._akState = nil end
+if F._akPS then pcall(function() F._akPS:Disconnect() end) F._akPS = nil end
+pcall(function() F._akState = hum.StateChanged:Connect(function() fixNow() end) end)
+pcall(function() F._akPS = hum:GetPropertyChangedSignal("PlatformStand"):Connect(fixNow) end)
+end
+F._akAttach = attach
+attach()
+F._antiKnockConn = RS.Heartbeat:Connect(function()
+if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
+if os.clock() - (F._akAt or 0) < 1 then return end
+F._akAt = os.clock()
+if F._akAttach then pcall(F._akAttach) end
+fixNow()
+end)
+end
 function F.AntiKnockdownDisable()
 if F._antiKnockConn then F._antiKnockConn:Disconnect() F._antiKnockConn = nil end
+if F._akState then pcall(function() F._akState:Disconnect() end) F._akState = nil end
+if F._akPS then pcall(function() F._akPS:Disconnect() end) F._akPS = nil end
+F._akAttach = nil
 end
 function F.PeekScript(inst)
 local code = nil
