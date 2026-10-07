@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 15:29 sha 35880263 bytes 498369'):format('2026-10-07 15:29','35880263',498369))
+print(('[CheatMenu] build 2026-10-07 15:42 sha c2a3a17a bytes 500764'):format('2026-10-07 15:42','c2a3a17a',500764))
 local F = {}
-F.VERSION = "v16.10.10"
+F.VERSION = "v16.10.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8920,10 +8920,58 @@ F.Out("[收起脑红] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_S
 pcall(function() Fluent:Notify({ Title = "收起脑红", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位发送(" .. tostring(n) .. " 次)", Duration = 10 }) end)
 end)
 end
+function F.CollectAllFindPlot()
+local cands = { "Plots", "Plot", "Bases", "Base", "PlotsClient", "PlotsFolder", "PlayerPlots" }
+for _, cn in ipairs(cands) do
+local c = workspace:FindFirstChild(cn)
+if c then
+for _, p in ipairs(c:GetChildren()) do
+local owner = nil
+pcall(function() owner = p:GetAttribute("Owner") end)
+if owner == nil then
+local ov = nil
+pcall(function() ov = p:FindFirstChild("Owner") end)
+if ov and ov:IsA("ValueBase") then owner = ov.Value end
+end
+if owner == LP or (type(owner) == "string" and owner == LP.Name) or tostring(owner) == LP.Name then
+return p, cn
+end
+end
+end
+end
+return nil
+end
+function F.CollectAllSlots(plot)
+local out = {}
+local pod = nil
+pcall(function() pod = plot:FindFirstChild("AnimalPodiums", true) end)
+if pod then
+for _, p in ipairs(pod:GetChildren()) do out[#out + 1] = p end
+end
+if #out == 0 then
+for _, d in ipairs(plot:GetDescendants()) do
+local num = tonumber(tostring(d.Name):match("^Slot[%s_%-]*(%d+)$"))
+if num and num >= 1 and num <= 60 then out[num] = d end
+end
+end
+return out
+end
+function F.CollectAllSlotPos(s)
+local pos = nil
+pcall(function()
+if s:IsA("BasePart") then pos = s.Position
+elseif s:IsA("Model") then
+local pp = s.PrimaryPart or s:FindFirstChildWhichIsA("BasePart", true)
+if pp then pos = pp.Position end
+if not pos then pos = s:GetPivot().Position end
+end
+end)
+return pos
+end
 function F.CollectAll(maxSlot)
 maxSlot = tonumber(maxSlot) or 30
 task.spawn(function()
-local node = game:GetService("ReplicatedStorage")
+local node = RStorage
 for _, seg in ipairs({ "Shared", "Packages", "Network", "rev_B_Collect" }) do
 local ok, child = pcall(function() return node:WaitForChild(seg, 5) end)
 if not (ok and child) then
@@ -8932,13 +8980,37 @@ return
 end
 node = child
 end
-local n = 0
+local _, hum, root = GC()
+if not root then F.Out("[收集货币] 没角色(没进游戏/重生中), 本次没动") return end
+local origin = root.CFrame
+local plot, cname = F.CollectAllFindPlot()
+if not plot then
+F.Out("[收集货币] ⚠ 找不到你的基地(试过 Plots/Plot/Bases/Base.., Owner 属性都非你) ⇒ 降级为原地直接发 remote")
+for i = 1, maxSlot do pcall(function() node:FireServer(i) end) task.wait(0.08) end
+F.Out("[收集货币] 已原地发送 " .. tostring(maxSlot) .. " 次(未 TP)")
+return
+end
+local slots = F.CollectAllSlots(plot)
+F.Out("[收集货币] 基地「" .. tostring(plot.Name) .. "」(" .. tostring(cname) .. ") · 槽位 " .. tostring(#slots) .. " 个 ⇒ 逐个 TP 过去收")
+local n, tp = 0, 0
 for i = 1, maxSlot do
+local s = slots[i]
+if s then
+local pos = F.CollectAllSlotPos(s)
+if pos then
+tp = tp + 1
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
+task.wait(0.1)
+end
+end
 if pcall(function() node:FireServer(i) end) then n = n + 1 end
 task.wait(0.08)
 end
-F.Out("[收集货币] 已逐个槽位 1~" .. tostring(maxSlot) .. " 发送 rev_B_Collect(共 " .. tostring(n) .. " 次)")
-pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已按 1~" .. tostring(maxSlot) .. " 逐个槽位收货币(" .. tostring(n) .. " 次)", Duration = 10 }) end)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.CFrame = origin end)
+F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地")
+pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已 TP 逐个槽位收完(" .. tostring(n) .. " 次)并回到原地", Duration = 8 }) end)
 end)
 end
 local SUFFIX = { k = 1e3, m = 1e6, b = 1e9, t = 1e12, q = 1e15, qa = 1e15, qi = 1e18, sx = 1e21, sp = 1e24, no = 1e30, dc = 1e33 }
@@ -13318,8 +13390,8 @@ Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
-Tabs.AFK:AddButton({ Title = "收集货币(一键收脑红赚的钱)", Callback = function()
-if not F.Once("collectall", 2) then return end
+Tabs.AFK:AddButton({ Title = "收集货币(TP 逐个槽位收完再回原地)", Callback = function()
+if not F.Once("collectall", 3) then return end
 task.spawn(function() pcall(F.CollectAll, 30) end)
 end })
 Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
