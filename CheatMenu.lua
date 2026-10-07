@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 12:55 sha 262c2db3 bytes 484859'):format('2026-10-07 12:55','262c2db3',484859))
+print(('[CheatMenu] build 2026-10-07 13:00 sha 65c53149 bytes 484880'):format('2026-10-07 13:00','65c53149',484880))
 local F = {}
-F.VERSION = "v16.10.1"
+F.VERSION = "v16.10.2"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8152,7 +8152,7 @@ F.Out("[热加载] 远端最新 " .. bestv .. " > 当前 " .. myv .. ", 开始�
 pcall(function() Fluent:Notify({ Title = "热加载", Content = "正在取 " .. bestv .. " …", Duration = 6 }) end)
 local keep, n = {}, 0
 for k, v in pairs(T) do
-if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
+if type(v) == "boolean" and v and k ~= "Translate" then keep[k] = true n = n + 1 end
 end
 task.spawn(function()
 local order = { best }
