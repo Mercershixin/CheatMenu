@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:27 sha db6840fe bytes 528316'):format('2026-10-07 20:27','db6840fe',528316))
+print(('[CheatMenu] build 2026-10-07 20:28 sha f506d076 bytes 531018'):format('2026-10-07 20:28','f506d076',531018))
 local F = {}
-F.VERSION = "v16.10.43"
+F.VERSION = "v17.0.0"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9406,6 +9406,8 @@ tot = tot + 1
 if Trans.Cache[en] ~= zh then Trans.Cache[en] = zh add = add + 1 end
 local lc = en:lower()
 if lc ~= en and Trans.Cache[lc] ~= zh then Trans.Cache[lc] = zh add = add + 1 end
+local uc = en:upper()
+if uc ~= en and uc ~= lc and Trans.Cache[uc] ~= zh then Trans.Cache[uc] = zh add = add + 1 end
 end
 return add, tot
 end
@@ -10393,6 +10395,16 @@ end
 Trans.Lookup = function(text)
 local hit = Trans.Cache[text]
 if type(hit) == "string" then return hit end
+local low = text:lower()
+if low ~= text then
+local h2 = Trans.Cache[low]
+if type(h2) == "string" then return h2 end
+end
+local up = text:upper()
+if up ~= text and up ~= low then
+local h3 = Trans.Cache[up]
+if type(h3) == "string" then return h3 end
+end
 return Trans.NumTplHit(text)
 end
 Trans.NumTplHit = function(text)
@@ -10625,6 +10637,76 @@ if #p > 160 then p = p:sub(-160) end
 Trans._pathCache[o] = p
 return p
 end
+Trans._locTr = nil
+Trans._locTried = false
+Trans._locMap = {}
+Trans._locN = 0
+Trans.LocInit = function()
+if Trans._locTried then return end
+Trans._locTried = true
+pcall(function()
+local LPl = game:GetService("Players").LocalPlayer
+if not LPl then return end
+local LS = game:GetService("LocalizationService")
+local ok, tr = pcall(function() return LS:GetTranslatorForPlayerAsync(LPl) end)
+if ok and tr then Trans._locTr = tr end
+end)
+end
+Trans.OfficialCN = function(obj)
+local ct = nil
+if pcall(function() ct = obj.ContentText end) and type(ct) == "string" and #ct > 0 then
+local s0 = nil
+pcall(function() s0 = obj.Text end)
+if ct ~= s0 and ct:find("[\228-\233]") then return ct end
+end
+if not Trans._locTr then return nil end
+local src = nil
+pcall(function() src = obj.Text end)
+if type(src) ~= "string" or #src == 0 then return nil end
+local hit = Trans._locMap[src]
+if hit == nil then
+local ok, a, b = pcall(function() return Trans._locTr:Translate(obj, src) end)
+if ok and type(a) == "string" and a ~= src and b ~= false and a:find("[\228-\233]") then
+hit = a
+else
+hit = false
+end
+if Trans._locN < 6000 then
+Trans._locMap[src] = hit
+Trans._locN = Trans._locN + 1
+else
+Trans._locMap = { [src] = hit }
+Trans._locN = 1
+end
+end
+if hit then return hit end
+return nil
+end
+Trans.RevertOfficial = function(obj)
+local rr = Trans.Reg[obj]
+if type(rr) ~= "table" then return end
+if type(rr.Text) == "string" then
+local cur = nil
+pcall(function() cur = obj.Text end)
+if cur ~= rr.Text then pcall(function() obj.Text = rr.Text end) end
+end
+if type(rr.PlaceholderText) == "string" then
+local curP = nil
+pcall(function() curP = obj.PlaceholderText end)
+if curP ~= rr.PlaceholderText then pcall(function() obj.PlaceholderText = rr.PlaceholderText end) end
+end
+end
+Trans.SkipOfficial = function(obj)
+Trans._offCN = (Trans._offCN or 0) + 1
+if not Trans._offCNLogged and Trans._offCN >= 5 then
+Trans._offCNLogged = true
+F.Out("[翻译] 检测到游戏自带官方中文(" .. tostring(Trans._offCN) .. " 条) ⇒ 这类文字保留游戏原文, 不再翻译")
+end
+Trans._selfCN[obj] = true
+local p = Trans.PathOf(obj)
+if p ~= "" then Trans._selfCNPath[p] = true end
+Trans.RevertOfficial(obj)
+end
 Trans.MarkSelfCN = function(obj, txt)
 if type(txt) ~= "string" then return end
 if not txt:find("[\228-\233]") or txt:find("%a%a") then return end
@@ -10656,6 +10738,10 @@ if not Trans._indexLogged and Trans._indexSkip >= 5 then
 Trans._indexLogged = true
 F.Out("[翻译] 已识别图鉴/索引类面板 ⇒ 里面的内容全部不翻(已跳过 " .. tostring(Trans._indexSkip) .. " 条)")
 end
+return
+end
+if Trans.OfficialCN(obj) then
+Trans.SkipOfficial(obj)
 return
 end
 if Trans._selfCNPath[Trans.PathOf(obj)] then
@@ -10704,8 +10790,13 @@ if now:find("[\228-\233]") and not now:find("%a%a") then
 return
 end
 if Trans._selfCN[obj] then return end
-if Trans.Should(now) and Trans.Cache[now] then
-Trans.WriteText(obj, "Text", Trans.Cache[now], now)
+if Trans.OfficialCN(obj) then
+Trans.SkipOfficial(obj)
+return
+end
+local cv = Trans.Lookup(now)
+if Trans.Should(now) and cv then
+Trans.WriteText(obj, "Text", cv, now)
 return
 end
 pcall(Trans.GuiEl, obj, true)
@@ -11055,6 +11146,7 @@ Trans.ApplyMode(false)
 end
 pcall(Trans.Scan)
 Trans.WatchOn()
+task.spawn(Trans.LocInit)
 pcall(Trans.ChatWatch)
 if not Trans.Loop then
 Trans.Loop = task.spawn(function()
