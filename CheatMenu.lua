@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 13:22 sha 4847cdad bytes 496608'):format('2026-10-07 13:22','4847cdad',496608))
+print(('[CheatMenu] build 2026-10-07 13:25 sha dd03ea01 bytes 496607'):format('2026-10-07 13:25','dd03ea01',496607))
 local F = {}
-F.VERSION = "v16.10.4"
+F.VERSION = "v16.10.5"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10917,7 +10917,7 @@ Title = "CheatMenu",
 SubTitle = F.VERSION,
 TabWidth = _phone and math.clamp(math.floor(_w / 8), 50, 66) or 100,
 Size = UDim2.fromOffset(_w, _h),
-Acrylic = false,
+Acrylic = true,
 Theme = "Aqua",
 MinimizeKey = Enum.KeyCode.G,
 })
