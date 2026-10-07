@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 12:38 sha c6fbb2ec bytes 484758'):format('2026-10-07 12:38','c6fbb2ec',484758))
+print(('[CheatMenu] build 2026-10-07 12:45 sha 7f1fab18 bytes 484802'):format('2026-10-07 12:45','7f1fab18',484802))
 local F = {}
-F.VERSION = "v16.9.99"
+F.VERSION = "v16.9.100"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13022,8 +13022,9 @@ while true do
 task.wait(1)
 if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
-local md = Trans._ready and "✅ 模型已连接" or "❌ 未连接模型"
-transStatBtn:SetTitle(string.format("%s · 已翻 %d 条%s", md, Trans._cnt or 0, Trans._diagText or ""))
+local md = Trans._ready and "✅ 已连接" or "❌ 未连接"
+transStatBtn:SetTitle(string.format("%s · 待翻译 %d · 已翻译 %d · 已保存 %d 次",
+md, #(Trans.Queue or {}), Trans._cnt or 0, Trans._saveCount or 0))
 end)
 end
 end
