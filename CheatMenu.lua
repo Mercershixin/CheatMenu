@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 21:25 sha 1ed807de bytes 529367'):format('2026-10-07 21:25','1ed807de',529367))
+print(('[CheatMenu] build 2026-10-07 21:27 sha 187c5b10 bytes 530308'):format('2026-10-07 21:27','187c5b10',530308))
 local F = {}
-F.VERSION = "v16.10.52"
+F.VERSION = "v16.10.53"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -10348,9 +10348,9 @@ Trans._cnt = #keep
 end
 end
 local tplS, vals, kinds = Trans.TplBuild(text)
-if #vals == 1 and kinds[1] == "n" and #tplS >= 8 then
+if Trans.TplOK(vals, kinds, tplS) then
 local tplTr2, valsTr2, kindsTr2 = Trans.TplBuild(tr)
-if #valsTr2 == 1 and kindsTr2[1] == "n" and valsTr2[1] == vals[1] then
+if Trans.TplSame(vals, kinds, valsTr2, kindsTr2) then
 if Trans.NumTpl[tplS] ~= tplTr2 then
 Trans.NumTpl[tplS] = tplTr2
 Trans._numTplDirty = true
@@ -10400,14 +10400,40 @@ end
 end
 return table.concat(out), vals, kinds
 end
+Trans.TplOK = function(vals, kinds, tpl)
+if type(tpl) ~= "string" or #tpl < 8 then return false end
+if type(vals) ~= "table" or type(kinds) ~= "table" then return false end
+local n = #vals
+if n < 1 or n > 3 then return false end
+for i = 1, n do
+if kinds[i] ~= "n" then return false end
+end
+return true
+end
+Trans.TplSame = function(v1, k1, v2, k2)
+if type(v1) ~= "table" or type(v2) ~= "table" then return false end
+if #v1 ~= #v2 or #v1 < 1 then return false end
+for i = 1, #v1 do
+if k1[i] ~= "n" or k2[i] ~= "n" then return false end
+if tostring(v1[i]) ~= tostring(v2[i]) then return false end
+end
+return true
+end
+Trans.TplFill = function(trTpl, vals)
+local out = trTpl
+for i = 1, #vals do
+out = out:gsub("\1", (tostring(vals[i]):gsub("%%", "%%%%")), 1)
+end
+return out
+end
 Trans.TplFromCache = function()
 local n = 0
 for k, v in pairs(Trans.Cache) do
 if type(k) == "string" and type(v) == "string" then
 local tplS, vals, kinds = Trans.TplBuild(k)
-if #vals == 1 and kinds[1] == "n" and #tplS >= 8 then
+if Trans.TplOK(vals, kinds, tplS) then
 local tplTr, v2, k2 = Trans.TplBuild(v)
-if #v2 == 1 and k2[1] == "n" and v2[1] == vals[1] then
+if Trans.TplSame(vals, kinds, v2, k2) then
 if Trans.NumTpl[tplS] ~= tplTr then
 Trans.NumTpl[tplS] = tplTr
 n = n + 1
@@ -10533,17 +10559,23 @@ if up ~= text and up ~= low then
 local h3 = Trans.Cache[up]
 if type(h3) == "string" then return h3 end
 end
+local trim = text:gsub("^[%s%p]+", ""):gsub("[%s%p]+$", "")
+if trim ~= text and #trim >= 2 then
+local h4 = Trans.Cache[trim]
+if type(h4) == "string" then return h4 end
+local h5 = Trans.Cache[trim:lower()]
+if type(h5) == "string" then return h5 end
+end
 return Trans.NumTplHit(text)
 end
 Trans.NumTplHit = function(text)
 if not text or #text > 200 then return nil end
-local hasD = text:find("%d", 1)
-if not hasD then return nil end
+if not text:find("%d", 1) then return nil end
 local tpl, vals, kinds = Trans.TplBuild(text)
-if #vals ~= 1 or kinds[1] ~= "n" or #tpl < 8 then return nil end
+if not Trans.TplOK(vals, kinds, tpl) then return nil end
 local trTpl = Trans.NumTpl[tpl]
 if type(trTpl) ~= "string" or trTpl == "" then return nil end
-local filled = trTpl:gsub("\1", vals[1])
+local filled = Trans.TplFill(trTpl, vals)
 if filled == "" or filled == text then return nil end
 return filled
 end
