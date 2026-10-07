@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:37 sha b9db95ef bytes 533740'):format('2026-10-07 20:37','b9db95ef',533740))
+print(('[CheatMenu] build 2026-10-07 20:49 sha 4ac8b8b5 bytes 524551'):format('2026-10-07 20:49','4ac8b8b5',524551))
 local F = {}
-F.VERSION = "v16.10.45"
+F.VERSION = "v16.10.46"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8457,7 +8457,7 @@ if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable }) do pcall(fn) end
+for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
@@ -10476,126 +10476,6 @@ else Trans.Queue[#Trans.Queue + 1] = entry end
 end
 Trans.Drain()
 end
-Trans.IsWorldChat = function(msg)
-if type(msg) ~= "table" then return false end
-local okC, chName = pcall(function() return msg.TextChannel and msg.TextChannel.Name or "" end)
-local ch = okC and tostring(chName) or ""
-local low = string.lower(ch)
-if low:find("world", 1, true) or low:find("global", 1, true) or low:find("cross", 1, true)
-or ch:find("世界", 1, true) or ch:find("全服", 1, true) or ch:find("全区", 1, true) then
-return true
-end
-local txt = msg.Text
-if type(txt) == "string" then
-local tag = txt:match("^%s*[%[【]([^%]】]+)[%]】]")
-if tag then
-local tl = string.lower(tag)
-if tl:find("world", 1, true) or tl:find("global", 1, true) or tag:find("世界", 1, true)
-or tag:find("全服", 1, true) or tag:find("全区", 1, true) or tag:find("跨服", 1, true) then
-return true
-end
-end
-end
-local src = msg.TextSource
-if src then
-local found = false
-pcall(function()
-for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
-if pl.UserId == src.UserId then found = true break end
-end
-end)
-if not found then return true end
-end
-return false
-end
-Trans.ChatWatch = function()
-if Trans._chatHooked then return end
-Trans._chatHooked = true
-local LPl = game:GetService("Players").LocalPlayer
-local function mine(msg)
-if not LPl then return false end
-local src = msg and msg.TextSource
-if not src then return false end
-local okS, same = pcall(function() return src.UserId == LPl.UserId end)
-return okS and same
-end
-local function pick(text)
-if type(text) ~= "string" or text == "" then return nil end
-local hit = Trans.Cache[text]
-if type(hit) == "string" and hit ~= "" then return hit end
-if T.Translate and Trans.Should(text) then
-Trans.Async(text, function() end)
-end
-return nil
-end
-local okTcs = pcall(function()
-local tcs = game:GetService("TextChatService")
-if not tcs then error("no-tcs") end
-tcs.OnIncomingMessage = function(msg)
-if not T.Translate or type(msg) ~= "table" then return nil end
-if mine(msg) then return nil end
-if Trans.IsWorldChat(msg) then
-if not Trans._worldNote then
-Trans._worldNote = true
-F.Out("[翻译] 世界/跨服频道已跳过(只翻本地频道与同服玩家)")
-end
-return nil
-end
-local tr = pick(msg.Text)
-if not tr or tr == msg.Text then return nil end
-local props = nil
-pcall(function()
-props = Instance.new("TextChatMessageProperties")
-props.Text = tr
-end)
-return props
-end
-tcs.OnBubbleAdded = function(msg, adornee)
-if not T.Translate or type(msg) ~= "table" then return nil end
-if mine(msg) then return nil end
-local tr = pick(msg.Text)
-if not tr or tr == msg.Text then return nil end
-local props = nil
-pcall(function()
-props = Instance.new("TextChatMessageProperties")
-props.Text = tr
-end)
-return props
-end
-end)
-if not okTcs then
-F.Out("[翻译] ⚠ 本游戏聊天不走 TextChatService ⇒ 聊天无法原地替换(界面翻译不受影响)")
-end
-Trans._chatConns = {}
-pcall(function()
-local ps = game:GetService("Players")
-local function hookPl(pl)
-Trans._chatConns[#Trans._chatConns + 1] = pl.Chatted:Connect(function(text)
-if not T.Translate or type(text) ~= "string" or text == "" then return end
-if pl == LPl then return end
-if Trans.Cache[text] then return end
-if Trans.Should(text) then Trans.Async(text, function() end) end
-end)
-end
-for _, pl in ipairs(ps:GetPlayers()) do hookPl(pl) end
-Trans._playerAddedConn = ps.PlayerAdded:Connect(hookPl)
-end)
-end
-Trans.ChatUnwatch = function()
-pcall(function()
-local tcs = game:GetService("TextChatService")
-if tcs then
-tcs.OnIncomingMessage = nil
-tcs.OnBubbleAdded = nil
-end
-end)
-if Trans._chatConns then
-for i = 1, #Trans._chatConns do pcall(function() Trans._chatConns[i]:Disconnect() end) end
-Trans._chatConns = nil
-end
-if Trans._playerAddedConn then pcall(function() Trans._playerAddedConn:Disconnect() end) Trans._playerAddedConn = nil end
-Trans._chatHooked = nil
-end
 function F.IsOfficialUI(obj)
 local p = obj
 for _ = 1, 20 do
@@ -10604,7 +10484,7 @@ if not p then return false end
 local nm = p.Name
 if type(nm) == "string" then
 local ln = string.lower(nm)
-if ln:find("chat") then return false end
+if ln:find("chat") then return true end
 if Trans.OFFICIAL[ln] then return true end
 end
 end
@@ -11082,68 +10962,6 @@ end
 Trans.WatchOff = function()
 if Trans._watchConn then pcall(function() Trans._watchConn:Disconnect() end) Trans._watchConn = nil end
 end
-F.ChatSend = function(msg)
-local sent = false
-pcall(function()
-local tcs = game:GetService("TextChatService")
-local tch = tcs and tcs:FindFirstChild("TextChannels")
-local ch = tch and (tch:FindFirstChild("RBXGeneral") or tch:FindFirstChild("SayChannel"))
-if ch and ch:IsA("TextChannel") then
-if pcall(function() ch:SendAsync(msg) end) then sent = true end
-end
-end)
-if not sent then
-pcall(function()
-local chat = game:GetService("Chat")
-if chat and chat.Chat then
-chat:Chat(game:GetService("Players").LocalPlayer, msg, "All")
-sent = true
-end
-end)
-end
-if not sent then
-pcall(function()
-local legacy = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
-local req = legacy and legacy:FindFirstChild("SayMessageRequest")
-if req then
-req:FireServer(msg, "All")
-sent = true
-end
-end)
-end
-return sent
-end
-F.ChatSendTranslated = function(msg)
-task.spawn(function()
-local lang = C.TransLang or "en"
-if Trans.IsMobile then
-F.Out("[翻译发出] 📱 手机/平板没有本地模型, 无法翻译发出")
-return
-end
-if not Trans._ready then
-if not Trans.Health() then
-F.Out("[翻译发出] ⚠ 需要连本地模型才能翻发出 ⇒ 请打开「连本地模型实时翻译」开关并确保模型已启动(原文留在框里不丢)")
-return
-end
-Trans._ready = true
-end
-Trans._urgent = true
-Trans._urgentAt = os.clock()
-local okU, tr = pcall(Trans.Translate, msg, true, lang)
-Trans._urgent = false
-if not okU then tr = nil end
-if not tr then
-F.Out("[翻译发出] ⚠ 翻译失败 ⇒ 本次没发出(原文留在框里不丢)")
-return
-end
-local okSend = F.ChatSend(tr)
-if okSend then
-F.Out("[翻译发出] " .. tostring(msg) .. " → " .. tr .. " (" .. tostring(lang) .. ")")
-else
-F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏不允许客户端发言")
-end
-end)
-end
 Trans.ApplyMode = function(quiet)
 if not T.Translate then return end
 if Trans.IsMobile then
@@ -11180,7 +10998,6 @@ if Trans.Health() then
 Trans._ready = true
 F.Out("[翻译] ✅ 本地模型已就绪 ⇒ 继续翻译")
 pcall(Trans.Scan)
-pcall(Trans.ChatWatch)
 end
 end
 end
@@ -11218,7 +11035,6 @@ end
 pcall(Trans.Scan)
 Trans.WatchOn()
 task.spawn(Trans.LocInit)
-pcall(Trans.ChatWatch)
 if not Trans.Loop then
 Trans.Loop = task.spawn(function()
 while T.Translate do
@@ -11250,7 +11066,6 @@ function Trans.Disable()
 T.Translate = false
 Trans._ready = false
 Trans.WatchOff()
-Trans.ChatUnwatch()
 Trans.Loop = nil
 pcall(Trans.Flush)
 local n = 0
@@ -11270,82 +11085,6 @@ end)
 end
 return r
 end
-function F.ChatTranslateEnable() return Trans.Enable() end
-function F.ChatTranslateDisable() end
-function F.BubbleTranslateEnable() end
-function F.BubbleTranslateDisable() end
-F.ChatInputBuild = function()
-if F._ciGui and F._ciGui.Parent then return F._ciGui end
-local LPl = game:GetService("Players").LocalPlayer
-local pg = LPl and LPl:FindFirstChild("PlayerGui")
-if not pg then return nil end
-local sg = Instance.new("ScreenGui")
-sg.Name = "CM_ChatInput"
-sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true
-sg.DisplayOrder = 999
-pcall(function() sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling end)
-pcall(function() sg:SetAttribute("CMOwned", true) end)
-local frame = Instance.new("Frame")
-frame.Name = "Bar"
-frame.Size = UDim2.new(0, 440, 0, 46)
-frame.Position = UDim2.new(0.5, -220, 1, -84)
-frame.BackgroundColor3 = Color3.fromRGB(26, 26, 30)
-frame.BackgroundTransparency = 0.12
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Parent = sg
-pcall(function() frame.Draggable = true end)
-local cr = Instance.new("UICorner")
-cr.CornerRadius = UDim.new(0, 8)
-cr.Parent = frame
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(96, 96, 108)
-stroke.Thickness = 1
-stroke.Transparency = 0.35
-stroke.Parent = frame
-local box = Instance.new("TextBox")
-box.Name = "CM_ChatInputBox"
-box.Size = UDim2.new(1, -20, 1, -14)
-box.Position = UDim2.new(0, 10, 0, 7)
-box.BackgroundTransparency = 1
-box.TextColor3 = Color3.fromRGB(238, 238, 244)
-box.PlaceholderText = "输入中文 → 回车 → 翻成目标语言后发出"
-box.PlaceholderColor3 = Color3.fromRGB(140, 140, 152)
-box.Font = Enum.Font.Gotham
-box.TextSize = 16
-box.TextXAlignment = Enum.TextXAlignment.Left
-box.ClearTextOnFocus = false
-box.Text = ""
-box.Parent = frame
-box.FocusLost:Connect(function(enter)
-if not enter then return end
-local txt = box.Text
-box.Text = ""
-if type(txt) ~= "string" then return end
-txt = txt:gsub("^%s+", ""):gsub("%s+$", "")
-if txt == "" then return end
-task.spawn(function() pcall(F.ChatSendTranslated, txt) end)
-end)
-pcall(function() sg.Parent = pg end)
-F._ciGui = sg
-F._ciBox = box
-return sg
-end
-F.ChatInputShow = function(on)
-if not on then
-if F._ciGui then pcall(function() F._ciGui.Enabled = false end) end
-return
-end
-local sg = F.ChatInputBuild()
-if sg then pcall(function() sg.Enabled = true end) end
-end
-function F.ChatIMEBoxEnable() F.ChatInputShow(true) end
-function F.ChatIMEBoxDisable() F.ChatInputShow(false) end
-function F.ChatBoxSet(on)
-T.ChatIMEBox = on and true or false
-F.ChatInputShow(on)
-end
 local function UnloadAll()
 pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end end)
 for k in pairs(T) do T[k] = false end
@@ -11358,7 +11097,7 @@ AC.WatchNewRemotesDisable, AC.WatchNewScriptsDisable, AC.TrapDisable.Disable,
 AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.AntiPauseDisable, AC.UninstallIndexMask,
 AC.UninstallSetmetatableHook, AC.UninstallNamecallHook,
 F.GuiProtectionDisable,
-F.TranslateDisable, F.ChatTranslateDisable, F.BubbleTranslateDisable, F.ChatIMEBoxDisable,
+F.TranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
@@ -14368,19 +14107,6 @@ end })
 Tabs.Trans:AddButton({ Title = "清空全部缓存(所有游戏)", Callback = function()
 task.spawn(function() pcall(Trans.ClearAll) end)
 end })
-Tabs.Trans:AddSection("② 翻译发出(打中文 → 翻成目标语言发出)")
-Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
-T.ChatInput = v and true or false
-if F._cfgSyncing then return end
-pcall(F.ChatInputShow, v)
-end })
-Tabs.Trans:AddDropdown("TransLang", { Title = "翻译发出语言", Values = { "英文", "日语", "韩语", "泰语", "俄语", "阿拉伯语", "印尼语", "中文" },
-Default = "英文", Callback = function(v)
-local code = ({ ["英文"] = "en", ["日语"] = "ja", ["韩语"] = "ko", ["泰语"] = "th", ["俄语"] = "ru", ["阿拉伯语"] = "ar", ["印尼语"] = "id", ["中文"] = "zh" })[tostring(v)] or "en"
-C.TransLang = code
-if F._cfgSyncing then return end
-F.Out("[翻译发出] 目标语言已选 " .. tostring(v))
-end })
 Tabs.Trans:AddButton({ Title = "模型自检(检查本地模型能不能用)", Callback = function()
 task.spawn(function()
 local okP, okR, info = pcall(Trans.Probe)
@@ -14808,7 +14534,7 @@ end
 end)
 end
 F.CFG_NOSYNC = { AimOn = true }
-F.CFG_APPLY_SKIP = { TransLang = true, TransScope = true }
+F.CFG_APPLY_SKIP = {}
 F.ApplySavedOn = function(quiet)
 if F._applyingSaved then return 0 end
 F._applyingSaved = true
