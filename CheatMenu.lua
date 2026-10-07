@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:03 sha 79025a83 bytes 528221'):format('2026-10-07 20:03','79025a83',528221))
+print(('[CheatMenu] build 2026-10-07 20:09 sha db6840fe bytes 528316'):format('2026-10-07 20:09','db6840fe',528316))
 local F = {}
-F.VERSION = "v16.10.42"
+F.VERSION = "v16.10.43"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -201,7 +201,7 @@ local checkcaller   = checkcaller or function() return false end
 local getnamecallmethod = getnamecallmethod
 local dbgGetConstants = (debug and (debug.getconstants or debug.getconsts)) or getconstants or getconsts
 local dbgGetUpvalues  = (debug and (debug.getupvalues or debug.getupvals)) or getupvalues or getupvals
-local T = { TransModel = true, NetLog = true }
+local T = {}
 local C = {}
 local _gcCh, _gcHum, _gcRoot
 local function GC()
@@ -8291,7 +8291,7 @@ F.Out("[热加载] 远端最新 " .. bestv .. " > 当前 " .. myv .. ", 开始�
 pcall(function() Fluent:Notify({ Title = "热加载", Content = "正在取 " .. bestv .. " …", Duration = 6 }) end)
 local keep, n = {}, 0
 for k, v in pairs(T) do
-if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
+if type(v) == "boolean" and v and k ~= "TransModel" and k ~= "NetLog" then keep[k] = true n = n + 1 end
 end
 task.spawn(function()
 local order = { best }
@@ -8413,7 +8413,7 @@ if F._reloading then return false end
 F._reloading = true
 local keep, n = {}, 0
 for k, v in pairs(T) do
-if type(v) == "boolean" and v then keep[k] = true n = n + 1 end
+if type(v) == "boolean" and v and k ~= "TransModel" and k ~= "NetLog" then keep[k] = true n = n + 1 end
 end
 local src, sv = nil, nil
 pcall(function()
@@ -8444,7 +8444,7 @@ return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
-TrapWarn = true, SpeedGuard = true, TransModel = true, NetLog = true }
+TrapWarn = true, SpeedGuard = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -10637,6 +10637,13 @@ Trans.GuiEl = function(obj, urgent)
 if not obj or not obj.Parent then return end
 local cls = obj.ClassName
 if cls ~= "TextLabel" and cls ~= "TextButton" and cls ~= "TextBox" then return end
+do
+local par = obj.Parent
+if typeof(par) == "Instance" then
+local pc = par.ClassName
+if pc == "TextLabel" or pc == "TextButton" or pc == "TextBox" then return end
+end
+end
 if obj.Visible == false then return end
 if Trans.TextVisible(obj) == false then return end
 local tt = obj.TextTransparency
@@ -11019,7 +11026,6 @@ Trans._readyTask = nil
 end)
 end
 function Trans.Enable()
-if T.TransModel == nil then T.TransModel = true end
 pcall(function() Trans.WorldGuiOn() end)
 pcall(function()
 F.GlossLoad(true)
@@ -11645,9 +11651,7 @@ F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofMiss = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofGen = 1
 F.CMX_SpoofKey = {
-AssemblyLinearVelocity = true, Velocity = true,
-AssemblyAngularVelocity = true, RotVelocity = true,
-Position = true, CFrame = true,
+Velocity = true, AssemblyLinearVelocity = true,
 }
 F.CMX_SmoothPos = function(t, real)
 local now = os.clock()
@@ -11737,6 +11741,9 @@ if not F.CMX_SpoofKey[k] then return box.orig(t, k) end
 if F.CMX_IsCaller() then return box.orig(t, k) end
 if typeof(t) ~= "Instance" then return box.orig(t, k) end
 if not F.CMX_IsOwnPart(t) then return box.orig(t, k) end
+if k == "Position" or k == "CFrame" or k == "AssemblyAngularVelocity" or k == "RotVelocity" then
+return box.orig(t, k)
+end
 if (k == "Position" or k == "CFrame") and not T.CMX_SpoofPos then return box.orig(t, k) end
 if k == "AssemblyLinearVelocity" or k == "Velocity" then
 local v = box.orig(t, k)
@@ -12880,10 +12887,16 @@ if type(F._netSeen) ~= "table" then F._netSeen, F._netOrder, F._netTotal = {}, {
 local got = F.MetaInstall("__namecall", game, "CMNetLog", function(box)
 return function(self, ...)
 if T.NetLog ~= true then return box.orig(self, ...) end
-local m = getnamecallmethod and getnamecallmethod() or ""
+local NA = select("#", ...)
+if NA > 0 then
+local packed = table.pack(...)
+pcall(function()
+local m = nil
+pcall(function() m = getnamecallmethod and getnamecallmethod() or nil end)
 if m == "FireServer" or m == "InvokeServer" or m == "FireClient" or m == "InvokeClient" then
-local n = select("#", ...)
-if n > 0 then pcall(F.NetLogHit, self, m, table.pack(...), n) end
+pcall(F.NetLogHit, self, m, packed, NA)
+end
+end)
 end
 return box.orig(self, ...)
 end
@@ -14138,7 +14151,7 @@ Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
-Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(关掉=只用缓存, 不发请求)", Default = true, Callback = function(v)
+Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(默认关 · 只用缓存汉化)", Default = false, Callback = function(v)
 T.TransModel = v and true or false
 if F._cfgSyncing then return end
 if T.Translate then pcall(Trans.ApplyMode, false) end
@@ -14257,8 +14270,6 @@ F.Try("AntiFlingEnable", F.AntiFlingEnable)
 pcall(F.AuthorityGuard, true)
 F.Try("GuiProtectionEnable", F.GuiProtectionEnable)
 F.Try("CharPersistEnable", F.CharPersistEnable)
-T.CMX_SpoofIndex = true
-F.Try("CMX_SpoofIndexEnable", F.CMX_SpoofIndexEnable)
 if lvl >= 2 then
 T.CMX_AntiBanAll = true
 pcall(F.CMX_InboundWatchSet, true)
@@ -14302,7 +14313,7 @@ pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描")
-Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录(进游戏自动开 · 去重 · 随扫描输出)", Default = true, Callback = function(v)
+Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录(默认关 · 去重 · 随扫描输出 · 要手动开)", Default = false, Callback = function(v)
 T.NetLog = v and true or false
 if F._cfgSyncing then return end
 if v then pcall(F.NetLogEnable) else pcall(F.NetLogDisable) end
@@ -14776,8 +14787,5 @@ end)
 end)
 F.Try("AntiAFKEnable", F.AntiAFKEnable)
 F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
-task.delay(6, function()
-if T.NetLog ~= false then pcall(F.NetLogEnable) end
-end)
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
 pcall(F.CacheSync)
