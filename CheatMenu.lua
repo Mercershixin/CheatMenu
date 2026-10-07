@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 18:52 sha 1c99695c bytes 523349'):format('2026-10-07 18:52','1c99695c',523349))
+print(('[CheatMenu] build 2026-10-07 18:55 sha 1cb00751 bytes 526589'):format('2026-10-07 18:55','1cb00751',526589))
 local F = {}
-F.VERSION = "v16.10.30"
+F.VERSION = "v16.10.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9398,6 +9398,45 @@ Achievement->成就, Badge->徽章, Streak->连胜, Combo->连击, Critical->暴
 Buff->增益, Debuff->减益, Cooldown->冷却, Energy->能量, Stamina->体力, Team->队伍, Squad->小队, Guild->公会,
 Friend->好友, Party->组队, Gift->礼物, Mail->邮件, Notification->通知, Options->选项, Graphics->画质, Audio->音效,
 Controls->操作, Quit->退出, Exit->退出, Resume->继续, Retry->重试, Loading->加载中, Please Wait->请稍候, Connecting->连接中.
+Health->生命值, Armor->护甲, Weapon->武器, Melee->近战, Ranged->远程,
+Gun->枪, Pistol->手枪, Rifle->步枪, Shotgun->霰弹枪, Sniper->狙击枪,
+Bow->弓, Arrow->箭, Sword->剑, Axe->斧头, Dagger->匕首,
+Wand->法杖, Clip->弹匣, Fire Rate->射速, Recoil->后坐力, Spread->散布,
+Accuracy->精准度, Crit->暴击, Kill Streak->连杀, Assist->助攻, Revive->救起队友,
+Knockdown->击倒, Stun->眩晕, Poison->中毒, Burn->灼烧, Freeze->冰冻,
+Slow->减速, Immunity->免疫, Invincible->无敌, Arena->竞技场, Duel->决斗,
+Boss->首领, Minion->小怪, Elite->精英, Wave->波次, Draw->平局,
+Class->职业, Perk->特长, Ability->技能, Ultimate->终极技能, Mana->法力,
+Parry->招架, Counter->反击, Hitbox->判定框, Respawn Time->复活时间, Lifesteal->吸血,
+Thorns->反伤,
+Currency->货币, Credit->信用点, Point->积分, Cost->花费, Discount->折扣,
+Pack->礼包, Deal->优惠, Sale->特卖, Limited Time->限时, Restock->补货,
+In Stock->有货, Out of Stock->缺货, Purchase->购买, Refund->退款, Balance->余额,
+Earn->赚取, Spend->花费, Free Gift->免费礼物, Daily Shop->每日商店, Bundle Price->礼包价格,
+Config->配置, Keybind->快捷键, Hotkey->热键, Toggle->开关, Slider->滑块,
+Dropdown->下拉菜单, Default->默认, Apply->应用, Previous->上一个, Page->页面,
+Search->搜索, Filter->筛选, Sort->排序, Refresh->刷新, Language->语言,
+Fullscreen->全屏, Mute->静音, Volume->音量, Brightness->亮度, Quality->画质,
+Zoom->缩放, Copy->复制, Paste->粘贴, Clear->清空, Send->发送,
+Prestige->声望, Ascend->飞升, Trophy->奖杯, Medal->奖章, Title->称号,
+Complete->完成, Battle Pass->战斗通行证, Progress Bar->进度条, Requirement->要求, Goal->目标,
+Milestone Reward->里程碑奖励, Claim All->一键领取,
+Clan->氏族, Invite->邀请, Ban->封禁, Report->举报, Add Friend->加好友,
+Chat->聊天, Message->消息, Trade Request->交易请求, Gift Send->赠送,
+Build->建造, Place->放置, Rotate->旋转, Undo->撤销, Redo->重做,
+Resource->资源, Wood->木头, Stone->石头, Iron->铁, Diamond->钻石,
+Ore->矿石, Mine->挖矿, Recipe->配方, Smelt->冶炼, Fuel->燃料,
+Storage->仓库, Capacity->容量, Repair->修理, Destroy->摧毁, Plot Owner->基地主人,
+Vehicle->载具, Car->汽车, Bike->摩托车, Boat->船, Plane->飞机,
+Helicopter->直升机, Drive->驾驶, Ride->乘坐, Boost->加速, Nitro->氮气,
+Brake->刹车, Garage->车库, Customize->自定义, Paint->涂装,
+Pet Inventory->宠物背包, Fusion->融合, Evolve->进化, Rarity->稀有度, Common->普通,
+Uncommon->少见, Rare->稀有, Epic->史诗, Legendary->传说, Mythical->神话,
+Secret->秘密, Exotic->异域, Duplicate->重复, Collection->图鉴, Index->图鉴,
+Error->错误, Failed->失败, Success->成功, Warning->警告, Available Now->现已可用,
+Sold Out->售罄, Not Enough->数量不足, Too Far->距离太远, Cooldown Active->冷却中, Expired->已过期,
+Code->兑换码, Redeem->兑换, Redeem Code->兑换码, Lucky->幸运, Jackpot->头奖,
+Prize->奖品, Rare Drop->稀有掉落, Drop Rate->掉落率, Daily Login->每日登录, Reward Wheel->奖励转盘,
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.Prompt = function(code)
 if not code or code == "zh" then return Trans.SYS_ZH end
