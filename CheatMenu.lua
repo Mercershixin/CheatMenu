@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:01 sha bfd9b8e7 bytes 526881'):format('2026-10-07 19:01','bfd9b8e7',526881))
+print(('[CheatMenu] build 2026-10-07 19:05 sha ae75e890 bytes 527430'):format('2026-10-07 19:05','ae75e890',527430))
 local F = {}
-F.VERSION = "v16.10.32"
+F.VERSION = "v16.10.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9349,9 +9349,9 @@ Trans.GIT_API = "https://api.github.com/repos/Mercershixin/CheatMenu/contents/"
 Trans.CLOUD_DIR = "translate/cache/"
 Trans.CLOUD_DIR_OLD = "cache/"
 Trans.GIT_RAW = {
-"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 "https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 "https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
+"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/",
 }
 Trans.TOKEN_FILE = "CheatMenu_Token.txt"
 Trans.IsMobile = false
@@ -14135,6 +14135,19 @@ task.spawn(function() pcall(Trans.CloudPush, false) end)
 end })
 Tabs.Trans:AddButton({ Title = "☁ 从云端拉取本服缓存(补全)", Callback = function()
 task.spawn(function() pcall(Trans.CloudPull, false) end)
+end })
+Tabs.Trans:AddButton({ Title = "☁ 清空云端缓存(所有游戏)", Callback = function()
+task.spawn(function()
+pcall(Trans.CloudDeleteAll, false)
+pcall(function()
+if T.TransAutoCloud ~= false then
+T.TransAutoCloud = false
+local op = Fluent and Fluent.Options and Fluent.Options.TransAutoCloud
+if op and F.OptSet then pcall(function() F.OptSet(op, false) end) end
+end
+end)
+F.Out("[翻译] ☁ 已请求清空云端缓存 ⇒ 同时关掉「自动上传」(否则几秒后又会传回去); 想恢复上传请重新打开那个开关")
+end)
 end })
 Tabs.Trans:AddSection("② 翻译发出(打中文 → 翻成目标语言发出)")
 Tabs.Trans:AddToggle("ChatInput", { Title = "翻译发出输入框(打中文 → 回车发出)", Default = false, Callback = function(v)
