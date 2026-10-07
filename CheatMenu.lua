@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 23:15 sha 354fb555 bytes 540225'):format('2026-10-07 23:15','354fb555',540225))
+print(('[CheatMenu] build 2026-10-07 23:38 sha 76e40f10 bytes 540543'):format('2026-10-07 23:38','76e40f10',540543))
 local F = {}
-F.VERSION = "v16.10.61"
+F.VERSION = "v16.10.62"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13006,8 +13006,10 @@ end)
 F.Out("[扫描·远程] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 名字可疑(掉蛋/收回/速度/守卫类) " .. tostring(sus) .. " 个")
 end
 F.ScanGameAPI = function()
-F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/放置/任务」脚本(含 ReplicatedStorage 的 Controllers/Shared), 摘出它怎么调远程(只读) =====")
-local KEY = { "egg", "claim", "place", "steal", "drop", "quest", "mission", "task", "rebirth" }
+F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/放置/任务 + 世界/交易世界/换服」脚本(含 ReplicatedStorage 的 Controllers/Shared), 摘出它怎么调远程/调传送(只读) =====")
+local KEY = { "egg", "claim", "place", "steal", "drop", "quest", "mission", "task", "rebirth",
+"world", "trade", "shuffle", "rejoin", "serverhop", "matchmake", "lobby", "serverlist",
+"worldswitch", "switchworld", "newserver", "joinserver" }
 local n, shown = 0, 0
 pcall(function()
 local roots = {}
@@ -13041,7 +13043,9 @@ if type(code) ~= "string" or #code < 16 then pcall(function() if type(getscriptb
 if type(code) == "string" and #code >= 8 then
 n = n + 1
 local KW = { "InvokeServer", "FireServer", ":fire(", ":Fire(", ":invoke(", ":Invoke(",
-"ClaimArea", "claim", "Net.", "Remo", "placeEgg", "PlaceEgg", "getClaimArea" }
+"ClaimArea", "claim", "Net.", "Remo", "placeEgg", "PlaceEgg", "getClaimArea",
+"TeleportService", "Teleport", "ServerInstanceId", "JobId", "ReserveServer", "reserveServer",
+"shuffle", "Shuffle", "World", "world" }
 local lines = {}
 for line in tostring(code):gmatch("[^\n]+") do
 local keep = false
