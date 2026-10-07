@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 20:30 sha 8618e43c bytes 531020'):format('2026-10-07 20:30','8618e43c',531020))
+print(('[CheatMenu] build 2026-10-07 20:37 sha b9db95ef bytes 533740'):format('2026-10-07 20:37','b9db95ef',533740))
 local F = {}
-F.VERSION = "v16.10.44"
+F.VERSION = "v16.10.45"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9251,6 +9251,7 @@ local slots = F.CollectAllSlots(plot)
 F.Out("[收集货币] 基地「" .. tostring(plot.Name) .. "」(" .. tostring(cname) .. ") · 槽位 " .. tostring(#slots) .. " 个 ⇒ 流水线 TP 收(每帧 1 槽)")
 local t0 = os.clock()
 local n, tp, prev = 0, 0, nil
+local GAP = 0.06
 for i = 1, maxSlot do
 if prev then
 if pcall(function() node:FireServer(prev) end) then n = n + 1 end
@@ -9265,7 +9266,7 @@ pcall(function() root.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0)) end)
 end
 end
 prev = i
-task.wait()
+task.wait(GAP)
 end
 if prev then
 if pcall(function() node:FireServer(prev) end) then n = n + 1 end
@@ -9273,7 +9274,7 @@ end
 pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
 pcall(function() root.CFrame = origin end)
 F.Out("[收集货币] ✅ TP " .. tostring(tp) .. " 个槽位 · 发送 " .. tostring(n) .. " 次 · 已回到原地 · 耗时 "
-.. string.format("%.2f", os.clock() - t0) .. " 秒(流水线: 每帧 1 槽, 已到物理下限; 服务器要看到新位置至少要 1 帧)")
+.. string.format("%.2f", os.clock() - t0) .. " 秒(每槽停留 " .. string.format("%.2f", GAP) .. " 秒, 等服务器确认新位置再领)")
 pcall(function() Fluent:Notify({ Title = "收集货币", Content = "已 TP 逐个槽位收完(" .. tostring(n) .. " 次)并回到原地", Duration = 8 }) end)
 end)
 end
@@ -9451,12 +9452,13 @@ for i = 1, #picked do out[i] = picked[i].en .. "->" .. picked[i].zh end
 return "\nTranslate game terms CONSISTENTLY (these exact phrases only):\n" .. table.concat(out, ", "), #picked
 end
 Trans.SYS_BASE = [[Translate the following game UI text into Simplified Chinese.
-Use natural, idiomatic Chinese as seen in Chinese games; do NOT translate word by word.
-Keep it as short as the original. Never add or drop information.
+Translate LITERALLY and FAITHFULLY: keep the original meaning and wording as close as possible.
+Do NOT paraphrase, rewrite, embellish, localize, or "improve" the wording. Never invent context.
+Do NOT add, drop, reorder, summarize or explain anything. Keep the same length and structure as the source.
 Judge words by the game's context (a game about blocks: "Block" = 方块, not 格挡).
 Output ONLY the translation: no explanation, no quotes, no extra words.
 Preserve the original line breaks and number of lines.
-Keep numbers, emoji, URLs and player names unchanged.
+Keep numbers, emoji, URLs, player names and item / pet / mutation / skill names unchanged.
 If the text is already Chinese, return it unchanged.
 Keep these technical abbreviations as-is: CPS HUD FPS GUI UI ESP DPS XP HP MP FOV AFK NPC Ping.]]
 Trans.GLOSS_HEAD = "\nTranslate game terms CONSISTENTLY:\n"
@@ -9525,6 +9527,11 @@ Trans.GLOSSARY = {
 "Sold Out->售罄, Not Enough->数量不足, Too Far->距离太远, Cooldown Active->冷却中, Expired->已过期,",
 "Code->兑换码, Redeem->兑换, Redeem Code->兑换码, Lucky->幸运, Jackpot->头奖,",
 "Prize->奖品, Rare Drop->稀有掉落, Drop Rate->掉落率, Daily Login->每日登录, Reward Wheel->奖励转盘,",
+"No->否, Yes->是, Store->商店, Fuse->融合, Fusing->融合中, Brainrots->脑红, Fused->已融合,",
+"Play->开始游戏, Continue Playing->继续游戏, Claimed->已领取, Equipped->已装备, Unequipped->已卸下,",
+"Players In Server->服务器人数, Favorites->收藏, Favorite The Game->收藏该游戏, Like The Game->喜欢该游戏,",
+"Watch 1 ad->看1条广告, OFFER->优惠, BUNDLE->礼包, SKIP ALL->全部跳过, ONE TIME PURCHASE->一次性购买,",
+"BEST VALUE->最划算, BEST DEAL->最优惠, BEST SELLER->最热销, LIMITED TIME->限时, LIMITED STYLES->限定外观,",
 }
 Trans.SlotCtx = function()
 if Trans._slotCtx then return Trans._slotCtx end
@@ -9573,7 +9580,8 @@ Trans.Prompt = function(code, batchN, needText)
 if code and code ~= "zh" then
 local lang = Trans.LANGS[code] or "Chinese"
 return "Translate the following text into " .. lang
-.. ". Output ONLY the translation: no explanation, no quotes, no extra words."
+.. ". Translate literally and faithfully; do NOT paraphrase or rewrite."
+.. " Output ONLY the translation: no explanation, no quotes, no extra words."
 .. " Keep numbers, emoji, URLs and player names unchanged."
 end
 if Trans._noGloss then
@@ -9634,6 +9642,8 @@ ballberto = true, bangello = true, burguro = true, cordraculo = true,
 croakumber = true, dumbelloni = true, fryuro = true, garamararam = true,
 kerbaros = true, moggatron = true, orcalero = true, rockokoko = true,
 stadoini = true, tralaledon = true, triregnus = true,
+hacked = true, hack = true, hacker = true, hackers = true,
+glitched = true, corrupted = true, infected = true,
 }
 Trans.OFFICIAL = {
 robloxgui = true, corescripts = true, playerlist = true, chat = true, chatwindow = true,
@@ -9942,6 +9952,21 @@ end
 F.Out("[翻译] 已清空全部缓存 " .. n .. " 条 · 已删文件 " .. del .. " 个")
 return n
 end
+Trans.PurgeStale = function()
+local drop = 0
+for k in pairs(Trans.Cache) do
+if type(k) == "string" and not Trans.Should(k) then
+Trans.Cache[k] = nil
+drop = drop + 1
+end
+end
+if drop > 0 then
+Trans._dirty = true
+Trans.ShouldCacheClear()
+F.Out("[翻译] 缓存自检: 已淘汰 " .. tostring(drop) .. " 条按当前规则不该翻的旧条目(不用手动清空缓存)")
+end
+return drop
+end
 function Trans.Load()
 local total, files = 0, 0
 local list = Trans.CacheFiles()
@@ -9953,6 +9978,7 @@ local n1 = Trans.LoadInto(Trans.FILE)
 if n1 > 0 then total = total + n1 files = files + 1 end
 local n2 = Trans.LoadInto("CheatMenu_TransCache.json")
 if n2 > 0 then total = total + n2 files = files + 1 end
+pcall(Trans.PurgeStale)
 Trans._cnt = Trans.Count()
 Trans._dirty = false
 if total > 0 then
@@ -10651,6 +10677,7 @@ local LS = game:GetService("LocalizationService")
 local ok, tr = pcall(function() return LS:GetTranslatorForPlayerAsync(LPl) end)
 if ok and tr then Trans._locTr = tr end
 end)
+pcall(Trans.PrefetchOfficial)
 end
 Trans.OfficialCN = function(obj)
 local ct = nil
@@ -10696,16 +10723,58 @@ pcall(function() curP = obj.PlaceholderText end)
 if curP ~= rr.PlaceholderText then pcall(function() obj.PlaceholderText = rr.PlaceholderText end) end
 end
 end
-Trans.SkipOfficial = function(obj)
+Trans.SkipOfficial = function(obj, official)
 Trans._offCN = (Trans._offCN or 0) + 1
 if not Trans._offCNLogged and Trans._offCN >= 5 then
 Trans._offCNLogged = true
-F.Out("[翻译] 检测到游戏自带官方中文(" .. tostring(Trans._offCN) .. " 条) ⇒ 这类文字保留游戏原文, 不再翻译")
+F.Out("[翻译] 已识别游戏自带官方中文(" .. tostring(Trans._offCN) .. " 条) ⇒ 一律沿用官方译法并写入缓存, 不再送模型")
+end
+local src = nil
+pcall(function() src = obj.Text end)
+if type(src) == "string" and #src > 0 and type(official) == "string" and #official > 0 then
+if Trans.Cache[src] ~= official then
+Trans.Cache[src] = official
+Trans._dirty = true
+end
 end
 Trans._selfCN[obj] = true
 local p = Trans.PathOf(obj)
 if p ~= "" then Trans._selfCNPath[p] = true end
 Trans.RevertOfficial(obj)
+end
+Trans._prefetched = false
+Trans.PrefetchOfficial = function()
+if Trans._prefetched then return end
+Trans._prefetched = true
+local LPl = game:GetService("Players").LocalPlayer
+local roots = {}
+pcall(function() if LPl then roots[#roots + 1] = LPl:FindFirstChild("PlayerGui") end end)
+pcall(function() if gethui then roots[#roots + 1] = gethui() end end)
+local n = 0
+for i = 1, #roots do
+if roots[i] then
+local ok, ds = pcall(function() return roots[i]:GetDescendants() end)
+if ok and type(ds) == "table" then
+for j = 1, #ds do
+local o = ds[j]
+if typeof(o) == "Instance" then
+local c = o.ClassName
+if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
+local off = Trans.OfficialCN(o)
+if off then
+Trans.SkipOfficial(o, off)
+n = n + 1
+end
+end
+end
+end
+end
+end
+end
+if n > 0 then
+Trans._dirty = true
+F.Out("[翻译] 官方译文预读完成: 已收录 " .. tostring(n) .. " 条游戏自带中文 ⇒ 以后遇到同类文字直接用官方译法, 不会二次翻译")
+end
 end
 Trans.MarkSelfCN = function(obj, txt)
 if type(txt) ~= "string" then return end
@@ -10740,8 +10809,9 @@ F.Out("[翻译] 已识别图鉴/索引类面板 ⇒ 里面的内容全部不翻(
 end
 return
 end
-if Trans.OfficialCN(obj) then
-Trans.SkipOfficial(obj)
+local offCN = Trans.OfficialCN(obj)
+if offCN then
+Trans.SkipOfficial(obj, offCN)
 return
 end
 if Trans._selfCNPath[Trans.PathOf(obj)] then
@@ -10790,8 +10860,9 @@ if now:find("[\228-\233]") and not now:find("%a%a") then
 return
 end
 if Trans._selfCN[obj] then return end
-if Trans.OfficialCN(obj) then
-Trans.SkipOfficial(obj)
+local offCN = Trans.OfficialCN(obj)
+if offCN then
+Trans.SkipOfficial(obj, offCN)
 return
 end
 local cv = Trans.Lookup(now)
