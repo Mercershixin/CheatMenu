@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 11:19 sha bd362480 bytes 488547'):format('2026-10-07 11:19','bd362480',488547))
+print(('[CheatMenu] build 2026-10-07 12:07 sha 5000866a bytes 488827'):format('2026-10-07 12:07','5000866a',488827))
 local F = {}
-F.VERSION = "v16.9.94"
+F.VERSION = "v16.9.95"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9837,9 +9837,10 @@ for i = 1, #Trans.Queue do
 local it = Trans.Queue[i]
 local g = groups[it.text]
 if g then
-g.applies[#g.applies + 1] = it.apply
+local al = it.applies or {}
+for a = 1, #al do g.applies[#g.applies + 1] = al[a] end
 elseif #order < Trans.BATCH then
-g = { text = it.text, applies = { it.apply } }
+g = { text = it.text, applies = it.applies or {} }
 groups[it.text] = g
 order[#order + 1] = it.text
 else
@@ -9897,6 +9898,7 @@ F.Out("[翻译] ⚠ 翻译任务出错(已自动恢复): " .. tostring(errAll))
 end
 end
 Trans._lastDone = os.clock()
+for i = 1, #items do Trans._qEntry[items[i].text] = nil end
 Trans.Active = Trans.Active - 1
 if Trans.Active < 0 then Trans.Active = 0 end
 if Trans.Active < Trans.MAX and #Trans.Queue > 0 then Trans.Drain() end
@@ -9926,6 +9928,7 @@ if filled == "" or filled == text then return nil end
 return filled
 end
 Trans.NumTpl = {}
+Trans._qEntry = {}
 Trans.Async = function(text, applyFn, urgent)
 if not T.Translate then return end
 if not Trans._ready then return end
@@ -9941,8 +9944,17 @@ end
 local ft = Trans._fail and Trans._fail[text]
 if ft and os.clock() < ft then return end
 if #Trans.Queue > 2000 then return end
-if urgent then table.insert(Trans.Queue, 1, { text = text, apply = applyFn })
-else Trans.Queue[#Trans.Queue + 1] = { text = text, apply = applyFn } end
+local entry = Trans._qEntry[text]
+if entry then
+local al = entry.applies or {}
+al[#al + 1] = applyFn
+entry.applies = al
+else
+entry = { text = text, applies = { applyFn } }
+Trans._qEntry[text] = entry
+if urgent then table.insert(Trans.Queue, 1, entry)
+else Trans.Queue[#Trans.Queue + 1] = entry end
+end
 Trans.Drain()
 end
 Trans.IsWorldChat = function(msg)
