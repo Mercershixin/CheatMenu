@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 17:19 sha 8089f1f0 bytes 506303'):format('2026-10-07 17:19','8089f1f0',506303))
+print(('[CheatMenu] build 2026-10-07 17:37 sha bf4fbf30 bytes 506451'):format('2026-10-07 17:37','bf4fbf30',506451))
 local F = {}
-F.VERSION = "v16.10.15"
+F.VERSION = "v16.10.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8986,11 +8986,15 @@ while T.AutoGym do
 pcall(function()
 local active, _, machine = Gym.gymTimeActive(true)
 if not active then
-if os.clock() - (F._gymNoneAt or 0) > 10 then
-F._gymNoneAt = os.clock()
-F.Out("[自动传送健身房] 场上暂时没有带 LiftMachine 标签的举铁机 ⇒ 等下一次健身房事件")
+if not F._gymWaitLogged then
+F._gymWaitLogged = true
+F.Out("[自动传送健身房] 场上暂无健身房事件 ⇒ 静默等待中(事件一出现就过去, 期间不再刷提示)")
 end
 else
+if F._gymWaitLogged then
+F._gymWaitLogged = false
+F.Out("[自动传送健身房] 健身房事件出现了 ⇒ 过去站机器")
+end
 if machine then Gym.Event.Machine = machine end
 if Gym.gymMachineNeedsReenter() then
 gymUnequipUnanchor()
@@ -9015,6 +9019,7 @@ end
 function F.AutoGymDisable()
 T.AutoGym = false
 GymThread = nil
+F._gymWaitLogged = nil
 F.Out("[自动传送健身房] 已停止")
 end
 local BonusThread = nil
