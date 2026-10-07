@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 19:18 sha fa8ba5d4 bytes 514311'):format('2026-10-07 19:18','fa8ba5d4',514311))
+print(('[CheatMenu] build 2026-10-07 19:22 sha 491669c2 bytes 509889'):format('2026-10-07 19:22','491669c2',509889))
 local F = {}
-F.VERSION = "v16.10.36"
+F.VERSION = "v16.10.37"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8197,14 +8197,6 @@ pcall(chunk)
 end)
 return true
 end
-F.AutoRejoinSaveState = function()
-if type(writefile) ~= "function" then return end
-local state = {}
-for k, v in pairs(T) do
-if type(v) == "boolean" and v then state[k] = true end
-end
-pcall(function() writefile("CheatMenu_State.txt", HS:JSONEncode(state)) end)
-end
 F.SrcVerOf = function(s)
 if type(s) ~= "string" then return nil end
 local i = s:find("F.VERSION", 1, true)
@@ -8283,89 +8275,6 @@ pcall(F.UnloadAll)
 task.wait(0.6)
 pcall(chunk)
 return true
-end
-F.AutoRejoinQueue = function()
-local qot = AC.cap("queue_on_teleport")
-if type(qot) ~= "function" then return false end
-local code = [[
-pcall(function()
-if type(writefile) == "function" then writefile("CheatMenu_RejoinFlag.txt", "1") end
-local function vn(v)
-local a, b, c = tostring(v or ""):match("^(%d+)%.(%d+)%.(%d+)$")
-if not a then return 0 end
-return tonumber(a) * 1000000 + tonumber(b) * 1000 + tonumber(c)
-end
-local function fver(s)
-if type(s) ~= "string" then return nil end
-local i = s:find("F.VERSION", 1, true)
-if not i then return nil end
-return s:sub(i, i + 48):match("v(%d+%.%d+%.%d+)")
-end
-local src, sv = nil, nil
-pcall(function()
-if type(readfile) == "function" then
-local s = readfile("CheatMenu_main.lua")
-if type(s) == "string" and #s > 100000 then src, sv = s, fver(s) end
-end
-end)
-local urls = {
-"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-}
-for _, u in ipairs(urls) do
-local ok, body = pcall(game.HttpGet, game, u .. "?t=" .. tostring(os.time()))
-if ok and type(body) == "string" and #body > 100000
-and body:sub(1, 9) ~= "<!DOCTYPE" and not body:find("404: Not Found", 1, true) then
-local rv = fver(body)
-if rv and (not src or vn(rv) > vn(sv)) then
-src, sv = body, rv
-pcall(function() if type(writefile) == "function" then writefile("CheatMenu_main.lua", body) end end)
-end
-break
-end
-end
-if type(src) == "string" and #src > 100000 then
-pcall(function()
-local plrs = game:GetService("Players")
-local t0 = os.clock()
-while (not plrs.LocalPlayer or not game:IsLoaded()) and os.clock() - t0 < 60 do
-task.wait(0.2)
-end
-task.wait(0.5)
-end)
-local chunk = (loadstring or load)(src, "@CheatMenu_rejoin")
-if chunk then chunk() end
-end
-end)
-]]
-return pcall(qot, code)
-end
-F.AutoRejoinEnable = function()
-T.AutoRejoin = true
-F.AutoRejoinSaveState()
-if not F._stateLoop then
-F._stateLoop = true
-task.spawn(function()
-while T.AutoRejoin do
-task.wait(10)
-if not T.AutoRejoin then break end
-pcall(F.AutoRejoinSaveState)
-end
-F._stateLoop = false
-end)
-end
-if F.AutoRejoinQueue() then
-F.Out("[换服] 已开: 被换服后会自动重载脚本 + 恢复你开着的功能")
-else
-F.Out("[换服] ⚠ 本执行器不支持自动重载(缺 queue_on_teleport)")
-end
-end
-F.AutoRejoinDisable = function()
-T.AutoRejoin = false
-pcall(function() if delfile then delfile("CheatMenu_State.txt") end end)
-pcall(function() if delfile then delfile("CheatMenu_RejoinFlag.txt") end end)
-F.Out("[换服] 已关")
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
@@ -8475,8 +8384,6 @@ if jid == "" then
 F.Out("[重进] 拿不到当前服务器 ID(JobId 为空: 多半在 Studio / 非公共服) 本次没执行")
 return false
 end
-pcall(F.AutoRejoinSaveState)
-local queued = F.AutoRejoinQueue()
 local ts = game:GetService("TeleportService")
 pcall(function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) end
@@ -8503,8 +8410,7 @@ task.delay(30, function()
 if F._tpFailConn then pcall(function() F._tpFailConn:Disconnect() end) F._tpFailConn = nil end
 end)
 end)
-F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")"
-.. (queued and " · 已登记: 回来后自动重载脚本+恢复功能" or " · ⚠ 本执行器没有 queue_on_teleport, 回来后要手动加载"))
+F.Out("[重进] 正在回到当前服务器(" .. tostring(game.PlaceId) .. " · " .. jid:sub(1, 12) .. ")")
 local ok = pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, jid, LP) end)
 if ok then
 task.delay(12, function()
@@ -13986,11 +13892,6 @@ Tabs.Setting:AddButton({ Title = "强制重载", Callback = function()
 if not F.Once("reloadforce", 3) then return end
 F.HotReload(true)
 end })
-Tabs.Setting:AddToggle("AutoRejoin", { Title = "换服自动重载(被传送走后自动恢复脚本+功能)", Default = false, Callback = function(v)
-T.AutoRejoin = v and true or false
-if F._cfgSyncing then return end
-if v then pcall(F.AutoRejoinEnable) else pcall(F.AutoRejoinDisable) end
-end })
 Tabs.Setting:AddButton({ Title = "重新进入服务器", Callback = function()
 if not F.Once("rejoin", 6) then return end
 F.RejoinNow()
@@ -14364,35 +14265,6 @@ end
 local n2 = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (界面同步 " .. tostring(n2) .. " 个)")
 pcall(F.ApplySavedOn)
-end)
-pcall(function()
-if type(isfile) ~= "function" or not isfile("CheatMenu_RejoinFlag.txt") then return end
-pcall(function() if delfile then delfile("CheatMenu_RejoinFlag.txt") end end)
-local raw = nil
-pcall(function() raw = readfile("CheatMenu_State.txt") end)
-local d = nil
-if type(raw) == "string" then pcall(function() d = HS:JSONDecode(raw) end) end
-local c2 = 0
-if type(d) == "table" then
-local op2 = Fluent and Fluent.Options
-for k, v in pairs(d) do
-if v == true and k ~= "AutoRejoin" and type(T[k]) == "boolean" then
-T[k] = true
-c2 = c2 + 1
-local opt = nil
-pcall(function() opt = op2 and op2[k] end)
-if opt ~= nil then pcall(F.OptSet, opt, true) end
-end
-end
-end
-pcall(F.ApplySavedOn)
-if type(d) == "table" and d.AutoRejoin == true then
-T.AutoRejoin = true
-local optA = nil
-pcall(function() optA = Fluent and Fluent.Options and Fluent.Options.AutoRejoin end)
-if optA ~= nil then pcall(F.OptSet, optA, true) end
-end
-F.Out("[换服] ✅ 已自动重载脚本, 恢复 " .. tostring(c2) .. " 个功能")
 end)
 end)
 end)
