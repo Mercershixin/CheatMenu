@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-07 13:07 sha be8bb842 bytes 495348'):format('2026-10-07 13:07','be8bb842',495348))
+print(('[CheatMenu] build 2026-10-07 13:22 sha 4847cdad bytes 496608'):format('2026-10-07 13:22','4847cdad',496608))
 local F = {}
-F.VERSION = "v16.10.3"
+F.VERSION = "v16.10.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9205,7 +9205,7 @@ if attempt == 1 then task.wait(0.25) end
 end
 Trans._localFails = Trans._localFails + 1
 if Trans._localFails <= 3 then
-F.Out("[翻译] ⚠ 本地模型没响应(" .. tostring(lastErr) .. ") ⇒ 请确认 llama-server 在 " .. Trans.HOST .. " 跑着")
+F.Out("[翻译] ⚠ 本地模型没响应(" .. tostring(lastErr) .. ") ⇒ 先用缓存汉化, 模型恢复后自动继续")
 end
 return nil, lastErr
 end
@@ -10513,7 +10513,7 @@ if Trans._stuck >= 2 then
 Trans._stuck = 0
 Trans.Active = 0
 Trans._drainErr = 0
-F.Out("[翻译] ⚠ 队列 25 秒无进展(服务疑似卡死) ⇒ 已重置并发计数; 若反复出现, 模型服务可能死锁了 —— 双击「翻译模型开关.bat」重启一次即可恢复")
+F.Out("[翻译] ⚠ 队列 25 秒无进展(模型疑似卡住) ⇒ 已重置并发计数, 会自动继续")
 Trans.Drain()
 end
 end
@@ -10525,6 +10525,9 @@ Trans.Stats = function()
 if Trans.IsMobile then
 F.Out("[翻译] 📱 云缓存模式(手机/平板) · 已汉化 " .. tostring(Trans._cnt or 0)
 .. " 条 · 已保存 " .. tostring(Trans._saveCount or 0) .. " 次 · 云端路径 " .. tostring(Trans.CloudPath()))
+elseif T.TransModel ~= true then
+F.Out("[翻译] 📄 纯缓存汉化模式 · 已汉化 " .. tostring(Trans._cnt or 0)
+.. " 条 · 已保存 " .. tostring(Trans._saveCount or 0) .. " 次(不连模型、不发请求)")
 else
 F.Out("[翻译] 待翻译 " .. tostring(#Trans.Queue) .. " 条 · 已翻译 " .. tostring(Trans._cnt or 0)
 .. " 条 · 已保存 " .. tostring(Trans._saveCount or 0) .. " 次")
@@ -10583,7 +10586,7 @@ return
 end
 if not Trans._ready then
 if not Trans.Health() then
-F.Out("[翻译发出] ⚠ 本地模型没响应 ⇒ 先双击「翻译模型开关.bat」把服务起起来再发(原文留在框里不丢)")
+F.Out("[翻译发出] ⚠ 需要连本地模型才能翻发出 ⇒ 请打开「连本地模型实时翻译」开关并确保模型已启动(原文留在框里不丢)")
 return
 end
 Trans._ready = true
@@ -10605,37 +10608,36 @@ F.Out("[翻译发出] ⚠ 译文已生成(" .. tostring(tr) .. ")但本游戏不
 end
 end)
 end
-function Trans.Enable()
-T.Translate = true
-Trans.Load()
-pcall(Trans.NumTplLoad)
-local name = nil
-pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
-Trans.KeepAdd(name)
+Trans.ApplyMode = function(quiet)
+if not T.Translate then return end
 if Trans.IsMobile then
 Trans._ready = false
-F.Out("[翻译] 📱 手机/平板: 云缓存模式 ⇒ 从 Git 拉取电脑保存的缓存来汉化(不连本地模型)")
-task.spawn(function() pcall(Trans.CloudPull, false) end)
-else
+return
+end
+if T.TransModel == true then
 Trans._ready = Trans.Health()
 if Trans._ready then
-F.Out("[翻译] ✅ 本地模型已就绪(" .. Trans.HOST .. ")")
-else
-F.Out("[翻译] ⏳ 本地模型还没起来(" .. Trans.HOST .. ") ⇒ 已挂监听, 服务一起来自动开翻。请先启动 llama-server")
-end
-end
+if not quiet then F.Out("[翻译] ✅ 已连本地模型 ⇒ 缓存命中秒出 + 新词实时翻译") end
 pcall(Trans.Scan)
-Trans.WatchOn()
-pcall(Trans.ChatWatch)
-if not Trans.IsMobile and not Trans._readyTask then
+else
+if not quiet then F.Out("[翻译] 📄 模型还没连 ⇒ 先用缓存汉化, 模型一起来自动接着翻新词") end
+end
+Trans.StartReadyWatcher()
+else
+Trans._ready = false
+if not quiet then F.Out("[翻译] 📄 纯缓存汉化: 只用已翻译好的缓存, 不连模型、不发请求") end
+end
+end
+Trans.StartReadyWatcher = function()
+if Trans._readyTask or Trans.IsMobile then return end
 Trans._readyTask = task.spawn(function()
-while T.Translate do
+while T.Translate and T.TransModel == true do
 task.wait(3)
-if not T.Translate then break end
+if not (T.Translate and T.TransModel == true) then break end
 if Trans._ready then
 if not Trans.Health() then
 Trans._ready = false
-F.Out("[翻译] ⚠ 本地模型没响应了(服务被关/掉线) ⇒ 它一起来会自动继续翻")
+F.Out("[翻译] ⚠ 模型掉线 ⇒ 先用缓存汉化, 模型回来会自动继续翻")
 end
 else
 if Trans.Health() then
@@ -10649,6 +10651,27 @@ end
 Trans._readyTask = nil
 end)
 end
+function Trans.Enable()
+T.Translate = true
+Trans.Load()
+pcall(Trans.NumTplLoad)
+local name = nil
+pcall(function() if F.CMX_GameName then name = F.CMX_GameName() end end)
+Trans.KeepAdd(name)
+if Trans.IsMobile then
+Trans._ready = false
+F.Out("[翻译] 📱 手机/平板: 云缓存模式 ⇒ 从 Git 拉取电脑保存的缓存来汉化(不连本地模型)")
+else
+Trans.ApplyMode(false)
+end
+if Trans.IsMobile or T.TransModel ~= true then
+task.spawn(function() pcall(Trans.CloudPull, false) end)
+elseif (Trans._cnt or 0) == 0 then
+task.spawn(function() pcall(Trans.CloudPull, false) end)
+end
+pcall(Trans.Scan)
+Trans.WatchOn()
+pcall(Trans.ChatWatch)
 if not Trans.Loop then
 Trans.Loop = task.spawn(function()
 while T.Translate do
@@ -10681,7 +10704,7 @@ function F.TranslateDisable() Trans.Disable() end
 function F.TranslateEnable()
 local ok, r = pcall(Trans.Enable)
 if not ok then F.Out("[翻译] 启动出错: " .. tostring(r)) return nil end
-if not Trans.IsMobile then
+if not Trans.IsMobile and T.TransModel == true then
 task.spawn(function()
 local okP, okR, info = pcall(Trans.Probe)
 local msg = tostring(info or okR)
@@ -13284,6 +13307,11 @@ Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
+Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(不开=只用缓存汉化)", Default = false, Callback = function(v)
+T.TransModel = v and true or false
+if F._cfgSyncing then return end
+if T.Translate then pcall(Trans.ApplyMode, false) end
+end })
 local transStatBtn = Tabs.Trans:AddButton({ Title = "状态: 等待开启", Callback = function()
 task.spawn(function() pcall(Trans.Stats) end)
 end })
@@ -13294,11 +13322,13 @@ if transStatBtn and transStatBtn.SetTitle then
 pcall(function()
 if Trans.IsMobile then
 transStatBtn:SetTitle(string.format("📱 云缓存 · 已汉化 %d · 已保存 %d 次", Trans._cnt or 0, Trans._saveCount or 0))
+elseif T.TransModel ~= true then
+transStatBtn:SetTitle(string.format("📄 缓存汉化 · 已汉化 %d · 已保存 %d 次", Trans._cnt or 0, Trans._saveCount or 0))
 elseif Trans._ready then
 transStatBtn:SetTitle(string.format("✅ 待翻译 %d · 已翻译 %d · 已保存 %d 次",
 #(Trans.Queue or {}), Trans._cnt or 0, Trans._saveCount or 0))
 else
-transStatBtn:SetTitle("❌ 模型没连(翻译停) · 双击「翻译模型开关.bat」启动")
+transStatBtn:SetTitle(string.format("📄 模型没连 · 先用缓存(已汉化 %d) · 起来自动翻新词", Trans._cnt or 0))
 end
 end)
 end
