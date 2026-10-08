@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:52 sha 2d52050b bytes 592312'):format('2026-10-08 23:52','2d52050b',592312))
+print(('[CheatMenu] build 2026-10-09 00:07 sha ba4b50f9 bytes 594904'):format('2026-10-09 00:07','ba4b50f9',594904))
 local F = {}
-F.VERSION = "v16.10.97"
+F.VERSION = "v16.10.98"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8645,7 +8645,7 @@ F._ixPos, F._ixLog = nil, 0
 F.IX_MAX = 240
 F.IX_MAXSZ = 90
 F.IX_MOVE = 12
-F.IX_HOPS = 6
+F.IX_HOPS = 2
 F.IxTooBig = function(o)
 local sz = 0
 pcall(function() if o:IsA("BasePart") then sz = o.Size.Magnitude end end)
@@ -8686,38 +8686,93 @@ item = Color3.fromRGB(80, 255, 160),
 drop = Color3.fromRGB(255, 240, 120),
 veh = Color3.fromRGB(0, 235, 255),
 }
-F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap" }
-F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge" }
+F.IX_STRUCT_N = 0
+F.KeyHit = function(low, kw)
+local i = 1
+while true do
+local s = string.find(low, kw, i, true)
+if not s then return false end
+local e = s + #kw - 1
+if e >= #low then return true end
+if string.match(string.sub(low, e + 1, e + 1), "%a") == nil then return true end
+i = s + 1
+end
+end
+F.HL_BLOCK_KEYS = { "room","wall","floor","ceiling","roof","frame","doorway","hallway","corridor","house","building","block","platform","stairway","stairs","ramp","beam","pillar","column","carpet","rug","curtain","painting","portrait","poster","banner","fence","railing","window","tile","vent","duct","terrain","decor","background","structure","facade","gatehouse","level","map","chunk","module","part_" }
+F.HLBlocked = function(low)
+local i
+for i = 1, #F.HL_BLOCK_KEYS do
+if string.find(low, F.HL_BLOCK_KEYS[i], 1, true) then return true end
+end
+return false
+end
+F.IxStruct = function(o)
+if o == nil then return false end
+local isM = false
+pcall(function() isM = o:IsA("Model") end)
+if not isM then return false end
+local n = 0
+pcall(function() n = #o:GetDescendants() end)
+if n > 40 then return true end
+local sz = 0
+pcall(function() sz = o:GetExtentsSize().Magnitude end)
+if sz == 0 or sz ~= sz then return false end
+return sz > F.IX_MAXSZ
+end
+F.IxTgtPart = function(o)
+if o == nil then return nil end
+local isP = false
+pcall(function() isP = o:IsA("BasePart") end)
+if isP then return o end
+local mp = nil
+pcall(function() mp = o:FindFirstChildWhichIsA("BasePart") end)
+if mp ~= nil then return mp end
+return o
+end
+F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap","killbrick","hurtbrick","damagebrick","spikeball","lasergrid" }
+F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge","keycard","cashbag","coinbag" }
 F.HL_DROP_KEYS = { "weapon","gun","sword","cash","money","reward" }
-F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","elevator","valve","terminal","keypad","quest","interact","prompt","vendor","register" }
+F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","elevator","valve","terminal","keypad","quest","interact","prompt","vendor","register","vendingmachine","shopkeeper","questgiver" }
 F.HLKind = function(o)
 if o == nil or o == LP.Character then return nil end
-local okT = false
-pcall(function() okT = o:IsA("Model") or o:IsA("BasePart") or o:IsA("Tool") end)
-if okT then
-local okn, isNpc = pcall(F.IsNPC, o, true)
+local isM, isB, isT = false, false, false
+pcall(function()
+isM = o:IsA("Model")
+isB = o:IsA("BasePart")
+isT = o:IsA("Tool")
+end)
+if isM or isB or isT then
+local okn, isNpc = pcall(F.IsNPC, o, isM)
 if okn and isNpc then return "npc", F.HL_COLORS.npc end
 local oki, isIx = pcall(F.IxIsTarget, o)
 if oki and isIx then return "ix", F.HL_COLORS.ix end
+if isM or isB then
 local isVeh = false
 pcall(function() isVeh = o:IsA("VehicleSeat") or o:IsA("Seat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil or o:FindFirstChildOfClass("Seat") ~= nil end)
 if isVeh then return "veh", F.HL_COLORS.veh end
-local isTool = false
-pcall(function() isTool = o:IsA("Tool") end)
-if isTool then return "drop", F.HL_COLORS.drop end
+end
+if isT then return "drop", F.HL_COLORS.drop end
+if isM and F.IxStruct(o) then
+F.IX_STRUCT_N = F.IX_STRUCT_N + 1
+return nil
+end
 local low = string.lower(tostring(o.Name))
+if F.HLBlocked(low) then
+F.IX_STRUCT_N = F.IX_STRUCT_N + 1
+return nil
+end
 local i
 for i = 1, #F.HL_TRAP_KEYS do
-if string.find(low, F.HL_TRAP_KEYS[i], 1, true) then return "trap", F.HL_COLORS.trap end
+if F.KeyHit(low, F.HL_TRAP_KEYS[i]) then return "trap", F.HL_COLORS.trap end
 end
 for i = 1, #F.HL_ITEM_KEYS do
-if string.find(low, F.HL_ITEM_KEYS[i], 1, true) then return "item", F.HL_COLORS.item end
+if F.KeyHit(low, F.HL_ITEM_KEYS[i]) then return "item", F.HL_COLORS.item end
 end
 for i = 1, #F.HL_USE_KEYS do
-if string.find(low, F.HL_USE_KEYS[i], 1, true) then return "ix", F.HL_COLORS.ix end
+if F.KeyHit(low, F.HL_USE_KEYS[i]) then return "ix", F.HL_COLORS.ix end
 end
 for i = 1, #F.HL_DROP_KEYS do
-if string.find(low, F.HL_DROP_KEYS[i], 1, true) then return "drop", F.HL_COLORS.drop end
+if F.KeyHit(low, F.HL_DROP_KEYS[i]) then return "drop", F.HL_COLORS.drop end
 end
 return nil
 end
@@ -8754,17 +8809,24 @@ end
 F.IxIsTarget = function(o)
 if o == nil then return false end
 if o == LP.Character then return false end
-local ok, has = pcall(function() return o:FindFirstChildOfClass("ProximityPrompt") ~= nil or o:FindFirstChildOfClass("ClickDetector") ~= nil end)
-if ok and has then return true end
 local ok2, isAny = pcall(function() return o:IsA("ProximityPrompt") or o:IsA("ClickDetector") end)
 if ok2 and isAny then return true end
+local ok, has = pcall(function() return o:FindFirstChildOfClass("ProximityPrompt") ~= nil or o:FindFirstChildOfClass("ClickDetector") ~= nil end)
+if ok and has then return true end
 local isModel = false
 pcall(function() isModel = o:IsA("Model") end)
 if not isModel then return false end
-local ok3, deep = pcall(function()
-return o:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil or o:FindFirstChildWhichIsA("ClickDetector", true) ~= nil
-end)
-return (ok3 and deep) or false
+if F.IxStruct(o) then return false end
+local kids = nil
+pcall(function() kids = o:GetChildren() end)
+if type(kids) ~= "table" or #kids > 12 then return false end
+local i
+for i = 1, #kids do
+local c = kids[i]
+local ok3, hit = pcall(function() return c:FindFirstChildOfClass("ProximityPrompt") ~= nil or c:FindFirstChildOfClass("ClickDetector") ~= nil end)
+if ok3 and hit then return true end
+end
+return false
 end
 F.IxDropDead = function()
 local gone = 0
@@ -8810,6 +8872,10 @@ local cls = o.ClassName
 if cls == "ProximityPrompt" or cls == "ClickDetector" then
 local tgt = nil
 pcall(function() tgt = o.Parent end)
+if tgt ~= nil and tgt ~= LP.Character and F.IxStruct(tgt) then
+local alt = F.IxTgtPart(tgt)
+if alt ~= nil and alt ~= tgt and not F.IxStruct(alt) then tgt = alt else tgt = nil end
+end
 if tgt ~= nil and tgt ~= LP.Character then
 local pos = nil
 pcall(function() pos = tgt.Position end)
@@ -8841,6 +8907,7 @@ return 0, F.IxDropDead(), 0
 end
 local best, order, skipped, npcN = {}, {}, 0, 0
 F._npcCache = {}
+F.IX_STRUCT_N = 0
 local function offer(o, col, pos, kind)
 if o == nil or o == LP.Character then return end
 if kind ~= "npc" and F.IxTooBig(o) then skipped = skipped + 1 return end
@@ -8931,6 +8998,7 @@ F.Out("[高亮透视] 死亡/观战时会自动改用相机位置继续扫, 不�
 F.Out("[高亮透视] 刷新节奏: 每移动 " .. tostring(F.IX_MOVE) .. " 格 或 每 " .. tostring(F.IxGap())
 .. " 秒重扫一次(间隔可在下面调) · 中途新出现的物件由事件即时补标")
 F.Out("[高亮透视] 颜色: NPC棕 / 交互金 / 陷阱红 / 道具绿 / 掉落黄 / 载具青 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
+F.Out("[高亮透视] 只高亮「真正可交互的物件 + 生物」: 地图建筑/房间/墙体/布景模型一律跳过(不改色调、不动伽马)")
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
 if not T.IxHL then return end
@@ -8943,6 +9011,10 @@ pcall(function()
 if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then target = o.Parent end
 end)
 if target == nil then return end
+if F.IxStruct(target) then
+local alt = F.IxTgtPart(target)
+if alt ~= nil and alt ~= target and not F.IxStruct(alt) then target = alt else return end
+end
 local okg, _, _, root = pcall(GC)
 if not okg or not root then return end
 local pos = nil
@@ -8981,7 +9053,8 @@ local n, gone, sk, npcN = F.IxScan()
 if now - F._ixLog > 8 then
 F._ixLog = now
 F.Out("[高亮透视] " .. (F.IxScopeFull() and "全图" or (tostring(F.IxRange()) .. " 格内")) .. " " .. tostring(n) .. " 个(NPC/生物 " .. tostring(npcN or 0) .. ") · 本轮取消 " .. tostring(gone) .. " 个"
-.. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个(避免整块地图被染色)") or ""))
+.. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个") or "")
+.. (tonumber(F.IX_STRUCT_N) and tonumber(F.IX_STRUCT_N) > 0 and (" · 跳过地图建筑/布景 " .. tostring(F.IX_STRUCT_N) .. " 个") or ""))
 end
 end)
 end
