@@ -30,7 +30,8 @@ translate/
 > ⛔ 游戏内上传必须把 GitHub Token 放进执行器环境 ⇒ 能写仓库的密钥会暴露给所有脚本。
 > 缓存文件本来就落在电脑的真实目录里，用电脑端同步最安全。
 
-双击 `同步翻译缓存到云端.bat`（与 `sync-cache.py` 同一目录），它会：
+运行 `python translate/sync-cache.py`（★ 2026-10-09 路径更正：原先它在 `D:\666\AI工作区\`，该目录已不存在 ⇒ 脚本已随项目走，源文件在项目内 `translate/sync-cache.py`；
+原配套的双击 `.bat` 只存在于那个已丢失的目录里，需要时用一行 `python translate/sync-cache.py` 代替），它会：
 
 1. 找到执行器 workspace 目录（默认 `%LOCALAPPDATA%\Real\workspace`，可手动传路径）；
 2. 扫出全部 `CheatMenu_Cache_*.txt`；
