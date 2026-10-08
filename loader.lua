@@ -1,22 +1,15 @@
 -- CheatMenu 加载器 · 就是这一小段需要粘贴/保存到执行器里, 主脚本走网络不受长度限制
 local URLS = {
-	"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 	"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://ghpxy.hwinzniej.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
-	"https://fastly.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
-	"https://gcore.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
-	"https://raw.githack.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-	"https://raw.gitmirror.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 }
--- ★ 防缓存与源顺序(2026-09-20 云端实测后更正):
---   raw 系(raw.githubusercontent.com 及其透传代理)原生缓存只有约 5 分钟, 推送后稍等即刷新;
---   jsDelivr 对【分支 @main】是文件级长缓存, 实测【加了下面的 ?t= 也穿不动】——
---   同一时刻 version.txt 已是新版、CheatMenu.lua 却还停在旧版(就是"更新不了/还是旧版"的来源)。
---   所以 URLS 的排序是: raw 系在前(新鲜), jsDelivr 三节点压到兜底(命中时可能静默给旧版)。
---   下面这个时间戳参数对 raw 系有穿透效果, 对 jsDelivr 无效但无害, 保留。
+-- ★ 源顺序(2026-10-09 实测后精简为两条):
+--   1) 官方 raw.githubusercontent.com —— 本机实测最快(601530 字节 0.50s), 且权威、不会喂旧版;
+--   2) gh-proxy.com —— 最快的非官方代理(0.97s), 官方被墙/超时才轮到它。
+--   ⛔ jsDelivr 三节点已删: 对【分支 @main】是文件级长缓存, 实测返回的是【旧版本脚本】
+--      (同一时刻 version.txt 已是新版、CheatMenu.lua 却还是旧版 ⇒ 就是"更新不了/还是旧版"的来源),
+--      下面这个 ?t= 时间戳对它【实测无效】。
+--   ⛔ ghfast.top / ghproxy.net / ghpxy / raw.githack / raw.gitmirror 一并删掉(慢或已死)。
 local TS = "?t=" .. tostring(os.time())
 local function fetch()
 	local last = "?"
