@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 20:40 sha 47d5dac7 bytes 577427'):format('2026-10-08 20:40','47d5dac7',577427))
+print(('[CheatMenu] build 2026-10-08 21:10 sha 6882c262 bytes 580925'):format('2026-10-08 21:10','6882c262',580925))
 local F = {}
-F.VERSION = "v16.10.81"
+F.VERSION = "v16.10.82"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2417,8 +2417,8 @@ local vp = cam and cam.ViewportSize or Vector2.new(400, 400)
 if not touch then
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
-vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
-vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+vim:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, true, game, 1)
+vim:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, false, game, 1)
 did[#did + 1] = "VIM"
 end)
 end
@@ -5972,21 +5972,60 @@ n = n + 1
 end
 return false
 end
-F.ClickerOverOwnGui = function()
-local pos = nil
-pcall(function() pos = game:GetService("UserInputService"):GetMouseLocation() end)
-if not pos then return false end
+F.ClickerPoint = function()
+local us = game:GetService("UserInputService")
+local focused = true
+pcall(function() focused = us.WindowFocused end)
+if focused then
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp then
+F._ckPX, F._ckPY = mp.X, mp.Y
+end
+end
+if F._ckPX == nil or F._ckPY == nil then
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp then
+F._ckPX, F._ckPY = mp.X, mp.Y
+end
+end
+return F._ckPX, F._ckPY, focused
+end
+F.ClickerOverOwnGui = function(x, y)
+if x == nil or y == nil then x, y = F.ClickerPoint() end
+if x == nil or y == nil then return false end
 local pg = LP:FindFirstChild("PlayerGui")
 if not pg then return false end
 local hits = nil
-pcall(function() hits = pg:GetGuiObjectsAtPosition(pos.X, pos.Y) end)
+pcall(function() hits = pg:GetGuiObjectsAtPosition(x, y) end)
 if type(hits) ~= "table" then return false end
 for i = 1, #hits do
 if F.CM_OWNED(hits[i]) then return true end
 end
 return false
 end
-F.MouseClickOnce = function()
+F.MouseClickOnce = function(x, y, focused)
+if x == nil or y == nil then
+local _, _, f = F.ClickerPoint()
+x, y = F._ckPX, F._ckPY
+if focused == nil then focused = f end
+end
+if x == nil or y == nil then return nil end
+if focused == nil then
+local f = true
+pcall(function() f = game:GetService("UserInputService").WindowFocused end)
+focused = f
+end
+do
+local ok = pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
+vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
+end)
+if ok then return "VIM(引擎级)" end
+end
+if focused then
 if type(mouse1click) == "function" then
 if pcall(mouse1click) then return "mouse1click" end
 end
@@ -5997,23 +6036,6 @@ if type(mouse1release) == "function" then mouse1release() end
 end)
 if ok and type(mouse1press) == "function" then return "mouse1press" end
 end
-do
-local ok = pcall(function()
-local vim = game:GetService("VirtualInputManager")
-local vp = Vector2.new(400, 400)
-pcall(function()
-local cam = workspace.CurrentCamera
-if cam and cam.ViewportSize then vp = cam.ViewportSize end
-end)
-local x, y = vp.X / 2, vp.Y / 2
-pcall(function()
-local mp = game:GetService("UserInputService"):GetMouseLocation()
-if mp then x, y = mp.X, mp.Y end
-end)
-vim:SendMouseButtonEvent(true, x, y, 0, true, game, 0)
-vim:SendMouseButtonEvent(false, x, y, 0, true, game, 0)
-end)
-if ok then return "VIM" end
 end
 return nil
 end
@@ -6047,7 +6069,9 @@ end
 end)
 parts[#parts + 1] = names[i] .. "=" .. tostring(cnt)
 end
-return table.concat(parts, " · ")
+local vis = "?"
+pcall(function() vis = tostring(b.Visible) .. " / " .. tostring(math.floor(b.AbsoluteSize.X)) .. "x" .. tostring(math.floor(b.AbsoluteSize.Y)) end)
+return table.concat(parts, " · ") .. " · Visible/尺寸=" .. vis
 end
 F.RB_FIND = function(name)
 if type(name) ~= "string" or name == "" then return nil end
@@ -6062,6 +6086,50 @@ end
 end
 end)
 return found
+end
+F.RB_ARG_LABELS = { ' "rebirthRequest" ', ' "Rebirth" ', ' "RebirthRequest" ', ' "rebirth" ', " 无参数 ", " true " }
+F.RB_ARG_AT = function(i)
+if i <= 1 then return "rebirthRequest" end
+if i == 2 then return "Rebirth" end
+if i == 3 then return "RebirthRequest" end
+if i == 4 then return "rebirth" end
+if i == 5 then return nil end
+return true
+end
+F.RB_COUNT = function()
+local n = nil
+pcall(function()
+local ls = LP:FindFirstChild("leaderstats")
+if ls then
+for _, d in ipairs(ls:GetChildren()) do
+local nm = string.lower(tostring(d.Name))
+if string.find(nm, "rebirth", 1, true) or string.find(nm, "prestige", 1, true) or string.find(nm, "ascend", 1, true) then
+local v = d.Value
+if type(v) == "number" then n = v return end
+end
+end
+end
+end)
+if n == nil then
+pcall(function()
+local at = LP:GetAttributes()
+if type(at) == "table" then
+for k, v in pairs(at) do
+if type(v) == "number" and F.RB_HIT(tostring(k)) then n = v return end
+end
+end
+end)
+end
+return n
+end
+F.RB_SEND = function(remote, arg)
+if not remote then return false end
+if remote:IsA("RemoteFunction") then
+if arg == nil then return (pcall(function() remote:InvokeServer() end)) end
+return (pcall(function() remote:InvokeServer(arg) end))
+end
+if arg == nil then return (pcall(function() remote:FireServer() end)) end
+return (pcall(function() remote:FireServer(arg) end))
 end
 F.RB_LEARN = function()
 local out = {}
@@ -6090,21 +6158,7 @@ local obj = cache[it.name]
 if obj == nil then obj = F.RB_FIND(it.name) cache[it.name] = obj or false end
 if obj then
 tried = tried + 1
-local ok = false
-if it.cmd then
-if obj:IsA("RemoteFunction") then
-ok = pcall(function() obj:InvokeServer(it.cmd) end)
-else
-ok = pcall(function() obj:FireServer(it.cmd) end)
-end
-else
-if obj:IsA("RemoteFunction") then
-ok = pcall(function() obj:InvokeServer() end)
-else
-ok = pcall(function() obj:FireServer() end)
-end
-end
-if ok then fired = fired + 1 end
+if F.RB_SEND(obj, it.cmd) then fired = fired + 1 end
 end
 end
 F.Out("[自动转生] 用录到的 " .. tostring(#list) .. " 条命令 ⇒ 找到远程 " .. tostring(tried) .. " 个 · 成功发出 " .. tostring(fired) .. " 次")
@@ -6113,12 +6167,11 @@ end
 local RBT = nil
 function F.AutoRebirthEnable()
 if RBT and T.AutoRebirth then return end
-F.Out("[自动转生] 已开: 自动找游戏自己的转生入口(已录命令 / 自带自动转生按钮 / 转生远程 / 转生按钮)")
+F.Out("[自动转生] 已开: 自动找转生入口(已录命令 / 自带自动转生按钮 / 转生远程 / 转生按钮)")
+F.Out("[自动转生] 提示: 有的游戏要求先满足条件(例如「先完成一次投掷」)才允许转生 —— 若一直没转, 先满足条件再看")
 RBT = task.spawn(function()
-local tgt, lastLog, dumped, done1 = nil, 0, false, false
-while T.AutoRebirth do
-pcall(function()
-if not tgt then
+local tgt, lastLog, dumped, done1, sent, cnt0 = nil, 0, false, false, 0, nil
+local function findTarget()
 local learned = F.RB_LEARN()
 if #learned > 0 then
 tgt = { kind = "learn", list = learned }
@@ -6126,21 +6179,32 @@ F.Out("[自动转生] 从「远程调用记录」里学到 " .. tostring(#learne
 for i = 1, #learned do
 F.Out("[自动转生]    · " .. learned[i].method .. " " .. learned[i].name .. "  (" .. learned[i].sig .. ")")
 end
-else
+return
+end
 local sc = F.RB_SCAN()
 if sc.auto then
 tgt = { kind = "auto", obj = sc.auto }
 F.Out("[自动转生] 找到游戏自带的「自动转生」按钮: " .. sc.auto:GetFullName())
 F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.auto))
-elseif #sc.remotes > 0 then
-local r = sc.remotes[1]
-tgt = { kind = r:IsA("RemoteFunction") and "rfn" or "rev", obj = r }
-F.Out("[自动转生] 找到转生远程: " .. r:GetFullName() .. " (" .. r.ClassName .. ") ⇒ 定时触发")
-elseif #sc.buttons > 0 then
+return
+end
+if #sc.remotes > 0 then
+tgt = { kind = "remote", list = sc.remotes, argIdx = 1, argAt = os.clock(), okIdx = nil }
+F.Out("[自动转生] 找到 " .. tostring(#sc.remotes) .. " 个转生远程 ⇒ 轮流试实参")
+for i = 1, math.min(#sc.remotes, 6) do
+F.Out("[自动转生]    · " .. tostring(sc.remotes[i]:GetFullName()) .. " (" .. sc.remotes[i].ClassName .. ")")
+end
+cnt0 = F.RB_COUNT()
+F.Out("[自动转生] 起点转生次数 = " .. tostring(cnt0 == nil and "(读不到, 只能靠自己看)" or cnt0))
+return
+end
+if #sc.buttons > 0 then
 tgt = { kind = "btn", obj = sc.buttons[1] }
 F.Out("[自动转生] 找到转生按钮: " .. sc.buttons[1]:GetFullName())
 F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.buttons[1]))
-elseif not dumped and os.clock() - lastLog > 12 then
+return
+end
+if not dumped and os.clock() - lastLog > 12 then
 dumped = true
 lastLog = os.clock()
 F.Out("[自动转生] 还没找到转生入口。这个游戏里名字像转生的东西(" .. tostring(#sc.any) .. " 个):")
@@ -6148,31 +6212,56 @@ for i = 1, #sc.any do F.Out("[自动转生]    · " .. sc.any[i]) end
 F.Out("[自动转生] ⇒ 先在游戏里打开「转生」界面(让按钮被创建); 或开「远程调用记录」手动转生一次再回来看")
 end
 end
-end
-if tgt then
+local function fireTarget()
 if tgt.kind == "learn" then
-if not done1 then
+if done1 then return end
 done1 = true
 F.RB_LEARN_FIRE(tgt.list)
 F.Out("[自动转生] 已用录到的命令发过一次 ⇒ 若游戏里没动静, 把上面那几行发我")
+return
 end
-elseif tgt.kind == "auto" then
-if not done1 then
+if tgt.kind == "auto" then
+if done1 then return end
 done1 = true
 local okc = F.GymClickButton(tgt.obj)
-F.Out("[自动转生] 点了一下游戏自带的自动转生 ⇒ " .. (okc and "已发出信号" or "没发出去")
-.. " · 请看一眼游戏界面上那个开关有没有变亮; 若没变, 把上面「按钮信号连接」那行发我")
+F.Out("[自动转生] 点了一下游戏自带的自动转生 ⇒ " .. (okc and "已发出信号" or "没发出去(按钮没暴露信号)"))
+return
 end
-elseif tgt.kind == "rfn" then
-pcall(function() tgt.obj:InvokeServer() end)
-elseif tgt.kind == "rev" then
-pcall(function() tgt.obj:FireServer() end)
-else
+if tgt.kind == "remote" then
+local arg = F.RB_ARG_AT(tgt.argIdx)
+for i = 1, #tgt.list do
+if F.RB_SEND(tgt.list[i], arg) then sent = sent + 1 end
+end
+local cnt = F.RB_COUNT()
+if cnt ~= nil and cnt0 ~= nil and cnt > cnt0 then
+F.Out("[自动转生] ✅ 有效! 转生次数 " .. tostring(cnt0) .. " ⇒ " .. tostring(cnt) .. " (实参=" .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?") .. ")")
+cnt0 = cnt
+tgt.okIdx = tgt.argIdx
+elseif tgt.okIdx == nil and os.clock() - tgt.argAt > 8 then
+tgt.argAt = os.clock()
+tgt.argIdx = (tgt.argIdx % #F.RB_ARG_LABELS) + 1
+F.Out("[自动转生] 这个实参没生效 ⇒ 换下一个: " .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?"))
+end
+return
+end
+if tgt.kind == "btn" then
+if done1 then return end
+done1 = true
 F.GymClickButton(tgt.obj)
 end
 end
+while T.AutoRebirth do
+pcall(function()
+if not tgt then findTarget() end
+if tgt then fireTarget() end
+if tgt and tgt.kind == "remote" and os.clock() - lastLog > 20 then
+lastLog = os.clock()
+local cc = F.RB_COUNT()
+F.Out("[自动转生] 已发 " .. tostring(sent) .. " 次 · 实参=" .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?")
+.. " · 当前转生次数=" .. tostring(cc == nil and "(读不到)" or cc))
+end
 end)
-task.wait(2)
+task.wait(0.25)
 end
 RBT = nil
 end)
@@ -6188,24 +6277,34 @@ if CKT and T.Clicker then return end
 T.Clicker = true
 local gap = F.ClickerGap()
 local kc = F.ClickerKeyCode()
-F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s · 鼠标停在菜单上时自动跳过(不会点到自己)",
+F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s",
 gap, (gap > 0) and (1 / gap) or 0,
 kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
+F.Out("[连点器] 用的是引擎级输入 + 固定坐标 ⇒ 切到别的窗口(失焦)后, 仍会点「切屏前最后那个位置」")
+F.Out("[连点器] ⚠ 若某些游戏在失焦时直接丢弃输入, 那种就只能让游戏窗口保持在前台")
 CKT = task.spawn(function()
-local n, t0, via, skipped = 0, os.clock(), nil, 0
+local n, t0, via, skOut, skMenu, lastF = 0, os.clock(), nil, 0, 0, nil
 while T.Clicker do
+local x, y, focused = F.ClickerPoint()
+if lastF ~= nil and lastF ~= focused then
+F.Out("[连点器] 窗口" .. (focused and "回到前台" or "切出去了(开始用记录的坐标 " .. tostring(math.floor(x or 0)) .. "," .. tostring(math.floor(y or 0)) .. " 继续点)"))
+end
+lastF = focused
 local over = false
-pcall(function() over = F.ClickerOverOwnGui() end)
+pcall(function() over = F.ClickerOverOwnGui(x, y) end)
 if over then
-skipped = skipped + 1
+skMenu = skMenu + 1
 else
-pcall(function() via = F.MouseClickOnce() end)
-n = n + 1
+pcall(function() via = F.MouseClickOnce(x, y, focused) end)
+if via == nil then skOut = skOut + 1 else n = n + 1 end
 end
 if os.clock() - t0 > 30 then
 t0 = os.clock()
 F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)")
-.. (skipped > 0 and (" · 鼠标在菜单上跳过 " .. tostring(skipped) .. " 次") or ""))
+.. " · 坐标=" .. tostring(math.floor(x or 0)) .. "," .. tostring(math.floor(y or 0))
+.. (focused and " · 窗口在前台" or " · 窗口在后台(仍继续)")
+.. (skMenu > 0 and (" · 跳过(鼠标在菜单上) " .. tostring(skMenu) .. " 次") or "")
+.. (skOut > 0 and (" · 发不出去 " .. tostring(skOut) .. " 次") or ""))
 end
 task.wait(F.ClickerGap())
 end
@@ -10088,8 +10187,6 @@ return nil
 end
 F.GymClickButton = function(button)
 if not button or not button:IsA("GuiButton") then return false end
-if not button.Visible or button.AbsoluteSize.X <= 1 or button.AbsoluteSize.Y <= 1 then return false end
-local used = false
 if type(getconnections) == "function" and type(firesignal) == "function" then
 local order = { "Activated", "MouseButton1Click" }
 for i = 1, #order do
@@ -10102,34 +10199,26 @@ local cs = getconnections(sig)
 if type(cs) == "table" then cnt = #cs end
 end)
 if cnt > 0 then
-if pcall(function() firesignal(sig) end) then used = true break end
+if pcall(function() firesignal(sig) end) then return true end
 end
 end
 end
-if not used then
 local dn, up = nil, nil
 pcall(function() dn = button.MouseButton1Down up = button.MouseButton1Up end)
-local cdn, cup = 0, 0
-pcall(function() local cs = getconnections(dn) if type(cs) == "table" then cdn = #cs end end)
-pcall(function() local cs = getconnections(up) if type(cs) == "table" then cup = #cs end end)
-if cdn > 0 or cup > 0 then
-if dn then pcall(function() firesignal(dn) end) end
-if up then pcall(function() firesignal(up) end) end
-used = true
-end
-end
-if not used then
+local cdn = 0
 pcall(function()
-for _, nm in ipairs({ "Activated", "MouseButton1Click" }) do
-local sig = button[nm]
-if sig then
-for _, c in ipairs(getconnections(sig) or {}) do pcall(function() c:Fire() end) end
-end
-end
+local cs = getconnections(dn)
+if type(cs) == "table" then cdn = #cs end
 end)
+if cdn > 0 and dn then
+pcall(function() firesignal(dn) end)
+if up then pcall(function() firesignal(up) end) end
+return true
 end
 end
-if not used and type(firesignal) == "function" then
+if not button.Visible or button.AbsoluteSize.X <= 1 or button.AbsoluteSize.Y <= 1 then return false end
+local used = false
+if type(firesignal) == "function" then
 pcall(function() firesignal(button.Activated) end)
 pcall(function() firesignal(button.MouseButton1Click) end)
 used = true
