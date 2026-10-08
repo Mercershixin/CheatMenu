@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 03:18 sha 03bbe7e1 bytes 587131'):format('2026-10-09 03:18','03bbe7e1',587131))
+print(('[CheatMenu] build 2026-10-09 03:33 sha d445a1e1 bytes 587176'):format('2026-10-09 03:33','d445a1e1',587176))
 local F = {}
-F.VERSION = "v17.0.15"
+F.VERSION = "v17.0.16"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6161,7 +6161,7 @@ if C.ClickerKey == nil then C.ClickerKey = "F6" end
 if C.ClickerPosKey == nil then C.ClickerPosKey = "F7" end
 if C.ClickerX == nil then C.ClickerX = 0 end
 if C.ClickerY == nil then C.ClickerY = 0 end
-local CK = { loop = nil, conns = {}, sendAt = 0 }
+local CLKST = { loop = nil, conns = {}, sendAt = 0 }
 F.ClickerKeyOf = function(which)
 local nm = C.ClickerKey
 if which == "pos" then nm = C.ClickerPosKey end
@@ -6204,7 +6204,7 @@ F.Out("[连点器] 已清除保存的位置")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已清除保存的位置", Duration = 3 }) end)
 end
 F.ClickerClick = function(x, y)
-CK.sendAt = os.clock()
+CLKST.sendAt = os.clock()
 local ok = false
 pcall(function()
 local vim = game:GetService("VirtualInputManager")
@@ -6219,7 +6219,7 @@ end
 return nil
 end
 function F.ClickerEnable()
-if CK.loop then return end
+if CLKST.loop then return end
 local x, y = F.ClickerPos()
 if not x then
 F.Out("[连点器] 还没保存位置 ⇒ 鼠标移到目标处, 按 " .. tostring(C.ClickerPosKey) .. " 或点「保存当前鼠标位置」")
@@ -6231,7 +6231,7 @@ end
 T.Clicker = true
 local gap = F.ClickerGap()
 F.Out("[连点器] 已开 · 每 " .. string.format("%.2f", gap) .. " 秒一次 (" .. x .. "," .. y .. ") · 模式 " .. tostring(C.ClickerMode))
-CK.loop = task.spawn(function()
+CLKST.loop = task.spawn(function()
 local n, t0, via = 0, os.clock(), nil
 while T.Clicker == true do
 local px, py = F.ClickerPos()
@@ -6245,7 +6245,7 @@ F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via 
 end
 task.wait(F.ClickerGap())
 end
-CK.loop = nil
+CLKST.loop = nil
 if T.Clicker == true then
 T.Clicker = false
 pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.Clicker, false) end)
@@ -6254,7 +6254,7 @@ end)
 end
 function F.ClickerDisable()
 T.Clicker = false
-if CK.loop then pcall(function() task.cancel(CK.loop) end) CK.loop = nil end
+if CLKST.loop then pcall(function() task.cancel(CLKST.loop) end) CLKST.loop = nil end
 F.Out("[连点器] 已停")
 end
 function F.ClickerToggle()
@@ -6266,15 +6266,15 @@ if want then F.ClickerEnable() else F.ClickerDisable() end
 end
 end
 function F.ClickerWatch()
-if CK.conns[1] then return end
+if CLKST.conns[1] then return end
 if not (UIS and UIS.InputBegan and UIS.InputEnded) then return end
-local function selfClick() return (os.clock() - (CK.sendAt or 0)) < 0.15 end
+local function selfClick() return (os.clock() - (CLKST.sendAt or 0)) < 0.15 end
 local function isMouse1(input)
 local ok = false
 pcall(function() ok = (input.UserInputType == Enum.UserInputType.MouseButton1) end)
 return ok
 end
-CK.conns[1] = UIS.InputBegan:Connect(function(input, gp)
+CLKST.conns[1] = UIS.InputBegan:Connect(function(input, gp)
 if gp or not input then return end
 local isK = false
 pcall(function() isK = (input.UserInputType == Enum.UserInputType.Keyboard) end)
@@ -6298,7 +6298,7 @@ pcall(F.ClickerToggle)
 end
 end
 end)
-CK.conns[2] = UIS.InputEnded:Connect(function(input, gp)
+CLKST.conns[2] = UIS.InputEnded:Connect(function(input, gp)
 if gp or not input then return end
 if not isMouse1(input) then return end
 if selfClick() then return end
@@ -6306,8 +6306,8 @@ if string.find(tostring(C.ClickerMode), "按住", 1, true) then pcall(F.ClickerD
 end)
 end
 function F.ClickerWatchStop()
-for i = 1, #CK.conns do pcall(function() CK.conns[i]:Disconnect() end) end
-CK.conns = {}
+for i = 1, #CLKST.conns do pcall(function() CLKST.conns[i]:Disconnect() end) end
+CLKST.conns = {}
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
