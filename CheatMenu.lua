@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 00:07 sha ba4b50f9 bytes 594904'):format('2026-10-09 00:07','ba4b50f9',594904))
+print(('[CheatMenu] build 2026-10-09 00:19 sha 60915b83 bytes 605743'):format('2026-10-09 00:19','60915b83',605743))
 local F = {}
-F.VERSION = "v16.10.98"
+F.VERSION = "v16.10.99"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -689,6 +689,26 @@ return nil
 end
 end
 end
+if (method == "FireServer" or method == "InvokeServer") and not checkcaller() and (T.GameBypass == true or T.SpoofPos == true) then
+local oname = tostring(self and self.Name or "")
+if T.GameBypass == true then
+local gkw = F.GameBypassNameHit(oname)
+if gkw ~= nil then
+F.GameBypassNote(oname, gkw)
+return nil
+end
+end
+if T.SpoofPos == true then
+local pkw = F.PosSpoofNameHit(oname)
+if pkw ~= nil then
+local sp, sc = F.PosSpoofArgs(...)
+if sp then
+F.PosSpoofNote(oname, pkw, sc)
+return box.orig(self, table.unpack(sp, 1, sp.n))
+end
+end
+end
+end
 return box.orig(self, ...)
 end
 end)
@@ -698,7 +718,7 @@ return AC._nc
 end
 function AC.UninstallNamecallHook()
 if not AC._nc then return false end
-if T.HpBlock or T.RemoteBlock then return false end
+if T.HpBlock or T.RemoteBlock or T.SpoofPos or T.GameBypass then return false end
 local ok = F.MetaUninstall("__namecall", "AC")
 AC._nc = false
 AC._ncLayer = nil
@@ -712,6 +732,141 @@ F.Out("[拦受伤上报] 已开: 客户端发出的「受伤/死亡」类 remote
 F.Out("[拦受伤上报] 生效条件: 游戏必须是「客户端算伤害再上报」; 若是服务端算伤害, 拦了也没用(服务端早就知道了)。日志会列出实际拦到了什么, 游戏变卡就说明误伤, 关掉即恢复")
 else
 F.Out("[拦受伤上报] 已关(已不再拦, 未卸载公共钩子)")
+end
+end
+F.POS_KEYS = { "motorreplication","motor_replication","position","posupdate","pos_update","updatepos","setpos","reportpos","reportposition","location","transform","cframe","moveupdate","move_update","charpos","char_pos","playerpos","player_pos","syncpos","syncposition","updatemove" }
+F.PosSpoofNameHit = function(name)
+local n = string.lower(tostring(name or ""))
+local i
+for i = 1, #F.POS_KEYS do
+if string.find(n, F.POS_KEYS[i], 1, true) then return F.POS_KEYS[i] end
+end
+return nil
+end
+F.PosSpoofArm = function()
+local ok, _, _, root = pcall(GC)
+local px, py, pz = nil, nil, nil
+if ok and root then
+pcall(function() px, py, pz = root.Position.X, root.Position.Y, root.Position.Z end)
+end
+if type(px) ~= "number" or type(py) ~= "number" or type(pz) ~= "number" then return false end
+local lift = tonumber(C.SpoofPosLift) or 0
+if lift < 0 then lift = 0 end
+if lift > 2000 then lift = 2000 end
+F._spoofP = { X = px, Y = py + lift, Z = pz }
+return true
+end
+F.PosSpoofArgs = function(...)
+if T.SpoofPos ~= true then return nil end
+local f = F._spoofP
+if f == nil then return nil end
+local n = select("#", ...)
+local args = { ... }
+local c, i = 0, 0
+for i = 1, n do
+local v = args[i]
+local tp = type(v)
+if tp == "Vector3" then
+local nv = nil
+pcall(function() nv = Vector3.new(f.X, f.Y, f.Z) end)
+if nv ~= nil then args[i] = nv c = c + 1 end
+elseif tp == "CFrame" then
+local nv = nil
+pcall(function() nv = CFrame.new(f.X, f.Y, f.Z) end)
+if nv ~= nil then args[i] = nv c = c + 1 end
+end
+end
+if c == 0 then return nil end
+args.n = n
+return args, c
+end
+F.PosSpoofNote = function(name, kw, cnt)
+AC._posSpoofed = (AC._posSpoofed or 0) + 1
+local now = os.clock()
+if now - (AC._posSpoofLogAt or 0) < 5 then return end
+AC._posSpoofLogAt = now
+local msg = "[位置上报伪造] " .. tostring(name) .. " ← 关键词 " .. tostring(kw)
+.. " ⇒ 已把 " .. tostring(cnt) .. " 个坐标参数改成假位置(累计 " .. tostring(AC._posSpoofed) .. " 次)"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, msg) end) else pcall(F.Out, msg) end
+end
+F.SpoofPosSet = function(on)
+T.SpoofPos = on and true or false
+if T.SpoofPos then
+local armed = F.PosSpoofArm()
+pcall(AC.InstallNamecallHook)
+if armed then
+F.Out("[位置上报伪造] 已开: 对外上报的坐标改成 " .. string.format("%.0f, %.0f, %.0f", F._spoofP.X, F._spoofP.Y, F._spoofP.Z))
+else
+F.Out("[位置上报伪造] 已开, 但现在没有角色(没进游戏/重生中) ⇒ 进游戏后点「重设伪造点」")
+end
+F.Out("[位置上报伪造] 原理: 只改「你发出去的坐标」。若游戏的实体/判定是看客户端上报的位置 ⇒ 打空; 若是服务端权威移动 ⇒ 可能被拉回, 变卡或异常就关掉")
+else
+F.Out("[位置上报伪造] 已关(不再改坐标; 公共钩子留给其它功能用)")
+end
+end
+F.GBYP_KEYS = { "anticheat","anti_cheat","anti-cheat","acflag","ac_flag","flag","report","detect","violation","suspect","exploit","cheat","telemetry","analytic","integrity","verify","audit","evidence","punish","moderate","strike","screenshot","alert","warn" }
+F.GBYP_SAFE = { "interact","door","open","pick","use","quest","shop","chat","buy","sell","trade","invite","join","leave","vote","emote","music","sound","camera","menu","equip","inventory","grab","dropitem","respawn","checkpoint" }
+F.GameBypassNameHit = function(name)
+local n = string.lower(tostring(name or ""))
+local i
+for i = 1, #F.GBYP_SAFE do
+if string.find(n, F.GBYP_SAFE[i], 1, true) then return nil end
+end
+for i = 1, #F.GBYP_KEYS do
+if string.find(n, F.GBYP_KEYS[i], 1, true) then return F.GBYP_KEYS[i] end
+end
+return nil
+end
+F.GameBypassScan = function()
+F._gbypList = {}
+local roots, i, j = {}, 0, 0
+pcall(function() local rs = game:GetService("ReplicatedStorage") if rs then roots[#roots + 1] = rs end end)
+pcall(function() if workspace then roots[#roots + 1] = workspace end end)
+local seen = {}
+for i = 1, #roots do
+local objs = F.walk(roots[i], 4000, 300)
+for j = 1, #objs do
+local o = objs[j]
+local cls = nil
+pcall(function() cls = o.ClassName end)
+if cls == "RemoteEvent" or cls == "UnreliableRemoteEvent" or cls == "RemoteFunction" then
+if seen[o] == nil and F.GameBypassNameHit(o.Name) ~= nil then
+seen[o] = true
+F._gbypList[#F._gbypList + 1] = o
+end
+end
+end
+end
+return #F._gbypList
+end
+F.GameBypassNote = function(name, kw)
+AC._gbypBlocked = (AC._gbypBlocked or 0) + 1
+local now = os.clock()
+if now - (AC._gbypLogAt or 0) < 4 then return end
+AC._gbypLogAt = now
+local msg = "[游戏专用绕过] 已拦下 " .. tostring(name) .. " ← 关键词 " .. tostring(kw)
+.. " (累计 " .. tostring(AC._gbypBlocked) .. " 次; 游戏功能异常就说明这个词误伤了, 关掉即恢复)"
+if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, msg) end) else pcall(F.Out, msg) end
+end
+F.GameBypassSet = function(on)
+T.GameBypass = on and true or false
+if T.GameBypass then
+local n = 0
+pcall(function() n = F.GameBypassScan() end)
+pcall(AC.InstallNamecallHook)
+F.Out("[游戏专用绕过] 已开: 只拦「检测 / 上报类」远程, 命中 " .. tostring(n) .. " 个")
+local names, k = {}, 0
+for k = 1, #(F._gbypList or {}) do
+if #names >= 12 then break end
+names[#names + 1] = tostring(F._gbypList[k].Name)
+end
+if #names > 0 then
+F.Out("[游戏专用绕过] 本次目标: " .. table.concat(names, " / "))
+else
+F.Out("[游戏专用绕过] 本服没扫到「检测/上报类」远程 ⇒ 这次等于空转(不拦任何东西)")
+end
+else
+F.Out("[游戏专用绕过] 已关(不再拦; 公共钩子留给其它功能用)")
 end
 end
 AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
@@ -5396,8 +5551,9 @@ F.Out("[锁血] 最近 6 秒补血 " .. tostring(total) .. " 次")
 end
 end
 F.DMG_KEYS = { "hurt","damage","dmg","blood","bleed","injur","wound","vignette","lowhp","low_hp","lowhealth","low_health","redflash","red_flash","screenfx","screeneffect","screen_effect","healthwarn","health_warn","got_hit","getting_hit" }
+F.SCR_KEYS = { "jumpscare","jump_scare","scare","strobe","screenflash","screen_flash","flashfx","flash_fx","flashoverlay","flasheffect","whiteout","white_out","blackout","black_out","redout","red_out","fade","static","glitch","noise","scanline","scan_line","distortion","chromatic","aberration","vhs","filmgrain","film_grain","grain","screeneffect","screenfx","screen_effect","fullscreen","overlay","blur" }
 F._dmgFx, F._dmgAt = {}, 0
-F.DmgFxOn = function() return (T.GodMode or T.LockHealth) and true or false end
+F.DmgFxOn = function() return (T.GodMode or T.LockHealth or T.NoScreenFx == true) and true or false end
 F.DmgFxKind = function(o)
 local k = nil
 pcall(function()
@@ -5414,6 +5570,9 @@ pcall(function() nm = string.lower(tostring(o.Name)) end)
 if nm == nil then return false end
 local i
 for i = 1, #F.DMG_KEYS do if string.find(nm, F.DMG_KEYS[i], 1, true) then return true end end
+if T.NoScreenFx == true then
+for i = 1, #F.SCR_KEYS do if string.find(nm, F.SCR_KEYS[i], 1, true) then return true end end
+end
 return false
 end
 F.DmgFxBigRed = function(o, k)
@@ -5499,6 +5658,21 @@ if F._dmgLoop then pcall(function() F._dmgLoop:Disconnect() end) F._dmgLoop = ni
 local n = F.DmgFxRestore(false)
 if n > 0 then F.Out("[受伤红屏] 已停: 还原 " .. tostring(n) .. " 个覆盖层") end
 end
+F.ScrFxSet = function(on)
+T.NoScreenFx = on and true or false
+if T.NoScreenFx then
+F.Out("[关屏幕特效] 已开: 隐藏画面上的惊吓/闪屏/黑屏/噪点/扭曲类覆盖层(只动覆盖层的透明度, 不改灯光、不动伽马、不改游戏状态)")
+pcall(F.DmgFxLoop)
+else
+if F.DmgFxOn() then
+F.Out("[关屏幕特效] 已关(上帝模式/锁血还在 ⇒ 受伤红屏抑制继续生效)")
+else
+if F._dmgLoop then pcall(function() F._dmgLoop:Disconnect() end) F._dmgLoop = nil end
+local n = F.DmgFxRestore(false)
+F.Out("[关屏幕特效] 已关: 还原 " .. tostring(n) .. " 个覆盖层")
+end
+end
+end
 F.DmgFxLoop = function()
 if F._dmgLoop then return end
 F._dmgLoop = RS.Heartbeat:Connect(function()
@@ -5517,7 +5691,11 @@ local now = os.clock()
 if now - (F._dmgAt or 0) < 0.5 then return end
 F._dmgAt = now
 local n = F.DmgFxScan()
-if n > 0 then F.Out("[受伤红屏] 已屏蔽 " .. tostring(n) .. " 个受伤/红屏覆盖层(上帝模式/锁血期间生效, 关掉即还原)") end
+if n > 0 then
+local tag = "受伤红屏"
+if T.NoScreenFx == true and not (T.GodMode or T.LockHealth) then tag = "关屏幕特效" end
+F.Out("[" .. tag .. "] 已屏蔽 " .. tostring(n) .. " 个覆盖层(只压透明度, 关掉即还原)")
+end
 end)
 end
 local LockHealthEnable, LockHealthDisable
@@ -6234,12 +6412,57 @@ local cx, cy = F.ClickerCenter()
 if not cx or not cy then F.ClickerMarkHide() return end
 F.ClickerMarkShow(cx, cy)
 end
+F.ClickerTrackStart = function()
+if F._ckTrack then return end
+if not (UIS and UIS.InputChanged) then return end
+F._ckTrack = UIS.InputChanged:Connect(function(inp)
+if inp == nil then return end
+local isM = false
+pcall(function() isM = (inp.UserInputType == Enum.UserInputType.MouseMovement) end)
+if not isM then return end
+local now = os.clock()
+if now - (F._ckTrackAt or 0) < 0.12 then return end
+F._ckTrackAt = now
+local us = game:GetService("UserInputService")
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp == nil then return end
+local x, y = math.floor(mp.X), math.floor(mp.Y)
+F._ckPX, F._ckPY = x, y
+local over = false
+pcall(function() over = F.ClickerOverOwnGui(x, y) end)
+if not over then
+F._ckGX, F._ckGY = x, y
+end
+end)
+end
+F.ClickerTrackStop = function()
+if F._ckTrack then pcall(function() F._ckTrack:Disconnect() end) F._ckTrack = nil end
+end
 F.ClickerLockHere = function()
 local us = game:GetService("UserInputService")
 local mp = nil
 pcall(function() mp = us:GetMouseLocation() end)
-if not mp then F.Out("[连点器] 拿不到鼠标位置 ⇒ 锁定失败") return end
-local x, y = math.floor(mp.X), math.floor(mp.Y)
+local x, y, src = nil, nil, nil
+if mp ~= nil then
+local px, py = math.floor(mp.X), math.floor(mp.Y)
+local over = false
+pcall(function() over = F.ClickerOverOwnGui(px, py) end)
+if not over then x, y, src = px, py, "当前鼠标位置" end
+end
+if x == nil then
+local gx, gy = F._ckGX, F._ckGY
+if gx ~= nil and gy ~= nil then
+local over2 = false
+pcall(function() over2 = F.ClickerOverOwnGui(gx, gy) end)
+if not over2 then x, y, src = math.floor(gx), math.floor(gy), "你上一次在游戏画面里的位置" end
+end
+end
+if x == nil then
+F.Out("[连点器] 锁定失败: 鼠标现在压在菜单上, 而且还没记录到你在游戏里的位置 ⇒ 先把鼠标移到游戏画面上晃一下, 再回来点「锁定当前位置」")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "先把鼠标移到游戏画面晃一下再锁", Duration = 5 }) end)
+return
+end
 C.ClickerLockX, C.ClickerLockY = x, y
 T.ClickerLock = true
 pcall(function()
@@ -6249,8 +6472,9 @@ pcall(F.OptSet, op.ClickerLockX, x)
 pcall(F.OptSet, op.ClickerLockY, y)
 pcall(F.OptSet, op.ClickerLock, true)
 end)
+F.ClickerTrackStart()
 F.ClickerMarkSync()
-F.Out("[连点器] ✅ 已锁定点击点 " .. x .. "," .. y
+F.Out("[连点器] ✅ 已锁定点击点 " .. x .. "," .. y .. " (取值来源: " .. tostring(src) .. ")"
 .. " ⇒ 之后切屏、鼠标乱跑都只点这里(可用下面两个滑块微调 · 关掉「锁定点击点」就恢复跟随鼠标)")
 end
 F.ClickerGap = function()
@@ -6271,6 +6495,7 @@ local CKT = nil
 function F.ClickerEnable()
 if CKT and T.Clicker then return end
 T.Clicker = true
+pcall(F.ClickerTrackStart)
 local gap = F.ClickerGap()
 local kc = F.ClickerKeyCode()
 F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s",
@@ -6320,6 +6545,7 @@ end
 function F.ClickerDisable()
 T.Clicker = false
 CKT = nil
+F._ckGX, F._ckGY = nil, nil
 pcall(F.ClickerMarkHide)
 F.Out("[连点器] 已停")
 end
@@ -10099,7 +10325,8 @@ return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
-TrapWarn = true, SpeedGuard = true, ClickerLock = true, LockHealthSolo = true }
+TrapWarn = true, SpeedGuard = true, ClickerLock = true, LockHealthSolo = true,
+NoScreenFx = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -15826,6 +16053,12 @@ Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记", Default = false, Cal
 if F._cfgSyncing then return end
 F.AllyMarkSet(v)
 end })
+Tabs.Visual:AddSection("屏幕")
+Tabs.Visual:AddToggle("NoScreenFx", { Title = "关屏幕特效", Default = false, Callback = function(v)
+T.NoScreenFx = v and true or false
+if F._cfgSyncing then return end
+pcall(F.ScrFxSet, v)
+end })
 Tabs.Visual:AddSection("高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视", Default = false, Callback = function(v)
 T.BodyHL = v
@@ -16144,6 +16377,11 @@ F.Out("[防护档位] 已收回档位自己开的「完整防护」")
 end
 pcall(F.LockFieldsUninstall)
 pcall(F.MetaHookUninstall)
+if F._tierGbypOwn then
+F._tierGbypOwn = nil
+pcall(F.GameBypassSet, false)
+F.Out("[防护档位] 已收回档位自己开的「游戏专用绕过」")
+end
 if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
 pcall(F.CfgSyncUI)
 F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(血量隔离/锁血/无敌等)保持不动")
@@ -16166,10 +16404,12 @@ pcall(F.HealthIsolateSet, true)
 pcall(F.HpBlockSet, true)
 pcall(AC.AntiPauseEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
+if T.GameBypass ~= true then F._tierGbypOwn = true end
+pcall(F.GameBypassSet, true)
 end
 if lvl >= 3 then
 T.CMX_FakeReport = true
-T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数)"
+T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数) + 游戏专用绕过"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
 T.BypassTier = "④ 绕过层全开: 防护(稳身·受击·陷阱) + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回(清检测脚本) + 深度中和"
 pcall(F.BypassTierApply, T.BypassTier)
@@ -16189,12 +16429,35 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
-"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警",
-"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) ⇒ 最激进",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过",
+"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) + 游戏专用绕过 ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
+end })
+Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
+T.SpoofPos = v and true or false
+if F._cfgSyncing then return end
+pcall(F.SpoofPosSet, v)
+end })
+Tabs.AC:AddSlider("SpoofPosLift", { Title = "伪造 · 抬高", Min = 0, Max = 2000, Default = 0, Rounding = 0, Callback = function(v)
+C.SpoofPosLift = v
+if F._cfgSyncing then return end
+if T.SpoofPos then pcall(F.PosSpoofArm) end
+end })
+Tabs.AC:AddButton({ Title = "重设伪造点", Callback = function()
+if T.SpoofPos ~= true then F.Out("[位置上报伪造] 还没开启 ⇒ 先打开上面的开关") return end
+if F.PosSpoofArm() then
+F.Out("[位置上报伪造] 已重设: " .. string.format("%.0f, %.0f, %.0f", F._spoofP.X, F._spoofP.Y, F._spoofP.Z))
+else
+F.Out("[位置上报伪造] 重设失败: 现在没有角色")
+end
+end })
+Tabs.AC:AddButton({ Title = "扫描本服绕过目标", Callback = function()
+local n = 0
+pcall(function() n = F.GameBypassScan() end)
+F.Out("[游戏专用绕过] 扫描完成: 「检测/上报类」远程 " .. tostring(n) .. " 个 · 档位②/③会自动拦这些")
 end })
 Tabs.AC:AddSection("扫描")
 Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录", Default = false, Callback = function(v)
@@ -16647,6 +16910,7 @@ end
 if C.IxRange == nil then C.IxRange = 300 end
 if C.IxGap == nil then C.IxGap = 2 end
 if C.IxScope == nil then C.IxScope = "附近范围" end
+if C.SpoofPosLift == nil then C.SpoofPosLift = 0 end
 if C.ClickerArea == nil then C.ClickerArea = 120 end
 if C.ClickerLockX == nil then C.ClickerLockX = 1 end
 if C.ClickerLockY == nil then C.ClickerLockY = 1 end
