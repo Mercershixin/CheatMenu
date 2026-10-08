@@ -137,7 +137,7 @@ local done = ok and (r ~= false)   -- ✓ 必须看返回值
   **本地缓存为 0 或本地模型没起来时自动触发**；拉到即写进本服文件。
   ⚠ 同时**保留旧 `cache/` 路径兜底**（`Trans.CLOUD_DIR_OLD`），老缓存文件不会失效。
 - **云端上传（写）**：⛔ **不在游戏内做**（要在脚本/工作目录放 GitHub Token ⇒ 密钥暴露给所有执行器脚本）。
-  改走**电脑端脚本** `D:\666\AI工作区\同步翻译缓存到云端.py`（双击同名 .bat）：
+  改走**电脑端脚本** `translate/sync-cache.py`（项目内；★ 2026-10-09 更正：原路径 `D:\666\AI工作区\` 整个目录已不存在，该文件已从仓库恢复回项目内）：
   读本机 workspace 的 `CheatMenu_Cache_*.txt` → PUT 到仓库 `translate/cache/`。
   - Token 来源：`项目/.workbuddy/publish.token`（本机，不进仓库）。
   - 该脚本已加入 `push_api.py` 的 FILES（推为 `translate/sync-cache.py`），随发版上仓库做异地备份。
