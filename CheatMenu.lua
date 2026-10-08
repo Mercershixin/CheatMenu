@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 20:13 sha da80cfba bytes 563298'):format('2026-10-08 20:13','da80cfba',563298))
+print(('[CheatMenu] build 2026-10-08 20:22 sha 8655801b bytes 569714'):format('2026-10-08 20:22','8655801b',569714))
 local F = {}
-F.VERSION = "v16.10.78"
+F.VERSION = "v16.10.79"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5874,6 +5874,188 @@ F.Out("[世界] ⇒ 更好的办法: 开「远程调用记录」→ 游戏里正
 end
 F.Out("[世界] 已发完 · 5 秒后看你在的世界/位置有没有变")
 end
+F.RB_STRONG = { "autorebirth", "auto_rebirth", "auto birth", "自动转生", "自动重生" }
+F.RB_KEYS = { "rebirth", "prestige", "ascend", "transcend", "reincarn", "转生", "轮回", "转升", "重生" }
+F.RB_HIT = function(nm)
+local s = string.lower(tostring(nm or ""))
+for i = 1, #F.RB_KEYS do
+if string.find(s, F.RB_KEYS[i], 1, true) then return true end
+end
+return false
+end
+F.RB_AUTO = function(nm)
+local s = string.lower(tostring(nm or ""))
+for i = 1, #F.RB_STRONG do
+if string.find(s, F.RB_STRONG[i], 1, true) then return true end
+end
+if string.find(s, "auto", 1, true) and F.RB_HIT(s) then return true end
+return false
+end
+F.RB_ISOURS = function(o)
+local p, n = o, 0
+while p and n < 12 do
+local nm = nil
+pcall(function() nm = string.lower(tostring(p.Name)) end)
+if nm then
+if string.find(nm, "cheatmenu", 1, true) or string.find(nm, "fluent", 1, true) then return true end
+end
+local up = nil
+pcall(function() up = p.Parent end)
+if up == nil then break end
+p = up
+n = n + 1
+end
+return false
+end
+F.RB_ROOTS = function()
+local t = {}
+pcall(function() local g = LP and LP:FindFirstChild("PlayerGui") if g then t[#t + 1] = g end end)
+pcall(function() if type(gethui) == "function" then local h = gethui() if h then t[#t + 1] = h end end end)
+pcall(function() t[#t + 1] = game:GetService("ReplicatedStorage") end)
+pcall(function() local ch = LP.Character if ch then t[#t + 1] = ch end end)
+return t
+end
+F.RB_SCAN = function()
+local out = { buttons = {}, remotes = {}, any = {}, auto = nil }
+local roots = F.RB_ROOTS()
+local budget = 40000
+local seen = {}
+for i = 1, #roots do
+local ds = nil
+pcall(function() ds = roots[i]:GetDescendants() end)
+if type(ds) == "table" then
+for j = 1, #ds do
+budget = budget - 1
+if budget <= 0 then break end
+local d = ds[j]
+if not seen[d] then
+seen[d] = true
+local cls, nm = nil, nil
+pcall(function() cls = d.ClassName nm = d.Name end)
+if cls and nm and not F.RB_ISOURS(d) then
+if cls == "TextButton" or cls == "ImageButton" then
+if F.RB_HIT(nm) then
+out.buttons[#out.buttons + 1] = d
+if F.RB_AUTO(nm) and not out.auto then out.auto = d end
+end
+elseif cls == "RemoteEvent" or cls == "RemoteFunction" then
+if F.RB_HIT(nm) then out.remotes[#out.remotes + 1] = d end
+end
+if F.RB_HIT(nm) and #out.any < 12 then
+local fp = "?"
+pcall(function() fp = d:GetFullName() end)
+out.any[#out.any + 1] = nm .. " (" .. cls .. ") @ " .. fp
+end
+end
+end
+end
+end
+end
+return out
+end
+F.MouseClickOnce = function()
+if type(mouse1click) == "function" then
+if pcall(mouse1click) then return "mouse1click" end
+end
+do
+local ok = pcall(function()
+if type(mouse1press) == "function" then mouse1press() end
+if type(mouse1release) == "function" then mouse1release() end
+end)
+if ok and type(mouse1press) == "function" then return "mouse1press" end
+end
+do
+local ok = pcall(function()
+local vim = game:GetService("VirtualInputManager")
+local cam = workspace.CurrentCamera
+local vp = (cam and cam.ViewportSize) or Vector2.new(400, 400)
+vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+end)
+if ok then return "VIM" end
+end
+return nil
+end
+local RBT = nil
+function F.AutoRebirthEnable()
+if RBT and T.AutoRebirth then return end
+F.Out("[自动转生] 已开: 自动找游戏自己的转生入口(自带自动转生按钮 / 转生远程 / 转生按钮)并触发")
+RBT = task.spawn(function()
+local tgt, autoAt, lastLog, dumped, autoDone = nil, 0, 0, false, false
+while T.AutoRebirth do
+pcall(function()
+if not tgt then
+local sc = F.RB_SCAN()
+if sc.auto then
+tgt = { kind = "auto", obj = sc.auto }
+F.Out("[自动转生] 找到游戏自带的「自动转生」按钮: " .. sc.auto:GetFullName() .. " ⇒ 打开它")
+elseif #sc.remotes > 0 then
+local r = sc.remotes[1]
+tgt = { kind = r:IsA("RemoteFunction") and "rfn" or "rev", obj = r }
+F.Out("[自动转生] 找到转生远程: " .. r:GetFullName() .. " (" .. r.ClassName .. ") ⇒ 定时触发")
+elseif #sc.buttons > 0 then
+tgt = { kind = "btn", obj = sc.buttons[1] }
+F.Out("[自动转生] 找到转生按钮: " .. sc.buttons[1]:GetFullName() .. " ⇒ 定时点击")
+elseif not dumped and os.clock() - lastLog > 12 then
+dumped = true
+lastLog = os.clock()
+F.Out("[自动转生] 还没找到转生入口。这个游戏里名字像转生的东西(" .. tostring(#sc.any) .. " 个):")
+for i = 1, #sc.any do F.Out("[自动转生]    · " .. sc.any[i]) end
+F.Out("[自动转生] ⇒ 请先在游戏里打开「转生」界面(让按钮被创建)再回来看; 或开「远程调用记录」手动转生一次")
+end
+end
+if tgt then
+if tgt.kind == "auto" then
+if not autoDone or os.clock() - autoAt > 30 then
+autoAt = os.clock()
+autoDone = F.GymClickButton(tgt.obj)
+if autoDone and not dumped then
+dumped = true
+F.Out("[自动转生] ✅ 已打开游戏自带的自动转生 ⇒ 之后它自己会一直转(本开关留着即可)")
+end
+end
+elseif tgt.kind == "rfn" then
+pcall(function() tgt.obj:InvokeServer() end)
+elseif tgt.kind == "rev" then
+pcall(function() tgt.obj:FireServer() end)
+else
+F.GymClickButton(tgt.obj)
+end
+end
+end)
+task.wait(2)
+end
+RBT = nil
+end)
+end
+function F.AutoRebirthDisable()
+T.AutoRebirth = false
+RBT = nil
+F.Out("[自动转生] 已停")
+end
+local CKT = nil
+function F.ClickerEnable()
+if CKT and T.Clicker then return end
+F.Out("[连点器] 已开: 左键连点(约 20 次/秒)。提示: 鼠标要在游戏画面上, 菜单打开时可能点到菜单")
+CKT = task.spawn(function()
+local n, t0, via = 0, os.clock(), nil
+while T.Clicker do
+pcall(function() via = F.MouseClickOnce() end)
+n = n + 1
+if os.clock() - t0 > 30 then
+t0 = os.clock()
+F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)"))
+end
+task.wait(0.05)
+end
+CKT = nil
+end)
+end
+function F.ClickerDisable()
+T.Clicker = false
+CKT = nil
+F.Out("[连点器] 已停")
+end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
 if type(C.Waypoints) ~= "table" then C.Waypoints = {} end
@@ -9224,7 +9406,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.AutoRebirthDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -12064,7 +12246,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.AutoRebirthDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
@@ -15064,6 +15246,16 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房", Default = false
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
+end })
+Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动转生(游戏里的重生 · 自动找转生入口)", Default = false, Callback = function(v)
+T.AutoRebirth = v
+if F._cfgSyncing then return end
+if v then F.AutoRebirthEnable() else F.AutoRebirthDisable() end
+end })
+Tabs.AFK:AddToggle("Clicker", { Title = "连点器(左键连点 · 约 20 次/秒)", Default = false, Callback = function(v)
+T.Clicker = v
+if F._cfgSyncing then return end
+if v then F.ClickerEnable() else F.ClickerDisable() end
 end })
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
