@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 19:52 sha 9ab830e3 bytes 553535'):format('2026-10-08 19:52','9ab830e3',553535))
+print(('[CheatMenu] build 2026-10-08 20:13 sha da80cfba bytes 563298'):format('2026-10-08 20:13','da80cfba',563298))
 local F = {}
-F.VERSION = "v16.10.77"
+F.VERSION = "v16.10.78"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5627,6 +5627,252 @@ else
 say(string.format("❌ 没到位(仍差 %.0f 格) · 已分 %d 段走 + 连顶 %d 次全被拉回 ⇒ 本服位移由服务端裁决(游戏的世界/区域系统会把你拉回), 不是脚本的距离限制",
 dEnd, steps, tries))
 end
+end
+F.WORLD_LIST = {
+{ id = "World1", en = "WORLD 1", cn = "主世界" },
+{ id = "World2", en = "PIRATE WORLD", cn = "海盗世界" },
+{ id = "World3", en = "SPACE WORLD", cn = "太空世界" },
+{ id = "World4", en = "CHOCOLATE FACTORY", cn = "巧克力工厂" },
+{ id = "World5", en = "DRAGON VOLCANO", cn = "龙火火山" },
+}
+F.WorldLabels = function()
+local t = {}
+for i = 1, #F.WORLD_LIST do
+local w = F.WORLD_LIST[i]
+t[i] = w.id .. " · " .. w.en .. "(" .. w.cn .. ")"
+end
+return t
+end
+F.WorldDesc = function(id)
+for i = 1, #F.WORLD_LIST do
+local w = F.WORLD_LIST[i]
+if w.id == id then return w.en .. "(" .. w.cn .. ")" end
+end
+return tostring(id)
+end
+F.WorldById = function(v)
+if type(v) ~= "string" then return nil end
+for i = 1, #F.WORLD_LIST do
+local w = F.WORLD_LIST[i]
+if v == w.id then return w.id end
+end
+local low = string.lower(v)
+for i = 1, #F.WORLD_LIST do
+local w = F.WORLD_LIST[i]
+if string.find(low, string.lower(w.id), 1, true) then return w.id end
+end
+return nil
+end
+F.WorldAttr = function()
+if F._wAttr ~= nil then return F._wAttr or nil end
+local nm = nil
+pcall(function()
+local at = LP:GetAttributes()
+if type(at) ~= "table" then return end
+for k, v in pairs(at) do
+if type(k) == "string" and type(v) == "string" and string.find(v, "^World%d+$") then nm = k break end
+end
+end)
+if not nm then
+local ok, v = pcall(function() return LP:GetAttribute("SkippingWorld") end)
+if ok and type(v) == "string" and v ~= "" then nm = "SkippingWorld" end
+end
+F._wAttr = nm or false
+return nm
+end
+F.MyWorld = function()
+local nm = F.WorldAttr()
+if not nm then return nil end
+local v = nil
+pcall(function() v = LP:GetAttribute(nm) end)
+if type(v) == "string" and v ~= "" then return v end
+return nil
+end
+F.WorldBox = function()
+if F._wBox ~= nil then return F._wBox or nil end
+local c = nil
+pcall(function() c = workspace:FindFirstChild("SkippingWorlds") end)
+if not c then
+pcall(function()
+for _, d in ipairs(workspace:GetChildren()) do
+local nm = string.lower(d.Name)
+if string.find(nm, "skippingworld", 1, true) or nm == "worlds" then c = d break end
+end
+end)
+end
+F._wBox = c or false
+return c
+end
+F.WorldModel = function(id)
+local c = F.WorldBox()
+if not c or type(id) ~= "string" then return nil end
+local m = nil
+pcall(function() m = c:FindFirstChild(id) end)
+return m
+end
+F.WorldSpot = function(m)
+if not m then return nil end
+local p = nil
+pcall(function()
+local wp = m:FindFirstChild("WorldPortal") or m:FindFirstChild("Portal")
+if wp then
+local oz = wp:FindFirstChild("OpenZone", true) or wp:FindFirstChild("PortalSurface", true) or wp:FindFirstChildWhichIsA("BasePart", true)
+if oz and oz:IsA("BasePart") then p = oz.Position end
+end
+end)
+if not p then pcall(function() if m.PrimaryPart then p = m.PrimaryPart.Position end end) end
+if not p then pcall(function() local b = m:FindFirstChildWhichIsA("BasePart", true) if b then p = b.Position end end) end
+return p
+end
+F.BlinkTo = function(spot, label)
+local _, _, root = GC()
+if not (root and spot) then return false end
+local from = root.Position
+local dist = (spot - from).Magnitude
+pcall(function() root:SetNetworkOwnershipAuto(false) end)
+local delta = spot - from
+local STEP = 300
+local steps = math.max(1, math.ceil(dist / STEP))
+if steps > 60 then steps = 60 end
+for i = 1, steps do
+if not (root and root.Parent) then break end
+local p = from + delta * (i / steps)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.CFrame = CFrame.new(p + Vector3.new(0, 3, 0)) end)
+task.wait()
+end
+local t0 = os.clock()
+local tries, dEnd = 0, dist
+while os.clock() - t0 < 1.5 do
+if not (root and root.Parent) then break end
+tries = tries + 1
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
+pcall(function() root.CFrame = CFrame.new(spot + Vector3.new(0, 3, 0)) end)
+task.wait()
+pcall(function() dEnd = (root.Position - spot).Magnitude end)
+if dEnd < 10 then break end
+end
+pcall(function() root:SetNetworkOwnershipAuto(true) end)
+F.Out(string.format("[世界] %s · 原距 %.0f格 · 分 %d 段 · 顶 %d 次 ⇒ %s",
+tostring(label), dist, steps, tries, (dEnd < 10) and "到位" or string.format("差 %.0f格(被拉回)", dEnd)))
+return dEnd < 10
+end
+F.WorldDiag = function()
+local _, _, root = GC()
+local my = F.MyWorld()
+F.Out("[世界] 我在: " .. (my and (my .. " = " .. F.WorldDesc(my)) or "(没读到属性 ⇒ 可能不是这个机制)"))
+F.Out("[世界] 世界属性名: " .. tostring(F.WorldAttr() or "(没找到)"))
+local c = F.WorldBox()
+if not c then
+F.Out("[世界] ❌ 没找到 workspace.SkippingWorlds ⇒ 这游戏可能不是「同 place 多区域」结构")
+return
+end
+local full = "?"
+pcall(function() full = c:GetFullName() end)
+local kids = {}
+pcall(function() kids = c:GetChildren() end)
+F.Out("[世界] " .. full .. " 下有 " .. tostring(#kids) .. " 个模型:")
+for i = 1, #kids do
+local m = kids[i]
+local p = F.WorldSpot(m)
+local extra = ""
+if p and root then
+extra = string.format(" @ (%.0f,%.0f,%.0f) 距离 %.0f格", p.X, p.Y, p.Z, (p - root.Position).Magnitude)
+end
+F.Out("   · " .. m.Name .. " (" .. m.ClassName .. ")" .. extra)
+end
+end
+F.WorldGoto = function(pick)
+local id = F.WorldById(pick)
+if not id then F.Out("[世界] 先在上面「目标世界」里选一个") return end
+local _, _, root = GC()
+if not root then F.Out("[世界] 没角色, 先进游戏") return end
+local my = F.MyWorld()
+F.Out("[世界] 现在 " .. tostring(my or "?") .. " ⇒ 目标 " .. id .. " (" .. F.WorldDesc(id) .. ")")
+if C.WorldAttrSync == true then
+local nm = F.WorldAttr()
+local okA = false
+if nm then pcall(function() LP:SetAttribute(nm, id) okA = true end) end
+F.Out("[世界] 本地属性 " .. tostring(nm or "?") .. " 改成 " .. id .. (okA and " ✓(仅本地, 服务端不认)" or " ✗(改不了)"))
+task.wait(0.4)
+end
+local m = F.WorldModel(id)
+if not m then
+F.Out("[世界] ⚠ " .. id .. " 的场景没加载 ⇒ 飞不过去。可点「用录到的命令换世界」, 或先在游戏里正常去一次")
+return
+end
+local spot = F.WorldSpot(m)
+if not spot then F.Out("[世界] ⚠ 模型「" .. m.Name .. "」里取不到可用坐标") return end
+F.Out("[世界] 目标模型 " .. m.Name .. " 已找到 ⇒ 开始飞")
+F.BlinkTo(spot, "去 " .. id)
+end
+F.WorldCmdNear = function()
+local out = {}
+local seen = F._netSeen
+if type(seen) ~= "table" then return out end
+for _, r in pairs(seen) do
+if type(r) == "table" and r.method == "FireServer" and type(r.path) == "string" then
+local isReq = string.find(r.path, "SkippingNetwork", 1, true) or string.match(r.path, "Request$")
+if isReq then
+local sig = tostring(r.sig or "")
+local cmd = string.match(sig, '^str:"(.-)"')
+if cmd and cmd ~= "" and string.find(string.lower(cmd), "world", 1, true) then
+out[#out + 1] = { cmd = cmd, asTable = (string.find(sig, "table", 1, true) ~= nil) }
+end
+end
+end
+end
+return out
+end
+F.WorldRemote = function()
+local re = nil
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+local sn = rs:FindFirstChild("SkippingNetwork")
+if sn then
+local r = sn:FindFirstChild("Request")
+if r and r:IsA("RemoteEvent") then re = r end
+end
+if not re then
+for _, d in ipairs(rs:GetDescendants()) do
+if d:IsA("RemoteEvent") and d.Name == "Request" then re = d break end
+end
+end
+end)
+return re
+end
+F.WorldCmd = function(pick)
+local id = F.WorldById(pick)
+if not id then F.Out("[世界] 先在上面「目标世界」里选一个") return end
+local re = F.WorldRemote()
+if not re then F.Out("[世界] ❌ 找不到 SkippingNetwork.Request 远程对象") return end
+local full = "?"
+pcall(function() full = re:GetFullName() end)
+F.Out("[世界] 远程 = " .. full)
+local list = F.WorldCmdNear()
+if #list > 0 then
+F.Out("[世界] 从「远程调用记录」里学到 " .. tostring(#list) .. " 个含 world 的命令 ⇒ 直接重放")
+for i = 1, #list do
+local it = list[i]
+local payload = it.asTable and { WorldId = id } or id
+local ok = pcall(function() re:FireServer(it.cmd, payload) end)
+F.Out("[世界]   已发 " .. it.cmd .. " (" .. (it.asTable and "{WorldId=...}" or "字符串") .. ") " .. (ok and "✓" or "✗"))
+task.wait(0.2)
+end
+else
+local guesses = { "EnterWorld", "TravelWorld", "SetWorld", "JoinWorld" }
+F.Out("[世界] 还没录到换世界命令 ⇒ 盲试 " .. tostring(#guesses) .. " 个常见名 × 2 种载荷(服务端不认会被忽略)")
+for i = 1, #guesses do
+local c = guesses[i]
+pcall(function() re:FireServer(c, id) end)
+pcall(function() re:FireServer(c, { WorldId = id }) end)
+F.Out("[世界]   已试 " .. c)
+task.wait(0.15)
+end
+F.Out("[世界] ⇒ 更好的办法: 开「远程调用记录」→ 游戏里正常换一次世界 → 再点本按钮(会用真实命令名)")
+end
+F.Out("[世界] 已发完 · 5 秒后看你在的世界/位置有没有变")
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -14750,6 +14996,22 @@ Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(鼠标左键点哪传哪 ·
 T.ClickTP = v
 if F._cfgSyncing then return end
 if v then pcall(F.ClickTPEnable) else pcall(F.ClickTPDisable) end
+end })
+Tabs.TP:AddSection("世界 (World · 同 place 内的区域)")
+Tabs.TP:AddDropdown("WorldPick", { Title = "目标世界", Values = F.WorldLabels(), Default = nil })
+Tabs.TP:AddToggle("WorldAttrSync", { Title = "换世界时同时改本地世界属性(可让客户端加载该世界)", Default = false, Callback = function(v)
+C.WorldAttrSync = v
+end })
+Tabs.TP:AddButton({ Title = "扫描世界结构(你在哪 · 有哪些世界 · 各自坐标)", Callback = function()
+task.spawn(function() pcall(F.WorldDiag) end)
+end })
+Tabs.TP:AddButton({ Title = "去这个世界(飞过去)", Callback = function()
+local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
+task.spawn(function() pcall(F.WorldGoto, pick) end)
+end })
+Tabs.TP:AddButton({ Title = "用录到的命令换世界(需先开「远程调用记录」录一次)", Callback = function()
+local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
+task.spawn(function() pcall(F.WorldCmd, pick) end)
 end })
 Tabs.TP:AddSection("针对玩家")
 Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
