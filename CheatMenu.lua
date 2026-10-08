@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 21:10 sha 6882c262 bytes 580925'):format('2026-10-08 21:10','6882c262',580925))
+print(('[CheatMenu] build 2026-10-08 21:17 sha 25dc6b0b bytes 570471'):format('2026-10-08 21:17','25dc6b0b',570471))
 local F = {}
-F.VERSION = "v16.10.82"
+F.VERSION = "v16.10.83"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5874,85 +5874,6 @@ F.Out("[世界] ⇒ 更好的办法: 开「远程调用记录」→ 游戏里正
 end
 F.Out("[世界] 已发完 · 5 秒后看你在的世界/位置有没有变")
 end
-F.RB_STRONG = { "autorebirth", "auto_rebirth", "auto birth", "自动转生", "自动重生" }
-F.RB_KEYS = { "rebirth", "prestige", "ascend", "transcend", "reincarn", "转生", "轮回", "转升", "重生" }
-F.RB_HIT = function(nm)
-local s = string.lower(tostring(nm or ""))
-for i = 1, #F.RB_KEYS do
-if string.find(s, F.RB_KEYS[i], 1, true) then return true end
-end
-return false
-end
-F.RB_AUTO = function(nm)
-local s = string.lower(tostring(nm or ""))
-for i = 1, #F.RB_STRONG do
-if string.find(s, F.RB_STRONG[i], 1, true) then return true end
-end
-if string.find(s, "auto", 1, true) and F.RB_HIT(s) then return true end
-return false
-end
-F.RB_ISOURS = function(o)
-local p, n = o, 0
-while p and n < 12 do
-local nm = nil
-pcall(function() nm = string.lower(tostring(p.Name)) end)
-if nm then
-if string.find(nm, "cheatmenu", 1, true) or string.find(nm, "fluent", 1, true) then return true end
-end
-local up = nil
-pcall(function() up = p.Parent end)
-if up == nil then break end
-p = up
-n = n + 1
-end
-return false
-end
-F.RB_ROOTS = function()
-local t = {}
-pcall(function() local g = LP and LP:FindFirstChild("PlayerGui") if g then t[#t + 1] = g end end)
-pcall(function() if type(gethui) == "function" then local h = gethui() if h then t[#t + 1] = h end end end)
-pcall(function() t[#t + 1] = game:GetService("ReplicatedStorage") end)
-pcall(function() local ch = LP.Character if ch then t[#t + 1] = ch end end)
-return t
-end
-F.RB_SCAN = function()
-local out = { buttons = {}, remotes = {}, any = {}, auto = nil }
-local roots = F.RB_ROOTS()
-local budget = 40000
-local seen = {}
-for i = 1, #roots do
-local ds = nil
-pcall(function() ds = roots[i]:GetDescendants() end)
-if type(ds) == "table" then
-for j = 1, #ds do
-budget = budget - 1
-if budget <= 0 then break end
-local d = ds[j]
-if not seen[d] then
-seen[d] = true
-local cls, nm = nil, nil
-pcall(function() cls = d.ClassName nm = d.Name end)
-if cls and nm and not F.RB_ISOURS(d) then
-if cls == "TextButton" or cls == "ImageButton" then
-if F.RB_HIT(nm) then
-out.buttons[#out.buttons + 1] = d
-if F.RB_AUTO(nm) and not out.auto then out.auto = d end
-end
-elseif cls == "RemoteEvent" or cls == "RemoteFunction" then
-if F.RB_HIT(nm) then out.remotes[#out.remotes + 1] = d end
-end
-if F.RB_HIT(nm) and #out.any < 12 then
-local fp = "?"
-pcall(function() fp = d:GetFullName() end)
-out.any[#out.any + 1] = nm .. " (" .. cls .. ") @ " .. fp
-end
-end
-end
-end
-end
-end
-return out
-end
 F.CM_OWNED = function(o)
 local p, n = o, 0
 while p and n < 14 do
@@ -6052,224 +5973,6 @@ if type(nm) ~= "string" or nm == "" then nm = "F6" end
 local kc = nil
 pcall(function() kc = Enum.KeyCode[nm] end)
 return kc
-end
-F.RB_BTNSIG = function(b)
-if not b then return "?" end
-if type(getconnections) ~= "function" then return "(本执行器没有 getconnections, 无法查信号)" end
-local names = { "Activated", "MouseButton1Click", "MouseButton1Down", "MouseButton1Up" }
-local parts = {}
-for i = 1, #names do
-local cnt = 0
-pcall(function()
-local sig = b[names[i]]
-if sig then
-local cs = getconnections(sig)
-if type(cs) == "table" then cnt = #cs end
-end
-end)
-parts[#parts + 1] = names[i] .. "=" .. tostring(cnt)
-end
-local vis = "?"
-pcall(function() vis = tostring(b.Visible) .. " / " .. tostring(math.floor(b.AbsoluteSize.X)) .. "x" .. tostring(math.floor(b.AbsoluteSize.Y)) end)
-return table.concat(parts, " · ") .. " · Visible/尺寸=" .. vis
-end
-F.RB_FIND = function(name)
-if type(name) ~= "string" or name == "" then return nil end
-local found = nil
-pcall(function()
-local rs = game:GetService("ReplicatedStorage")
-for _, d in ipairs(rs:GetDescendants()) do
-local cls = d.ClassName
-if cls == "RemoteEvent" or cls == "RemoteFunction" or cls == "UnreliableRemoteEvent" then
-if d.Name == name then found = d break end
-end
-end
-end)
-return found
-end
-F.RB_ARG_LABELS = { ' "rebirthRequest" ', ' "Rebirth" ', ' "RebirthRequest" ', ' "rebirth" ', " 无参数 ", " true " }
-F.RB_ARG_AT = function(i)
-if i <= 1 then return "rebirthRequest" end
-if i == 2 then return "Rebirth" end
-if i == 3 then return "RebirthRequest" end
-if i == 4 then return "rebirth" end
-if i == 5 then return nil end
-return true
-end
-F.RB_COUNT = function()
-local n = nil
-pcall(function()
-local ls = LP:FindFirstChild("leaderstats")
-if ls then
-for _, d in ipairs(ls:GetChildren()) do
-local nm = string.lower(tostring(d.Name))
-if string.find(nm, "rebirth", 1, true) or string.find(nm, "prestige", 1, true) or string.find(nm, "ascend", 1, true) then
-local v = d.Value
-if type(v) == "number" then n = v return end
-end
-end
-end
-end)
-if n == nil then
-pcall(function()
-local at = LP:GetAttributes()
-if type(at) == "table" then
-for k, v in pairs(at) do
-if type(v) == "number" and F.RB_HIT(tostring(k)) then n = v return end
-end
-end
-end)
-end
-return n
-end
-F.RB_SEND = function(remote, arg)
-if not remote then return false end
-if remote:IsA("RemoteFunction") then
-if arg == nil then return (pcall(function() remote:InvokeServer() end)) end
-return (pcall(function() remote:InvokeServer(arg) end))
-end
-if arg == nil then return (pcall(function() remote:FireServer() end)) end
-return (pcall(function() remote:FireServer(arg) end))
-end
-F.RB_LEARN = function()
-local out = {}
-local seen = F._netSeen
-if type(seen) ~= "table" then return out end
-for _, r in pairs(seen) do
-if type(r) == "table" and type(r.path) == "string"
-and (r.method == "FireServer" or r.method == "InvokeServer") then
-local sig = tostring(r.sig or "")
-local cmd = string.match(sig, '^str:"(.-)"')
-local nm = string.match(r.path, "([^%.]+)$") or ""
-local hit = F.RB_HIT(nm) or (type(cmd) == "string" and cmd ~= "" and F.RB_HIT(cmd))
-if hit then
-out[#out + 1] = { method = r.method, name = nm, cmd = (type(cmd) == "string" and cmd ~= "") and cmd or nil, sig = sig }
-end
-end
-end
-return out
-end
-F.RB_LEARN_FIRE = function(list)
-local fired, tried = 0, 0
-local cache = {}
-for i = 1, #list do
-local it = list[i]
-local obj = cache[it.name]
-if obj == nil then obj = F.RB_FIND(it.name) cache[it.name] = obj or false end
-if obj then
-tried = tried + 1
-if F.RB_SEND(obj, it.cmd) then fired = fired + 1 end
-end
-end
-F.Out("[自动转生] 用录到的 " .. tostring(#list) .. " 条命令 ⇒ 找到远程 " .. tostring(tried) .. " 个 · 成功发出 " .. tostring(fired) .. " 次")
-return fired > 0
-end
-local RBT = nil
-function F.AutoRebirthEnable()
-if RBT and T.AutoRebirth then return end
-F.Out("[自动转生] 已开: 自动找转生入口(已录命令 / 自带自动转生按钮 / 转生远程 / 转生按钮)")
-F.Out("[自动转生] 提示: 有的游戏要求先满足条件(例如「先完成一次投掷」)才允许转生 —— 若一直没转, 先满足条件再看")
-RBT = task.spawn(function()
-local tgt, lastLog, dumped, done1, sent, cnt0 = nil, 0, false, false, 0, nil
-local function findTarget()
-local learned = F.RB_LEARN()
-if #learned > 0 then
-tgt = { kind = "learn", list = learned }
-F.Out("[自动转生] 从「远程调用记录」里学到 " .. tostring(#learned) .. " 条含转生的调用 ⇒ 优先用它")
-for i = 1, #learned do
-F.Out("[自动转生]    · " .. learned[i].method .. " " .. learned[i].name .. "  (" .. learned[i].sig .. ")")
-end
-return
-end
-local sc = F.RB_SCAN()
-if sc.auto then
-tgt = { kind = "auto", obj = sc.auto }
-F.Out("[自动转生] 找到游戏自带的「自动转生」按钮: " .. sc.auto:GetFullName())
-F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.auto))
-return
-end
-if #sc.remotes > 0 then
-tgt = { kind = "remote", list = sc.remotes, argIdx = 1, argAt = os.clock(), okIdx = nil }
-F.Out("[自动转生] 找到 " .. tostring(#sc.remotes) .. " 个转生远程 ⇒ 轮流试实参")
-for i = 1, math.min(#sc.remotes, 6) do
-F.Out("[自动转生]    · " .. tostring(sc.remotes[i]:GetFullName()) .. " (" .. sc.remotes[i].ClassName .. ")")
-end
-cnt0 = F.RB_COUNT()
-F.Out("[自动转生] 起点转生次数 = " .. tostring(cnt0 == nil and "(读不到, 只能靠自己看)" or cnt0))
-return
-end
-if #sc.buttons > 0 then
-tgt = { kind = "btn", obj = sc.buttons[1] }
-F.Out("[自动转生] 找到转生按钮: " .. sc.buttons[1]:GetFullName())
-F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.buttons[1]))
-return
-end
-if not dumped and os.clock() - lastLog > 12 then
-dumped = true
-lastLog = os.clock()
-F.Out("[自动转生] 还没找到转生入口。这个游戏里名字像转生的东西(" .. tostring(#sc.any) .. " 个):")
-for i = 1, #sc.any do F.Out("[自动转生]    · " .. sc.any[i]) end
-F.Out("[自动转生] ⇒ 先在游戏里打开「转生」界面(让按钮被创建); 或开「远程调用记录」手动转生一次再回来看")
-end
-end
-local function fireTarget()
-if tgt.kind == "learn" then
-if done1 then return end
-done1 = true
-F.RB_LEARN_FIRE(tgt.list)
-F.Out("[自动转生] 已用录到的命令发过一次 ⇒ 若游戏里没动静, 把上面那几行发我")
-return
-end
-if tgt.kind == "auto" then
-if done1 then return end
-done1 = true
-local okc = F.GymClickButton(tgt.obj)
-F.Out("[自动转生] 点了一下游戏自带的自动转生 ⇒ " .. (okc and "已发出信号" or "没发出去(按钮没暴露信号)"))
-return
-end
-if tgt.kind == "remote" then
-local arg = F.RB_ARG_AT(tgt.argIdx)
-for i = 1, #tgt.list do
-if F.RB_SEND(tgt.list[i], arg) then sent = sent + 1 end
-end
-local cnt = F.RB_COUNT()
-if cnt ~= nil and cnt0 ~= nil and cnt > cnt0 then
-F.Out("[自动转生] ✅ 有效! 转生次数 " .. tostring(cnt0) .. " ⇒ " .. tostring(cnt) .. " (实参=" .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?") .. ")")
-cnt0 = cnt
-tgt.okIdx = tgt.argIdx
-elseif tgt.okIdx == nil and os.clock() - tgt.argAt > 8 then
-tgt.argAt = os.clock()
-tgt.argIdx = (tgt.argIdx % #F.RB_ARG_LABELS) + 1
-F.Out("[自动转生] 这个实参没生效 ⇒ 换下一个: " .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?"))
-end
-return
-end
-if tgt.kind == "btn" then
-if done1 then return end
-done1 = true
-F.GymClickButton(tgt.obj)
-end
-end
-while T.AutoRebirth do
-pcall(function()
-if not tgt then findTarget() end
-if tgt then fireTarget() end
-if tgt and tgt.kind == "remote" and os.clock() - lastLog > 20 then
-lastLog = os.clock()
-local cc = F.RB_COUNT()
-F.Out("[自动转生] 已发 " .. tostring(sent) .. " 次 · 实参=" .. tostring(F.RB_ARG_LABELS[tgt.argIdx] or "?")
-.. " · 当前转生次数=" .. tostring(cc == nil and "(读不到)" or cc))
-end
-end)
-task.wait(0.25)
-end
-RBT = nil
-end)
-end
-function F.AutoRebirthDisable()
-T.AutoRebirth = false
-RBT = nil
-F.Out("[自动转生] 已停")
 end
 local CKT = nil
 function F.ClickerEnable()
@@ -9688,7 +9391,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.AutoRebirthDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -12558,7 +12261,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.AutoRebirthDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 function()
@@ -15561,11 +15264,6 @@ Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房", Default = false
 T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
-end })
-Tabs.AFK:AddToggle("AutoRebirth", { Title = "自动转生(游戏里的重生 · 自动找转生入口)", Default = false, Callback = function(v)
-T.AutoRebirth = v
-if F._cfgSyncing then return end
-if v then F.AutoRebirthEnable() else F.AutoRebirthDisable() end
 end })
 Tabs.AFK:AddToggle("Clicker", { Title = "连点器(一直左键连点 · 快捷键可开关)", Default = false, Callback = function(v)
 T.Clicker = v
