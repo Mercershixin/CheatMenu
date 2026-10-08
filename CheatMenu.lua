@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:40 sha 9d3df469 bytes 588386'):format('2026-10-08 23:40','9d3df469',588386))
+print(('[CheatMenu] build 2026-10-08 23:52 sha 2d52050b bytes 592312'):format('2026-10-08 23:52','2d52050b',592312))
 local F = {}
-F.VERSION = "v16.10.96"
+F.VERSION = "v16.10.97"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -257,6 +257,34 @@ local ok3, loaded = pcall(chunk)
 if ok3 and loaded then
 Fluent = loaded
 F.Out("[CheatMenu] Fluent 加载成功 ← " .. tostring(how))
+pcall(function()
+if type(Fluent) ~= "table" then return end
+local orig = Fluent.SafeCallback
+if type(orig) ~= "function" then return end
+Fluent.SafeCallback = function(self, cb, ...)
+if type(cb) ~= "function" then return end
+local ok, err = pcall(cb, ...)
+if ok then return end
+local msg = tostring(err)
+F.Out("[界面] ⚠ 控件回调报错(该功能可能没生效): " .. msg)
+pcall(function()
+Fluent:Notify({ Title = "界面", Content = "控件回调报错", SubContent = msg, Duration = 8 })
+end)
+end
+if type(Fluent.Notify) == "function" then
+local nf = Fluent.Notify
+Fluent.Notify = function(self, arg)
+if type(arg) == "table" then
+if arg.Title == "Interface" then arg.Title = "界面" end
+if arg.Content == "Callback error" then arg.Content = "控件回调报错" end
+if type(arg.Content) == "string" and string.find(arg.Content, "to toggle the inteface", 1, true) then
+arg.Content = "按 %s 可以收起/展开界面"
+end
+end
+return nf(self, arg)
+end
+end
+end)
 return true
 end
 return false
@@ -3053,7 +3081,7 @@ local now = os.clock()
 if now - arLastG < 0.1 then return end
 arLastG = now
 local _, hum = GC()
-F.GodTopUp(hum)
+if F.GodTopUp(hum, true) then F.HpFixNote(1) end
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
@@ -5322,7 +5350,7 @@ F._godAt = now
 local _, hum = GC()
 if not hum then return end
 pcall(function() F.GodSnap(hum) end)
-pcall(function() F.GodTopUp(hum) end)
+if F.GodTopUp(hum, true) then F.HpFixNote(1) end
 pcall(function()
 if type(hookfunction) == "function" and not F._godTDHook then
 local orig = hum.TakeDamage
@@ -5341,11 +5369,31 @@ end
 end)
 end)
 end
-F.GodTopUp = function(hum)
-if not hum then return end
-if hum.Health <= 0 then return end
-if type(hum.MaxHealth) ~= "number" or hum.MaxHealth ~= hum.MaxHealth then return end
-if hum.Health < hum.MaxHealth then pcall(function() hum.Health = hum.MaxHealth end) end
+F.GodTopUp = function(hum, allowZero)
+if not hum then return false end
+local mx = hum.MaxHealth
+if type(mx) ~= "number" or mx ~= mx or mx <= 0 then return false end
+local hp = hum.Health
+if type(hp) ~= "number" or hp ~= hp then return false end
+if hp >= mx then return false end
+if hp <= 0 and allowZero ~= true then return false end
+pcall(function() hum.Health = mx end)
+return true
+end
+F.HpFixNote = function(n)
+if n < 1 then return end
+F._hpFixN = (F._hpFixN or 0) + n
+local now = os.clock()
+if now - (F._hpFixLog or 0) < 6 then return end
+F._hpFixLog = now
+local total = F._hpFixN
+F._hpFixN = 0
+if total >= 12 then
+F.Out("[锁血] ⚠ 最近 6 秒内血量被外部压低 " .. tostring(total) .. " 次 ⇒ 本游戏是「服务端裁决」："
+.. "服务端说了算, 客户端只能反复补血。想真正不死, 需要「被命中前避免」或「死了立刻用游戏自己的复活通道复活」(见维护文档)")
+elseif total > 0 then
+F.Out("[锁血] 最近 6 秒补血 " .. tostring(total) .. " 次")
+end
 end
 F.DMG_KEYS = { "hurt","damage","dmg","blood","bleed","injur","wound","vignette","lowhp","low_hp","lowhealth","low_health","redflash","red_flash","screenfx","screeneffect","screen_effect","healthwarn","health_warn","got_hit","getting_hit" }
 F._dmgFx, F._dmgAt = {}, 0
@@ -5486,7 +5534,7 @@ F.GodTickLoop()
 pcall(F.DmgFxLoop)
 pcall(function()
 local _, hum = GC()
-F.GodTopUp(hum)
+if F.GodTopUp(hum, true) then F.HpFixNote(1) end
 if hum then
 F.Out("[上帝模式] 已开: 血量锁在「游戏默认上限」MaxHealth="
 .. tostring(math.floor(tonumber(hum.MaxHealth) or 0))
@@ -5555,7 +5603,7 @@ pcall(F.LightReassert)
 end
 F._lightLoop = nil
 end)
-F.Out("[视觉增强] 已挂复写监听: 游戏把光照改回去会自动重设")
+F.Out("[夜视] 已挂复写监听: 游戏把光照改回去会自动重设")
 end
 F.LightWatchDisable = function()
 if F._lightConns then
@@ -7945,7 +7993,7 @@ pcall(function()
 if not T.LockHealth then return end
 local _, hum = GC()
 if not hum then return end
-F.GodTopUp(hum)
+if F.GodTopUp(hum, true) then F.HpFixNote(1) end
 end)
 end
 local function attach()
@@ -8594,7 +8642,7 @@ return n
 end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
 F._ixPos, F._ixLog = nil, 0
-F.IX_MAX = 180
+F.IX_MAX = 240
 F.IX_MAXSZ = 90
 F.IX_MOVE = 12
 F.IX_HOPS = 6
@@ -8735,16 +8783,63 @@ end
 end
 return gone
 end
-F.IxScan = function()
+F.IxCenter = function()
 local okg, _, _, root = pcall(GC)
-if not okg or not root then
+if okg and root then return root.Position, root end
+local cam = workspace.CurrentCamera
+if cam ~= nil then
+local p = nil
+pcall(function() p = cam.CFrame.Position end)
+if p ~= nil then return p, nil end
+end
+return nil, nil
+end
+F.IxScopeFull = function()
+return tostring(C.IxScope or "") == "全图"
+end
+F.IxFullSweep = function(center, doOffer)
+if type(doOffer) ~= "function" then return 0 end
+local all = nil
+pcall(function() all = workspace:GetDescendants() end)
+if type(all) ~= "table" then return 0 end
+local n, i = 0, 0
+for i = 1, #all do
+local o = all[i]
+if o ~= nil and typeof(o) == "Instance" then
+local cls = o.ClassName
+if cls == "ProximityPrompt" or cls == "ClickDetector" then
+local tgt = nil
+pcall(function() tgt = o.Parent end)
+if tgt ~= nil and tgt ~= LP.Character then
+local pos = nil
+pcall(function() pos = tgt.Position end)
+if pos == nil then pcall(function() pos = tgt:GetPivot().Position end) end
+if pos ~= nil then
+doOffer(tgt, F.HL_COLORS.ix, pos, "ix")
+n = n + 1
+end
+end
+elseif cls == "Model" and o ~= LP.Character then
+if F.IsNPC(o) then
+local pos = nil
+pcall(function() pos = o:GetPivot().Position end)
+if pos == nil then pcall(function() local pp = o.PrimaryPart if pp ~= nil then pos = pp.Position end end) end
+if pos ~= nil then
+doOffer(o, F.NPC_COLOR, pos, "npc")
+n = n + 1
+end
+end
+end
+end
+end
+return n
+end
+F.IxScan = function()
+local center = F.IxCenter()
+if center == nil then
 return 0, F.IxDropDead(), 0
 end
-local center = root.Position
-local parts = nil
-pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
-if type(parts) ~= "table" then parts = {} end
-local best, order, skipped = {}, {}, 0
+local best, order, skipped, npcN = {}, {}, 0, 0
 F._npcCache = {}
 local function offer(o, col, pos, kind)
 if o == nil or o == LP.Character then return end
@@ -8760,6 +8855,12 @@ cur.d = d
 cur.col = col
 end
 end
+if F.IxScopeFull() then
+pcall(function() npcN = F.IxFullSweep(center, offer) end)
+else
+local parts = nil
+pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
+if type(parts) ~= "table" then parts = {} end
 for i = 1, #parts do
 local pt = parts[i]
 local k, c = F.HLKind(pt)
@@ -8781,8 +8882,8 @@ end
 end
 end
 end
-local npcN = 0
-pcall(function() npcN = F.NpcSweep(center, offer) end)
+pcall(function() npcN = npcN + F.NpcSweep(center, offer) end)
+end
 table.sort(order, function(a, b) return best[a].d < best[b].d end)
 local keep = {}
 for i = 1, #order do
@@ -8825,7 +8926,8 @@ F.Out("[高亮透视] 已关")
 return
 end
 local n, _, _, npcN = F.IxScan()
-F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个(其中 NPC/生物 " .. tostring(npcN or 0) .. " 个) · 上限 " .. tostring(F.IX_MAX) .. " 个")
+F.Out("[高亮透视] 已开 · 模式=" .. (F.IxScopeFull() and "全图(不限距离)" or ("以你为中心 " .. tostring(F.IxRange()) .. " 格内")) .. " · 标出 " .. tostring(n) .. " 个(其中 NPC/生物 " .. tostring(npcN or 0) .. " 个) · 上限 " .. tostring(F.IX_MAX) .. " 个")
+F.Out("[高亮透视] 死亡/观战时会自动改用相机位置继续扫, 不会因为自己没角色就全灭")
 F.Out("[高亮透视] 刷新节奏: 每移动 " .. tostring(F.IX_MOVE) .. " 格 或 每 " .. tostring(F.IxGap())
 .. " 秒重扫一次(间隔可在下面调) · 中途新出现的物件由事件即时补标")
 F.Out("[高亮透视] 颜色: NPC棕 / 交互金 / 陷阱红 / 道具绿 / 掉落黄 / 载具青 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
@@ -8855,24 +8957,30 @@ end)
 end)
 F._ixLoop = RS.Heartbeat:Connect(function()
 if not T.IxHL then F.IxHLSet(false) return end
-local okg, _, _, root = pcall(GC)
+local center, liveRoot = F.IxCenter()
 local now = os.clock()
-if not okg or not root then
+if center == nil then
 if now - (F._ixCleanAt or 0) > 1 then
 F._ixCleanAt = now
 F.IxDropDead()
 end
 return
 end
+local root = { Position = center }
 local pos = root.Position
 local moved = 999
 if F._ixPos then moved = (pos - F._ixPos).Magnitude end
-if moved < F.IX_MOVE and (now - (F._ixAt or 0)) < F.IxGap() then return end
+local needMove, gap = F.IX_MOVE, F.IxGap()
+if F.IxScopeFull() then
+needMove = 40
+gap = gap * 4
+end
+if moved < needMove and (now - (F._ixAt or 0)) < gap then return end
 F._ixAt, F._ixPos = now, pos
 local n, gone, sk, npcN = F.IxScan()
 if now - F._ixLog > 8 then
 F._ixLog = now
-F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个(NPC/生物 " .. tostring(npcN or 0) .. ") · 本轮取消 " .. tostring(gone) .. " 个"
+F.Out("[高亮透视] " .. (F.IxScopeFull() and "全图" or (tostring(F.IxRange()) .. " 格内")) .. " " .. tostring(n) .. " 个(NPC/生物 " .. tostring(npcN or 0) .. ") · 本轮取消 " .. tostring(gone) .. " 个"
 .. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个(避免整块地图被染色)") or ""))
 end
 end)
@@ -15668,6 +15776,11 @@ C.IxRange = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
+Tabs.Visual:AddDropdown("IxScope", { Title = "高亮透视 · 范围模式", Values = { "附近范围", "全图" }, Default = "附近范围", Callback = function(v)
+C.IxScope = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
 Tabs.Visual:AddSlider("IxGap", { Title = "高亮透视 · 重扫间隔", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
 C.IxGap = v
 if F._cfgSyncing then return end
@@ -15680,12 +15793,12 @@ if F._cfgSyncing then return end
 F.XRaySet(v)
 end })
 Tabs.World:AddSection("画面 / 声音")
-Tabs.World:AddToggle("VisionBoost", { Title = "视觉增强", Default = false, Callback = function(v)
+Tabs.World:AddToggle("VisionBoost", { Title = "夜视", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
 if F._cfgSyncing then return end
 if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable() pcall(F.LightWatchEnable)
 else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() pcall(F.LightWatchDisable) end
-F.Out("[视觉增强] 全亮/夜视/去雾/光照守卫 = " .. (v and "开" or "关"))
+F.Out("[夜视] 全亮/夜视/去雾/光照守卫 = " .. (v and "开" or "关"))
 end })
 Tabs.World:AddToggle("ViewBoost", { Title = "视角增强", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -16460,6 +16573,7 @@ C.FlyDisguise = "关闭"
 end
 if C.IxRange == nil then C.IxRange = 300 end
 if C.IxGap == nil then C.IxGap = 2 end
+if C.IxScope == nil then C.IxScope = "附近范围" end
 if C.ClickerArea == nil then C.ClickerArea = 120 end
 if C.ClickerLockX == nil then C.ClickerLockX = 1 end
 if C.ClickerLockY == nil then C.ClickerLockY = 1 end
