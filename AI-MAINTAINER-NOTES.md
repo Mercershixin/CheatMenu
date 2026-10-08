@@ -4441,3 +4441,51 @@ Highlight 39/47 · 传送/TP 34/47 · 飞行 38/47 · 速度 31/47 · 远程监�
 Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键> to toggle the inteface.`、Dialog 的 `Yes/No/Close`。
 ⇒ 包一层 `Fluent.SafeCallback`：报错时弹**中文**提示并把**真实错误写进日志**（`[界面] ⚠ 控件回调报错: ...`）；
 同时包装 `Fluent.Notify` 把这三处英文换中文。**以后再看到英文提示，日志里必有对应的报错行。**
+
+## v16.10.98 · 高亮不再染色地图建筑（2026-10-09）
+
+### 现象
+用户第三次报「地图建筑被高亮」（前两次分别报「地图场景不要高亮」「说了地图建筑不要高亮」）。
+
+### ★★★ 根因三条（前一轮只改关键词表 + 跳过 Folder，打不中）
+1. **`F.IxIsTarget` 对 Model 做整模型递归** `FindFirstChildWhichIsA("ProximityPrompt", true)`
+   ⇒ 一栋楼里只要有一个门带提示，**整栋楼模型**被判定为交互物。
+2. **祖先上溯 6 层**且上溯到的 Model 走同一个 `HLKind` ⇒ 墙部件 → 房间模型递归命中
+   ⇒ **整个房间/楼层染色**。`IX_MAXSZ=90` 只挡"超大"，30~60 格的房间照样漏。
+3. **名字裸子串匹配**：`DoorFrame/Doorway→door`、`Gateway→gate`、`Keyboard→key`、`DamageZone→damage`；
+   命中落在 Model 祖先上就是"整块建筑染色"。另外 `DescendantAdded` 每个新实例都调 `HLKind`
+   ⇒ 地图流式加载时**持续**触发。
+
+### 修法
+- `IxIsTarget`：去掉递归。只认 ①自己是提示 ②**直接子**是提示；Model 另需 `≤12 子` + 先过 `IxStruct`。
+- 新增 `F.IxStruct(o)`：Model 的 `#GetDescendants() > 40` **或** `GetExtentsSize().Magnitude > IX_MAXSZ`。
+  `HLKind` 在名字判定**之前**拦下并计数 `F.IX_STRUCT_N`（每轮 `IxScan` 重置，日志输出"跳过地图建筑/布景 N 个"）。
+- `IX_HOPS` 6 → **2**。
+- 新增 `F.KeyHit(low, kw)`：**只判后边界**（关键词后紧跟字母即不命中）。
+  取舍：前缀=物件的一部分（DoorFrame 门框），尾巴=物件本身（LightSwitch/BigDoor）。
+  ⇒ 复合名仍命中，建筑部件被拒。
+- 新增 `F.HL_BLOCK_KEYS` / `F.HLBlocked`：名字含 room/wall/floor/ceiling/roof/frame/doorway/hallway/
+  corridor/house/building/block/platform/stairway/ramp/beam/pillar/column/carpet/rug/curtain/painting/
+  portrait/poster/banner/fence/railing/window/tile/vent/duct/terrain/decor/background/structure/facade/
+  gatehouse/level/map/chunk/module/part_ ⇒ **不做名字猜测**（NPC 与真提示两条路不受影响）。
+- 新增 `F.IxTgtPart(o)`：提示挂在大模型上时退回到模型内第一个 BasePart。
+  **`IxFullSweep`（全图模式）与 `DescendantAdded` 都接上**这道兜底；退化后仍不合格就放弃。
+
+### ★ 边界匹配带来的回归与补救（通用教训）
+后边界把 `Killbrick` 误杀（`kill`+`b`）⇒ 把高频复合词**作为整词**补进词表：
+陷阱 `killbrick/hurtbrick/damagebrick/spikeball/lasergrid`；道具 `keycard/cashbag/coinbag`；
+交互 `vendingmachine/shopkeeper/questgiver`。
+⇒ **规矩：一旦引入边界匹配，必须回扫一遍常用复合名并补成整词，否则会静默漏掉真目标。**
+
+### 验证
+- `test6.lua` 单测 **50/50**：KeyHit 边界 11 项 · HLBlocked 8 项 · IxStruct 5 项 · IxIsTarget 8 项 ·
+  HLKind 18 项（含"大 Boss 生物仍为 npc"反向核对）。
+- `test7.lua` 端到端（真 `IxScan`+真 `HLKind`+真 `IxAdd`）**13/13**：
+  一间房 30 面墙 + 1 扇真门 ⇒ 只高亮门；`IX_STRUCT_N > 0`；门出范围高亮被撤；回范围立刻恢复。
+- 本地复查 `_sweep_all.py` 仍 27 条基线 · 编译 0 错误 · 等价性通过。
+
+### ⚠ 测试脚手架三条坑
+1. 切片起止**用标记串，不用行号**（本轮插入 45 行后 `test2/3/5` 的硬编码行号全部错位失效）。
+2. 切片漏掉被调函数（`F.IxRange/F.IxParams/F.IxTooBig` 在插入点**之前**）⇒ 被 `pcall` **静默吞掉**
+   ⇒ 现象是"扫到 0 个且无任何报错"。**扫描返回 0 时，先怀疑"某个被调函数是 nil"。**
+3. 测 `IxScan` 必须 `T.IxHL = true`（`F.IxAdd` 首行 `if not T.IxHL then return end`）。
