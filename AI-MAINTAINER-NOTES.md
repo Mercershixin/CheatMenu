@@ -4765,3 +4765,10 @@ v17.0.2 把 `F.ClickerSeed` 改成**只认"鼠标最后一次在游戏画面上"
 - **E/F** 真跑一轮循环（把 `task.wait` 换成"第一次等待就停"）：开框时发出的点击坐标**在框里**，不开框时**跟着鼠标**；
 - **G** 拆掉 VIM 后：开框模式返回 nil（宁可不点），跟随模式才允许退回按鼠标位置的老 API。
 `preflight` PASS（无新增孤儿）、`luau-compile` 0 错。
+
+## v17.0.11 · 连点器**整体回退到 16.10.99 原文**（2026-10-09，用户裁定）
+
+上面 v17.0.1~v17.0.10 对连点器的**一切重写全部作废**（`local CK` 表 / `ClickerState` / `ClickerWarn` /
+`MarkHosts+MarkDestroy` / `DisplayOrder=最大` / `MouseClickOnce` 的 `cursorOk` / 改过的日志文案 / 卸载链新增的三个调用）。
+现状：实现模块 + UI 段 + 卸载链**逐字节**等同 `build/backup/post-spoof-16.10.99.lua`；散状态用回旧名 `F._ckPX/_ckPY/_ckGX/_ckGY/_ckTrack/_ckConn/_ckMark`。
+⛔ 以后改连点器**一律从 16.10.99 原文出发**。★ 用户口径："回退老版本"=照抄旧代码**原文**，不是"照抄交互、再自己换一版实现"。
