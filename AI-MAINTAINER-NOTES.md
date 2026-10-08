@@ -4574,3 +4574,62 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 先误用 `push_now.py --no-build` ⇒ 推的是上一次构建的 `dist/repo/CheatMenu.lua`（606919 字节、版本号未变 17.0.0）
 ⇒ 游戏端「远端=当前 ⇒ 无需重载」⇒ 用户收不到修复。
 **规矩：改源码必须 `--patch` 走完整构建；`--no-build` 只用于纯文档/纯同步。**
+
+## v17.0.2 · 连点器坐标逻辑重写：开框=只在框内点(不跟鼠标)，不开框=跟随鼠标（2026-10-09）
+
+### 用户要求（原话）
+「用点击框的时候 开启连点器只能在点击框进行点击不进行跟随鼠标，不开启点击框 就跟随鼠标」
+
+### 三条旧缺陷（都在坐标口径上）
+1. `F.ClickerPoint` 把**带随机偏移的结果**存进 `F._ckPX/_ckPY`，下一次 `F.ClickerCenter` 又拿它当中心
+   ⇒ **偏移逐次累积**（点会自己漂走）；`ClickerCenter` 因此缓存了鼠标位置 ⇒ 鼠标停住/移位后点不出来。
+2. `F.ClickerBoxPos` 与 `F.ClickerDragTo` 两套口径（前者要求存值 `>=20` 且只判右下超界；后者走 clamp）
+   ⇒ 同一个框在不同路径算出不同中心。
+3. 一个"框位置"被三个状态耦合：`T.ClickerLock` + `T.ClickerBox` + `F._ckBoxPlaced`，
+   而 `T.ClickerLock` 全仓**只写不读**（幽灵状态）。
+
+### 现在的事实来源（唯一）
+`T.ClickerBox` 决定点法；`C.ClickerLockX/Y` 是唯一坐标真值。数据流单向：
+`拖动 / 事件 / 存档 → C.ClickerLockX,Y → F.ClickerBoxPos() → F.ClickerClamp() → SendMouseButtonEvent`
+- **开框**：`F.ClickerCenter` **只读** `ClickerBoxPos()`（存档值经 clamp），**一次都不碰鼠标** ⇒ 鼠标移开也不影响；
+  定位不了（存档还是默认 `1,1`/`0`）⇒ 返回 nil ⇒ **不点击**，且提示只出现一次。
+- **不开框**：`F.ClickerCenter` **每次调用现读** `F.ClickerRawMouse()`（`GetMouseLocation`），**无缓存** ⇒ 跟随鼠标。
+- `F.ClickerBoxPos` 把「小于半边长」的存档一律判为**未定位**（边长 60 ⇒ 最小合法中心 30，所以默认 (1,1) 不会被当成一个真框）。
+- `F.ClickerDragTo` 与 `ClickerBoxPos` 共用同一个 `F.ClickerClamp`，口径统一。
+
+### ★ 坐标系（以后别换）
+统一用 **`GetMouseLocation()` 空间**（含顶栏 inset 的屏幕坐标）：
+- 点击框的 ScreenGui 带 `IgnoreGuiInset = true`，其 offset 与 `GetMouseLocation` 同源 ⇒ 画出来的框和实际点的位置一致；
+- `VirtualInputManager:SendMouseButtonEvent` 吃的也是这套坐标；
+- 拖动读的 `us:GetMouseLocation()` 同样是这套。
+⇒ ⛔ **不要混用 `InputObject.Position`**（那是视口空间，差一个顶栏高度）。本次就把鼠标追踪里的 `inp.Position`
+改成只做"触发 + 判是否在自家菜单上"，坐标一律取 `GetMouseLocation`。
+
+### 鼠标追踪 `F.ClickerMouseWatch` 的生命周期
+- **加载时启动**（UI 构建处 `task.spawn`），**卸载时停止**（进 `disables` 链），中途**不随开关连断**。
+- 只干一件事：记住"鼠标最后一次在游戏画面上的位置"，给 `ClickerSeed` 用。
+  理由：用户点「显示点击框」时鼠标必然停在菜单上，当场读只会拿到菜单坐标。
+- 频率：`InputChanged` 事件驱动 + `os.clock()` 节流 50ms（≤20 次/秒，且只在鼠标动的时候）。
+- 正因为没有"关框就停"的来回连断，**第一次点「显示点击框」就能一步落到你刚才在游戏里的位置**。
+
+### 清理（同批）
+- `T.ClickerLock` 全量删除（2 处写入 + `F.PANIC_KEEP` 里的一项）——它没有读取点，正是"一个概念多处状态"的源头。
+- `F.ClickerMouseWatchStop` / `F.ClickerHotkeyRemove` 补进卸载链。
+  后者原先**定义了却从没被调用** ⇒ 卸载后按 F6 还能把已卸载的连点器重新拉起来（连接泄漏）。
+- `F.ClickerDisable` 不再有副作用地调用 `ClickerSeed`（改用纯读的 `ClickerBoxPos`），避免"停止时反而锁定一个位置"。
+
+### 验证
+`_gen_clicker_sim.py`（新，只读）：逐字节抽 11 个坐标函数 + 最小 UIS/Camera 桩 + 真 `luau.exe`，**22 项断言全过**：
+- T1 不开框跟随鼠标（含"鼠标一移点立刻变"防缓存 + 300 次取样都在鼠标 ±半边长内）
+- T2 开框后鼠标跑到 (5,5)/(1800,1000)，点仍固定在框心；400 次取样全在框内
+- T3 未定位 ⇒ 返回 nil 不瞎点、提示只出现 1 次；T3b 鼠标回到游戏画面后自动落位并写回存档
+- T4 贴右下角被收进屏内、存档 0 判未定位；T5 拖框 clamp + 自动开框；T6 小范围(边长 8)的 4/3 边界
+`preflight.py` PASS；`_sweep_all.py` 命中项全是既有基线（T 键只读未写 / AimPart / F.VERSION / 常驻循环）。
+
+### 顺手修的**工具链**缺陷（不是产物缺陷）
+`preflight.py::mask_short` 与 `_sweep_all.py::strip_all` 原来只认 `--[[ ]]` 块注释，**不认长字符串 `[[ ]]`**
+⇒ 源码 L11498 的 `Trans.SYS_BASE = [[ … "…" ]]` 让扫描器脱同步，其后约 5600 行被当字符串抹掉
+⇒ 假报"关闭链 14 条 nil 洞 + 15 条只用未定义 / 9 条只读未写"（逐条 grep 全部有定义：
+`F.TranslateDisable@13323`、`F.CMX_DisableAll@13569`）。已补 `[[` / `[=[` 分支，
+修完 `preflight` 第 4/5 项与 `_sweep_all` 第 5 项全部变 OK。
+⚠ `gate.py::_strip` **本来就支持**长括号（用 `LONG_OPEN` 正则），**不受影响 —— 别再"顺手"改它**。
