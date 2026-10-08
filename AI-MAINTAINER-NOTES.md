@@ -4412,3 +4412,32 @@ Highlight 39/47 · 传送/TP 34/47 · 飞行 38/47 · 速度 31/47 · 远程监�
 普通场景与 Decor 不误判 / 自己与他人的角色都不误判 / Script 与 nil 不误判 / 部件不误判 /
 补扫恰好 5 个 / 文件夹内（深度2）找到 / 超范围不标 / 5 层不扫（边界）/ 二次结果一致 /
 **`Shadow` 这种名字但带 Humanoid 仍判 NPC**。前两轮 19 + 37 项回归全过。
+
+## v16.10.97 · 锁血的两个真实边界 + 死亡/观战高亮 + 全图模式 + 提示汉化（2026-10-08）
+
+### ★★★ 铁律：改血量**挡不住服务端裁决**
+比对参考源 `Abysall Continued`（8256 行 DOORS 专用脚本，180 个控件）后定论：
+**它根本没有"把 MaxHealth 改成天文数字"这种做法**。它的"不怕服务器"是四招：
+1. **不让服务器打中**：`hookmetamethod(game,"__namecall",...)` 改写出站参数 ——
+   `MotorReplication.FireServer` 的坐标参数直接改成 `-650`（位置上报造假，实体 AI 按假位置判定）；
+   `Crouch.FireServer` 强制 `Args[1]=true, Args[2]=true`。
+2. **拦掉失败/受伤上报**：`ClutchHeartbeat` / `HideMonster` 的 `FireServer` 直接 `return`。
+3. **死了就用游戏自己的复活通道复活**：`LocalPlayer:GetAttributeChangedSignal("Alive")` → 循环 `Revive:FireServer()`。
+4. 游戏专用 Bypass* + 关掉画面特效（`DisableHideVignette` / `DisableJumpscare*`）。
+⇒ **凡是我方"锁血/无敌"，先问"客户端裁决还是服务端裁决"。** 服务端裁决时只能"避免被命中"或"用游戏自己的复活通道"。
+
+**落实**：`F.GodTopUp(hum, allowZero)`（`Health=0` 也救回，原来 `<= 0` 直接 return ⇒ **血量被置 0 就等于锁血失效**）
++ `F.HpFixNote(n)` 统计补血；6 秒内 ≥12 次 ⇒ 日志明确写"本游戏是服务端裁决"。
+
+### 高亮三改
+- **死亡/观战也能高亮**：`F.IxCenter()` —— 有角色用角色位置，**没角色改用 `workspace.CurrentCamera.CFrame.Position`**。
+  原来 `GC()` 拿不到 root 就直接 `return 0` ⇒ 一死高亮全灭（用户日志里的 `0 个` 就是这个）。
+- **全图模式**（不动伽马）：下拉「高亮透视 · 范围模式」= 附近范围/全图；全图用 `F.IxFullSweep()`
+  （`workspace:GetDescendants()` 一遍，只认 `ProximityPrompt`/`ClickDetector`（取父部件）与带 `Humanoid` 的 `Model`）
+  ⇒ **不受 `CanQuery` 影响、不限距离**；`IX_MAX` 180→**240**（引擎 255 上限留余量）；全图节奏自动放慢（移动 40 格 / 间隔 ×4）。
+- 另：「视觉增强」改名「夜视」（只改 Title 与日志前缀，不动 id）。
+
+### 右下角提示英文 = **有控件回调在报错**
+Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键> to toggle the inteface.`、Dialog 的 `Yes/No/Close`。
+⇒ 包一层 `Fluent.SafeCallback`：报错时弹**中文**提示并把**真实错误写进日志**（`[界面] ⚠ 控件回调报错: ...`）；
+同时包装 `Fluent.Notify` 把这三处英文换中文。**以后再看到英文提示，日志里必有对应的报错行。**
