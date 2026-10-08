@@ -4378,3 +4378,37 @@ Highlight 39/47 · 传送/TP 34/47 · 飞行 38/47 · 速度 31/47 · 远程监�
   （家具/道具词会把地图场景染色）；`IxHLSet(false)` 额外扫掉所有残留 `CMHLMark`。
 - 连点器：改成 `F.ClickerArea`（边长，默认 120px）+ 框内**随机取点**，绿框改成半透明填充方框。
 - **界面文案规矩（用户明确要求）**：功能名**不带括号说明**。只改 `Title`，不改控件 id（存档/回填不受影响）。
+
+## v16.10.96 · NPC/生物识别：靠结构不靠名字 + 独立补扫（2026-10-08）
+
+### 现象
+用户报「NPC 生物高亮 有的没覆盖」。
+
+### 根因（两条）
+1. `F.IsNPC` **只认名字表**（npc/zombie/monster…）。恐怖/剧情类游戏的实体叫
+   `Rush / Ambush / Seek / Screech / Figure / Halt / Eyes / Dupe / Creak / Monument` —— 一个通用词都不含，
+   但它们**有 `Humanoid`**。⇒ 只靠名字必然漏。
+2. 候选来源只有 `workspace:GetPartBoundsInRadius`，而该查询**会跳过 `CanQuery = false` 的部件**；
+   隐形/装饰实体常被设 `CanQuery=false` ⇒ 它们的部件**根本不在候选里**，识别再准也扫不到。
+
+### 修法
+- `F.IsNPC(o, deep)` 结构化多层判定：直接 `Humanoid` → 直接 `AnimationController`
+  → **直接子 Model 里的 Humanoid/AnimationController（≤24 个）** → `deep=true` 时
+  `FindFirstChildWhichIsA(..., true)` 递归兜底（只在半径路径传 `deep`，避免昂贵递归）→ 最后才名字表。
+- `F.NpcSweep(center, doOffer)`：独立于半径查询的**广度优先补扫**（workspace 起，只下钻 `Model`/`Folder`，
+  层深 ≤3，节点上限 1500）。**补扫 + 结构判定**才能捞到 `CanQuery=false` 的实体。
+- `offer(o, col, pos, kind)` 新增 kind：`kind == "npc"` **跳过体积上限**（大 Boss/大生物不再被 90 格误杀；
+  带 Humanoid 的模型不可能是整块地图）。
+- `F._npcCache`：每次 `IxScan` 开头重建；**只缓存 `true`**，浅查的 `false` 不缓存
+  （否则浅查先否掉，后面深查永远拿不到真值）。
+- 名字表扩到 49 词，但**剔除会误伤的短词**：`rat`(撞 Generate) / `mage`(撞 damage) / `pawn`(撞 spawn) /
+  `guard`(撞 guardrail)。⇒ 短词入名字表前必须反查常见英文词。
+
+### 已知边界（改这里要同步改测试）
+补扫层深 ≤3：超过 3 层的实体扫不到，只能靠半径路径覆盖。节点上限 1500 ⇒ 超大场景的靠后分支可能轮不到。
+
+### 验证
+26 项离线断言全过：直接 Humanoid / AnimationController / 子模型里的 Humanoid / 名字命中 /
+普通场景与 Decor 不误判 / 自己与他人的角色都不误判 / Script 与 nil 不误判 / 部件不误判 /
+补扫恰好 5 个 / 文件夹内（深度2）找到 / 超范围不标 / 5 层不扫（边界）/ 二次结果一致 /
+**`Shadow` 这种名字但带 Humanoid 仍判 NPC**。前两轮 19 + 37 项回归全过。
