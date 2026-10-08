@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 19:48 sha 09d6368f bytes 551850'):format('2026-10-08 19:48','09d6368f',551850))
+print(('[CheatMenu] build 2026-10-08 19:52 sha 9ab830e3 bytes 553535'):format('2026-10-08 19:52','9ab830e3',553535))
 local F = {}
-F.VERSION = "v16.10.76"
+F.VERSION = "v16.10.77"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5560,26 +5560,73 @@ end
 breakVelocity()
 end
 local function TeleportToPlayer(target)
-local _, _, root = GC()
+local _, hum, root = GC()
 if not root or not target then return end
-local tchar = target.Character
-if not tchar then return end
-local troot = tchar:FindFirstChild("HumanoidRootPart")
-if not troot then return end
-local dest = troot.CFrame + Vector3.new(0, 3, 0)
-local dist = (troot.Position - root.Position).Magnitude
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
-pcall(function() root.CFrame = dest end)
-task.spawn(function()
-for _ = 1, 12 do
-if not (root and root.Parent) then break end
-if (root.Position - dest.Position).Magnitude < 6 then break end
-pcall(function() root.CFrame = dest end)
-task.wait(0.05)
+local function say(m) F.Out("[传送] " .. m) end
+local tname = tostring(target.Name)
+say("开始 → 「" .. tname .. "」")
+local tchar = nil
+pcall(function() tchar = target.Character end)
+if not (tchar and tchar.Parent) then
+local t0 = os.clock()
+repeat
+task.wait(0.1)
+pcall(function() tchar = target.Character end)
+until (tchar and tchar.Parent) or (os.clock() - t0 > 3)
 end
-end)
-F.Out("[传送] 已直接瞬移到「" .. tostring(target.Name) .. "」(距离 " .. string.format("%.0f", dist)
-.. " 格 · 无距离限制) —— 若被拉回, 说明本服的位移由服务端裁决, 不是脚本限制")
+if not (tchar and tchar.Parent) then
+say("❌ 拿不到「" .. tname .. "」的角色(等 3 秒仍为空) ⇒ 他大概在你这个「世界/区块」之外, 客户端根本没加载他的模型")
+return
+end
+local troot = tchar:FindFirstChild("HumanoidRootPart") or tchar.PrimaryPart
+if not troot then
+local t0 = os.clock()
+repeat
+task.wait(0.1)
+troot = tchar:FindFirstChild("HumanoidRootPart") or tchar.PrimaryPart
+until troot or (os.clock() - t0 > 2)
+end
+if not troot then
+say("❌ 拿不到「" .. tname .. "」的 HumanoidRootPart ⇒ 他的模型只加载了一部分(串流中), 取不到坐标")
+return
+end
+local tp = troot.Position
+local dist = (tp - root.Position).Magnitude
+say(string.format("目标坐标已拿到 · 距离 %.0f 格 ⇒ 开始瞬移", dist))
+pcall(function() root:SetNetworkOwner(LP) end)
+pcall(function() root:SetNetworkOwnershipAuto(false) end)
+local from = root.Position
+local delta = tp - from
+local STEP = 300
+local steps = math.max(1, math.ceil(dist / STEP))
+if steps > 60 then steps = 60 end
+for i = 1, steps do
+if not (root and root.Parent) then break end
+local p = from + delta * (i / steps)
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.CFrame = CFrame.new(p + Vector3.new(0, 2, 0)) end)
+task.wait()
+end
+local t0 = os.clock()
+local tries, dEnd = 0, dist
+while os.clock() - t0 < 1.5 do
+if not (root and root.Parent) then break end
+tries = tries + 1
+pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
+pcall(function() root.CFrame = CFrame.new(tp + Vector3.new(0, 3, 0)) end)
+task.wait()
+pcall(function() dEnd = (root.Position - tp).Magnitude end)
+if dEnd < 8 then break end
+end
+pcall(function() root:SetNetworkOwnershipAuto(true) end)
+if dEnd < 8 then
+say(string.format("✅ 已到「%s」身旁 (当时距离 %.0f 格 · 分 %d 段 · 顶 %d 次 · 耗 %.2fs)",
+tname, dist, steps, tries, os.clock() - t0))
+else
+say(string.format("❌ 没到位(仍差 %.0f 格) · 已分 %d 段走 + 连顶 %d 次全被拉回 ⇒ 本服位移由服务端裁决(游戏的世界/区域系统会把你拉回), 不是脚本的距离限制",
+dEnd, steps, tries))
+end
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -14697,8 +14744,7 @@ local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then F.Out("[传送] 先在左边「目标玩家」里选一个人") return end
 local pl = Players:FindFirstChild(tostring(name))
 if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已离开)") return end
-if not pl.Character or not pl.Character.Parent then F.Out("[传送] 「" .. pl.Name .. "」现在没有角色(在复活/已死)") return end
-TeleportToPlayer(pl)
+task.spawn(function() pcall(TeleportToPlayer, pl) end)
 end })
 Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(鼠标左键点哪传哪 · 无限远)", Default = false, Callback = function(v)
 T.ClickTP = v
