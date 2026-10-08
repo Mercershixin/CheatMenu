@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:17 sha a5656683 bytes 586591'):format('2026-10-08 23:17','a5656683',586591))
+print(('[CheatMenu] build 2026-10-08 23:29 sha e9fd29cf bytes 586249'):format('2026-10-08 23:29','e9fd29cf',586249))
 local F = {}
-F.VERSION = "v16.10.93"
+F.VERSION = "v16.10.94"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8495,7 +8495,7 @@ end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
 F._ixPos, F._ixLog = nil, 0
 F.IX_MAX = 180
-F.IX_MAXSZ = 200
+F.IX_MAXSZ = 90
 F.IX_MOVE = 12
 F.IX_HOPS = 6
 F.IxTooBig = function(o)
@@ -8541,7 +8541,7 @@ veh = Color3.fromRGB(0, 235, 255),
 F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap" }
 F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge" }
 F.HL_DROP_KEYS = { "weapon","gun","sword","cash","money","reward" }
-F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","locker","drawer","cabinet","elevator","lift","ladder","valve","terminal","keypad","dial","quest","task","interact","prompt","vendor","machine","console","register","furnace","oven","forge","anvil","craft","generator","fuse","crank","wheel","handle","bell","panel","atm","safe","vault","seat","chair","bed","chest","crate" }
+F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","elevator","valve","terminal","keypad","quest","interact","prompt","vendor","register" }
 F.HLKind = function(o)
 if o == nil or o == LP.Character then return nil end
 local okT = false
@@ -8671,8 +8671,12 @@ local pp = nil
 pcall(function() pp = up.Parent end)
 if pp == nil or pp == workspace then break end
 up = pp
+local skipUp = false
+pcall(function() skipUp = up:IsA("Folder") or up:IsA("Terrain") end)
+if not skipUp then
 local k2, c2 = F.HLKind(up)
 if k2 then offer(up, c2, pt.Position) break end
+end
 end
 end
 end
@@ -8699,6 +8703,14 @@ for _, rec in pairs(F._ixObjs) do
 if rec and rec.h then pcall(function() rec.h:Destroy() end) end
 end
 F._ixObjs = {}
+pcall(function()
+local left = workspace:GetDescendants()
+local i
+for i = 1, #left do
+local d = left[i]
+if d ~= nil and d.Name == "CMHLMark" then pcall(function() d:Destroy() end) end
+end
+end)
 end
 F.IxHLSet = function(on)
 T.IxHL = on and true or false
@@ -15276,11 +15288,11 @@ if F._cfgSyncing then return end
 if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
 end })
 Tabs.Surv:AddSection("生命 / 保命")
-Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式(锁血在游戏默认上限 + 免伤 · 不改游戏状态)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
-Tabs.Surv:AddToggle("LockHealthSolo", { Title = "锁血(锁在游戏默认上限 · 不改任何游戏状态)", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("LockHealthSolo", { Title = "锁血", Default = false, Callback = function(v)
 T.LockHealthSolo = v and true or false
 if F._cfgSyncing then return end
 pcall(F.LockHealthSoloSet, v)
@@ -15543,17 +15555,17 @@ if F._cfgSyncing then return end
 if T.BodyHL then F.BodyHLRefresh() end
 F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
 end })
-Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视(以你为中心 N 格内 · 实时更新)", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视", Default = false, Callback = function(v)
 T.IxHL = v
-if F._cfgSyncing then return end
+if F._cfgSyncing and v then return end
 F.IxHLSet(v)
 end })
-Tabs.Visual:AddSlider("IxRange", { Title = "高亮透视 · 范围(格 · 以你为中心)", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
+Tabs.Visual:AddSlider("IxRange", { Title = "高亮透视 · 范围", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
 C.IxRange = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
-Tabs.Visual:AddSlider("IxGap", { Title = "高亮透视 · 重扫间隔(秒 · 越小越跟手但越耗性能)", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
+Tabs.Visual:AddSlider("IxGap", { Title = "高亮透视 · 重扫间隔", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
 C.IxGap = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
@@ -15708,33 +15720,33 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
-Tabs.AFK:AddToggle("Clicker", { Title = "连点器(一直左键连点 · 快捷键可开关)", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("Clicker", { Title = "连点器", Default = false, Callback = function(v)
 T.Clicker = v
 if F._cfgSyncing then return end
 if v then F.ClickerEnable() else F.ClickerDisable() end
 end })
-Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒 · 越小越快)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
-Tabs.AFK:AddSlider("ClickerArea", { Title = "连点器 · 点击范围(像素 · 绿框边长)", Min = 10, Max = 800, Default = 120, Rounding = 0, Callback = function(v)
+Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
+Tabs.AFK:AddSlider("ClickerArea", { Title = "连点器 · 点击范围", Min = 10, Max = 800, Default = 120, Rounding = 0, Callback = function(v)
 C.ClickerArea = v
 if F._cfgSyncing then return end
 pcall(F.ClickerMarkSync)
 end })
-Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键(游戏内开/关)", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
-Tabs.AFK:AddToggle("ClickerLock", { Title = "连点器 · 锁定点击点(切屏/鼠标乱跑都不漂)", Default = false, Callback = function(v)
+Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
+Tabs.AFK:AddToggle("ClickerLock", { Title = "连点器 · 锁定点击点", Default = false, Callback = function(v)
 T.ClickerLock = v
 if F._cfgSyncing then return end
 pcall(F.ClickerMarkSync)
 end })
-Tabs.AFK:AddButton({ Title = "连点器 · 锁定当前位置(取鼠标此刻所在点)", Callback = function()
+Tabs.AFK:AddButton({ Title = "连点器 · 锁定当前位置", Callback = function()
 if not F.Once("cklockhere", 1) then return end
 pcall(F.ClickerLockHere)
 end })
-Tabs.AFK:AddSlider("ClickerLockX", { Title = "连点器 · 锁定点 X(像素 · 微调)", Min = 1, Max = 4000, Default = 1, Rounding = 0, Callback = function(v)
+Tabs.AFK:AddSlider("ClickerLockX", { Title = "连点器 · 锁定点 X", Min = 1, Max = 4000, Default = 1, Rounding = 0, Callback = function(v)
 C.ClickerLockX = v
 if F._cfgSyncing then return end
 pcall(F.ClickerMarkSync)
 end })
-Tabs.AFK:AddSlider("ClickerLockY", { Title = "连点器 · 锁定点 Y(像素 · 微调)", Min = 1, Max = 3000, Default = 1, Rounding = 0, Callback = function(v)
+Tabs.AFK:AddSlider("ClickerLockY", { Title = "连点器 · 锁定点 Y", Min = 1, Max = 3000, Default = 1, Rounding = 0, Callback = function(v)
 C.ClickerLockY = v
 if F._cfgSyncing then return end
 pcall(F.ClickerMarkSync)
