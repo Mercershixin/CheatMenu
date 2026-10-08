@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:28 sha eaae511c bytes 578944'):format('2026-10-08 22:28','eaae511c',578944))
+print(('[CheatMenu] build 2026-10-08 22:34 sha 1fac887c bytes 578973'):format('2026-10-08 22:34','1fac887c',578973))
 local F = {}
-F.VERSION = "v16.10.87"
+F.VERSION = "v16.10.88"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7807,6 +7807,7 @@ if LockHealthConn then return end
 local function lockNow()
 pcall(function()
 if not T.LockHealth then return end
+if T.GodMode then return end
 local _, hum = GC()
 if not hum or hum.Health <= 0 then return end
 local target = C.LockHealthValue or 100
