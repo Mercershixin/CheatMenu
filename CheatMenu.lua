@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:15 sha 483d73a6 bytes 586531'):format('2026-10-08 23:15','483d73a6',586531))
+print(('[CheatMenu] build 2026-10-08 23:17 sha a5656683 bytes 586591'):format('2026-10-08 23:17','a5656683',586591))
 local F = {}
-F.VERSION = "v16.10.92"
+F.VERSION = "v16.10.93"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -15276,7 +15276,7 @@ if F._cfgSyncing then return end
 if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
 end })
 Tabs.Surv:AddSection("生命 / 保命")
-Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
+Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式(锁血在游戏默认上限 + 免伤 · 不改游戏状态)", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
