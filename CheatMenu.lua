@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:34 sha 1fac887c bytes 578973'):format('2026-10-08 22:34','1fac887c',578973))
+print(('[CheatMenu] build 2026-10-08 22:39 sha abca4759 bytes 579591'):format('2026-10-08 22:39','abca4759',579591))
 local F = {}
-F.VERSION = "v16.10.88"
+F.VERSION = "v16.10.89"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3016,7 +3016,10 @@ if hum then
 local o = (F._godOrig and F._godOrig.hum == hum) and F._godOrig or nil
 local mh = hum.MaxHealth
 local want = (o and o.maxHealth) or (F._orig and F._orig.maxHealth) or 100
-if type(mh) ~= "number" or mh > 1000 or mh ~= mh then
+local need = false
+if type(mh) ~= "number" or mh > 1000 or mh ~= mh then need = true end
+if o and type(o.maxHealth) == "number" and mh ~= o.maxHealth then need = true end
+if need then
 pcall(function() hum.MaxHealth = want end)
 done[#done + 1] = "MaxHealth=" .. tostring(want)
 end
@@ -8370,6 +8373,14 @@ end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
 F._ixPos, F._ixLog = nil, 0
 F.IX_MAX = 220
+F.IX_MAXSZ = 60
+F.IxTooBig = function(o)
+local sz = 0
+pcall(function() if o:IsA("BasePart") then sz = o.Size.Magnitude end end)
+if sz == 0 then pcall(function() sz = o:GetExtentsSize().Magnitude end) end
+if sz == 0 or sz ~= sz then return false end
+return sz > F.IX_MAXSZ
+end
 F.IxRange = function()
 local v = tonumber(C.IxRange)
 if not v or v < 30 then v = 300 end
@@ -8466,9 +8477,10 @@ local center = root.Position
 local parts = nil
 pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
 if type(parts) ~= "table" then parts = {} end
-local best, order = {}, {}
+local best, order, skipped = {}, {}, 0
 local function offer(o, col, pos)
 if o == nil or o == LP.Character then return end
+if F.IxTooBig(o) then skipped = skipped + 1 return end
 local d = 0
 if pos then d = (pos - center).Magnitude end
 local cur = best[o]
@@ -8510,7 +8522,7 @@ F._ixObjs[o] = nil
 gone = gone + 1
 end
 end
-return #order, gone
+return #order, gone, skipped
 end
 F.IxClear = function()
 for _, rec in pairs(F._ixObjs) do
@@ -8561,10 +8573,11 @@ local moved = 999
 if F._ixPos then moved = (pos - F._ixPos).Magnitude end
 if moved < 15 and (now - (F._ixAt or 0)) < 3 then return end
 F._ixAt, F._ixPos = now, pos
-local n, gone = F.IxScan()
+local n, gone, sk = F.IxScan()
 if now - F._ixLog > 8 then
 F._ixLog = now
-F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮移出范围 " .. tostring(gone) .. " 个")
+F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮移出范围 " .. tostring(gone) .. " 个"
+.. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个(避免整块地图被染色)") or ""))
 end
 end)
 end
