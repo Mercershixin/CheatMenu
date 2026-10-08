@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 00:33 sha c36dd143 bytes 606802'):format('2026-10-09 00:33','c36dd143',606802))
+print(('[CheatMenu] build 2026-10-09 00:43 sha 10361240 bytes 607741'):format('2026-10-09 00:43','10361240',607741))
 local F = {}
-F.VERSION = "v17.0.0"
+F.VERSION = "v17.0.1"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6245,26 +6245,51 @@ if not v or v < 8 then v = 60 end
 if v > 400 then v = 400 end
 return v
 end
+F.ClickerRawMouse = function()
+local us = game:GetService("UserInputService")
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if type(mp) ~= "table" then return nil, nil end
+return math.floor(mp.X), math.floor(mp.Y)
+end
+F.ClickerBoxPos = function()
+local vp = nil
+pcall(function() local c = workspace.CurrentCamera if c then vp = c.ViewportSize end end)
+local sx, sy = tonumber(C.ClickerLockX), tonumber(C.ClickerLockY)
+if sx == nil or sy == nil then return nil, nil end
+if sx < 20 or sy < 20 then return nil, nil end
+if vp ~= nil and vp.X > 0 and sx > vp.X - 10 then return nil, nil end
+if vp ~= nil and vp.Y > 0 and sy > vp.Y - 10 then return nil, nil end
+return math.floor(sx), math.floor(sy)
+end
+F.ClickerSeed = function()
+local x, y = F.ClickerBoxPos()
+if x ~= nil then return x, y end
+local mx, my = F.ClickerRawMouse()
+if mx == nil then return nil, nil end
+F.ClickerDragTo(mx, my)
+return F.ClickerBoxPos()
+end
+F.ClickerLocked = function()
+if T.ClickerBox ~= true then return nil end
+local x, y = F.ClickerBoxPos()
+if x == nil then x, y = F.ClickerSeed() end
+if x == nil or y == nil then return nil end
+return math.floor(x), math.floor(y)
+end
 F.ClickerCenter = function()
 local us = game:GetService("UserInputService")
 local focused = true
 pcall(function() focused = us.WindowFocused end)
 local lx, ly = F.ClickerLocked()
 if lx then return lx, ly, focused end
-if focused then
-local mp = nil
-pcall(function() mp = us:GetMouseLocation() end)
-if mp then
-F._ckPX, F._ckPY = mp.X, mp.Y
+local mx, my = nil, nil
+if focused then mx, my = F.ClickerRawMouse() end
+if mx == nil then mx, my = F.ClickerRawMouse() end
+if mx ~= nil then
+F._ckPX, F._ckPY = mx, my
 end
-end
-if F._ckPX == nil or F._ckPY == nil then
-local mp = nil
-pcall(function() mp = us:GetMouseLocation() end)
-if mp then
-F._ckPX, F._ckPY = mp.X, mp.Y
-end
-end
+if F._ckPX == nil or F._ckPY == nil then return nil, nil, focused end
 return F._ckPX, F._ckPY, focused
 end
 F.ClickerPoint = function()
@@ -6324,15 +6349,6 @@ if ok and type(mouse1press) == "function" then return "mouse1press" end
 end
 end
 return nil
-end
-F.ClickerLocked = function()
-if T.ClickerLock ~= true then return nil end
-if F._ckBoxPlaced ~= true then return nil end
-local x = tonumber(C.ClickerLockX)
-local y = tonumber(C.ClickerLockY)
-if not x or not y then return nil end
-if x < 1 or y < 1 then return nil end
-return math.floor(x), math.floor(y)
 end
 F.ClickerMarkHide = function()
 local g = F._ckMark
@@ -6429,7 +6445,16 @@ if ny > vp.Y - hx then ny = vp.Y - hx end
 end
 C.ClickerLockX, C.ClickerLockY = math.floor(nx), math.floor(ny)
 T.ClickerLock = true
+T.ClickerBox = true
 F._ckBoxPlaced = true
+if F._cfgSyncing ~= true and F._ckBoxSyncing ~= true then
+F._ckBoxSyncing = true
+pcall(function()
+local op = Fluent and Fluent.Options
+if type(op) == "table" then pcall(F.OptSet, op.ClickerBox, true) end
+end)
+F._ckBoxSyncing = nil
+end
 F.ClickerMarkShow(C.ClickerLockX, C.ClickerLockY)
 end
 F.ClickerDragStop = function()
@@ -6499,20 +6524,14 @@ end
 F.ClickerBoxSet = function(on)
 T.ClickerBox = on and true or false
 if T.ClickerBox then
-local sx, sy = tonumber(C.ClickerLockX), tonumber(C.ClickerLockY)
-if sx ~= nil and sy ~= nil and sx >= 20 and sy >= 20 then
-F.ClickerDragTo(sx, sy)
-else
-local cx, cy = F.ClickerCenter()
-if cx ~= nil and cy ~= nil then F.ClickerDragTo(cx, cy) end
-end
-local x, y = F.ClickerLocked()
-if x then
+local x, y = F.ClickerBoxPos()
+if x == nil then x, y = F.ClickerSeed() end
+if x ~= nil and y ~= nil then
 F.ClickerMarkShow(x, y)
 F.Out("[连点器] 点击框已显示 " .. tostring(x) .. "," .. tostring(y) .. " · 边长 " .. tostring(F.ClickerArea())
 .. " ⇒ 拖左上角那块绿色小方块「拖」移动它; 连点器只在这个框里点, 且切屏后不漂")
 else
-F.Out("[连点器] 点击框已显示, 但暂时拿不到可用坐标 ⇒ 进游戏后重开一次这个开关")
+F.Out("[连点器] 点击框已显示, 但拿不到可用坐标 ⇒ 把鼠标移到游戏画面上再重开这个开关")
 end
 else
 F._ckDrag = nil
@@ -16298,6 +16317,7 @@ Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔", Min = 0.01, Ma
 Tabs.AFK:AddToggle("ClickerBox", { Title = "显示点击框", Default = false, Callback = function(v)
 T.ClickerBox = v and true or false
 if F._cfgSyncing then return end
+if F._ckBoxSyncing == true then return end
 pcall(F.ClickerBoxSet, v)
 end })
 Tabs.AFK:AddSlider("ClickerArea", { Title = "连点器 · 点击范围", Min = 8, Max = 400, Default = 60, Rounding = 0, Callback = function(v)
