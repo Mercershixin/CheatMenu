@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:39 sha abca4759 bytes 579591'):format('2026-10-08 22:39','abca4759',579591))
+print(('[CheatMenu] build 2026-10-08 22:42 sha 939c575d bytes 579808'):format('2026-10-08 22:42','939c575d',579808))
 local F = {}
-F.VERSION = "v16.10.89"
+F.VERSION = "v16.10.90"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8168,10 +8168,11 @@ F._mmg, F._mmgConn, F._mmgCam = nil, nil, nil
 F.MenuMouseForce = function()
 pcall(function()
 if UIS.TouchEnabled then return end
-local c = workspace.CurrentCamera
-if c then
-if F._mmgCam == nil then F._mmgCam = c.CameraMode end
-if c.CameraMode ~= Enum.CameraMode.Classic then c.CameraMode = Enum.CameraMode.Classic end
+if LP then
+if F._mmgCam == nil then pcall(function() F._mmgCam = LP.CameraMode end) end
+if LP.CameraMode ~= Enum.CameraMode.Classic then
+pcall(function() LP.CameraMode = Enum.CameraMode.Classic end)
+end
 end
 if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default end
 if UIS.MouseIconEnabled ~= true then
@@ -8181,11 +8182,14 @@ end
 end)
 end
 F.MenuMouseRelease = function()
-if F._mmgConn then pcall(function() F._mmgConn:Disconnect() end) F._mmgConn = nil end
-pcall(function()
-local c = workspace.CurrentCamera
-if c and F._mmgCam ~= nil then c.CameraMode = F._mmgCam end
-end)
+if F._mmgConn then
+pcall(function() RS:UnbindFromRenderStep("CM_MenuMouse") end)
+pcall(function() F._mmgConn:Disconnect() end)
+F._mmgConn = nil
+end
+if F._mmgCam ~= nil then
+pcall(function() if LP then LP.CameraMode = F._mmgCam end end)
+end
 F._mmgCam = nil
 if F._savedMouseIcon ~= nil then
 pcall(function() UIS.MouseIconEnabled = F._savedMouseIcon end)
@@ -8209,7 +8213,14 @@ if w then pcall(function() open = F.MenuOpen() end) end
 if open then
 pcall(F.MenuMouseForce)
 if not F._mmgConn then
+local okB = pcall(function()
+RS:BindToRenderStep("CM_MenuMouse", Enum.RenderPriority.Camera.Value + 1, F.MenuMouseForce)
+end)
+if okB then
+F._mmgConn = true
+else
 pcall(function() F._mmgConn = RS.RenderStepped:Connect(F.MenuMouseForce) end)
+end
 end
 if last ~= true then
 F.Out("[菜单] 已接管鼠标: 每帧解除锁定 + 临时切第三人称 ⇒ 第一人称/锁定视角下也能用菜单(关掉菜单自动还原)")
