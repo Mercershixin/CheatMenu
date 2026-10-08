@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 20:22 sha 8655801b bytes 569714'):format('2026-10-08 20:22','8655801b',569714))
+print(('[CheatMenu] build 2026-10-08 20:35 sha f4b95624 bytes 573242'):format('2026-10-08 20:35','f4b95624',573242))
 local F = {}
-F.VERSION = "v16.10.79"
+F.VERSION = "v16.10.80"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5953,6 +5953,39 @@ end
 end
 return out
 end
+F.CM_OWNED = function(o)
+local p, n = o, 0
+while p and n < 14 do
+local own = false
+pcall(function() own = (p:GetAttribute("CMOwned") == true) end)
+if own then return true end
+local nm = nil
+pcall(function() nm = string.lower(tostring(p.Name)) end)
+if nm and (string.find(nm, "cheatmenu", 1, true) or string.find(nm, "fluent", 1, true) or string.find(nm, "cmtouch", 1, true)) then
+return true
+end
+local up = nil
+pcall(function() up = p.Parent end)
+if up == nil then break end
+p = up
+n = n + 1
+end
+return false
+end
+F.ClickerOverOwnGui = function()
+local pos = nil
+pcall(function() pos = game:GetService("UserInputService"):GetMouseLocation() end)
+if not pos then return false end
+local pg = LP:FindFirstChild("PlayerGui")
+if not pg then return false end
+local hits = nil
+pcall(function() hits = pg:GetGuiObjectsAtPosition(pos.X, pos.Y) end)
+if type(hits) ~= "table" then return false end
+for i = 1, #hits do
+if F.CM_OWNED(hits[i]) then return true end
+end
+return false
+end
 F.MouseClickOnce = function()
 if type(mouse1click) == "function" then
 if pcall(mouse1click) then return "mouse1click" end
@@ -5967,14 +6000,36 @@ end
 do
 local ok = pcall(function()
 local vim = game:GetService("VirtualInputManager")
+local vp = Vector2.new(400, 400)
+pcall(function()
 local cam = workspace.CurrentCamera
-local vp = (cam and cam.ViewportSize) or Vector2.new(400, 400)
-vim:SendMouseButtonEvent(true, vp.X / 2, vp.Y / 2, 0, true, game, 0)
-vim:SendMouseButtonEvent(false, vp.X / 2, vp.Y / 2, 0, true, game, 0)
+if cam and cam.ViewportSize then vp = cam.ViewportSize end
+end)
+local x, y = vp.X / 2, vp.Y / 2
+pcall(function()
+local mp = game:GetService("UserInputService"):GetMouseLocation()
+if mp then x, y = mp.X, mp.Y end
+end)
+vim:SendMouseButtonEvent(true, x, y, 0, true, game, 0)
+vim:SendMouseButtonEvent(false, x, y, 0, true, game, 0)
 end)
 if ok then return "VIM" end
 end
 return nil
+end
+F.ClickerGap = function()
+local v = tonumber(C.ClickerGap)
+if not v or v < 0.01 then v = 0.05 end
+if v > 5 then v = 5 end
+return v
+end
+F.CLICKER_KEYS = { "不用快捷键", "F6", "F7", "F8", "F9", "F10", "F11", "H", "J", "K", "L", "N", "M", "V", "B" }
+F.ClickerKeyCode = function()
+local nm = C.ClickerKey
+if type(nm) ~= "string" or nm == "" then nm = "F6" end
+local kc = nil
+pcall(function() kc = Enum.KeyCode[nm] end)
+return kc
 end
 local RBT = nil
 function F.AutoRebirthEnable()
@@ -6036,17 +6091,29 @@ end
 local CKT = nil
 function F.ClickerEnable()
 if CKT and T.Clicker then return end
-F.Out("[连点器] 已开: 左键连点(约 20 次/秒)。提示: 鼠标要在游戏画面上, 菜单打开时可能点到菜单")
+T.Clicker = true
+local gap = F.ClickerGap()
+local kc = F.ClickerKeyCode()
+F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s · 鼠标停在菜单上时自动跳过(不会点到自己)",
+gap, (gap > 0) and (1 / gap) or 0,
+kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
 CKT = task.spawn(function()
-local n, t0, via = 0, os.clock(), nil
+local n, t0, via, skipped = 0, os.clock(), nil, 0
 while T.Clicker do
+local over = false
+pcall(function() over = F.ClickerOverOwnGui() end)
+if over then
+skipped = skipped + 1
+else
 pcall(function() via = F.MouseClickOnce() end)
 n = n + 1
+end
 if os.clock() - t0 > 30 then
 t0 = os.clock()
-F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)"))
+F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)")
+.. (skipped > 0 and (" · 鼠标在菜单上跳过 " .. tostring(skipped) .. " 次") or ""))
 end
-task.wait(0.05)
+task.wait(F.ClickerGap())
 end
 CKT = nil
 end)
@@ -6055,6 +6122,28 @@ function F.ClickerDisable()
 T.Clicker = false
 CKT = nil
 F.Out("[连点器] 已停")
+end
+function F.ClickerToggle()
+local want = not (T.Clicker == true)
+local opt = nil
+pcall(function() opt = Fluent and Fluent.Options and Fluent.Options.Clicker end)
+if not F.OptSet(opt, want) then
+if want then F.ClickerEnable() else F.ClickerDisable() end
+end
+end
+function F.ClickerHotkeyInstall()
+if F._ckConn then return end
+if not (UIS and UIS.InputBegan) then return end
+F._ckConn = UIS.InputBegan:Connect(function(input, gp)
+if gp then return end
+if not input or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+local kc = F.ClickerKeyCode()
+if not kc or input.KeyCode ~= kc then return end
+pcall(F.ClickerToggle)
+end)
+end
+function F.ClickerHotkeyRemove()
+if F._ckConn then pcall(function() F._ckConn:Disconnect() end) F._ckConn = nil end
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -13776,10 +13865,11 @@ end)
 F.Out("[扫描·远程] 共 " .. tostring(n) .. " 个有客户端处理的远程 · 名字可疑(掉蛋/收回/速度/守卫类) " .. tostring(sus) .. " 个")
 end
 F.ScanGameAPI = function()
-F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/放置/任务 + 世界/交易世界/换服」脚本(含 ReplicatedStorage 的 Controllers/Shared), 摘出它怎么调远程/调传送(只读) =====")
+F.Out("[扫描·游戏接口] ===== 反编译游戏自己的「蛋/认领/放置/任务 + 世界/交易世界/换服 + 投掷/概率」脚本(含 ReplicatedStorage 的 Controllers/Shared), 摘出它怎么调远程/调传送(只读) =====")
 local KEY = { "egg", "claim", "place", "steal", "drop", "quest", "mission", "task", "rebirth",
 "world", "trade", "shuffle", "rejoin", "serverhop", "matchmake", "lobby", "serverlist",
-"worldswitch", "switchworld", "newserver", "joinserver" }
+"worldswitch", "switchworld", "newserver", "joinserver",
+"throw", "train", "odds", "chance", "rarity", "luck", "pool", "launch", "strength" }
 local n, shown = 0, 0
 pcall(function()
 local roots = {}
@@ -13815,7 +13905,9 @@ n = n + 1
 local KW = { "InvokeServer", "FireServer", ":fire(", ":Fire(", ":invoke(", ":Invoke(",
 "ClaimArea", "claim", "Net.", "Remo", "placeEgg", "PlaceEgg", "getClaimArea",
 "TeleportService", "Teleport", "ServerInstanceId", "JobId", "ReserveServer", "reserveServer",
-"shuffle", "Shuffle", "World", "world" }
+"shuffle", "Shuffle", "World", "world",
+"throw", "Throw", "Odds", "odds", "Chance", "chance", "Rarity", "rarity", "Luck", "luck",
+"math.random", "Random", "Weight", "weight", "Pool", "pool", "Power", "power" }
 local lines = {}
 for line in tostring(code):gmatch("[^\n]+") do
 local keep = false
@@ -15252,11 +15344,14 @@ T.AutoRebirth = v
 if F._cfgSyncing then return end
 if v then F.AutoRebirthEnable() else F.AutoRebirthDisable() end
 end })
-Tabs.AFK:AddToggle("Clicker", { Title = "连点器(左键连点 · 约 20 次/秒)", Default = false, Callback = function(v)
+Tabs.AFK:AddToggle("Clicker", { Title = "连点器(一直左键连点 · 快捷键可开关)", Default = false, Callback = function(v)
 T.Clicker = v
 if F._cfgSyncing then return end
 if v then F.ClickerEnable() else F.ClickerDisable() end
 end })
+Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒 · 越小越快)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
+Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键(游戏内开/关)", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
+task.spawn(function() pcall(F.ClickerHotkeyInstall) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
