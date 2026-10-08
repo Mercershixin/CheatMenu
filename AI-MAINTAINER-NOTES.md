@@ -4489,3 +4489,53 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 2. 切片漏掉被调函数（`F.IxRange/F.IxParams/F.IxTooBig` 在插入点**之前**）⇒ 被 `pcall` **静默吞掉**
    ⇒ 现象是"扫到 0 个且无任何报错"。**扫描返回 0 时，先怀疑"某个被调函数是 nil"。**
 3. 测 `IxScan` 必须 `T.IxHL = true`（`F.IxAdd` 首行 `if not T.IxHL then return end`）。
+
+## v16.10.99 · 连点器锁定修复 + 关屏幕特效 + 位置上报伪造 + 游戏专用绕过（进档位）（2026-10-09）
+
+### ① 连点器「锁定当前位置」锁到菜单自己身上（真 bug）
+`F.ClickerLockHere` 原来直接取 `us:GetMouseLocation()` —— 而**按这个按钮时鼠标必然在菜单上**
+⇒ 锁到菜单坐标；之后点击循环里 `F.ClickerOverOwnGui` 又把"点在自己菜单上"的点击**全部跳过**
+⇒ 用户看到的是"锁了但什么都不点"。
+**修法**：新增 `F.ClickerTrackStart/Stop`（`UIS.InputChanged` 的 MouseMovement + 0.12s 节流，事件驱动）
+持续记录 `F._ckGX/_ckGY` = 鼠标最后一次停在**游戏画面**（`F.ClickerOverOwnGui` 为假）时的位置；
+`F.ClickerLockHere` 三级取值：① 鼠标在游戏画面 ⇒ 当前位置；② 压在菜单上 ⇒ 用 `_ckGX/_ckGY`；
+③ 都没有 ⇒ **拒绝并提示**"先把鼠标移到游戏画面晃一下"。**日志写明取值来源**；关连点器时清空记录点。
+
+### ② 关屏幕特效（新开关，视觉页）
+复用 `F.DmgFx*` 覆盖层抑制引擎，只加词表、不加循环不加实例：
+- 新增 `F.SCR_KEYS`：jumpscare/jump_scare/scare/strobe/screenflash/flashfx/flashoverlay/whiteout/blackout/
+  redout/fade/static/glitch/noise/scanline/distortion/chromatic/aberration/vhs/filmgrain/grain/overlay/blur。
+  ★ **故意不用裸 `flash`**（会误伤 `Flashlight` 这类道具/UI）。
+- `F.DmgFxOn` 纳入 `T.NoScreenFx`；`F.DmgFxNamed` 只在 `T.NoScreenFx` 时查 `SCR_KEYS`（受伤词表始终算）。
+- `F.ScrFxSet(on)`：开=启动循环；关=若上帝模式/锁血还在就只关自己那部分，否则还原并断开循环。
+- 只**压透明度**：不动灯光、不动伽马、不改游戏状态；`NoScreenFx` 已进 `F.PANIC_KEEP`。
+
+### ③ 位置上报伪造（新开关，防护页 + 「伪造 · 抬高」滑块 + 「重设伪造点」按钮）
+`F.POS_KEYS` / `F.PosSpoofNameHit` / `F.PosSpoofArm` / `F.PosSpoofArgs`：
+只把出站参数里的 **Vector3 / CFrame** 换成假位置（开启时坐标 + 抬高），**其余参数原样透传、`args.n` 保持**；
+没有坐标参数 ⇒ 返回 nil（不改）。命中后**照常发出**（不丢弃）。
+风险如实写进日志：只改"你发出去的坐标"；服务端权威移动的游戏可能把你拉回。
+
+### ④ 游戏专用绕过（新），**放进档位**（用户明确要求）
+- `F.GBYP_KEYS` 只针对**检测/上报类**（anticheat/flag/report/detect/violation/suspect/exploit/cheat/telemetry/
+  analytic/integrity/verify/audit/evidence/punish/moderate/strike/screenshot/alert/warn）；
+  `F.GBYP_SAFE` 白名单（interact/door/open/pick/use/quest/shop/chat/buy/sell/trade/invite/join/leave/vote/
+  emote/music/sound/camera/menu/equip/inventory/grab/respawn/checkpoint）命中即放行。
+  ⛔ **不碰 kill/hit/damage 类** —— 那归「拦受伤上报」，混在一起会打坏自己的攻击/交互判定。
+- `F.GameBypassScan()`：`F.walk` 扫 ReplicatedStorage + workspace，按名字挑出候选远程
+  ⇒ **"游戏专用"= 每个游戏现场扫它自己的目标**，不写死任何游戏名。目标名打进日志（最多列 12 个）。
+- **档位集成**：`F.ProtectTierApply` 在 ②/③ 自动 `F.GameBypassSet(true)`，`F._tierGbypOwn` 记所有权；
+  档位调回「关」时**只收回档位自己开的那次**（用户手动开的保持不动）。档位 ②/③ 文案补「+ 游戏专用绕过」。
+
+### 关于「复活通道会不会消耗道具」（用户提问）
+本项目**目前没有**自动复活功能（`自动重生/自动转生` 已被用户点名删除）。若将来做，做法只会是
+**调用游戏自己的复活按钮/远程** ⇒ 花费与游戏正常复活**完全一致**（游戏不收费就不收费，游戏要扣道具就扣道具）。
+客户端**无法**绕过"服务端要扣道具"——那属于服务端裁决。已有的「自杀」功能走游戏自己的 Reset/Respawn 通道，
+并且已经会提示"手上还有 N 个东西，会掉"。
+
+### 验证
+本轮 49 项离线断言（连点器锁定 5 情形 · 伪造 7 项 · 游戏专用绕过 10 项 · 关屏幕特效 13 项，含反向核对）；
+回归 `test6` 50/50、`test7` 13/13；本地复查 27 条基线；编译 0 错误；等价性通过。
+
+⚠ **测试脚手架坑（新）**：`gen_test6/gen_test7` 写死了源码文件名带版本号 ⇒ 版本一升就 FileNotFoundError。
+⇒ **生成器里的源码路径不要写死版本号**（用 glob 或读 `build/VERSION` 拼）。
