@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 01:46 sha 0f6e6a2d bytes 611130'):format('2026-10-09 01:46','0f6e6a2d',611130))
+print(('[CheatMenu] build 2026-10-09 01:48 sha a57ffa3c bytes 611274'):format('2026-10-09 01:48','a57ffa3c',611274))
 local F = {}
-F.VERSION = "v17.0.3"
+F.VERSION = "v17.0.4"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6429,6 +6429,11 @@ end
 F.ClickerMarkHide = function()
 local g = F._ckMark
 if g then pcall(function() g.Enabled = false end) end
+end
+F.ClickerMarkDestroy = function()
+local g = F._ckMark
+F._ckMark = nil
+if g then pcall(function() g:Destroy() end) end
 end
 F.ClickerMarkShow = function(x, y)
 if not x or not y then F.ClickerMarkHide() return end
@@ -13366,7 +13371,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerMouseWatchStop, F.ClickerHotkeyRemove, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerMouseWatchStop, F.ClickerHotkeyRemove, F.ClickerMarkDestroy, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
