@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 03:02 sha 532b22d6 bytes 580072'):format('2026-10-09 03:02','532b22d6',580072))
+print(('[CheatMenu] build 2026-10-09 03:18 sha 03bbe7e1 bytes 587131'):format('2026-10-09 03:18','03bbe7e1',587131))
 local F = {}
-F.VERSION = "v17.0.14"
+F.VERSION = "v17.0.15"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6152,6 +6152,162 @@ p = up
 n = n + 1
 end
 return false
+end
+F.CLICKER_KEYS = { "F6", "F7", "F8", "F9", "F10", "F11", "F12", "H", "J", "K", "L", "N", "M", "B", "V" }
+F.CLICKER_MODES = { "快捷键/按钮开关", "按住左键(松开即停)", "点一下左键(再点停止)" }
+if C.ClickerMode == nil then C.ClickerMode = "快捷键/按钮开关" end
+if C.ClickerGap == nil then C.ClickerGap = 0.05 end
+if C.ClickerKey == nil then C.ClickerKey = "F6" end
+if C.ClickerPosKey == nil then C.ClickerPosKey = "F7" end
+if C.ClickerX == nil then C.ClickerX = 0 end
+if C.ClickerY == nil then C.ClickerY = 0 end
+local CK = { loop = nil, conns = {}, sendAt = 0 }
+F.ClickerKeyOf = function(which)
+local nm = C.ClickerKey
+if which == "pos" then nm = C.ClickerPosKey end
+if type(nm) ~= "string" or nm == "" then return nil end
+local kc = nil
+pcall(function() kc = Enum.KeyCode[nm] end)
+return kc
+end
+F.ClickerGap = function()
+local v = tonumber(C.ClickerGap)
+if not v or v < 0.01 then v = 0.05 end
+if v > 5 then v = 5 end
+return v
+end
+F.ClickerPos = function()
+local x, y = tonumber(C.ClickerX), tonumber(C.ClickerY)
+if not x or not y then return nil end
+if x <= 0 or y <= 0 then return nil end
+return math.floor(x), math.floor(y)
+end
+F.ClickerSavePos = function()
+local x, y = nil, nil
+pcall(function()
+local mp = game:GetService("UserInputService"):GetMouseLocation()
+if mp then x, y = math.floor(mp.X), math.floor(mp.Y) end
+end)
+if x == nil or y == nil then
+F.Out("[连点器] 保存失败: 读不到鼠标位置")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "读不到鼠标位置, 保存失败", Duration = 5 }) end)
+return false
+end
+C.ClickerX, C.ClickerY = x, y
+F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " ⇒ 之后只点这里")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. x .. "," .. y, Duration = 4 }) end)
+return true
+end
+F.ClickerClearPos = function()
+C.ClickerX, C.ClickerY = 0, 0
+F.Out("[连点器] 已清除保存的位置")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "已清除保存的位置", Duration = 3 }) end)
+end
+F.ClickerClick = function(x, y)
+CK.sendAt = os.clock()
+local ok = false
+pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
+vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
+ok = true
+end)
+if ok then return "按坐标" end
+if type(mouse1click) == "function" then
+if pcall(mouse1click) then return "按鼠标位置" end
+end
+return nil
+end
+function F.ClickerEnable()
+if CK.loop then return end
+local x, y = F.ClickerPos()
+if not x then
+F.Out("[连点器] 还没保存位置 ⇒ 鼠标移到目标处, 按 " .. tostring(C.ClickerPosKey) .. " 或点「保存当前鼠标位置」")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "还没保存位置: 鼠标放到目标处按 " .. tostring(C.ClickerPosKey), Duration = 6 }) end)
+T.Clicker = false
+pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.Clicker, false) end)
+return
+end
+T.Clicker = true
+local gap = F.ClickerGap()
+F.Out("[连点器] 已开 · 每 " .. string.format("%.2f", gap) .. " 秒一次 (" .. x .. "," .. y .. ") · 模式 " .. tostring(C.ClickerMode))
+CK.loop = task.spawn(function()
+local n, t0, via = 0, os.clock(), nil
+while T.Clicker == true do
+local px, py = F.ClickerPos()
+if not px then break end
+via = nil
+pcall(function() via = F.ClickerClick(px, py) end)
+if via then n = n + 1 end
+if os.clock() - t0 > 30 then
+t0 = os.clock()
+F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "失败") .. " · 位置 " .. tostring(px) .. "," .. tostring(py))
+end
+task.wait(F.ClickerGap())
+end
+CK.loop = nil
+if T.Clicker == true then
+T.Clicker = false
+pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.Clicker, false) end)
+end
+end)
+end
+function F.ClickerDisable()
+T.Clicker = false
+if CK.loop then pcall(function() task.cancel(CK.loop) end) CK.loop = nil end
+F.Out("[连点器] 已停")
+end
+function F.ClickerToggle()
+local want = not (T.Clicker == true)
+local opt = nil
+pcall(function() opt = Fluent and Fluent.Options and Fluent.Options.Clicker end)
+if not F.OptSet(opt, want) then
+if want then F.ClickerEnable() else F.ClickerDisable() end
+end
+end
+function F.ClickerWatch()
+if CK.conns[1] then return end
+if not (UIS and UIS.InputBegan and UIS.InputEnded) then return end
+local function selfClick() return (os.clock() - (CK.sendAt or 0)) < 0.15 end
+local function isMouse1(input)
+local ok = false
+pcall(function() ok = (input.UserInputType == Enum.UserInputType.MouseButton1) end)
+return ok
+end
+CK.conns[1] = UIS.InputBegan:Connect(function(input, gp)
+if gp or not input then return end
+local isK = false
+pcall(function() isK = (input.UserInputType == Enum.UserInputType.Keyboard) end)
+if isK then
+local kc = F.ClickerKeyOf("run")
+local pk = F.ClickerKeyOf("pos")
+if kc ~= nil and input.KeyCode == kc then
+pcall(F.ClickerToggle)
+elseif pk ~= nil and input.KeyCode == pk then
+pcall(F.ClickerSavePos)
+end
+return
+end
+if isMouse1(input) then
+if selfClick() then return end
+local md = tostring(C.ClickerMode)
+if string.find(md, "按住", 1, true) then
+pcall(F.ClickerEnable)
+elseif string.find(md, "点一下", 1, true) then
+pcall(F.ClickerToggle)
+end
+end
+end)
+CK.conns[2] = UIS.InputEnded:Connect(function(input, gp)
+if gp or not input then return end
+if not isMouse1(input) then return end
+if selfClick() then return end
+if string.find(tostring(C.ClickerMode), "按住", 1, true) then pcall(F.ClickerDisable) end
+end)
+end
+function F.ClickerWatchStop()
+for i = 1, #CK.conns do pcall(function() CK.conns[i]:Disconnect() end) end
+CK.conns = {}
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -12792,7 +12948,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -15566,6 +15722,28 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
+Tabs.AFK:AddToggle("Clicker", { Title = "连点器", Default = false, Callback = function(v)
+T.Clicker = v and true or false
+if F._cfgSyncing then return end
+if T.Clicker then pcall(F.ClickerEnable) else pcall(F.ClickerDisable) end
+end })
+Tabs.AFK:AddDropdown("ClickerMode", { Title = "连点器 · 模式", Values = F.CLICKER_MODES, Default = "快捷键/按钮开关", Callback = function(v)
+C.ClickerMode = v
+if F._cfgSyncing then return end
+F.Out("[连点器] 模式已切换: " .. tostring(v))
+end })
+Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
+Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 开/停快捷键", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
+Tabs.AFK:AddDropdown("ClickerPosKey", { Title = "连点器 · 存坐标快捷键", Values = F.CLICKER_KEYS, Default = "F7", Callback = function(v) C.ClickerPosKey = v end })
+Tabs.AFK:AddButton({ Title = "连点器 · 保存当前鼠标位置", Callback = function()
+if not F.Once("cksave", 0.6) then return end
+pcall(F.ClickerSavePos)
+end })
+Tabs.AFK:AddButton({ Title = "连点器 · 清除保存的位置", Callback = function()
+if not F.Once("ckclear", 0.6) then return end
+pcall(F.ClickerClearPos)
+end })
+task.spawn(function() pcall(F.ClickerWatch) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
