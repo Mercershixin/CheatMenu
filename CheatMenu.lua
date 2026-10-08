@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 01:34 sha 4509eb7e bytes 609809'):format('2026-10-09 01:34','4509eb7e',609809))
+print(('[CheatMenu] build 2026-10-09 01:46 sha 0f6e6a2d bytes 611130'):format('2026-10-09 01:46','0f6e6a2d',611130))
 local F = {}
-F.VERSION = "v17.0.2"
+F.VERSION = "v17.0.3"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6308,11 +6308,19 @@ return F.ClickerClamp(sx, sy)
 end
 F.ClickerSeed = function()
 local x, y = F.ClickerGameMouse()
-if x == nil then return nil, nil end
+local src = "game"
+if x == nil then
+x, y = F.ClickerRawMouse()
+src = "mouse"
+F._ckNeedDrag = true
+else
+F._ckNeedDrag = nil
+end
+if x == nil or y == nil then return nil, nil, nil end
 local cx, cy = F.ClickerClamp(x, y)
-if cx == nil or cy == nil then return nil, nil end
+if cx == nil or cy == nil then return nil, nil, nil end
 C.ClickerLockX, C.ClickerLockY = cx, cy
-return cx, cy
+return cx, cy, src
 end
 F.ClickerLocked = function()
 if T.ClickerBox ~= true then return nil end
@@ -6332,6 +6340,13 @@ if x == nil or y == nil then
 if not F._ckBoxWarned then
 F._ckBoxWarned = true
 F.Out("[连点器] 点击框还没有定位 ⇒ 请先把鼠标移到游戏画面上(不要停在菜单上), 再打开一次「显示点击框」")
+end
+return nil, nil, focused
+end
+if F._ckNeedDrag == true then
+if not F._ckBoxWarned then
+F._ckBoxWarned = true
+F.Out("[连点器] 点击框还没搬过位置(现在压在菜单上) ⇒ 先按住绿色小方块「拖」把框拖到你要点的位置, 才会开始点击")
 end
 return nil, nil, focused
 end
@@ -6427,6 +6442,7 @@ local host = nil
 pcall(function() if type(gethui) == "function" then host = gethui() end end)
 if not host then pcall(function() host = CoreGui end) end
 if not host then pcall(function() host = game:GetService("CoreGui") end) end
+if not host then pcall(function() host = LP:FindFirstChild("PlayerGui") end) end
 if host then
 pcall(function()
 local old = host:FindFirstChild("CMClickMark")
@@ -6437,7 +6453,7 @@ sg.Name = "CMClickMark"
 pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
-pcall(function() sg.DisplayOrder = 50 end)
+pcall(function() sg.DisplayOrder = 2147483647 end)
 local box = Instance.new("Frame")
 box.Name = "Box"
 box.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
@@ -6471,7 +6487,8 @@ end
 if not g then
 if not F._ckMarkWarned then
 F._ckMarkWarned = true
-F.Out("[连点器] ⚠ 找不到可挂载的界面容器 ⇒ 锁定点画不出框(点击本身不受影响)")
+F.Out("[连点器] ⚠ 找不到可挂载的界面容器 ⇒ 点击框画不出来(点击本身不受影响)")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "⚠ 这个执行器不让建界面, 点击框画不出来(连点本身可用)", Duration = 8 }) end)
 end
 return
 end
@@ -6500,6 +6517,7 @@ C.ClickerLockX, C.ClickerLockY = x, y
 T.ClickerBox = true
 F._ckBoxPlaced = true
 F._ckBoxWarned = nil
+F._ckNeedDrag = nil
 F.ClickerMouseWatch()
 if F._cfgSyncing ~= true and F._ckBoxSyncing ~= true then
 F._ckBoxSyncing = true
@@ -6580,14 +6598,21 @@ T.ClickerBox = on and true or false
 if T.ClickerBox then
 F.ClickerMouseWatch()
 local x, y = F.ClickerBoxPos()
-if x == nil then x, y = F.ClickerSeed() end
+local src = "存档"
+if x == nil then x, y, src = F.ClickerSeed() end
 if x ~= nil and y ~= nil then
 F.ClickerMarkShow(x, y)
-F.Out("[连点器] 点击框已显示 " .. tostring(x) .. "," .. tostring(y) .. " · 边长 " .. tostring(F.ClickerArea())
-.. " ⇒ 连点器只在这个框里点, 不跟随鼠标; 拖左上角那块绿色小方块「拖」可换位置")
+if src == "mouse" then
+F.Out("[连点器] 点击框已显示 " .. tostring(x) .. "," .. tostring(y) .. " · 来源=鼠标当前位置(还没在游戏里定位过)")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "点击框已经出来了(就在鼠标这儿) ⇒ 按住左上角绿色小方块「拖」把它拖到你要点的位置", Duration = 9 }) end)
+else
+F.Out("[连点器] 点击框已显示 " .. tostring(x) .. "," .. tostring(y) .. " · 来源=" .. tostring(src)
+.. " · 边长 " .. tostring(F.ClickerArea()) .. " ⇒ 连点器只在这个框里点, 不跟随鼠标; 拖左上角那块绿色小方块「拖」可换位置")
+end
 else
 F.ClickerMarkHide()
-F.Out("[连点器] 点击框还是定位不了 ⇒ 把鼠标移到游戏画面上(别停在菜单上), 再关一次/开一次这个开关")
+F.Out("[连点器] 点击框定位不了 ⇒ 把鼠标移到游戏画面上(别停在菜单上), 再关一次/开一次这个开关")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "⚠ 点击框定位不了: 先把鼠标移到游戏画面上, 再关一次/开一次这个开关", Duration = 9 }) end)
 end
 else
 F._ckDrag = nil
