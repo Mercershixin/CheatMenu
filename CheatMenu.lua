@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:01 sha b4c099d8 bytes 575332'):format('2026-10-08 22:01','b4c099d8',575332))
+print(('[CheatMenu] build 2026-10-08 22:14 sha 0bc60ba5 bytes 576463'):format('2026-10-08 22:14','0bc60ba5',576463))
 local F = {}
-F.VERSION = "v16.10.84"
+F.VERSION = "v16.10.85"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8160,6 +8160,47 @@ pcall(F.ModalOverlaySet, root.Visible)
 end
 end)
 F._modalOverlay, F._savedMouseIcon = nil, nil
+F._mmg = nil
+F.MenuMouseGuardStop = function()
+F._mmg = nil
+end
+F.MenuMouseGuard = function()
+if F._mmg then return end
+F._mmg = true
+task.spawn(function()
+local last = nil
+while F._mmg do
+local w = nil
+pcall(function() w = F.MenuWin() end)
+local open = false
+if w then pcall(function() open = F.MenuOpen() end) end
+pcall(function()
+if UIS.TouchEnabled then return end
+if open then
+if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
+if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
+UIS.MouseBehavior = Enum.MouseBehavior.Default
+end
+elseif F._savedMouseIcon ~= nil then
+UIS.MouseIconEnabled = F._savedMouseIcon
+F._savedMouseIcon = nil
+end
+end)
+if open and last ~= true then
+F.Out("[菜单] 已接管鼠标 ⇒ 第一人称/锁定视角下鼠标也能弹出来点菜单(关掉菜单会自动交还)")
+end
+last = open
+task.wait(open and 0.05 or 0.2)
+end
+F._mmg = nil
+end)
+end
+F.MenuMouseGuardBoot = function()
+task.wait(1.2)
+pcall(F.MenuMouseGuard)
+end
+pcall(function() task.spawn(F.MenuMouseGuardBoot) end)
 F.ModalOverlaySet = function(on)
 local sg = nil
 pcall(function() sg = Fluent and Fluent.GUI end)
@@ -12384,6 +12425,7 @@ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.Bod
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
+F.MenuMouseGuardStop,
 function()
 AC._neutFns = {}
 F._cfgSyncing = false
