@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 19:25 sha 357b1b40 bytes 548354'):format('2026-10-08 19:25','357b1b40',548354))
+print(('[CheatMenu] build 2026-10-08 19:48 sha 09d6368f bytes 551850'):format('2026-10-08 19:48','09d6368f',551850))
 local F = {}
-F.VERSION = "v16.10.75"
+F.VERSION = "v16.10.76"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3009,15 +3009,39 @@ end
 local GodConn = nil
 local function GodDisable()
 if GodConn then GodConn:Disconnect() GodConn = nil end
+local done = {}
 pcall(function()
 local _, hum = GC()
 if hum then
-local o = F._orig or {}
+local o = (F._godOrig and F._godOrig.hum == hum) and F._godOrig or nil
 local mh = hum.MaxHealth
-if type(mh) ~= "number" or mh > 1000 or mh ~= mh then hum.MaxHealth = o.maxHealth or 100 end
-hum.Health = math.min(hum.Health, hum.MaxHealth)
+local want = (o and o.maxHealth) or (F._orig and F._orig.maxHealth) or 100
+if type(mh) ~= "number" or mh > 1000 or mh ~= mh then
+pcall(function() hum.MaxHealth = want end)
+done[#done + 1] = "MaxHealth=" .. tostring(want)
+end
+pcall(function() hum.Health = math.min(hum.Health, hum.MaxHealth) end)
+if o then
+if o.requiresNeck ~= nil then
+pcall(function() hum.RequiresNeck = o.requiresNeck end)
+done[#done + 1] = "RequiresNeck=" .. tostring(o.requiresNeck)
+end
+if o.breakJoints ~= nil then
+pcall(function() hum.BreakJointsOnDeath = o.breakJoints end)
+done[#done + 1] = "BreakJointsOnDeath=" .. tostring(o.breakJoints)
+end
+if o.deadState ~= nil then
+pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, o.deadState) end)
+done[#done + 1] = "Dead状态=" .. tostring(o.deadState)
+end
+end
 end
 end)
+local cn = 0
+pcall(function() cn = F.GodRestoreDied() end)
+if cn > 0 then done[#done + 1] = "恢复死亡事件 " .. tostring(cn) .. " 条" end
+F._godOrig = nil
+if #done > 0 then F.Out("[上帝模式] 还原: " .. table.concat(done, " · ")) end
 end
 local function GodEnable()
 if GodConn then return end
@@ -3049,6 +3073,18 @@ local function apply(force)
 if not T.AntiRagdoll then pcall(F.AntiRagdollDisable) return end
 local ch, hum = GC()
 if not hum then return end
+if F._arOrig == nil or F._arOrig.hum ~= hum then
+local o = { hum = hum }
+pcall(function() o.ragdoll = hum:GetStateEnabled(Enum.HumanoidStateType.Ragdoll) end)
+pcall(function() o.falling = hum:GetStateEnabled(Enum.HumanoidStateType.FallingDown) end)
+pcall(function() o.physics = hum:GetStateEnabled(Enum.HumanoidStateType.Physics) end)
+pcall(function() o.platform = hum:GetStateEnabled(Enum.HumanoidStateType.PlatformStanding) end)
+pcall(function()
+local rc = ch and ch:FindFirstChild("RagdollClient")
+if rc then o.rc = rc.Enabled end
+end)
+F._arOrig = o
+end
 if not force then
 local now = os.clock()
 if hum == arLastHum and now - arLast < 0.25 then return end
@@ -3069,15 +3105,21 @@ end
 function F.AntiRagdollDisable()
 if F._antiRagdollConn then F._antiRagdollConn:Disconnect() F._antiRagdollConn = nil end
 local ch, hum = GC()
+local o = (F._arOrig and F._arOrig.hum == hum) and F._arOrig or nil
 if hum then pcall(function()
-hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
-hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
-hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, true)
+hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, (o and o.ragdoll) ~= false)
+hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, (o and o.falling) ~= false)
+hum:SetStateEnabled(Enum.HumanoidStateType.Physics, (o and o.physics) ~= false)
+hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, (o and o.platform) ~= false)
 end) end
 if ch then
 local rc = ch:FindFirstChild("RagdollClient")
-if rc then pcall(function() rc.Enabled = true end) end
+if rc then
+local v = true
+if o ~= nil and o.rc ~= nil then v = o.rc end
+pcall(function() rc.Enabled = v end)
+end
+F._arOrig = nil
 end
 end
 function F.AntiKnockdownEnable()
@@ -5206,19 +5248,63 @@ F._godLoop, F._godAt = nil, 0
 F.GodKillDied = function(hum)
 if not hum then return 0 end
 local n = 0
+if F._godConns == nil then F._godConns = {} end
 if type(getconnections) == "function" then
 pcall(function()
 local conns = getconnections(hum.Died)
 if type(conns) == "table" then
 local i
 for i = 1, #conns do
-pcall(function() conns[i]:Disconnect() end)
+local c = conns[i]
+if c ~= nil and F._godConns[c] == nil then
+F._godConns[c] = true
 n = n + 1
+if type(c.Disable) == "function" then
+pcall(function() c:Disable() end)
+else
+pcall(function() c:Disconnect() end)
+F._godConnHard = (F._godConnHard or 0) + 1
+end
+end
 end
 end
 end)
 end
+if n > 0 and not F._godDiedLogged then
+F._godDiedLogged = true
+F.Out("[上帝模式] 已临时屏蔽 " .. tostring(n) .. " 条死亡事件(用「禁用」不用「断开」⇒ 关掉时能原样恢复)")
+end
 return n
+end
+F.GodRestoreDied = function()
+if type(F._godConns) ~= "table" then return 0 end
+local n = 0
+for c in pairs(F._godConns) do
+pcall(function()
+if type(c.Enable) == "function" then
+c:Enable()
+n = n + 1
+end
+end)
+end
+local hard = tonumber(F._godConnHard) or 0
+if hard > 0 then
+F.Out("[上帝模式] ⚠ 有 " .. tostring(hard) .. " 条死亡事件是被「断开」的(你的执行器不支持禁用/启用) ⇒ 这几条只能等重生或重载脚本才回来")
+end
+F._godConns, F._godConnHard, F._godDiedLogged = {}, nil, nil
+return n
+end
+F.GodSnap = function(hum)
+if not hum then return end
+if F._godOrig and F._godOrig.hum == hum then return end
+local o = { hum = hum }
+pcall(function() o.maxHealth = hum.MaxHealth end)
+pcall(function() o.requiresNeck = hum.RequiresNeck end)
+pcall(function() o.breakJoints = hum.BreakJointsOnDeath end)
+pcall(function() o.deadState = hum:GetStateEnabled(Enum.HumanoidStateType.Dead) end)
+F._godOrig = o
+F._godConns = {}
+F._godConnHard = nil
 end
 F.GodTickLoop = function()
 if F._godLoop then return end
@@ -5232,6 +5318,7 @@ if now - (F._godAt or 0) < 0.25 then return end
 F._godAt = now
 local _, hum = GC()
 if not hum then return end
+pcall(function() F.GodSnap(hum) end)
 pcall(function() if hum.MaxHealth < 1e6 then hum.MaxHealth = 1e6 end end)
 pcall(function() if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end end)
 pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
@@ -5248,6 +5335,7 @@ local okW, w = pcall(newcclosure, nk)
 if okW and type(w) == "function" then nk = w end
 end
 hookfunction(orig, nk)
+F._godTDNew = nk
 F._godTDHook = true
 end
 end
@@ -5263,6 +5351,7 @@ T.LockHealth = T.GodMode
 T.NoDeath = T.GodMode
 T.AntiRagdoll = T.GodMode
 if T.GodMode then
+pcall(function() local _, hh = GC() F.GodSnap(hh) end)
 pcall(GodEnable)
 pcall(LockHealthEnable)
 pcall(NoDeathEnable)
@@ -5291,11 +5380,17 @@ pcall(function() F.HealthIsolateSet(false) end)
 pcall(F.HpBlockSet, false)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
 pcall(function()
-if F._godTDHook and F._godTDOrig and type(restorefunction) == "function" then
-restorefunction(F._godTDOrig)
+if F._godTDHook and F._godTDOrig then
+local okR = false
+if type(restorefunction) == "function" then
+okR = pcall(restorefunction, F._godTDOrig)
+end
+if not okR and F._godTDNew ~= nil and type(hookfunction) == "function" then
+pcall(function() hookfunction(F._godTDNew, F._godTDOrig) end)
+end
 end
 end)
-F._godTDHook, F._godTDOrig = nil, nil
+F._godTDHook, F._godTDOrig, F._godTDNew = nil, nil, nil
 F.Out("[上帝模式] 已关")
 end
 end
