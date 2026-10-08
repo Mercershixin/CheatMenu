@@ -4792,3 +4792,13 @@ v17.0.2 把 `F.ClickerSeed` 改成**只认"鼠标最后一次在游戏画面上"
 - 引用点：急停 disable 列表、卸载链里的 `F.ClickerDisable`（`PANIC_KEEP` / 配置默认值此前已清）。
 ⇒ 控件 112→109；`preflight` PASS；`luau-compile` 0 错。
 ★ 口径：用户说"删除功能"= **连实现 + 事件 + 所有引用一起删**（不只是关掉或隐藏入口）。
+
+### 同版附带：死代码清理（用户："死代码 幽灵代码 全部清理"）
+
+- ⚠ **`deadfix.py --write` 的"块边界"识别有 bug**（`F.CMX_IsOwnPart` 实为 **14 行**，它只算 8 行 ⇒ 删完多出 2 个 `end`、编译失败、`F.CMX_SpoofUseCount` 变未定义）。
+  ⇒ **别用它的 `--write` 自动写盘**；改用"关键字状态机配平（`for/while` 的 `do` 只算一次）"精确取块，**逐块删 + 编译验证**。
+- 删净 8 个零引用项 / 194 行：`F.GodKillDied`(31) · `F.CMX_SpoofIndexEnable`(70) · `F.CMX_SmoothPos`(21) ·
+  `F.CMX_GcinfoMaskEnable`(37) · `F.CMX_IsCaller`(6) · `F.CMX_IsOwnPart`(14) · `local smoothTP`(9) · `local breakVelocity`(6)；级联出来的
+  `F.CMX_SpoofUseCount`（只用未定义）⇒ 改掉唯一引用点（`CMX_SpoofIndexDisable` 的日志）的文案。
+- 结果：`preflight` 全绿（零引用 0 / `F` 只用未定义 0 / 括号配平 6362=6362），控件 109。
+- ⛔ **"幽灵状态"（`T.*` 只写不读）本轮未动**：`T.GuiProtect/Mute/NoRecoil/AntiTPOn` 等可能被 `T[控件名]`（`CfgSyncUI`/`ApplySavedOn`）动态读，须逐个 grep 确认后才可删。
