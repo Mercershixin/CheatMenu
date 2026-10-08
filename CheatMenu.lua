@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:24 sha 90ff444c bytes 579190'):format('2026-10-08 22:24','90ff444c',579190))
+print(('[CheatMenu] build 2026-10-08 22:28 sha eaae511c bytes 578944'):format('2026-10-08 22:28','eaae511c',578944))
 local F = {}
-F.VERSION = "v16.10.86"
+F.VERSION = "v16.10.87"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -15684,7 +15684,6 @@ T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddToggle("HpBlock", { Title = "血量隔离 + 拦受伤/死亡上报", Default = false, Callback = function(v) T.HpBlock = v T.HealthIsolate = v if F._cfgSyncing then return end pcall(F.HealthIsolateSet, v) pcall(F.HpBlockSet, v) end })
 Tabs.AC:AddSection("扫描")
 Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录(默认关 · 去重 · 随扫描输出 · 要手动开)", Default = false, Callback = function(v)
 T.NetLog = v and true or false
