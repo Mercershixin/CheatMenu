@@ -4539,3 +4539,38 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 
 ⚠ **测试脚手架坑（新）**：`gen_test6/gen_test7` 写死了源码文件名带版本号 ⇒ 版本一升就 FileNotFoundError。
 ⇒ **生成器里的源码路径不要写死版本号**（用 glob 或读 `build/VERSION` 拼）。
+
+## v17.0.1 · 修「开连点器后点击框失联」——把三点耦合拍成单一事实来源（2026-10-09）
+
+### 现象
+用户报：点击框已经能看到，但**一开连点器框就没了/中心又跟鼠标走**。
+
+### ★★★ 根因（不是 UI 问题，是状态耦合）
+`F.ClickerLocked()` 原来要求 `T.ClickerLock == true` **且** `F._ckBoxPlaced == true`；
+而 `F._ckBoxPlaced` 只在 `F.ClickerDragTo` 里置位（**运行时标志，重载即失**）。于是：
+1. 存档恢复把 `T.ClickerBox = true` 写进去，但回调被 `F._cfgSyncing` 拦掉（`ClickerBoxSet` 没跑）
+   ⇒ 开关开着、标志为空 ⇒ 一开连点器中心掉回鼠标；
+2. 恢复顺序里 `Clicker` 先于 `ClickerBox` ⇒ 启用那刻框还没建；
+3. `ClickerBoxSet(false)` 会清掉标志，之后必须再拖一次才能恢复。
+
+### 修法（单一事实来源）
+- `F.ClickerLocked()`：**只看 `T.ClickerBox`**；位置由 `F.ClickerBoxPos()`（校验 ≥20 + 在视口内）派生，
+  不可用则 `F.ClickerSeed()` **自动落到鼠标处并写回 `C.ClickerLockX/Y`**。
+  ⇒ `_ckBoxPlaced` 退出判定链（仅保留作信息）。
+- `F.ClickerRawMouse()`：纯鼠标读取，供 Seed 使用 —— **避免
+  `Locked → Seed → Center → Locked` 递归**（`ClickerCenter` 会调 `ClickerLocked`）。
+- `F.ClickerCenter()` 重写：先锁定、后鼠标。
+- 拖动即开框：`F.ClickerDragTo` 顺手置 `T.ClickerBox = true` 并**同步界面开关**
+  （`F._ckBoxSyncing` 守卫防回调回环）。
+- `ClickerBoxSet(true)` 改走 `BoxPos/Seed`，**不再"拿不到坐标就放弃"**；
+  坐标跑到屏幕外（换分辨率）也会自动重落。
+
+### 验证
+`test10` **22 项全过**：含"模拟存档恢复 ClickerBox=true 但 BoxSet 被跳过"这一条（C=1,1 + `_ckBoxPlaced=nil`
+⇒ 自动落到鼠标并写回，之后鼠标再动仍固定）、"开框后鼠标怎么动都不跟着走"、"拖动同步界面开关只同步一次"。
+回归 `test6` 50 · `test7` 13 · `test8` 40 · `test9` 32 全过；本地复查 27 条基线。
+
+### ⛔ 同批发版事故：`--no-build` 推了旧产物
+先误用 `push_now.py --no-build` ⇒ 推的是上一次构建的 `dist/repo/CheatMenu.lua`（606919 字节、版本号未变 17.0.0）
+⇒ 游戏端「远端=当前 ⇒ 无需重载」⇒ 用户收不到修复。
+**规矩：改源码必须 `--patch` 走完整构建；`--no-build` 只用于纯文档/纯同步。**
