@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 03:45 sha 31458fb4 bytes 588714'):format('2026-10-09 03:45','31458fb4',588714))
+print(('[CheatMenu] build 2026-10-09 03:51 sha 4afe9c6a bytes 590692'):format('2026-10-09 03:51','4afe9c6a',590692))
 local F = {}
-F.VERSION = "v17.0.17"
+F.VERSION = "v17.0.18"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6194,14 +6194,52 @@ pcall(function() Fluent:Notify({ Title = "连点器", Content = "读不到鼠标
 return false
 end
 C.ClickerX, C.ClickerY = x, y
-F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " ⇒ 之后只点这里")
+pcall(F.ClickerPersist)
+F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " ⇒ 之后只点这里(已写盘, 重载/重进都在)")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. x .. "," .. y, Duration = 4 }) end)
 return true
 end
 F.ClickerClearPos = function()
 C.ClickerX, C.ClickerY = 0, 0
+pcall(F.ClickerPersist)
 F.Out("[连点器] 已清除保存的位置")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已清除保存的位置", Duration = 3 }) end)
+end
+F.ClickerFile = "CheatMenu_Clicker.txt"
+F.ClickerPersist = function()
+pcall(function()
+if type(writefile) ~= "function" then return end
+local mode = tostring(C.ClickerMode or "")
+mode = string.gsub(mode, "\n", " ")
+writefile(F.ClickerFile, tostring(math.floor(tonumber(C.ClickerX) or 0)) .. ","
+.. tostring(math.floor(tonumber(C.ClickerY) or 0)) .. "\n"
+.. mode .. "\n" .. tostring(tonumber(C.ClickerGap) or 0.05) .. "\n")
+end)
+end
+F.ClickerRestore = function()
+local got = false
+pcall(function()
+if type(readfile) ~= "function" then return end
+if type(isfile) == "function" and not isfile(F.ClickerFile) then return end
+local s = readfile(F.ClickerFile)
+if type(s) ~= "string" then return end
+local x, y = string.match(s, "(-?%d+)%s*,%s*(-?%d+)")
+local mx, my = tonumber(x), tonumber(y)
+if mx and my and mx >= 1 and my >= 1 then
+C.ClickerX, C.ClickerY = math.floor(mx), math.floor(my)
+got = true
+end
+local mode = string.match(s, "\n([^\n]+)")
+if type(mode) == "string" and mode ~= "" then C.ClickerMode = mode end
+local gap = string.match(s, "\n[^\n]+\n([%d%.]+)")
+if tonumber(gap) then C.ClickerGap = tonumber(gap) end
+end)
+if got then
+F.Out("[连点器] 已从存档恢复点击位置 " .. tostring(C.ClickerX) .. "," .. tostring(C.ClickerY))
+else
+F.Out("[连点器] 存档里还没有点击位置 ⇒ 鼠标放到目标处按快捷键保存")
+end
+return got
 end
 F.ClickerClick = function(x, y)
 CLKST.sendAt = os.clock()
@@ -6212,9 +6250,21 @@ vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
 vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
 ok = true
 end)
-if ok then return "按坐标" end
+if ok then
+if CLKST.firstLogged ~= true then
+CLKST.firstLogged = true
+F.Out("[连点器] 第 1 次点击已发出 · 方式=按坐标(VIM) · 坐标=" .. tostring(x) .. "," .. tostring(y))
+end
+return "按坐标"
+end
 if type(mouse1click) == "function" then
-if pcall(mouse1click) then return "按鼠标位置" end
+if pcall(mouse1click) then
+if CLKST.firstLogged ~= true then
+CLKST.firstLogged = true
+F.Out("[连点器] 第 1 次点击已发出 · 方式=按鼠标位置(此执行器不支持按坐标) ⇒ 切后台可能点不到")
+end
+return "按鼠标位置"
+end
 end
 return nil
 end
@@ -6230,6 +6280,7 @@ return
 end
 T.Clicker = true
 local gap = F.ClickerGap()
+CLKST.firstLogged = nil
 F.Out("[连点器] 已开 · 每 " .. string.format("%.2f", gap) .. " 秒一次 (" .. x .. "," .. y .. ") · 模式 " .. tostring(C.ClickerMode))
 CLKST.loop = task.spawn(function()
 local n, t0, via = 0, os.clock(), nil
@@ -6593,7 +6644,8 @@ end)
 for _, d in ipairs(seen) do pcall(F.InstantInteractApply, d) end
 return n
 end
-F.OUR_GUI_NAMES = { "CM_", "CMTouchToggle", "StatOverlay", "CrosshairDot", "MenuButton", "CheatMenu" }
+F.OUR_GUI_NAMES = { "CM_", "CMTouchToggle", "StatOverlay", "CrosshairDot", "MenuButton", "CheatMenu",
+"CMClickMark", "CMClickerMark", "CMEsp", "CMAllyTag", "CMRoleTag", "CMHLMark" }
 F.NukeAllGUIs = function(keepFluent)
 local n = 0
 local roots = {}
@@ -15790,6 +15842,7 @@ pcall(F.ClickerClearPos)
 end })
 task.spawn(function() pcall(F.ClickerWatch) end)
 task.spawn(function() pcall(F.PurgeLegacyClicker) end)
+task.spawn(function() pcall(F.ClickerRestore) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
