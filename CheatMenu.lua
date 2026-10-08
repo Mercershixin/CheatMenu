@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 01:55 sha deb7091e bytes 605791'):format('2026-10-09 01:55','deb7091e',605791))
+print(('[CheatMenu] build 2026-10-09 02:02 sha 00025b6a bytes 605241'):format('2026-10-09 02:02','00025b6a',605241))
 local F = {}
-F.VERSION = "v17.0.5"
+F.VERSION = "v17.0.6"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -750,16 +750,17 @@ if ok and root then
 pcall(function() px, py, pz = root.Position.X, root.Position.Y, root.Position.Z end)
 end
 if type(px) ~= "number" or type(py) ~= "number" or type(pz) ~= "number" then return false end
-local lift = tonumber(C.SpoofPosLift) or 0
-if lift < 0 then lift = 0 end
-if lift > 2000 then lift = 2000 end
-F._spoofP = { X = px, Y = py + lift, Z = pz }
+F._spoofP = { X = px, Y = py, Z = pz }
 return true
 end
 F.PosSpoofArgs = function(...)
 if T.SpoofPos ~= true then return nil end
 local f = F._spoofP
+if f == nil then
+if not F.PosSpoofArm() then return nil end
+f = F._spoofP
 if f == nil then return nil end
+end
 local n = select("#", ...)
 local args = { ... }
 local c, i = 0, 0
@@ -795,11 +796,11 @@ if T.SpoofPos then
 local armed = F.PosSpoofArm()
 pcall(AC.InstallNamecallHook)
 if armed then
-F.Out("[位置上报伪造] 已开: 对外上报的坐标改成 " .. string.format("%.0f, %.0f, %.0f", F._spoofP.X, F._spoofP.Y, F._spoofP.Z))
+F.Out("[位置上报伪造] 已开: 对外上报的坐标冻结在当前这格 " .. string.format("%.0f, %.0f, %.0f", F._spoofP.X, F._spoofP.Y, F._spoofP.Z))
 else
-F.Out("[位置上报伪造] 已开, 但现在没有角色(没进游戏/重生中) ⇒ 进游戏后点「重设伪造点」")
+F.Out("[位置上报伪造] 已开, 但现在没有角色(没进游戏/重生中) ⇒ 进游戏后自动补取(第一次上报位置时就取点)")
 end
-F.Out("[位置上报伪造] 原理: 只改「你发出去的坐标」。若游戏的实体/判定是看客户端上报的位置 ⇒ 打空; 若是服务端权威移动 ⇒ 可能被拉回, 变卡或异常就关掉")
+F.Out("[位置上报伪造] 原理: 只改「你发出去的坐标」⇒ 服务端/别人看到的位置停在这一格。若游戏是服务端权威移动 ⇒ 可能被拉回、抽搐, 遇到就把档位调到① (本项随②/③自动开关)")
 else
 F.Out("[位置上报伪造] 已关(不再改坐标; 公共钩子留给其它功能用)")
 end
@@ -16363,6 +16364,11 @@ pcall(F.GuiProtectionDisable)
 pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
 pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
+if lvl < 2 and F._tierSpoofOwn then
+F._tierSpoofOwn = nil
+pcall(F.SpoofPosSet, false)
+F.Out("[防护档位] 已收回档位自己开的「位置上报伪造」")
+end
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
 pcall(F.GuiProtectionDisable)
@@ -16414,6 +16420,8 @@ pcall(AC.AntiPauseEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 if T.GameBypass ~= true then F._tierGbypOwn = true end
 pcall(F.GameBypassSet, true)
+if T.SpoofPos ~= true then F._tierSpoofOwn = true end
+pcall(F.SpoofPosSet, true)
 end
 if lvl >= 3 then
 T.CMX_FakeReport = true
@@ -16437,30 +16445,12 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
-"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过 + 位置上报伪造(上报坐标冻结在开档位那一刻)",
 "③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) + 游戏专用绕过 ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
-end })
-Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
-T.SpoofPos = v and true or false
-if F._cfgSyncing then return end
-pcall(F.SpoofPosSet, v)
-end })
-Tabs.AC:AddSlider("SpoofPosLift", { Title = "伪造 · 抬高", Min = 0, Max = 2000, Default = 0, Rounding = 0, Callback = function(v)
-C.SpoofPosLift = v
-if F._cfgSyncing then return end
-if T.SpoofPos then pcall(F.PosSpoofArm) end
-end })
-Tabs.AC:AddButton({ Title = "重设伪造点", Callback = function()
-if T.SpoofPos ~= true then F.Out("[位置上报伪造] 还没开启 ⇒ 先打开上面的开关") return end
-if F.PosSpoofArm() then
-F.Out("[位置上报伪造] 已重设: " .. string.format("%.0f, %.0f, %.0f", F._spoofP.X, F._spoofP.Y, F._spoofP.Z))
-else
-F.Out("[位置上报伪造] 重设失败: 现在没有角色")
-end
 end })
 Tabs.AC:AddButton({ Title = "扫描本服绕过目标", Callback = function()
 local n = 0
@@ -16912,7 +16902,6 @@ end
 if C.IxRange == nil then C.IxRange = 300 end
 if C.IxGap == nil then C.IxGap = 2 end
 if C.IxScope == nil then C.IxScope = "附近范围" end
-if C.SpoofPosLift == nil then C.SpoofPosLift = 0 end
 if C.ClickerArea == nil then C.ClickerArea = 120 end
 if C.ClickerLockX == nil then C.ClickerLockX = 1 end
 if C.ClickerLockY == nil then C.ClickerLockY = 1 end
