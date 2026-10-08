@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:14 sha 0bc60ba5 bytes 576463'):format('2026-10-08 22:14','0bc60ba5',576463))
+print(('[CheatMenu] build 2026-10-08 22:24 sha 90ff444c bytes 579190'):format('2026-10-08 22:24','90ff444c',579190))
 local F = {}
-F.VERSION = "v16.10.85"
+F.VERSION = "v16.10.86"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5408,7 +5408,7 @@ if not (T.FullBright or T.NightVision or T.NoFog) then return end
 local L = game:GetService("Lighting")
 if not L then return end
 if T.FullBright then
-if L.Brightness ~= 3.5 or L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.FullBrightEnable) end
+if L.Brightness ~= 2 or L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.FullBrightEnable) end
 end
 if T.NoFog then
 if L.FogEnd ~= 100000 or L.FogStart ~= 100000 then pcall(F.NoFogEnable) end
@@ -5449,8 +5449,8 @@ local L = game:GetService("Lighting")
 if not F.savedLight then
 F.savedLight = { Brightness = L.Brightness, ClockTime = L.ClockTime, FogEnd = L.FogEnd, FogStart = L.FogStart, GlobalShadows = L.GlobalShadows, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient, ExposureCompensation = L.ExposureCompensation }
 end
-L.Brightness = 3.5 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
-L.Ambient = Color3.fromRGB(255, 255, 255) L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+L.Brightness = 2 L.ClockTime = 14 L.FogEnd = 100000 L.FogStart = 100000 L.GlobalShadows = false
+L.Ambient = Color3.fromRGB(120, 120, 120) L.OutdoorAmbient = Color3.fromRGB(170, 170, 170)
 end
 function F.FullBrightDisable()
 local L = game:GetService("Lighting")
@@ -5463,9 +5463,9 @@ F.savedNV = nil
 function F.NightVisionEnable()
 local L = game:GetService("Lighting")
 if not F.savedNV then F.savedNV = { Brightness = L.Brightness, Ambient = L.Ambient, OutdoorAmbient = L.OutdoorAmbient } end
-L.Brightness = math.max(tonumber(L.Brightness) or 0, 2.5)
-L.Ambient = Color3.fromRGB(255, 255, 255)
-L.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+L.Brightness = math.max(tonumber(L.Brightness) or 0, 1.8)
+L.Ambient = Color3.fromRGB(110, 110, 110)
+L.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
 end
 function F.NightVisionDisable()
 local L = game:GetService("Lighting")
@@ -8160,9 +8160,37 @@ pcall(F.ModalOverlaySet, root.Visible)
 end
 end)
 F._modalOverlay, F._savedMouseIcon = nil, nil
-F._mmg = nil
+F._mmg, F._mmgConn, F._mmgCam = nil, nil, nil
+F.MenuMouseForce = function()
+pcall(function()
+if UIS.TouchEnabled then return end
+local c = workspace.CurrentCamera
+if c then
+if F._mmgCam == nil then F._mmgCam = c.CameraMode end
+if c.CameraMode ~= Enum.CameraMode.Classic then c.CameraMode = Enum.CameraMode.Classic end
+end
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default end
+if UIS.MouseIconEnabled ~= true then
+if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
+UIS.MouseIconEnabled = true
+end
+end)
+end
+F.MenuMouseRelease = function()
+if F._mmgConn then pcall(function() F._mmgConn:Disconnect() end) F._mmgConn = nil end
+pcall(function()
+local c = workspace.CurrentCamera
+if c and F._mmgCam ~= nil then c.CameraMode = F._mmgCam end
+end)
+F._mmgCam = nil
+if F._savedMouseIcon ~= nil then
+pcall(function() UIS.MouseIconEnabled = F._savedMouseIcon end)
+F._savedMouseIcon = nil
+end
+end
 F.MenuMouseGuardStop = function()
 F._mmg = nil
+pcall(F.MenuMouseRelease)
 end
 F.MenuMouseGuard = function()
 if F._mmg then return end
@@ -8174,25 +8202,21 @@ local w = nil
 pcall(function() w = F.MenuWin() end)
 local open = false
 if w then pcall(function() open = F.MenuOpen() end) end
-pcall(function()
-if UIS.TouchEnabled then return end
 if open then
-if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
-if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end
-if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
-UIS.MouseBehavior = Enum.MouseBehavior.Default
+pcall(F.MenuMouseForce)
+if not F._mmgConn then
+pcall(function() F._mmgConn = RS.RenderStepped:Connect(F.MenuMouseForce) end)
 end
-elseif F._savedMouseIcon ~= nil then
-UIS.MouseIconEnabled = F._savedMouseIcon
-F._savedMouseIcon = nil
+if last ~= true then
+F.Out("[菜单] 已接管鼠标: 每帧解除锁定 + 临时切第三人称 ⇒ 第一人称/锁定视角下也能用菜单(关掉菜单自动还原)")
 end
-end)
-if open and last ~= true then
-F.Out("[菜单] 已接管鼠标 ⇒ 第一人称/锁定视角下鼠标也能弹出来点菜单(关掉菜单会自动交还)")
+elseif last == true then
+pcall(F.MenuMouseRelease)
 end
 last = open
-task.wait(open and 0.05 or 0.2)
+task.wait(open and 0.6 or 0.3)
 end
+pcall(F.MenuMouseRelease)
 F._mmg = nil
 end)
 end
@@ -8343,6 +8367,24 @@ end
 return n
 end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
+F._ixPos, F._ixLog = nil, 0
+F.IX_MAX = 220
+F.IxRange = function()
+local v = tonumber(C.IxRange)
+if not v or v < 30 then v = 300 end
+if v > 5000 then v = 5000 end
+return v
+end
+F.IxParams = function()
+local p = nil
+pcall(function()
+p = OverlapParams.new()
+p.FilterType = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
+p.FilterDescendantsInstances = { LP.Character }
+p.MaxParts = 3000
+end)
+return p
+end
 F.IX_COLOR = Color3.fromRGB(255, 215, 0)
 F.HL_COLORS = {
 npc = F.NPC_COLOR,
@@ -8417,40 +8459,57 @@ if ok2 and isAny then return true end
 return false
 end
 F.IxScan = function()
-local n = 0
-local list = {}
-pcall(function() list = workspace:GetChildren() end)
-for i = 1, #list do
-local o = list[i]
-local k1, c1 = F.HLKind(o)
-if k1 then F.IxAdd(o, c1) n = n + 1 end
-end
-local subs = {}
-pcall(function()
-for i = 1, #list do
-local o = list[i]
-local okf = pcall(function() return o:IsA("Folder") or o:IsA("Model") end)
-if okf and o ~= LP.Character then
-local okk, kids = pcall(function() return o:GetChildren() end)
-if okk and kids then
-for j = 1, #kids do subs[#subs + 1] = kids[j] end
-end
-end
-end
-end)
-for i = 1, #subs do
-local o = subs[i]
-local k2, c2 = F.HLKind(o)
-if k2 then F.IxAdd(o, c2) n = n + 1 end
-local okk2, kids2 = pcall(function() return o:GetChildren() end)
-if okk2 and kids2 then
-for j = 1, #kids2 do
-local k3, c3 = F.HLKind(kids2[j])
-if k3 then F.IxAdd(kids2[j], c3) n = n + 1 end
+local okg, _, _, root = pcall(GC)
+if not okg or not root then return 0, 0 end
+local center = root.Position
+local parts = nil
+pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
+if type(parts) ~= "table" then parts = {} end
+local best, order = {}, {}
+local function offer(o, col, pos)
+if o == nil or o == LP.Character then return end
+local d = 0
+if pos then d = (pos - center).Magnitude end
+local cur = best[o]
+if cur == nil then
+best[o] = { col = col, d = d }
+order[#order + 1] = o
+elseif d < cur.d then
+cur.d = d
+cur.col = col
 end
 end
+for i = 1, #parts do
+local pt = parts[i]
+local k, c = F.HLKind(pt)
+if k then offer(pt, c, pt.Position) end
+local up = pt
+for hop = 1, 4 do
+local pp = nil
+pcall(function() pp = up.Parent end)
+if pp == nil or pp == workspace then break end
+up = pp
+local k2, c2 = F.HLKind(up)
+if k2 then offer(up, c2, pt.Position) break end
 end
-return n
+end
+table.sort(order, function(a, b) return best[a].d < best[b].d end)
+local keep = {}
+for i = 1, #order do
+if i > F.IX_MAX then break end
+local o = order[i]
+keep[o] = true
+F.IxAdd(o, best[o].col)
+end
+local gone = 0
+for o, rec in pairs(F._ixObjs) do
+if not keep[o] then
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+F._ixObjs[o] = nil
+gone = gone + 1
+end
+end
+return #order, gone
 end
 F.IxClear = function()
 for _, rec in pairs(F._ixObjs) do
@@ -8468,32 +8527,43 @@ F.Out("[高亮透视] 已关")
 return
 end
 local n = F.IxScan()
-F.Out("[高亮透视] 已开 · 本轮标出 " .. tostring(n) .. " 个(NPC棕/交互金/陷阱红/道具绿/掉落黄/载具青)")
+F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个 · 随你移动实时更新(NPC棕/交互金/陷阱红/道具绿/掉落黄/载具青)")
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
 if not T.IxHL then return end
 task.wait(0.3)
+if not T.IxHL then return end
 local kk, cc = F.HLKind(o)
-if kk then
-local parent = o
+if not kk then return end
+local target = o
 pcall(function()
-if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then parent = o.Parent end
+if o:IsA("ProximityPrompt") or o:IsA("ClickDetector") then target = o.Parent end
 end)
-F.IxAdd(parent, cc)
-end
+if target == nil then return end
+local okg, _, _, root = pcall(GC)
+if not okg or not root then return end
+local pos = nil
+pcall(function() pos = target.Position end)
+if pos == nil then pcall(function() pos = target:GetPivot().Position end) end
+if pos == nil then return end
+if (pos - root.Position).Magnitude > F.IxRange() then return end
+F.IxAdd(target, cc)
 end)
 end)
 F._ixLoop = RS.Heartbeat:Connect(function()
 if not T.IxHL then F.IxHLSet(false) return end
+local okg, _, _, root = pcall(GC)
+if not okg or not root then return end
 local now = os.clock()
-if now - (F._ixAt or 0) < 3 then return end
-F._ixAt = now
-F.IxScan()
-for o, rec in pairs(F._ixObjs) do
-if not o.Parent then
-if rec and rec.h then pcall(function() rec.h:Destroy() end) end
-F._ixObjs[o] = nil
-end
+local pos = root.Position
+local moved = 999
+if F._ixPos then moved = (pos - F._ixPos).Magnitude end
+if moved < 15 and (now - (F._ixAt or 0)) < 3 then return end
+F._ixAt, F._ixPos = now, pos
+local n, gone = F.IxScan()
+if now - F._ixLog > 8 then
+F._ixLog = now
+F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮移出范围 " .. tostring(gone) .. " 个")
 end
 end)
 end
@@ -15272,10 +15342,15 @@ if F._cfgSyncing then return end
 if T.BodyHL then F.BodyHLRefresh() end
 F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
 end })
-Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视", Default = false, Callback = function(v)
+Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视(以你为中心 N 格内 · 实时更新)", Default = false, Callback = function(v)
 T.IxHL = v
 if F._cfgSyncing then return end
 F.IxHLSet(v)
+end })
+Tabs.Visual:AddSlider("IxRange", { Title = "高亮透视 · 范围(格 · 以你为中心)", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
+C.IxRange = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
 end })
 Tabs.Visual:AddSection("穿墙透视")
 Tabs.Visual:AddToggle("XRay", { Title = "穿墙透视", Default = false, Callback = function(v)
@@ -16058,6 +16133,7 @@ pcall(function()
 if C.FlyDisguise == nil then
 C.FlyDisguise = "关闭"
 end
+if C.IxRange == nil then C.IxRange = 300 end
 if C.ClickerLockX == nil then C.ClickerLockX = 1 end
 if C.ClickerLockY == nil then C.ClickerLockY = 1 end
 local n = F.CfgSyncUI()
