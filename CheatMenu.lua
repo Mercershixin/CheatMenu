@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 02:33 sha e01ddb1f bytes 600147'):format('2026-10-09 02:33','e01ddb1f',600147))
+print(('[CheatMenu] build 2026-10-09 02:39 sha 6c733de8 bytes 598885'):format('2026-10-09 02:39','6c733de8',598885))
 local F = {}
-F.VERSION = "v17.0.10"
+F.VERSION = "v17.0.11"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6205,55 +6205,27 @@ if not v or v < 10 then v = 120 end
 if v > 800 then v = 800 end
 return v
 end
-F.CLICKER_KEYS = { "不用快捷键", "F6", "F7", "F8", "F9", "F10", "F11", "H", "J", "K", "L", "N", "M", "V", "B" }
-F.ClickerKeyCode = function()
-local nm = C.ClickerKey
-if type(nm) ~= "string" or nm == "" or nm == "不用快捷键" then return nil end
-local kc = nil
-pcall(function() kc = Enum.KeyCode[nm] end)
-return kc
-end
-F.ClickerGap = function()
-local v = tonumber(C.ClickerGap)
-if not v or v < 0.01 then v = 0.05 end
-if v > 5 then v = 5 end
-return v
-end
-local CK = { mark = nil, loop = nil, conn = nil, track = nil, warned = {}, px = nil, py = nil, gx = nil, gy = nil }
-F.ClickerRawMouse = function()
-local us = game:GetService("UserInputService")
-local mp = nil
-pcall(function() mp = us:GetMouseLocation() end)
-if type(mp) ~= "table" then return nil, nil end
-return math.floor(mp.X), math.floor(mp.Y)
-end
-F.ClickerFocused = function()
-local f = true
-pcall(function() f = game:GetService("UserInputService").WindowFocused end)
-return f
-end
-F.ClickerLocked = function()
-if T.ClickerLock ~= true then return nil end
-local x = tonumber(C.ClickerLockX)
-local y = tonumber(C.ClickerLockY)
-if not x or not y then return nil end
-if x < 1 or y < 1 then return nil end
-return math.floor(x), math.floor(y)
-end
 F.ClickerCenter = function()
-local focused = F.ClickerFocused()
+local us = game:GetService("UserInputService")
+local focused = true
+pcall(function() focused = us.WindowFocused end)
 local lx, ly = F.ClickerLocked()
 if lx then return lx, ly, focused end
 if focused then
-local mx, my = F.ClickerRawMouse()
-if mx ~= nil then CK.px, CK.py = mx, my end
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp then
+F._ckPX, F._ckPY = mp.X, mp.Y
 end
-if CK.px == nil or CK.py == nil then
-local mx, my = F.ClickerRawMouse()
-if mx ~= nil then CK.px, CK.py = mx, my end
 end
-if CK.px == nil or CK.py == nil then return nil, nil, focused end
-return CK.px, CK.py, focused
+if F._ckPX == nil or F._ckPY == nil then
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp then
+F._ckPX, F._ckPY = mp.X, mp.Y
+end
+end
+return F._ckPX, F._ckPY, focused
 end
 F.ClickerPoint = function()
 local cx, cy, focused = F.ClickerCenter()
@@ -6262,6 +6234,7 @@ local r = F.ClickerArea() / 2
 return cx + (math.random() * 2 - 1) * r, cy + (math.random() * 2 - 1) * r, focused
 end
 F.ClickerOverOwnGui = function(x, y)
+if x == nil or y == nil then x, y = F.ClickerPoint() end
 if x == nil or y == nil then return false end
 local pg = LP:FindFirstChild("PlayerGui")
 if not pg then return false end
@@ -6271,68 +6244,82 @@ if type(hits) ~= "table" then return false end
 for i = 1, #hits do
 local hit = hits[i]
 local isMark = false
-if CK.mark then pcall(function() isMark = (hit == CK.mark) or hit:IsDescendantOf(CK.mark) end) end
+if F._ckMark then pcall(function() isMark = (hit == F._ckMark) or hit:IsDescendantOf(F._ckMark) end) end
 if not isMark then
 if F.CM_OWNED(hit) then return true end
 end
 end
 return false
 end
-F.ClickerWarn = function(key, msg)
-if CK.warned[key] == true then return end
-CK.warned[key] = true
-pcall(F.Out, "[连点器] " .. msg)
-pcall(function() Fluent:Notify({ Title = "连点器", Content = msg, Duration = 10 }) end)
+F.MouseClickOnce = function(x, y, focused)
+if x == nil or y == nil then
+local px, py, f = F.ClickerPoint()
+x, y = px, py
+if focused == nil then focused = f end
 end
-F.ClickerMarkHosts = function()
-local out, seen = {}, {}
-local function add(h)
-if h == nil then return end
-local ok = false
-pcall(function() ok = (typeof(h) == "Instance") end)
-if not ok or seen[h] then return end
-seen[h] = true
-out[#out + 1] = h
+if x == nil or y == nil then return nil end
+if focused == nil then
+local f = true
+pcall(function() f = game:GetService("UserInputService").WindowFocused end)
+focused = f
 end
-pcall(function() if type(gethui) == "function" then add(gethui()) end end)
-pcall(function() add(game:GetService("CoreGui")) end)
-pcall(function() add(LP:FindFirstChild("PlayerGui")) end)
-return out
-end
-F.ClickerMarkKill = function(host)
-pcall(function()
-local old = host:FindFirstChild("CMClickMark")
-if old then old:Destroy() end
+do
+local ok = pcall(function()
+local vim = game:GetService("VirtualInputManager")
+vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
+vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
 end)
+if ok then return "VIM(引擎级)" end
 end
-F.ClickerMarkDestroy = function()
-local hosts = F.ClickerMarkHosts()
-for i = 1, #hosts do F.ClickerMarkKill(hosts[i]) end
-CK.mark = nil
+if focused then
+if type(mouse1click) == "function" then
+if pcall(mouse1click) then return "mouse1click" end
+end
+do
+local ok = pcall(function()
+if type(mouse1press) == "function" then mouse1press() end
+if type(mouse1release) == "function" then mouse1release() end
+end)
+if ok and type(mouse1press) == "function" then return "mouse1press" end
+end
+end
+return nil
+end
+F.ClickerLocked = function()
+if T.ClickerLock ~= true then return nil end
+local x = tonumber(C.ClickerLockX)
+local y = tonumber(C.ClickerLockY)
+if not x or not y then return nil end
+if x < 1 or y < 1 then return nil end
+return math.floor(x), math.floor(y)
 end
 F.ClickerMarkHide = function()
-local g = CK.mark
+local g = F._ckMark
 if g then pcall(function() g.Enabled = false end) end
 end
 F.ClickerMarkShow = function(x, y)
 if not x or not y then F.ClickerMarkHide() return end
 local w = F.ClickerArea()
-local g = CK.mark
+local g = F._ckMark
 local alive = false
 if g then pcall(function() alive = (g.Parent ~= nil) end) end
 if not alive then
 g = nil
-CK.mark = nil
-local hosts = F.ClickerMarkHosts()
-for i = 1, #hosts do F.ClickerMarkKill(hosts[i]) end
-local host = hosts[1]
+local host = nil
+pcall(function() if type(gethui) == "function" then host = gethui() end end)
+if not host then pcall(function() host = CoreGui end) end
+if not host then pcall(function() host = game:GetService("CoreGui") end) end
 if host then
+pcall(function()
+local old = host:FindFirstChild("CMClickMark")
+if old then old:Destroy() end
+end)
 local sg = Instance.new("ScreenGui")
 sg.Name = "CMClickMark"
 pcall(function() sg:SetAttribute("CMOwned", true) end)
 sg.ResetOnSpawn = false
 sg.IgnoreGuiInset = true
-pcall(function() sg.DisplayOrder = 2147483647 end)
+pcall(function() sg.DisplayOrder = 50 end)
 local box = Instance.new("Frame")
 box.Name = "Box"
 box.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
@@ -6359,12 +6346,15 @@ vb.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
 vb.BorderSizePixel = 0
 vb.Parent = box
 pcall(function() sg.Parent = host end)
-CK.mark = sg
+F._ckMark = sg
 g = sg
 end
 end
 if not g then
-F.ClickerWarn("nohost", "点击框画不出来: 这个执行器不让自建界面(点击本身不受影响)")
+if not F._ckMarkWarned then
+F._ckMarkWarned = true
+F.Out("[连点器] ⚠ 找不到可挂载的界面容器 ⇒ 锁定点画不出框(点击本身不受影响)")
+end
 return
 end
 pcall(function()
@@ -6383,39 +6373,45 @@ if not cx or not cy then F.ClickerMarkHide() return end
 F.ClickerMarkShow(cx, cy)
 end
 F.ClickerTrackStart = function()
-if CK.track then return end
+if F._ckTrack then return end
 if not (UIS and UIS.InputChanged) then return end
-CK.track = UIS.InputChanged:Connect(function(inp)
+F._ckTrack = UIS.InputChanged:Connect(function(inp)
 if inp == nil then return end
 local isM = false
 pcall(function() isM = (inp.UserInputType == Enum.UserInputType.MouseMovement) end)
 if not isM then return end
 local now = os.clock()
-if now - (CK.trackAt or 0) < 0.12 then return end
-CK.trackAt = now
-local x, y = F.ClickerRawMouse()
-if x == nil then return end
-CK.px, CK.py = x, y
+if now - (F._ckTrackAt or 0) < 0.12 then return end
+F._ckTrackAt = now
+local us = game:GetService("UserInputService")
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
+if mp == nil then return end
+local x, y = math.floor(mp.X), math.floor(mp.Y)
+F._ckPX, F._ckPY = x, y
 local over = false
 pcall(function() over = F.ClickerOverOwnGui(x, y) end)
 if not over then
-CK.gx, CK.gy = x, y
+F._ckGX, F._ckGY = x, y
 end
 end)
 end
 F.ClickerTrackStop = function()
-if CK.track then pcall(function() CK.track:Disconnect() end) CK.track = nil end
+if F._ckTrack then pcall(function() F._ckTrack:Disconnect() end) F._ckTrack = nil end
 end
 F.ClickerLockHere = function()
-local mx, my = F.ClickerRawMouse()
+local us = game:GetService("UserInputService")
+local mp = nil
+pcall(function() mp = us:GetMouseLocation() end)
 local x, y, src = nil, nil, nil
-if mx ~= nil then
+if mp ~= nil then
+local px, py = math.floor(mp.X), math.floor(mp.Y)
 local over = false
-pcall(function() over = F.ClickerOverOwnGui(mx, my) end)
-if not over then x, y, src = mx, my, "当前鼠标位置" end
+pcall(function() over = F.ClickerOverOwnGui(px, py) end)
+if not over then x, y, src = px, py, "当前鼠标位置" end
 end
 if x == nil then
-local gx, gy = CK.gx, CK.gy
+local gx, gy = F._ckGX, F._ckGY
 if gx ~= nil and gy ~= nil then
 local over2 = false
 pcall(function() over2 = F.ClickerOverOwnGui(gx, gy) end)
@@ -6424,7 +6420,7 @@ end
 end
 if x == nil then
 F.Out("[连点器] 锁定失败: 鼠标现在压在菜单上, 而且还没记录到你在游戏里的位置 ⇒ 先把鼠标移到游戏画面上晃一下, 再回来点「锁定当前位置」")
-F.ClickerWarn("lockfail", "先把鼠标移到游戏画面晃一下, 再回来点「锁定当前位置」")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "先把鼠标移到游戏画面晃一下再锁", Duration = 5 }) end)
 return
 end
 C.ClickerLockX, C.ClickerLockY = x, y
@@ -6432,62 +6428,32 @@ T.ClickerLock = true
 pcall(function()
 local op = Fluent and Fluent.Options
 if type(op) ~= "table" then return end
-if op.ClickerLockX ~= nil then pcall(F.OptSet, op.ClickerLockX, x) end
-if op.ClickerLockY ~= nil then pcall(F.OptSet, op.ClickerLockY, y) end
-if op.ClickerLock ~= nil then pcall(F.OptSet, op.ClickerLock, true) end
+pcall(F.OptSet, op.ClickerLockX, x)
+pcall(F.OptSet, op.ClickerLockY, y)
+pcall(F.OptSet, op.ClickerLock, true)
 end)
 F.ClickerTrackStart()
 F.ClickerMarkSync()
-F.Out("[连点器] ✅ 已锁定点击点 " .. tostring(x) .. "," .. tostring(y) .. " (取值来源: " .. tostring(src) .. ")"
+F.Out("[连点器] ✅ 已锁定点击点 " .. x .. "," .. y .. " (取值来源: " .. tostring(src) .. ")"
 .. " ⇒ 之后切屏、鼠标乱跑都只点这里(可用下面两个滑块微调 · 关掉「锁定点击点」就恢复跟随鼠标)")
 end
-F.MouseClickOnce = function(x, y, cursorOk)
-if x == nil or y == nil then return nil end
-local ok = false
-pcall(function()
-local vim = game:GetService("VirtualInputManager")
-vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
-vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
-ok = true
-end)
-if ok then return "VIM(按坐标)" end
-if cursorOk ~= true then return nil end
-if type(mouse1click) == "function" then
-if pcall(mouse1click) then return "mouse1click(按当前鼠标位置)" end
+F.ClickerGap = function()
+local v = tonumber(C.ClickerGap)
+if not v or v < 0.01 then v = 0.05 end
+if v > 5 then v = 5 end
+return v
 end
-local ok2 = pcall(function()
-if type(mouse1press) == "function" then mouse1press() end
-if type(mouse1release) == "function" then mouse1release() end
-end)
-if ok2 and type(mouse1press) == "function" then return "mouse1press(按当前鼠标位置)" end
-return nil
+F.CLICKER_KEYS = { "不用快捷键", "F6", "F7", "F8", "F9", "F10", "F11", "H", "J", "K", "L", "N", "M", "V", "B" }
+F.ClickerKeyCode = function()
+local nm = C.ClickerKey
+if type(nm) ~= "string" or nm == "" then nm = "F6" end
+local kc = nil
+pcall(function() kc = Enum.KeyCode[nm] end)
+return kc
 end
-function F.ClickerHotkeyInstall()
-if CK.conn then return end
-if not (UIS and UIS.InputBegan) then return end
-CK.conn = UIS.InputBegan:Connect(function(input, gp)
-if gp then return end
-if not input then return end
-local isK = false
-pcall(function() isK = (input.UserInputType == Enum.UserInputType.Keyboard) end)
-if not isK then return end
-local kc = F.ClickerKeyCode()
-if kc == nil or input.KeyCode ~= kc then return end
-pcall(F.ClickerToggle)
-end)
-end
-function F.ClickerHotkeyRemove()
-if CK.conn then pcall(function() CK.conn:Disconnect() end) CK.conn = nil end
-end
-F.ClickerState = function()
-local x = tonumber(C.ClickerLockX)
-local y = tonumber(C.ClickerLockY)
-local lx = F.ClickerLocked()
-return { on = (T.Clicker == true), lock = (T.ClickerLock == true), locked = (lx ~= nil),
-x = x, y = y, area = F.ClickerArea(), gap = F.ClickerGap(), mark = (CK.mark ~= nil) }
-end
+local CKT = nil
 function F.ClickerEnable()
-if CK.loop and T.Clicker then return end
+if CKT and T.Clicker then return end
 T.Clicker = true
 pcall(F.ClickerTrackStart)
 local gap = F.ClickerGap()
@@ -6496,58 +6462,50 @@ F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(�
 gap, (gap > 0) and (1 / gap) or 0,
 kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
 F.Out("[连点器] 用的是引擎级输入 ⇒ 切到别的窗口(失焦)后, 仍会在「范围框」内继续点")
+F.Out("[连点器] ⚠ 若某些游戏在失焦时直接丢弃输入, 那种就只能让游戏窗口保持在前台")
 local llx, lly = F.ClickerLocked()
 local cx0, cy0 = F.ClickerCenter()
 F.Out("[连点器] 点击范围: 以 " .. tostring(math.floor(tonumber(cx0) or 0)) .. "," .. tostring(math.floor(tonumber(cy0) or 0))
 .. " 为中心 · 边长 " .. tostring(F.ClickerArea()) .. " 像素的方框内随机取点(绿色半透明框就是范围)")
 if llx then
-F.Out("[连点器] 框中心已锁定 " .. tostring(llx) .. "," .. tostring(lly) .. " ⇒ 与鼠标位置无关, 切屏也不漂")
+F.Out("[连点器] 框中心已锁定 " .. llx .. "," .. lly .. " ⇒ 与鼠标位置无关, 切屏也不漂")
 else
 F.Out("[连点器] 框中心未锁定 ⇒ 跟着鼠标走(想固定就开「锁定点击点」或点「锁定当前位置」)")
 end
-if CK.loop then return end
-CK.loop = task.spawn(function()
-local n, t0, via, skOut, skMenu, lastF, lx2, ly2 = 0, os.clock(), nil, 0, 0, nil, nil, nil
-while T.Clicker == true do
+CKT = task.spawn(function()
+local n, t0, via, skOut, skMenu, lastF = 0, os.clock(), nil, 0, 0, nil
+while T.Clicker do
 pcall(F.ClickerMarkSync)
 local x, y, focused = F.ClickerPoint()
-lx2, ly2 = x, y
 if lastF ~= nil and lastF ~= focused then
-F.Out("[连点器] 窗口" .. (focused and "回到前台" or "切出去了(开始用记录的坐标继续点)"))
+F.Out("[连点器] 窗口" .. (focused and "回到前台" or "切出去了(开始用记录的坐标 " .. tostring(math.floor(x or 0)) .. "," .. tostring(math.floor(y or 0)) .. " 继续点)"))
 end
 lastF = focused
-if x == nil then
-skOut = skOut + 1
-else
 local over = false
 pcall(function() over = F.ClickerOverOwnGui(x, y) end)
 if over then
 skMenu = skMenu + 1
 else
-via = nil
-pcall(function() via = F.MouseClickOnce(x, y, T.ClickerLock ~= true) end)
+pcall(function() via = F.MouseClickOnce(x, y, focused) end)
 if via == nil then skOut = skOut + 1 else n = n + 1 end
-end
 end
 if os.clock() - t0 > 30 then
 t0 = os.clock()
-local st = F.ClickerState()
-F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(此执行器不支持按坐标点击)")
-.. " · 点法=" .. (st.locked and ("锁定 " .. tostring(st.x) .. "," .. tostring(st.y)) or "跟随鼠标")
-.. " · 本次点=" .. tostring(math.floor(tonumber(lx2) or 0)) .. "," .. tostring(math.floor(tonumber(ly2) or 0))
-.. (skMenu > 0 and (" · 跳过(点在我们菜单上) " .. tostring(skMenu) .. " 次") or "")
+F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)")
+.. " · 坐标=" .. tostring(math.floor(x or 0)) .. "," .. tostring(math.floor(y or 0))
+.. (focused and " · 窗口在前台" or " · 窗口在后台(仍继续)")
+.. (skMenu > 0 and (" · 跳过(目标点在我们菜单上) " .. tostring(skMenu) .. " 次") or "")
 .. (skOut > 0 and (" · 发不出去 " .. tostring(skOut) .. " 次") or ""))
 end
 task.wait(F.ClickerGap())
 end
-CK.loop = nil
+CKT = nil
 end)
 end
 function F.ClickerDisable()
 T.Clicker = false
-CK.loop = nil
-CK.gx, CK.gy = nil, nil
-CK.warned = {}
+CKT = nil
+F._ckGX, F._ckGY = nil, nil
 pcall(F.ClickerMarkHide)
 F.Out("[连点器] 已停")
 end
@@ -6558,6 +6516,20 @@ pcall(function() opt = Fluent and Fluent.Options and Fluent.Options.Clicker end)
 if not F.OptSet(opt, want) then
 if want then F.ClickerEnable() else F.ClickerDisable() end
 end
+end
+function F.ClickerHotkeyInstall()
+if F._ckConn then return end
+if not (UIS and UIS.InputBegan) then return end
+F._ckConn = UIS.InputBegan:Connect(function(input, gp)
+if gp then return end
+if not input or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+local kc = F.ClickerKeyCode()
+if not kc or input.KeyCode ~= kc then return end
+pcall(F.ClickerToggle)
+end)
+end
+function F.ClickerHotkeyRemove()
+if F._ckConn then pcall(function() F._ckConn:Disconnect() end) F._ckConn = nil end
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -13198,7 +13170,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerTrackStop, F.ClickerHotkeyRemove, F.ClickerMarkDestroy, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -16121,9 +16093,9 @@ if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
 Tabs.AFK:AddToggle("Clicker", { Title = "连点器", Default = false, Callback = function(v)
-T.Clicker = v and true or false
+T.Clicker = v
 if F._cfgSyncing then return end
-if T.Clicker then F.ClickerEnable() else F.ClickerDisable() end
+if v then F.ClickerEnable() else F.ClickerDisable() end
 end })
 Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
 Tabs.AFK:AddSlider("ClickerArea", { Title = "连点器 · 点击范围", Min = 10, Max = 800, Default = 120, Rounding = 0, Callback = function(v)
@@ -16133,7 +16105,7 @@ pcall(F.ClickerMarkSync)
 end })
 Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
 Tabs.AFK:AddToggle("ClickerLock", { Title = "连点器 · 锁定点击点", Default = false, Callback = function(v)
-T.ClickerLock = v and true or false
+T.ClickerLock = v
 if F._cfgSyncing then return end
 pcall(F.ClickerMarkSync)
 end })
