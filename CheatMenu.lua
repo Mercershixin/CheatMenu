@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:54 sha 92582bba bytes 584009'):format('2026-10-08 22:54','92582bba',584009))
+print(('[CheatMenu] build 2026-10-08 23:15 sha 483d73a6 bytes 586531'):format('2026-10-08 23:15','483d73a6',586531))
 local F = {}
-F.VERSION = "v16.10.91"
+F.VERSION = "v16.10.92"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -548,12 +548,10 @@ elseif k == "JumpHeight" and T.InfiniteJump then
 v = 7.5
 elseif k == "PlatformStand" and T.FlyOn then
 v = true
-elseif k == "MaxHealth" and T.God then
-v = 1e9
-elseif k == "Health" then
-if T.God then v = 1e9
-elseif T.LockHealth then v = tonumber(C.LockHealthValue) or 100
-elseif T.NoDeath and tonumber(v) and tonumber(v) <= 0 then v = 1 end
+elseif (k == "Health" or k == "MaxHealth") and (T.God or T.LockHealth) and type(v) == "number" then
+local mx = nil
+pcall(function() mx = rawget(t, "MaxHealth") end)
+if type(mx) == "number" and mx == mx and mx > 0 and v < mx then v = mx end
 end
 elseif k == "CanCollide" and T.NoClip and ch then
 local mine = false
@@ -2222,7 +2220,7 @@ if key == "PlatformStand" and v == false and T.FlyOn then
 KG.blocked3 = (KG.blocked3 or 0) + 1
 return nil
 end
-if (T.God or T.LockHealth or T.NoDeath) and key == "Health" and type(v) == "number" then
+if (T.God or T.LockHealth) and key == "Health" and type(v) == "number" then
 local hv = nil
 pcall(function() hv = rawget(self, "Health") end)
 if type(hv) == "number" and v < hv then
@@ -3048,12 +3046,14 @@ if #done > 0 then F.Out("[上帝模式] 还原: " .. table.concat(done, " · "))
 end
 local function GodEnable()
 if GodConn then return end
+local arLastG = 0
 local function apply()
 if not T.LockHealth then pcall(LockHealthDisable) return end
+local now = os.clock()
+if now - arLastG < 0.1 then return end
+arLastG = now
 local _, hum = GC()
-if not hum then return end
-if hum.MaxHealth ~= 1e6 then pcall(function() hum.MaxHealth = 1e6 end) end
-if hum.Health ~= 1e6 then pcall(function() hum.Health = 1e6 end) end
+F.GodTopUp(hum)
 end
 apply()
 GodConn = RS.Stepped:Connect(apply)
@@ -5322,11 +5322,7 @@ F._godAt = now
 local _, hum = GC()
 if not hum then return end
 pcall(function() F.GodSnap(hum) end)
-pcall(function() if hum.MaxHealth < 1e6 then hum.MaxHealth = 1e6 end end)
-pcall(function() if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end end)
-pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
-pcall(function() if hum.BreakJointsOnDeath then hum.BreakJointsOnDeath = false end end)
-pcall(function() if hum.RequiresNeck then hum.RequiresNeck = false end end)
+pcall(function() F.GodTopUp(hum) end)
 pcall(function()
 if type(hookfunction) == "function" and not F._godTDHook then
 local orig = hum.TakeDamage
@@ -5343,12 +5339,17 @@ F._godTDHook = true
 end
 end
 end)
-pcall(function() F.GodKillDied(hum) end)
 end)
+end
+F.GodTopUp = function(hum)
+if not hum then return end
+if hum.Health <= 0 then return end
+if type(hum.MaxHealth) ~= "number" or hum.MaxHealth ~= hum.MaxHealth then return end
+if hum.Health < hum.MaxHealth then pcall(function() hum.Health = hum.MaxHealth end) end
 end
 F.DMG_KEYS = { "hurt","damage","dmg","blood","bleed","injur","wound","vignette","lowhp","low_hp","lowhealth","low_health","redflash","red_flash","screenfx","screeneffect","screen_effect","healthwarn","health_warn","got_hit","getting_hit" }
 F._dmgFx, F._dmgAt = {}, 0
-F.DmgFxOn = function() return (T.GodMode or T.LockHealth or T.NoDeath) and true or false end
+F.DmgFxOn = function() return (T.GodMode or T.LockHealth) and true or false end
 F.DmgFxKind = function(o)
 local k = nil
 pcall(function()
@@ -5471,42 +5472,30 @@ local n = F.DmgFxScan()
 if n > 0 then F.Out("[受伤红屏] 已屏蔽 " .. tostring(n) .. " 个受伤/红屏覆盖层(上帝模式/锁血期间生效, 关掉即还原)") end
 end)
 end
-local LockHealthEnable, LockHealthDisable, NoDeathEnable, NoDeathDisable
+local LockHealthEnable, LockHealthDisable
 F.GodModeSet = function(on)
 T.GodMode = on and true or false
 T.God = T.GodMode
-T.LockHealth = T.GodMode
-T.NoDeath = T.GodMode
+T.LockHealth = T.GodMode or (T.LockHealthSolo == true)
 T.AntiRagdoll = T.GodMode
 if T.GodMode then
 pcall(function() local _, hh = GC() F.GodSnap(hh) end)
-pcall(GodEnable)
 pcall(LockHealthEnable)
-pcall(NoDeathEnable)
 pcall(F.AntiRagdollEnable)
-pcall(function() F.HealthIsolateSet(true) end)
-pcall(F.HpBlockSet, true)
 F.GodTickLoop()
 pcall(F.DmgFxLoop)
 pcall(function()
 local _, hum = GC()
+F.GodTopUp(hum)
 if hum then
-pcall(function() hum.MaxHealth = 1e6 end)
-pcall(function() hum.Health = 1e6 end)
-pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
-pcall(function() hum.BreakJointsOnDeath = false end)
-pcall(function() hum.RequiresNeck = false end)
-F.GodKillDied(hum)
+F.Out("[上帝模式] 已开: 血量锁在「游戏默认上限」MaxHealth="
+.. tostring(math.floor(tonumber(hum.MaxHealth) or 0))
+.. " ⇒ 不改 MaxHealth、不禁用任何游戏状态(死亡/生成/重生流程都交给游戏自己)")
 end
 end)
-F.Out("[上帝模式] 已开(无敌 + 锁血 + 不死 + 防击倒 + 禁用Dead状态 + 断死亡事件 + 血量隔离 + 拦受伤上报)")
 else
 pcall(GodDisable)
-pcall(LockHealthDisable)
-pcall(NoDeathDisable)
 pcall(F.AntiRagdollDisable)
-pcall(function() F.HealthIsolateSet(false) end)
-pcall(F.HpBlockSet, false)
 pcall(F.DmgFxStop)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
 pcall(function()
@@ -5521,6 +5510,7 @@ end
 end
 end)
 F._godTDHook, F._godTDOrig, F._godTDNew = nil, nil, nil
+if not T.LockHealthSolo then pcall(LockHealthDisable) end
 F.Out("[上帝模式] 已关")
 end
 end
@@ -6023,7 +6013,13 @@ n = n + 1
 end
 return false
 end
-F.ClickerPoint = function()
+F.ClickerArea = function()
+local v = tonumber(C.ClickerArea)
+if not v or v < 10 then v = 120 end
+if v > 800 then v = 800 end
+return v
+end
+F.ClickerCenter = function()
 local us = game:GetService("UserInputService")
 local focused = true
 pcall(function() focused = us.WindowFocused end)
@@ -6045,6 +6041,12 @@ end
 end
 return F._ckPX, F._ckPY, focused
 end
+F.ClickerPoint = function()
+local cx, cy, focused = F.ClickerCenter()
+if cx == nil or cy == nil then return nil, nil, focused end
+local r = F.ClickerArea() / 2
+return cx + (math.random() * 2 - 1) * r, cy + (math.random() * 2 - 1) * r, focused
+end
 F.ClickerOverOwnGui = function(x, y)
 if x == nil or y == nil then x, y = F.ClickerPoint() end
 if x == nil or y == nil then return false end
@@ -6065,8 +6067,8 @@ return false
 end
 F.MouseClickOnce = function(x, y, focused)
 if x == nil or y == nil then
-local _, _, f = F.ClickerPoint()
-x, y = F._ckPX, F._ckPY
+local px, py, f = F.ClickerPoint()
+x, y = px, py
 if focused == nil then focused = f end
 end
 if x == nil or y == nil then return nil end
@@ -6097,7 +6099,6 @@ end
 end
 return nil
 end
-F.ClickerMarkW = 34
 F.ClickerLocked = function()
 if T.ClickerLock ~= true then return nil end
 local x = tonumber(C.ClickerLockX)
@@ -6112,7 +6113,7 @@ if g then pcall(function() g.Enabled = false end) end
 end
 F.ClickerMarkShow = function(x, y)
 if not x or not y then F.ClickerMarkHide() return end
-local w = F.ClickerMarkW
+local w = F.ClickerArea()
 local g = F._ckMark
 local alive = false
 if g then pcall(function() alive = (g.Parent ~= nil) end) end
@@ -6135,7 +6136,8 @@ sg.IgnoreGuiInset = true
 pcall(function() sg.DisplayOrder = 50 end)
 local box = Instance.new("Frame")
 box.Name = "Box"
-box.BackgroundTransparency = 1
+box.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+box.BackgroundTransparency = 0.88
 box.BorderSizePixel = 0
 box.Parent = sg
 local st = Instance.new("UIStroke")
@@ -6179,9 +6181,10 @@ g.Enabled = true
 end)
 end
 F.ClickerMarkSync = function()
-local x, y = F.ClickerLocked()
-if not x or T.Clicker ~= true then F.ClickerMarkHide() return end
-F.ClickerMarkShow(x, y)
+if T.Clicker ~= true then F.ClickerMarkHide() return end
+local cx, cy = F.ClickerCenter()
+if not cx or not cy then F.ClickerMarkHide() return end
+F.ClickerMarkShow(cx, cy)
 end
 F.ClickerLockHere = function()
 local us = game:GetService("UserInputService")
@@ -6225,18 +6228,21 @@ local kc = F.ClickerKeyCode()
 F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s",
 gap, (gap > 0) and (1 / gap) or 0,
 kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
-F.Out("[连点器] 用的是引擎级输入 + 固定坐标 ⇒ 切到别的窗口(失焦)后, 仍会点「切屏前最后那个位置」")
+F.Out("[连点器] 用的是引擎级输入 ⇒ 切到别的窗口(失焦)后, 仍会在「范围框」内继续点")
 F.Out("[连点器] ⚠ 若某些游戏在失焦时直接丢弃输入, 那种就只能让游戏窗口保持在前台")
 local llx, lly = F.ClickerLocked()
+local cx0, cy0 = F.ClickerCenter()
+F.Out("[连点器] 点击范围: 以 " .. tostring(math.floor(tonumber(cx0) or 0)) .. "," .. tostring(math.floor(tonumber(cy0) or 0))
+.. " 为中心 · 边长 " .. tostring(F.ClickerArea()) .. " 像素的方框内随机取点(绿色半透明框就是范围)")
 if llx then
-F.Out("[连点器] 已锁定点击点 " .. llx .. "," .. lly .. " ⇒ 与鼠标位置无关, 切屏也不漂")
+F.Out("[连点器] 框中心已锁定 " .. llx .. "," .. lly .. " ⇒ 与鼠标位置无关, 切屏也不漂")
 else
-F.Out("[连点器] 未锁定 ⇒ 点的是鼠标当前位置(想固定就开「锁定点击点」或点「锁定当前位置」)")
+F.Out("[连点器] 框中心未锁定 ⇒ 跟着鼠标走(想固定就开「锁定点击点」或点「锁定当前位置」)")
 end
-pcall(F.ClickerMarkSync)
 CKT = task.spawn(function()
 local n, t0, via, skOut, skMenu, lastF = 0, os.clock(), nil, 0, 0, nil
 while T.Clicker do
+pcall(F.ClickerMarkSync)
 local x, y, focused = F.ClickerPoint()
 if lastF ~= nil and lastF ~= focused then
 F.Out("[连点器] 窗口" .. (focused and "回到前台" or "切出去了(开始用记录的坐标 " .. tostring(math.floor(x or 0)) .. "," .. tostring(math.floor(y or 0)) .. " 继续点)"))
@@ -7937,11 +7943,9 @@ if LockHealthConn then return end
 local function lockNow()
 pcall(function()
 if not T.LockHealth then return end
-if T.GodMode then return end
 local _, hum = GC()
-if not hum or hum.Health <= 0 then return end
-local target = C.LockHealthValue or 100
-if hum.Health ~= target then hum.Health = target end
+if not hum then return end
+F.GodTopUp(hum)
 end)
 end
 local function attach()
@@ -7976,36 +7980,16 @@ end
 end)
 end)
 end
-local NoDeathConn = nil
-NoDeathDisable = function()
-if NoDeathConn then NoDeathConn:Disconnect() NoDeathConn = nil end
-if F._ndSig then pcall(function() F._ndSig:Disconnect() end) F._ndSig = nil end
-F._ndAttach = nil
+F.LockHealthSoloSet = function(on)
+T.LockHealthSolo = on and true or false
+T.LockHealth = T.LockHealthSolo or (T.GodMode == true)
+if T.LockHealth then
+pcall(LockHealthEnable)
+F.Out("[锁血] 已开: 血量始终维持在「游戏默认上限」(MaxHealth) · 不改任何游戏状态、不屏蔽伤害")
+else
+pcall(LockHealthDisable)
+F.Out("[锁血] 已关")
 end
-NoDeathEnable = function()
-if NoDeathConn then return end
-local function reviveNow()
-pcall(function()
-if not T.NoDeath then return end
-local _, hum = GC()
-if hum and hum.Health <= 0 then hum.Health = hum.MaxHealth end
-end)
-end
-local function attach()
-local _, hum = GC()
-if not hum then return end
-if F._ndSig then pcall(function() F._ndSig:Disconnect() end) F._ndSig = nil end
-pcall(function() F._ndSig = hum.HealthChanged:Connect(reviveNow) end)
-end
-F._ndAttach = attach
-attach()
-NoDeathConn = RS.Heartbeat:Connect(function()
-if not T.NoDeath then NoDeathDisable() return end
-if os.clock() - (F._thr4456 or 0) < 1 then return end
-F._thr4456 = os.clock()
-if F._ndAttach then pcall(F._ndAttach) end
-reviveNow()
-end)
 end
 function F.OnCharacter()
 if T.CharPersist == false then return end
@@ -8510,8 +8494,10 @@ return n
 end
 F._ixObjs, F._ixLoop, F._ixAdded, F._ixAt = {}, nil, nil, 0
 F._ixPos, F._ixLog = nil, 0
-F.IX_MAX = 220
-F.IX_MAXSZ = 60
+F.IX_MAX = 180
+F.IX_MAXSZ = 200
+F.IX_MOVE = 12
+F.IX_HOPS = 6
 F.IxTooBig = function(o)
 local sz = 0
 pcall(function() if o:IsA("BasePart") then sz = o.Size.Magnitude end end)
@@ -8525,7 +8511,14 @@ if not v or v < 30 then v = 300 end
 if v > 5000 then v = 5000 end
 return v
 end
+F.IxGap = function()
+local v = tonumber(C.IxGap)
+if not v or v < 0.5 then v = 2 end
+if v > 10 then v = 10 end
+return v
+end
 F.IxParams = function()
+if F._ixParams ~= nil then return F._ixParams end
 local p = nil
 pcall(function()
 p = OverlapParams.new()
@@ -8533,6 +8526,7 @@ p.FilterType = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklis
 p.FilterDescendantsInstances = { LP.Character }
 p.MaxParts = 3000
 end)
+F._ixParams = p
 return p
 end
 F.IX_COLOR = Color3.fromRGB(255, 215, 0)
@@ -8547,6 +8541,7 @@ veh = Color3.fromRGB(0, 235, 255),
 F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap" }
 F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge" }
 F.HL_DROP_KEYS = { "weapon","gun","sword","cash","money","reward" }
+F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","locker","drawer","cabinet","elevator","lift","ladder","valve","terminal","keypad","dial","quest","task","interact","prompt","vendor","machine","console","register","furnace","oven","forge","anvil","craft","generator","fuse","crank","wheel","handle","bell","panel","atm","safe","vault","seat","chair","bed","chest","crate" }
 F.HLKind = function(o)
 if o == nil or o == LP.Character then return nil end
 local okT = false
@@ -8557,7 +8552,7 @@ if okn and isNpc then return "npc", F.HL_COLORS.npc end
 local oki, isIx = pcall(F.IxIsTarget, o)
 if oki and isIx then return "ix", F.HL_COLORS.ix end
 local isVeh = false
-pcall(function() isVeh = o:IsA("VehicleSeat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil end)
+pcall(function() isVeh = o:IsA("VehicleSeat") or o:IsA("Seat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil or o:FindFirstChildOfClass("Seat") ~= nil end)
 if isVeh then return "veh", F.HL_COLORS.veh end
 local isTool = false
 pcall(function() isTool = o:IsA("Tool") end)
@@ -8569,6 +8564,9 @@ if string.find(low, F.HL_TRAP_KEYS[i], 1, true) then return "trap", F.HL_COLORS.
 end
 for i = 1, #F.HL_ITEM_KEYS do
 if string.find(low, F.HL_ITEM_KEYS[i], 1, true) then return "item", F.HL_COLORS.item end
+end
+for i = 1, #F.HL_USE_KEYS do
+if string.find(low, F.HL_USE_KEYS[i], 1, true) then return "ix", F.HL_COLORS.ix end
 end
 for i = 1, #F.HL_DROP_KEYS do
 if string.find(low, F.HL_DROP_KEYS[i], 1, true) then return "drop", F.HL_COLORS.drop end
@@ -8585,8 +8583,14 @@ if not T.IxHL then return end
 if o == nil then return end
 local rec0 = F._ixObjs[o]
 if rec0 then
+local alive = false
+if rec0.h ~= nil then pcall(function() alive = (rec0.h.Parent ~= nil) end) end
+if alive then
 if col and rec0.h then pcall(function() rec0.h.FillColor = col rec0.h.OutlineColor = col end) end
 return
+end
+if rec0.h then pcall(function() rec0.h:Destroy() end) end
+F._ixObjs[o] = nil
 end
 local h = Instance.new("Highlight")
 h.Name = "CMHLMark"
@@ -8606,11 +8610,36 @@ local ok, has = pcall(function() return o:FindFirstChildOfClass("ProximityPrompt
 if ok and has then return true end
 local ok2, isAny = pcall(function() return o:IsA("ProximityPrompt") or o:IsA("ClickDetector") end)
 if ok2 and isAny then return true end
-return false
+local isModel = false
+pcall(function() isModel = o:IsA("Model") end)
+if not isModel then return false end
+local ok3, deep = pcall(function()
+return o:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil or o:FindFirstChildWhichIsA("ClickDetector", true) ~= nil
+end)
+return (ok3 and deep) or false
+end
+F.IxDropDead = function()
+local gone = 0
+for o, rec in pairs(F._ixObjs) do
+local dead = false
+if rec == nil or rec.h == nil then
+dead = true
+else
+pcall(function() dead = (rec.h.Parent == nil) end)
+end
+if dead then
+if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+F._ixObjs[o] = nil
+gone = gone + 1
+end
+end
+return gone
 end
 F.IxScan = function()
 local okg, _, _, root = pcall(GC)
-if not okg or not root then return 0, 0 end
+if not okg or not root then
+return 0, F.IxDropDead(), 0
+end
 local center = root.Position
 local parts = nil
 pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
@@ -8633,15 +8662,18 @@ end
 for i = 1, #parts do
 local pt = parts[i]
 local k, c = F.HLKind(pt)
-if k then offer(pt, c, pt.Position) end
+if k then
+offer(pt, c, pt.Position)
+else
 local up = pt
-for hop = 1, 4 do
+for hop = 1, F.IX_HOPS do
 local pp = nil
 pcall(function() pp = up.Parent end)
 if pp == nil or pp == workspace then break end
 up = pp
 local k2, c2 = F.HLKind(up)
 if k2 then offer(up, c2, pt.Position) break end
+end
 end
 end
 table.sort(order, function(a, b) return best[a].d < best[b].d end)
@@ -8652,9 +8684,9 @@ local o = order[i]
 keep[o] = true
 F.IxAdd(o, best[o].col)
 end
-local gone = 0
+local gone = F.IxDropDead()
 for o, rec in pairs(F._ixObjs) do
-if not keep[o] then
+if keep[o] == nil then
 if rec and rec.h then pcall(function() rec.h:Destroy() end) end
 F._ixObjs[o] = nil
 gone = gone + 1
@@ -8678,7 +8710,10 @@ F.Out("[高亮透视] 已关")
 return
 end
 local n = F.IxScan()
-F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个 · 随你移动实时更新(NPC棕/交互金/陷阱红/道具绿/掉落黄/载具青)")
+F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个 · 上限 " .. tostring(F.IX_MAX) .. " 个")
+F.Out("[高亮透视] 刷新节奏: 每移动 " .. tostring(F.IX_MOVE) .. " 格 或 每 " .. tostring(F.IxGap())
+.. " 秒重扫一次(间隔可在下面调) · 中途新出现的物件由事件即时补标")
+F.Out("[高亮透视] 颜色: NPC棕 / 交互金 / 陷阱红 / 道具绿 / 掉落黄 / 载具青 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
 if not T.IxHL then return end
@@ -8698,23 +8733,31 @@ pcall(function() pos = target.Position end)
 if pos == nil then pcall(function() pos = target:GetPivot().Position end) end
 if pos == nil then return end
 if (pos - root.Position).Magnitude > F.IxRange() then return end
+if F.IxTooBig(target) then return end
+if F._ixObjs[target] ~= nil then return end
 F.IxAdd(target, cc)
 end)
 end)
 F._ixLoop = RS.Heartbeat:Connect(function()
 if not T.IxHL then F.IxHLSet(false) return end
 local okg, _, _, root = pcall(GC)
-if not okg or not root then return end
 local now = os.clock()
+if not okg or not root then
+if now - (F._ixCleanAt or 0) > 1 then
+F._ixCleanAt = now
+F.IxDropDead()
+end
+return
+end
 local pos = root.Position
 local moved = 999
 if F._ixPos then moved = (pos - F._ixPos).Magnitude end
-if moved < 15 and (now - (F._ixAt or 0)) < 3 then return end
+if moved < F.IX_MOVE and (now - (F._ixAt or 0)) < F.IxGap() then return end
 F._ixAt, F._ixPos = now, pos
 local n, gone, sk = F.IxScan()
 if now - F._ixLog > 8 then
 F._ixLog = now
-F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮移出范围 " .. tostring(gone) .. " 个"
+F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮取消 " .. tostring(gone) .. " 个"
 .. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个(避免整块地图被染色)") or ""))
 end
 end)
@@ -9760,7 +9803,7 @@ return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
 AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
-TrapWarn = true, SpeedGuard = true, ClickerLock = true }
+TrapWarn = true, SpeedGuard = true, ClickerLock = true, LockHealthSolo = true }
 function F.PanicKeyDisableAll()
 local keep = {}
 for k in pairs(F.PANIC_KEEP) do keep[k] = T[k] end
@@ -9772,7 +9815,7 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, NoDeathDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.NetLogDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
@@ -12661,7 +12704,7 @@ end)
 if F._touchToggle then pcall(function() F._touchToggle:Destroy() end) F._touchToggle = nil end
 end,
 MuteDisable, FOVDisable, ZoomDisable,
-F.InvisibleDisable, AntilagDisable, GodDisable, RegenDisable, NoDeathDisable, LockHealthDisable,
+F.InvisibleDisable, AntilagDisable, GodDisable, RegenDisable, LockHealthDisable,
 F.AntiCheatGCRestore, F.CMX_DisableAll, F.LightWatchDisable, F.MetaHookUninstall,
 }
 local okN, badN = 0, 0
@@ -15237,6 +15280,11 @@ Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callba
 if F._cfgSyncing then return end
 F.GodModeSet(v)
 end })
+Tabs.Surv:AddToggle("LockHealthSolo", { Title = "锁血(锁在游戏默认上限 · 不改任何游戏状态)", Default = false, Callback = function(v)
+T.LockHealthSolo = v and true or false
+if F._cfgSyncing then return end
+pcall(F.LockHealthSoloSet, v)
+end })
 Tabs.Surv:AddToggle("AntiKnockdown", { Title = "防击倒", Default = false, Callback = function(v)
 T.AntiKnockdown = v
 if F._cfgSyncing then return end
@@ -15505,6 +15553,11 @@ C.IxRange = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
+Tabs.Visual:AddSlider("IxGap", { Title = "高亮透视 · 重扫间隔(秒 · 越小越跟手但越耗性能)", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
+C.IxGap = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
 Tabs.Visual:AddSection("穿墙透视")
 Tabs.Visual:AddToggle("XRay", { Title = "穿墙透视", Default = false, Callback = function(v)
 T.XRay = v
@@ -15661,6 +15714,11 @@ if F._cfgSyncing then return end
 if v then F.ClickerEnable() else F.ClickerDisable() end
 end })
 Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒 · 越小越快)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
+Tabs.AFK:AddSlider("ClickerArea", { Title = "连点器 · 点击范围(像素 · 绿框边长)", Min = 10, Max = 800, Default = 120, Rounding = 0, Callback = function(v)
+C.ClickerArea = v
+if F._cfgSyncing then return end
+pcall(F.ClickerMarkSync)
+end })
 Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键(游戏内开/关)", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
 Tabs.AFK:AddToggle("ClickerLock", { Title = "连点器 · 锁定点击点(切屏/鼠标乱跑都不漂)", Default = false, Callback = function(v)
 T.ClickerLock = v
@@ -16286,6 +16344,8 @@ if C.FlyDisguise == nil then
 C.FlyDisguise = "关闭"
 end
 if C.IxRange == nil then C.IxRange = 300 end
+if C.IxGap == nil then C.IxGap = 2 end
+if C.ClickerArea == nil then C.ClickerArea = 120 end
 if C.ClickerLockX == nil then C.ClickerLockX = 1 end
 if C.ClickerLockY == nil then C.ClickerLockY = 1 end
 local n = F.CfgSyncUI()
