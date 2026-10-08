@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 03:33 sha d445a1e1 bytes 587176'):format('2026-10-09 03:33','d445a1e1',587176))
+print(('[CheatMenu] build 2026-10-09 03:45 sha 31458fb4 bytes 588714'):format('2026-10-09 03:45','31458fb4',588714))
 local F = {}
-F.VERSION = "v17.0.16"
+F.VERSION = "v17.0.17"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6308,6 +6308,51 @@ end
 function F.ClickerWatchStop()
 for i = 1, #CLKST.conns do pcall(function() CLKST.conns[i]:Disconnect() end) end
 CLKST.conns = {}
+end
+F.CLICKER_LEGACY_GUI = { "CMClickMark", "CM_ClickMark", "CMClickerMark", "ClickerMark", "CM_Click_Frame" }
+F.PurgeLegacyClicker = function()
+local hosts = {}
+pcall(function() if type(gethui) == "function" then hosts[#hosts + 1] = gethui() end end)
+pcall(function() hosts[#hosts + 1] = CoreGui end)
+pcall(function() hosts[#hosts + 1] = game:GetService("CoreGui") end)
+pcall(function() hosts[#hosts + 1] = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui") end)
+pcall(function() hosts[#hosts + 1] = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerScripts") end)
+local names = F.CLICKER_LEGACY_GUI
+local n, seen = 0, {}
+for i = 1, #hosts do
+local h = hosts[i]
+if h ~= nil and not seen[h] then
+seen[h] = true
+local all = nil
+pcall(function() all = h:GetDescendants() end)
+if type(all) == "table" then
+local j, lim = 1, math.min(#all, 20000)
+while j <= lim do
+local o = all[j]
+local nm = nil
+pcall(function() nm = o.Name end)
+if type(nm) == "string" then
+local k
+for k = 1, #names do
+if nm == names[k] then
+pcall(function() o:Destroy() end)
+n = n + 1
+break
+end
+end
+end
+j = j + 1
+end
+end
+end
+end
+if n > 0 then
+F.Out("[连点器] 开机清理: 已清除旧版本残留绿框 " .. tostring(n) .. " 个")
+pcall(function() Fluent:Notify({ Title = "已清除旧连点器残留", Content = "清掉 " .. tostring(n) .. " 个旧版本绿框(CMClickMark)", Duration = 6 }) end)
+else
+F.Out("[连点器] 开机清理: 没有发现旧版本残留绿框")
+end
+return n
 end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
@@ -15744,6 +15789,7 @@ if not F.Once("ckclear", 0.6) then return end
 pcall(F.ClickerClearPos)
 end })
 task.spawn(function() pcall(F.ClickerWatch) end)
+task.spawn(function() pcall(F.PurgeLegacyClicker) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
