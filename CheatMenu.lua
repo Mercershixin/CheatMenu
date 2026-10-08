@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 03:51 sha 4afe9c6a bytes 590692'):format('2026-10-09 03:51','4afe9c6a',590692))
+print(('[CheatMenu] build 2026-10-09 04:00 sha 609c450d bytes 590076'):format('2026-10-09 04:00','609c450d',590076))
 local F = {}
-F.VERSION = "v17.0.18"
+F.VERSION = "v17.0.19"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -790,7 +790,7 @@ F.Out("[位置上报伪造] 已开: 对外上报的坐标冻结在当前这格 "
 else
 F.Out("[位置上报伪造] 已开, 但现在没有角色(没进游戏/重生中) ⇒ 进游戏后自动补取(第一次上报位置时就取点)")
 end
-F.Out("[位置上报伪造] 原理: 只改「你发出去的坐标」⇒ 服务端/别人看到的位置停在这一格。若游戏是服务端权威移动 ⇒ 可能被拉回、抽搐, 遇到就把档位调到① (本项随②/③自动开关)")
+F.Out("[位置上报伪造] 原理: 只改「你发出去的坐标」⇒ 服务端/别人看到的位置停在这一格。若游戏是服务端权威移动 ⇒ 可能被拉回、抽搐, 那就是这个在起作用, 关掉即恢复")
 else
 F.Out("[位置上报伪造] 已关(不再改坐标; 公共钩子留给其它功能用)")
 end
@@ -4683,7 +4683,7 @@ F.Out(string.format("[加速] 已还原你开加速之前的 WalkSpeed = %.1f (�
 return true
 end
 function F.SpeedSet(on)
-if on then pcall(F.BypassAutoRaise, "你开了加速") end
+pcall(F.BypassAutoRaise, "加速", on)
 local want = on and true or false
 if F._spdConn then F._spdConn:Disconnect() F._spdConn = nil end
 T.SpeedOn = want
@@ -4926,7 +4926,7 @@ if m:find("飞行转", 1, true) then return 2 end
 return 1
 end
 F.HeliSet = function(on)
-if on then pcall(F.BypassAutoRaise, "你开了旋转角色") end
+pcall(F.BypassAutoRaise, "旋转角色", on)
 T.HeliOn = on and true or false
 F.HeliDestroy()
 if not T.HeliOn then return end
@@ -5160,7 +5160,7 @@ end)
 end
 end
 function F.FlySet(on)
-if on then pcall(F.BypassAutoRaise, "你开了飞行") end
+pcall(F.BypassAutoRaise, "飞行", on)
 T.FlyOn = on and true or false
 F.FlyDestroy()
 if not T.FlyOn then return end
@@ -5699,6 +5699,7 @@ F._godTDHook, F._godTDOrig, F._godTDNew = nil, nil, nil
 if not T.LockHealthSolo then pcall(LockHealthDisable) end
 F.Out("[上帝模式] 已关")
 end
+pcall(F.LifeGuardSync)
 end
 F.GodRefill = function()
 local _, hum = GC()
@@ -6671,28 +6672,32 @@ end
 end
 return n
 end
-F.BypassAutoRaise = function(why)
-pcall(function()
-local t = tostring(T.BypassTier or "")
-if string.find(t, "②", 1, true) or string.find(t, "③", 1, true) or string.find(t, "④", 1, true) then return end
-if F._risk == nil then task.spawn(function() pcall(F.ScanClientChecks, false) end) end
-local risk = tonumber(F._risk)
-if risk == 0 then
-F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服客户端没扫到防加速/拉回检测(脚本 0 · 可疑连接 0)"
-.. " ⇒ 不自动升档(保持现状, 省性能)。若真被拉回, 手动把「防护档位」开到 ②")
-return
+F._featBypass = {}
+F.BypassOwned = function()
+local k2
+for k2, v in pairs(F._featBypass) do if v then return true end end
+return false
 end
-local rs, rc = tonumber(F._riskScripts) or 0, tonumber(F._riskConns) or 0
-if risk == nil then
-T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
-F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服还没扫过检测 ⇒ 按保守值自动升到 ②(反拉回+伪装)")
-else
-T.BypassTier = "② + 防护/反拉回/伪装(稳身·受击·陷阱·抢所有权·钉位·读原值)"
-F.Out("[绕过防护] " .. tostring(why) .. " ⇒ 本服检测: 脚本 " .. tostring(rs) .. " 个 · 可疑连接 "
-.. tostring(rc) .. " 条 ⇒ 自动升到 ② 反拉回+伪装, 免得被服务端拉回/换位置")
-end
+F.BypassAutoRaise = function(which, on)
+local key = tostring(which or "?")
+if on == nil then on = true end
+if on then F._featBypass[key] = true else F._featBypass[key] = nil end
+if F.BypassOwned() then
+if F._featBypassOn ~= true then
+F._featBypassOn = true
+T.BypassTier = "④ 全绕过(加速/飞行/旋转自带): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回 + 深度中和"
 pcall(F.BypassTierApply, T.BypassTier)
-end)
+F.Out("[自带绕过] " .. key .. " 已开 ⇒ 直接装全绕过(不做检测扫描, 不用管防护档位): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回 + 深度中和")
+pcall(function() Fluent:Notify({ Title = "自带绕过", Content = "已随「" .. key .. "」装好全绕过(与防护档位无关)", Duration = 5 }) end)
+end
+else
+if F._featBypassOn == true then
+F._featBypassOn = nil
+T.BypassTier = "关(什么都不开)"
+pcall(F.BypassTierApply, T.BypassTier)
+F.Out("[自带绕过] " .. key .. " 已关 ⇒ 用到绕过的功能都关了, 已收回自动装的绕过层")
+end
+end
 end
 F.BypassTierApply = function(v)
 v = tostring(v or "")
@@ -8089,6 +8094,17 @@ end
 end)
 end)
 end
+F.LifeGuardSync = function()
+local need = (T.GodMode == true) or (T.LockHealthSolo == true) or (T.LockHealth == true)
+if need then
+pcall(AC.InstallNamecallHook)
+if T.HealthIsolate ~= true then pcall(F.HealthIsolateSet, true) end
+if T.HpBlock ~= true then pcall(F.HpBlockSet, true) end
+else
+if T.HealthIsolate == true then pcall(F.HealthIsolateSet, false) end
+if T.HpBlock == true then pcall(F.HpBlockSet, false) end
+end
+end
 F.LockHealthSoloSet = function(on)
 T.LockHealthSolo = on and true or false
 T.LockHealth = T.LockHealthSolo or (T.GodMode == true)
@@ -8099,6 +8115,7 @@ else
 pcall(LockHealthDisable)
 F.Out("[锁血] 已关")
 end
+pcall(F.LifeGuardSync)
 end
 function F.OnCharacter()
 if T.CharPersist == false then return end
@@ -15922,24 +15939,12 @@ if v:find("③", 1, true) then lvl = 3 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
 pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
-pcall(function() T.BypassTier = "关(什么都不开)" F.BypassTierApply(T.BypassTier) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
-if lvl < 2 and F._tierSpoofOwn then
-F._tierSpoofOwn = nil
-pcall(F.SpoofPosSet, false)
-F.Out("[防护档位] 已收回档位自己开的「位置上报伪造」")
-end
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
 pcall(F.GuiProtectionDisable)
 T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
-if F._tierHpOwn then
-F._tierHpOwn = nil
-T.HpBlock, T.HealthIsolate = false, false
-pcall(F.HealthIsolateSet, false)
-F.Out("[防护档位] 已收回档位自己开的「血量隔离 + 拦受伤上报」")
-end
 pcall(AC.AntiPauseDisable)
 if F._tierGuardOwn then
 F._tierGuardOwn = nil
@@ -15951,14 +15956,9 @@ F.Out("[防护档位] 已收回档位自己开的「完整防护」")
 end
 pcall(F.LockFieldsUninstall)
 pcall(F.MetaHookUninstall)
-if F._tierGbypOwn then
-F._tierGbypOwn = nil
-pcall(F.GameBypassSet, false)
-F.Out("[防护档位] 已收回档位自己开的「游戏专用绕过」")
-end
 if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
 pcall(F.CfgSyncUI)
-F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(血量隔离/锁血/无敌等)保持不动")
+F.Out("[防护档位] 已关 —— 档位自己装的钩子已卸; 你手动开的(锁血/无敌/绕过等)保持不动")
 pcall(function() Fluent:Notify({ Title = "防护档位", Content = "已全部关闭", Duration = 4 }) end)
 return
 end
@@ -15972,23 +15972,13 @@ T.CMX_AntiBanAll = true
 pcall(F.CMX_InboundWatchSet, true)
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
-if not (T.HpBlock and T.HealthIsolate) then F._tierHpOwn = true end
-T.HpBlock, T.HealthIsolate = true, true
-pcall(F.HealthIsolateSet, true)
-pcall(F.HpBlockSet, true)
 pcall(AC.AntiPauseEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
-if T.GameBypass ~= true then F._tierGbypOwn = true end
-pcall(F.GameBypassSet, true)
-if T.SpoofPos ~= true then F._tierSpoofOwn = true end
-pcall(F.SpoofPosSet, true)
 end
 if lvl >= 3 then
 T.CMX_FakeReport = true
-T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数) + 游戏专用绕过"
+T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
-T.BypassTier = "④ 绕过层全开: 防护(稳身·受击·陷阱) + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回(清检测脚本) + 深度中和"
-pcall(F.BypassTierApply, T.BypassTier)
 if not T.GuardAll then F._tierGuardOwn = true end
 T.GuardAll = true
 T.MyEgg, T.CarryGuard, T.SpeedFree = true, true, true
@@ -16005,17 +15995,28 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
-"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 血量隔离(读伪装+断本地血量监听) + 拦受伤死亡上报 + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过 + 位置上报伪造(上报坐标冻结在开档位那一刻)",
-"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 绕过层(速度守卫/读原值伪装/抢所有权/钉位/防拉回) + 假上报(异常数值改回正常再发) + 游戏专用绕过 ⇒ 最激进",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 锁字段 + 防暂停 + 服务端下发预警",
+"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 假上报(异常数值改回正常再发) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
+Tabs.AC:AddSection("绕过（独立开关，防护档位不再代开）")
+Tabs.AC:AddToggle("GameBypass", { Title = "游戏专用绕过", Default = false, Callback = function(v)
+T.GameBypass = v and true or false
+if F._cfgSyncing then return end
+pcall(F.GameBypassSet, v)
+end })
+Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
+T.SpoofPos = v and true or false
+if F._cfgSyncing then return end
+pcall(F.SpoofPosSet, v)
+end })
 Tabs.AC:AddButton({ Title = "扫描本服绕过目标", Callback = function()
 local n = 0
 pcall(function() n = F.GameBypassScan() end)
-F.Out("[游戏专用绕过] 扫描完成: 「检测/上报类」远程 " .. tostring(n) .. " 个 · 档位②/③会自动拦这些")
+F.Out("[游戏专用绕过] 扫描完成: 「检测/上报类」远程 " .. tostring(n) .. " 个 ⇒ 打开上面的「游戏专用绕过」才会拦这些")
 end })
 Tabs.AC:AddSection("扫描")
 Tabs.AC:AddButton({ Title = "一键全扫描", Callback = function()
