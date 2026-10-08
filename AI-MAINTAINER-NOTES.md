@@ -4782,3 +4782,13 @@ v17.0.2 把 `F.ClickerSeed` 改成**只认"鼠标最后一次在游戏画面上"
 现状：实现模块（332→116 行）+ UI（32→8 行）+ `PANIC_KEEP`（去 `ClickerLock`）+ 配置默认值 全部对齐 16.10.82；
 逐字节取自 `build/backup/pre-ckpos-16.10.82.lua`（其连点器分两块：`OverOwnGui/MouseClickOnce/Gap/KeyCode` 与 `Enable/Disable/Toggle/Hotkey`）。
 ⛔ **`CheatMenu-17.0.1~17.0.11` 的连点器（点击框 / 锁定点 / 坐标点击）全都不是用户要的** —— 别退回那些版本。
+
+## v17.0.13 · **连点器功能整体删除**（2026-10-09，用户："彻底删除事件和代码逻辑"）
+
+用户对"版本窜来窜去"不满，改口要求**彻底删掉连点器**。已删净（grep 零残留验证）：
+- 实现块 116 行（`ClickerOverOwnGui` / **`MouseClickOnce`（连点器专用，一并删）** / `ClickerGap` / `CLICKER_KEYS` /
+  `ClickerKeyCode` / `local CKT` / `Enable` / `Disable` / `Toggle` / `HotkeyInstall` / `HotkeyRemove`）；
+- UI 3 控件 + 快捷键**事件连接**（`task.spawn(pcall(F.ClickerHotkeyInstall))` ⇒ 内部 `UIS.InputBegan` 那条）；
+- 引用点：急停 disable 列表、卸载链里的 `F.ClickerDisable`（`PANIC_KEEP` / 配置默认值此前已清）。
+⇒ 控件 112→109；`preflight` PASS；`luau-compile` 0 错。
+★ 口径：用户说"删除功能"= **连实现 + 事件 + 所有引用一起删**（不只是关掉或隐藏入口）。
