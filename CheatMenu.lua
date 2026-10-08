@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 02:10 sha b02c5dc7 bytes 603410'):format('2026-10-09 02:10','b02c5dc7',603410))
+print(('[CheatMenu] build 2026-10-09 02:18 sha cb3b95e4 bytes 601413'):format('2026-10-09 02:18','cb3b95e4',601413))
 local F = {}
-F.VERSION = "v17.0.7"
+F.VERSION = "v17.0.8"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6229,8 +6229,7 @@ if not v or v < 0.01 then v = 0.05 end
 if v > 5 then v = 5 end
 return v
 end
-local CK = { mark = nil, loop = nil, conn = nil, watch = nil, drag = nil, dragMove = nil, dragEnd = nil,
-needsDrag = false, warned = {}, gx = nil, gy = nil }
+local CK = { mark = nil, loop = nil, conn = nil, drag = nil, dragMove = nil, dragEnd = nil, warned = {} }
 F.ClickerSpace = function()
 local vp = nil
 pcall(function() local c = workspace.CurrentCamera if c then vp = c.ViewportSize end end)
@@ -6265,41 +6264,27 @@ end
 F.ClickerBoxPos = function()
 local sx, sy = tonumber(C.ClickerLockX), tonumber(C.ClickerLockY)
 if sx == nil or sy == nil then return nil, nil end
-if sx <= 1 and sy <= 1 then return nil, nil end
+if sx < 20 or sy < 20 then return nil, nil end
 return F.ClickerClamp(sx, sy)
 end
-F.ClickerPlace = function(nx, ny, byDrag)
+F.ClickerPlace = function(nx, ny)
 local x, y = F.ClickerClamp(nx, ny)
 if x == nil or y == nil then return nil, nil end
 C.ClickerLockX, C.ClickerLockY = x, y
-if byDrag == true then
-CK.needsDrag = false
-CK.warned = {}
-end
 return x, y
 end
 F.ClickerAutoPlace = function()
-local gx, gy, src = CK.gx, CK.gy, "游戏画面里最后的位置"
-if type(gx) ~= "number" or type(gy) ~= "number" then
-gx, gy = F.ClickerRawMouse()
-src = "鼠标当前位置"
-end
-if gx == nil or gy == nil then
+local mx, my = F.ClickerRawMouse()
+if mx == nil or my == nil then
 local vp = F.ClickerSpace()
-if vp ~= nil then gx, gy, src = math.floor(vp.X / 2), math.floor(vp.Y / 2), "屏幕中心" end
+if vp ~= nil then mx, my = math.floor(vp.X / 2), math.floor(vp.Y / 2) end
 end
-if gx == nil or gy == nil then return nil, nil, nil end
-local x, y = F.ClickerPlace(gx, gy, false)
-if x == nil or y == nil then return nil, nil, nil end
-CK.needsDrag = (src ~= "游戏画面里最后的位置")
-return x, y, src
+if mx == nil or my == nil then return nil, nil end
+return F.ClickerPlace(mx, my)
 end
 F.ClickerEnsure = function()
 local x, y = F.ClickerBoxPos()
-if x ~= nil then
-C.ClickerLockX, C.ClickerLockY = x, y
-return x, y, "已定过位的位置"
-end
+if x ~= nil then return x, y end
 return F.ClickerAutoPlace()
 end
 F.ClickerWarn = function(key, msg)
@@ -6433,7 +6418,7 @@ if T.ClickerBox ~= true then
 if g then pcall(function() g.Enabled = false end) end
 return false
 end
-local x, y, src = F.ClickerEnsure()
+local x, y = F.ClickerEnsure()
 if x == nil then
 F.ClickerWarn("nopos", "点击框画不出来: 这个执行器取不到屏幕尺寸和鼠标位置")
 return false
@@ -6452,9 +6437,6 @@ box.Position = UDim2.fromOffset(x - math.floor(w / 2), y - math.floor(w / 2))
 end
 g.Enabled = true
 end)
-if src == "鼠标当前位置" or src == "屏幕中心" then
-F.ClickerWarn("first", "点击框已出现(" .. src .. ") ⇒ 按住左上角绿色小方块「拖」把它拖到你要点的位置")
-end
 return true
 end
 F.ClickerDragHandlers = function()
@@ -6467,7 +6449,7 @@ pcall(function() isM = (inp.UserInputType == Enum.UserInputType.MouseMovement) e
 if not isM then return end
 local mx, my = F.ClickerRawMouse()
 if mx == nil then return end
-local x, y = F.ClickerPlace(mx - CK.drag.dx, my - CK.drag.dy, true)
+local x, y = F.ClickerPlace(mx - CK.drag.dx, my - CK.drag.dy)
 if x == nil or y == nil then return end
 F.ClickerRender()
 end)
@@ -6482,29 +6464,7 @@ CK.drag = nil
 local x, y = F.ClickerBoxPos()
 pcall(F.Out, "[连点器] 点击框已固定 " .. tostring(x) .. "," .. tostring(y) .. " · 边长 " .. tostring(F.ClickerArea())
 .. " ⇒ 连点器只在这个框里点(再拖绿色小方块可换位置)")
-F.ClickerRender()
 end)
-end
-F.ClickerMouseWatch = function()
-if CK.watch then return end
-if not (UIS and UIS.InputChanged) then return end
-CK.watch = UIS.InputChanged:Connect(function(inp)
-local isM = false
-pcall(function()
-isM = (inp.UserInputType == Enum.UserInputType.MouseMovement) or (inp.UserInputType == Enum.UserInputType.Touch)
-end)
-if not isM then return end
-local now = os.clock()
-if now - (CK.watchAt or 0) < 0.1 then return end
-CK.watchAt = now
-local x, y = F.ClickerRawMouse()
-if x == nil or y == nil then return end
-if F.ClickerOverOwnGui(x, y) then return end
-CK.gx, CK.gy = x, y
-end)
-end
-F.ClickerMouseWatchStop = function()
-if CK.watch then pcall(function() CK.watch:Disconnect() end) CK.watch = nil end
 end
 function F.ClickerHotkeyInstall()
 if CK.conn then return end
@@ -6527,7 +6487,7 @@ F.ClickerState = function()
 local x, y = F.ClickerBoxPos()
 if x == nil then x, y = tonumber(C.ClickerLockX), tonumber(C.ClickerLockY) end
 return { on = (T.Clicker == true), box = (T.ClickerBox == true), x = x, y = y,
-needDrag = (CK.needsDrag == true), mark = (CK.mark ~= nil), area = F.ClickerArea(), gap = F.ClickerGap() }
+mark = (CK.mark ~= nil), area = F.ClickerArea(), gap = F.ClickerGap() }
 end
 F.MouseClickOnce = function(x, y, cursorOk)
 if x == nil or y == nil then return nil end
@@ -6570,7 +6530,6 @@ end
 function F.ClickerEnable()
 T.Clicker = true
 F.ClickerRender()
-F.ClickerMouseWatch()
 local gap = F.ClickerGap()
 local kc = F.ClickerKeyCode()
 F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s",
@@ -6578,13 +6537,9 @@ gap, (gap > 0) and (1 / gap) or 0,
 kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
 F.Out("[连点器] 用的是引擎级输入 ⇒ 切到别的窗口(失焦)后, 仍会点在上一次的位置上")
 if T.ClickerBox == true then
-local x, y = F.ClickerBoxPos()
-if x ~= nil then
+local x, y = F.ClickerEnsure()
 F.Out("[连点器] 点法: 只在「点击框」内点 " .. tostring(x) .. "," .. tostring(y)
 .. " · 边长 " .. tostring(F.ClickerArea()) .. " 像素 ⇒ 不跟随鼠标, 鼠标移到哪都不影响")
-else
-F.Out("[连点器] 点法: 点击框还没定过位 ⇒ 先按兜底位置来, 拖一下绿色小方块就能定死")
-end
 else
 F.Out("[连点器] 点法: 跟随鼠标 —— 每次点击都按鼠标当前位置取点(边长 " .. tostring(F.ClickerArea()) .. " 像素的随机范围)")
 end
@@ -6592,10 +6547,6 @@ if CK.loop then return end
 CK.loop = task.spawn(function()
 local n, t0, skOut, skMenu, via, lx, ly = 0, os.clock(), 0, 0, nil, nil, nil
 while T.Clicker == true do
-if T.ClickerBox == true and CK.needsDrag == true then
-F.ClickerWarn("drag", "点击框还没搬过位置 ⇒ 先按住绿色小方块「拖」到你要点的地方(现在不会点击, 免得误点菜单)")
-skMenu = skMenu + 1
-else
 local x, y = F.ClickerPoint()
 lx, ly = x, y
 if x == nil then
@@ -6613,14 +6564,13 @@ pcall(function() via = F.MouseClickOnce(x, y, T.ClickerBox ~= true) end)
 if via == nil then skOut = skOut + 1 else n = n + 1 end
 end
 end
-end
 if os.clock() - t0 > 30 then
 t0 = os.clock()
 local stK = F.ClickerState()
 F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(此执行器不支持按坐标点击)")
-.. " · 点法=" .. (stK.box and ("框内 " .. tostring(stK.x) .. "," .. tostring(stK.y) .. (stK.needDrag and "(还没搬过)" or "")) or "跟随鼠标")
+.. " · 点法=" .. (stK.box and ("框内 " .. tostring(stK.x) .. "," .. tostring(stK.y)) or "跟随鼠标")
 .. " · 本次点=" .. tostring(math.floor(tonumber(lx) or 0)) .. "," .. tostring(math.floor(tonumber(ly) or 0))
-.. (skMenu > 0 and (" · 跳过(点在我们菜单上或框没搬) " .. tostring(skMenu) .. " 次") or "")
+.. (skMenu > 0 and (" · 跳过(点在我们菜单上) " .. tostring(skMenu) .. " 次") or "")
 .. (skOut > 0 and (" · 发不出去 " .. tostring(skOut) .. " 次") or ""))
 end
 task.wait(F.ClickerGap())
@@ -6642,7 +6592,7 @@ CK.drag = nil
 CK.warned = {}
 F.ClickerRender()
 if T.ClickerBox == true then
-local x, y = F.ClickerBoxPos()
+local x, y = F.ClickerEnsure()
 F.Out("[连点器] 点击框已显示 " .. tostring(x) .. "," .. tostring(y) .. " · 边长 " .. tostring(F.ClickerArea())
 .. " ⇒ 连点器只在这个框里点, 不跟随鼠标; 拖左上角绿色小方块「拖」可换位置")
 else
@@ -13296,7 +13246,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerMouseWatchStop, F.ClickerHotkeyRemove, F.ClickerMarkDestroy, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerHotkeyRemove, F.ClickerMarkDestroy, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -16236,7 +16186,6 @@ pcall(F.ClickerRender)
 end })
 Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
 task.spawn(function() pcall(F.ClickerHotkeyInstall) end)
-task.spawn(function() pcall(F.ClickerMouseWatch) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
