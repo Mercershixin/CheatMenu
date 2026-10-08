@@ -4633,3 +4633,43 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 `F.TranslateDisable@13323`、`F.CMX_DisableAll@13569`）。已补 `[[` / `[=[` 分支，
 修完 `preflight` 第 4/5 项与 `_sweep_all` 第 5 项全部变 OK。
 ⚠ `gate.py::_strip` **本来就支持**长括号（用 `LONG_OPEN` 正则），**不受影响 —— 别再"顺手"改它**。
+
+## v17.0.3 · 修「点显示点击框不出框」：兜底 + 置顶 + 可见提示（2026-10-09）
+
+### 现象
+用户报：「点击显示点击框怎么没出来框」。
+
+### ★★★ 根因（v17.0.2 引入的回归）
+v17.0.2 把 `F.ClickerSeed` 改成**只认"鼠标最后一次在游戏画面上"的历史**；历史为空（刚注入、
+还没把鼠标移回游戏画面）⇒ Seed 返回 nil ⇒ `ClickerBoxSet(true)` 走 `ClickerMarkHide()` 分支 ⇒ **一个框都不画**。
+对比 v17.0.1：旧 Seed 直接读 `GetMouseLocation()`，**永远成功** ⇒ 无论对错都会画一个框。
+⇒ **教训：定位类功能的失败路径绝不能是"什么都不显示"**；宁可先画在鼠标处让用户拖。
+
+### 同时修掉的两个"看不见"
+1. **点击框被菜单盖住**：标记 ScreenGui 的 `DisplayOrder` 只有 **50**，而本仓其他叠加层都用 **999**
+   （L8608/L9432），Fluent 菜单自己也在同一 `gethui()` 根下 ⇒ 框一旦与菜单重叠就是**看不见**。
+   ⇒ 改成 `2147483647`（Int32 上限），保证"框 + 绿色「拖」把手"永远在最上面。
+2. **失败只写控制台**：连点器全程只 `F.Out`，而 `F.Out` 是日志列表（不是弹窗）⇒ 用户看不到任何解释。
+   ⇒ 兜底/失败两条路径补 `Fluent:Notify` 弹窗；正常路径只写日志（框本身就看得见）。
+
+### 现在的完整取值顺序（`F.ClickerSeed` 返回 `x, y, 来源`）
+1. **游戏画面历史**（`F.ClickerGameMouse`，来自 `F.ClickerMouseWatch`）⇒ 来源 `game`，**不设安全闸**；
+2. 否则 **当前鼠标位置**（`F.ClickerRawMouse`）⇒ 来源 `mouse`，**并置 `F._ckNeedDrag = true`**；
+3. 都没有（`GetMouseLocation` 不可用）⇒ nil，走"画不出来"提示。
+`ClickerBoxPos()`（存档值）永远优先于 Seed，所以"搬过一次"之后就再也不会走到兜底。
+
+### ★ 安全闸 `F._ckNeedDrag`
+兜底到鼠标 = 框必然压在菜单上（用户点开关时鼠标就在菜单上）。此时**先不点击**：
+`F.ClickerCenter` 在 `_ckNeedDrag == true` 时返回 nil + 一次性提示，直到用户**拖动框**
+（`F.ClickerDragTo` 清标志）或拿到游戏画面历史为止。
+⇒ 防的是"开了框又开连点器 ⇒ 连点器对着菜单点，误触一堆开关"。
+（注：`F.ClickerOverOwnGui` 用的是 `PlayerGui:GetGuiObjectsAtPosition`，而 Fluent 的 GUI 挂在 `gethui()/CoreGui`，
+**它本来就看不见菜单** —— 所以这道闸不能靠"自家 GUI 判定"来兜，必须靠"没搬过就不点"。）
+
+### 顺手修的残留
+点击框开着时卸载脚本，绿色框会**留在屏幕上**（`F.ClickerDisable` 在有框时故意保留它，而卸载链没人销毁它）
+⇒ 新增 `F.ClickerMarkDestroy()` 并接进卸载链。
+
+### 验证
+`_gen_clicker_sim.py` 扩到 **30 项断言全过**：新增"无历史 ⇒ 兜底到鼠标且写回存档""安全闸：没搬走不点击 / 拖走后开始点击"
+"有游戏内历史 ⇒ 不设闸且优先用它"；`preflight` PASS；`luau-compile` 0 错。
