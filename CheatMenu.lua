@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 22:42 sha 939c575d bytes 579808'):format('2026-10-08 22:42','939c575d',579808))
+print(('[CheatMenu] build 2026-10-08 22:54 sha 92582bba bytes 584009'):format('2026-10-08 22:54','92582bba',584009))
 local F = {}
-F.VERSION = "v16.10.90"
+F.VERSION = "v16.10.91"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5346,6 +5346,131 @@ end)
 pcall(function() F.GodKillDied(hum) end)
 end)
 end
+F.DMG_KEYS = { "hurt","damage","dmg","blood","bleed","injur","wound","vignette","lowhp","low_hp","lowhealth","low_health","redflash","red_flash","screenfx","screeneffect","screen_effect","healthwarn","health_warn","got_hit","getting_hit" }
+F._dmgFx, F._dmgAt = {}, 0
+F.DmgFxOn = function() return (T.GodMode or T.LockHealth or T.NoDeath) and true or false end
+F.DmgFxKind = function(o)
+local k = nil
+pcall(function()
+if o:IsA("Frame") then k = "frame"
+elseif o:IsA("ImageLabel") or o:IsA("ImageButton") then k = "image"
+elseif o:IsA("TextLabel") or o:IsA("TextButton") then k = "text"
+end
+end)
+return k
+end
+F.DmgFxNamed = function(o)
+local nm = nil
+pcall(function() nm = string.lower(tostring(o.Name)) end)
+if nm == nil then return false end
+local i
+for i = 1, #F.DMG_KEYS do if string.find(nm, F.DMG_KEYS[i], 1, true) then return true end end
+return false
+end
+F.DmgFxBigRed = function(o, k)
+local vp = nil
+pcall(function() local c = workspace.CurrentCamera if c then vp = c.ViewportSize end end)
+if vp == nil or vp.X <= 0 or vp.Y <= 0 then return false end
+local sz = nil
+pcall(function() sz = o.AbsoluteSize end)
+if sz == nil or sz.X <= 0 or sz.Y <= 0 then return false end
+if (sz.X * sz.Y) < (vp.X * vp.Y) * 0.6 then return false end
+local tr, cc = 1, nil
+if k == "frame" or k == "text" then
+pcall(function() tr = o.BackgroundTransparency cc = o.BackgroundColor3 end)
+else
+pcall(function() tr = o.ImageTransparency cc = o.ImageColor3 end)
+end
+if type(tr) ~= "number" or tr > 0.9 then return false end
+if cc == nil then return true end
+return (cc.R >= 0.7 and cc.G <= 0.55 and cc.B <= 0.55)
+end
+F.DmgFxScan = function()
+if not F.DmgFxOn() then return 0 end
+local roots = {}
+pcall(function() if LP then local pg = LP:FindFirstChildOfClass("PlayerGui") if pg then roots[#roots + 1] = pg end end end)
+pcall(function() if type(gethui) == "function" then local h = gethui() if h and h ~= roots[1] then roots[#roots + 1] = h end end end)
+local n, ri, i = 0, 0, 0
+for ri = 1, #roots do
+local objs = F.walk(roots[ri], 6000, 600)
+for i = 1, #objs do
+local o = objs[i]
+local k = F.DmgFxKind(o)
+if k ~= nil and F._dmgFx[o] == nil and (F.DmgFxNamed(o) or F.DmgFxBigRed(o, k)) and not F.CM_OWNED(o) then
+local rec = nil
+pcall(function()
+if k == "image" then
+rec = { o = o, p = "ImageTransparency", v = o.ImageTransparency }
+else
+rec = { o = o, p = "BackgroundTransparency", v = o.BackgroundTransparency }
+end
+end)
+if rec ~= nil then
+F._dmgFx[o] = rec
+pcall(function() o[rec.p] = 1 end)
+n = n + 1
+end
+end
+end
+end
+return n
+end
+F.DmgFxRestore = function(keepRed)
+local n, kept = 0, 0
+for o, rec in pairs(F._dmgFx) do
+if rec ~= nil and rec.o ~= nil then
+local cur = nil
+pcall(function() cur = rec.o[rec.p] end)
+if cur ~= nil and cur >= 0.999 then
+local base = tonumber(rec.v) or 1
+if keepRed and base < 0.9 then
+kept = kept + 1
+else
+pcall(function() rec.o[rec.p] = base end)
+n = n + 1
+end
+end
+end
+F._dmgFx[o] = nil
+end
+return n, kept
+end
+F.DmgFxThaw = function()
+pcall(function()
+local _, hum = GC()
+if not hum then return end
+local mx = hum.MaxHealth
+if type(mx) ~= "number" or mx ~= mx or mx <= 0 or mx > 1e5 then return end
+hum.MaxHealth = mx + 0.01
+hum.MaxHealth = mx
+end)
+end
+F.DmgFxStop = function()
+if F._dmgLoop then pcall(function() F._dmgLoop:Disconnect() end) F._dmgLoop = nil end
+local n = F.DmgFxRestore(false)
+if n > 0 then F.Out("[受伤红屏] 已停: 还原 " .. tostring(n) .. " 个覆盖层") end
+end
+F.DmgFxLoop = function()
+if F._dmgLoop then return end
+F._dmgLoop = RS.Heartbeat:Connect(function()
+if not F.DmgFxOn() then
+if next(F._dmgFx) ~= nil then
+local n, kept = F.DmgFxRestore(true)
+if n > 0 or kept > 0 then
+F.Out("[受伤红屏] 已关: 还原 " .. tostring(n) .. " 个 · 保留隐藏 " .. tostring(kept) .. " 个受伤层(防红边残留)")
+end
+end
+pcall(F.DmgFxThaw)
+if F._dmgLoop then pcall(function() F._dmgLoop:Disconnect() end) F._dmgLoop = nil end
+return
+end
+local now = os.clock()
+if now - (F._dmgAt or 0) < 0.5 then return end
+F._dmgAt = now
+local n = F.DmgFxScan()
+if n > 0 then F.Out("[受伤红屏] 已屏蔽 " .. tostring(n) .. " 个受伤/红屏覆盖层(上帝模式/锁血期间生效, 关掉即还原)") end
+end)
+end
 local LockHealthEnable, LockHealthDisable, NoDeathEnable, NoDeathDisable
 F.GodModeSet = function(on)
 T.GodMode = on and true or false
@@ -5362,6 +5487,7 @@ pcall(F.AntiRagdollEnable)
 pcall(function() F.HealthIsolateSet(true) end)
 pcall(F.HpBlockSet, true)
 F.GodTickLoop()
+pcall(F.DmgFxLoop)
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -5381,6 +5507,7 @@ pcall(NoDeathDisable)
 pcall(F.AntiRagdollDisable)
 pcall(function() F.HealthIsolateSet(false) end)
 pcall(F.HpBlockSet, false)
+pcall(F.DmgFxStop)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
 pcall(function()
 if F._godTDHook and F._godTDOrig then
@@ -12521,6 +12648,7 @@ F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.He
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
+F.DmgFxStop,
 function()
 AC._neutFns = {}
 F._cfgSyncing = false
