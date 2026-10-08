@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:29 sha e9fd29cf bytes 586249'):format('2026-10-08 23:29','e9fd29cf',586249))
+print(('[CheatMenu] build 2026-10-08 23:33 sha 6fdc546b bytes 585511'):format('2026-10-08 23:33','6fdc546b',585511))
 local F = {}
-F.VERSION = "v16.10.94"
+F.VERSION = "v16.10.95"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -15251,7 +15251,7 @@ C.CombatPriority = tostring(v)
 if F._cfgSyncing then return end
 F.Out("[战斗] 目标优先级 = " .. tostring(v))
 end })
-Tabs.Combat:AddToggle("CombatTeamCheck", { Title = "不打队友(队伍相同自动跳过)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("CombatTeamCheck", { Title = "不打队友", Default = false, Callback = function(v)
 T.CombatTeamCheck = v
 if F._cfgSyncing then return end
 F.Out("[战斗] 不打队友 = " .. (v and "开(队伍相同的人不会锁)" or "关"))
@@ -15272,17 +15272,17 @@ T.AimTurnCamera, T.AimTurnBody = cam, (not cam)
 if F._cfgSyncing then return end
 F.Out("[战斗] 锁定方式 = " .. tostring(v))
 end })
-Tabs.Combat:AddToggle("BulletTrack", { Title = "子弹追踪(子弹自动拐向目标)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("BulletTrack", { Title = "子弹追踪", Default = false, Callback = function(v)
 T.BulletTrack = v
 if F._cfgSyncing then return end
 if v then pcall(F.BulletTrackEnable) else pcall(F.BulletTrackDisable) end
 end })
-Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力(镜头不抖/枪口不上跳)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("NoRecoil", { Title = "无后坐力", Default = false, Callback = function(v)
 T.NoRecoil = v
 if F._cfgSyncing then return end
 if v then pcall(F.NoRecoilEnable) else pcall(F.NoRecoilDisable) end
 end })
-Tabs.Combat:AddToggle("Pierce", { Title = "穿透弹(打穿墙和其他人 · 需先开自瞄锁定)", Default = false, Callback = function(v)
+Tabs.Combat:AddToggle("Pierce", { Title = "穿透弹", Default = false, Callback = function(v)
 T.Pierce = v
 if F._cfgSyncing then return end
 if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
@@ -15314,7 +15314,7 @@ F.GodRefill()
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
-Tabs.Move:AddToggle("HeliOn", { Title = "旋转角色(只转模型 · 你的视角不动)", Default = false, Callback = function(v) F.HeliSet(v) end })
+Tabs.Move:AddToggle("HeliOn", { Title = "旋转角色", Default = false, Callback = function(v) F.HeliSet(v) end })
 Tabs.Move:AddDropdown("HeliMode", { Title = "旋转模式", Values = {
 "不飞行转(站着自转 · 照常走路跳跃)",
 "飞行转(横躺旋转 · 悬空/配飞行 · WASD移动)",
@@ -15332,7 +15332,7 @@ C.HeliAxis = tostring(v)
 if F._cfgSyncing then return end
 if T.HeliOn then pcall(F.HeliSet, true) end
 end })
-Tabs.Move:AddDropdown("HeliPivot", { Title = "支点(绕哪里转)", Values = {
+Tabs.Move:AddDropdown("HeliPivot", { Title = "支点", Values = {
 "身体中心(原地自转 · 推荐)",
 "头部(头定点 · 身体绕头画一圈)",
 }, Default = "身体中心(原地自转 · 推荐)", Callback = function(v)
@@ -15340,9 +15340,9 @@ C.HeliPivot = tostring(v)
 if F._cfgSyncing then return end
 if T.HeliOn then pcall(F.HeliSet, true) end
 end })
-Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速(度/秒 · 上限 3 万)", Min = 30, Max = 30000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
-Tabs.Move:AddSlider("HeliTilt", { Title = "旋转 · 倾角(仅飞行转 · 0=立着 90=横躺)", Min = 0, Max = 90, Default = 90, Rounding = 0, Callback = function(v) C.HeliTilt = v end })
-Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 初始悬停高度(0=不自动升)", Min = 0, Max = 200, Default = 0, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
+Tabs.Move:AddSlider("HeliSpin", { Title = "旋转 · 转速", Min = 30, Max = 30000, Default = 720, Rounding = 0, Callback = function(v) C.HeliSpin = v end })
+Tabs.Move:AddSlider("HeliTilt", { Title = "旋转 · 倾角", Min = 0, Max = 90, Default = 90, Rounding = 0, Callback = function(v) C.HeliTilt = v end })
+Tabs.Move:AddSlider("HeliHeight", { Title = "旋转 · 初始悬停高度", Min = 0, Max = 200, Default = 0, Rounding = 0, Callback = function(v) C.HeliHeight = v end })
 F.SetSpeedValue = function(kind, n)
 n = tonumber(n)
 local op = Fluent and Fluent.Options
@@ -15422,7 +15422,7 @@ pcall(F.SpeedTierApply, idx)
 end })
 Tabs.Move:AddSection("加速")
 Tabs.Move:AddToggle("SpeedOn", { Title = "加速", Default = false, Callback = function(v) F.SpeedSet(v) end })
-Tabs.Move:AddButton({ Title = "本服检测 / 档位自检(加速飞行前点一下)", Callback = function()
+Tabs.Move:AddButton({ Title = "本服检测 / 档位自检", Callback = function()
 if not F.Once("riskcheck", 4) then return end
 task.spawn(function()
 local a, b = F.ScanClientChecks(true)
@@ -15521,7 +15521,7 @@ if F._cfgSyncing then return end
 if v then F.HideEnable() else F.HideDisable() end
 end })
 Tabs.Move:AddSlider("HideDepth", { Title = "藏地下 · 深度", Min = -60, Max = 60, Default = 5, Rounding = 0, Callback = function(v) C.HideDepth = v end })
-Tabs.Move:AddToggle("WallClimb", { Title = "爬墙(面朝墙自动上爬)", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("WallClimb", { Title = "爬墙", Default = false, Callback = function(v)
 T.WallClimb = v
 if F._cfgSyncing then return end
 if v then pcall(F.WallClimbEnable) else pcall(F.WallClimbDisable) end
@@ -15640,31 +15640,31 @@ Tabs.TP:AddButton({ Title = "传送到出生点", Callback = function()
 task.spawn(function() pcall(F.SpawnTP) end)
 end })
 Tabs.TP:AddDropdown("TPTarget", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
-Tabs.TP:AddButton({ Title = "传送到目标(无距离限制)", Callback = function()
+Tabs.TP:AddButton({ Title = "传送到目标", Callback = function()
 local name = Fluent.Options.TPTarget and Fluent.Options.TPTarget.Value
 if not name then F.Out("[传送] 先在左边「目标玩家」里选一个人") return end
 local pl = Players:FindFirstChild(tostring(name))
 if not pl then F.Out("[传送] 找不到「" .. tostring(name) .. "」(可能已离开)") return end
 task.spawn(function() pcall(TeleportToPlayer, pl) end)
 end })
-Tabs.TP:AddToggle("ClickTP", { Title = "点击传送(鼠标左键点哪传哪 · 无限远)", Default = false, Callback = function(v)
+Tabs.TP:AddToggle("ClickTP", { Title = "点击传送", Default = false, Callback = function(v)
 T.ClickTP = v
 if F._cfgSyncing then return end
 if v then pcall(F.ClickTPEnable) else pcall(F.ClickTPDisable) end
 end })
 Tabs.TP:AddSection("世界 (World · 同 place 内的区域)")
 Tabs.TP:AddDropdown("WorldPick", { Title = "目标世界", Values = F.WorldLabels(), Default = nil })
-Tabs.TP:AddToggle("WorldAttrSync", { Title = "换世界时同时改本地世界属性(可让客户端加载该世界)", Default = false, Callback = function(v)
+Tabs.TP:AddToggle("WorldAttrSync", { Title = "换世界时同时改本地世界属性", Default = false, Callback = function(v)
 C.WorldAttrSync = v
 end })
-Tabs.TP:AddButton({ Title = "扫描世界结构(你在哪 · 有哪些世界 · 各自坐标)", Callback = function()
+Tabs.TP:AddButton({ Title = "扫描世界结构", Callback = function()
 task.spawn(function() pcall(F.WorldDiag) end)
 end })
-Tabs.TP:AddButton({ Title = "去这个世界(飞过去)", Callback = function()
+Tabs.TP:AddButton({ Title = "去这个世界", Callback = function()
 local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
 task.spawn(function() pcall(F.WorldGoto, pick) end)
 end })
-Tabs.TP:AddButton({ Title = "用录到的命令换世界(需先开「远程调用记录」录一次)", Callback = function()
+Tabs.TP:AddButton({ Title = "用录到的命令换世界", Callback = function()
 local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
 task.spawn(function() pcall(F.WorldCmd, pick) end)
 end })
@@ -15672,15 +15672,15 @@ Tabs.TP:AddSection("针对玩家")
 Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
-Tabs.TP:AddToggle("LoopFling", { Title = "循环甩飞(一直甩当前目标)", Default = false, Callback = function(v)
+Tabs.TP:AddToggle("LoopFling", { Title = "循环甩飞", Default = false, Callback = function(v)
 T.LoopFling = v
 if F._cfgSyncing then return end
 if v then pcall(F.FlingLoopStart) else pcall(F.FlingLoopStop) end
 end })
-Tabs.TP:AddButton({ Title = "甩飞所有人(全场逐个甩)", Callback = function()
+Tabs.TP:AddButton({ Title = "甩飞所有人", Callback = function()
 task.spawn(function() pcall(F.FlingAll) end)
 end })
-Tabs.TP:AddSlider("FlingInterval", { Title = "甩飞间隔(秒)", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
+Tabs.TP:AddSlider("FlingInterval", { Title = "甩飞间隔", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
 Tabs.TP:AddSection("收藏点位")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
@@ -15757,7 +15757,7 @@ Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
 task.spawn(function() pcall(F.WithdrawAll, 30) end)
 end })
-Tabs.AFK:AddButton({ Title = "收集货币(TP 逐个槽位收完再回原地)", Callback = function()
+Tabs.AFK:AddButton({ Title = "收集货币", Callback = function()
 if not F.Once("collectall", 3) then return end
 task.spawn(function() pcall(F.CollectAll, 30) end)
 end })
@@ -15766,7 +15766,7 @@ Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
 end })
-Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词(默认关 · 只用缓存汉化)", Default = false, Callback = function(v)
+Tabs.Trans:AddToggle("TransModel", { Title = "连本地模型实时翻译新词", Default = false, Callback = function(v)
 T.TransModel = v and true or false
 if F._cfgSyncing then return end
 if T.Translate then pcall(Trans.ApplyMode, false) end
@@ -15793,7 +15793,7 @@ end)
 end
 end
 end)
-Tabs.Trans:AddButton({ Title = "扫描界面(立即重扫一次)", Callback = function()
+Tabs.Trans:AddButton({ Title = "扫描界面", Callback = function()
 Trans._diagOnce = nil
 task.spawn(function()
 local ok, err = pcall(Trans.Scan)
@@ -15804,7 +15804,7 @@ F.Out("[翻译] 重新扫描失败: " .. tostring(err))
 end
 end)
 end })
-Tabs.Trans:AddButton({ Title = "保存缓存(立即写入本服文件)", Callback = function()
+Tabs.Trans:AddButton({ Title = "保存缓存", Callback = function()
 task.spawn(function()
 local ok = pcall(Trans.Flush)
 if ok and not Trans._lastErr then
@@ -15814,10 +15814,10 @@ F.Out("[翻译] 缓存保存失败: " .. tostring(Trans._lastErr or "未知原�
 end
 end)
 end })
-Tabs.Trans:AddButton({ Title = "清空当前服缓存(只删本服)", Callback = function()
+Tabs.Trans:AddButton({ Title = "清空当前服缓存", Callback = function()
 task.spawn(function() pcall(Trans.ClearCurrent) end)
 end })
-Tabs.Trans:AddButton({ Title = "清空全部缓存(所有游戏)", Callback = function()
+Tabs.Trans:AddButton({ Title = "清空全部缓存", Callback = function()
 task.spawn(function() pcall(Trans.ClearAll) end)
 end })
 Tabs.AC:AddSection("防护 / 反封禁 / 绕过")
@@ -15908,7 +15908,7 @@ if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
 Tabs.AC:AddSection("扫描")
-Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录(默认关 · 去重 · 随扫描输出 · 要手动开)", Default = false, Callback = function(v)
+Tabs.AC:AddToggle("NetLog", { Title = "远程调用记录", Default = false, Callback = function(v)
 T.NetLog = v and true or false
 if F._cfgSyncing then return end
 if v then pcall(F.NetLogEnable) else pcall(F.NetLogDisable) end
