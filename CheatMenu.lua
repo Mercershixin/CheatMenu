@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 20:35 sha f4b95624 bytes 573242'):format('2026-10-08 20:35','f4b95624',573242))
+print(('[CheatMenu] build 2026-10-08 20:40 sha 47d5dac7 bytes 577427'):format('2026-10-08 20:40','47d5dac7',577427))
 local F = {}
-F.VERSION = "v16.10.80"
+F.VERSION = "v16.10.81"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6031,43 +6031,137 @@ local kc = nil
 pcall(function() kc = Enum.KeyCode[nm] end)
 return kc
 end
+F.RB_BTNSIG = function(b)
+if not b then return "?" end
+if type(getconnections) ~= "function" then return "(本执行器没有 getconnections, 无法查信号)" end
+local names = { "Activated", "MouseButton1Click", "MouseButton1Down", "MouseButton1Up" }
+local parts = {}
+for i = 1, #names do
+local cnt = 0
+pcall(function()
+local sig = b[names[i]]
+if sig then
+local cs = getconnections(sig)
+if type(cs) == "table" then cnt = #cs end
+end
+end)
+parts[#parts + 1] = names[i] .. "=" .. tostring(cnt)
+end
+return table.concat(parts, " · ")
+end
+F.RB_FIND = function(name)
+if type(name) ~= "string" or name == "" then return nil end
+local found = nil
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = d.ClassName
+if cls == "RemoteEvent" or cls == "RemoteFunction" or cls == "UnreliableRemoteEvent" then
+if d.Name == name then found = d break end
+end
+end
+end)
+return found
+end
+F.RB_LEARN = function()
+local out = {}
+local seen = F._netSeen
+if type(seen) ~= "table" then return out end
+for _, r in pairs(seen) do
+if type(r) == "table" and type(r.path) == "string"
+and (r.method == "FireServer" or r.method == "InvokeServer") then
+local sig = tostring(r.sig or "")
+local cmd = string.match(sig, '^str:"(.-)"')
+local nm = string.match(r.path, "([^%.]+)$") or ""
+local hit = F.RB_HIT(nm) or (type(cmd) == "string" and cmd ~= "" and F.RB_HIT(cmd))
+if hit then
+out[#out + 1] = { method = r.method, name = nm, cmd = (type(cmd) == "string" and cmd ~= "") and cmd or nil, sig = sig }
+end
+end
+end
+return out
+end
+F.RB_LEARN_FIRE = function(list)
+local fired, tried = 0, 0
+local cache = {}
+for i = 1, #list do
+local it = list[i]
+local obj = cache[it.name]
+if obj == nil then obj = F.RB_FIND(it.name) cache[it.name] = obj or false end
+if obj then
+tried = tried + 1
+local ok = false
+if it.cmd then
+if obj:IsA("RemoteFunction") then
+ok = pcall(function() obj:InvokeServer(it.cmd) end)
+else
+ok = pcall(function() obj:FireServer(it.cmd) end)
+end
+else
+if obj:IsA("RemoteFunction") then
+ok = pcall(function() obj:InvokeServer() end)
+else
+ok = pcall(function() obj:FireServer() end)
+end
+end
+if ok then fired = fired + 1 end
+end
+end
+F.Out("[自动转生] 用录到的 " .. tostring(#list) .. " 条命令 ⇒ 找到远程 " .. tostring(tried) .. " 个 · 成功发出 " .. tostring(fired) .. " 次")
+return fired > 0
+end
 local RBT = nil
 function F.AutoRebirthEnable()
 if RBT and T.AutoRebirth then return end
-F.Out("[自动转生] 已开: 自动找游戏自己的转生入口(自带自动转生按钮 / 转生远程 / 转生按钮)并触发")
+F.Out("[自动转生] 已开: 自动找游戏自己的转生入口(已录命令 / 自带自动转生按钮 / 转生远程 / 转生按钮)")
 RBT = task.spawn(function()
-local tgt, autoAt, lastLog, dumped, autoDone = nil, 0, 0, false, false
+local tgt, lastLog, dumped, done1 = nil, 0, false, false
 while T.AutoRebirth do
 pcall(function()
 if not tgt then
+local learned = F.RB_LEARN()
+if #learned > 0 then
+tgt = { kind = "learn", list = learned }
+F.Out("[自动转生] 从「远程调用记录」里学到 " .. tostring(#learned) .. " 条含转生的调用 ⇒ 优先用它")
+for i = 1, #learned do
+F.Out("[自动转生]    · " .. learned[i].method .. " " .. learned[i].name .. "  (" .. learned[i].sig .. ")")
+end
+else
 local sc = F.RB_SCAN()
 if sc.auto then
 tgt = { kind = "auto", obj = sc.auto }
-F.Out("[自动转生] 找到游戏自带的「自动转生」按钮: " .. sc.auto:GetFullName() .. " ⇒ 打开它")
+F.Out("[自动转生] 找到游戏自带的「自动转生」按钮: " .. sc.auto:GetFullName())
+F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.auto))
 elseif #sc.remotes > 0 then
 local r = sc.remotes[1]
 tgt = { kind = r:IsA("RemoteFunction") and "rfn" or "rev", obj = r }
 F.Out("[自动转生] 找到转生远程: " .. r:GetFullName() .. " (" .. r.ClassName .. ") ⇒ 定时触发")
 elseif #sc.buttons > 0 then
 tgt = { kind = "btn", obj = sc.buttons[1] }
-F.Out("[自动转生] 找到转生按钮: " .. sc.buttons[1]:GetFullName() .. " ⇒ 定时点击")
+F.Out("[自动转生] 找到转生按钮: " .. sc.buttons[1]:GetFullName())
+F.Out("[自动转生] 按钮信号连接: " .. F.RB_BTNSIG(sc.buttons[1]))
 elseif not dumped and os.clock() - lastLog > 12 then
 dumped = true
 lastLog = os.clock()
 F.Out("[自动转生] 还没找到转生入口。这个游戏里名字像转生的东西(" .. tostring(#sc.any) .. " 个):")
 for i = 1, #sc.any do F.Out("[自动转生]    · " .. sc.any[i]) end
-F.Out("[自动转生] ⇒ 请先在游戏里打开「转生」界面(让按钮被创建)再回来看; 或开「远程调用记录」手动转生一次")
+F.Out("[自动转生] ⇒ 先在游戏里打开「转生」界面(让按钮被创建); 或开「远程调用记录」手动转生一次再回来看")
+end
 end
 end
 if tgt then
-if tgt.kind == "auto" then
-if not autoDone or os.clock() - autoAt > 30 then
-autoAt = os.clock()
-autoDone = F.GymClickButton(tgt.obj)
-if autoDone and not dumped then
-dumped = true
-F.Out("[自动转生] ✅ 已打开游戏自带的自动转生 ⇒ 之后它自己会一直转(本开关留着即可)")
+if tgt.kind == "learn" then
+if not done1 then
+done1 = true
+F.RB_LEARN_FIRE(tgt.list)
+F.Out("[自动转生] 已用录到的命令发过一次 ⇒ 若游戏里没动静, 把上面那几行发我")
 end
+elseif tgt.kind == "auto" then
+if not done1 then
+done1 = true
+local okc = F.GymClickButton(tgt.obj)
+F.Out("[自动转生] 点了一下游戏自带的自动转生 ⇒ " .. (okc and "已发出信号" or "没发出去")
+.. " · 请看一眼游戏界面上那个开关有没有变亮; 若没变, 把上面「按钮信号连接」那行发我")
 end
 elseif tgt.kind == "rfn" then
 pcall(function() tgt.obj:InvokeServer() end)
@@ -9996,9 +10090,49 @@ F.GymClickButton = function(button)
 if not button or not button:IsA("GuiButton") then return false end
 if not button.Visible or button.AbsoluteSize.X <= 1 or button.AbsoluteSize.Y <= 1 then return false end
 local used = false
-if type(firesignal) == "function" then
-used = pcall(function() firesignal(button.Activated) end)
-if not used then used = pcall(function() firesignal(button.MouseButton1Click) end) end
+if type(getconnections) == "function" and type(firesignal) == "function" then
+local order = { "Activated", "MouseButton1Click" }
+for i = 1, #order do
+local sig = nil
+pcall(function() sig = button[order[i]] end)
+if sig then
+local cnt = 0
+pcall(function()
+local cs = getconnections(sig)
+if type(cs) == "table" then cnt = #cs end
+end)
+if cnt > 0 then
+if pcall(function() firesignal(sig) end) then used = true break end
+end
+end
+end
+if not used then
+local dn, up = nil, nil
+pcall(function() dn = button.MouseButton1Down up = button.MouseButton1Up end)
+local cdn, cup = 0, 0
+pcall(function() local cs = getconnections(dn) if type(cs) == "table" then cdn = #cs end end)
+pcall(function() local cs = getconnections(up) if type(cs) == "table" then cup = #cs end end)
+if cdn > 0 or cup > 0 then
+if dn then pcall(function() firesignal(dn) end) end
+if up then pcall(function() firesignal(up) end) end
+used = true
+end
+end
+if not used then
+pcall(function()
+for _, nm in ipairs({ "Activated", "MouseButton1Click" }) do
+local sig = button[nm]
+if sig then
+for _, c in ipairs(getconnections(sig) or {}) do pcall(function() c:Fire() end) end
+end
+end
+end)
+end
+end
+if not used and type(firesignal) == "function" then
+pcall(function() firesignal(button.Activated) end)
+pcall(function() firesignal(button.MouseButton1Click) end)
+used = true
 end
 if not used and type(getconnections) == "function" then
 pcall(function()
@@ -10007,8 +10141,8 @@ if sig then
 for _, c in ipairs(getconnections(sig) or {}) do pcall(function() c:Fire() end) end
 end
 end
-used = true
 end)
+used = true
 end
 return used
 end
