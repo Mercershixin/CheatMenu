@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 23:33 sha 6fdc546b bytes 585511'):format('2026-10-08 23:33','6fdc546b',585511))
+print(('[CheatMenu] build 2026-10-08 23:40 sha 9d3df469 bytes 588386'):format('2026-10-08 23:40','9d3df469',588386))
 local F = {}
-F.VERSION = "v16.10.95"
+F.VERSION = "v16.10.96"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8442,25 +8442,125 @@ if r == "killer" then return F.ROLE_NAME.killer, F.ROLE_COLOR.killer, r end
 if r == "sheriff" then return F.ROLE_NAME.sheriff, F.ROLE_COLOR.sheriff, r end
 return "平民", F.ROLE_COLOR.none, nil
 end
-F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin" }
+F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin","sentry","soldier","bandit","golem","slime","wolf","bear","spider","crab","worm","bird","animal","walker","stalker","hunter","wraith","demon","devil","reaper","clown","mummy","vampire","werewolf","titan","brute","grunt","minion","troop","hostile","attacker","raider","ninja","knight","archer","troll","ogre","goblin" }
 F.NPC_COLOR = Color3.fromRGB(170, 110, 55)
-F.IsNPC = function(o)
+F.IsNPC = function(o, deep)
 if o == nil then return false end
-local ok, isM = pcall(function() return o:IsA("Model") end)
-local okP, isP = pcall(function() return o:IsA("BasePart") end)
-if not (ok and isM) and not (okP and isP) then return false end
-if o == LP.Character then return false end
+local cache = F._npcCache
+if cache ~= nil and cache[o] == true then return true end
+local isM, isP = false, false
+pcall(function() isM = o:IsA("Model") end)
+if not isM then pcall(function() isP = o:IsA("BasePart") end) end
+local res = false
+if isM or isP then
+local mine = false
+pcall(function() mine = (o == LP.Character) end)
+if not mine then
 local isPl = false
 pcall(function() isPl = Players:GetPlayerFromCharacter(o) ~= nil end)
-if isPl then return false end
+if not isPl then
 local hum = nil
 pcall(function() hum = o:FindFirstChildOfClass("Humanoid") end)
-if hum then return true end
-local low = string.lower(o.Name)
-for i = 1, #F.NPC_KEYS do
-if string.find(low, F.NPC_KEYS[i], 1, true) then return true end
+if hum ~= nil then
+res = true
+else
+local ac = nil
+pcall(function() ac = o:FindFirstChildOfClass("AnimationController") end)
+if ac ~= nil then
+res = true
+elseif isM then
+local kids = nil
+pcall(function() kids = o:GetChildren() end)
+if type(kids) == "table" then
+local i
+for i = 1, #kids do
+if i > 24 then break end
+local c = kids[i]
+local isSub = false
+pcall(function() isSub = c:IsA("Model") end)
+if isSub then
+local sh = nil
+pcall(function() sh = c:FindFirstChildOfClass("Humanoid") or c:FindFirstChildOfClass("AnimationController") end)
+if sh ~= nil then
+res = true
+break
 end
-return false
+end
+end
+end
+if not res and deep == true then
+local dh = false
+pcall(function() dh = o:FindFirstChildWhichIsA("Humanoid", true) ~= nil end)
+if dh then
+res = true
+else
+local da = false
+pcall(function() da = o:FindFirstChildWhichIsA("AnimationController", true) ~= nil end)
+if da then res = true end
+end
+end
+end
+end
+if not res then
+local low = string.lower(tostring(o.Name))
+local i
+for i = 1, #F.NPC_KEYS do
+if string.find(low, F.NPC_KEYS[i], 1, true) then
+res = true
+break
+end
+end
+end
+end
+end
+end
+if cache ~= nil and (res == true or deep == true) then cache[o] = res end
+return res
+end
+F.NpcSweep = function(center, doOffer)
+if type(doOffer) ~= "function" then return 0 end
+local q, qi, n, found = { { workspace, 0 } }, 1, 0, 0
+while qi <= #q and n < 1500 do
+local item = q[qi]
+qi = qi + 1
+local node = item[1]
+local dep = tonumber(item[2]) or 0
+n = n + 1
+local descend = (dep < 3)
+if node ~= workspace and node ~= nil then
+local skip = false
+pcall(function() skip = (node == LP.Character) end)
+if not skip then
+pcall(function() if Players:GetPlayerFromCharacter(node) ~= nil then skip = true end end)
+end
+if skip then
+descend = false
+elseif F.IsNPC(node) then
+descend = false
+local pos = nil
+pcall(function() pos = node:GetPivot().Position end)
+if pos == nil then pcall(function() local pp = node.PrimaryPart if pp ~= nil then pos = pp.Position end end) end
+if pos ~= nil and (pos - center).Magnitude <= F.IxRange() then
+doOffer(node, F.NPC_COLOR, pos, "npc")
+found = found + 1
+end
+end
+end
+if descend then
+local kids = nil
+pcall(function() kids = node:GetChildren() end)
+if type(kids) == "table" then
+local i
+for i = 1, #kids do
+local k = kids[i]
+local ok2 = false
+pcall(function() ok2 = k:IsA("Model") or k:IsA("Folder") end)
+if ok2 then q[#q + 1] = { k, dep + 1 } end
+end
+end
+end
+end
+return found
 end
 F.NpcScan = function()
 local n = 0
@@ -8547,7 +8647,7 @@ if o == nil or o == LP.Character then return nil end
 local okT = false
 pcall(function() okT = o:IsA("Model") or o:IsA("BasePart") or o:IsA("Tool") end)
 if okT then
-local okn, isNpc = pcall(F.IsNPC, o)
+local okn, isNpc = pcall(F.IsNPC, o, true)
 if okn and isNpc then return "npc", F.HL_COLORS.npc end
 local oki, isIx = pcall(F.IxIsTarget, o)
 if oki and isIx then return "ix", F.HL_COLORS.ix end
@@ -8645,9 +8745,10 @@ local parts = nil
 pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
 if type(parts) ~= "table" then parts = {} end
 local best, order, skipped = {}, {}, 0
-local function offer(o, col, pos)
+F._npcCache = {}
+local function offer(o, col, pos, kind)
 if o == nil or o == LP.Character then return end
-if F.IxTooBig(o) then skipped = skipped + 1 return end
+if kind ~= "npc" and F.IxTooBig(o) then skipped = skipped + 1 return end
 local d = 0
 if pos then d = (pos - center).Magnitude end
 local cur = best[o]
@@ -8663,7 +8764,7 @@ for i = 1, #parts do
 local pt = parts[i]
 local k, c = F.HLKind(pt)
 if k then
-offer(pt, c, pt.Position)
+offer(pt, c, pt.Position, k)
 else
 local up = pt
 for hop = 1, F.IX_HOPS do
@@ -8675,11 +8776,13 @@ local skipUp = false
 pcall(function() skipUp = up:IsA("Folder") or up:IsA("Terrain") end)
 if not skipUp then
 local k2, c2 = F.HLKind(up)
-if k2 then offer(up, c2, pt.Position) break end
+if k2 then offer(up, c2, pt.Position, k2) break end
 end
 end
 end
 end
+local npcN = 0
+pcall(function() npcN = F.NpcSweep(center, offer) end)
 table.sort(order, function(a, b) return best[a].d < best[b].d end)
 local keep = {}
 for i = 1, #order do
@@ -8696,7 +8799,7 @@ F._ixObjs[o] = nil
 gone = gone + 1
 end
 end
-return #order, gone, skipped
+return #order, gone, skipped, npcN
 end
 F.IxClear = function()
 for _, rec in pairs(F._ixObjs) do
@@ -8721,8 +8824,8 @@ F.IxClear()
 F.Out("[高亮透视] 已关")
 return
 end
-local n = F.IxScan()
-F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个 · 上限 " .. tostring(F.IX_MAX) .. " 个")
+local n, _, _, npcN = F.IxScan()
+F.Out("[高亮透视] 已开 · 以你为中心 " .. tostring(F.IxRange()) .. " 格内标出 " .. tostring(n) .. " 个(其中 NPC/生物 " .. tostring(npcN or 0) .. " 个) · 上限 " .. tostring(F.IX_MAX) .. " 个")
 F.Out("[高亮透视] 刷新节奏: 每移动 " .. tostring(F.IX_MOVE) .. " 格 或 每 " .. tostring(F.IxGap())
 .. " 秒重扫一次(间隔可在下面调) · 中途新出现的物件由事件即时补标")
 F.Out("[高亮透视] 颜色: NPC棕 / 交互金 / 陷阱红 / 道具绿 / 掉落黄 / 载具青 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
@@ -8766,10 +8869,10 @@ local moved = 999
 if F._ixPos then moved = (pos - F._ixPos).Magnitude end
 if moved < F.IX_MOVE and (now - (F._ixAt or 0)) < F.IxGap() then return end
 F._ixAt, F._ixPos = now, pos
-local n, gone, sk = F.IxScan()
+local n, gone, sk, npcN = F.IxScan()
 if now - F._ixLog > 8 then
 F._ixLog = now
-F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个 · 本轮取消 " .. tostring(gone) .. " 个"
+F.Out("[高亮透视] " .. tostring(F.IxRange()) .. " 格内 " .. tostring(n) .. " 个(NPC/生物 " .. tostring(npcN or 0) .. ") · 本轮取消 " .. tostring(gone) .. " 个"
 .. (tonumber(sk) and tonumber(sk) > 0 and (" · 跳过超大对象 " .. tostring(sk) .. " 个(避免整块地图被染色)") or ""))
 end
 end)
