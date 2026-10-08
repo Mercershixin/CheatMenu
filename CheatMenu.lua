@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 02:18 sha cb3b95e4 bytes 601413'):format('2026-10-09 02:18','cb3b95e4',601413))
+print(('[CheatMenu] build 2026-10-09 02:25 sha 7a924cf4 bytes 600589'):format('2026-10-09 02:25','7a924cf4',600589))
 local F = {}
-F.VERSION = "v17.0.8"
+F.VERSION = "v17.0.9"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -12,11 +12,8 @@ SCAN_SCRIPT_CAP = 400000, SCAN_DESC_EVERY = 400,
 PROBE_STEP = 4, PROBE_SEC = 2,
 }
 F.REMOTE_URLS = {
-"https://ghfast.top/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://ghproxy.net/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 "https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
-"https://cdn.jsdelivr.net/gh/Mercershixin/CheatMenu@main/CheatMenu.lua",
+"https://gh-proxy.com/https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua",
 }
 F.SANITIZE = {
 {"cloneref", "cref"},
@@ -232,15 +229,8 @@ end)
 end)
 local Fluent = nil
 local FLUENT_SOURCES = {
-"https://ghfast.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 "https://gh-proxy.com/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://ghproxy.net/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://ghpxy.hwinzniej.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
-"https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua",
-"https://cdn.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
-"https://fastly.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
-"https://gcore.jsdelivr.net/gh/dawid-scripts/Fluent@main/main.lua",
+"https://ghfast.top/https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
 }
 local FLUENT_LOCAL = { "CheatMenu_Fluent.lua", "Fluent.lua", "fluent.lua" }
 local function fluentLooksLua(body)
