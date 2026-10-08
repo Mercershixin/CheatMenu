@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 02:49 sha dd419f23 bytes 585775'):format('2026-10-09 02:49','dd419f23',585775))
+print(('[CheatMenu] build 2026-10-09 03:02 sha 532b22d6 bytes 580072'):format('2026-10-09 03:02','532b22d6',580072))
 local F = {}
-F.VERSION = "v17.0.13"
+F.VERSION = "v17.0.14"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5422,37 +5422,6 @@ F.Out("[藏地下] 已开: 模型整体下沉 " .. tostring(hideDepth())
 end
 F.savedLight = nil
 F._godLoop, F._godAt = nil, 0
-F.GodKillDied = function(hum)
-if not hum then return 0 end
-local n = 0
-if F._godConns == nil then F._godConns = {} end
-if type(getconnections) == "function" then
-pcall(function()
-local conns = getconnections(hum.Died)
-if type(conns) == "table" then
-local i
-for i = 1, #conns do
-local c = conns[i]
-if c ~= nil and F._godConns[c] == nil then
-F._godConns[c] = true
-n = n + 1
-if type(c.Disable) == "function" then
-pcall(function() c:Disable() end)
-else
-pcall(function() c:Disconnect() end)
-F._godConnHard = (F._godConnHard or 0) + 1
-end
-end
-end
-end
-end)
-end
-if n > 0 and not F._godDiedLogged then
-F._godDiedLogged = true
-F.Out("[上帝模式] 已临时屏蔽 " .. tostring(n) .. " 条死亡事件(用「禁用」不用「断开」⇒ 关掉时能原样恢复)")
-end
-return n
-end
 F.GodRestoreDied = function()
 if type(F._godConns) ~= "table" then return 0 end
 local n = 0
@@ -5821,12 +5790,6 @@ local L = game:GetService("Lighting")
 if not F.savedFog then return end
 L.FogEnd = F.savedFog.FogEnd L.FogStart = F.savedFog.FogStart
 end
-local function breakVelocity()
-local _, _, root = GC()
-if root then
-pcall(function() root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end)
-end
-end
 F.TakeAllOwnership = function()
 local _, _, root = GC()
 local ch = LP.Character
@@ -5886,15 +5849,6 @@ pcall(function() hum.PlatformStand = wasStand end)
 end
 F._tpOwnInfo = own
 return (root.Position - cf.Position).Magnitude < 20
-end
-local function smoothTP(targetCF)
-if F.HardTP then
-F.HardTP(targetCF)
-else
-local _, _, root = GC()
-if root and targetCF then pcall(function() root:PivotTo(targetCF) end) end
-end
-breakVelocity()
 end
 local function TeleportToPlayer(target)
 local _, hum, root = GC()
@@ -13256,20 +13210,6 @@ F.CMX_HiddenCount = F.CMX_HiddenCount + 1
 end
 return o
 end
-F.CMX_IsOwnPart = function(t)
-if F.CMX_SpoofParts[t] then return true end
-if F.CMX_SpoofMiss[t] == F.CMX_SpoofGen then return false end
-local ok, ours = pcall(function()
-local ch = LP.Character
-return ch ~= nil and (t == ch or t:IsDescendantOf(ch))
-end)
-if ok and ours then
-F.CMX_SpoofParts[t] = true
-return true
-end
-F.CMX_SpoofMiss[t] = F.CMX_SpoofGen
-return false
-end
 F.CMX_LegitWalk = function()
 local w = tonumber(F._orig and F._orig.walk) or tonumber(F._preSpeed)
 if not w or w <= 0 or w > 40 then w = 16 end
@@ -13282,76 +13222,12 @@ local okC = pcall(checkcaller)
 if okC then F._ccProbe = checkcaller end
 end
 end
-F.CMX_IsCaller = function()
-if not F._ccProbe then return true end
-local ok, r = pcall(F._ccProbe)
-if not ok then return true end
-return r and true or false
-end
 F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofMiss = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofGen = 1
 F.CMX_SpoofKey = {
 Velocity = true, AssemblyLinearVelocity = true,
 }
-F.CMX_SmoothPos = function(t, real)
-local now = os.clock()
-local st = F.CMX_SpoofLast[t]
-if not st then
-F.CMX_SpoofLast[t] = { p = real, t = now }
-return real
-end
-local dt = now - st.t
-if dt < 0 then dt = 0 end
-if dt > 0.5 then dt = 0.5 end
-st.t = now
-local maxStep = F.CMX_LegitWalk() * dt + 0.6
-local d = real - st.p
-local m = d.Magnitude
-if m > maxStep then
-st.p = st.p + d.Unit * maxStep
-else
-st.p = real
-end
-return st.p
-end
-F.CMX_GcinfoMaskEnable = function()
-if F._gcMaskOn then return end
-if type(gcinfo) ~= "function" then return end
-local orig = gcinfo
-F._gcMaskOrig = orig
-F._gcMaskByAssign = nil
-local base = nil
-pcall(function() base = orig() end)
-local ok = false
-pcall(function()
-local box
-if type(newcclosure) == "function" then
-box = newcclosure(function()
-if not F._gcMaskOn then return orig() end
-if F.CMX_IsCaller() then return orig() end
-return base
-end)
-else
-box = function()
-if not F._gcMaskOn then return orig() end
-if F.CMX_IsCaller() then return orig() end
-return base
-end
-end
-if type(hookfunction) == "function" then
-hookfunction(gcinfo, box)
-else
-gcinfo = box
-F._gcMaskByAssign = true
-end
-ok = true
-end)
-F._gcMaskOn = ok and true or false
-if F._gcMaskOn then
-F.Out("[伪装·gcinfo] 已开: 反作弊用 gcinfo 量增量只会拿到恒定值(增量 0) ⇒ 查不出我们的钩子")
-end
-end
 F.CMX_GcinfoMaskDisable = function()
 pcall(function()
 if F._gcMaskOrig then
@@ -13367,76 +13243,6 @@ F._gcMaskByAssign = nil
 F._gcMaskOn = false
 F.Out("[伪装·gcinfo] 已关: gcinfo 已还原")
 end
-F.CMX_SpoofIndexEnable = function()
-if F.CMX_SpoofOn then return false end
-F.Try("CMX_GcinfoMaskEnable", F.CMX_GcinfoMaskEnable)
-F.CMX_SpoofUseCount = 0
-F.CMX_SpoofGen = F.CMX_SpoofGen or 1
-F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
-F.CMX_SpoofMiss  = setmetatable({}, { __mode = "k" })
-F.CMX_SpoofLast  = setmetatable({}, { __mode = "k" })
-local got = F.MetaInstall("game.__index", game, "CMXSpoof", function(box)
-return function(t, k)
-if not F.CMX_SpoofOn then return box.orig(t, k) end
-if not F.CMX_SpoofKey[k] then return box.orig(t, k) end
-if F.CMX_IsCaller() then return box.orig(t, k) end
-if typeof(t) ~= "Instance" then return box.orig(t, k) end
-if not F.CMX_IsOwnPart(t) then return box.orig(t, k) end
-if k == "Position" or k == "CFrame" or k == "AssemblyAngularVelocity" or k == "RotVelocity" then
-return box.orig(t, k)
-end
-if (k == "Position" or k == "CFrame") and not T.CMX_SpoofPos then return box.orig(t, k) end
-if k == "AssemblyLinearVelocity" or k == "Velocity" then
-local v = box.orig(t, k)
-if typeof(v) == "Vector3" then
-local sp = F.CMX_LegitWalk()
-local h = Vector3.new(v.X, 0, v.Z)
-if h.Magnitude > sp and h.Magnitude > 0.001 then
-h = h.Unit * sp
-end
-F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
-return Vector3.new(h.X, v.Y, h.Z)
-end
-elseif k == "AssemblyAngularVelocity" or k == "RotVelocity" then
-local v = box.orig(t, k)
-if typeof(v) == "Vector3" and v.Magnitude > 0.5 then
-F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
-return Vector3.zero
-end
-elseif k == "Position" then
-local v = box.orig(t, k)
-if typeof(v) == "Vector3" then
-F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
-return F.CMX_SmoothPos(t, v)
-end
-elseif k == "CFrame" then
-local cf = box.orig(t, k)
-if typeof(cf) == "CFrame" then
-F.CMX_SpoofUseCount = (F.CMX_SpoofUseCount or 0) + 1
-return CFrame.new(F.CMX_SmoothPos(t, cf.Position)) * (cf - cf.Position)
-end
-end
-return box.orig(t, k)
-end
-end)
-if not got then
-T.CMX_SpoofIndex = false
-F.Out("[绕过·属性伪装] 装不上 __index 钩子(执行器不支持) ⇒ 该层不可用")
-return false
-end
-F.CMX_SpoofOn = true
-pcall(function()
-F._spoofCharConn = LP.CharacterAdded:Connect(function()
-F.CMX_SpoofGen = (F.CMX_SpoofGen or 1) + 1
-F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
-F.CMX_SpoofMiss = setmetatable({}, { __mode = "k" })
-F.CMX_SpoofLast = setmetatable({}, { __mode = "k" })
-end)
-end)
-F.Out("[绕过·属性伪装] 已开: 别人读你角色的 速度/角速度/位置/CFrame 会拿到「按合法速度平滑后」的值"
-.. " · 我们自己(含加速/飞行/传送)读到的仍是真值(checkcaller 分流)")
-return true
-end
 F.CMX_SpoofIndexDisable = function()
 pcall(F.CMX_GcinfoMaskDisable)
 if not F.CMX_SpoofOn then return end
@@ -13446,7 +13252,7 @@ if F._spoofCharConn then pcall(function() F._spoofCharConn:Disconnect() end) F._
 F.CMX_SpoofParts = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofMiss  = setmetatable({}, { __mode = "k" })
 F.CMX_SpoofLast  = setmetatable({}, { __mode = "k" })
-F.Out("[绕过·属性伪装] 已关 · 本次共伪装 " .. tostring(F.CMX_SpoofUseCount or 0) .. " 次属性读取")
+F.Out("[绕过·属性伪装] 已关")
 end
 F.CMX_PLACEMAP_RAW = "107778070777162=Steal An Egg|124216119978534=[⌛] Ride A Pet|109983668079237=[🥚] Steal a Brainrot|121864768012064=[👾UPD] Fish It! 🐟|113290951185459=[⚙️UPD 6] Anime Dice|16732694052=Fisch 🐟 [RACING]|114326934417838=Break and Steal an Egg|77108422251420=[SKINS 🐮] Search For The Needl|15532962292=Sol's RNG [ Summer Event 🏖️]|6961824067=Fling Things and People|104320321984431=Paint to Get Rich 🎨|123720558354386=Build the Pyramid!|8737899170=⛏️ [MINE] Pet Simulator 99! 🌌|71704434889758=(BETA) Drive A Kukirin!|3351674303=Driving Empire [2X CASH]|1537690962=Bee Swarm Simulator|76841016201110=💭Dream Car Collection [LUCK EV|105011592530400=Build and Kill Zombies|111543903102439=+1 Stone Skipping|79480724066456=[🛥️Boats🛥️] Southern Mudding 🚜|122245938604556=[🔮UPDATE!] +1 Tongue Escape 😛|87740422849523=Steal A Car|78490532994307=Build An Ant Empire|537413528=Build A Boat For Treasure|80242821185181=+1 Wings For Eggs|89469502395769=[🍭] Kick a Lucky Block|126884695634066=[🐿️] Grow a Garden 🌶️|98610101874791=+1 Strength for Eggs|122278212262864=Race for Eggs|98800969324557=[⛏️] Storage Hunters: Open Wor|109928390521457=Anime Breaker [🛠️CRAFT]|120475074479690=[😇] Steal From The Rich!|107164765081465=[BOSS] Steal A Verity!|132767904294856=[⚽] Blue Lock Farm|137228775845999=Ghost Driver [ALPHA]|102072869879193=[GUILDS] Anime Astral Simulato|119048529960596=[🛵] Restaurant Tycoon 3|114697347887839=🐒 +1 Speed Monkey Escape|4639625707=War Tycoon|13822889=🌳 Lumber Tycoon 2|76943966208523=Clone to Steal Eggs|7305309231=Taxi Boss 🚖|103429966174263=+1 Paint Keyboard Adventure|82081400078378=Steal ASMR!|138686218420016=[🗻] Mine Antarctica|74629631798007=[🎣UPD!] Pets Universe! 🐾|131346454575416=[💥] Mini War|128784467030899=[UPD☢️] Merge a Nuke!|88047783411976=Open Sea For Animals!|70906625936847=Gym Star Simulator 🏋️|95409544559668=Military Army Tycoon|77843161404023=Run a Restaurant!|92648272637932=[W3] +1 Mog Evolution|99679692310083=Steal Animal Egg|121831322352666=Dig For Eggs|4924922222=Brookhaven 🏡RP|920587237=[24H🎃] Adopt Me!|15101393044=Dress To Impress ⭐|13967668166=LifeTogether 🏠 RP|8481844229=Berry Avenue 🏠 RP|5233782396=✨ Creatures of Sonaria 📜 Survi|74395953411817=Dreamville 🏡 RP [Multiple Kids|122485613019196=Dubai 🏡 RP [Multiple Kids! 👶]|185655149=[🍂] Welcome to Bloxburg|7711635737=Emergency Hamburg|136020512003847=San Diego Roleplay|5289509545=Gacha Online ✨ RP|12985361032=Metro Life 🏡 City RP|97577741629233=⭐Catalog Avatar Runway|735030788=Royale🎃High|2534724415=[🗺️] Emergency Response: Liber|16625391970=NewSmith 🏡 RP|6989310863=Wild Horse Islands|8704997000=[🧪] Maple Hospital 🍂|3663340706=Warrior Cats: Ultimate Edition|891852901=Greenville RP (⭐AUDI + SHELBY |1365404657=Feather Family 🎃 [Burrowing Ow|192800=🍕Work at a Pizza Place|135717153770519=Toilet World Roleplay 2|15768329004=IT GIRL 🏝️|6698800091=[MOBILE!📱]Prior Extinction - D|96796259580891=Kingdom World|18753889337=Main Street 🏡RP|106568491289620=[将] Shogun's Reign|18214855317=Savannah Life|12716055617=Emergency Emden|17192092512=Deermont 🏡RP|71599043035739=SCP MORPH|3457390032=Club Roblox RP 💗 [👶 NEEDS]|8369888266=Redcliff City 🏡RP|6737970321=Livetopia 🏡 RP|5712833750=Animal Simulator|6377740507=[Stickers] Miraculous™ RP: Lad|5593925613=Countryball World 🌎|135571353544108=Love Letter: Roleplay ( YANWEE|104841616983113=San Aurie|13473615074=Boxywood 🏠🌴 RP|11862502039=Seaside RP🏡🌴 City RP|112333343527957=Highschool Experience RP|15182389440=[ 🍂 🏍️ 🎣 BikeLife ] Northline |71174733280934=Palmhaven City Life RP🏡|16962279458=☀️ KOYA DANCE STUDIO|18537079992=Армия Роблокса РП|5041144419=SCP: Roleplay|75178747054941=LCS: EQuest|79886695267825=Steal The Show! 🎤⭐|3631820248=[🎉6th Anniversary!] Stevos Gem|81223687051453=PRISON RP|373513488=FNAF RP - TPRR [🐻FB3 EVENT📺]|118447215156914=Prism Runway Show💎|102917792916356=Apocalyptic Titans Roleplay|142823291=Murder Mystery 2|79546208627805=99 Nights in the Forest 🔦|18687417158=[✨BONUS] Forsaken|93978595733734=[CURE] Violence District|78515283254292=Animal Hospital (Anomaly) 🧪|9872472334=Evade|4623386862=Piggy [SEASON 9 - FRIGHT NIGHT|893973440=Flee the Facility|116802325837172=7 Days Cat-Sitting|70411440483149=100 Days At Sea|124061247871628=Animal Daycare (Anomaly)|2768379856=3008 [2.75]|113481077323469=Scream And Run|70923197964305=⚔️ Killer's Arena|115668616082195=WHO FARTED?|85967844112283=Last Stop [Beta]|117713779364528=Lethal Ape Experience|78453398695059=THRESHOLD [HORROR] [UPD 1.5]|92122513197996=⛏️Dig to Escape|189707=Natural Disaster Survival|82591391194183=MM2 of The Locust|97793725257596=MMZ👽|90148635862803=[UPD] 🧟 Survive the Apocalypse|139020444733179=Survive Deep in the Woods|82457571485380=Zombie Rush Survival 🧟‍♂️|96168869671905=💎 ROB IT|6205205961=Escape Running Head|121165298854655=[CREATURE] DON'T LET HIM IN|14608970270=(ANNIVERSARY) Outcome Memories|15318113891=Lethal Ape|140553375004913=this underrated game (flamingo|137826330724902=Scary Shawarma Kiosk: the ANOM|129626004396080=just a sniper game|127877871885165=he ate them. [HORROR]|114204398207377=[FACTIONS] Survive Zombie Aren|18666738837=Death Order: Simon Says|128263975853774=🛠️Build and Survive|12931609417=Color or Die 🎨|127380660530951=Survive Overnight in a Mega St|87468080405188=[UPDATE] Home Alone: Anomalies|18199615050=[UPD] Demonology🕯️|7336302630=Project Delta|135889880932940=Survive 7 Days In Desert 🌵|120951586797306=🙈 Killer or Innocent|100227226022278=Survive The Swarm[2x loot]|6382584061=Build to Survive 🛠️|98894876188248=Cheating During Testing [BETA]|116070952245255=[💪] Build Base to Survive VERI|123393202531499=Build and Hide to Survive VERI|4580204640=🔪Survive the Killer!|74716719697996=[⏰SOON]🚪Survive Verity in Area|109423220190564=[UPDATE] Backrooms Company|82531308645115=Plunder [UPD]|124338404742585=Keep the Door Locked🔒|5118969548=Spider|108645230905176=Mrbeast Island Escape|119004860768199=[UPD]BreakDoor|2753915549=Blox Fruits|16205713724=Slayers 2|1730877806=[🍬HALLOWEEN PT 1] Grand Piece |13379208636=Attack on Titan Revolution|2809202155=[CDR & DD] Your Bizarre Advent|77649408247578=[2X LUCK] Dungeon Quest Reborn|111097829542198=[🦋] Legacy Piece|128451689942376=[🎞️ PROJECTION] Jujutsu: Zero|4520749081=King Legacy|117533937949084=Iron Soul: Dungeon|104761395312874=[🐲Goku & Castorice🟣] Lineage P|114574503491412=Anime Zero [RELEASE] 🎉|4616652839=Shindo Life [250]|90860390610142=Clover Legends|106484206883664=⚔️ Dungeon Lootr|4111023553=Deepwoken|80734098185936=An Average Campaign [Alpha v0.|18172550962=[CLASSES] Pixel Blade|8075399143=[✨Ashura Update] Ninja Time|9096881148=Peroxide [Update!]|93934100402512=Clover Time [BETA RELEASE]|71315343=[PARASITE 🌀] Dragon Ball Rage|125503525638054=The Veil|5571328985=[🐢] Bloodlines|2727067538=World // Zero ⚔️ Anime RPG|120704669141193=[V13] Blox Loot|140409475718339=[YUTA!] Anime Apocalypse|10260193230=[UPDATE 4] Meme Sea|10450270085=[⚖️JUDGEMAN] Jujutsu Infinite|5130598377=A Universal Time|119091355492870=[UPDATE 1.75]Rock Fruit|6918802270=Haze Seas|11729688377=Booga Booga [QUESTS! 📜]|10912405603=[3 YEARS!] Clover Retribution|15014439457=Demon Blade|3177438863=[🎃EVENT] Dragon Blox|122003435349029=The Portal [MMORPG]|10595058975=[Withered Grove 🧿] Arcane Line|3016661674=Rogue Lineage|14067600077=TYPE://SOUL|6728870912=World of Stands|5116869569=🌴 Doodle World! [BEACH EVENT]|139150436440482=[⚔️COMBAT] Ninja: Legacy [RP]|914010731=Ro-Ghoul [ALPHA]|116276659864007=Project Mirror Labyrinth|6938803436=[⭐2X] Anime Dimensions Simulat|6298464951=Roblox Is Unbreakable|102829972707814=civilization survival game|132044122002338=[Update 11 🔥] Chaos Fruits|118582391303761=UNTITLED RPG GAME|114581778828030=Soul RPG|100283815455755=Vagrant Survival [0.9]|15167153398=✨Someday City 2.0 ✨|5870869755=HEROES: Infinite 2|18923620224=[🗼 UPDATE 5.0] Anime Warriors |1087852616=CATASTROPHIA ☢️ Survive ☢️|134931730875913=[BETA] Crazy Odyssey: A New Jo|4622037906=Sans Fight Simulator|17625359962=RIVALS|112731528776884=KNIFE DUELS|90568084448279=[FPS] One Tap|122446657157717=[🔥NEW SNIPER] Sniper Arena|13687899540=Cold War [VIETNAM]|120851538706364=Murder Duels|114234929420007=BloxStrike|84556640895285=Deagle Arena|12334109280=Guts & Blackpowder|113506071094099=[🌴] SHARP|10165583746=Examination|93091759101123=FPS🔥AirDrop Arena [S5]🔥|72920620366355=[SEASON 3] Operation One|79393329652220=[🧤] Defusal|130404059693601=Strike: Warfare|3678761576=[🗣️CALLOUT🗣️] ENTRENCHED 🥀|120189115846709=TTK Testing [CUSTOMIZATION]|129253568870286=Bonk & Block [5v5]|102871156420149=The Lost Front|109397169461300=SNIPER DUELS|21532277=Notoriety: A PAYDAY® Experienc|118367369949006=Ground War|13955927965=Blood Zone 🎃|90184287580174=(SEASON 2) KILLSTREAK|286090429=Arsenal|136801880565837=[FPS] Flick|18259975825=Grave/Digger|13429790955=📚 Murderers vs Sheriffs 2|123873483242204=Anime Finals|3891618314=⚓ Harbor Havoc|119214646022567=Top sniper [5.0]|5286116071=Hunting Season [BETA]|15694891095=[CLANS] Combat Arena|94590879393563=Weird Gun Game [UPDATE!]|301549746=Counter Blox|130490210702949=Blood Debt Gun System|99342262733194=[SUMMER] Randomizer: Redux|14313259147=FORTLINE|104856666707760=Killstreak Battle Royale|3214114884=[💰2x] Flag Wars!|99001115434148=Fluxo PVP [MATCHMAKING]|94987506187454=[🤝 TRADING] REDLINER|115286378269814=Protect The House From Monster|13438553315=Decaying Winter|4991214437=town|13794093709=SCORCHED EARTH 🔊|106605940421527=BetterEH|443406476=Project Lazarus: 💀 ZOMBIES 💀|14518422161=Gunfight Arena|2778230703=Reminiscence Zombies|112757576021097=Defuse Division|111267397030523=CQB Hell [NEW MODES]|328028363=Typical Colors 2|71607575632633=[🎃] Zone Defense RNG|131558436575033=[REALISTIC] SevenM Hood Testin|9391468976=[SKY ASSASSIN] Jujutsu Shenani|10449761463=The Strongest Battlegrounds|135856908115931=[🌌DUELS] Murderers VS Sheriffs|13772394625=Blade Ball|104715542330896=BlockSpin 🔪 [WEATHER]|6872265039=BedWars [🎣RERELEASE🪤]|101770480176177=[X2 XP] Command An Army|1458767429=ABA|120700541929930=Knife VS Gun DUELS|127403135954624=[ Halloween ] Kaiju Alpha|118418618261207=RUNAWAYS [beta]|108567435288296=Anime Ability Arena|72105128013629=Kidnap And Jail|6403373529=[UPDATE🏴‍☠️] Slap Battles👏|110175021189594=Ability Arena 💥|94217045453265=Dueling Grounds ⚔️|606849621=Jailbreak|13621938427=[DEIMOS👹] untitled boxing game|128119795963270=Murder Mystery DUELS"
 F.CMX_PlaceMap = nil
