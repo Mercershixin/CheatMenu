@@ -4802,3 +4802,14 @@ v17.0.2 把 `F.ClickerSeed` 改成**只认"鼠标最后一次在游戏画面上"
   `F.CMX_SpoofUseCount`（只用未定义）⇒ 改掉唯一引用点（`CMX_SpoofIndexDisable` 的日志）的文案。
 - 结果：`preflight` 全绿（零引用 0 / `F` 只用未定义 0 / 括号配平 6362=6362），控件 109。
 - ⛔ **"幽灵状态"（`T.*` 只写不读）本轮未动**：`T.GuiProtect/Mute/NoRecoil/AntiTPOn` 等可能被 `T[控件名]`（`CfgSyncUI`/`ApplySavedOn`）动态读，须逐个 grep 确认后才可删。
+
+## v17.0.15 · 重写连点器（快捷键开关 · 快捷键存坐标 · 三模式）（2026-10-09，用户新需求）
+
+- **开/停**：快捷键（默认 `F6`，可换）或界面开关；**存坐标**：`F7`（或点「保存当前鼠标位置」）把当前鼠标位置写进
+  `C.ClickerX/Y`（**不用手填**）；「清除保存的位置」把 X/Y 归零（**0 = 未保存**）；**间隔** `C.ClickerGap`(0.01~2，兜底 0.05)。
+- **三种模式**（下拉 `C.ClickerMode`，列表省位置）：① `快捷键/按钮开关`（默认）② `按住左键(松开即停)` ③ `点一下左键(再点停止)`。
+- **只点保存的坐标**：`F.ClickerClick` 优先 VIM 按坐标，拿不到才退 `mouse1click`（日志标注方式）；未保存位置时 `ClickerEnable` **拒绝启动**并提示。
+- ⚠ 模式 ②③ 监听鼠标左键，而**连点器自己发的 VIM 点击会触发 `InputBegan`** ⇒ 必须用 `CK.sendAt` 时间窗（0.15s）过滤自击，
+  否则"点一下"模式会被自己第一下立刻关掉。
+- 模块在 `F.WAYPOINT_MAX` 之前、UI 在 AFK 页「脑红」分节之前；随加载挂 `F.ClickerWatch`，卸载链含 `F.ClickerDisable, F.ClickerWatchStop`。
+- 测试 `_gen_clicker_sim.py`：真 luau **17 项全过**（含"把鼠标移走后，仍然只点保存的坐标"）。
