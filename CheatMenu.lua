@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-08 02:38 sha 1b93e237 bytes 547556'):format('2026-10-08 02:38','1b93e237',547556))
+print(('[CheatMenu] build 2026-10-08 19:25 sha 357b1b40 bytes 548354'):format('2026-10-08 19:25','357b1b40',548354))
 local F = {}
-F.VERSION = "v16.10.74"
+F.VERSION = "v16.10.75"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -4537,8 +4537,33 @@ local thr = math.max(6, want * 2)
 local rolled = (dev > thr) or (dev > want * 0.5 and dxz.Unit:Dot(u) < -0.3)
 if rolled then
 local dest = Vector3.new(intent.X, cur2.Y, intent.Z)
+local clearPath = true
+pcall(function()
+local dv = dest - cur2
+local dl = dv.Magnitude
+if dl > 1.5 then
+local rp = RaycastParams.new()
+local okE = pcall(function() rp.FilterType = Enum.RaycastFilterType.Exclude end)
+if not okE then pcall(function() rp.FilterType = Enum.RaycastFilterType.Blacklist end) end
+local flt = { r }
+if h.Parent then flt[#flt + 1] = h.Parent end
+rp.FilterDescendantsInstances = flt
+pcall(function() rp.RespectCanCollide = true end)
+if workspace:Raycast(cur2, dv, rp) then clearPath = false end
+end
+end)
+if clearPath then
 pcall(function() r.CFrame = CFrame.new(dest) * (r.CFrame - r.CFrame.Position) end)
 pcall(function() F.PinPulse(dest, 0.3) end)
+intent = dest
+else
+intent = cur2
+F._tpWall = (F._tpWall or 0) + 1
+if os.clock() - (F._tpWallAt or 0) > 5 then
+F._tpWallAt = os.clock()
+F.Out("[反拉回] 检测到被回滚, 但顶回的那一跳会穿过墙 ⇒ 本次已放弃(不再穿墙)")
+end
+end
 F._tpBack = (F._tpBack or 0) + 1
 local t0 = os.clock()
 if t0 - (F._tpBackAt or 0) > 3 then
