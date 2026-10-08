@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 02:45 sha d592997d bytes 590162'):format('2026-10-09 02:45','d592997d',590162))
+print(('[CheatMenu] build 2026-10-09 02:49 sha dd419f23 bytes 585775'):format('2026-10-09 02:49','dd419f23',585775))
 local F = {}
-F.VERSION = "v17.0.12"
+F.VERSION = "v17.0.13"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6199,122 +6199,6 @@ n = n + 1
 end
 return false
 end
-F.ClickerOverOwnGui = function()
-local pos = nil
-pcall(function() pos = game:GetService("UserInputService"):GetMouseLocation() end)
-if not pos then return false end
-local pg = LP:FindFirstChild("PlayerGui")
-if not pg then return false end
-local hits = nil
-pcall(function() hits = pg:GetGuiObjectsAtPosition(pos.X, pos.Y) end)
-if type(hits) ~= "table" then return false end
-for i = 1, #hits do
-if F.CM_OWNED(hits[i]) then return true end
-end
-return false
-end
-F.MouseClickOnce = function()
-if type(mouse1click) == "function" then
-if pcall(mouse1click) then return "mouse1click" end
-end
-do
-local ok = pcall(function()
-if type(mouse1press) == "function" then mouse1press() end
-if type(mouse1release) == "function" then mouse1release() end
-end)
-if ok and type(mouse1press) == "function" then return "mouse1press" end
-end
-do
-local ok = pcall(function()
-local vim = game:GetService("VirtualInputManager")
-local vp = Vector2.new(400, 400)
-pcall(function()
-local cam = workspace.CurrentCamera
-if cam and cam.ViewportSize then vp = cam.ViewportSize end
-end)
-local x, y = vp.X / 2, vp.Y / 2
-pcall(function()
-local mp = game:GetService("UserInputService"):GetMouseLocation()
-if mp then x, y = mp.X, mp.Y end
-end)
-vim:SendMouseButtonEvent(true, x, y, 0, true, game, 0)
-vim:SendMouseButtonEvent(false, x, y, 0, true, game, 0)
-end)
-if ok then return "VIM" end
-end
-return nil
-end
-F.ClickerGap = function()
-local v = tonumber(C.ClickerGap)
-if not v or v < 0.01 then v = 0.05 end
-if v > 5 then v = 5 end
-return v
-end
-F.CLICKER_KEYS = { "不用快捷键", "F6", "F7", "F8", "F9", "F10", "F11", "H", "J", "K", "L", "N", "M", "V", "B" }
-F.ClickerKeyCode = function()
-local nm = C.ClickerKey
-if type(nm) ~= "string" or nm == "" then nm = "F6" end
-local kc = nil
-pcall(function() kc = Enum.KeyCode[nm] end)
-return kc
-end
-local CKT = nil
-function F.ClickerEnable()
-if CKT and T.Clicker then return end
-T.Clicker = true
-local gap = F.ClickerGap()
-local kc = F.ClickerKeyCode()
-F.Out(string.format("[连点器] 已开: 一直左键连点 · 间隔 %.2f 秒(约 %.0f 次/秒)%s · 鼠标停在菜单上时自动跳过(不会点到自己)",
-gap, (gap > 0) and (1 / gap) or 0,
-kc and (" · 游戏内按 " .. tostring(C.ClickerKey) .. " 可随时开/关") or " · 可在上面选一个快捷键"))
-CKT = task.spawn(function()
-local n, t0, via, skipped = 0, os.clock(), nil, 0
-while T.Clicker do
-local over = false
-pcall(function() over = F.ClickerOverOwnGui() end)
-if over then
-skipped = skipped + 1
-else
-pcall(function() via = F.MouseClickOnce() end)
-n = n + 1
-end
-if os.clock() - t0 > 30 then
-t0 = os.clock()
-F.Out("[连点器] 已点 " .. tostring(n) .. " 次 · 方式=" .. tostring(via or "无(执行器不支持)")
-.. (skipped > 0 and (" · 鼠标在菜单上跳过 " .. tostring(skipped) .. " 次") or ""))
-end
-task.wait(F.ClickerGap())
-end
-CKT = nil
-end)
-end
-function F.ClickerDisable()
-T.Clicker = false
-CKT = nil
-F.Out("[连点器] 已停")
-end
-function F.ClickerToggle()
-local want = not (T.Clicker == true)
-local opt = nil
-pcall(function() opt = Fluent and Fluent.Options and Fluent.Options.Clicker end)
-if not F.OptSet(opt, want) then
-if want then F.ClickerEnable() else F.ClickerDisable() end
-end
-end
-function F.ClickerHotkeyInstall()
-if F._ckConn then return end
-if not (UIS and UIS.InputBegan) then return end
-F._ckConn = UIS.InputBegan:Connect(function(input, gp)
-if gp then return end
-if not input or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-local kc = F.ClickerKeyCode()
-if not kc or input.KeyCode ~= kc then return end
-pcall(F.ClickerToggle)
-end)
-end
-function F.ClickerHotkeyRemove()
-if F._ckConn then pcall(function() F._ckConn:Disconnect() end) F._ckConn = nil end
-end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
 if type(C.Waypoints) ~= "table" then C.Waypoints = {} end
@@ -10084,7 +9968,7 @@ end
 for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
-for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
+for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
@@ -12954,7 +12838,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -15876,14 +15760,6 @@ T.AutoGym = v
 if F._cfgSyncing then return end
 if v then F.AutoGymEnable() else F.AutoGymDisable() end
 end })
-Tabs.AFK:AddToggle("Clicker", { Title = "连点器(一直左键连点 · 快捷键可开关)", Default = false, Callback = function(v)
-T.Clicker = v
-if F._cfgSyncing then return end
-if v then F.ClickerEnable() else F.ClickerDisable() end
-end })
-Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒 · 越小越快)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
-Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 快捷键(游戏内开/关)", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
-task.spawn(function() pcall(F.ClickerHotkeyInstall) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
 if not F.Once("withdrawall", 2) then return end
