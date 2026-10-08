@@ -4335,3 +4335,46 @@ Highlight 39/47 · 传送/TP 34/47 · 飞行 38/47 · 速度 31/47 · 远程监�
 `DmgFxRestore(true)` 保留 4 还原 1 / 仅锁血·仅不死也生效 / `DmgFxThaw` 不碰 1e6 且无角色不崩 /
 循环建立与停止。
 **发版**：v16.10.91 · 编译 0 错误 · 等价性通过 · 本地复查仍为基线 27 条（无新增）· raw 回读逐字节一致。
+
+## v16.10.94 · 无敌类功能不许"自造血量上限/改游戏状态"（2026-10-08）
+
+### 事实现象
+用户报「部分游戏开上帝模式**还是会死亡 / 人物倒地了动不了**」。
+取证：本机日志 `CheatMenu_log_game_<id>.txt` 里上帝模式开启日志正常、无报错 ⇒ 是**行为**问题不是崩溃。
+
+### ★★★ 根因：我们**凭空改写了血量与死亡相关状态**，让游戏自己的流程与真实值不一致
+当时的实现有 **4 处**在写"我们自己造的值"：
+1. `GodModeSet` 直接 `hum.MaxHealth = 1e6`、`hum.Health = 1e6`；
+2. `GodTickLoop`（0.25s）里 `if MaxHealth < 1e6 then MaxHealth = 1e6 end`；
+3. `GodEnable` 的 `RS.Stepped` 循环 **每帧**再写一遍 1e6；
+4. `CMLockFields`（`__newindex` 锁层）把游戏对 `Health`/`MaxHealth` 的写入 **一律改写成 `1e9`**。
+⇒ 游戏"我设 Health=0，该走死亡/重生流程了"被我们改成 1e9；游戏那边**认为你已经死了**，你这边血量还满着
+⇒ 表现就是「还是会死」（游戏判定死了）与「倒地动不了」（游戏播了死亡/僵直，我们又不许它完整走完）。
+
+### 修法（现在的规矩）
+- **只维持 Health，绝不写 MaxHealth**：统一走 `F.GodTopUp(hum)`：
+  `if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end`（`Health<=0` 或 `MaxHealth` 非数/NaN 直接跳过）。
+- `CMLockFields` 的血量分支改成**只挡往低改**：游戏要写 `Health/MaxHealth = v` 且 `v < rawget(t,"MaxHealth")`
+  时才抬回 MaxHealth；**不再造 1e6/1e9**。
+- **不再碰**：`SetStateEnabled(Dead,false)` · `BreakJointsOnDeath` · `RequiresNeck` ·
+  禁用游戏自己的 `Died` 连接（`GodKillDied`）· 死亡后回血（`NoDeath`）·
+  以及上帝模式里的 `血量隔离`+`拦受伤上报`（"禁用别人事件连接"的来源，需要的人走「防护档位」）。
+- `F.AntiRagdollEnable` 从「禁用 Ragdoll/FallingDown/Physics/PlatformStanding 四种状态」改成
+  「清 `PlatformStand` + `ChangeState` 起身」—— 前者会让游戏设了 `PlatformStand` 之后你**动不了**。
+- 独立开关「锁血」= 同一套 `GodTopUp`，只是不屏蔽伤害、不改任何状态；`T.LockHealth = T.LockHealthSolo or T.GodMode`。
+  ★ 控件 id 必须是 `LockHealthSolo`：`ApplySavedOn` 按 `want = T[控件名]` 回填，
+  若控件叫 `LockHealth`（机制标志，上帝模式开着也是 true）会被误判成"锁血开着"。
+
+### 两个通用判据
+1. **任何"无敌/锁血"只允许写 `Health`，且目标值必须是游戏自己给的 `MaxHealth`**；写别的值（1e6/1e9/固定 100）
+   都会让"游戏判定"与"真实血量"分叉。判据：**我写的这个值，游戏自己会同意吗？**
+2. **别替游戏改"死亡流程相关"的状态**（Dead 状态 / BreakJoints / RequiresNeck / Died 连接）。
+   我们要的是"不死"，不是"死了但不许游戏知道"。
+
+### 同批其它修复
+- 高亮：`IxAdd` 复用前必须检查 `rec.h.Parent ~= nil`（否则该物件**永远不再亮**）；
+  `IxScan` 拿不到角色时也要先 `IxDropDead()` 再返回（否则死亡瞬间的高亮**永久残留**）；
+  祖先上溯**跳过 `Folder`/`Terrain`**（否则整个文件夹被当交互物染色）；`HL_USE_KEYS` 收窄到真交互词
+  （家具/道具词会把地图场景染色）；`IxHLSet(false)` 额外扫掉所有残留 `CMHLMark`。
+- 连点器：改成 `F.ClickerArea`（边长，默认 120px）+ 框内**随机取点**，绿框改成半透明填充方框。
+- **界面文案规矩（用户明确要求）**：功能名**不带括号说明**。只改 `Title`，不改控件 id（存档/回填不受影响）。
