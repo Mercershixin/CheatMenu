@@ -4840,3 +4840,45 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 ★ 两条通用规律（以后照用）：
 1. **一个概念只能有一个所有者**；真要两个入口，两处必须调**同一个 Apply 函数** —— 不许各写一半（本次就是"各写一半"造成假象）。
 2. **选项文案里列的每一项，都要能在代码里找到对应动作** —— "文案 ≠ 实现"是最难被用户信任的缺陷（他看到的是描述，不是你写的代码）。
+
+## 归属混乱专项审计（2026-10-09 v17.0.32 · 用户要求"看看全部功能还有哪些归属混乱的 修复"）
+
+新增 `.workbuddy/build/_audit_ownership.py`，4 类判据（**全部只看代码**）：
+- **O1 假开关**：`T.x` 有读无写 ⇒ 分支永远进不去
+- **O2 多入口**：同一 `T.x` 被 ≥2 个**互不相关**的归属写（把 `XxxEnable/Disable/Set/Apply/Loop` 归为同一家族，避免把"自己的一对"误报）
+- **O3 幽灵状态**：有写无读（**必须排除控件 id** —— 界面同步按 `T[控件名]` 动态读）
+- **O4 开关不配对**：`F.XxxEnable` 无对应 Disable（或反之）
+
+★ **工具自身的两个坑（写这类脚本必踩）**：
+1. `mask()` 必须处理**长括号字符串** `[[...]]`/`[==[...]==]` —— 漏了它，字符串里的 `"` 会把后续整行吃掉，赋值判定全错（曾导致 O1 误报 `T.RemoteBlock`/`T.Translate` 是"假开关"）。
+2. **"这行属于哪个控件"必须在未掩码的行上判断** —— 掩码会把 `AddToggle("GuardAll"` 的 id 抹掉，
+   于是所有控件回调都被归到最近的那个 `F.x = function` 名下（曾把移动页「防护」的写入误标成 `SpeedTierApply`）。
+
+### 修掉的 3 个真缺陷
+1. ★★★ **「自带绕过」越权**：`F.BypassTierApply`（由加速/飞行/旋转角色的 `F.BypassAutoRaise` 驱动）在开/关**绕过层**时调了 `F.GuardSet(...)`
+   与 `T.DeepNeuter` ⇒ 开加速会**代开"完整防护"的 2 项**（还有 2 项没开，又一处"各写一半"）；
+   **关加速会把用户自己开的 稳身/受击/陷阱/防拉回 全关掉**，并关掉**深度中和**（防护档位③ 的，而档位下拉仍显示 ③）。
+   修法：只碰绕过层（`SpeedGuard` + `Spoof`），删掉 `F.GuardSet` 调用与 `T.GuardOn/T.DeepNeuter/T.SpeedAntiTP` 的写；④档描述串去掉"深度中和"与重复的"防拉回"。
+2. ★★ **`F.GuardSet` 日志引用了从未定义的 `lock`** ⇒ 那行**永远显示"锁满血=关"**。删掉该字段。
+3. ★★ **上帝模式有两套补血循环**：旧 `GodConn`（Stepped/0.1s，`GodEnable` 建，重生后由 `if T.God then pcall(GodEnable) end` 唤起）
+   vs 新 `F._godLoop`（Heartbeat/0.25s，`F.GodTickLoop` 建）。两条**同时在跑**（补血频率翻倍）；
+   旧套守卫条件写错（用 `T.LockHealth` 而非 `T.GodMode`），且里面 `pcall(LockHealthDisable)` 因**局部前向声明在后面**
+   解析成 nil 全局 ⇒ **永远静默失效**。修法：删旧套，重生后的唤起改指 `F.GodTickLoop()`（新套是旧套超集，多了 TakeDamage 钩）。
+
+### 顺带清理
+- **`T.GuardOn` 是死条件**：全脚本只有"自带绕过"给它写 `false` ⇒ 从来不可能为真，而 namecall 陷阱拦截写的是 `(T.TrapWarn or T.GuardOn)`。
+  删掉该死条件与 `PANIC_KEEP` 里的 `GuardOn`（行为不变）。
+- **`F.GuardOnDisable` → `F.ProtectAllDisable`**（它实质是"关掉整组完整防护"）——`GuardOn/GuardAll/GuardSet` 三套命名正是混淆源头。
+- **3 个幽灵状态**：`T.CMX_CutLog / CMX_NeuterPlus / CMX_HashFreeze` 只被各自 Enable 的"能力不足"分支写、无人读 ⇒ 删。
+
+### ★ 方法论：`luau-analyze` 必须"过滤白名单"才有用
+裸跑会吐 **1204 条** `Unknown global`（全是 `task`/`Enum`/`Instance`/`getgenv`/`getconnections`/`Drawing` 等 Roblox/执行器 API）。
+**过滤白名单后只剩 2 个真·未定义变量**（就是上面那两个缺陷）。★ 以后"找未定义变量"就按这个流程：
+`luau-analyze → 提取 Unknown global 名字 → 减去 Roblox/执行器 API 白名单 → 剩下的逐个看`。
+（`gate.py` 第 8 项本来就想做这件事，但它 300 秒必超时 ⇒ 只能手工按这个流程跑一次，约 9 分钟。）
+
+### 逐条核实为"设计如此"、以后别重复查的（详见根目录 `归属混乱审计报告.md` 第三节）
+`AllyMark`（多选下拉的委托）/ `AntiAFK`（AFKApply 是唯一入口）/ `AntiFling·CharPersist·GuiProtect`（档位① 内容）/
+`AutoTrain·Bonus·Gym`（GymApply+Restore）/ `EspName·Dist·Hp`（默认值+控件）/ `LockHealth`（两处同一公式）/
+`BypassDetect`（SpeedGuard 开=防拉回续跑）/ 3 个玩家下拉（已挂 SetValues 实时刷新）/ 3 个"无 Enable 的 Disable"（清理函数）/
+`_sweep_all` 第 1、3 项（多值赋值误报、下拉模糊匹配）。
