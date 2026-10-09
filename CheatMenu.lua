@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 08:47 sha f87bfacd bytes 607421'):format('2026-10-09 08:47','f87bfacd',607421))
+print(('[CheatMenu] build 2026-10-09 08:58 sha b682b8fa bytes 610290'):format('2026-10-09 08:58','b682b8fa',610290))
 local F = {}
-F.VERSION = "v17.0.23"
+F.VERSION = "v17.0.24"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -699,6 +699,15 @@ end
 end
 end
 end
+if method == "GetState" and not checkcaller() and T.Spoof and (T.FlyOn or T.SpeedOn) then
+local okS, stS = pcall(box.orig, self, ...)
+if okS then
+if stS == Enum.HumanoidStateType.Physics or stS == Enum.HumanoidStateType.PlatformStanding then
+return Enum.HumanoidStateType.Running
+end
+return stS
+end
+end
 return box.orig(self, ...)
 end
 end)
@@ -1069,6 +1078,30 @@ if hum and t == hum then
 if k == "WalkSpeed" then return F.CMX_LegitWalk() end
 if k == "JumpPower" then return 50 end
 if k == "JumpHeight" then return 7.5 end
+end
+return box.orig(t, k)
+end
+if k == "PlatformStand" then
+if not T.Spoof then return box.orig(t, k) end
+local _, hum2 = GC()
+if hum2 and t == hum2 then return false end
+return box.orig(t, k)
+end
+if k == "AssemblyLinearVelocity" then
+if not T.Spoof then return box.orig(t, k) end
+if T.FlyOn or T.SpeedOn then
+local _, _, root2 = GC()
+if root2 and t == root2 then
+local ok2, v2 = pcall(box.orig, t, k)
+if ok2 and typeof(v2) == "Vector3" then
+local flat = Vector3.new(v2.X, 0, v2.Z)
+local mg = flat.Magnitude
+if mg > 24 then
+local cap = flat.Unit * 16
+return Vector3.new(cap.X, math.min(v2.Y, 50), cap.Z)
+end
+end
+end
 end
 return box.orig(t, k)
 end
@@ -6743,7 +6776,59 @@ F._infLoopStop = true
 F._infLastTool, F._infLastNum = nil, nil
 F.Out("[无限道具] 已关")
 end
+F.InfItemDeepScan = function()
+local bag = nil
+pcall(function() bag = LP:FindFirstChildOfClass("Backpack") end)
+local ch = GC()
+local tools = {}
+if bag ~= nil then
+pcall(function()
+for _, d in ipairs(bag:GetChildren()) do
+if d:IsA("Tool") then tools[#tools + 1] = d end
+end
+end)
+end
+if ch ~= nil then
+local eq = nil
+pcall(function() eq = ch:FindFirstChildOfClass("Tool") end)
+if eq ~= nil then tools[#tools + 1] = eq end
+end
+F.Out("[无限道具] ===== 深度扫描: 背包+手持共 " .. tostring(#tools) .. " 个工具 =====")
+if #tools == 0 then
+F.Out("[无限道具] 没有工具 ⇒ 先拿一个要刷的道具再开这个开关")
+end
+for i = 1, #tools do
+local tl = tools[i]
+local nm = "?"
+pcall(function() nm = tostring(tl.Name) end)
+local cls = "?"
+pcall(function() cls = tostring(tl.ClassName) end)
+F.Out("[无限道具] 工具" .. tostring(i) .. "「" .. nm .. "」(" .. cls .. ")")
+local attrs = {}
+pcall(function()
+for k, v in pairs(tl:GetAttributes()) do
+attrs[#attrs + 1] = tostring(k) .. "=" .. tostring(v)
+end
+end)
+F.Out("[无限道具]   自定义属性: " .. (#attrs > 0 and table.concat(attrs, " · ") or "(无)"))
+local nums = {}
+local pn
+for _, pn in ipairs({ "Uses", "Charges", "Ammo", "Durability", "Count", "Amount", "Quantity", "Value", "Remaining" }) do
+local v = nil
+pcall(function() v = tl[pn] end)
+if type(v) == "number" then nums[#nums + 1] = pn .. "=" .. tostring(v) end
+end
+F.Out("[无限道具]   数值属性: " .. (#nums > 0 and table.concat(nums, " · ") or "(未找到常见次数属性)"))
+if F.StealOps and type(F.StealOps.DumpToolRemotes) == "function" then
+pcall(function() F.StealOps.DumpToolRemotes(nm) end)
+end
+end
+F.Out("[无限道具] ===== 扫描结束 · 把以上几行发我即可精确适配 =====")
+pcall(function() Fluent:Notify({ Title = "无限道具", Content = "已扫描 " .. tostring(#tools) .. " 个工具 · 详情看日志", Duration = 8 }) end)
+return #tools
+end
 F.InfItemEnable = function()
+pcall(F.InfItemDeepScan)
 if #(F._infDropList or {}) == 0 then pcall(F.InfItemScan) end
 if F._infDrop == nil then
 F.Out("[无限道具] ⚠ 本服没扫到可用的「丢弃」远程 ⇒ 拒绝开启(不会乱发远程)。请点「扫描道具 / 交互」把日志发给我, 我按你的游戏接上")
