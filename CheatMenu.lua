@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 01:53 sha 50740fd5 bytes 650729'):format('2026-10-10 01:53','50740fd5',650729))
+print(('[CheatMenu] build 2026-10-10 02:05 sha a39024c9 bytes 648520'):format('2026-10-10 02:05','a39024c9',648520))
 local F = {}
-F.VERSION = "v17.0.52"
+F.VERSION = "v17.0.53"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11229,7 +11229,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.NoFaceSet, F.NoLimbsSet, F.HitboxShowSet }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16932,17 +16932,6 @@ end })
 Tabs.Visual:AddSlider("IYFcSpeed", { Title = "自由视角 · 速度", Min = 20, Max = 300, Default = 80, Rounding = 0, Callback = function(v)
 C.IYFcSpeed = v
 end })
-Tabs.Visual:AddSection("外观")
-Tabs.Visual:AddToggle("NoFace", { Title = "无脸", Default = false, Callback = function(v)
-T.NoFace = v
-if F._cfgSyncing then return end
-F.NoFaceSet(v)
-end })
-Tabs.Visual:AddToggle("NoLimbs", { Title = "隐藏身体", Default = false, Callback = function(v)
-T.NoLimbs = v
-if F._cfgSyncing then return end
-F.NoLimbsSet(v)
-end })
 Tabs.World:AddSection("画面 / 声音")
 Tabs.World:AddToggle("VisionBoost", { Title = "夜视", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
@@ -17632,7 +17621,8 @@ local tool = hum:FindFirstChildOfClass("Tool")
 local bp = LP:FindFirstChildOfClass("Backpack")
 if tool == nil and bp ~= nil then tool = bp:FindFirstChildOfClass("Tool") end
 if tool == nil then F.Out("[复制工具] 手上和背包里都没有工具 ⇒ 先拿一个工具") return end
-if bp == nil then F.Out("[复制工具] 找不到背包 ⇒ 无法放入") return end
+if bp == nil then pcall(function() bp = LP.Character end) end
+if bp == nil then F.Out("[复制工具] 既没有背包也没有角色 ⇒ 无法放入") return end
 local cnt = math.clamp(math.floor(tonumber(n) or 1), 1, 10)
 local ok = 0
 for i = 1, cnt do
@@ -17762,63 +17752,6 @@ for _, e in ipairs(F._swOrig) do pcall(function() e.o.AnimationId = e.id end) en
 F._swOrig = nil
 end
 F.Out("[坐着走] 已关 · 动画已还原")
-end
-end
-F._nfFace = nil
-F.NoFaceSet = function(on)
-local ch = nil
-pcall(function() ch = LP.Character end)
-if on then
-local head = nil
-pcall(function() head = ch and ch:FindFirstChild("Head") end)
-if head == nil then F.Out("[无脸] 找不到头部 ⇒ 无法使用") return end
-local face = nil
-pcall(function() face = head:FindFirstChildWhichIsA("Decal") end)
-if face == nil then F.Out("[无脸] 这个头没有贴脸 ⇒ 无需处理") return end
-F._nfFace = face
-pcall(function() face.Transparency = 1 end)
-F.Out("[无脸] 已开（仅你本地可见）")
-else
-if F._nfFace ~= nil then pcall(function() F._nfFace.Transparency = 0 end) F._nfFace = nil end
-F.Out("[无脸] 已关")
-end
-end
-F._nlOrig, F._nlLoop = nil, nil
-F.NoLimbsSet = function(on)
-local ch = nil
-pcall(function() ch = LP.Character end)
-if on then
-if ch == nil then F.Out("[隐藏身体] 没有角色 ⇒ 稍后再试") return end
-if F._nlOrig == nil then
-F._nlOrig = {}
-pcall(function()
-for _, p in ipairs(ch:GetChildren()) do
-if p:IsA("BasePart") then
-local nm = tostring(p.Name)
-if string.find(nm, "Arm") ~= nil or string.find(nm, "Leg") ~= nil or string.find(nm, "Torso") ~= nil then
-F._nlOrig[#F._nlOrig + 1] = { o = p, m = p.LocalTransparencyModifier }
-end
-end
-end
-end)
-end
-local e
-for _, e in ipairs(F._nlOrig) do pcall(function() e.o.LocalTransparencyModifier = 1 end) end
-if F._nlLoop == nil then
-F._nlLoop = F.SlowLoop(0.3, function()
-local e2
-for _, e2 in ipairs(F._nlOrig or {}) do pcall(function() e2.o.LocalTransparencyModifier = 1 end) end
-end)
-end
-F.Out("[隐藏身体] 已开 · 手臂/腿/躯干已隐去（仅你本地可见）")
-else
-if F._nlLoop ~= nil then pcall(function() F._nlLoop:Disconnect() end) F._nlLoop = nil end
-if F._nlOrig ~= nil then
-local e
-for _, e in ipairs(F._nlOrig) do pcall(function() e.o.LocalTransparencyModifier = e.m or 0 end) end
-F._nlOrig = nil
-end
-F.Out("[隐藏身体] 已关")
 end
 end
 Tabs.IY:AddSection("近战 / 鼠标")
