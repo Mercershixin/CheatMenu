@@ -4882,3 +4882,43 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 `AutoTrain·Bonus·Gym`（GymApply+Restore）/ `EspName·Dist·Hp`（默认值+控件）/ `LockHealth`（两处同一公式）/
 `BypassDetect`（SpeedGuard 开=防拉回续跑）/ 3 个玩家下拉（已挂 SetValues 实时刷新）/ 3 个"无 Enable 的 Disable"（清理函数）/
 `_sweep_all` 第 1、3 项（多值赋值误报、下拉模糊匹配）。
+
+## ★★★ Fluent 控件的"构造期"行为（必须记住，决定了哪些默认值会"真的跑一次"）
+
+读 `.workbuddy/research/fluent/fluent_rel.lua` 源码确认（别猜）：
+- **`AddToggle`**：`Value = Default or false` —— **构造时不调 Callback**（只在鼠标点击时 `SetValue`）。
+- **`AddDropdown`**：`Default` 直接写进 `l.Value`（Multi 时写字典）—— **构造时不调 Callback**。
+- **`AddSlider`**：构造尾部有 `h:SetValue(f.Default)` ⇒ **构造时必然用 Default 调一次 Callback**。
+- **`AddInput`**：先 `Input.Text = Default`、**之后**才接 `Text` 变化信号 ⇒ 构造时不调 Callback。
+- `Toggle/Dropdown/Input/Slider` 的 `SetValue` 一律 `SafeCallback(Callback, Value)` ⇒ **`F.OptSet` 必然触发回调**。
+
+★ 推论：**任何滑块的回调里若要 Enable 功能，必须自己带门控**（`if T.<主开关> then`），
+否则一进游戏就自动开（`SpeedValue → F.SpeedApply`、`CrosshairSize → F.CrosshairEnable` 两处正是靠门控才安全）。
+★ 反向推论：`F.CfgSyncUI` / `F.ApplySavedOn` 会 `OptSet` ⇒ **回调会跑**，所以"回填 UI 的代码必须假定 Callback 有副作用"
+（通用规矩 `F._cfgSyncing`）。
+
+## ★★★ 从 Enable 里回写界面选项 ⇒ 必须"静默"，否则无限递归
+
+`F.ClickerWatch` 的「按住左键」模式直接调 `F.ClickerEnable()`，而它要回写 `Options.Clicker`：
+`OptSet ⇒ Clicker 回调 ⇒ 又调 F.ClickerEnable ⇒ 又 OptSet …` ⇒ **递归**。
+修法 = 老套路：`F.ClickerSyncUI(on)` 里 `_cfgSyncing` 压住回调，**用完恢复原值**（不是写死 false，
+否则会吃掉外层正在进行的同步）。这条对所有"Enable/Disable 需要让界面跟随"的功能通用。
+
+## ★★ 静态扫描自己的坑（写这类审计脚本必踩）
+
+1. **"只写不读"判据不能把 `==` 当写入**：`T.X == nil` 里的 `==` 若被判成赋值，
+   该键的"读"就被吃掉 ⇒ 幽灵状态漏网（`T.Aim360` 就是这么漏了一轮）。
+2. 找"控件归属/是否在函数体内"时，**函数起始要匹配 `function F.A.B(...)`、`F.A.B = function`**
+   （只匹配 `F.<单级名>` 会把 `F.GuardPlus.Set`、`F.StealOps.DesyncTick` 里的顶层连接误报成"开机常驻"）。
+3. 取控件块要用**从 `Add*(` 的括号开始配平**；用 `m.end()-1` 会落到 id 引号上，把参数表截断
+   （曾导致所有下拉的 `Default` 读成"(无)"、滑块 `Default` 读成 None）。
+4. 判断"回调是否有副作用"要看**名字后缀**（`Enable/Apply/Install/Watch/Tick/Loop`），
+   不能只看有没有 `F.Try/pcall`；且要区分"带 `if T.主开关 then` 门控"和"裸调"。
+
+## ★ 巡检清单：一个"子项"该问的 4 个问题（本轮的检查方法）
+
+对每个"子项控件"（滑块/下拉/多选/开关）问：
+1. 它**默认开**吗？→ 看 `Default`；若开着，**它开机真的会执行吗**？（滑块会、开关/下拉不会）
+2. 它**属于哪个主开关**？→ 回调里有没有 `if T.<主开关> then`？
+3. 主开关关着时用户动它，**会发生什么**？→ 静默无反应（要提示）／自动开主功能（要联动）／照跑（要修）
+4. 它**自己会改状态**吗？→ 若会（Enable 里回写 UI、改别的功能的标志），必须走静默回写、且不得越权碰别的功能。
