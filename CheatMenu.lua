@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 02:05 sha a39024c9 bytes 648520'):format('2026-10-10 02:05','a39024c9',648520))
+print(('[CheatMenu] build 2026-10-10 03:40 sha c31f5b86 bytes 666651'):format('2026-10-10 03:40','c31f5b86',666651))
 local F = {}
-F.VERSION = "v17.0.53"
+F.VERSION = "v17.0.54"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -3218,7 +3218,12 @@ end)
 F.CombatHudSet("锁定: " .. tostring(pl and pl.Name or ch.Name) .. string.format(" · %.0f 格", dist)
 .. " · 锁" .. tostring(part.Name) .. " · HP " .. thp
 .. (T.AutoFire and " · 自动开火中" or ""))
-local dir = part.Position - root.Position
+local aimAt = part.Position
+if T.AimPredict == true then
+local pp = F.AimPredictPos(part, dist)
+if pp ~= nil then aimAt = pp end
+end
+local dir = aimAt - root.Position
 if T.AimTurnBody == true then
 local flat = Vector3.new(dir.X, 0, dir.Z)
 if flat.Magnitude > 0.05 then
@@ -3232,7 +3237,7 @@ local cam = workspace.CurrentCamera
 if cam and (part.Position - cam.CFrame.Position).Magnitude > 2.5 then
 local sm = tonumber(C.AimSmooth) or 0
 if sm > 0 then
-local goal = CFrame.lookAt(cam.CFrame.Position, part.Position)
+local goal = CFrame.lookAt(cam.CFrame.Position, aimAt)
 pcall(function()
 local base = math.clamp(1 / math.max(sm, 1), 0.05, 1)
 local st = math.clamp((F._aimDt or 0.0166667) * 60, 0.02, 8)
@@ -3240,7 +3245,7 @@ local a = 1 - (1 - base) ^ st
 cam.CFrame = cam.CFrame:Lerp(goal, a)
 end)
 else
-pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, part.Position) end)
+pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, aimAt) end)
 end
 end
 end
@@ -11229,7 +11234,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, F.VxFlush, F.MagnetSet, F.WatermarkSet, F.HitMarkSet, F.SignalsFlush, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16288,6 +16293,516 @@ end)
 end)
 end
 end
+F.VxAvail = function()
+return type(Drawing) == "table" and type(Drawing.new) == "function"
+end
+F.VxNew = function(kind, thick)
+local ok, o = pcall(function() return Drawing.new(kind) end)
+if not ok or o == nil then return nil end
+pcall(function() o.Visible = false end)
+pcall(function()
+if thick ~= nil and o.Thickness ~= nil then o.Thickness = thick end
+if o.Transparency ~= nil then o.Transparency = 1 end
+end)
+return o
+end
+F.VxKill = function(o)
+if o == nil then return end
+pcall(function() o.Visible = false end)
+pcall(function() o:Remove() end)
+end
+F.VxPart = function(ch, nm)
+if ch == nil then return nil end
+local ok, o = pcall(function() return ch:FindFirstChild(nm) end)
+if not ok or o == nil then return nil end
+local okp, isp = pcall(function() return o:IsA("BasePart") end)
+if okp and isp then return o end
+return nil
+end
+F.SkelPairs = {
+{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" },
+{ "UpperTorso", "LeftUpperArm" }, { "LeftUpperArm", "LeftLowerArm" }, { "LeftLowerArm", "LeftHand" },
+{ "UpperTorso", "RightUpperArm" }, { "RightUpperArm", "RightLowerArm" }, { "RightLowerArm", "RightHand" },
+{ "LowerTorso", "LeftUpperLeg" }, { "LeftUpperLeg", "LeftLowerLeg" }, { "LeftLowerLeg", "LeftFoot" },
+{ "LowerTorso", "RightUpperLeg" }, { "RightUpperLeg", "RightLowerLeg" }, { "RightLowerLeg", "RightFoot" },
+{ "Head", "Torso" }, { "Torso", "Left Arm" }, { "Torso", "Right Arm" }, { "Torso", "Left Leg" }, { "Torso", "Right Leg" },
+}
+F._vxConn, F._vxAt = nil, 0
+F._vxTracer, F._vxSkel = {}, {}
+F.VxTick = function()
+local cam = workspace.CurrentCamera
+if cam == nil then return end
+local vp = cam.ViewportSize
+local list = Players:GetPlayers()
+local onT = (T.TracerLine == true)
+local onS = (T.SkelEsp == true)
+for i = 1, #list do
+local pl = list[i]
+if pl ~= LP then
+local ch = pl.Character
+local hum = nil
+if ch ~= nil then pcall(function() hum = ch:FindFirstChildOfClass("Humanoid") end) end
+local alive = (ch ~= nil and ch.Parent ~= nil and hum ~= nil and hum.Health > 0)
+local col = nil
+if alive then pcall(function() col = F.CMX_HLTeamColor(pl) end) end
+if onT then
+local ln = F._vxTracer[pl]
+if ln == nil then
+ln = F.VxNew("Line", 1)
+F._vxTracer[pl] = ln
+end
+local root = nil
+if ch ~= nil then
+root = F.VxPart(ch, "HumanoidRootPart")
+if root == nil then root = F.VxPart(ch, "Torso") end
+end
+if ln ~= nil then
+if alive and root ~= nil then
+local p, vis = cam:WorldToViewportPoint(root.Position)
+if vis then
+ln.From = Vector2.new(vp.X * 0.5, vp.Y)
+ln.To = Vector2.new(p.X, p.Y)
+ln.Color = col or Color3.fromRGB(255, 255, 255)
+ln.Visible = true
+else
+ln.Visible = false
+end
+else
+ln.Visible = false
+end
+end
+end
+if onS then
+local recs = F._vxSkel[pl]
+if recs == nil then
+recs = {}
+for k = 1, #F.SkelPairs do recs[k] = F.VxNew("Line", 1) end
+F._vxSkel[pl] = recs
+end
+if alive then
+for k = 1, #F.SkelPairs do
+local ln2 = recs[k]
+if ln2 ~= nil then
+local a = F.VxPart(ch, F.SkelPairs[k][1])
+local b = F.VxPart(ch, F.SkelPairs[k][2])
+if a ~= nil and b ~= nil then
+local pa, va = cam:WorldToViewportPoint(a.Position)
+local pb, vb = cam:WorldToViewportPoint(b.Position)
+if va and vb then
+ln2.From = Vector2.new(pa.X, pa.Y)
+ln2.To = Vector2.new(pb.X, pb.Y)
+ln2.Color = col or Color3.fromRGB(255, 255, 255)
+ln2.Visible = true
+else
+ln2.Visible = false
+end
+else
+ln2.Visible = false
+end
+end
+end
+else
+for k = 1, #recs do
+if recs[k] ~= nil then recs[k].Visible = false end
+end
+end
+end
+end
+end
+for pl, ln in pairs(F._vxTracer) do
+local still = false
+for i = 1, #list do
+if list[i] == pl then still = true break end
+end
+if not still then F.VxKill(ln) F._vxTracer[pl] = nil end
+end
+for pl, recs in pairs(F._vxSkel) do
+local still = false
+for i = 1, #list do
+if list[i] == pl then still = true break end
+end
+if not still then
+for k = 1, #recs do F.VxKill(recs[k]) end
+F._vxSkel[pl] = nil
+end
+end
+end
+F.VxFlush = function()
+if F._vxConn ~= nil then pcall(function() F._vxConn:Disconnect() end) F._vxConn = nil end
+for _, ln in pairs(F._vxTracer) do F.VxKill(ln) end
+for _, recs in pairs(F._vxSkel) do
+for k = 1, #recs do F.VxKill(recs[k]) end
+end
+F._vxTracer, F._vxSkel = {}, {}
+pcall(function() if type(cleardrawcache) == "function" then cleardrawcache() end end)
+end
+F.VxSet = function()
+local want = (T.TracerLine == true) or (T.SkelEsp == true)
+if want and not F.VxAvail() then
+T.TracerLine, T.SkelEsp = false, false
+F.Out("[视觉增强] 当前执行器没有 Drawing API ⇒ 追踪线 / 骨骼透视 未开启")
+local o1 = Fluent and Fluent.Options and Fluent.Options.TracerLine
+if o1 ~= nil then pcall(F.OptSet, o1, false) end
+local o2 = Fluent and Fluent.Options and Fluent.Options.SkelEsp
+if o2 ~= nil then pcall(F.OptSet, o2, false) end
+return
+end
+if want then
+if F._vxConn ~= nil then return end
+F._vxConn = RS.RenderStepped:Connect(function()
+if not ((T.TracerLine == true) or (T.SkelEsp == true)) then pcall(F.VxSet) return end
+local now = os.clock()
+if now - F._vxAt < 0.033 then return end
+F._vxAt = now
+pcall(F.VxTick)
+end)
+F.Out("[视觉增强] 追踪线/骨骼透视 已开(Drawing 直绘 · 不创建任何实例)")
+return
+end
+F.VxFlush()
+F.Out("[视觉增强] 追踪线/骨骼透视 已关(绘制对象已释放)")
+end
+F.AimPredictPos = function(part, dist)
+if part == nil then return nil end
+local v = nil
+pcall(function() v = part.AssemblyLinearVelocity end)
+if v == nil then pcall(function() v = part.Velocity end) end
+if v == nil then return part.Position end
+local sp = tonumber(C.BulletSpeed) or 800
+if sp < 40 then sp = 40 end
+local gain = tonumber(C.PredictGain) or 1
+local lead = dist / sp
+return part.Position + Vector3.new(v.X, v.Y, v.Z) * (lead * gain)
+end
+F._hmGui, F._hmSegs, F._hmNum, F._hmAt = nil, nil, nil, 0
+F.HmGui = function()
+if F._hmGui ~= nil and F._hmGui.Parent ~= nil then return F._hmGui end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if host == nil then pcall(function() host = CoreGui end) end
+if host == nil then pcall(function() host = game:GetService("CoreGui") end) end
+if host == nil then return nil end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMHitmark"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 998
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.Parent = host
+F._hmGui = sg
+return sg
+end
+F.HmBuild = function()
+if F._hmSegs ~= nil and F._hmNum ~= nil and F._hmNum.Parent ~= nil then return true end
+local sg = F.HmGui()
+if sg == nil then return false end
+local c = Instance.new("Frame")
+c.Name = "hmc"
+c.AnchorPoint = Vector2.new(0.5, 0.5)
+c.Position = UDim2.fromScale(0.5, 0.5)
+c.Size = UDim2.fromOffset(56, 56)
+c.BackgroundTransparency = 1
+c.Parent = sg
+local segs = {}
+for i = 1, 4 do
+local f = Instance.new("Frame")
+f.Name = "s" .. tostring(i)
+f.AnchorPoint = Vector2.new(0.5, 0.5)
+f.Size = UDim2.fromOffset(13, 2)
+f.BorderSizePixel = 0
+f.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+f.Rotation = (i - 1) * 90 + 45
+local rd = math.rad((i - 1) * 90 + 45)
+f.Position = UDim2.fromOffset(28 + math.cos(rd) * 15, 28 + math.sin(rd) * 15)
+f.Visible = false
+f.Parent = c
+segs[i] = f
+end
+local num = Instance.new("TextLabel")
+num.Name = "dmg"
+num.AnchorPoint = Vector2.new(0.5, 1)
+num.Position = UDim2.new(0.5, 0, 0.5, -30)
+num.Size = UDim2.fromOffset(160, 22)
+num.BackgroundTransparency = 1
+num.Font = Enum.Font.GothamBold
+num.TextSize = 17
+num.TextColor3 = Color3.fromRGB(255, 214, 110)
+num.TextStrokeTransparency = 0.4
+num.Text = ""
+num.Visible = false
+num.Parent = sg
+F._hmSegs, F._hmNum = segs, num
+return true
+end
+F.HitMarkShow = function(dmg)
+if T.HitMark ~= true then return end
+if not F.HmBuild() then return end
+for i = 1, #F._hmSegs do F._hmSegs[i].Visible = true end
+F._hmNum.Text = "-" .. tostring(math.floor((tonumber(dmg) or 0) + 0.5))
+F._hmNum.Visible = true
+F._hmAt = os.clock()
+end
+F.HitMarkTick = function()
+if (F._hmAt or 0) == 0 then return end
+if os.clock() - F._hmAt < 0.16 then return end
+F._hmAt = 0
+if F._hmSegs ~= nil then
+for i = 1, #F._hmSegs do F._hmSegs[i].Visible = false end
+end
+if F._hmNum ~= nil then F._hmNum.Visible = false end
+end
+F._hmLast, F._hmConns, F._hmLoop = {}, {}, nil
+F.HitMarkWatch = function(pl)
+if pl == nil or pl == LP then return end
+local ch = pl.Character
+local hum = nil
+if ch ~= nil then pcall(function() hum = ch:FindFirstChildOfClass("Humanoid") end) end
+if hum == nil or F._hmConns[hum] ~= nil then return end
+F._hmLast[hum] = nil
+F._hmConns[hum] = hum.HealthChanged:Connect(function(hp)
+local prev = F._hmLast[hum]
+F._hmLast[hum] = hp
+if prev == nil then return end
+if T.HitMark ~= true then return end
+local d = prev - hp
+if d <= 0.01 then return end
+local mx = hum.MaxHealth
+if mx > 0 and d >= mx then return end
+pcall(F.HitMarkShow, d)
+end)
+end
+F.HitMarkSet = function(on)
+T.HitMark = on and true or false
+if F._hmLoop ~= nil then pcall(function() F._hmLoop:Disconnect() end) F._hmLoop = nil end
+if not T.HitMark then
+for hum, c in pairs(F._hmConns) do pcall(function() c:Disconnect() end) end
+F._hmConns, F._hmLast = {}, {}
+if F._hmSegs ~= nil then
+for i = 1, #F._hmSegs do F._hmSegs[i].Visible = false end
+end
+if F._hmNum ~= nil then F._hmNum.Visible = false end
+F.Out("[命中提示] 已关")
+return
+end
+F.HmBuild()
+F.Out("[命中提示] 已开 · 打中别人会在准星处闪一下并飘伤害数字")
+F._hmLoop = F.SlowLoop(0.4, function()
+if T.HitMark ~= true then F.HitMarkSet(false) return end
+pcall(F.HitMarkTick)
+for _, pl in ipairs(Players:GetPlayers()) do pcall(F.HitMarkWatch, pl) end
+for hum in pairs(F._hmLast) do
+if hum.Parent == nil then
+if F._hmConns[hum] ~= nil then pcall(function() F._hmConns[hum]:Disconnect() end) end
+F._hmConns[hum], F._hmLast[hum] = nil, nil
+end
+end
+end)
+end
+F._magLoop, F._magCands, F._magScanAt, F._magDone = nil, {}, 0, 0
+F.MagnetSet = function(on)
+T.Magnet = on and true or false
+if F._magLoop ~= nil then pcall(function() F._magLoop:Disconnect() end) F._magLoop = nil end
+if not T.Magnet then
+F.Out("[物品吸附] 已关")
+return
+end
+F._magCands, F._magScanAt, F._magDone = {}, 0, 0
+F.Out("[物品吸附] 已开 · 把周围松动的掉落物拖到你脚下")
+F._magLoop = F.SlowLoop(0.08, function()
+if T.Magnet ~= true then F.MagnetSet(false) return end
+local _, _, root = GC()
+if root == nil or root.Parent == nil then return end
+local now = os.clock()
+if now - F._magScanAt > 1.5 then
+F._magScanAt = now
+local cands = {}
+local n = 0
+pcall(function()
+for _, o in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 5000 then break end
+local okp, isp = pcall(function() return o:IsA("BasePart") end)
+if okp and isp then
+if o.Anchored == false and o.Parent ~= nil then
+local sz = o.Size
+if sz.X <= 10 and sz.Y <= 10 and sz.Z <= 10 then
+local isPl = false
+pcall(function() isPl = Players:GetPlayerFromCharacter(o.Parent) ~= nil end)
+local hasHum = false
+pcall(function() hasHum = o.Parent:FindFirstChildOfClass("Humanoid") ~= nil end)
+if not isPl and not hasHum then cands[#cands + 1] = o end
+end
+end
+end
+end
+end)
+F._magCands = cands
+end
+local r = tonumber(C.MagnetRange) or 24
+if r < 4 then r = 4 end
+local moved = 0
+for i = 1, #F._magCands do
+local o = F._magCands[i]
+if o.Parent ~= nil then
+local d = (root.Position - o.Position).Magnitude
+if d <= r then
+if d <= 3 then
+pcall(function() o.CFrame = CFrame.new(root.Position - Vector3.new(0, 3, 0)) end)
+else
+local dir = (root.Position - o.Position).Unit
+pcall(function() o.CFrame = o.CFrame + dir * math.min(d * 0.4, 7) end)
+end
+moved = moved + 1
+end
+end
+end
+F._magDone = F._magDone + moved
+end)
+end
+F._wmGui, F._wmLoop, F._wmExec = nil, nil, nil
+F.WatermarkSet = function(on)
+T.Watermark = on and true or false
+if F._wmLoop ~= nil then pcall(function() F._wmLoop:Disconnect() end) F._wmLoop = nil end
+if not T.Watermark then
+if F._wmGui ~= nil then pcall(function() F._wmGui:Destroy() end) end
+F._wmGui = nil
+F.Out("[水印] 已关")
+return
+end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if host == nil then pcall(function() host = CoreGui end) end
+if host == nil then pcall(function() host = game:GetService("CoreGui") end) end
+if host == nil then
+T.Watermark = false
+F.Out("[水印] 没有可用的 GUI 宿主 ⇒ 未开启")
+return
+end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMWatermark"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 997
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.Parent = host
+local lb = Instance.new("TextLabel")
+lb.Name = "wm"
+lb.BackgroundTransparency = 0.35
+lb.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+lb.Position = UDim2.new(0, 12, 0, 12)
+lb.Size = UDim2.fromOffset(320, 22)
+lb.Font = Enum.Font.Code
+lb.TextSize = 13
+lb.TextColor3 = Color3.fromRGB(120, 220, 255)
+lb.TextXAlignment = Enum.TextXAlignment.Left
+lb.Text = "CheatMenu"
+lb.Parent = sg
+F._wmGui = sg
+local ex = "?"
+pcall(function() if type(identifyexecutor) == "function" then ex = tostring(identifyexecutor()) end end)
+F._wmExec = ex
+F._wmLoop = F.SlowLoop(1, function()
+if T.Watermark ~= true then F.WatermarkSet(false) return end
+if F._wmGui == nil or F._wmGui.Parent == nil then return end
+local txt = "CheatMenu " .. tostring(F.VERSION) .. " | " .. tostring(F._wmExec or "?")
+pcall(function()
+local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+txt = txt .. " | ping " .. tostring(math.floor(tonumber(ping) or 0)) .. "ms"
+end)
+local n = 0
+for _ in pairs(F._slowTicks or {}) do n = n + 1 end
+txt = txt .. " | 后台环 " .. tostring(n)
+pcall(function() lb.Text = txt end)
+end)
+F.Out("[水印] 已开 · 左上角显示版本 / 执行器 / ping")
+end
+F.TeamSignalInstall = function()
+if F._teamInst == true then return end
+F._teamInst = true
+F._teamConns = F._teamConns or {}
+local function watch(pl)
+if pl == nil then return end
+if F._teamConns[pl] ~= nil then return end
+pcall(function()
+F._teamConns[pl] = pl:GetPropertyChangedSignal("Team"):Connect(function()
+F._enemyScanAt = 0
+pcall(F.RefreshGameEnemyNames)
+end)
+end)
+end
+F._teamInstConns = F._teamInstConns or {}
+pcall(function() watch(LP) end)
+for _, pl in ipairs(Players:GetPlayers()) do pcall(watch, pl) end
+pcall(function()
+F._teamInstConns[#F._teamInstConns + 1] = Players.PlayerAdded:Connect(function(pl)
+task.wait(0.4)
+pcall(watch, pl)
+end)
+end)
+pcall(function()
+F._teamInstConns[#F._teamInstConns + 1] = Players.PlayerRemoving:Connect(function(pl)
+if F._teamConns[pl] ~= nil then pcall(function() F._teamConns[pl]:Disconnect() end) end
+F._teamConns[pl] = nil
+end)
+end)
+F.Out("[监听] 已挂「队伍变化」事件 ⇒ 换队/自动平衡后敌我颜色立即刷新(不再等 2 秒轮询)")
+end
+F.BagBind = function()
+if F._bpConn ~= nil then pcall(function() F._bpConn:Disconnect() end) F._bpConn = nil end
+if F._chToolConn ~= nil then pcall(function() F._chToolConn:Disconnect() end) F._chToolConn = nil end
+local bp = nil
+pcall(function() bp = LP:FindFirstChildOfClass("Backpack") end)
+if bp ~= nil then
+F._bpConn = bp.ChildAdded:Connect(function()
+if T.InfItem == true then pcall(F.InfItemEnable) end
+end)
+end
+local ch = LP.Character
+if ch ~= nil then
+F._chToolConn = ch.ChildAdded:Connect(function(c)
+local ok, isT = pcall(function() return c:IsA("Tool") end)
+if ok and isT and T.InfItem == true then pcall(F.InfItemEnable) end
+end)
+end
+end
+F.BagSignalInstall = function()
+if F._bagInst == true then return end
+F._bagInst = true
+pcall(function()
+LP.ChildAdded:Connect(function(c)
+local ok, isBp = pcall(function() return c:IsA("Backpack") end)
+if not (ok and isBp) then return end
+task.wait(0.3)
+pcall(F.BagBind)
+end)
+end)
+pcall(function()
+LP.CharacterAdded:Connect(function()
+task.wait(0.6)
+pcall(F.BagBind)
+end)
+end)
+pcall(F.BagBind)
+F.Out("[监听] 已挂「背包 / 工具」事件 ⇒ 拿到新道具/换武器时无限道具立即套用")
+end
+F.SignalsFlush = function()
+if F._teamConns ~= nil then
+for _, c in pairs(F._teamConns) do pcall(function() c:Disconnect() end) end
+end
+F._teamConns = {}
+if F._teamInstConns ~= nil then
+for _, c in ipairs(F._teamInstConns) do pcall(function() c:Disconnect() end) end
+end
+F._teamInstConns = {}
+F._teamInst = false
+if F._bpConn ~= nil then pcall(function() F._bpConn:Disconnect() end) end
+if F._chToolConn ~= nil then pcall(function() F._chToolConn:Disconnect() end) end
+F._bpConn, F._chToolConn, F._bagInst = nil, nil, false
+end
+F.SignalInstallAll = function()
+pcall(F.TeamSignalInstall)
+pcall(F.BagSignalInstall)
+end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
@@ -16460,6 +16975,13 @@ T.Pierce = v
 if F._cfgSyncing then return end
 if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
 end })
+Tabs.Combat:AddToggle("AimPredict", { Title = "弹道预测", Default = false, Callback = function(v)
+T.AimPredict = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.EnsureAimOn, "弹道预测") end
+end })
+Tabs.Combat:AddSlider("BulletSpeed", { Title = "子弹速度 · 格/秒", Min = 100, Max = 5000, Default = 800, Rounding = 0, Callback = function(v) C.BulletSpeed = v end })
+Tabs.Combat:AddSlider("PredictGain", { Title = "预测强度", Min = 0.2, Max = 3, Default = 1, Rounding = 2, Callback = function(v) C.PredictGain = v end })
 Tabs.Combat:AddSection("战斗增强")
 Tabs.Combat:AddToggle("HitboxOn", { Title = "命中盒扩大", Default = false, Callback = function(v)
 T.HitboxOn = v
@@ -16471,6 +16993,11 @@ Tabs.Combat:AddToggle("HitboxShow", { Title = "碰撞盒可视化", Default = fa
 T.HitboxShow = v
 if F._cfgSyncing then return end
 F.HitboxShowSet(v)
+end })
+Tabs.Combat:AddToggle("HitMark", { Title = "命中提示", Default = false, Callback = function(v)
+T.HitMark = v and true or false
+if F._cfgSyncing then return end
+pcall(F.HitMarkSet, v)
 end })
 Tabs.Surv:AddSection("生命 / 保命")
 Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
@@ -16814,6 +17341,16 @@ T.AllyMark = v and true or false
 if F._cfgSyncing then return end
 pcall(F.AllyMarkSet, v)
 end })
+Tabs.Visual:AddToggle("TracerLine", { Title = "追踪线", Default = false, Callback = function(v)
+T.TracerLine = v and true or false
+if F._cfgSyncing then return end
+pcall(F.VxSet)
+end })
+Tabs.Visual:AddToggle("SkelEsp", { Title = "骨骼透视", Default = false, Callback = function(v)
+T.SkelEsp = v and true or false
+if F._cfgSyncing then return end
+pcall(F.VxSet)
+end })
 F._cfgSyncing = true
 pcall(F.EspItemsApply, F.EspItemsRead())
 F._cfgSyncing = false
@@ -16999,6 +17536,11 @@ Tabs.World:AddColorPicker("CrosshairColor", { Title = "准星颜色", Default = 
 C.CrosshairColor = v
 if F._cfgSyncing then return end
 if T.Crosshair then pcall(F.CrosshairDisable) pcall(F.CrosshairEnable) end
+end })
+Tabs.World:AddToggle("Watermark", { Title = "水印", Default = false, Callback = function(v)
+T.Watermark = v and true or false
+if F._cfgSyncing then return end
+pcall(F.WatermarkSet, v)
 end })
 end
 do
@@ -17811,7 +18353,15 @@ if not F.Once("doors_pull", 1.5) then return end
 pcall(F.DoorsPullAsset, C.DoorsAssetId)
 end })
 Tabs.Item:AddInput("DoorsAssetId", { Title = "道具资产 ID · 可留空", Default = "", Placeholder = "留空即自动扫描本游戏道具", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
+Tabs.Item:AddSection("自动拾取")
+Tabs.Item:AddToggle("Magnet", { Title = "物品吸附", Default = false, Callback = function(v)
+T.Magnet = v and true or false
+if F._cfgSyncing then return end
+pcall(F.MagnetSet, v)
+end })
+Tabs.Item:AddSlider("MagnetRange", { Title = "吸附范围", Min = 5, Max = 200, Default = 24, Rounding = 0, Callback = function(v) C.MagnetRange = v end })
 pcall(F.RecordOriginals)
+pcall(F.SignalInstallAll)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
 local _plat = (UIS.MouseEnabled == true) and "键鼠(PC)" or (UIS.TouchEnabled and "触屏(手机/平板)" or "未知输入")
