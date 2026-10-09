@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 08:58 sha b682b8fa bytes 610290'):format('2026-10-09 08:58','b682b8fa',610290))
+print(('[CheatMenu] build 2026-10-09 09:00 sha 28e7897b bytes 611563'):format('2026-10-09 09:00','28e7897b',611563))
 local F = {}
-F.VERSION = "v17.0.24"
+F.VERSION = "v17.0.25"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6440,20 +6440,35 @@ if not x or not y then return nil end
 if x <= 0 or y <= 0 then return nil end
 return math.floor(x), math.floor(y)
 end
-F.ClickerSavePos = function()
+F.ClickerMouseXY = function()
 local x, y = nil, nil
 pcall(function()
 local mp = game:GetService("UserInputService"):GetMouseLocation()
-if mp then x, y = math.floor(mp.X), math.floor(mp.Y) end
+if mp then x, y = tonumber(mp.X), tonumber(mp.Y) end
 end)
+if x ~= nil and y ~= nil and x > 0 and y > 0 then return math.floor(x), math.floor(y), "引擎鼠标" end
+x, y = nil, nil
+pcall(function()
+local m = LP:GetMouse()
+if m then x, y = tonumber(m.X), tonumber(m.Y) end
+end)
+if x ~= nil and y ~= nil and x > 0 and y > 0 then return math.floor(x), math.floor(y), "PlayerMouse" end
+if type(CLKST.lastMouseX) == "number" and type(CLKST.lastMouseY) == "number"
+and CLKST.lastMouseX > 0 and CLKST.lastMouseY > 0 then
+return math.floor(CLKST.lastMouseX), math.floor(CLKST.lastMouseY), "最近鼠标移动"
+end
+return nil, nil, nil
+end
+F.ClickerSavePos = function()
+local x, y, src = F.ClickerMouseXY()
 if x == nil or y == nil then
-F.Out("[连点器] 保存失败: 读不到鼠标位置")
-pcall(function() Fluent:Notify({ Title = "连点器", Content = "读不到鼠标位置, 保存失败", Duration = 5 }) end)
+F.Out("[连点器] 保存失败: 三种读法都拿不到鼠标位置(引擎 / PlayerMouse / 鼠标移动记录) ⇒ 先到游戏画面里晃一下鼠标, 再按快捷键")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "读不到鼠标位置 ⇒ 先在游戏里晃一下鼠标再按", Duration = 6 }) end)
 return false
 end
 C.ClickerX, C.ClickerY = x, y
 pcall(F.ClickerPersist)
-F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " ⇒ 之后只点这里(已写盘, 重载/重进都在)")
+F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " (来源: " .. tostring(src) .. ") ⇒ 之后只点这里(已写盘, 重载/重进都在)")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. x .. "," .. y, Duration = 4 }) end)
 return true
 end
@@ -6612,6 +6627,21 @@ if gp or not input then return end
 if not isMouse1(input) then return end
 if selfClick() then return end
 if string.find(tostring(C.ClickerMode), "按住", 1, true) then pcall(F.ClickerDisable) end
+end)
+CLKST.conns[3] = UIS.InputChanged:Connect(function(input)
+if not input then return end
+local isM = false
+pcall(function()
+isM = (input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch)
+end)
+if not isM then return end
+local p = input.Position
+if p then
+local px, py = tonumber(p.X), tonumber(p.Y)
+if px ~= nil and py ~= nil and px > 0 and py > 0 then
+CLKST.lastMouseX, CLKST.lastMouseY = px, py
+end
+end
 end)
 end
 function F.ClickerWatchStop()
