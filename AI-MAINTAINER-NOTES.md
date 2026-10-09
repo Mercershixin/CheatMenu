@@ -4987,3 +4987,29 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 ★ 排查这类"用户说某某不见了"的最快路径：**读执行器运行日志**（`%LOCALAPPDATA%\Real\workspace\CheatMenu_Logs\`），
 里面有 `[环境] 平台=… · 布局=… · 视口=…` 逐次会话记录 —— 一眼就能看出"环境判定是不是变了"。
 本次正是靠"早上的会话是键鼠、晚上的会话是触屏"这一行对比直接定位。
+
+## ★★★ `TouchEnabled` 不能当"没有鼠标"用（v17.0.38 修复 F7 存不到真实坐标）
+
+**症状**：用户按 F7 存连点器坐标，日志显示"保存成功"，但**每次读到的都是同一个数**（964,723），
+点下去的位置不是鼠标所在处。
+
+**根因（与鼠标指针被藏是同一个病根）**：判断"这台设备有没有鼠标"用的是 `UIS.TouchEnabled`：
+- 加载期：`if TouchEnabled then MouseIconEnabled = false`（藏指针，v17.0.37 已修）
+- `F.MenuMouseForce` 第一句：`if UIS.TouchEnabled then return end` ⇒ **不去解锁鼠标**
+- `LP.Idled` 防挂机的"空点"：同样被 `TouchEnabled` 挡住
+
+而**触屏笔记本 / 带触摸屏的 Windows 机器**上 `TouchEnabled == true` 但鼠标是正常的。
+⇒ 鼠标被游戏锁住（`MouseBehavior` 非 Default）时 `UIS:GetMouseLocation()` 会返回一个**不动的值**，
+按 F7 存下来就是那个死坐标。
+
+★★★ 正确判据：**`UIS.MouseEnabled` / `UIS.KeyboardEnabled`**（有没有鼠标/键盘），
+不要用 `TouchEnabled`（它只表示"这台设备支持触摸"）。
+已封装成 `F.HasMouse()`，全文所有"要不要处理鼠标"的地方都用它。
+
+**同时加的诊断**（下次一眼定位）：`F.ClickerMouseXY()` 现在把三种读法 + 鼠标锁状态记进 `F._xyDiag`，
+保存日志变成 `(来源: 引擎鼠标 · 对照 引擎=gx,gy · PlayerMouse=px,py · 实时跟踪=tx,ty · 鼠标锁=…/指针…)`。
+另：按 F7 时会先 `MouseBehavior = Default` + 确保指针可见，再等一下才读（把鼠标抢回自由状态）。
+
+★ 通用教训：**判断"输入方式"要看 MouseEnabled / KeyboardEnabled / TouchEnabled 三个一组**，
+只看 `TouchEnabled` 会把"触屏笔记本"整类设备误判成手机，而且往往同时影响**指针可见性、鼠标锁定、
+输入空点、界面布局**四处（本次三个 bug 全由这一个误判引起）。
