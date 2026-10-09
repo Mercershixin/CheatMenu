@@ -5175,3 +5175,23 @@ ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                 
   完整审计表（38 个连接 + 18 个循环，逐项标注所选方案与理由）见 `.workbuddy/build/perf-audit-2026-10-09.md`。
 - ⚠ 测试桩注意：`F.SlowLoop` 在单测里要**桩掉**（否则取出的源码块里没有它）并**手动驱动 `h.fn()`**；
   `_gen_afk_sim` 还漏了 `F.HasMouse` 桩（源码新加的门禁），已补。
+
+## ★★ 功能覆盖：以公开脚本为基准补齐（2026-10-10 v17.0.49）
+
+**方法**：拿 **Infinite Yield**（最全的通用脚本，`EdgeIY/infiniteyield` 的 `source`，**429 个 `addcmd`**）当基准，
+逐条对照我们的控件清单，**只补"通用且客户端安全"的缺口**，不抄它的管理/捣乱命令。
+
+- 基准获取：`curl https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source`，
+  再用 `grep -oE 'addcmd\(["'"'"'][^"'"'"']+'` 抽出全部命令名（429 个）—— 这比在 ScriptBlox 上翻混淆壳高效得多。
+- 本批补上 8 个：**命中盒扩大** · **防掉出地图** · **重力调节** · **最大坡度** · **锚定自己** ·
+  **隐藏游戏界面** · **帧率上限** · **服务器信息**。
+- 实现约定：一律 `pcall` 包住 + **记录原值、关掉还原** + 用 `F.SlowLoop` 而不是每帧闭包（命中盒/最大坡度/防掉出地图都是）。
+
+### ★★★ 写这类回归踩的桩坑（`_gen_coverage_sim.py`）
+
+1. **必须补 `typeof` 全局**：源码用 `typeof(x) == "Instance"` 判实例，桩里没有 ⇒ **还原分支整段被跳过**，
+   表现为"开了生效、关掉不还原"的**假失败**。
+2. **Lua 的 `__newindex` 只在键不存在时触发** ⇒ 桩里先 `rawset` 了 `CFrame`，之后的赋值就绕过拦截、
+   `Position` 不再联动。正解：把对象做成**代理表**（`__index`/`__newindex` 全走内部 store）。
+3. 部件要有 `Parent`（源码用 `part.Parent` 判断"还在不在场上"）；`ScreenGui` 桩要有 `IsA`。
+   ⇒ 结论：**桩要按真实 Roblox 语义写**（实例有 Parent/IsA/typeof），否则会得到"源码有 bug"的错觉。
