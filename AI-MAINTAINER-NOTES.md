@@ -4654,3 +4654,73 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 - **全系没有任何反作弊绕过** —— 只有 `Idled → VirtualUser:Button2Down/Up`（我们已有且更强：多了 `CaptureController` + `ClickButton2`）；
 - 它们的做法是 **Dump 游戏结构 → 用游戏自己的远程做合法操作**（如 `E.InfiniteTowerPad:FireServer("launch")`）；
 - ⛔ 别再花时间去"从它们身上找绕过手法" —— 没有；参考价值仅在"按游戏结构操作"这个思路。
+
+## 事件驱动复核：上一版报告"8 个每帧扫全世界"是**估计，且是错的**（2026-10-09 v17.0.27）
+
+★ 教训（方法论）：**别拿"连接的是 Heartbeat/RenderStepped"当"每帧在干活"的证据** —— 循环体第一行的节流闸门
+（`if now - F._x < N then return end`）才是真实频率。上次没量就写报告，结论整段是错的。
+
+量化脚本 `.workbuddy/build/_audit_drivers.py` + `_audit_drivers2.py`：扫出全部 **57 个驱动点**
+（47 个步进连接 + 10 个 while），逐块回显"闸门行 / 是否整场景扫描 / 块内伴生事件 / 所属函数"。实测：
+
+| 上一版说"每帧扫全世界"的 8 个 | 实测 |
+|---|---|
+| 高亮透视 | 移动 8 格或 0.5~2 秒一次 **+ 已有 `DescendantAdded`** ⇒ 本来就是"事件+兜底" |
+| 穿墙透视 | 每 3 秒 **+ 已有 `DescendantAdded`** |
+| 队友标记 | 每 0.5 秒 |
+| 头顶标记 | 每 0.4 秒 |
+| 身体高亮 | 遮挡 0.2 秒 / 重建 2 秒 **+ `PlayerAdded/CharacterAdded`** |
+| 伤害特效解冻 | 每 0.5 秒 |
+| ESP | 0.033 秒（≈30Hz，屏幕叠加层，**刻意**） |
+| 载具加速 | 0.05 秒（20Hz，物理，**必须**） |
+
+⇒ 真正"每帧无闸门且属状态判定类"的只剩 3 个，本轮改的就是这 3 个。
+
+## 三处事件驱动改造（v17.0.27）
+
+1. **受击保护 `HitGuard`**：原来**每帧** `SetStateEnabled(5 种状态,false)` ×5 + `GetState()` ⇒ 300 次引擎调用/秒。
+   改法：`F.HitGuardArm(hum)` 只在**换角色时武装一次**（`SetStateEnabled` 只做一次）+ 挂 `hum.StateChanged` 事件即时救回；
+   `F._hitConn` 降为 **0.1 秒**兜底（`GetState` 轮询 + `OnMovingFloorC` 让路判断）。`HitGuardDisable` 要一并断 `_hitStateConn`、清 `_hitArmed`。
+2. **稳身 `Steady`**：实测其每帧开销本来就很小（`GC()` 有缓存、`OnMovingFloorC` 有 0.5 秒缓存、`SteadyStates` 只在换角色/5 秒时调）
+   ⇒ 只做两件低风险的事：加 `hum.StateChanged` 事件即时 `GettingUp`；把"防空降更新 + 状态补偿"整段降到 **0.25 秒**，
+   **速度钳制（`v.Y>90` 压到 40）保留每帧**（这是防甩飞的保险，不能降频）。新增 `F.SteadyArm(hum)` / `_steadyStateConn`。
+3. **隐身 `Invisible`**：原来每帧读 `root.Transparency`、必要时写，并**每帧写 3 个动画属性**（`IsPlaying/AdjustSpeed/TimePosition`）。
+   改法：给 `HumanoidRootPart` 挂 `GetPropertyChangedSignal("Transparency")`（被改回就立刻重写，事件优先）+ 主循环降到 **0.2 秒**兜底。
+   ⚠ 事件回调里只写"当 `~= 1` 才写"，否则自己触发自己会自激。
+
+★ 通用规矩（沿用既有结论）：**先事件驱动、再低频轮询兜底**；`Enable()` 自己写 `T.Xxx = true`，别指望 UI 的 Default。
+
+## 四处控件合并（129 → 120）（v17.0.27）
+
+1. **挂机防踢 4→1**：`AFKKickGuard/AFKKeepAlive/AFKKeepGap/AFKBlockReport` ⇒ 一个下拉 `AFKStrength`
+   （`F.AFK_LEVELS` = 关 / 基础(Idled+心跳) / 标准(保活60秒+拦上报) / 激进(保活30秒+拦上报)）。
+   `F.AFKApply(lvl)` 是唯一入口：档位决定 `T.AntiAFK / T.AFKKeepAlive / T.AFKBlockReport` 与 `C.AFKKeepGap`，再驱动
+   `AntiAFKEnable/Disable` + `AFKLoopEnable/Stop` + `AC.InstallNamecallHook`。
+   ★ **旧配置自动升级**：`F.AFKStrengthOf()` 在 `C.AFKStrength` 非法时**从旧布尔反推档位**（`AFKKeepGap<=30` 判为激进）
+   ⇒ 老用户升级后不会被重置成默认值；`F.AFKStrengthInit()` 必须在 `F.CfgSyncUI()` **之前**调用（否则下拉拿不到值、界面与实际不符）。
+   ★ 行为变更：namecall 拦上报的判据从 `(T.AntiAFK or T.AFKBlockReport)` 改为**只认 `T.AFKBlockReport`** ——
+   否则"基础"档会顺带拦上报，四档就退化成两档。
+   ★ `F.PANIC_KEEP` 必须补 `AFKKeepAlive/AFKBlockReport`：急停会清零所有 `T` 布尔，不加会被**静默降档**。
+2. **扫描 3→1**：两个旧按钮的实现（`InfItemScan` + 手持工具属性 Dump + `GameBypassScan`）**并入 `F.CMX_ScanAll` 开头**，
+   界面只留「全扫描(道具 / 绕过目标 / 全量)」；`F.Once("scanall",6)` 防连点保留。
+   ★ 通用：合并按钮时**先看合并进来的实现是否有别的调用方**，确认无孤儿再删入口。
+3. **世界页废件**：删「用录到的命令换世界」+ 它的 `F.WorldCmd` / `F.WorldRemote`（只有它一个调用方）。
+   ⚠ 更正上一版报告的说法：`WorldCmd` 并非"拿不到命令名"（它用的是 `EnterWorld/TravelWorld/...` **盲试**，
+   不依赖已删除的「远程调用记录」）—— 真实理由是**盲试 4 个猜的命令名 = 基本无效**。日志里那条引用该按钮的提示一并改掉。
+4. **ESP 4→1**：`EspName/EspDist/EspHp/AllyMark` ⇒ 一个 `Multi = true` 下拉 `EspItems`。
+   ★ **Fluent 1.1.0 多选下拉语义（读源码确认，别猜）**：`Value` 是 `{选项名 = true}` 的字典；
+   `Set/SetValue` 接受任意表但**只保留 `Values` 里存在的键**；`Default` 支持"选项名数组"。
+   ★ `T.EspName/EspDist/EspHp/AllyMark` 仍是**唯一真源**（别用 `C.EspItems` 存表 —— `CfgSyncUI` 的
+   `want ~= nil and type(want) == type(cur)` 判定对表会走偏）；`F.EspItemsRead/Apply/Sync/Restore` 四个函数负责双向同步。
+   ⛔ `AllyMark` 从 Toggle 变多选项后，`ApplySavedOn`（按 option 遍历调 Callback）**再也不会**启动队友标记循环
+   ⇒ 必须在加载/热加载两处显式调 `F.EspItemsRestore()`；且 `F.CfgSyncUI` 结尾要调 `F.EspItemsSync()`，
+   因为 `CfgSyncUI` 的 Dropdown 分支不认多选表（不会自动回填）。
+
+## 待你确认（本轮只报不改）
+
+★ 实测发现：**当前版本没有任何"开关状态落盘"代码** —— 全仓 `writefile` 只有 Fluent 缓存 / 连点器坐标 / `CheatMenu_main.lua` /
+术语表 / 翻译缓存 / 日志；`T.AutoSave` 只被读一次（`:13751`）、从无写入方。
+执行器目录里那份 `CheatMenu_State.txt`（`{"EspName":true,"AntiAFK":true,...}`，2026-10-07）是**旧版本遗留**，新版没人再写它。
+⇒ 现象：`F.CfgSyncUI` 依赖的 `T[name]` 在**重进游戏后**只有 `RestoreFeatures()` 的 3 个默认值 + Fluent 的 `Default`，
+**跨会话的开关记忆实际已失效**（会话内热加载靠 `CM_RELOAD_KEEP` 仍然有效）。
+⛔ 这是行为级改动（要么补回落盘，要么改文案），**未获批不动**。
