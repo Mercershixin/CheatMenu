@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 21:59 sha df135f8b bytes 618187'):format('2026-10-09 21:59','df135f8b',618187))
+print(('[CheatMenu] build 2026-10-09 22:11 sha c3ca89e0 bytes 616861'):format('2026-10-09 22:11','c3ca89e0',616861))
 local F = {}
-F.VERSION = "v17.0.41"
+F.VERSION = "v17.0.42"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5921,7 +5921,6 @@ F.Out("[上帝模式] 已关")
 end
 pcall(F.LifeGuardSync)
 pcall(F.GodShieldSet, T.GodMode == true)
-pcall(F.GodBoxLiftSet, T.GodMode == true)
 end
 F.GOD_SHIELD_KEYS = { "damage", "hurt", "kill", "attack", "takedamage", "dealda" }
 F.GOD_SHIELD_SAFE = { "damagefx", "hitbox", "hitsound", "killfeed", "healthbar" }
@@ -5986,43 +5985,6 @@ F.Out("[上帝模式] 入站伤害屏蔽: 已恢复 " .. tostring(#F._godShieldC
 end
 F._godShieldConns = nil
 end
-end
-F.GOD_BOX_KEYS = { "collision", "hitbox", "hurtbox", "detectbox", "trapbox" }
-F.GodBoxLiftSet = function(on)
-if F._godBoxConn then pcall(function() F._godBoxConn:Disconnect() end) F._godBoxConn = nil end
-F._godBoxes = nil
-if on ~= true then return end
-local found = {}
-pcall(function()
-local ch = GC()
-if ch == nil then return end
-for _, d in ipairs(ch:GetDescendants()) do
-if d:IsA("BasePart") then
-local low = string.lower(tostring(d.Name))
-local i
-for i = 1, #F.GOD_BOX_KEYS do
-if string.find(low, F.GOD_BOX_KEYS[i], 1, true) then found[#found + 1] = d break end
-end
-end
-end
-end)
-if #found == 0 then
-F.Out("[上帝模式] 判定盒搬移: 角色里没有独立判定盒(collision/hitbox 类部件) ⇒ 这层跳过(只写血量那层照常生效)")
-return
-end
-F._godBoxes = found
-F.Out("[上帝模式] 判定盒搬移: 找到 " .. tostring(#found) .. " 个判定盒 ⇒ 每帧抬到角色上方 200 格")
-F._godBoxConn = RS.Heartbeat:Connect(function()
-if T.GodMode ~= true then return end
-local _, _, root = GC()
-if root == nil or F._godBoxes == nil then return end
-local pos = root.Position + Vector3.new(0, 200, 0)
-local i
-for i = 1, #F._godBoxes do
-local b = F._godBoxes[i]
-if b ~= nil and b.Parent ~= nil then pcall(function() b.CFrame = CFrame.new(pos) end) end
-end
-end)
 end
 F.GodRefill = function()
 local _, hum = GC()
