@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 17:49 sha ce67d5b4 bytes 614162'):format('2026-10-09 17:49','ce67d5b4',614162))
+print(('[CheatMenu] build 2026-10-09 17:58 sha d47f6d89 bytes 615260'):format('2026-10-09 17:58','d47f6d89',615260))
 local F = {}
-F.VERSION = "v17.0.37"
+F.VERSION = "v17.0.38"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2124,7 +2124,7 @@ end
 F._afkConn = LP.Idled:Connect(function()
 F._afkIdleHits = (F._afkIdleHits or 0) + 1
 if not T.AntiAFK then return end
-if UIS.TouchEnabled then return end
+if not F.HasMouse() then return end
 pcall(function()
 if F.AntiAFKIdleHit() then
 F._afkIdleFixed = (F._afkIdleFixed or 0) + 1
@@ -6500,34 +6500,51 @@ if x <= 0 or y <= 0 then return nil end
 return math.floor(x), math.floor(y)
 end
 F.ClickerMouseXY = function()
-local x, y = nil, nil
+local gx, gy = nil, nil
 pcall(function()
-local mp = game:GetService("UserInputService"):GetMouseLocation()
-if mp then x, y = tonumber(mp.X), tonumber(mp.Y) end
+local mp = UIS:GetMouseLocation()
+if mp then gx, gy = tonumber(mp.X), tonumber(mp.Y) end
 end)
-if x ~= nil and y ~= nil and x > 0 and y > 0 then return math.floor(x), math.floor(y), "引擎鼠标" end
-x, y = nil, nil
+local px, py = nil, nil
 pcall(function()
 local m = LP:GetMouse()
-if m then x, y = tonumber(m.X), tonumber(m.Y) end
+if m then px, py = tonumber(m.X), tonumber(m.Y) end
 end)
-if x ~= nil and y ~= nil and x > 0 and y > 0 then return math.floor(x), math.floor(y), "PlayerMouse" end
+local tx, ty = nil, nil
 if type(CLKST.lastMouseX) == "number" and type(CLKST.lastMouseY) == "number"
 and CLKST.lastMouseX > 0 and CLKST.lastMouseY > 0 then
-return math.floor(CLKST.lastMouseX), math.floor(CLKST.lastMouseY), "最近鼠标移动"
+tx, ty = CLKST.lastMouseX, CLKST.lastMouseY
 end
+F._xyDiag = "引擎=" .. tostring(gx) .. "," .. tostring(gy)
+.. " · PlayerMouse=" .. tostring(px) .. "," .. tostring(py)
+.. " · 实时跟踪=" .. tostring(tx) .. "," .. tostring(ty)
+.. " · 鼠标锁=" .. tostring(F.LockedNow and F.LockedNow() or "?")
+if gx ~= nil and gy ~= nil and gx > 0 and gy > 0 then return math.floor(gx), math.floor(gy), "引擎鼠标" end
+if px ~= nil and py ~= nil and px > 0 and py > 0 then return math.floor(px), math.floor(py), "PlayerMouse" end
+if tx ~= nil and ty ~= nil then return math.floor(tx), math.floor(ty), "实时鼠标跟踪" end
 return nil, nil, nil
 end
+F.LockedNow = function()
+local mb, mi = nil, nil
+pcall(function() mb = UIS.MouseBehavior end)
+pcall(function() mi = UIS.MouseIconEnabled end)
+return tostring(mb) .. "/指针" .. tostring(mi)
+end
 F.ClickerSavePos = function()
+pcall(function()
+if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default end
+end)
+task.wait(0.05)
 local x, y, src = F.ClickerMouseXY()
 if x == nil or y == nil then
-F.Out("[连点器] 保存失败: 三种读法都拿不到鼠标位置(引擎 / PlayerMouse / 鼠标移动记录) ⇒ 先到游戏画面里晃一下鼠标, 再按快捷键")
+F.Out("[连点器] 保存失败: 三种读法都拿不到鼠标位置(引擎 / PlayerMouse / 实时跟踪) ⇒ 先晃一下鼠标再按快捷键 · 对照 " .. tostring(F._xyDiag))
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "读不到鼠标位置 ⇒ 先在游戏里晃一下鼠标再按", Duration = 6 }) end)
 return false
 end
 C.ClickerX, C.ClickerY = x, y
 pcall(F.ClickerPersist)
-F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " (来源: " .. tostring(src) .. ") ⇒ 之后只点这里(已写盘, 重载/重进都在)")
+F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " (来源: " .. tostring(src) .. " · 对照 " .. tostring(F._xyDiag) .. ")")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. x .. "," .. y, Duration = 4 }) end)
 return true
 end
@@ -8945,13 +8962,21 @@ F._mmg, F._mmgConn, F._mmgCam = nil, nil, nil
 F.MouseShow = function()
 pcall(function() if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end end)
 end
+F.HasMouse = function()
+local m, k = nil, nil
+pcall(function() m = UIS.MouseEnabled end)
+pcall(function() k = UIS.KeyboardEnabled end)
+if m == true or k == true then return true end
+if m == false or k == false then return false end
+return (UIS.TouchEnabled ~= true)
+end
 F.MenuMouseForce = function()
 pcall(function()
 if UIS.MouseIconEnabled ~= true then
 if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
 UIS.MouseIconEnabled = true
 end
-if UIS.TouchEnabled then return end
+if not F.HasMouse() then return end
 if LP then
 if F._mmgCam == nil then pcall(function() F._mmgCam = LP.CameraMode end) end
 if LP.CameraMode ~= Enum.CameraMode.Classic then
@@ -16853,7 +16878,7 @@ end })
 pcall(F.RecordOriginals)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
-local _plat = UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"
+local _plat = (UIS.MouseEnabled == true) and "键鼠(PC)" or (UIS.TouchEnabled and "触屏(手机/平板)" or "未知输入")
 local _ls = (type(loadstring) == "function" or type(load) == "function") and "有" or "无"
 local _wf = (type(writefile) == "function") and "有" or "无"
 local _hi = (type(hookmetamethod) == "function" and type(newcclosure) == "function"
@@ -16888,8 +16913,8 @@ end)
 local minSide = math.min(vw, vh)
 local isPhone = (vw < 760) or (vh < 500) or (UIS.TouchEnabled and minSide <= 720)
 F.Out(string.format("[环境] 执行器=%s · 平台=%s · 布局=%s · 视口=%dx%d · loadstring=%s · writefile=%s · gethui=%s",
-ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"), (isPhone and "手机" or "桌面"), vw, vh,
-type(loadstring), type(writefile), type(gethui)))
+ex, ((UIS.MouseEnabled == true) and "键鼠(PC)" or (UIS.TouchEnabled and "触屏(手机/平板)" or "未知输入")),
+(isPhone and "手机" or "桌面"), vw, vh, type(loadstring), type(writefile), type(gethui)))
 end)
 pcall(function() F.MouseShow() end)
 pcall(function()
