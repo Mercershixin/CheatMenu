@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 09:00 sha 28e7897b bytes 611563'):format('2026-10-09 09:00','28e7897b',611563))
+print(('[CheatMenu] build 2026-10-09 09:03 sha 2ac502c2 bytes 611659'):format('2026-10-09 09:03','2ac502c2',611659))
 local F = {}
-F.VERSION = "v17.0.25"
+F.VERSION = "v17.0.26"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -16516,6 +16516,11 @@ local lvl = 0
 if v:find("①", 1, true) then lvl = 1 end
 if v:find("②", 1, true) then lvl = 2 end
 if v:find("③", 1, true) then lvl = 3 end
+if lvl < 2 and F._tierGbypOwn then
+F._tierGbypOwn = nil
+pcall(F.GameBypassSet, false)
+F.Out("[防护档位] 已收回档位自己开的「游戏专用绕过」")
+end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
 pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
@@ -16548,6 +16553,8 @@ pcall(F.AuthorityGuard, true)
 F.Try("GuiProtectionEnable", F.GuiProtectionEnable)
 F.Try("CharPersistEnable", F.CharPersistEnable)
 if lvl >= 2 then
+if T.GameBypass ~= true then F._tierGbypOwn = true end
+pcall(F.GameBypassSet, true)
 T.CMX_AntiBanAll = true
 pcall(F.CMX_InboundWatchSet, true)
 pcall(AC.InstallNamecallHook)
@@ -16575,19 +16582,14 @@ end
 Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
-"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 锁字段 + 防暂停 + 服务端下发预警",
+"② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过",
 "③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 假上报(异常数值改回正常再发) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddSection("绕过（独立开关，防护档位不再代开）")
-Tabs.AC:AddToggle("GameBypass", { Title = "游戏专用绕过", Default = false, Callback = function(v)
-T.GameBypass = v and true or false
-if F._cfgSyncing then return end
-pcall(F.GameBypassSet, v)
-end })
+Tabs.AC:AddSection("绕过 / 道具（「游戏专用绕过」已并入档位: ②/③自动代开）")
 Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
 T.SpoofPos = v and true or false
 if F._cfgSyncing then return end
