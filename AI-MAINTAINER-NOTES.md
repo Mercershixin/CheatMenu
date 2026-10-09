@@ -5042,3 +5042,47 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 第二次会**把已经在跑的循环重启**（本次回归测试就是靠"开两次 ⇒ loopOn 仍为 1"抓到的）。
 正确写法：**开的路径只调幂等的 Enable，不调 Stop**（真实 `AntiAFKEnable`/`AFKLoopEnable`
 自带 `if 已存在 then return end`）。
+
+## ★★★ v17.0.40 · F7「完全没反应」= 被 `gameProcessedEvent` 吃掉（不是存错位置）
+
+**用户原话**：「F7保存当前位置还是有bug」。**先问症状再动手**（这次问对了）⇒ 症状是 **按 F7 完全没有反应**，
+和 v17.0.38 那句"存下来的数永远是同一个"**不是同一个 bug**。
+
+**根因**：热键钩子第一句是 `if gp or not input then return end`（`gp = gameProcessedEvent`）。
+只要这次 F7 被"消费"过，处理函数直接 return：**连日志都不会有**。会消费 F7 的场景至少三种：
+① 脚本自己的菜单用了 Modal 覆盖层（菜单开着时全屏 Modal 会吃掉一切输入）；
+② 聊天框/TextBox 有焦点；③ 游戏自己用 ContextActionService 或 UIS 绑了 F 键。
+⇒ **功能键（F1~F12）必须豁免 gp**：`if gp and not F.ClickerFnKey(k) then return end`（字母键照旧尊重 gp，免得抢了聊天输入）。
+
+**第二个坑：不能只解锁一次鼠标就立刻读。** 这游戏每帧把鼠标锁回中心（菜单必须 `BindToRenderStep` "每帧解除锁定"
+才可用 = 铁证）⇒ `ClickerSavePos` 里"写一次 `MouseBehavior=Default` + `task.wait(0.05)`"三帧内就被游戏锁回去了，
+`GetMouseLocation()` 又变死值。**要取"用户指哪"就必须在取点窗口内逐帧顶住**（`CM_PickMouse` 绑 `RenderPriority.Last`）。
+
+**第三个坑（取点层建法）**：全屏捕获层必须是 **`ScreenGui` → `TextButton`** 两层，不能把 `TextButton` 直接
+`Parent = gethui()` —— 没有 ScreenGui 不渲染、收不到点击（18:29 那版就死在这）。要点：
+`ResetOnSpawn=false` + `IgnoreGuiInset=true` + `DisplayOrder` 拉高 + `ZIndexBehavior=Sibling` + `Modal=true`。
+
+**第四个坑（收尾）**：取点结束必须 ①销毁 ScreenGui ②`UnbindFromRenderStep` ③把 `MouseBehavior` 还原成进入前的值
+④`F.MouseShow()` 强制指针可见（v17.0.37 教训：绝不能把藏起来的指针留给用户），并把它加进卸载/热加载收尾列表。
+
+★ 坐标空间结论（免得以后再纠结）：`UserInputService:GetMouseLocation()` 与输入事件 `input.Position` 都在
+**屏幕坐标（含 36px 顶栏）**这一套里，`VirtualInputManager:SendMouseButtonEvent(x,y)` 取的也是**屏幕坐标**
+（官方新 API `VirtualInput::SendMouseButton` 文档明写 "screen-space position"）⇒ 存下来的值直接回灌即可，
+**不需要 ±36 补偿**。取点日志会把「事件 / 引擎 / 差值 / 顶栏 / 鼠标锁」全打出来，下次一眼可判。
+
+### ★★★ 教训：**补丁写进源码 ≠ 已交付**
+18:29 已经把「取点模式」写进 `CheatMenu-17.0.39.lua`，但（大概率被 worker 启动超时打断）**没构建、没推送**，
+记忆日志也没记 —— 用户 20:18/20:45/21:00/21:27 四次会话跑的都是 18:16 的旧产物，等于修复从未到达。
+**判定方法（30 秒）**：
+```bash
+md5sum "$LOCALAPPDATA/Real/workspace/CheatMenu_main.lua" dist/repo/CheatMenu.lua   # 一致 = 用户跑的就是最后一次构建
+ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                            # 最后推送时间 vs 源码 mtime
+```
+⇒ 规矩：**改过源码的那一轮，必须做到 pushlog 更新 + raw 校验通过才算结束**；被打断后重开会话，先做这个比对。
+
+### ★★ 顺手发现：两个 F7/连点器回归脚本早已静默失效（与本轮改动无关，用 A/B 对照确认）
+- `_gen_f7_sim.py`：桩里缺全局 `UIS` 和 `task` ⇒ T1（引擎优先）静默退化、SavePos 用例直接报错。**已补桩**，现 14/14 PASS；
+  T3 的期望字面量也从旧名"最近鼠标移动"改回代码里的"实时鼠标跟踪"。
+- `_gen_clicker_sim.py`：自 v17.0.38 起 `ClickerSavePos` 里有 `task.wait`，而脚本在**主线程**直接调它 ⇒
+  `thread yielded unexpectedly`，T2/T3/T8 全跑不到（它的 `task.wait` 桩是 `coroutine.yield`）。**未修**，待专门处理。
+★ 通用：**回归脚本"跑失败"要先用旧源码跑一遍做 A/B**，否则会把旧账算到本轮改动头上。
