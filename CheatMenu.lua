@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 22:17 sha ecd2ae22 bytes 616969'):format('2026-10-09 22:17','ecd2ae22',616969))
+print(('[CheatMenu] build 2026-10-09 22:31 sha b4052ee3 bytes 616469'):format('2026-10-09 22:31','b4052ee3',616469))
 local F = {}
-F.VERSION = "v17.0.43"
+F.VERSION = "v17.0.44"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6899,10 +6899,26 @@ F.InfItemAttrName = function(tm)
 if tm == nil then return nil end
 local best = nil
 pcall(function()
+local attrs = nil
+pcall(function() attrs = tm:GetAttributes() end)
+if type(attrs) == "table" then
+local lower = {}
+local k, v
+for k, v in pairs(attrs) do
+if type(v) == "number" then lower[string.lower(tostring(k))] = k end
+end
+local i
+for i = 1, #F.INF_USE_ATTR do
+local real = lower[F.INF_USE_ATTR[i]]
+if real ~= nil then best = real break end
+end
+end
+if best == nil then
 for _, key in ipairs(F.INF_USE_ATTR) do
 local v = nil
 pcall(function() v = tm:GetAttribute(key) end)
 if type(v) == "number" then best = key break end
+end
 end
 if best == nil then
 for _, key in ipairs(F.INF_USE_ATTR) do
@@ -9308,51 +9324,6 @@ end
 if cache ~= nil and (res == true or deep == true) then cache[o] = res end
 return res
 end
-F.NpcSweep = function(center, doOffer)
-if type(doOffer) ~= "function" then return 0 end
-local q, qi, n, found = { { workspace, 0 } }, 1, 0, 0
-while qi <= #q and n < 1500 do
-local item = q[qi]
-qi = qi + 1
-local node = item[1]
-local dep = tonumber(item[2]) or 0
-n = n + 1
-local descend = (dep < 3)
-if node ~= workspace and node ~= nil then
-local skip = false
-pcall(function() skip = (node == LP.Character) end)
-if not skip then
-pcall(function() if Players:GetPlayerFromCharacter(node) ~= nil then skip = true end end)
-end
-if skip then
-descend = false
-elseif F.IsNPC(node) then
-descend = false
-local pos = nil
-pcall(function() pos = node:GetPivot().Position end)
-if pos == nil then pcall(function() local pp = node.PrimaryPart if pp ~= nil then pos = pp.Position end end) end
-if pos ~= nil and (pos - center).Magnitude <= F.IxRange() then
-doOffer(node, F.NPC_COLOR, pos, "npc")
-found = found + 1
-end
-end
-end
-if descend then
-local kids = nil
-pcall(function() kids = node:GetChildren() end)
-if type(kids) == "table" then
-local i
-for i = 1, #kids do
-local k = kids[i]
-local ok2 = false
-pcall(function() ok2 = k:IsA("Model") or k:IsA("Folder") end)
-if ok2 then q[#q + 1] = { k, dep + 1 } end
-end
-end
-end
-end
-return found
-end
 F.NpcScan = function()
 local n = 0
 local list = {}
@@ -9388,7 +9359,6 @@ F._ixPos, F._ixLog = nil, 0
 F.IX_MAX = 240
 F.IX_MAXSZ = 90
 F.IX_MOVE = 12
-F.IX_HOPS = 2
 F.IxTooBig = function(o)
 local sz = 0
 pcall(function() if o:IsA("BasePart") then sz = o.Size.Magnitude end end)
@@ -9407,18 +9377,6 @@ local v = tonumber(C.IxGap)
 if not v or v < 0.5 then v = 2 end
 if v > 10 then v = 10 end
 return v
-end
-F.IxParams = function()
-if F._ixParams ~= nil then return F._ixParams end
-local p = nil
-pcall(function()
-p = OverlapParams.new()
-p.FilterType = Enum.RaycastFilterType.Exclude or Enum.RaycastFilterType.Blacklist
-p.FilterDescendantsInstances = { LP.Character }
-p.MaxParts = 3000
-end)
-F._ixParams = p
-return p
 end
 F.IX_COLOR = Color3.fromRGB(255, 215, 0)
 F.HL_COLORS = {
@@ -9588,46 +9546,86 @@ end
 F.IxScopeFull = function()
 return tostring(C.IxScope or "") == "全图"
 end
-F.IxFullSweep = function(center, doOffer)
-if type(doOffer) ~= "function" then return 0 end
-local all = nil
-pcall(function() all = workspace:GetDescendants() end)
-if type(all) ~= "table" then return 0 end
-local n, i = 0, 0
+F.IxCand, F.IxCandAt = {}, 0
+F.IxCandBuild = function()
+local t = {}
+pcall(function()
+local all = workspace:GetDescendants()
+local i
 for i = 1, #all do
 local o = all[i]
-if o ~= nil and typeof(o) == "Instance" then
-local cls = o.ClassName
+if o ~= nil then
+local cls = nil
+pcall(function() cls = o.ClassName end)
 if cls == "ProximityPrompt" or cls == "ClickDetector" then
-local tgt = nil
+t[#t + 1] = o
+elseif cls == "Model" and o ~= LP.Character then
+local ok = false
+pcall(function() ok = F.IsNPC(o) end)
+if ok then t[#t + 1] = o end
+end
+end
+end
+end)
+F.IxCand = t
+F.IxCandAt = os.clock()
+return #t
+end
+F.IxCandAdd = function(o)
+if o == nil or T.IxHL ~= true then return end
+if type(F.IxCand) ~= "table" then F.IxCand = {} end
+local cls = nil
+pcall(function() cls = o.ClassName end)
+if cls == "ProximityPrompt" or cls == "ClickDetector" then
+F.IxCand[#F.IxCand + 1] = o
+elseif cls == "Model" and o ~= LP.Character then
+local ok = false
+pcall(function() ok = F.IsNPC(o) end)
+if ok then F.IxCand[#F.IxCand + 1] = o end
+end
+end
+F.IxFullSweep = function(center, doOffer, maxDist)
+if type(doOffer) ~= "function" then return 0, 0 end
+if type(F.IxCand) ~= "table" then F.IxCand = {} end
+if (F.IxCandAt or 0) == 0 then pcall(F.IxCandBuild) end
+local t = F.IxCand
+local n, npcN = 0, 0
+local i
+for i = 1, #t do
+local o = t[i]
+if o ~= nil and o.Parent ~= nil then
+local cls = nil
+pcall(function() cls = o.ClassName end)
+local pos, tgt, kind = nil, o, nil
+if cls == "ProximityPrompt" or cls == "ClickDetector" then
+tgt = nil
 pcall(function() tgt = o.Parent end)
 if tgt ~= nil and tgt ~= LP.Character and F.IxStruct(tgt) then
 local alt = F.IxTgtPart(tgt)
 if alt ~= nil and alt ~= tgt and not F.IxStruct(alt) then tgt = alt else tgt = nil end
 end
 if tgt ~= nil and tgt ~= LP.Character then
-local pos = nil
 pcall(function() pos = tgt.Position end)
 if pos == nil then pcall(function() pos = tgt:GetPivot().Position end) end
-if pos ~= nil then
-doOffer(tgt, F.HL_COLORS.ix, pos, "ix")
-n = n + 1
-end
+kind = "ix"
 end
 elseif cls == "Model" and o ~= LP.Character then
-if F.IsNPC(o) then
-local pos = nil
 pcall(function() pos = o:GetPivot().Position end)
 if pos == nil then pcall(function() local pp = o.PrimaryPart if pp ~= nil then pos = pp.Position end end) end
-if pos ~= nil then
-doOffer(o, F.NPC_COLOR, pos, "npc")
+kind = "npc"
+end
+if kind ~= nil and pos ~= nil then
+local ok = true
+if maxDist ~= nil then ok = (pos - center).Magnitude <= maxDist end
+if ok then
+if kind == "npc" then doOffer(o, F.NPC_COLOR, pos, "npc") npcN = npcN + 1
+else doOffer(tgt, F.HL_COLORS.ix, pos, "ix") end
 n = n + 1
 end
 end
 end
 end
-end
-return n
+return n, npcN
 end
 F.IxScan = function()
 local center = F.IxCenter()
@@ -9651,35 +9649,10 @@ cur.d = d
 cur.col = col
 end
 end
-if F.IxScopeFull() then
-pcall(function() npcN = F.IxFullSweep(center, offer) end)
-else
-local parts = nil
-pcall(function() parts = workspace:GetPartBoundsInRadius(center, F.IxRange(), F.IxParams()) end)
-if type(parts) ~= "table" then parts = {} end
-for i = 1, #parts do
-local pt = parts[i]
-local k, c = F.HLKind(pt)
-if k then
-offer(pt, c, pt.Position, k)
-else
-local up = pt
-for hop = 1, F.IX_HOPS do
-local pp = nil
-pcall(function() pp = up.Parent end)
-if pp == nil or pp == workspace then break end
-up = pp
-local skipUp = false
-pcall(function() skipUp = up:IsA("Folder") or up:IsA("Terrain") end)
-if not skipUp then
-local k2, c2 = F.HLKind(up)
-if k2 then offer(up, c2, pt.Position, k2) break end
-end
-end
-end
-end
-pcall(function() npcN = npcN + F.NpcSweep(center, offer) end)
-end
+if os.clock() - (F.IxCandAt or 0) > 30 then pcall(F.IxCandBuild) end
+local lim = nil
+if not F.IxScopeFull() then lim = F.IxRange() end
+pcall(function() local _, b = F.IxFullSweep(center, offer, lim) npcN = b or 0 end)
 table.sort(order, function(a, b) return best[a].d < best[b].d end)
 local keep = {}
 for i = 1, #order do
@@ -9720,9 +9693,11 @@ if F._ixLoop then pcall(function() F._ixLoop:Disconnect() end) F._ixLoop = nil e
 if F._ixAdded then pcall(function() F._ixAdded:Disconnect() end) F._ixAdded = nil end
 if not T.IxHL then
 F.IxClear()
+F.IxCand, F.IxCandAt = {}, 0
 F.Out("[高亮透视] 已关")
 return
 end
+pcall(F.IxCandBuild)
 local n, _, _, npcN = F.IxScan()
 F.Out("[高亮透视] 已开 · 模式=" .. (F.IxScopeFull() and "全图(不限距离)" or ("以你为中心 " .. tostring(F.IxRange()) .. " 格内")) .. " · 标出 " .. tostring(n) .. " 个(其中 NPC/生物 " .. tostring(npcN or 0) .. " 个) · 上限 " .. tostring(F.IX_MAX) .. " 个")
 F.Out("[高亮透视] 死亡/观战时会自动改用相机位置继续扫, 不会因为自己没角色就全灭")
@@ -9733,6 +9708,7 @@ F.Out("[高亮透视] 只高亮「真正可交互的物件 + 生物」: 地图�
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
 if not T.IxHL then return end
+pcall(F.IxCandAdd, o)
 task.wait(0.3)
 if not T.IxHL then return end
 local kk, cc = F.HLKind(o)
@@ -9752,7 +9728,7 @@ local pos = nil
 pcall(function() pos = target.Position end)
 if pos == nil then pcall(function() pos = target:GetPivot().Position end) end
 if pos == nil then return end
-if (pos - root.Position).Magnitude > F.IxRange() then return end
+if not F.IxScopeFull() and (pos - root.Position).Magnitude > F.IxRange() then return end
 if F.IxTooBig(target) then return end
 if F._ixObjs[target] ~= nil then return end
 F.IxAdd(target, cc)
