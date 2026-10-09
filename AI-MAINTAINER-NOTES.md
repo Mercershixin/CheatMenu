@@ -4959,3 +4959,31 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 旧执行器缓存里的老脚本可能在**我们清理之后**才把绿框建出来（加载时序不确定）。
 ⇒ 开机做多轮清扫（0 / 2 / 6 秒），并且**只写日志不弹窗**（用户嫌通知烦）。
 `F.PurgeLegacyClicker(quiet)` 的 `quiet` 参数就是给这种后台轮次用的。
+
+## ★★★ 事故：鼠标指针被脚本藏起来（v17.0.37 修复）—— "环境判定翻转"引发的老逻辑爆雷
+
+**症状**：用户鼠标指针不见了（Roblox 里完全看不到光标）。
+
+**根因**：脚本从 16.10.34 起就有一行加载期逻辑：
+`if UIS.TouchEnabled and UIS.MouseIconEnabled then UIS.MouseIconEnabled = false end`
+—— 只要设备被判定为**触屏**，就把鼠标指针隐藏。
+而**恢复路径也被同一个条件挡住**：`F.MenuMouseForce` 第一句就是 `if UIS.TouchEnabled then return end`，
+`F.ModalOverlaySet` 里那段"亮出指针"也无脑套了 `if not UIS.TouchEnabled`。⇒ 触屏设备上**只藏不放**。
+
+**为什么以前没事、今天出事**：不是代码变了，是**环境判定翻转了**。
+用户执行器日志里当天 09:03 以前全是 `平台=键鼠(PC) · 视口=1920x1080`；
+17:44 那次变成 `[环境] 触屏(手机/平板)` ⇒ `TouchEnabled == true` ⇒ 老逻辑开始生效。
+
+★★★ 教训（通用）：**"把某个状态改成 X"的代码，必须同时确认"把它改回原值"的路径不在同一个条件里**。
+本次就是"隐藏"和"恢复"共用了 `TouchEnabled` 这一个判断 ⇒ 一旦判定为真，就永久回不来。
+
+**修法**：
+1. 删掉加载期"触屏就隐藏指针"的逻辑，改成**确保可见**：`pcall(function() F.MouseShow() end)`。
+2. 新增公共函数 `F.MouseShow()`（`MouseIconEnabled ~= true` 才写，避免每帧写属性）。
+3. `F.MenuMouseForce` 里把"亮出指针"**挪到 `if UIS.TouchEnabled then return end` 之前**；
+   `F.ModalOverlaySet` 里去掉 `if not UIS.TouchEnabled` 的前置条件。
+4. 卸载/热加载收尾加 `pcall(F.MouseShow)` —— 保证不会把"藏起来的指针"留给用户。
+
+★ 排查这类"用户说某某不见了"的最快路径：**读执行器运行日志**（`%LOCALAPPDATA%\Real\workspace\CheatMenu_Logs\`），
+里面有 `[环境] 平台=… · 布局=… · 视口=…` 逐次会话记录 —— 一眼就能看出"环境判定是不是变了"。
+本次正是靠"早上的会话是键鼠、晚上的会话是触屏"这一行对比直接定位。
