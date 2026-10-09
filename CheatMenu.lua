@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 17:58 sha d47f6d89 bytes 615260'):format('2026-10-09 17:58','d47f6d89',615260))
+print(('[CheatMenu] build 2026-10-09 18:16 sha 40259f6d bytes 614472'):format('2026-10-09 18:16','40259f6d',614472))
 local F = {}
-F.VERSION = "v17.0.38"
+F.VERSION = "v17.0.39"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2202,51 +2202,23 @@ end
 F._afkLoop = nil
 end)
 end
-F.AFK_LEVELS = { "关(不防踢)", "基础(只掐游戏检测连接)", "标准(保活60秒+拦上报)", "激进(保活30秒+拦上报)" }
-F.AFKStrengthOf = function()
-local v = C.AFKStrength
-local ok = false
-for i = 1, #F.AFK_LEVELS do
-if F.AFK_LEVELS[i] == v then ok = true break end
-end
-if ok then return v end
-if T.AntiAFK ~= true then return F.AFK_LEVELS[1] end
-if T.AFKKeepAlive == false or T.AFKBlockReport == false then return F.AFK_LEVELS[2] end
-if (tonumber(C.AFKKeepGap) or 60) <= 30 then return F.AFK_LEVELS[4] end
-return F.AFK_LEVELS[3]
-end
-F.AFKStrengthInit = function()
-C.AFKStrength = F.AFKStrengthOf()
-return C.AFKStrength
-end
-F.AFKApply = function(v)
-if type(v) ~= "string" or v == "" then v = F.AFKStrengthOf() end
-local lvl = 1
-for i = 1, #F.AFK_LEVELS do
-if F.AFK_LEVELS[i] == v then lvl = i break end
-end
-C.AFKStrength = F.AFK_LEVELS[lvl]
-local basic = (lvl >= 2)
-local keep = (lvl >= 3)
-T.AntiAFK = basic
-T.AFKKeepAlive = keep
-T.AFKBlockReport = keep
-if keep then C.AFKKeepGap = (lvl >= 4) and 30 or 60 end
-if keep then
-pcall(F.AFKLoopStop)
-pcall(F.AFKLoopEnable)
-else
-pcall(F.AFKLoopStop)
-end
-if basic then
+F.AFKApply = function(on)
+T.AFKKickGuard = on and true or false
+T.AntiAFK = T.AFKKickGuard
+T.AFKKeepAlive = T.AFKKickGuard
+T.AFKBlockReport = T.AFKKickGuard
+C.AFKKeepGap = 60
+if F._cfgSyncing then return end
+if T.AFKKickGuard then
 pcall(F.AntiAFKEnable)
+pcall(F.AFKLoopEnable)
+pcall(function() if AC and AC.InstallNamecallHook then AC.InstallNamecallHook() end end)
+F.Out("[挂机防踢] 已开: 掐掉游戏自带的挂机检测连接 + 每 " .. tostring(F.AFKGap()) .. " 秒保活一次 + 拦 AFK 上报")
 else
 pcall(F.AntiAFKDisable)
+pcall(F.AFKLoopStop)
+F.Out("[挂机防踢] 已关: 不再掐检测连接 / 不再保活 / 不再拦上报")
 end
-if keep then pcall(function() AC.InstallNamecallHook() end) end
-F.Out("[挂机防踢] 强度 = " .. C.AFKStrength
-.. (keep and (" · 每 " .. tostring(F.AFKGap()) .. " 秒保活 + 拦 AFK 上报") or (basic and " · 只掐连接+心跳, 不保活不拦上报" or " · 已全关")))
-return C.AFKStrength
 end
 F._flingConns = {}
 function F.AntiFlingEnable()
@@ -10784,7 +10756,7 @@ task.wait(0.6)
 pcall(chunk)
 return true
 end
-F.PANIC_KEEP = { CharPersist = true, GuiProtect = true,
+F.PANIC_KEEP = { CharPersist = true, GuiProtect = true, AFKKickGuard = true,
 AntiAFK = true, AFKKeepAlive = true, AFKBlockReport = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true, LockHealthSolo = true,
 NoScreenFx = true }
@@ -13756,6 +13728,7 @@ end)
 end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
+if T.AFKKickGuard == nil then T.AFKKickGuard = true end
 end
 pcall(function()
 local sid = tostring(game.PlaceId) .. "/" .. tostring(game.JobId)
@@ -16544,8 +16517,9 @@ F.WaypointRefreshUI()
 task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
-Tabs.AFK:AddSection("挂机防踢")
-Tabs.AFK:AddDropdown("AFKStrength", { Title = "防踢强度", Values = F.AFK_LEVELS, Default = F.AFK_LEVELS[1], Callback = function(v)
+Tabs.AFK:AddSection("挂机")
+Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢", Default = true, Callback = function(v)
+T.AFKKickGuard = v and true or false
 if F._cfgSyncing then return end
 pcall(F.AFKApply, v)
 end })
@@ -17217,7 +17191,6 @@ end
 if C.IxRange == nil then C.IxRange = 300 end
 if C.IxGap == nil then C.IxGap = 2 end
 if C.IxScope == nil then C.IxScope = "附近范围" end
-pcall(F.AFKStrengthInit)
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
 if n and n > 0 then F.Out("[CheatMenu] 已把 " .. n .. " 个控件拉到与当前状态一致") end
@@ -17247,7 +17220,7 @@ pcall(F.GymRestore)
 end)
 end)
 end)
-F.Try("AFKApply", F.AFKApply, F.AFKStrengthInit())
+F.Try("AFKApply", F.AFKApply, T.AFKKickGuard ~= false)
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
 pcall(F.CacheSync)
 F.PerfCheck = function()
