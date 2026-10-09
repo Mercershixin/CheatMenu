@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 01:22 sha a6e25b2d bytes 645622'):format('2026-10-10 01:22','a6e25b2d',645622))
+print(('[CheatMenu] build 2026-10-10 01:37 sha 2472ff17 bytes 645681'):format('2026-10-10 01:37','2472ff17',645681))
 local F = {}
-F.VERSION = "v17.0.50"
+F.VERSION = "v17.0.51"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -16323,10 +16323,10 @@ Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
+TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 IY      = Window:AddTab({ Title = "IY 命令", Icon = "terminal" }),
 }
 Tabs.World   = Tabs.Visual
-Tabs.TP      = Tabs.Move
 Tabs.AC      = Tabs.System
 Tabs.Setting = Tabs.System
 F._uiFails = 0
@@ -16844,6 +16844,11 @@ T.NoScreenFx = v and true or false
 if F._cfgSyncing then return end
 pcall(F.ScrFxSet, v)
 end })
+Tabs.Visual:AddToggle("HideGameGui", { Title = "隐藏游戏界面", Default = false, Callback = function(v)
+T.HideGameGui = v
+if F._cfgSyncing then return end
+pcall(F.HideGameGuiSet, v)
+end })
 Tabs.Visual:AddSection("高亮 / 敌我识别")
 Tabs.Visual:AddToggle("BodyHL", { Title = "身体高亮透视", Default = false, Callback = function(v)
 T.BodyHL = v
@@ -16930,11 +16935,6 @@ C.IxGap = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
-Tabs.Visual:AddToggle("HideGameGui", { Title = "隐藏游戏界面", Default = false, Callback = function(v)
-T.HideGameGui = v
-if F._cfgSyncing then return end
-pcall(F.HideGameGuiSet, v)
-end })
 Tabs.Visual:AddSection("穿墙透视")
 Tabs.Visual:AddToggle("XRay", { Title = "穿墙透视", Default = false, Callback = function(v)
 T.XRay = v
@@ -16965,6 +16965,17 @@ T.Antilag = v
 if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 F.Out("[降画质] " .. (v and "已开" or "已关"))
+end })
+Tabs.World:AddSection("画面 / 界面")
+Tabs.World:AddToggle("IYNoRender", { Title = "停渲染", Default = false, Callback = function(v)
+T.IYNoRender = v
+if F._cfgSyncing then return end
+F.IYNoRenderSet(v)
+end })
+Tabs.World:AddToggle("IYPrompts", { Title = "关购买弹窗", Default = false, Callback = function(v)
+T.IYPrompts = v
+if F._cfgSyncing then return end
+F.IYPromptsSet(v)
 end })
 Tabs.World:AddSection("角色识别")
 Tabs.World:AddToggle("RoleTag", { Title = "头顶标记", Default = false, Callback = function(v)
@@ -17029,19 +17040,19 @@ Tabs.TP:AddButton({ Title = "去这个世界", Callback = function()
 local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
 task.spawn(function() pcall(F.WorldGoto, pick) end)
 end })
-Tabs.TP:AddSection("针对玩家")
-Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
+Tabs.Move:AddSection("针对玩家")
+Tabs.Move:AddButton({ Title = "把他甩飞", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
 end })
-Tabs.TP:AddToggle("LoopFling", { Title = "循环甩飞", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("LoopFling", { Title = "循环甩飞", Default = false, Callback = function(v)
 T.LoopFling = v
 if F._cfgSyncing then return end
 if v then pcall(F.FlingLoopStart) else pcall(F.FlingLoopStop) end
 end })
-Tabs.TP:AddButton({ Title = "甩飞所有人", Callback = function()
+Tabs.Move:AddButton({ Title = "甩飞所有人", Callback = function()
 task.spawn(function() pcall(F.FlingAll) end)
 end })
-Tabs.TP:AddSlider("FlingInterval", { Title = "甩飞间隔", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
+Tabs.Move:AddSlider("FlingInterval", { Title = "甩飞间隔", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
 Tabs.TP:AddSection("收藏点位")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
@@ -17692,17 +17703,6 @@ end })
 Tabs.IY:AddSlider("IYSpinSpeed", { Title = "自转 · 转速", Min = 1, Max = 60, Default = 20, Rounding = 0, Callback = function(v)
 C.IYSpinSpeed = v
 if T.IYSpin == true and not F._cfgSyncing then F.IYSpinSet(true) end
-end })
-Tabs.IY:AddSection("画面 / 界面")
-Tabs.IY:AddToggle("IYNoRender", { Title = "停渲染", Default = false, Callback = function(v)
-T.IYNoRender = v
-if F._cfgSyncing then return end
-F.IYNoRenderSet(v)
-end })
-Tabs.IY:AddToggle("IYPrompts", { Title = "关购买弹窗", Default = false, Callback = function(v)
-T.IYPrompts = v
-if F._cfgSyncing then return end
-F.IYPromptsSet(v)
 end })
 Tabs.IY:AddSection("道具 / 刷东西")
 Tabs.IY:AddButton({ Title = "抓工具（把场上地面道具装进手/背包）", Callback = function()
