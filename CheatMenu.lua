@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 18:16 sha 40259f6d bytes 614472'):format('2026-10-09 18:16','40259f6d',614472))
+print(('[CheatMenu] build 2026-10-09 21:39 sha 3bb2be6a bytes 619618'):format('2026-10-09 21:39','3bb2be6a',619618))
 local F = {}
-F.VERSION = "v17.0.39"
+F.VERSION = "v17.0.40"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6459,6 +6459,12 @@ local kc = nil
 pcall(function() kc = Enum.KeyCode[nm] end)
 return kc
 end
+F.ClickerFnKey = function(kc)
+local n = nil
+pcall(function() n = kc and kc.Name end)
+if type(n) ~= "string" then return false end
+return (string.match(n, "^F%d+$") ~= nil)
+end
 F.ClickerGap = function()
 local v = tonumber(C.ClickerGap)
 if not v or v < 0.01 then v = 0.05 end
@@ -6518,6 +6524,131 @@ C.ClickerX, C.ClickerY = x, y
 pcall(F.ClickerPersist)
 F.Out("[连点器] 已保存点击位置 " .. x .. "," .. y .. " (来源: " .. tostring(src) .. " · 对照 " .. tostring(F._xyDiag) .. ")")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. x .. "," .. y, Duration = 4 }) end)
+return true
+end
+F.PickChoose = function(evx, evy, gx, gy, curx, cury)
+local gOk = (gx ~= nil and gy ~= nil and gx > 0 and gy > 0)
+if not gOk then
+local eOk = (evx ~= nil and evy ~= nil and evx > 0 and evy > 0)
+if eOk then return math.floor(evx), math.floor(evy), "点击事件" end
+return nil, nil, nil
+end
+if evx ~= nil and evy ~= nil and evx > 0 and evy > 0 and curx ~= nil and cury ~= nil
+and math.abs(gx - curx) <= 1 and math.abs(gy - cury) <= 1
+and (math.abs(evx - gx) > 8 or math.abs(evy - gy) > 8) then
+return math.floor(evx), math.floor(evy), "点击事件(引擎读数卡住)"
+end
+return math.floor(gx), math.floor(gy), "引擎鼠标"
+end
+F.ClickerPickAbort = function()
+if type(F._pickDone) == "function" then pcall(F._pickDone) end
+pcall(function() RS:UnbindFromRenderStep("CM_PickMouse") end)
+pcall(function()
+local g = F._pickGui
+F._pickGui = nil
+if g ~= nil then g:Destroy() end
+end)
+pcall(F.MouseShow)
+end
+F.ClickerPickPos = function()
+if F._pickGui ~= nil then
+F.Out("[连点器] 再按一次 = 取消取点")
+pcall(function() F.ClickerPickAbort() end)
+return false
+end
+local host = nil
+pcall(function() if type(gethui) == "function" then host = gethui() end end)
+if host == nil then pcall(function() host = Fluent and Fluent.GUI end) end
+if host == nil then pcall(function() host = game:GetService("CoreGui") end) end
+local prevMB = nil
+pcall(function() prevMB = UIS.MouseBehavior end)
+local gui, btn = nil, nil
+if host ~= nil then
+pcall(function()
+gui = Instance.new("ScreenGui")
+gui.Name = "CMPickPos"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 100000
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui:SetAttribute("CMOwned", true)
+btn = Instance.new("TextButton")
+btn.Name = "Pick"
+btn.Size = UDim2.fromScale(1, 1)
+btn.Position = UDim2.fromScale(0, 0)
+btn.BackgroundTransparency = 1
+btn.Text = ""
+btn.TextTransparency = 1
+btn.AutoButtonColor = false
+btn.Modal = true
+btn.ZIndex = 5000
+btn.Parent = gui
+gui.Parent = host
+end)
+end
+if gui == nil or btn == nil then
+pcall(function() if gui ~= nil then gui:Destroy() end end)
+F.Out("[连点器] 取点层起不来 ⇒ 退回按一下直接存")
+return F.ClickerSavePos()
+end
+F._pickGui = gui
+local done = false
+local function force()
+if done then return end
+pcall(function()
+if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end
+if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default end
+end)
+end
+local function finish(cx, cy, src)
+if done then return end
+done = true
+F._pickGui, F._pickDone = nil, nil
+pcall(function() gui:Destroy() end)
+pcall(function() RS:UnbindFromRenderStep("CM_PickMouse") end)
+pcall(function()
+if prevMB ~= nil and UIS.MouseBehavior ~= prevMB then UIS.MouseBehavior = prevMB end
+end)
+pcall(F.MouseShow)
+if cx == nil or cy == nil then
+F.Out("[连点器] 取点已取消(没拿到坐标)")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "已取消取点", Duration = 3 }) end)
+return
+end
+C.ClickerX, C.ClickerY = math.floor(cx), math.floor(cy)
+pcall(F.ClickerPersist)
+F.Out("[连点器] 已保存点击位置 " .. tostring(C.ClickerX) .. "," .. tostring(C.ClickerY) .. " (来源: " .. tostring(src or "取点") .. ")")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "已保存位置 " .. tostring(C.ClickerX) .. "," .. tostring(C.ClickerY), Duration = 5 }) end)
+end
+F._pickDone = function() finish(nil, nil) end
+pcall(function() RS:BindToRenderStep("CM_PickMouse", Enum.RenderPriority.Last.Value, force) end)
+force()
+pcall(function()
+btn.InputBegan:Connect(function(input)
+if done then return end
+local evx, evy = nil, nil
+pcall(function() evx, evy = tonumber(input.Position.X), tonumber(input.Position.Y) end)
+task.spawn(function()
+task.wait()
+local gx, gy = F.ClickerMouseXY()
+local curx, cury = F.ClickerPos()
+local ins = nil
+pcall(function()
+local a = game:GetService("GuiService"):GetGuiInset()
+if a ~= nil then ins = tonumber(a.Y) end
+end)
+F.Out("[连点器] 取点对照: 事件=" .. tostring(evx) .. "," .. tostring(evy)
+.. " · 引擎=" .. tostring(gx) .. "," .. tostring(gy)
+.. " · 差=" .. tostring(evx ~= nil and gx ~= nil and (evx - gx) or "?") .. "," .. tostring(evy ~= nil and gy ~= nil and (evy - gy) or "?")
+.. " · 顶栏=" .. tostring(ins) .. " · 鼠标锁=" .. tostring(F.LockedNow and F.LockedNow() or "?"))
+local x, y, src = F.PickChoose(evx, evy, gx, gy, curx, cury)
+finish(x, y, src)
+end)
+end)
+end)
+F.Out("[连点器] 取点模式: 点一下你要连点的位置 —— 点完自动保存, 15 秒不点自动取消(再按一次 " .. tostring(C.ClickerPosKey) .. " 取消)")
+pcall(function() Fluent:Notify({ Title = "连点器 · 取点", Content = "点一下你要连点的位置就行", Duration = 8 }) end)
+task.delay(15, function() if not done then finish(nil, nil) end end)
 return true
 end
 F.ClickerClearPos = function()
@@ -6603,8 +6734,8 @@ function F.ClickerEnable()
 if CLKST.loop then return end
 local x, y = F.ClickerPos()
 if not x then
-F.Out("[连点器] 还没保存位置 ⇒ 鼠标移到目标处, 按 " .. tostring(C.ClickerPosKey) .. " 或点「保存当前鼠标位置」")
-pcall(function() Fluent:Notify({ Title = "连点器", Content = "还没保存位置: 鼠标放到目标处按 " .. tostring(C.ClickerPosKey), Duration = 6 }) end)
+F.Out("[连点器] 还没保存位置 ⇒ 按 " .. tostring(C.ClickerPosKey) .. " 或用「连点器 · 点一下存坐标」点一下目标")
+pcall(function() Fluent:Notify({ Title = "连点器", Content = "还没保存位置: 按 " .. tostring(C.ClickerPosKey) .. " 或用「点一下存坐标」点目标", Duration = 6 }) end)
 T.Clicker = false
 F.ClickerSyncUI(false)
 return
@@ -6659,19 +6790,22 @@ pcall(function() ok = (input.UserInputType == Enum.UserInputType.MouseButton1) e
 return ok
 end
 CLKST.conns[1] = UIS.InputBegan:Connect(function(input, gp)
-if gp or not input then return end
+if not input then return end
 local isK = false
 pcall(function() isK = (input.UserInputType == Enum.UserInputType.Keyboard) end)
 if isK then
 local kc = F.ClickerKeyOf("run")
 local pk = F.ClickerKeyOf("pos")
 if kc ~= nil and input.KeyCode == kc then
+if gp and not F.ClickerFnKey(kc) then return end
 pcall(F.ClickerToggle)
 elseif pk ~= nil and input.KeyCode == pk then
-pcall(F.ClickerSavePos)
+if gp and not F.ClickerFnKey(pk) then return end
+pcall(F.ClickerPickPos)
 end
 return
 end
+if gp then return end
 if isMouse1(input) then
 if selfClick() then return end
 local md = tostring(C.ClickerMode)
@@ -13643,7 +13777,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.InfItemDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.ClickerPickAbort, F.InfItemDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -16582,9 +16716,9 @@ end })
 Tabs.AFK:AddSlider("ClickerGap", { Title = "连点器 · 间隔(秒)", Min = 0.01, Max = 2, Default = 0.05, Rounding = 2, Callback = function(v) C.ClickerGap = v end })
 Tabs.AFK:AddDropdown("ClickerKey", { Title = "连点器 · 开/停快捷键", Values = F.CLICKER_KEYS, Default = "F6", Callback = function(v) C.ClickerKey = v end })
 Tabs.AFK:AddDropdown("ClickerPosKey", { Title = "连点器 · 存坐标快捷键", Values = F.CLICKER_KEYS, Default = "F7", Callback = function(v) C.ClickerPosKey = v end })
-Tabs.AFK:AddButton({ Title = "连点器 · 保存当前鼠标位置", Callback = function()
+Tabs.AFK:AddButton({ Title = "连点器 · 点一下存坐标", Callback = function()
 if not F.Once("cksave", 0.6) then return end
-pcall(F.ClickerSavePos)
+pcall(F.ClickerPickPos)
 end })
 Tabs.AFK:AddButton({ Title = "连点器 · 清除保存的位置", Callback = function()
 if not F.Once("ckclear", 0.6) then return end
