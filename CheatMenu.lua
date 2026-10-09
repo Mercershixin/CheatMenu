@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 10:52 sha c6aeb130 bytes 613891'):format('2026-10-09 10:52','c6aeb130',613891))
+print(('[CheatMenu] build 2026-10-09 11:17 sha 011353e6 bytes 612698'):format('2026-10-09 11:17','011353e6',612698))
 local F = {}
-F.VERSION = "v17.0.31"
+F.VERSION = "v17.0.32"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2463,7 +2463,7 @@ KG.blocked7 = (KG.blocked7 or 0) + 1
 return nil
 end
 end
-if (m == "FireServer" or m == "InvokeServer") and (T.TrapWarn or T.GuardOn) then
+if (m == "FireServer" or m == "InvokeServer") and T.TrapWarn then
 local isInst0 = false
 pcall(function() isInst0 = (typeof(self) == "Instance") end)
 if isInst0 then
@@ -3377,9 +3377,7 @@ F._hpIsoConns = {}
 pcall(function() F.MetaUninstall("game.__index", "CMHealthLock") end)
 F.Out("[血量隔离] 已关闭")
 end
-local GodConn = nil
 local function GodDisable()
-if GodConn then GodConn:Disconnect() GodConn = nil end
 local done = {}
 pcall(function()
 local _, hum = GC()
@@ -3416,20 +3414,6 @@ pcall(function() cn = F.GodRestoreDied() end)
 if cn > 0 then done[#done + 1] = "恢复死亡事件 " .. tostring(cn) .. " 条" end
 F._godOrig = nil
 if #done > 0 then F.Out("[上帝模式] 还原: " .. table.concat(done, " · ")) end
-end
-local function GodEnable()
-if GodConn then return end
-local arLastG = 0
-local function apply()
-if not T.LockHealth then pcall(LockHealthDisable) return end
-local now = os.clock()
-if now - arLastG < 0.1 then return end
-arLastG = now
-local _, hum = GC()
-if F.GodTopUp(hum, true) then F.HpFixNote(1) end
-end
-apply()
-GodConn = RS.Stepped:Connect(apply)
 end
 F.KillAuraConn = nil
 function F.KillAuraEnable()
@@ -3673,9 +3657,8 @@ pcall(steady and F.SteadyEnable or F.SteadyDisable)
 if hit then pcall(function() F.HitGuardEnable(strong) end) else pcall(F.HitGuardDisable) end
 pcall(trap and F.TrapGuardEnable or F.TrapGuardDisable)
 pcall(atp and F.SpeedAntiTPEnable or F.SpeedAntiTPDisable)
-F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 锁满血=%s · 陷阱=%s · 防拉回=%s · 绕过拉回=%s",
+F.Out(string.format("[防护] 稳身=%s · 受击保护=%s%s · 陷阱=%s · 防拉回=%s · 绕过拉回=%s",
 steady and "开" or "关", hit and "开" or "关", strong and "(猛档:断连接)" or "(状态法)",
-lock and "开" or "关",
 trap and "拦截(只做不触发)" or "关", atp and "开" or "关", bypass and "开" or "关"))
 end
 F.FLOOR_KEYS = { "treadmill", "tread", "belt", "conveyor", "speedpad" }
@@ -7252,9 +7235,9 @@ if on then F._featBypass[key] = true else F._featBypass[key] = nil end
 if F.BypassOwned() then
 if F._featBypassOn ~= true then
 F._featBypassOn = true
-T.BypassTier = "④ 全绕过(加速/飞行/旋转自带): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回 + 深度中和"
+T.BypassTier = "④ 全绕过(加速/飞行/旋转自带): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位"
 pcall(F.BypassTierApply, T.BypassTier)
-F.Out("[自带绕过] " .. key .. " 已开 ⇒ 直接装全绕过(不做检测扫描, 不用管防护档位): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位 + 防拉回 + 深度中和")
+F.Out("[自带绕过] " .. key .. " 已开 ⇒ 直接装绕过层(不做检测扫描, 不用管防护档位): 反拉回 + 速度守卫 + 读原值伪装 + 抢所有权 + 钉位")
 pcall(function() Fluent:Notify({ Title = "自带绕过", Content = "已随「" .. key .. "」装好全绕过(与防护档位无关)", Duration = 5 }) end)
 end
 else
@@ -7268,37 +7251,20 @@ end
 end
 F.BypassTierApply = function(v)
 v = tostring(v or "")
-local wants = {
-afk = string.find(v, "防挂机", 1, true) ~= nil,
-guard = string.find(v, "②", 1, true) ~= nil or string.find(v, "③", 1, true) ~= nil
-or string.find(v, "④", 1, true) ~= nil,
-kick = string.find(v, "③", 1, true) ~= nil or string.find(v, "④", 1, true) ~= nil,
-deep = string.find(v, "④", 1, true) ~= nil,
-}
-if not wants.guard then
-T.GuardOn, T.SpeedGuard, T.Spoof = false, false, false
-pcall(function() F.GuardSet(false, false, false, false) end)
+local on = string.find(v, "②", 1, true) ~= nil or string.find(v, "③", 1, true) ~= nil
+or string.find(v, "④", 1, true) ~= nil
+if not on then
+T.SpeedGuard, T.Spoof = false, false
 F.Try("SpeedGuardDisable", F.SpeedGuardDisable)
 F.Try("SpoofDisable", F.SpoofDisable)
 else
-T.GuardOn = false
-pcall(function() F.GuardSet(true, true, false, false) end)
 T.SpeedGuard = true
 F.Try("SpeedGuardEnable", F.SpeedGuardEnable)
 T.Spoof = true
 F.Try("SpoofEnable", F.SpoofEnable)
 end
-if not wants.deep then
-T.DeepNeuter = false
-pcall(F.DeepNeuterDisable)
-pcall(F.SpeedAntiTPDisable)
-else
-T.DeepNeuter = true
-F.Try("SpeedAntiTPEnable", F.SpeedAntiTPEnable)
-F.Try("DeepNeuterEnable", F.DeepNeuterEnable)
-end
 pcall(F.CfgSyncUI)
-F.Out("[绕过防护] 档位 = " .. v)
+F.Out("[自带绕过] 档位 = " .. v)
 end
 function F.SpeedGuardEnable()
 T.SpeedGuard = true
@@ -7739,7 +7705,7 @@ for _, c in ipairs(F._charEv) do pcall(function() c:Disconnect() end) end
 F._charEv = nil
 end
 end
-function F.GuardOnDisable()
+function F.ProtectAllDisable()
 pcall(function() F.GuardSet(false, false, false, false) end)
 end
 F.SpeedFreeEnable = function()
@@ -7875,7 +7841,7 @@ end
 function F.AllInOneDisableAll()
 F.Try("SpeedGuardDisable", F.SpeedGuardDisable)
 F.Try("CarryGuardDisable", F.CarryGuardDisable)
-F.Try("GuardOnDisable", F.GuardOnDisable)
+F.Try("ProtectAllDisable", F.ProtectAllDisable)
 F.Try("SpeedFreeDisable", F.SpeedFreeDisable)
 F.Try("SpoofDisable", F.SpoofDisable)
 end
@@ -8695,7 +8661,7 @@ end)
 if T.FlyOn then pcall(function() F.FlySet(true) end) end
 if T.SpeedOn then pcall(function() F.SpeedSet(true) end) end
 if T.NoClip then pcall(F.NoClipEnable) end
-if T.God then pcall(GodEnable) end
+if T.God then pcall(F.GodTickLoop) end
 if T.LockHealth then pcall(LockHealthEnable) end
 if T.AntiRagdoll then pcall(F.AntiRagdollEnable) end
 if T.InfiniteJump then pcall(F.InfiniteJumpEnable) end
@@ -10779,7 +10745,7 @@ pcall(chunk)
 return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
-AntiAFK = true, AFKKeepAlive = true, AFKBlockReport = true, GuardOn = true, HitGuard = true, SteadyOn = true,
+AntiAFK = true, AFKKeepAlive = true, AFKBlockReport = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true, LockHealthSolo = true,
 NoScreenFx = true }
 function F.PanicKeyDisableAll()
@@ -10793,7 +10759,7 @@ for k in pairs(T) do
 if type(T[k]) == "boolean" then T[k] = false end
 end
 for k, v in pairs(keep) do T[k] = v end
-for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
+for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
 for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
@@ -13663,7 +13629,7 @@ F.GuiProtectionDisable,
 F.TranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
-F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
+F.SpoofDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.InfItemDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
@@ -14329,7 +14295,6 @@ end
 F.CMX_CutLogEnable = function()
 if F.CMX_CutLogOn then return false end
 if type(getconnections) ~= "function" then
-T.CMX_CutLog = false
 F.Out("[反封禁·断日志] 本执行器没有 getconnections ⇒ 该层不可用")
 return false
 end
@@ -14380,7 +14345,6 @@ end
 F.CMX_NeuterPlusEnable = function()
 if F.CMX_NPOn then return false end
 if type(getgc) ~= "function" then
-T.CMX_NeuterPlus = false
 F.Out("[反封禁·按名中和+] 本执行器没有 getgc ⇒ 该层不可用")
 return false
 end
@@ -14453,7 +14417,6 @@ end
 F.CMX_HashFreezeEnable = function()
 if F.CMX_HashOn then return false end
 if type(getgc) ~= "function" or type(hookfunction) ~= "function" then
-T.CMX_HashFreeze = false
 F.Out("[反封禁·哈希冻结] 需要 getgc + hookfunction ⇒ 该层不可用")
 return false
 end
