@@ -5086,3 +5086,18 @@ ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                 
 - `_gen_clicker_sim.py`：自 v17.0.38 起 `ClickerSavePos` 里有 `task.wait`，而脚本在**主线程**直接调它 ⇒
   `thread yielded unexpectedly`，T2/T3/T8 全跑不到（它的 `task.wait` 桩是 `coroutine.yield`）。**未修**，待专门处理。
 ★ 通用：**回归脚本"跑失败"要先用旧源码跑一遍做 A/B**，否则会把旧账算到本轮改动头上。
+
+### 高亮透视：两个"看起来对、实测错"的写法（v17.0.41 实测）
+
+- ⛔ **`FindFirstChildWhichIsA(cls, true)` 递归整棵子树 = 定时炸弹**。它在 `F.IsNPC` 里被
+  `HLKind` 以 `deep=true` 调用 ⇒ **地图 Model 里任何角落有一个 Humanoid/AnimationController，
+  整块地图就被判成"生物"**（表现：整片地图被染成 NPC 色）。凡"这个实例像不像 X"的判定，
+  **默认只查自身与直接子级**；要递归必须显式写明并加尺寸/结构兜底。
+- ⛔ **别给关键词匹配"顺手加边界"**。加了左右边界后：`BossArena` 里的 `arena`、`EnemySpawner` 里的 `spawn`、
+  `ZombieKing` 里的 `zombie` **全部匹配不上** —— 前者让"地图排除"失效，后者让复合名怪漏标。
+  本仓定论：**包含匹配（`string.find(...,1,true)`）+ 强词表 + 布景反门禁**才是对的组合。
+- ★ 名字词表要**同时准备"正向词"和"反门禁词"**：只有正向词（`zombie/npc/boss/...`）时，
+  地图上的 `BossArena`/`EnemyBase`/`NPCBoard` 一定会中招。反门禁词（`statue/sign/spawn/arena/room/wall/...`）
+  必须**先于**正向词判定。
+- ★ 新增/修改高亮判定后**必须跑 `_gen_hlonly_sim.py`**（29 用例，含"地图不标""真生物认得""复合名不漏"三类断言）；
+  另注意 `_gen_merge_sim.py` 的 M1 段断言的是分类下拉内容，改分类就要同步改它。
