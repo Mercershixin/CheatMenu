@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 09:32 sha 83a44c1d bytes 613672'):format('2026-10-09 09:32','83a44c1d',613672))
+print(('[CheatMenu] build 2026-10-09 09:39 sha 649ec8a4 bytes 613584'):format('2026-10-09 09:39','649ec8a4',613584))
 local F = {}
-F.VERSION = "v17.0.27"
+F.VERSION = "v17.0.28"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -844,7 +844,7 @@ AC._gbypBlocked = (AC._gbypBlocked or 0) + 1
 local now = os.clock()
 if now - (AC._gbypLogAt or 0) < 4 then return end
 AC._gbypLogAt = now
-local msg = "[游戏专用绕过] 已拦下 " .. tostring(name) .. " ← 关键词 " .. tostring(kw)
+local msg = "[防护档位·游戏绕过] 已拦下 " .. tostring(name) .. " ← 关键词 " .. tostring(kw)
 .. " (累计 " .. tostring(AC._gbypBlocked) .. " 次; 游戏功能异常就说明这个词误伤了, 关掉即恢复)"
 if type(task) == "table" and task.defer then task.defer(function() pcall(F.Out, msg) end) else pcall(F.Out, msg) end
 end
@@ -854,19 +854,19 @@ if T.GameBypass then
 local n = 0
 pcall(function() n = F.GameBypassScan() end)
 pcall(AC.InstallNamecallHook)
-F.Out("[游戏专用绕过] 已开: 只拦「检测 / 上报类」远程, 命中 " .. tostring(n) .. " 个")
+F.Out("[防护档位·游戏绕过] 已开: 只拦「检测 / 上报类」远程, 命中 " .. tostring(n) .. " 个")
 local names, k = {}, 0
 for k = 1, #(F._gbypList or {}) do
 if #names >= 12 then break end
 names[#names + 1] = tostring(F._gbypList[k].Name)
 end
 if #names > 0 then
-F.Out("[游戏专用绕过] 本次目标: " .. table.concat(names, " / "))
+F.Out("[防护档位·游戏绕过] 本次目标: " .. table.concat(names, " / "))
 else
-F.Out("[游戏专用绕过] 本服没扫到「检测/上报类」远程 ⇒ 这次等于空转(不拦任何东西)")
+F.Out("[防护档位·游戏绕过] 本服没扫到「检测/上报类」远程 ⇒ 这次等于空转(不拦任何东西)")
 end
 else
-F.Out("[游戏专用绕过] 已关(不再拦; 公共钩子留给其它功能用)")
+F.Out("[防护档位·游戏绕过] 已关(不再拦; 公共钩子留给其它功能用)")
 end
 end
 AC.REMOTE_CLASSES = { "RemoteEvent", "UnreliableRemoteEvent", "RemoteFunction" }
@@ -1527,7 +1527,7 @@ local usedName = nil
 local hasRW = false
 pcall(function() hasRW = (type(writefile) == "function" and type(readfile) == "function") end)
 if not hasRW then
-F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(点「复制扫描结果」可复制)")
+F.Out("[日志] ⚠ 执行器不支持 readfile/writefile, 内容只留在 F9 控制台(在里面全选复制即可)")
 F._logFlushing = false
 return nil
 end
@@ -2202,7 +2202,7 @@ end
 F._afkLoop = nil
 end)
 end
-F.AFK_LEVELS = { "关(不防踢)", "基础(Idled+心跳)", "标准(保活60秒+拦上报)", "激进(保活30秒+拦上报)" }
+F.AFK_LEVELS = { "关(不防踢)", "基础(只掐游戏检测连接)", "标准(保活60秒+拦上报)", "激进(保活30秒+拦上报)" }
 F.AFKStrengthOf = function()
 local v = C.AFKStrength
 local ok = false
@@ -4873,7 +4873,7 @@ end
 F.bypassConn = nil
 function F.BypassEnable()
 if F.bypassConn then return end
-F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测函数」那种猛招的话, 防护里单独开「防拉回档」(那层动作最招反作弊)")
+F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测函数」那种猛招的话, 把「防护档位」调到 ③ 重 就有了(那一档动作最招反作弊)")
 local got = false
 pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
@@ -6937,7 +6937,7 @@ F.InfItemEnable = function()
 pcall(F.InfItemDeepScan)
 if #(F._infDropList or {}) == 0 then pcall(F.InfItemScan) end
 if F._infDrop == nil then
-F.Out("[无限道具] ⚠ 本服没扫到可用的「丢弃」远程 ⇒ 拒绝开启(不会乱发远程)。请点「扫描道具 / 交互」把日志发给我, 我按你的游戏接上")
+F.Out("[无限道具] ⚠ 本服没扫到可用的「丢弃」远程 ⇒ 拒绝开启(不会乱发远程)。点一次系统页的「全扫描」再把日志发我, 我按你的游戏接上")
 pcall(function() Fluent:Notify({ Title = "无限道具", Content = "没扫到「丢弃」远程 ⇒ 已拒绝开启(看日志)", Duration = 7 }) end)
 T.InfItem = false
 pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.InfItem, false) end)
@@ -15234,7 +15234,7 @@ local keys = {}
 for i = 1, #found do keys[#keys + 1] = tostring(found[i].inst.Name) end
 F.Out("[扫描] 扫到 " .. tostring(#found) .. " 个像上报/封禁的远程: "
 .. table.concat(keys, ", "):sub(1, 160))
-F.Out("[扫描] 要拦它们请手动开「★ 反封禁全家桶」(扫描只负责列出来, 不会自动动手)")
+F.Out("[扫描] 要拦它们请把「防护档位」调到 ② 中 或 ③ 重(扫描只负责列出来, 不会自动动手)")
 else
 F.Out("[扫描] 没扫到名字像上报/封禁的远程")
 end
@@ -15250,7 +15250,7 @@ local n = F.IxScan()
 F.Out("[扫描·交互] 场上识别到 " .. tostring(n) .. " 个可交互物")
 end)
 pcall(F.LogFlush, "一键全扫描")
-F.Out("[扫描] ===== 一键全扫描 结束 · 点「复制扫描结果」交给我  =====")
+F.Out("[扫描] ===== 一键全扫描 结束 · 结果已写入日志文件, 直接发给我  =====")
 end
 F.CMX_StackDump = function()
 F.Out("[绕过·栈] ===== 当前调用栈(从内往外) =====")
@@ -16310,7 +16310,7 @@ elseif F._allyRefresh then
 pcall(F.AllyMarkSet, false)
 end
 end
-Tabs.Visual:AddDropdown("EspItems", { Title = "显示项(可多选)", Values = F.ESP_ITEM_KEYS, Multi = true,
+Tabs.Visual:AddDropdown("EspItems", { Title = "显示项", Values = F.ESP_ITEM_KEYS, Multi = true,
 Default = { "名字", "距离", "血条" }, Callback = function(v)
 F.EspItemsApply(v)
 end })
@@ -16342,7 +16342,7 @@ if F._cfgSyncing and v then return end
 F.IxHLSet(v)
 end })
 Tabs.Visual:AddSection("高亮透视 · 分类")
-Tabs.Visual:AddToggle("IxHLix", { Title = "交互点(门/商店/按钮)", Default = true, Callback = function(v)
+Tabs.Visual:AddToggle("IxHLix", { Title = "交互点 / 门·商店", Default = true, Callback = function(v)
 T.IxHLix = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
@@ -16474,7 +16474,7 @@ T.ClickTP = v
 if F._cfgSyncing then return end
 if v then pcall(F.ClickTPEnable) else pcall(F.ClickTPDisable) end
 end })
-Tabs.TP:AddSection("世界 (World · 同 place 内的区域)")
+Tabs.TP:AddSection("世界 / 区域")
 Tabs.TP:AddDropdown("WorldPick", { Title = "目标世界", Values = F.WorldLabels(), Default = nil })
 Tabs.TP:AddToggle("WorldAttrSync", { Title = "换世界时同时改本地世界属性", Default = false, Callback = function(v)
 C.WorldAttrSync = v
@@ -16570,7 +16570,7 @@ Tabs.AFK:AddButton({ Title = "收集货币", Callback = function()
 if not F.Once("collectall", 3) then return end
 task.spawn(function() pcall(F.CollectAll, 30) end)
 end })
-Tabs.Trans:AddSection("① 界面翻译(游戏 UI 英文 → 中文)")
+Tabs.Trans:AddSection("界面翻译")
 Tabs.Trans:AddToggle("Translate", { Title = "翻译游戏界面文字 → 中文", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
 if v then F.TranslateEnable() else F.TranslateDisable() end
@@ -16640,7 +16640,7 @@ if v:find("③", 1, true) then lvl = 3 end
 if lvl < 2 and F._tierGbypOwn then
 F._tierGbypOwn = nil
 pcall(F.GameBypassSet, false)
-F.Out("[防护档位] 已收回档位自己开的「游戏专用绕过」")
+F.Out("[防护档位] 已收回档位自己开的「游戏绕过」那层")
 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
@@ -16710,7 +16710,7 @@ T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddSection("绕过 / 道具（「游戏专用绕过」已并入档位: ②/③自动代开）")
+Tabs.AC:AddSection("绕过 / 道具")
 Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
 T.SpoofPos = v and true or false
 if F._cfgSyncing then return end
@@ -16722,7 +16722,7 @@ if F._cfgSyncing then return end
 if v then pcall(F.InfItemEnable) else pcall(F.InfItemDisable) end
 end })
 Tabs.AC:AddSection("扫描")
-Tabs.AC:AddButton({ Title = "全扫描(道具 / 绕过目标 / 全量)", Callback = function()
+Tabs.AC:AddButton({ Title = "全扫描", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
 pcall(F.CMX_ScanAll)
@@ -16885,7 +16885,7 @@ if F.VerNum(best) > F.VerNum(mine) then
 F.Out("[版本] ⚠ 这次加载的是 v" .. mine .. ", 远端最新是 v" .. best
 .. " ⇒ 你跑的是旧副本(执行器缓存/旧脚本), 新版修复不会生效")
 pcall(function() Fluent:Notify({ Title = "⚠ 你加载的是旧版本", Content = "本地 v" .. mine
-.. " · 远端 v" .. best .. " —— 请点「★ 强制重载」或重新跑网络加载器", Duration = 20 }) end)
+.. " · 远端 v" .. best .. " —— 请点系统页的「强制重载」或重新跑网络加载器", Duration = 20 }) end)
 else
 F.Out("[版本] 已是最新: v" .. mine .. " (远端 v" .. best .. ")")
 end
