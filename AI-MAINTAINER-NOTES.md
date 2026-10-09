@@ -4779,3 +4779,38 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 - `gate.py` 早就有"产物体检"，但它跑一次 5 分钟 ⇒ 日常只用秒级 `preflight` 时**漏检**。
 - ⇒ 已把同一检查做成 **`preflight.py` 第 9 项（发行产物完整性：空 / NUL）**，日常发行必跑。
 ★ 规矩重申：**任何"文件看起来正常但没生效"的现象，先用 `od -c` / 逐字节 NUL 计数验一次内容**，别只看文件名和大小。
+
+## 文案体检 v2：把"过时引用"做到 100%，并查下拉选项有效性（2026-10-09 v17.0.30）
+
+新增 `.workbuddy/build/_audit_texts2.py`（4 类判据）。**这轮的价值一半在"负结论"**，记下来免得以后重复查：
+
+| 判据 | 结论 |
+|---|---|
+| A 过时引用（用户可见文案里「XXX」指向不存在的界面名） | **1 处真问题**（下），其余 4 处是描述性强调语（如「检测/上报类」），不是控件名 |
+| B 下拉选项有效性（选了也不生效的多余选项） | **0 个真问题**。11 组字面量下拉逐个核对：`AimPart`/`CombatMode`/`HeliMode`/`HeliAxis`/`HeliPivot` 都是**按关键词模糊匹配**（`find("头")`/`find("正面")`），不是整串比较；`SpeedTier` 用 `match("档(%d)")`；`AimLockMode` 在 Callback 里就把值翻译成 `T.AimTurnCamera/Body`（所以它不需要 `C.AimLockMode`） |
+| C 同一下拉内重复选项 | **0 处**（初版误报：取值窗口把 `Default = "同名"` 也算进去了） |
+| D 动态下拉（`Values = F.XXX()`） | **0 个问题**：`WorldPick` 来自静态表 `F.WORLD_LIST` 无需刷新；三个玩家下拉在 `F.PLAYER_DROPDOWNS` 里、由 `PlayerAdded/Removing → opt:SetValues()` 实时刷新（Fluent 1.1.0 确实有 `SetValues`） |
+
+- 唯一的真问题：`[反检测]` 日志写「**界面保护**」，而全文其它地方（档位文案、急停日志）都叫「**护界面**」
+  ⇒ 同一概念只许一个词；已改成"把「防护档位」调到 ① 以上(该档自带护界面)"。
+- ★ 教训（本次实测）：**在 Lua 双引号字符串里插入 ASCII 双引号会直接截断字符串** —— 我批量替换文案时写了个 `(该档含"护界面")`，
+  立刻编译失败（`Expected ')'`）。**中文文案里的引号一律用「」或全角**；并且**批量替换文案后必须立刻编译**（本次靠 `preflight` 第 1 项拦住）。
+- ★ 另一条工具坑：写"控件 id 集合"时必须用**未掩码**的源码 —— 掩码会把 `AddToggle("Mute"` 的 id 字面量一起抹掉，
+  于是 `Mute`/`NoRecoil` 会被误判成"只写不读的死状态"。**判死状态前，先确认它是不是某个控件的 id**（`CfgSyncUI` 会按 option 名 `T[name]` 动态读）。
+
+## 清理"只写不读"的幽灵状态：8 个键（v17.0.30）
+
+严格执行既有规矩（只写不读的幽灵状态连根删）。逐条 grep 确认"无静态读 + 不是控件 id + 不在 `F.PANIC_KEEP` + 不参与任何 `T[...]` 名字驱动"后删除：
+
+| 删掉的键 | 原用途（已失效） |
+|---|---|
+| `T.AntiTPOn` | 与 `T.DeepNeuter` 配对写；反传送自己去查状态，从不读它 |
+| `T.CMX_AntiBanAll` | 反封禁全家桶的"主开关镜像"，真正生效的是 `F.CMX_BanAllApply(false/true)` |
+| `T.CMX_SpoofIndex` | 位置伪造索引层的镜像；真正生效的是 `F.CMX_SpoofIndexDisable` |
+| `T.CMX_SpoofPos` | 与真正的开关 `T.SpoofPos` 混淆的旧遗留 |
+| `T.CMX_BlockReport / CMX_CutLog / CMX_NeuterPlus / CMX_HashFreeze` | `F.CMX_BanAllApply` 里 `T[it[1]] = on` 写的一排镜像；**只删那句写**，表里的名字列留下当文档（本来第 4 列描述字符串也是纯文档） |
+
+★ 判断流程（照抄即可）：`grep -c 'Add[A-Za-z]*("NAME"'` 必须 = 0（不是控件 id）；`grep -n "T\.NAME\b"` 出来的行**全部是赋值**（`T.X =` 或 `,` 收尾）；
+`grep -n 'T\[引号外'` 的**动态访问来源**只有 `F.PANIC_KEEP` 的键与那张层列表 —— 都不含它 ⇒ 判定死亡。
+⛔ 仍在 `F.PANIC_KEEP` 里但语义已死的 `T.AutoSave` / `T.GuiProtect` **没删**：它们参与"急停保留"的行为语义（`keep[k] = T[k]` 动态读写），删了会改急停行为。
+  其中 `AutoSave` 是彻底的死标志（全仓只被读一次，没有任何落盘代码）—— 与"跨会话开关存档"这个待定问题一起处理。
