@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 10:07 sha 34080a1a bytes 614570'):format('2026-10-09 10:07','34080a1a',614570))
+print(('[CheatMenu] build 2026-10-09 10:22 sha 8f988b97 bytes 614423'):format('2026-10-09 10:22','8f988b97',614423))
 local F = {}
-F.VERSION = "v17.0.29"
+F.VERSION = "v17.0.30"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7289,11 +7289,11 @@ T.Spoof = true
 F.Try("SpoofEnable", F.SpoofEnable)
 end
 if not wants.deep then
-T.DeepNeuter, T.AntiTPOn = false, false
+T.DeepNeuter = false
 pcall(F.DeepNeuterDisable)
 pcall(F.SpeedAntiTPDisable)
 else
-T.DeepNeuter, T.AntiTPOn = true, true
+T.DeepNeuter = true
 F.Try("SpeedAntiTPEnable", F.SpeedAntiTPEnable)
 F.Try("DeepNeuterEnable", F.DeepNeuterEnable)
 end
@@ -13894,7 +13894,6 @@ F.CMX_SpoofIndexDisable,
 F.CMX_BlockReportDisable, F.CMX_CutLogDisable,
 F.CMX_NeuterPlusDisable, F.CMX_HashFreezeDisable,
 }) do pcall(fn) end
-T.CMX_SpoofPos = false
 F.CMX_SpoofOn, F.CMX_ViewOn, F.CMX_InstNewOn = false, false, false
 task.delay(1, function() pcall(F.CMX_RestoreRO, true) end)
 end
@@ -14629,7 +14628,6 @@ local items = {
 local n = 0
 for i = 1, #items do
 local it = items[i]
-T[it[1]] = on and true or false
 if on then
 if pcall(it[2]) then n = n + 1 end
 else
@@ -14677,7 +14675,7 @@ end
 end
 end)
 F.Out("[反检测] ③ 我们的界面: 在隐藏容器里 " .. tostring(inHui) .. " 个 · 直接挂在 CoreGui 明文可见 " .. tostring(inCore) .. " 个")
-if inCore > 0 then F.Out("[反检测]    ⚠ 明文挂在 CoreGui 的界面, 游戏用 CoreGui:GetChildren() 就能看到 ⇒ 建议关掉「界面保护」外的多余挂载") end
+if inCore > 0 then F.Out("[反检测]    ⚠ 明文挂在 CoreGui 的界面, 游戏用 CoreGui:GetChildren() 就能看到 ⇒ 建议把「防护档位」调到 ① 以上(该档自带护界面)") end
 local mtRO = "?"
 pcall(function()
 local mt = getrawmetatable(game)
@@ -16677,12 +16675,11 @@ F.Out("[防护档位] 已收回档位自己开的「游戏绕过」那层")
 end
 pcall(F.AntiFlingDisable)
 pcall(F.GuiProtectionDisable)
-pcall(function() T.CMX_AntiBanAll = false T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
+pcall(function() T.CMX_FakeReport = false F.CMX_BanAllApply(false) T.CMX_InboundWatch = false F.CMX_InboundWatchSet(false) end)
 pcall(function() T.ACWriteTier = "① 不改游戏(现状: 反甩 + 护界面 + 权限守卫)" F.ACWriteTierApply(T.ACWriteTier) end)
 if lvl == 0 then
 T.AntiFling = false T.GuiProtect = false
 pcall(F.GuiProtectionDisable)
-T.CMX_SpoofIndex = false
 pcall(F.CMX_SpoofIndexDisable)
 pcall(AC.AntiPauseDisable)
 if F._tierGuardOwn then
@@ -16709,7 +16706,6 @@ F.Try("CharPersistEnable", F.CharPersistEnable)
 if lvl >= 2 then
 if T.GameBypass ~= true then F._tierGbypOwn = true end
 pcall(F.GameBypassSet, true)
-T.CMX_AntiBanAll = true
 pcall(F.CMX_InboundWatchSet, true)
 pcall(AC.InstallNamecallHook)
 pcall(F.CMX_BanAllApply, true)
