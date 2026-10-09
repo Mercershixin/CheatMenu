@@ -5261,3 +5261,18 @@ sweep 新旧均 27（无新增）。
   **"没有 Backpack 时回退到角色"** 的兜底，而留下的通用版 `F.IYDupeTools` **没有** ⇒ 已补上该回退。
   ⇒ 规矩：合并两个同类实现前先 **diff 各自独有分支**，把被丢那版独有的兜底并进留下的那版，再删。
 - 回归：`_gen_iypage_sim.py` 加 **T10b**（没有背包时回退到角色）⇒ 44/44。
+
+## 外部脚本全量对比 + 显示类补强（v17.0.54）
+
+- **GitHub 代码搜索的 `sha` 不能当 raw 下载的 ref**：`/search/code` 返回的是 **blob sha**（不是 commit sha），
+  用 `raw.githubusercontent.com/<repo>/<blob_sha>/<path>` 下载 **全部 404**（本轮第一次跑 FILES SAVED: 0 就是这个原因）。
+  ⇒ 正确做法：`/search/code` 只用来拿 `repo + path`，随后用仓库的 **default_branch** 拼 raw，或走 contents API。
+- **本环境跑 GitHub 批量采集的现实口径**：仓库搜索 31 组 + 代码搜索 29 组 ≈ 12 分钟（搜索受限流，要 2.4s/次退避）；
+  下载用 `ThreadPoolExecutor(8)` 才不至于拖到半小时以上。近 30 天新建的 Roblox 仓库里 **AI 空壳占多数**
+  （450 个里只有 158 个真含 `.lua`）⇒ 纯"仓库搜索"路线命中率低，**必须叠加 code search**。
+- **判断"某回归 FAIL 是不是我改出来的"**：把旧备份源码复制成 `CheatMenu-99.0.0.lua`（工具都取 `sorted()[-1]`，必然选中它）
+  跑同一条回归；旧基线同样 FAIL ⇒ 与本次无关（`_gen_light_sim` 就是这样定性的）。
+- **急停 fn 列表要连"事件句柄"一起清**：`F.VxFlush`（绘制对象）/`F.MagnetSet`/`F.WatermarkSet`/`F.HitMarkSet`/`F.SignalsFlush`
+  已按无参调用 = 关闭 的约定登记；其中 `SignalsFlush` 必须同时断 **`PlayerAdded`/`PlayerRemoving` 这类"维护型"连接**
+  —— 第一版只断了按玩家存的表，回归当场抓到"急停后仍有 2 条连接活着"。
+- **新增功能一律"默认关 + 无 Drawing 就弹回开关 + 说明原因"**（追踪线/骨骼透视），别让用户看到"开关拨了没反应"。
