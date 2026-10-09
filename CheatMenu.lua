@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 23:39 sha 1cda3e88 bytes 625358'):format('2026-10-09 23:39','1cda3e88',625358))
+print(('[CheatMenu] build 2026-10-09 23:50 sha 1ba92827 bytes 625307'):format('2026-10-09 23:50','1ba92827',625307))
 local F = {}
-F.VERSION = "v17.0.47"
+F.VERSION = "v17.0.48"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2616,7 +2616,7 @@ if type(newcclosure) == "function" then debug.getinfo = newcclosure(wrapped) els
 end)
 if not KG.mtHooked then return end
 KG.blockSet = {}
-KG.logConn = RS.Heartbeat:Connect(function()
+KG.logConn = F.SlowLoop(0.25, function()
 local gt = os.clock()
 if gt - (KG._logGate or 0) < 0.25 then return end
 KG._logGate = gt
@@ -9276,7 +9276,7 @@ F._fovGui = nil
 return
 end
 local lastFov = -1
-F._fovConn = RS.RenderStepped:Connect(function()
+F._fovConn = F.SlowLoop(0.25, function()
 if not T.FovCircle then F.FovCircleDisable() return end
 local fov = tonumber(C.CombatFOV) or 400
 if fov == lastFov then return end
@@ -10012,7 +10012,7 @@ if F._ixObjs[target] ~= nil then return end
 F.IxAdd(target, cc)
 end)
 end)
-F._ixLoop = RS.Heartbeat:Connect(function()
+F._ixLoop = F.SlowLoop(0.1, function()
 if not T.IxHL then F.IxHLSet(false) return end
 local center, liveRoot = F.IxCenter()
 local now = os.clock()
@@ -10163,7 +10163,7 @@ F.XRayApply(o)
 end)
 end)
 end)
-F._xrayLoop = RS.Heartbeat:Connect(function()
+F._xrayLoop = F.SlowLoop(3, function()
 if not T.XRay then F.XRaySet(false) return end
 local now = os.clock()
 if now - (F._xrayAt or 0) < 3 then return end
@@ -10234,7 +10234,7 @@ F.AllyMarkClear()
 F.Out("[队友标记] 已关")
 return
 end
-F._allyRefresh = RS.Heartbeat:Connect(function()
+F._allyRefresh = F.SlowLoop(0.5, function()
 if not T.AllyMark then pcall(F.AllyMarkSet, false) return end
 local now = os.clock()
 if now - (F._allyAt or 0) < 0.5 then return end
@@ -10252,7 +10252,7 @@ end
 F.VehicleBoostEnable = function()
 if F._vehLoop then return end
 F._vehAt = 0
-F._vehLoop = RS.Heartbeat:Connect(function()
+F._vehLoop = F.SlowLoop(0.05, function()
 if not T.VehicleBoost then F.VehicleBoostDisable() return end
 local now = os.clock()
 if now - (F._vehAt or 0) < 0.05 then return end
@@ -10635,7 +10635,7 @@ F.Out("[角色识别] 头顶标记已关")
 return
 end
 F.Out("[角色识别] 头顶标记已开(杀手/警长会标在头上)")
-F._roleTagConn = RS.RenderStepped:Connect(function()
+F._roleTagConn = F.SlowLoop(0.4, function()
 if not T.RoleTag then F.RoleTagSet(false) return end
 local now = os.clock()
 if now - (F._roleTagAt or 0) < 0.4 then return end
@@ -10818,7 +10818,7 @@ pl.CharacterAdded:Connect(function() task.wait(0.4) F.BodyHLAdd(pl) F.BodyHLRefr
 end)
 end
 if not F._hlWallLoop then
-F._hlWallLoop = RS.Heartbeat:Connect(function()
+F._hlWallLoop = F.SlowLoop(0.2, function()
 if not T.BodyHL then return end
 local now = os.clock()
 if now - (F._hlWallAt or 0) < 0.2 then return end
@@ -10838,7 +10838,7 @@ end
 end)
 end
 if not F._hlLoop then
-F._hlLoop = RS.Heartbeat:Connect(function()
+F._hlLoop = F.SlowLoop(0.25, function()
 if not T.BodyHL then F.BodyHLDisable() return end
 local now = os.clock()
 local gap = 2
