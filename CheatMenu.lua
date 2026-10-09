@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 08:37 sha 68f34e3b bytes 604025'):format('2026-10-09 08:37','68f34e3b',604025))
+print(('[CheatMenu] build 2026-10-09 08:47 sha f87bfacd bytes 607421'):format('2026-10-09 08:47','f87bfacd',607421))
 local F = {}
-F.VERSION = "v17.0.22"
+F.VERSION = "v17.0.23"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5820,6 +5820,109 @@ if not T.LockHealthSolo then pcall(LockHealthDisable) end
 F.Out("[上帝模式] 已关")
 end
 pcall(F.LifeGuardSync)
+pcall(F.GodShieldSet, T.GodMode == true)
+pcall(F.GodBoxLiftSet, T.GodMode == true)
+end
+F.GOD_SHIELD_KEYS = { "damage", "hurt", "kill", "attack", "takedamage", "dealda" }
+F.GOD_SHIELD_SAFE = { "damagefx", "hitbox", "hitsound", "killfeed", "healthbar" }
+F._godShieldConns = nil
+F.GodShieldScan = function()
+F._godShield = {}
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+if rs == nil then return end
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = nil
+pcall(function() cls = d.ClassName end)
+if cls == "RemoteEvent" or cls == "RemoteFunction" then
+local low = string.lower(tostring(d.Name))
+local safe = false
+local i
+for i = 1, #F.GOD_SHIELD_SAFE do
+if string.find(low, F.GOD_SHIELD_SAFE[i], 1, true) then safe = true break end
+end
+if not safe then
+for i = 1, #F.GOD_SHIELD_KEYS do
+if string.find(low, F.GOD_SHIELD_KEYS[i], 1, true) then F._godShield[#F._godShield + 1] = d break end
+end
+end
+end
+end
+end)
+return #F._godShield
+end
+F.GodShieldSet = function(on)
+if on then
+local n = F.GodShieldScan()
+local m = 0
+F._godShieldConns = {}
+if type(getconnections) == "function" then
+local i
+for i = 1, #F._godShield do
+local r = F._godShield[i]
+pcall(function()
+local sig = r.OnClientEvent
+if sig == nil then return end
+local list = getconnections(sig) or {}
+local j
+for j = 1, #list do
+pcall(function() list[j]:Disable() end)
+F._godShieldConns[#F._godShieldConns + 1] = list[j]
+m = m + 1
+end
+end)
+end
+end
+if m == 0 then
+F.Out("[上帝模式] 入站伤害屏蔽: 扫到 " .. tostring(n) .. " 个伤害类远程, 但没禁用掉任何监听(getconnections 不可用或无监听) ⇒ 这层跳过, 不影响其它层")
+else
+F.Out("[上帝模式] 入站伤害屏蔽: 扫到 " .. tostring(n) .. " 个伤害类远程, 已禁用游戏监听 " .. tostring(m) .. " 条 ⇒ 这些远程发来的伤害事件收不到了")
+end
+else
+if F._godShieldConns ~= nil then
+local i
+for i = 1, #F._godShieldConns do pcall(function() F._godShieldConns[i]:Enable() end) end
+F.Out("[上帝模式] 入站伤害屏蔽: 已恢复 " .. tostring(#F._godShieldConns) .. " 条游戏监听")
+end
+F._godShieldConns = nil
+end
+end
+F.GOD_BOX_KEYS = { "collision", "hitbox", "hurtbox", "detectbox", "trapbox" }
+F.GodBoxLiftSet = function(on)
+if F._godBoxConn then pcall(function() F._godBoxConn:Disconnect() end) F._godBoxConn = nil end
+F._godBoxes = nil
+if on ~= true then return end
+local found = {}
+pcall(function()
+local ch = GC()
+if ch == nil then return end
+for _, d in ipairs(ch:GetDescendants()) do
+if d:IsA("BasePart") then
+local low = string.lower(tostring(d.Name))
+local i
+for i = 1, #F.GOD_BOX_KEYS do
+if string.find(low, F.GOD_BOX_KEYS[i], 1, true) then found[#found + 1] = d break end
+end
+end
+end
+end)
+if #found == 0 then
+F.Out("[上帝模式] 判定盒搬移: 角色里没有独立判定盒(collision/hitbox 类部件) ⇒ 这层跳过(只写血量那层照常生效)")
+return
+end
+F._godBoxes = found
+F.Out("[上帝模式] 判定盒搬移: 找到 " .. tostring(#found) .. " 个判定盒 ⇒ 每帧抬到角色上方 200 格")
+F._godBoxConn = RS.Heartbeat:Connect(function()
+if T.GodMode ~= true then return end
+local _, _, root = GC()
+if root == nil or F._godBoxes == nil then return end
+local pos = root.Position + Vector3.new(0, 200, 0)
+local i
+for i = 1, #F._godBoxes do
+local b = F._godBoxes[i]
+if b ~= nil and b.Parent ~= nil then pcall(function() b.CFrame = CFrame.new(pos) end) end
+end
+end)
 end
 F.GodRefill = function()
 local _, hum = GC()
