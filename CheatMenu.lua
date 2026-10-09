@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 00:35 sha dbdc3ef0 bytes 633465'):format('2026-10-10 00:35','dbdc3ef0',633465))
+print(('[CheatMenu] build 2026-10-10 01:22 sha a6e25b2d bytes 645622'):format('2026-10-10 01:22','a6e25b2d',645622))
 local F = {}
-F.VERSION = "v17.0.49"
+F.VERSION = "v17.0.50"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11256,7 +11256,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16323,6 +16323,7 @@ Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
 AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
+IY      = Window:AddTab({ Title = "IY 命令", Icon = "terminal" }),
 }
 Tabs.World   = Tabs.Visual
 Tabs.TP      = Tabs.Move
@@ -17397,6 +17398,323 @@ task.defer(function()
 pcall(F.UnloadAll)
 pcall(function() F.LogFlush("卸载") end)
 end)
+end })
+F._iyReachLoop, F._iyReachPart, F._iyReachOrig = nil, nil, nil
+F.IYReachRestore = function()
+local o = F._iyReachOrig
+if o ~= nil then
+pcall(function()
+local h = o.tool and o.tool:FindFirstChild("Handle")
+if h ~= nil and h.Parent ~= nil then h.Size = o.size end
+end)
+pcall(function()
+if o.tool ~= nil and o.tool.Parent ~= nil then o.tool.GripPos = o.grip end
+end)
+end
+F._iyReachOrig, F._iyReachPart = nil, nil
+end
+F.IYReachApply = function()
+local ch, hum = GC()
+local tool = hum and hum:FindFirstChildOfClass("Tool")
+local h = tool and tool:FindFirstChild("Handle")
+if h == nil then return end
+if F._iyReachPart ~= h then
+F.IYReachRestore()
+F._iyReachPart = h
+F._iyReachOrig = { size = h.Size, tool = tool, grip = tool.GripPos }
+end
+local d = tonumber(C.IYReachDist) or 12
+pcall(function() h.Size = Vector3.new(0.6, 0.6, d) end)
+pcall(function() h.Massless = true end)
+pcall(function() tool.GripPos = Vector3.new(0, 0, 0) end)
+end
+F.IYReachSet = function(on)
+if on then
+if F._iyReachLoop == nil then
+F.IYReachApply()
+F._iyReachLoop = F.SlowLoop(0.35, F.IYReachApply)
+F.Out("[攻击距离] 已开 · " .. tostring(tonumber(C.IYReachDist) or 12) .. " 格（仅本地 · 换工具会自动重设）")
+end
+else
+if F._iyReachLoop ~= nil then pcall(function() F._iyReachLoop:Disconnect() end) F._iyReachLoop = nil end
+F.IYReachRestore()
+F.Out("[攻击距离] 已关 · 已还原武器原尺寸")
+end
+end
+F._iyMsOrig = nil
+F.IYMouseSensSet = function(on)
+if on then
+if F._iyMsOrig == nil then pcall(function() F._iyMsOrig = UIS.MouseDeltaSensitivity end) end
+local v = tonumber(C.IYMouseSensV) or 1
+pcall(function() UIS.MouseDeltaSensitivity = v end)
+F.Out("[鼠标灵敏度] 已设为 " .. tostring(v) .. " 倍")
+else
+local o = F._iyMsOrig
+pcall(function() UIS.MouseDeltaSensitivity = (o ~= nil) and o or 1 end)
+F._iyMsOrig = nil
+F.Out("[鼠标灵敏度] 已还原默认")
+end
+end
+F._iyViewOrig = nil
+F.IYViewSet = function(mode)
+if F._iyViewOrig == nil then pcall(function() F._iyViewOrig = LP.CameraMode end) end
+local m = tostring(mode or "关闭")
+pcall(function()
+if m == "第一人称" then
+LP.CameraMode = Enum.CameraMode.LockFirstPerson
+elseif m == "第三人称" then
+LP.CameraMode = Enum.CameraMode.Classic
+else
+LP.CameraMode = F._iyViewOrig or Enum.CameraMode.Classic
+end
+end)
+F.Out("[视角模式] " .. m)
+end
+F._iyFcConn, F._iyFcPos, F._iyFcYaw, F._iyFcPitch, F._iyFcData = nil, nil, 0, 0, nil
+F.IYFreecamSet = function(on)
+if on then
+if F._iyFcConn ~= nil then return end
+local cam = workspace.CurrentCamera
+if cam == nil then F.Out("[自由视角] 取不到相机 ⇒ 无法开启") return end
+F._iyFcData = { ct = cam.CameraType, subj = cam.CameraSubject }
+pcall(function() cam.CameraType = Enum.CameraType.Scriptable end)
+local look = cam.CFrame.LookVector
+F._iyFcPos = cam.CFrame.Position
+F._iyFcYaw = math.deg(math.atan2(-look.X, -look.Z))
+F._iyFcPitch = math.deg(math.asin(math.clamp(look.Y, -1, 1)))
+F._iyFcConn = RS.RenderStepped:Connect(function(dt)
+local c = workspace.CurrentCamera
+if c == nil or F._iyFcPos == nil then return end
+local md = Vector2.new(0, 0)
+pcall(function() md = UIS:GetMouseDelta() end)
+if md.X ~= 0 or md.Y ~= 0 then
+F._iyFcYaw = F._iyFcYaw - md.X * 0.25
+F._iyFcPitch = math.clamp(F._iyFcPitch - md.Y * 0.25, -89, 89)
+end
+local rot = CFrame.fromEulerAnglesYXZ(math.rad(F._iyFcPitch), math.rad(F._iyFcYaw), 0)
+local sp = tonumber(C.IYFcSpeed) or 80
+if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then sp = sp * 3 end
+local mv = Vector3.new(0, 0, 0)
+if UIS:IsKeyDown(Enum.KeyCode.W) then mv = mv + rot.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then mv = mv - rot.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then mv = mv - rot.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then mv = mv + rot.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.E) then mv = mv + Vector3.new(0, 1, 0) end
+if UIS:IsKeyDown(Enum.KeyCode.Q) then mv = mv - Vector3.new(0, 1, 0) end
+if mv.Magnitude > 0 then F._iyFcPos = F._iyFcPos + mv.Unit * sp * dt end
+c.CFrame = rot + F._iyFcPos
+end)
+F.Out("[自由视角] 已开 · WASD 平移 / QE 升降 / 鼠标转向 / Shift 加速")
+else
+if F._iyFcConn ~= nil then pcall(function() F._iyFcConn:Disconnect() end) F._iyFcConn = nil end
+local d = F._iyFcData
+pcall(function()
+local cam = workspace.CurrentCamera
+if cam ~= nil and d ~= nil then
+pcall(function() cam.CameraType = d.ct or Enum.CameraType.Custom end)
+pcall(function() cam.CameraSubject = d.subj end)
+end
+end)
+F._iyFcData, F._iyFcPos = nil, nil
+F.Out("[自由视角] 已关 · 相机已交回角色")
+end
+end
+F._iyFloat, F._iyFloatLoop = nil, nil
+F.IYFloatSet = function(on)
+if on then
+if F._iyFloatLoop ~= nil then return end
+local ch, hum, root = GC()
+if root == nil then F.Out("[漂浮平台] 没有角色 ⇒ 无法开启") return end
+local pl = nil
+local okc = pcall(function()
+pl = Instance.new("Part")
+pl.Name = "CM_IYFloatPlate"
+pl.Size = Vector3.new(6, 1, 6)
+pl.Anchored = true
+pl.CanCollide = true
+pl.Transparency = 0.55
+pl.Color = Color3.fromRGB(80, 200, 255)
+pl.Material = Enum.Material.ForceField
+pl.CFrame = CFrame.new(root.Position - Vector3.new(0, 3.6, 0))
+pl.Parent = workspace
+end)
+if not okc or pl == nil then F.Out("[漂浮平台] 平台建不出来 ⇒ 无法开启") return end
+F._iyFloat = pl
+F._iyFloatLoop = F.SlowLoop(0.1, function()
+local _, _, r = GC()
+local p2 = F._iyFloat
+if r ~= nil and p2 ~= nil and p2.Parent ~= nil then
+p2.CFrame = CFrame.new(r.Position - Vector3.new(0, 3.6, 0))
+end
+end)
+F.Out("[漂浮平台] 已开 · 脚下生成悬浮平台（仅本地可见）")
+else
+if F._iyFloatLoop ~= nil then pcall(function() F._iyFloatLoop:Disconnect() end) F._iyFloatLoop = nil end
+if F._iyFloat ~= nil then pcall(function() F._iyFloat:Destroy() end) F._iyFloat = nil end
+F.Out("[漂浮平台] 已关 · 平台已移除")
+end
+end
+F._iySpin = nil
+F.IYSpinSet = function(on)
+if on then
+local ch, hum, root = GC()
+if root == nil then F.Out("[自转] 没有角色 ⇒ 无法开启") return end
+if F._iySpin ~= nil and F._iySpin.Parent ~= nil then
+pcall(function() F._iySpin.AngularVelocity = Vector3.new(0, tonumber(C.IYSpinSpeed) or 20, 0) end)
+return
+end
+local b = nil
+local ok = pcall(function()
+b = Instance.new("BodyAngularVelocity")
+b.Name = "CM_IYSpin"
+b.MaxTorque = Vector3.new(0, math.huge, 0)
+b.AngularVelocity = Vector3.new(0, tonumber(C.IYSpinSpeed) or 20, 0)
+b.Parent = root
+end)
+if ok and b ~= nil and b.Parent ~= nil then
+F._iySpin = b
+F.Out("[自转] 已开 · " .. tostring(tonumber(C.IYSpinSpeed) or 20) .. " rad/s")
+else
+F.Out("[自转] 本执行器/本游戏不支持该物理体 ⇒ 无法使用")
+end
+else
+if F._iySpin ~= nil then pcall(function() F._iySpin:Destroy() end) F._iySpin = nil end
+F.Out("[自转] 已关")
+end
+end
+F.IYNoRenderSet = function(on)
+local ok = pcall(function() RS:Set3dRenderingEnabled(not on) end)
+if not ok then
+F.Out("[停渲染] 本执行器/本游戏不支持该 API ⇒ 无法使用")
+return
+end
+if on then
+F.Out("[停渲染] 已停 3D 渲染（画面会变黑，只剩界面；关掉即恢复）")
+else
+F.Out("[停渲染] 已恢复渲染")
+end
+end
+F.IYPromptsSet = function(on)
+local ok = pcall(function()
+local cg = game:GetService("CoreGui")
+cg.PurchasePromptApp.Enabled = not on
+end)
+if not ok then F.Out("[关购买弹窗] 本执行器无权访问 CoreGui ⇒ 无法使用") return end
+F.Out("[关购买弹窗] " .. (on and "已关掉购买/提示弹窗" or "已恢复弹窗"))
+end
+F.IYGrabTools = function()
+local ch, hum = GC()
+if hum == nil then F.Out("[抓工具] 没有角色 ⇒ 无法执行") return end
+local n = 0
+pcall(function()
+for _, v in ipairs(workspace:GetChildren()) do
+if v:IsA("BackpackItem") and v:FindFirstChild("Handle") ~= nil then
+local ok = pcall(function() hum:EquipTool(v) end)
+if ok then n = n + 1 end
+end
+end
+end)
+F.Out("[抓工具] 已把场上 " .. tostring(n) .. " 个地面道具装进手/背包（仅本地）")
+end
+F.IYDupeTools = function(n)
+local ch, hum = GC()
+if hum == nil then F.Out("[复制工具] 没有角色 ⇒ 无法执行") return end
+local tool = hum:FindFirstChildOfClass("Tool")
+local bp = LP:FindFirstChildOfClass("Backpack")
+if tool == nil and bp ~= nil then tool = bp:FindFirstChildOfClass("Tool") end
+if tool == nil then F.Out("[复制工具] 手上和背包里都没有工具 ⇒ 先拿一个工具") return end
+if bp == nil then F.Out("[复制工具] 找不到背包 ⇒ 无法放入") return end
+local cnt = math.clamp(math.floor(tonumber(n) or 1), 1, 10)
+local ok = 0
+for i = 1, cnt do
+local c = nil
+pcall(function() c = tool:Clone() end)
+if c ~= nil then
+c.Name = tool.Name
+local dok = pcall(function() c.Parent = bp end)
+if dok then ok = ok + 1 end
+end
+end
+F.Out("[复制工具] 已复制 " .. tostring(ok) .. " 份「" .. tostring(tool.Name) .. "」进背包（仅本地可见，服务器不一定认）")
+end
+F.IYPanicOff = function()
+pcall(function() F.IYReachSet(false) end)
+pcall(function() F.IYMouseSensSet(false) end)
+pcall(function() F.IYViewSet("关闭") end)
+pcall(function() F.IYFreecamSet(false) end)
+pcall(function() F.IYFloatSet(false) end)
+pcall(function() F.IYSpinSet(false) end)
+pcall(function() F.IYNoRenderSet(false) end)
+pcall(function() F.IYPromptsSet(false) end)
+end
+Tabs.IY:AddSection("近战 / 视角")
+Tabs.IY:AddToggle("IYReach", { Title = "攻击距离", Default = false, Callback = function(v)
+T.IYReach = v
+if F._cfgSyncing then return end
+F.IYReachSet(v)
+end })
+Tabs.IY:AddSlider("IYReachDist", { Title = "攻击距离 · 格数", Min = 4, Max = 50, Default = 12, Rounding = 0, Callback = function(v)
+C.IYReachDist = v
+if T.IYReach == true and not F._cfgSyncing then F.IYReachSet(true) end
+end })
+Tabs.IY:AddToggle("IYMouseSens", { Title = "鼠标灵敏度", Default = false, Callback = function(v)
+T.IYMouseSens = v
+if F._cfgSyncing then return end
+F.IYMouseSensSet(v)
+end })
+Tabs.IY:AddSlider("IYMouseSensV", { Title = "鼠标灵敏度 · 倍率", Min = 0.2, Max = 5, Default = 1, Rounding = 1, Callback = function(v)
+C.IYMouseSensV = v
+if T.IYMouseSens == true and not F._cfgSyncing then F.IYMouseSensSet(true) end
+end })
+Tabs.IY:AddDropdown("IYView", { Title = "视角模式", Values = { "关闭", "第一人称", "第三人称" }, Default = "关闭", Callback = function(v)
+F.IYViewSet(tostring(v))
+end })
+Tabs.IY:AddSection("自由视角")
+Tabs.IY:AddToggle("IYFreecam", { Title = "自由视角", Default = false, Callback = function(v)
+T.IYFreecam = v
+if F._cfgSyncing then return end
+F.IYFreecamSet(v)
+end })
+Tabs.IY:AddSlider("IYFcSpeed", { Title = "自由视角 · 速度", Min = 20, Max = 300, Default = 80, Rounding = 0, Callback = function(v)
+C.IYFcSpeed = v
+end })
+Tabs.IY:AddSection("角色 / 物理")
+Tabs.IY:AddToggle("IYFloat", { Title = "漂浮平台", Default = false, Callback = function(v)
+T.IYFloat = v
+if F._cfgSyncing then return end
+F.IYFloatSet(v)
+end })
+Tabs.IY:AddToggle("IYSpin", { Title = "自转", Default = false, Callback = function(v)
+T.IYSpin = v
+if F._cfgSyncing then return end
+F.IYSpinSet(v)
+end })
+Tabs.IY:AddSlider("IYSpinSpeed", { Title = "自转 · 转速", Min = 1, Max = 60, Default = 20, Rounding = 0, Callback = function(v)
+C.IYSpinSpeed = v
+if T.IYSpin == true and not F._cfgSyncing then F.IYSpinSet(true) end
+end })
+Tabs.IY:AddSection("画面 / 界面")
+Tabs.IY:AddToggle("IYNoRender", { Title = "停渲染", Default = false, Callback = function(v)
+T.IYNoRender = v
+if F._cfgSyncing then return end
+F.IYNoRenderSet(v)
+end })
+Tabs.IY:AddToggle("IYPrompts", { Title = "关购买弹窗", Default = false, Callback = function(v)
+T.IYPrompts = v
+if F._cfgSyncing then return end
+F.IYPromptsSet(v)
+end })
+Tabs.IY:AddSection("道具 / 刷东西")
+Tabs.IY:AddButton({ Title = "抓工具（把场上地面道具装进手/背包）", Callback = function()
+if not F.Once("iyGrab", 2) then return end
+pcall(F.IYGrabTools)
+end })
+Tabs.IY:AddButton({ Title = "复制手持工具进背包", Callback = function()
+if not F.Once("iyDupe", 2) then return end
+pcall(F.IYDupeTools, C.IYDupeN or 1)
+end })
+Tabs.IY:AddSlider("IYDupeN", { Title = "复制份数", Min = 1, Max = 10, Default = 1, Rounding = 0, Callback = function(v)
+C.IYDupeN = v
 end })
 pcall(F.RecordOriginals)
 task.spawn(function() pcall(F.LogBaseName) end)
