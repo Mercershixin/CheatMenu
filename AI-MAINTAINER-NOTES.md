@@ -5146,3 +5146,19 @@ ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                 
   **`F.DoorsPullAsset` 在 ID 为空时改为调用 `F.DoorsAutoGrab`**（ID 降级为"高级可选"）。
   ⚠ 本地扫不到时（道具只在服务端生成）必须**明确说清**，别假装成功。
   ⇒ 回归 `_gen_doors_sim.py` T10（桩已补 `GetDescendants`）。
+
+## ★★ 性能：别再让「每帧闭包」去干 1~5 Hz 的事（2026-10-09 v17.0.47）
+
+- 反模式：`RS.Heartbeat:Connect(function() if os.clock() - last < 0.25 then return end ... end)`
+  —— **闭包每帧都被调用 60 次/秒**，真正干活只有 4 次 ⇒ 96% 的调用是纯开销。
+- 正解：`F.SlowLoop(间隔, fn)`（`task.spawn` + `task.wait(间隔)`，返回带 `Disconnect()` 的句柄，并登记在
+  `F._slowTicks` 便于测试手动驱动）。语义与旧的「节流版 Heartbeat」**完全等价**（首跑一次、之后按间隔）。
+  ⇒ 用它替换后，闭包调用次数从 60/s 降到 1/间隔。
+- **事件驱动优先**：能给事件的绝不用轮询 —— 本轮已挂
+  `Humanoid.HealthChanged`（无敌/锁血，掉血即时补满）与 `Humanoid:GetPropertyChangedSignal("HipHeight")`（藏地下）。
+- ⛔ 这三类**必须保持每帧**，不要动：**自瞄**（RenderStepped）、**稳身**（速度逐帧钳制）、**无碰撞**（`CanCollide` 会被改回）。
+- 回归：`_gen_slowloop_sim.py`（16 用例，锁「立即跑一次 / 按间隔续跑 / Disconnect 即停 / fn 报错不中断 / 自停清理」
+  + **源码级契约**：15 处必须已换成 `F.SlowLoop`、7 处旧写法必须已消失、2 处事件必须存在）。
+  A/B：旧源码跑它**直接断言失败**。
+- ⚠ 测试桩注意：`F.SlowLoop` 在单测里要**桩掉**（否则取出的源码块里没有它）并**手动驱动 `h.fn()`**；
+  `_gen_afk_sim` 还漏了 `F.HasMouse` 桩（源码新加的门禁），已补。
