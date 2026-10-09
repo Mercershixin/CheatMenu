@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 17:29 sha e4715553 bytes 614047'):format('2026-10-09 17:29','e4715553',614047))
+print(('[CheatMenu] build 2026-10-09 17:49 sha ce67d5b4 bytes 614162'):format('2026-10-09 17:49','ce67d5b4',614162))
 local F = {}
-F.VERSION = "v17.0.36"
+F.VERSION = "v17.0.37"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -8942,8 +8942,15 @@ end
 end)
 F._modalOverlay, F._savedMouseIcon = nil, nil
 F._mmg, F._mmgConn, F._mmgCam = nil, nil, nil
+F.MouseShow = function()
+pcall(function() if UIS.MouseIconEnabled ~= true then UIS.MouseIconEnabled = true end end)
+end
 F.MenuMouseForce = function()
 pcall(function()
+if UIS.MouseIconEnabled ~= true then
+if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
+UIS.MouseIconEnabled = true
+end
 if UIS.TouchEnabled then return end
 if LP then
 if F._mmgCam == nil then pcall(function() F._mmgCam = LP.CameraMode end) end
@@ -8952,10 +8959,6 @@ pcall(function() LP.CameraMode = Enum.CameraMode.Classic end)
 end
 end
 if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default end
-if UIS.MouseIconEnabled ~= true then
-if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
-UIS.MouseIconEnabled = true
-end
 end)
 end
 F.MenuMouseRelease = function()
@@ -9038,7 +9041,12 @@ f.Parent = sg
 F._modalOverlay = f
 end
 pcall(function() F._modalOverlay.Visible = true end)
-pcall(function() if not UIS.TouchEnabled then F._savedMouseIcon = UIS.MouseIconEnabled UIS.MouseIconEnabled = true end end)
+pcall(function()
+if UIS.MouseIconEnabled ~= true then
+if F._savedMouseIcon == nil then F._savedMouseIcon = UIS.MouseIconEnabled end
+UIS.MouseIconEnabled = true
+end
+end)
 else
 if F._modalOverlay then pcall(function() F._modalOverlay.Visible = false end) end
 if F._savedMouseIcon ~= nil then
@@ -13698,6 +13706,7 @@ pcall(F.Conn.ClearAll)
 F.MetaLayers = {}
 F.MetaTargets = {}
 F.MetaSlot = {}
+pcall(F.MouseShow)
 F.Out("[CheatMenu] 已干净卸载")
 pcall(function() F.LogFlush("卸载") end)
 task.delay(0.8, function()
@@ -16882,7 +16891,7 @@ F.Out(string.format("[环境] 执行器=%s · 平台=%s · 布局=%s · 视口=%
 ex, (UIS.TouchEnabled and "触屏(手机/平板)" or "键鼠(PC)"), (isPhone and "手机" or "桌面"), vw, vh,
 type(loadstring), type(writefile), type(gethui)))
 end)
-pcall(function() if UIS.TouchEnabled and UIS.MouseIconEnabled then UIS.MouseIconEnabled = false end end)
+pcall(function() F.MouseShow() end)
 pcall(function()
 task.spawn(function()
 local mine = tostring(F.VERSION or ""):gsub("^v", "")
