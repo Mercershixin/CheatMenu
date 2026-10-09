@@ -5013,3 +5013,32 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
 ★ 通用教训：**判断"输入方式"要看 MouseEnabled / KeyboardEnabled / TouchEnabled 三个一组**，
 只看 `TouchEnabled` 会把"触屏笔记本"整类设备误判成手机，而且往往同时影响**指针可见性、鼠标锁定、
 输入空点、界面布局**四处（本次三个 bug 全由这一个误判引起）。
+
+## ★★★ v17.0.39 · 把「防踢强度」档位下拉退回"一个开关 + 默认开"（用户明确要求）
+
+**背景**：v17.0.27 那轮"功能合并"里，我把 `挂机防踢 / 定时保活 / 保活间隔 / 拦AFK上报` 四个控件
+合成了一个「防踢强度」下拉（关/基础/标准/激进）。用户这次明确说：
+**"挂机防踢需要默认开启，也只需要一个功能，不需要档位"** ⇒ 全部退回单开关。
+
+**改法**：
+- 控件：`AddDropdown("AFKStrength")` → `AddToggle("AFKKickGuard", Default = true)`，分节名 `挂机防踢`→`挂机`。
+- 实现：删掉 `F.AFK_LEVELS / F.AFKStrengthOf / F.AFKStrengthInit`；
+  `F.AFKApply(on)` 一个布尔入口：写 `T.AFKKickGuard/T.AntiAFK/T.AFKKeepAlive/T.AFKBlockReport` 四个键
+  （`C.AFKKeepGap` 固定 60），然后 `AntiAFKEnable + AFKLoopEnable + InstallNamecallHook`。
+- 默认开：`RestoreFeatures()` 置 `T.AFKKickGuard = true` + 控件 `Default = true` + 加载尾部
+  `F.Try("AFKApply", F.AFKApply, T.AFKKickGuard ~= false)`。
+
+### ★★ 教训一：用户说"只需要一个功能"时，别再自作主张做多档/多选
+"合并控件"这个方向本身没错，但**把"开关"升级成"档位下拉"是加复杂度**，
+在用户心里等于"改坏了、变得要选"。⇒ 以后合并**只减控件数、不引入新的选择维度**，
+除非用户点名要档位。
+
+### ★★ 教训二：让一个功能"默认开"，三处必须齐全，且 Apply 必须幂等
+1. `RestoreFeatures()` 里给状态键置默认值（`if T.X == nil then T.X = true end`）；
+2. 控件 `Default = true`（否则界面显示关，与实际不符）；
+3. 加载尾部**真的执行一次 Apply**（Toggle 的 Default 不会触发 Callback，光写 Default 没用）。
+★ 而且 Apply **必须是幂等的**：加载路径上 `F.ApplySavedOn`（按 T 调 Callback）和
+加载尾部那句 `F.Try(...)` 会**各调一次**；若 Apply 里有 `Stop`+`Start` 这种配对动作，
+第二次会**把已经在跑的循环重启**（本次回归测试就是靠"开两次 ⇒ loopOn 仍为 1"抓到的）。
+正确写法：**开的路径只调幂等的 Enable，不调 Stop**（真实 `AntiAFKEnable`/`AFKLoopEnable`
+自带 `if 已存在 then return end`）。
