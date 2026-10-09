@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 03:40 sha c31f5b86 bytes 666651'):format('2026-10-10 03:40','c31f5b86',666651))
+print(('[CheatMenu] build 2026-10-10 03:59 sha c9641cec bytes 703937'):format('2026-10-10 03:59','c9641cec',703937))
 local F = {}
-F.VERSION = "v17.0.54"
+F.VERSION = "v17.0.55"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2744,7 +2744,7 @@ table.sort(n)
 if #n == 0 then n[1] = "(无人)" end
 return n
 end
-F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "FlingTarget" }
+F.PLAYER_DROPDOWNS = { "TPTarget", "PriorityTarget", "FlingTarget", "PlayerPick" }
 function F.RefreshPlayerDropdowns()
 local names = F.PlayerNames()
 pcall(function()
@@ -3223,8 +3223,9 @@ if T.AimPredict == true then
 local pp = F.AimPredictPos(part, dist)
 if pp ~= nil then aimAt = pp end
 end
+local sil = (T.SilentAim == true)
 local dir = aimAt - root.Position
-if T.AimTurnBody == true then
+if T.AimTurnBody == true or (sil and T.AutoFire == true) then
 local flat = Vector3.new(dir.X, 0, dir.Z)
 if flat.Magnitude > 0.05 then
 F._aimFacing = true
@@ -3232,7 +3233,7 @@ pcall(function() hum.AutoRotate = false end)
 pcall(function() root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit) end)
 end
 end
-if T.AimTurnCamera ~= false then
+if (not sil) and T.AimTurnCamera ~= false then
 local cam = workspace.CurrentCamera
 if cam and (part.Position - cam.CFrame.Position).Magnitude > 2.5 then
 local sm = tonumber(C.AimSmooth) or 0
@@ -11234,7 +11235,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, F.VxFlush, F.MagnetSet, F.WatermarkSet, F.HitMarkSet, F.SignalsFlush, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, F.VxFlush, F.MagnetSet, F.WatermarkSet, F.HitMarkSet, F.SignalsFlush, F.AttackSpeedSet, F.InfAmmoSet, F.BlinkSet, F.AntiRagdollSet, F.AntiStunSet, F.FallGuardSet, F.OffScreenSet, F.ItemEspSet, F.SoundEspSet, F.AutoCollectSet, F.AutoRejoinSet, F.QueueOnTPSet, F.AntiShotSet, F.SpoofEnvSet, F.HideInstSet, F.SimRadiusSet, F.PlayerHudSet, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16803,20 +16804,918 @@ F.SignalInstallAll = function()
 pcall(F.TeamSignalInstall)
 pcall(F.BagSignalInstall)
 end
+F._asHook, F._asLog = nil, nil
+F.AntiShotSet = function(on)
+T.AntiShot = on and true or false
+if F._asHook ~= nil and type(F._asHook) == "function" then pcall(F._asHook) end
+F._asHook = nil
+if not T.AntiShot then
+F.Out("[反检测] 反截图 / 反日志 已关")
+return
+end
+local ok, err = pcall(function()
+local ls = game:GetService("LogService")
+local origHist = ls.GetLogHistory
+if type(origHist) == "function" and type(hookfunction) == "function" then
+local newHist = function() return {} end
+if type(newcclosure) == "function" then
+local okw, w = pcall(newcclosure, newHist)
+if okw and type(w) == "function" then newHist = w end
+end
+hookfunction(origHist, newHist)
+end
+local seen = {}
+local conn = ls.MessageOut:Connect(function(msg, ty)
+local low = string.lower(tostring(msg))
+local kw = F.AS_KEYWORDS
+for i = 1, #kw do
+if string.find(low, kw[i], 1, true) then
+seen[#seen + 1] = low
+if #seen > 500 then table.remove(seen, 1) end
+return
+end
+end
+end)
+F._asLog = seen
+F._asHook = function() pcall(function() conn:Disconnect() end) end
+end)
+if ok then
+F.Out("[反检测] 反截图/反日志 已开 · 游戏读本地日志拿不到历史、作弊关键词日志不再落地")
+else
+F.Out("[反检测] 反截图安装失败: " .. tostring(err))
+end
+end
+F.AS_KEYWORDS = { "cheat", "exploit", "hack", "inject", "anti", "detect", "kick", "ban", "report", "script", "executor" }
+F._seHook = nil
+F.SpoofEnvSet = function(on)
+T.SpoofEnv = on and true or false
+if F._seHook ~= nil and type(F._seHook) == "function" then pcall(F._seHook) end
+F._seHook = nil
+if not T.SpoofEnv then
+F.Out("[反检测] 执行器指纹伪装 已关")
+return
+end
+local ok = pcall(function()
+if type(identifyexecutor) == "function" and type(hookfunction) == "function" then
+local orig = identifyexecutor
+local nf = function() return "Roblox" end
+if type(newcclosure) == "function" then
+local okw, w = pcall(newcclosure, nf)
+if okw and type(w) == "function" then nf = w end
+end
+hookfunction(orig, nf)
+end
+if type(getgenv) == "function" then
+local g = getgenv()
+if type(g) == "table" then
+for _, k in ipairs({ "CheatMenu", "cheatmenu", "CM", "cmVersion", "ScriptName", "script_name" }) do
+pcall(function() g[k] = nil end)
+end
+end
+end
+end)
+if ok then F.Out("[反检测] 执行器指纹伪装 已开 · identifyexecutor → Roblox，getgenv 指纹键已清") end
+end
+F._hiHook = nil
+F.HideInstSet = function(on)
+T.HideInst = on and true or false
+if F._hiHook ~= nil and type(F._hiHook) == "function" then pcall(F._hiHook) end
+F._hiHook = nil
+if not T.HideInst then
+F.Out("[反检测] 隐藏自身实例 已关")
+return
+end
+local ok, err = pcall(function()
+if type(getconnections) ~= "function" then error("执行器没有 getconnections") end
+local function isOurs(o)
+local okA, v = pcall(function() return o:GetAttribute("CMOwned") end)
+if okA and v == true then return true end
+local okN, nm = pcall(function() return o.Name end)
+if okN and type(nm) == "string" and string.sub(nm, 1, 2) == "CM" then return true end
+return false
+end
+F._instFilter = isOurs
+local cl = game:GetService("CoreGui")
+local n = 0
+for _, c in ipairs(getconnections(cl.DescendantAdded) or {}) do
+pcall(function() c:Disable() end)
+n = n + 1
+end
+F._hiHook = function() F._instFilter = nil end
+F.Out("[反检测] 隐藏自身实例 已开 · 已断开 CoreGui.DescendantAdded 上的 " .. tostring(n) .. " 条游戏侧监听")
+end)
+if not ok then F.Out("[反检测] 隐藏自身实例 失败: " .. tostring(err)) end
+end
+F.SimRadiusSet = function(on)
+T.SimRadius = on and true or false
+if F._srLoop ~= nil then pcall(function() F._srLoop:Disconnect() end) F._srLoop = nil end
+if not T.SimRadius then
+F.Out("[反检测] 模拟半径控制 已关")
+return
+end
+if type(setsimulationradius) ~= "function" then
+T.SimRadius = false
+F.Out("[反检测] 执行器没有 setsimulationradius ⇒ 未开启")
+return
+end
+F.Out("[反检测] 模拟半径控制 已开 · 每 2 秒把模拟半径钉在 512（远处玩家不再被你的客户端模拟）")
+F._srLoop = F.SlowLoop(2, function()
+if T.SimRadius ~= true then F.SimRadiusSet(false) return end
+pcall(function() setsimulationradius(512, 512) end)
+end)
+end
+F._arLoop, F._arConn = nil, nil
+F.AutoRejoinSet = function(on)
+T.AutoRejoin = on and true or false
+if F._arConn ~= nil then pcall(function() F._arConn:Disconnect() end) F._arConn = nil end
+if F._arLoop ~= nil then pcall(function() F._arLoop:Disconnect() end) F._arLoop = nil end
+if not T.AutoRejoin then
+F.Out("[自动重连] 已关")
+return
+end
+F.Out("[自动重连] 已开 · 被踢/断线后自动回到本服")
+pcall(function()
+local ts = game:GetService("TeleportService")
+F._arConn = ts.TeleportInitFailed:Connect(function(pl, res)
+if pl ~= LP then return end
+if T.AutoRejoin ~= true then return end
+F.Out("[自动重连] 传送失败(" .. tostring(res) .. ") ⇒ 8 秒后重试")
+task.wait(8)
+pcall(function()
+ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP)
+end)
+end)
+end)
+pcall(function()
+F._arConn = LP.OnTeleport:Connect(function()
+if T.AutoRejoin == true then pcall(function() queueonteleport(F._selfURL or "") end) end
+end)
+end)
+end
+F._selfURL = "https://raw.githubusercontent.com/Mercershixin/CheatMenu/main/CheatMenu.lua"
+F.QueueOnTPSet = function(on)
+T.QueueOnTP = on and true or false
+if not T.QueueOnTP then
+F.Out("[换服重连] 已关")
+return
+end
+if type(queueonteleport) ~= "function" then
+T.QueueOnTP = false
+F.Out("[换服重连] 执行器没有 queueonteleport ⇒ 未开启")
+return
+end
+pcall(function() queueonteleport(F._selfURL) end)
+F.Out("[换服重连] 已开 · 换服/重进后会自动把 CheatMenu 再加载一遍")
+end
+F.ServerListCache, F._shAt = {}, 0
+F.ServerHopFetch = function(cb)
+local ok = pcall(function()
+local url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?limit=100"
+local body = nil
+if type(game.HttpGet) == "function" then body = game:HttpGet(url) end
+if body == nil then error("执行器没有 HttpGet") end
+local data = game:GetService("HttpService"):JSONDecode(body)
+F.ServerListCache = data and data.data or {}
+end)
+cb(ok, #F.ServerListCache)
+end
+F._atkLoop, F._atkAt = nil, 0
+F.AttackSpeedSet = function(on)
+T.AttackSpeed = on and true or false
+if F._atkLoop ~= nil then pcall(function() F._atkLoop:Disconnect() end) F._atkLoop = nil end
+if not T.AttackSpeed then
+F.Out("[攻速] 已关")
+return
+end
+F.Out("[攻速] 已开 · 按设定间隔连发手中工具")
+F._atkLoop = F.SlowLoop(0.03, function()
+if T.AttackSpeed ~= true then F.AttackSpeedSet(false) return end
+local gap = tonumber(C.AttackGap) or 0.12
+if gap < 0.03 then gap = 0.03 end
+local now = os.clock()
+if now - F._atkAt < gap then return end
+F._atkAt = now
+local tool = nil
+pcall(function()
+local ch = LP.Character
+if ch ~= nil then tool = ch:FindFirstChildOfClass("Tool") end
+end)
+if tool == nil then
+pcall(function()
+local bp = LP:FindFirstChildOfClass("Backpack")
+if bp ~= nil then tool = bp:FindFirstChildOfClass("Tool") end
+end)
+end
+if tool ~= nil then pcall(function() tool:Activate() end) end
+end)
+end
+F._iaLoop = nil
+F.InfAmmoSet = function(on)
+T.InfAmmo = on and true or false
+if F._iaLoop ~= nil then pcall(function() F._iaLoop:Disconnect() end) F._iaLoop = nil end
+if not T.InfAmmo then
+F.Out("[无限弹药] 已关")
+return
+end
+F.Out("[无限弹药] 已开 · 手中武器/道具的弹药与次数钉在 999")
+F._iaLoop = F.SlowLoop(0.2, function()
+if T.InfAmmo ~= true then F.InfAmmoSet(false) return end
+local tool = nil
+pcall(function()
+local ch = LP.Character
+if ch ~= nil then tool = ch:FindFirstChildOfClass("Tool") end
+end)
+if tool == nil then return end
+for _, nm in ipairs({ "Ammo", "AmmoCount", "Clip", "ClipSize", "Bullets", "Magazine", "Charges", "Uses" }) do
+local v = tool[nm]
+if type(v) == "number" then pcall(function() tool[nm] = math.max(v, 999) end) end
+end
+local ok, attrs = pcall(function() return tool:GetAttributes() end)
+if ok and type(attrs) == "table" then
+for k, v in pairs(attrs) do
+local lk = string.lower(tostring(k))
+if type(v) == "number" then
+if string.find(lk, "ammo", 1, true) or string.find(lk, "clip", 1, true)
+or string.find(lk, "bullet", 1, true) or string.find(lk, "charge", 1, true) then
+pcall(function() tool:SetAttribute(k, math.max(v, 999)) end)
+end
+end
+end
+end
+end)
+end
+F._blinkLoop, F._blinkAt = nil, 0
+F.BlinkSet = function(on)
+T.Blink = on and true or false
+if F._blinkLoop ~= nil then pcall(function() F._blinkLoop:Disconnect() end) F._blinkLoop = nil end
+if not T.Blink then
+F.Out("[瞬移步] 已关")
+return
+end
+F.Out("[瞬移步] 已开 · 移动时按间隔向前瞬移")
+F._blinkLoop = F.SlowLoop(0.05, function()
+if T.Blink ~= true then F.BlinkSet(false) return end
+local gap = tonumber(C.BlinkGap) or 0.5
+local dist = tonumber(C.BlinkDist) or 12
+if gap < 0.15 then gap = 0.15 end
+if dist < 2 then dist = 2 end
+local now = os.clock()
+if now - F._blinkAt < gap then return end
+local _, hum, root = GC()
+if root == nil or root.Parent == nil then return end
+local mv = nil
+pcall(function() mv = hum.MoveDirection end)
+if mv == nil or mv.Magnitude < 0.1 then return end
+F._blinkAt = now
+local flat = Vector3.new(mv.X, 0, mv.Z)
+if flat.Magnitude > 0.05 then
+pcall(function() root.CFrame = root.CFrame + flat.Unit * dist end)
+end
+end)
+end
+F._rdLoop = nil
+F.AntiRagdollSet = function(on)
+T.AntiRagdoll = on and true or false
+if F._rdLoop ~= nil then pcall(function() F._rdLoop:Disconnect() end) F._rdLoop = nil end
+if not T.AntiRagdoll then
+F.Out("[防布娃娃] 已关")
+return
+end
+F.Out("[防布娃娃] 已开 · 被击倒时立刻爬起来")
+F._rdLoop = F.SlowLoop(0.1, function()
+if T.AntiRagdoll ~= true then F.AntiRagdollSet(false) return end
+local _, hum = GC()
+if hum == nil then return end
+local st = nil
+pcall(function() st = hum:GetState() end)
+if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+end
+end)
+end
+F._stLoop = nil
+F.AntiStunSet = function(on)
+T.AntiStun = on and true or false
+if F._stLoop ~= nil then pcall(function() F._stLoop:Disconnect() end) F._stLoop = nil end
+if not T.AntiStun then
+F.Out("[反眩晕] 已关")
+return
+end
+F.Out("[反眩晕] 已开 · 被硬直/平台站立时会自己解")
+F._stLoop = F.SlowLoop(0.1, function()
+if T.AntiStun ~= true then F.AntiStunSet(false) return end
+if T.FlyOn == true or T.HeliOn == true then return end
+local _, hum = GC()
+if hum == nil then return end
+pcall(function()
+if hum.PlatformStand == true then hum.PlatformStand = false end
+end)
+pcall(function()
+local st = hum:GetState()
+if st == Enum.HumanoidStateType.PlatformStanding then hum:ChangeState(Enum.HumanoidStateType.Running) end
+end)
+end)
+end
+F._fgLoop = nil
+F.FallGuardSet = function(on)
+T.FallGuard = on and true or false
+if F._fgLoop ~= nil then pcall(function() F._fgLoop:Disconnect() end) F._fgLoop = nil end
+if not T.FallGuard then
+F.Out("[防摔保护] 已关")
+return
+end
+F.Out("[防摔保护] 已开 · 下坠速度超过 120 格/秒时自动兜住")
+F._fgLoop = F.SlowLoop(0.05, function()
+if T.FallGuard ~= true then F.FallGuardSet(false) return end
+local _, _, root = GC()
+if root == nil or root.Parent == nil then return end
+local v = nil
+pcall(function() v = root.AssemblyLinearVelocity end)
+if v == nil then pcall(function() v = root.Velocity end) end
+if v ~= nil and v.Y < -120 then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(v.X, -60, v.Z) end)
+end
+end)
+end
+F._osConn, F._osArrow, F._osAt = nil, nil, 0
+F.OffScreenSet = function(on)
+T.OffScreen = on and true or false
+if F._osConn ~= nil then pcall(function() F._osConn:Disconnect() end) F._osConn = nil end
+if not T.OffScreen then
+if F._osArrow ~= nil then for i = 1, #F._osArrow do F.VxKill(F._osArrow[i]) end end
+F._osArrow = nil
+F.Out("[屏外指示] 已关")
+return
+end
+if not F.VxAvail() then
+T.OffScreen = false
+F.Out("[屏外指示] 当前执行器没有 Drawing API ⇒ 未开启")
+local o = Fluent and Fluent.Options and Fluent.Options.OffScreen
+if o ~= nil then pcall(F.OptSet, o, false) end
+return
+end
+F._osArrow = {}
+for i = 1, 4 do F._osArrow[i] = F.VxNew("Line", 2) end
+F.Out("[屏外指示] 已开 · 敌人在屏幕外时会画指向箭头")
+F._osConn = RS.RenderStepped:Connect(function()
+if T.OffScreen ~= true then pcall(F.OffScreenSet, false) return end
+local now = os.clock()
+if now - F._osAt < 0.033 then return end
+F._osAt = now
+pcall(F.OffScreenTick)
+end)
+end
+F.OffScreenTick = function()
+if F._osArrow == nil then return end
+local cam = workspace.CurrentCamera
+if cam == nil then return end
+local _, _, root = GC()
+if root == nil then return end
+local best, bestD = nil, math.huge
+local list = Players:GetPlayers()
+for i = 1, #list do
+local pl = list[i]
+if pl ~= LP then
+local ch = pl.Character
+local hum = nil
+local rp = nil
+if ch ~= nil then
+pcall(function() hum = ch:FindFirstChildOfClass("Humanoid") end)
+pcall(function() rp = ch:FindFirstChild("HumanoidRootPart") end)
+end
+if hum ~= nil and hum.Health > 0 and rp ~= nil then
+local d = (rp.Position - root.Position).Magnitude
+if d < bestD then best, bestD = pl, d end
+end
+end
+end
+local hide = true
+if best ~= nil then
+local ch = best.Character
+local rp = ch and ch:FindFirstChild("HumanoidRootPart")
+if rp ~= nil then
+local sp, vis = cam:WorldToViewportPoint(rp.Position)
+if not vis then
+hide = false
+local vp = cam.ViewportSize
+local cx, cy = vp.X * 0.5, vp.Y * 0.5
+local dx, dy = sp.X - cx, sp.Y - cy
+if sp.Z < 0 then dx, dy = -dx, -dy end
+local m = math.sqrt(dx * dx + dy * dy)
+if m < 0.001 then dx, dy, m = 0, 1, 1 end
+dx, dy = dx / m, dy / m
+local r = math.min(vp.X, vp.Y) * 0.32
+local ex, ey = cx + dx * r, cy + dy * r
+local px, py = -dy, dx
+local col = Color3.fromRGB(255, 70, 70)
+pcall(function() col = F.CMX_HLTeamColor(best) end)
+local segs = {
+{ ex, ey, ex - dx * 26 + px * 14, ey - dy * 26 + py * 14 },
+{ ex, ey, ex - dx * 26 - px * 14, ey - dy * 26 - py * 14 },
+{ ex, ey, ex - dx * 14, ey - dy * 14 },
+}
+for i = 1, 3 do
+local ln = F._osArrow[i]
+if ln ~= nil then
+ln.From = Vector2.new(segs[i][1], segs[i][2])
+ln.To = Vector2.new(segs[i][3], segs[i][4])
+ln.Color = col
+ln.Visible = true
+end
+end
+end
+end
+end
+if hide then
+for i = 1, #F._osArrow do
+if F._osArrow[i] ~= nil then F._osArrow[i].Visible = false end
+end
+end
+end
+F._ieConn, F._ieRecs, F._ieAt = nil, {}, 0
+F.ItemEspSet = function(on)
+T.ItemEsp = on and true or false
+if F._ieConn ~= nil then pcall(function() F._ieConn:Disconnect() end) F._ieConn = nil end
+for _, rec in pairs(F._ieRecs) do
+pcall(function() rec.sq:Remove() end)
+pcall(function() rec.tx:Remove() end)
+end
+F._ieRecs = {}
+if not T.ItemEsp then
+F.Out("[物品透视] 已关")
+return
+end
+if not F.VxAvail() then
+T.ItemEsp = false
+F.Out("[物品透视] 当前执行器没有 Drawing API ⇒ 未开启")
+local o = Fluent and Fluent.Options and Fluent.Options.ItemEsp
+if o ~= nil then pcall(F.OptSet, o, false) end
+return
+end
+F.Out("[物品透视] 已开 · 地面掉落物会标名字与距离")
+F._ieConn = RS.RenderStepped:Connect(function()
+if T.ItemEsp ~= true then pcall(F.ItemEspSet, false) return end
+local now = os.clock()
+if now - F._ieAt < 0.1 then return end
+F._ieAt = now
+pcall(F.ItemEspTick)
+end)
+end
+F.ItemEspTick = function()
+local cam = workspace.CurrentCamera
+if cam == nil then return end
+local _, _, root = GC()
+if root == nil then return end
+local rng = tonumber(C.ItemEspRange) or 120
+local seen = {}
+local n = 0
+local cands = F._magCands
+if cands == nil or #cands == 0 then return end
+for i = 1, #cands do
+local o = cands[i]
+if o.Parent ~= nil then
+local d = (o.Position - root.Position).Magnitude
+if d <= rng then
+local rec = F._ieRecs[o]
+if rec == nil then
+rec = { sq = F.VxNew("Square", 1), tx = F.VxNew("Text", nil) }
+if rec.tx ~= nil then pcall(function() rec.tx.Center = true rec.tx.Outline = true rec.tx.Size = 13 end) end
+F._ieRecs[o] = rec
+end
+seen[o] = true
+local p, vis = cam:WorldToViewportPoint(o.Position)
+if vis and rec.sq ~= nil and rec.tx ~= nil then
+local sz = 14
+rec.sq.Position = Vector2.new(p.X - sz * 0.5, p.Y - sz * 0.5)
+rec.sq.Size = Vector2.new(sz, sz)
+rec.sq.Color = Color3.fromRGB(120, 220, 255)
+rec.sq.Visible = true
+rec.tx.Position = Vector2.new(p.X, p.Y - 20)
+rec.tx.Text = tostring(o.Name) .. " · " .. string.format("%.0f格", d)
+rec.tx.Color = Color3.fromRGB(120, 220, 255)
+rec.tx.Visible = true
+else
+if rec.sq ~= nil then rec.sq.Visible = false end
+if rec.tx ~= nil then rec.tx.Visible = false end
+end
+n = n + 1
+if n > 60 then break end
+end
+end
+end
+for o, rec in pairs(F._ieRecs) do
+if not seen[o] then
+if rec.sq ~= nil then pcall(function() rec.sq:Remove() end) end
+if rec.tx ~= nil then pcall(function() rec.tx:Remove() end) end
+F._ieRecs[o] = nil
+end
+end
+end
+F._seConn, F._seRecs, F._seAt = nil, {}, 0
+F.SoundEspSet = function(on)
+T.SoundEsp = on and true or false
+if F._seConn ~= nil then pcall(function() F._seConn:Disconnect() end) F._seConn = nil end
+for _, o in pairs(F._seRecs) do pcall(function() o:Remove() end) end
+F._seRecs = {}
+if not T.SoundEsp then
+F.Out("[声音透视] 已关")
+return
+end
+if not F.VxAvail() then
+T.SoundEsp = false
+F.Out("[声音透视] 当前执行器没有 Drawing API ⇒ 未开启")
+local o = Fluent and Fluent.Options and Fluent.Options.SoundEsp
+if o ~= nil then pcall(F.OptSet, o, false) end
+return
+end
+F.Out("[声音透视] 已开 · 附近发声位置会画圈")
+F._seConn = RS.RenderStepped:Connect(function()
+if T.SoundEsp ~= true then pcall(F.SoundEspSet, false) return end
+local now = os.clock()
+if now - F._seAt < 0.12 then return end
+F._seAt = now
+pcall(F.SoundEspTick)
+end)
+end
+F.SoundEspTick = function()
+local cam = workspace.CurrentCamera
+if cam == nil then return end
+local _, _, root = GC()
+if root == nil then return end
+local rng = tonumber(C.SoundEspRange) or 200
+local found, n = {}, 0
+pcall(function()
+for _, o in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 6000 then break end
+local okS, isS = pcall(function() return o:IsA("Sound") end)
+if okS and isS and o.Playing == true then
+local par = o.Parent
+local okP, isP = false, false
+if par ~= nil then okP, isP = pcall(function() return par:IsA("BasePart") end) end
+if okP and isP then
+local d = (par.Position - root.Position).Magnitude
+if d <= rng then found[#found + 1] = par end
+end
+end
+end
+end)
+local seen = {}
+for i = 1, #found do
+local part = found[i]
+seen[part] = true
+local c = F._seRecs[part]
+if c == nil then
+c = F.VxNew("Circle", 1)
+F._seRecs[part] = c
+end
+if c ~= nil then
+local p, vis = cam:WorldToViewportPoint(part.Position)
+if vis then
+c.Position = Vector2.new(p.X, p.Y)
+c.Radius = 18
+c.Thickness = 1
+c.Color = Color3.fromRGB(255, 210, 90)
+c.Visible = true
+else
+c.Visible = false
+end
+end
+end
+for part, c in pairs(F._seRecs) do
+if not seen[part] then
+pcall(function() c:Remove() end)
+F._seRecs[part] = nil
+end
+end
+end
+F.PullAllTools = function()
+task.spawn(function()
+local bp = nil
+pcall(function() bp = LP:FindFirstChildOfClass("Backpack") end)
+local dst = bp or LP.Character
+if dst == nil then F.Out("[全场道具] 没有背包也没有角色 ⇒ 放弃") return end
+local n, skip = 0, 0
+local roots = { game:GetService("ReplicatedStorage"), workspace }
+for r = 1, #roots do
+local arr = nil
+pcall(function() arr = roots[r]:GetDescendants() end)
+if arr ~= nil then
+for i = 1, #arr do
+local o = arr[i]
+if o.Parent ~= nil then
+local okT, isT = pcall(function() return o:IsA("Tool") end)
+if okT and isT then
+local owned = false
+pcall(function() owned = Players:GetPlayerFromCharacter(o.Parent) ~= nil end)
+if owned then skip = skip + 1 else
+local c = nil
+pcall(function() c = o:Clone() end)
+if c ~= nil then
+pcall(function() c.Parent = dst end)
+n = n + 1
+end
+end
+if n >= 40 then break end
+end
+end
+end
+end
+end
+F.Out("[全场道具] 拉了 " .. tostring(n) .. " 个道具进背包(跳过别人的 " .. tostring(skip) .. " 个)")
+end)
+end
+F.RemoteSpray = function()
+task.spawn(function()
+local pats = { "givetool", "givegun", "giveweapon", "giveitem", "getweapon", "getgun", "gettool",
+"spawntool", "spawnweapon", "spawnitem", "additem", "addtool", "grantweapon", "buyweapon", "weaponrequest" }
+local hit, tried = 0, 0
+local rs = game:GetService("ReplicatedStorage")
+local arr = nil
+pcall(function() arr = rs:GetDescendants() end)
+if arr == nil then F.Out("[远程喷洒] 读不到 ReplicatedStorage ⇒ 放弃") return end
+for i = 1, #arr do
+local o = arr[i]
+if o.Parent ~= nil then
+local okR, isR = pcall(function() return o:IsA("RemoteEvent") or o:IsA("RemoteFunction") end)
+if okR and isR then
+local ln = string.lower(tostring(o.Name))
+for j = 1, #pats do
+if string.find(ln, pats[j], 1, true) then
+tried = tried + 1
+local ok = pcall(function()
+if o:IsA("RemoteEvent") then
+o:FireServer(LP, "All")
+else
+o:InvokeServer(LP, "All")
+end
+end)
+if ok then hit = hit + 1 end
+break
+end
+end
+end
+end
+if tried >= 40 then break end
+end
+F.Out("[远程喷洒] 试了 " .. tostring(tried) .. " 个「给道具」类远程, " .. tostring(hit) .. " 个调用成功")
+end)
+end
+F._acLoop = nil
+F.AutoCollectSet = function(on)
+T.AutoCollect = on and true or false
+if F._acLoop ~= nil then pcall(function() F._acLoop:Disconnect() end) F._acLoop = nil end
+if not T.AutoCollect then
+F.Out("[自动收集] 已关")
+return
+end
+F.Out("[自动收集] 已开 · 自动触发附近的交互提示(捡东西/开门/领奖)")
+F._acLoop = F.SlowLoop(0.35, function()
+if T.AutoCollect ~= true then F.AutoCollectSet(false) return end
+local _, _, root = GC()
+if root == nil then return end
+local rng = tonumber(C.AutoCollectRange) or 30
+local n = 0
+pcall(function()
+local svc = game:GetService("ProximityPromptService")
+for _, pp in ipairs(workspace:GetDescendants()) do
+n = n + 1
+if n > 4000 then break end
+local okP, isP = pcall(function() return pp:IsA("ProximityPrompt") end)
+if okP and isP and pp.Enabled == true then
+local par = pp.Parent
+if par ~= nil and par:IsA("BasePart") then
+if (par.Position - root.Position).Magnitude <= rng then
+pcall(function() fireproximityprompt(pp) end)
+end
+end
+end
+end
+end)
+end)
+end
+F._plObserve, F._plObsConn = nil, nil
+F.PlayerAction = function(kind)
+local opt = Fluent and Fluent.Options and Fluent.Options.PlayerPick
+local name = opt and opt.Value
+if kind == "self" then name = LP.Name end
+if name == nil or name == "" then F.Out("[玩家] 先在「目标玩家」里选一个人") return end
+local pl = Players:FindFirstChild(tostring(name))
+if pl == nil then F.Out("[玩家] 找不到「" .. tostring(name) .. "」") return end
+if kind == "goto" then
+task.spawn(function() pcall(TeleportToPlayer, pl) end)
+elseif kind == "bring" then
+F.Out("[玩家] 把「" .. pl.Name .. "」带过来(只能用本机权限试, 服务器不认就没效果)")
+task.spawn(function()
+local _, _, myRoot = GC()
+local ch = pl.Character
+local tRoot = ch and ch:FindFirstChild("HumanoidRootPart")
+if myRoot == nil or tRoot == nil then return end
+pcall(function() tRoot.CFrame = myRoot.CFrame + myRoot.CFrame.LookVector * 4 end)
+end)
+elseif kind == "fling" then
+task.spawn(function() pcall(F.FlingPlayer) end)
+elseif kind == "observe" then
+if F._plObsConn ~= nil then pcall(function() F._plObsConn:Disconnect() end) end
+F._plObserve = pl
+F._plObsConn = RS.RenderStepped:Connect(function()
+if F._plObserve == nil or T.PlayerObserve ~= true then
+if F._plObsConn ~= nil then pcall(function() F._plObsConn:Disconnect() end) F._plObsConn = nil end
+F._plObserve = nil
+return end
+local ch = F._plObserve.Character
+local head = ch and (ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart"))
+local cam = workspace.CurrentCamera
+if head ~= nil and cam ~= nil then
+pcall(function() cam.CFrame = CFrame.lookAt(cam.CFrame.Position, head.Position) end)
+end
+end)
+F.Out("[玩家] 已开始盯「" .. pl.Name .. "」(相机锁他)")
+end
+end
+F._plHudGui, F._plHudLoop, F._plHudTxt = nil, nil, nil
+F.PlayerHudSet = function(on)
+T.PlayerHud = on and true or false
+if F._plHudLoop ~= nil then pcall(function() F._plHudLoop:Disconnect() end) F._plHudLoop = nil end
+if not T.PlayerHud then
+if F._plHudGui ~= nil then pcall(function() F._plHudGui:Destroy() end) end
+F._plHudGui, F._plHudTxt = nil, nil
+F.Out("[玩家列表] 已关")
+return
+end
+local host = nil
+pcall(function() host = gethui and gethui() end)
+if host == nil then pcall(function() host = CoreGui end) end
+if host == nil then pcall(function() host = game:GetService("CoreGui") end) end
+if host == nil then
+T.PlayerHud = false
+F.Out("[玩家列表] 没有可用的 GUI 宿主 ⇒ 未开启")
+return
+end
+local sg = Instance.new("ScreenGui")
+sg.Name = "CMPlayerList"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 996
+pcall(function() sg:SetAttribute("CMOwned", true) end)
+sg.Parent = host
+local lb = Instance.new("TextLabel")
+lb.Name = "lst"
+lb.BackgroundTransparency = 0.4
+lb.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+lb.AnchorPoint = Vector2.new(0, 0)
+lb.Position = UDim2.new(1, -232, 0, 12)
+lb.Size = UDim2.fromOffset(220, 24)
+lb.Font = Enum.Font.Code
+lb.TextSize = 13
+lb.TextColor3 = Color3.fromRGB(230, 230, 230)
+lb.TextXAlignment = Enum.TextXAlignment.Left
+lb.TextYAlignment = Enum.TextYAlignment.Top
+lb.TextWrapped = true
+lb.Text = "玩家"
+lb.Parent = sg
+F._plHudGui, F._plHudTxt = sg, lb
+F.Out("[玩家列表] 已开 · 右上角显示所有玩家的距离与血量")
+F._plHudLoop = F.SlowLoop(0.5, function()
+if T.PlayerHud ~= true then F.PlayerHudSet(false) return end
+if F._plHudTxt == nil or F._plHudTxt.Parent == nil then return end
+local _, _, root = GC()
+local lines = {}
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then
+local ch = pl.Character
+local hum = nil
+local rp = nil
+if ch ~= nil then
+pcall(function() hum = ch:FindFirstChildOfClass("Humanoid") end)
+pcall(function() rp = ch:FindFirstChild("HumanoidRootPart") end)
+end
+local d = 0
+if root ~= nil and rp ~= nil then pcall(function() d = (rp.Position - root.Position).Magnitude end) end
+local hp = "?"
+if hum ~= nil then pcall(function() hp = string.format("%d/%d", math.floor(hum.Health), math.floor(hum.MaxHealth)) end) end
+lines[#lines + 1] = string.format("%-14s %5.0f格 %s", tostring(pl.Name), d, hp)
+end
+end
+local head = "玩家 (" .. tostring(#lines) .. ")"
+if #lines == 0 then head = head .. " · 场上没别人" end
+pcall(function() F._plHudTxt.Text = head .. (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "") end)
+end)
+end
+F.TargetCycle = function()
+local list = {}
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP then list[#list + 1] = pl.Name end
+end
+if #list == 0 then F.Out("[目标切换] 场上没有别人") return end
+F._tgtIdx = ((F._tgtIdx or 0) % #list) + 1
+local nm = list[F._tgtIdx]
+local opt = Fluent and Fluent.Options and Fluent.Options.PriorityTarget
+if opt ~= nil then pcall(F.OptSet, opt, nm) end
+local opt2 = Fluent and Fluent.Options and Fluent.Options.PlayerPick
+if opt2 ~= nil then pcall(F.OptSet, opt2, nm) end
+F.Out("[目标切换] 当前优先目标 = " .. tostring(nm))
+end
+F.CFG_FILE = "CheatMenu_config.json"
+F.CfgSaveNow = function()
+if type(writefile) ~= "function" then F.Out("[配置] 执行器没有 writefile ⇒ 不能存盘") return end
+local ok, err = pcall(function()
+local data = { version = tostring(F.VERSION), t = {}, c = {} }
+for k, v in pairs(T) do if type(v) == "boolean" then data.t[k] = v end end
+for k, v in pairs(C) do
+local ty = type(v)
+if ty == "number" or ty == "string" or ty == "boolean" then data.c[k] = v end
+end
+writefile(F.CFG_FILE, game:GetService("HttpService"):JSONEncode(data))
+end)
+if ok then
+F.Out("[配置] 已存到执行器目录: " .. tostring(F.CFG_FILE))
+else
+F.Out("[配置] 存盘失败: " .. tostring(err))
+end
+end
+F.CfgLoadNow = function()
+if type(readfile) ~= "function" or type(isfile) ~= "function" then F.Out("[配置] 执行器没有 readfile ⇒ 不能读盘") return end
+local ok, err = pcall(function()
+if not isfile(F.CFG_FILE) then error("还没有存过配置") end
+local data = game:GetService("HttpService"):JSONDecode(readfile(F.CFG_FILE))
+local was = F._cfgSyncing
+F._cfgSyncing = true
+if type(data.t) == "table" then
+for k, v in pairs(data.t) do
+if T[k] ~= nil or true then T[k] = (v == true) end
+end
+end
+if type(data.c) == "table" then
+for k, v in pairs(data.c) do C[k] = v end
+end
+F._cfgSyncing = was
+pcall(F.CfgSyncUI)
+end)
+if ok then
+F.Out("[配置] 已按存档把界面同步好 · 需要生效版请点「应用存档」")
+else
+F.Out("[配置] 读盘失败: " .. tostring(err))
+end
+end
+F.CfgApplyNow = function()
+pcall(F.CfgLoadNow)
+local was = F._cfgSyncing
+F._cfgSyncing = false
+local applied = pcall(F.ApplySavedOn, true)
+F._cfgSyncing = was
+if applied then F.Out("[配置] 存档里的功能已真正装好") end
+end
+F.CfgWipeNow = function()
+if type(delfile) ~= "function" then F.Out("[配置] 执行器没有 delfile") return end
+pcall(function() delfile(F.CFG_FILE) end)
+F.Out("[配置] 存档已删")
+end
+F.ServerHopNow = function(minPlayers, maxPlayers)
+task.spawn(function()
+F.ServerHopFetch(function(ok, n)
+if not ok or n == 0 then
+F.Out("[服务器跳转] 拉不到服务器列表(执行器没 HttpGet 或被拦) ⇒ 放弃")
+return
+end
+local best, bestN = nil, math.huge
+for _, s in ipairs(F.ServerListCache) do
+local playing = tonumber(s.playing) or 0
+local max = tonumber(s.maxPlayers) or 0
+if s.id and s.id ~= game.JobId and playing < max then
+if playing >= (minPlayers or 0) and playing <= (maxPlayers or 100) and playing < bestN then
+best, bestN = s, playing
+end
+end
+end
+if best == nil then
+F.Out("[服务器跳转] 没有符合条件的服务器 ⇒ 放弃")
+return
+end
+F.Out("[服务器跳转] 选中最空的一个服(" .. tostring(bestN) .. " 人) ⇒ 正在跳")
+pcall(function() queueonteleport(F._selfURL) end)
+task.wait(0.4)
+local ts = game:GetService("TeleportService")
+pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, best.id, LP) end)
+end)
+end)
+end
 local Tabs = {
 Combat  = Window:AddTab({ Title = "战斗", Icon = "crosshair" }),
 Surv    = Window:AddTab({ Title = "生存", Icon = "shield" }),
-Visual  = Window:AddTab({ Title = "视觉", Icon = "globe" }),
+Visual  = Window:AddTab({ Title = "视觉", Icon = "eye" }),
 Move    = Window:AddTab({ Title = "移动", Icon = "move" }),
-AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
-Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
-System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
-TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
 Item    = Window:AddTab({ Title = "道具", Icon = "package" }),
+TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+Player  = Window:AddTab({ Title = "玩家", Icon = "users" }),
+AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
+Bypass  = Window:AddTab({ Title = "绕过", Icon = "shield-off" }),
+System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
+Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 IY      = Window:AddTab({ Title = "IY 命令", Icon = "terminal" }),
 }
 Tabs.World   = Tabs.Visual
-Tabs.AC      = Tabs.System
+Tabs.AC      = Tabs.Bypass
 Tabs.Setting = Tabs.System
 F._uiFails = 0
 local _tabAPI = { "AddSection", "AddToggle", "AddSlider", "AddButton", "AddDropdown", "AddInput", "AddColorPicker" }
@@ -16982,6 +17881,26 @@ if v then pcall(F.EnsureAimOn, "弹道预测") end
 end })
 Tabs.Combat:AddSlider("BulletSpeed", { Title = "子弹速度 · 格/秒", Min = 100, Max = 5000, Default = 800, Rounding = 0, Callback = function(v) C.BulletSpeed = v end })
 Tabs.Combat:AddSlider("PredictGain", { Title = "预测强度", Min = 0.2, Max = 3, Default = 1, Rounding = 2, Callback = function(v) C.PredictGain = v end })
+Tabs.Combat:AddToggle("SilentAim", { Title = "静默自瞄(不动屏幕照样命中)", Default = false, Callback = function(v)
+T.SilentAim = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.EnsureAimOn, "静默自瞄") end
+end })
+Tabs.Combat:AddButton({ Title = "切换到下一个目标", Callback = function()
+if not F.Once("tgtcycle2", 0.4) then return end
+pcall(F.TargetCycle)
+end })
+Tabs.Combat:AddToggle("AttackSpeed", { Title = "攻速强化", Default = false, Callback = function(v)
+T.AttackSpeed = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AttackSpeedSet, v)
+end })
+Tabs.Combat:AddSlider("AttackGap", { Title = "攻速间隔(秒)", Min = 0.03, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) C.AttackGap = v end })
+Tabs.Combat:AddToggle("InfAmmo", { Title = "无限弹药 / 次数", Default = false, Callback = function(v)
+T.InfAmmo = v and true or false
+if F._cfgSyncing then return end
+pcall(F.InfAmmoSet, v)
+end })
 Tabs.Combat:AddSection("战斗增强")
 Tabs.Combat:AddToggle("HitboxOn", { Title = "命中盒扩大", Default = false, Callback = function(v)
 T.HitboxOn = v
@@ -17030,6 +17949,21 @@ if F._cfgSyncing then return end
 if v then pcall(F.AntiVoidEnable) else pcall(F.AntiVoidDisable) end
 end })
 Tabs.Surv:AddSlider("AntiVoidY", { Title = "拉回高度", Min = -500, Max = 0, Default = -100, Rounding = 0, Callback = function(v) C.AntiVoidY = v end })
+Tabs.Surv:AddToggle("AntiRagdoll", { Title = "防布娃娃(击倒立刻爬起)", Default = false, Callback = function(v)
+T.AntiRagdoll = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AntiRagdollSet, v)
+end })
+Tabs.Surv:AddToggle("AntiStun", { Title = "反眩晕 / 反硬直", Default = false, Callback = function(v)
+T.AntiStun = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AntiStunSet, v)
+end })
+Tabs.Surv:AddToggle("FallGuard", { Title = "防摔保护", Default = false, Callback = function(v)
+T.FallGuard = v and true or false
+if F._cfgSyncing then return end
+pcall(F.FallGuardSet, v)
+end })
 Tabs.Surv:AddSection("DOORS 专属")
 Tabs.Surv:AddToggle("DoorsClutch", { Title = "保命心跳", Default = false, Callback = function(v)
 T.DoorsClutch = v and true or false
@@ -17286,6 +18220,13 @@ T.SitWalk = v
 if F._cfgSyncing then return end
 F.SitWalkSet(v)
 end })
+Tabs.Move:AddToggle("Blink", { Title = "瞬移步", Default = false, Callback = function(v)
+T.Blink = v and true or false
+if F._cfgSyncing then return end
+pcall(F.BlinkSet, v)
+end })
+Tabs.Move:AddSlider("BlinkDist", { Title = "瞬移步 · 每步距离", Min = 2, Max = 60, Default = 12, Rounding = 0, Callback = function(v) C.BlinkDist = v end })
+Tabs.Move:AddSlider("BlinkGap", { Title = "瞬移步 · 间隔(秒)", Min = 0.15, Max = 3, Default = 0.5, Rounding = 2, Callback = function(v) C.BlinkGap = v end })
 end
 do
 Tabs.Visual:AddSection("ESP 透视")
@@ -17542,6 +18483,29 @@ T.Watermark = v and true or false
 if F._cfgSyncing then return end
 pcall(F.WatermarkSet, v)
 end })
+Tabs.World:AddToggle("PlayerHud", { Title = "玩家列表", Default = false, Callback = function(v)
+T.PlayerHud = v and true or false
+if F._cfgSyncing then return end
+pcall(F.PlayerHudSet, v)
+end })
+Tabs.World:AddSection("指示 / 物品 / 声音")
+Tabs.World:AddToggle("OffScreen", { Title = "屏外指示箭头", Default = false, Callback = function(v)
+T.OffScreen = v and true or false
+if F._cfgSyncing then return end
+pcall(F.OffScreenSet, v)
+end })
+Tabs.World:AddToggle("ItemEsp", { Title = "物品透视", Default = false, Callback = function(v)
+T.ItemEsp = v and true or false
+if F._cfgSyncing then return end
+pcall(F.ItemEspSet, v)
+end })
+Tabs.World:AddSlider("ItemEspRange", { Title = "物品透视 · 范围", Min = 20, Max = 500, Default = 120, Rounding = 0, Callback = function(v) C.ItemEspRange = v end })
+Tabs.World:AddToggle("SoundEsp", { Title = "声音透视", Default = false, Callback = function(v)
+T.SoundEsp = v and true or false
+if F._cfgSyncing then return end
+pcall(F.SoundEspSet, v)
+end })
+Tabs.World:AddSlider("SoundEspRange", { Title = "声音透视 · 范围", Min = 30, Max = 800, Default = 200, Rounding = 0, Callback = function(v) C.SoundEspRange = v end })
 end
 do
 Tabs.TP:AddSection("传送")
@@ -17573,19 +18537,40 @@ Tabs.TP:AddButton({ Title = "去这个世界", Callback = function()
 local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
 task.spawn(function() pcall(F.WorldGoto, pick) end)
 end })
-Tabs.Move:AddSection("针对玩家")
-Tabs.Move:AddButton({ Title = "把他甩飞", Callback = function()
-task.spawn(function() pcall(F.FlingPlayer) end)
+Tabs.Player:AddSection("目标")
+Tabs.Player:AddDropdown("PlayerPick", { Title = "目标玩家", Values = F.PlayerNames(), Default = nil })
+Tabs.Player:AddButton({ Title = "切换到下一个目标", Callback = function()
+if not F.Once("tgtcycle", 0.4) then return end
+pcall(F.TargetCycle)
 end })
-Tabs.Move:AddToggle("LoopFling", { Title = "循环甩飞", Default = false, Callback = function(v)
+Tabs.Player:AddSection("动作")
+Tabs.Player:AddButton({ Title = "传送到他", Callback = function()
+if not F.Once("plgoto", 1) then return end
+F.PlayerAction("goto")
+end })
+Tabs.Player:AddButton({ Title = "把他带过来(本机权限)", Callback = function()
+if not F.Once("plbring", 1) then return end
+F.PlayerAction("bring")
+end })
+Tabs.Player:AddButton({ Title = "把他甩飞", Callback = function()
+if not F.Once("plfling", 1.5) then return end
+F.PlayerAction("fling")
+end })
+Tabs.Player:AddToggle("PlayerObserve", { Title = "盯住他(相机锁他)", Default = false, Callback = function(v)
+T.PlayerObserve = v and true or false
+if F._cfgSyncing then return end
+if v then F.PlayerAction("observe") end
+end })
+Tabs.Player:AddSection("全体")
+Tabs.Player:AddButton({ Title = "甩飞所有人", Callback = function()
+task.spawn(function() pcall(F.FlingAll) end)
+end })
+Tabs.Player:AddToggle("LoopFling", { Title = "循环甩飞", Default = false, Callback = function(v)
 T.LoopFling = v
 if F._cfgSyncing then return end
 if v then pcall(F.FlingLoopStart) else pcall(F.FlingLoopStop) end
 end })
-Tabs.Move:AddButton({ Title = "甩飞所有人", Callback = function()
-task.spawn(function() pcall(F.FlingAll) end)
-end })
-Tabs.Move:AddSlider("FlingInterval", { Title = "甩飞间隔", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
+Tabs.Player:AddSlider("FlingInterval", { Title = "甩飞间隔", Min = 0.3, Max = 5, Default = 1.5, Rounding = 1, Callback = function(v) C.FlingInterval = v end })
 Tabs.TP:AddSection("收藏点位")
 F._wpb = {}
 for i = 1, F.WP_SLOTS do
@@ -17817,11 +18802,48 @@ T.ACMaster = v
 if F._cfgSyncing then return end
 pcall(F.ProtectTierApply, v)
 end })
-Tabs.AC:AddSection("绕过 / 道具")
+Tabs.AC:AddSection("出站改写")
 Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, Callback = function(v)
 T.SpoofPos = v and true or false
 if F._cfgSyncing then return end
 pcall(F.SpoofPosSet, v)
+end })
+Tabs.AC:AddSection("反检测")
+Tabs.AC:AddToggle("AntiShot", { Title = "反截图 / 反日志", Default = false, Callback = function(v)
+T.AntiShot = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AntiShotSet, v)
+end })
+Tabs.AC:AddToggle("SpoofEnv", { Title = "执行器指纹伪装", Default = false, Callback = function(v)
+T.SpoofEnv = v and true or false
+if F._cfgSyncing then return end
+pcall(F.SpoofEnvSet, v)
+end })
+Tabs.AC:AddToggle("HideInst", { Title = "隐藏自身实例", Default = false, Callback = function(v)
+T.HideInst = v and true or false
+if F._cfgSyncing then return end
+pcall(F.HideInstSet, v)
+end })
+Tabs.AC:AddToggle("SimRadius", { Title = "模拟半径控制", Default = false, Callback = function(v)
+T.SimRadius = v and true or false
+if F._cfgSyncing then return end
+pcall(F.SimRadiusSet, v)
+end })
+Tabs.AC:AddSection("网络")
+Tabs.AC:AddSlider("HopMinPlayers", { Title = "跳服 · 最少人数", Min = 0, Max = 34, Default = 0, Rounding = 0, Callback = function(v) C.HopMinPlayers = v end })
+Tabs.AC:AddButton({ Title = "服务器跳转 · 去最空的服", Callback = function()
+if not F.Once("serverhop", 5) then return end
+task.spawn(function() pcall(F.ServerHopNow, tonumber(C.HopMinPlayers) or 0, 34) end)
+end })
+Tabs.AC:AddToggle("QueueOnTP", { Title = "换服后自动重新加载脚本", Default = false, Callback = function(v)
+T.QueueOnTP = v and true or false
+if F._cfgSyncing then return end
+pcall(F.QueueOnTPSet, v)
+end })
+Tabs.AC:AddToggle("AutoRejoin", { Title = "断线自动重连", Default = false, Callback = function(v)
+T.AutoRejoin = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AutoRejoinSet, v)
 end })
 Tabs.AC:AddSection("扫描")
 Tabs.AC:AddButton({ Title = "全扫描", Callback = function()
@@ -17911,6 +18933,19 @@ end })
 Tabs.AC:AddButton({ Title = "服务器信息 · 写进日志", Callback = function()
 if not F.Once("srv_info", 1) then return end
 pcall(F.ServerInfo)
+end })
+Tabs.Setting:AddSection("配置存档")
+Tabs.Setting:AddButton({ Title = "保存当前配置到存档", Callback = function()
+if not F.Once("cfgsave", 2) then return end
+pcall(F.CfgSaveNow)
+end })
+Tabs.Setting:AddButton({ Title = "读取存档并应用", Callback = function()
+if not F.Once("cfgapply", 3) then return end
+pcall(F.CfgApplyNow)
+end })
+Tabs.Setting:AddButton({ Title = "删除存档", Callback = function()
+if not F.Once("cfgwipe", 2) then return end
+pcall(F.CfgWipeNow)
 end })
 Tabs.Setting:AddSection("系统")
 Tabs.Setting:AddButton({ Title = "自杀 / 重置角色", Callback = function() pcall(F.SuicideNow) end })
@@ -18360,6 +19395,21 @@ if F._cfgSyncing then return end
 pcall(F.MagnetSet, v)
 end })
 Tabs.Item:AddSlider("MagnetRange", { Title = "吸附范围", Min = 5, Max = 200, Default = 24, Rounding = 0, Callback = function(v) C.MagnetRange = v end })
+Tabs.Item:AddToggle("AutoCollect", { Title = "自动收集(自动触发交互)", Default = false, Callback = function(v)
+T.AutoCollect = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AutoCollectSet, v)
+end })
+Tabs.Item:AddSlider("AutoCollectRange", { Title = "自动收集 · 范围", Min = 5, Max = 120, Default = 30, Rounding = 0, Callback = function(v) C.AutoCollectRange = v end })
+Tabs.Item:AddSection("批量刷取")
+Tabs.Item:AddButton({ Title = "全场道具 · 全部拉进背包", Callback = function()
+if not F.Once("pullall", 6) then return end
+pcall(F.PullAllTools)
+end })
+Tabs.Item:AddButton({ Title = "远程喷洒 · 试「给道具」类远程", Callback = function()
+if not F.Once("rspray", 6) then return end
+pcall(F.RemoteSpray)
+end })
 pcall(F.RecordOriginals)
 pcall(F.SignalInstallAll)
 task.spawn(function() pcall(F.LogBaseName) end)
