@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 00:02 sha 1ba92827 bytes 625307'):format('2026-10-10 00:02','1ba92827',625307))
+print(('[CheatMenu] build 2026-10-10 00:35 sha dbdc3ef0 bytes 633465'):format('2026-10-10 00:35','dbdc3ef0',633465))
 local F = {}
-F.VERSION = "v17.0.48"
+F.VERSION = "v17.0.49"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6263,6 +6263,162 @@ if pcall(function() o.Parent = bag end) then n = n + 1 end
 end
 end
 F.Out("[DOORS道具] 资产 " .. id .. " ⇒ 已放进背包 " .. tostring(n) .. " 个")
+end
+F._hbLoop, F._hbOrig = nil, nil
+F.HitboxEnable = function()
+if F._hbLoop then return end
+F._hbOrig = F._hbOrig or {}
+F._hbLoop = F.SlowLoop(0.5, function()
+if not T.HitboxOn then pcall(F.HitboxDisable) return end
+local sz = math.clamp(tonumber(C.HitboxSize) or 10, 2, 50)
+local me = LP
+pcall(function()
+local ps = game:GetService("Players"):GetPlayers()
+local i
+for i = 1, #ps do
+local p = ps[i]
+if p ~= me then
+local ch = p.Character
+local part = nil
+if ch then part = ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso") end
+if part ~= nil then
+if F._hbOrig[part] == nil then F._hbOrig[part] = part.Size end
+pcall(function() part.Size = Vector3.new(sz, sz, sz) end)
+end
+end
+end
+end)
+end)
+F.Out("[命中盒] 已开 · 把敌人的命中盒放大到 " .. tostring(math.clamp(tonumber(C.HitboxSize) or 10, 2, 50)) .. " 格(只改你本地看到的体积, 关掉即还原)")
+end
+F.HitboxDisable = function()
+if F._hbLoop then pcall(function() F._hbLoop:Disconnect() end) F._hbLoop = nil end
+if F._hbOrig then
+for part, sz in pairs(F._hbOrig) do
+if typeof(part) == "Instance" and part.Parent then pcall(function() part.Size = sz end) end
+end
+end
+F._hbOrig = nil
+F.Out("[命中盒] 已关: 命中盒已还原")
+end
+F._avLoop = nil
+F.AntiVoidEnable = function()
+if F._avLoop then return end
+F._avLoop = F.SlowLoop(0.25, function()
+if not T.AntiVoid then pcall(F.AntiVoidDisable) return end
+local _, _, root = GC()
+if root == nil then return end
+local lim = tonumber(C.AntiVoidY) or -100
+local y = root.Position.Y
+if y < lim then
+local now = os.clock()
+if now - (F._avAt or 0) < 1 then return end
+F._avAt = now
+pcall(function() root.CFrame = root.CFrame + Vector3.new(0, 80, 0) end)
+F.Out("[防掉出地图] 在 " .. tostring(math.floor(y)) .. " 格触底 ⇒ 已拉回 80 格")
+end
+end)
+F.Out("[防掉出地图] 已开: 低于 " .. tostring(tonumber(C.AntiVoidY) or -100) .. " 格自动拉回")
+end
+F.AntiVoidDisable = function()
+if F._avLoop then pcall(function() F._avLoop:Disconnect() end) F._avLoop = nil end
+F.Out("[防掉出地图] 已关")
+end
+F.GravitySet = function(on)
+local w = game:GetService("Workspace")
+if on then
+if F._gravOrig == nil then F._gravOrig = w.Gravity end
+w.Gravity = math.clamp(tonumber(C.GravityValue) or 100, 0, 500)
+F.Out("[重力] 已设为 " .. tostring(w.Gravity) .. " (原 " .. tostring(F._gravOrig) .. ")")
+else
+if F._gravOrig ~= nil then pcall(function() w.Gravity = F._gravOrig end) end
+F.Out("[重力] 已还原为 " .. tostring(F._gravOrig or "默认"))
+F._gravOrig = nil
+end
+end
+F._msLoop, F._msOrig = nil, nil
+F.MaxSlopeEnable = function()
+if F._msLoop then return end
+F._msLoop = F.SlowLoop(1, function()
+if not T.MaxSlopeOn then pcall(F.MaxSlopeDisable) return end
+local _, hum = GC()
+if hum == nil then return end
+if F._msOrig == nil then pcall(function() F._msOrig = hum.MaxSlopeAngle end) end
+pcall(function() hum.MaxSlopeAngle = math.clamp(tonumber(C.MaxSlope) or 89, 0, 89) end)
+end)
+F.Out("[最大坡度] 已开: 可爬 " .. tostring(math.clamp(tonumber(C.MaxSlope) or 89, 0, 89)) .. " 度(原 " .. tostring(F._msOrig or "默认") .. ", 关掉即还原)")
+end
+F.MaxSlopeDisable = function()
+if F._msLoop then pcall(function() F._msLoop:Disconnect() end) F._msLoop = nil end
+local _, hum = GC()
+if hum and F._msOrig ~= nil then pcall(function() hum.MaxSlopeAngle = F._msOrig end) end
+F._msOrig = nil
+F.Out("[最大坡度] 已关")
+end
+F.AnchorSet = function(on)
+local _, _, root = GC()
+if root == nil then F.Out("[锚定自己] 现在没有角色"); return end
+if on then
+if F._ancOrig == nil then F._ancOrig = root.Anchored end
+pcall(function() root.Anchored = true end)
+F.Out("[锚定自己] 已开: 你被钉在原地(不会被推开/冲走) ⇒ 关掉或再点一次即恢复")
+else
+pcall(function() root.Anchored = (F._ancOrig == true) end)
+F._ancOrig = nil
+F.Out("[锚定自己] 已关: 已恢复")
+end
+end
+F.HideGameGuiSet = function(on)
+local pg = nil
+pcall(function() pg = LP:FindFirstChildOfClass("PlayerGui") end)
+if pg == nil then F.Out("[隐藏游戏界面] 没找到 PlayerGui"); return end
+if on then
+F._hggOrig = F._hggOrig or {}
+local n, i = 0, 0
+local kids = pg:GetChildren()
+for i = 1, #kids do
+local g = kids[i]
+if typeof(g) == "Instance" and g:IsA("ScreenGui") then
+if F._hggOrig[g] == nil then F._hggOrig[g] = g.Enabled end
+if pcall(function() g.Enabled = false end) then n = n + 1 end
+end
+end
+F.Out("[隐藏游戏界面] 已隐藏 " .. tostring(n) .. " 个游戏界面(只动游戏的, 我们的菜单不在 PlayerGui 里 ⇒ 不受影响)")
+else
+local n = 0
+if F._hggOrig then
+for g, en in pairs(F._hggOrig) do
+if typeof(g) == "Instance" and g.Parent then
+if pcall(function() g.Enabled = en end) then n = n + 1 end
+end
+end
+end
+F._hggOrig = nil
+F.Out("[隐藏游戏界面] 已还原 " .. tostring(n) .. " 个界面")
+end
+end
+F.FpsCapSet = function(v)
+local n = math.floor(tonumber(v) or 0)
+if n <= 0 then n = 240 end
+if type(setfpscap) ~= "function" then
+F.Out("[帧率上限] 本执行器不支持 setfpscap ⇒ 这项用不了")
+return
+end
+local ok = pcall(setfpscap, n)
+F.Out("[帧率上限] " .. (ok and ("已设为 " .. tostring(n) .. " 帧") or "设置失败(执行器拦了)"))
+end
+F.ServerInfo = function()
+local d = {}
+pcall(function() d[#d + 1] = "PlaceId " .. tostring(game.PlaceId) end)
+pcall(function() d[#d + 1] = "JobId " .. tostring(game.JobId) end)
+pcall(function() d[#d + 1] = "本服 " .. tostring(#game:GetService("Players"):GetPlayers()) .. " 人" end)
+pcall(function()
+local st = game:GetService("Stats")
+local item = st.Network.ServerStatsItem["Data Ping"]
+d[#d + 1] = "Ping " .. tostring(item:GetValueString())
+end)
+pcall(function() d[#d + 1] = "版本 " .. tostring(F.VERSION or "?") end)
+F.Out("[服务器信息] " .. table.concat(d, " · "))
 end
 F.GodRefill = function()
 local _, hum = GC()
@@ -16329,6 +16485,13 @@ T.Pierce = v
 if F._cfgSyncing then return end
 if v then pcall(F.PierceEnable) else pcall(F.PierceDisable) end
 end })
+Tabs.Combat:AddSection("战斗增强")
+Tabs.Combat:AddToggle("HitboxOn", { Title = "命中盒扩大", Default = false, Callback = function(v)
+T.HitboxOn = v
+if F._cfgSyncing then return end
+if v then pcall(F.HitboxEnable) else pcall(F.HitboxDisable) end
+end })
+Tabs.Combat:AddSlider("HitboxSize", { Title = "命中盒大小", Min = 2, Max = 50, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v end })
 Tabs.Surv:AddSection("生命 / 保命")
 Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -16354,6 +16517,12 @@ Tabs.Surv:AddButton({ Title = "回满血", Callback = function()
 if not F.Once("god_refill", 0.8) then return end
 F.GodRefill()
 end })
+Tabs.Surv:AddToggle("AntiVoid", { Title = "防掉出地图", Default = false, Callback = function(v)
+T.AntiVoid = v
+if F._cfgSyncing then return end
+if v then pcall(F.AntiVoidEnable) else pcall(F.AntiVoidDisable) end
+end })
+Tabs.Surv:AddSlider("AntiVoidY", { Title = "拉回高度", Min = -500, Max = 0, Default = -100, Rounding = 0, Callback = function(v) C.AntiVoidY = v end })
 Tabs.Surv:AddSection("DOORS 专属")
 Tabs.Surv:AddToggle("DoorsClutch", { Title = "保命心跳", Default = false, Callback = function(v)
 T.DoorsClutch = v and true or false
@@ -16505,6 +16674,27 @@ if F._slInGuard then return end
 local n = tonumber(v)
 if not n then return end
 pcall(F.SetSpeedValue, "speed", n)
+end })
+Tabs.Move:AddSection("物理 / 视角")
+Tabs.Move:AddToggle("GravityOn", { Title = "重力调节", Default = false, Callback = function(v)
+T.GravityOn = v
+if F._cfgSyncing then return end
+pcall(F.GravitySet, v)
+end })
+Tabs.Move:AddSlider("GravityValue", { Title = "重力值", Min = 0, Max = 500, Default = 100, Rounding = 0, Callback = function(v)
+C.GravityValue = v
+if T.GravityOn and not F._cfgSyncing then pcall(F.GravitySet, true) end
+end })
+Tabs.Move:AddToggle("MaxSlopeOn", { Title = "最大坡度", Default = false, Callback = function(v)
+T.MaxSlopeOn = v
+if F._cfgSyncing then return end
+if v then pcall(F.MaxSlopeEnable) else pcall(F.MaxSlopeDisable) end
+end })
+Tabs.Move:AddSlider("MaxSlope", { Title = "可爬坡度", Min = 0, Max = 89, Default = 89, Rounding = 0, Callback = function(v) C.MaxSlope = v end })
+Tabs.Move:AddToggle("AnchorOn", { Title = "锚定自己", Default = false, Callback = function(v)
+T.AnchorOn = v
+if F._cfgSyncing then return end
+pcall(F.AnchorSet, v)
 end })
 Tabs.Move:AddSection("防护")
 Tabs.Move:AddToggle("GuardAll", { Title = "防护", Default = false, Callback = function(v)
@@ -16738,6 +16928,11 @@ Tabs.Visual:AddSlider("IxGap", { Title = "重扫间隔", Min = 0.5, Max = 10, De
 C.IxGap = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("HideGameGui", { Title = "隐藏游戏界面", Default = false, Callback = function(v)
+T.HideGameGui = v
+if F._cfgSyncing then return end
+pcall(F.HideGameGuiSet, v)
 end })
 Tabs.Visual:AddSection("穿墙透视")
 Tabs.Visual:AddToggle("XRay", { Title = "穿墙透视", Default = false, Callback = function(v)
@@ -17169,6 +17364,14 @@ end
 pcall(function() Fluent:Notify({ Title = "熔断完成", Content = "钩子已卸 + 残留已体检(结果在日志)", Duration = 10 }) end)
 F._fusing = false
 end
+Tabs.AC:AddSlider("FpsCapValue", { Title = "帧率上限 · 30~360", Min = 30, Max = 360, Default = 240, Rounding = 0, Callback = function(v)
+C.FpsCapValue = v
+if not F._cfgSyncing then pcall(F.FpsCapSet, v) end
+end })
+Tabs.AC:AddButton({ Title = "服务器信息 · 写进日志", Callback = function()
+if not F.Once("srv_info", 1) then return end
+pcall(F.ServerInfo)
+end })
 Tabs.Setting:AddSection("系统")
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "热加载", Callback = function()
