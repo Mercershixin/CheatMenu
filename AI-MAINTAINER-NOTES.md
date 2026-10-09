@@ -5276,3 +5276,22 @@ sweep 新旧均 27（无新增）。
   已按无参调用 = 关闭 的约定登记；其中 `SignalsFlush` 必须同时断 **`PlayerAdded`/`PlayerRemoving` 这类"维护型"连接**
   —— 第一版只断了按玩家存的表，回归当场抓到"急停后仍有 2 条连接活着"。
 - **新增功能一律"默认关 + 无 Drawing 就弹回开关 + 说明原因"**（追踪线/骨骼透视），别让用户看到"开关拨了没反应"。
+
+## 暴力加强（v17.0.55）：12 页 / 192 控件
+
+- ★★ **"整页搬家"用别名，别改字符串**：新增「绕过」页时，只要把 `Tabs.AC = Tabs.System` 改成 `Tabs.AC = Tabs.Bypass`，
+  原本挂在 `Tabs.AC:*` 的 11 个控件**自动整页迁移**；回归的字符串锚点（`Tabs.AC:AddDropdown("ACMaster"`）毫发无损。
+  比"逐个改 `Tabs.X:` 前缀"安全得多 —— 后者会一次性打断 `_gen_tier_sim` 等按字面量定位的回归。
+- ⛔ **Edit 插入块时别把 anchor 抄进 new_string 末尾**：本轮把 `local Tabs = {` 写进新增块结尾，
+  导致该行**重复两次**、直接编译失败（`Expected identifier ... got 'local'`）。
+  规矩：`old_string` 选什么锚点，`new_string` 只写"要插进去的内容"，**不要把锚点行复制到末尾**。
+- ★ **别名改动要连带改工具表**：`_gen_feature_list.py` 与 `_audit_structure.py` 各有一份硬编码
+  `alias = {"World": "Visual", "AC": "System", ...}` ⇒ 改 `Tabs.AC` 的指向后**两张表都要同步**，
+  否则「功能说明」会把绕过页并进系统页、页面计数失真。
+- ★ **luau 桩的两个隐蔽坑（本轮 7 个假 FAIL 全出自这里）**：
+  ① 桩函数被 `obj:Method(x)` 调用时**第一参数是 self** —— 写 `JSONDecode = function(s)` 会拿到表而不是字符串；
+     一律写成 `function(a, b) local s = b or a ... end`。
+  ② 桩里 `local ROOT` 声明在引用它的闭包**之后** ⇒ 那处引用是 **nil 全局**（本项目的老坑在桩里同样成立）：
+     `CH.FindFirstChildOfClass` 必须放在 `local TOOL/ROOT/HUM` **之后**。
+- ★ 新增功能统一遵守：默认关 · 登进急停清理链 · 执行器能力缺失（Drawing/queueonteleport/setsimulationradius/writefile）
+  时**弹回开关 + 说明原因**。
