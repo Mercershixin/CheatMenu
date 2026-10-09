@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 22:31 sha b4052ee3 bytes 616469'):format('2026-10-09 22:31','b4052ee3',616469))
+print(('[CheatMenu] build 2026-10-09 23:15 sha f5e40469 bytes 622297'):format('2026-10-09 23:15','f5e40469',622297))
 local F = {}
-F.VERSION = "v17.0.44"
+F.VERSION = "v17.0.45"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -5985,6 +5985,160 @@ F.Out("[上帝模式] 入站伤害屏蔽: 已恢复 " .. tostring(#F._godShieldC
 end
 F._godShieldConns = nil
 end
+end
+F.DoorsBricks = function()
+local b = nil
+pcall(function()
+local rs = game:GetService("ReplicatedStorage")
+if rs ~= nil then b = rs:FindFirstChild("Bricks") end
+end)
+return b
+end
+F.DoorsSignal = function(b, nm)
+if b == nil then return nil end
+local sig = nil
+pcall(function()
+local m = b:FindFirstChild(nm)
+if m ~= nil then sig = m.OnClientEvent end
+end)
+return sig
+end
+F.DoorsFire = function(sig)
+if sig == nil then return false end
+if type(firesignal) == "function" then
+local ok = pcall(firesignal, sig)
+if ok then return true end
+end
+local hit = false
+if type(getconnections) == "function" then
+pcall(function()
+local list = getconnections(sig)
+if type(list) == "table" then
+local i
+for i = 1, #list do
+local ok2 = pcall(function() list[i]:Fire() end)
+if ok2 then hit = true end
+end
+end
+end)
+end
+return hit
+end
+F.DoorsClutchGap = function()
+local v = tonumber(C.DoorsClutchGap)
+if not v or v < 1 then v = 15 end
+if v > 60 then v = 60 end
+return v
+end
+F.DoorsClutchOff = function()
+T.DoorsClutch = false
+if F._dcConn then pcall(function() F._dcConn:Disconnect() end) F._dcConn = nil end
+end
+F.DoorsClutchSet = function(on)
+if F._dcConn then pcall(function() F._dcConn:Disconnect() end) F._dcConn = nil end
+T.DoorsClutch = on and true or false
+if T.DoorsClutch ~= true then
+F.Out("[DOORS保命] 已关")
+return
+end
+local b = F.DoorsBricks()
+if F.DoorsSignal(b, "ClutchHeartbeat") == nil then
+T.DoorsClutch = false
+F.Out("[DOORS保命] 这个游戏里没有 Bricks.ClutchHeartbeat ⇒ 只有 DOORS 能用, 已自动关掉")
+pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.DoorsClutch, false) end)
+return
+end
+F._dcAt = 0
+F.Out("[DOORS保命] 已开 · 每 " .. tostring(math.floor(F.DoorsClutchGap())) .. " 秒敲一次 ClutchHeartbeat(借用游戏自己的保命信号, 不是硬改血量)")
+F._dcConn = RS.Heartbeat:Connect(function()
+if T.DoorsClutch ~= true then F.DoorsClutchOff() return end
+local now = os.clock()
+if now - (F._dcAt or 0) < F.DoorsClutchGap() then return end
+F._dcAt = now
+local sig = F.DoorsSignal(F.DoorsBricks(), "ClutchHeartbeat")
+if sig ~= nil then pcall(F.DoorsFire, sig) end
+end)
+end
+F.DoorsReviveNow = function()
+local b = F.DoorsBricks()
+if b == nil then
+F.Out("[DOORS复活] 这个游戏里没有 ReplicatedStorage.Bricks ⇒ 只有 DOORS 能用")
+return
+end
+local rv = nil
+pcall(function() rv = b:FindFirstChild("Revive") end)
+if rv == nil then
+F.Out("[DOORS复活] 没找到 Bricks.Revive ⇒ 这版 DOORS 可能改了名字")
+return
+end
+local ok = false
+pcall(function() rv:FireServer() ok = true end)
+if not ok then pcall(function() rv:InvokeServer() ok = true end) end
+F.Out("[DOORS复活] " .. (ok and "已发出复活请求(走游戏自己的复活流程)" or "发送失败 ⇒ 被执行器拦了"))
+end
+F.DoorsBag = function()
+local bag = nil
+pcall(function() bag = LP:FindFirstChildOfClass("Backpack") end)
+if bag == nil then local ch = nil pcall(function() ch = LP.Character end) bag = ch end
+return bag
+end
+F.DoorsCloneTool = function()
+local tm = nil
+local ch = nil
+pcall(function() ch = LP.Character end)
+if ch ~= nil then pcall(function() tm = ch:FindFirstChildOfClass("Tool") end) end
+if tm == nil then
+local bag = F.DoorsBag()
+if bag ~= nil then pcall(function() tm = bag:FindFirstChildOfClass("Tool") end) end
+end
+if tm == nil then
+F.Out("[DOORS道具] 没找到任何道具 ⇒ 先拿一个道具再点")
+return
+end
+local bag = F.DoorsBag()
+if bag == nil then
+F.Out("[DOORS道具] 没有可放的背包")
+return
+end
+local c = nil
+pcall(function() c = tm:Clone() end)
+if c == nil then
+F.Out("[DOORS道具] 克隆失败 ⇒ 这个道具不允许复制")
+return
+end
+local okp = pcall(function() c.Parent = bag end)
+F.Out("[DOORS道具] 「" .. tostring(tm.Name) .. "」⇒ " .. (okp and "已复制一份放进背包" or "放进背包失败"))
+end
+F.DoorsPullAsset = function(raw)
+local id = tostring(raw or ""):gsub("%D", "")
+if id == "" then
+F.Out("[DOORS道具] 先在「道具资产 ID」里填纯数字, 再点这个按钮")
+return
+end
+if type(game.GetObjects) ~= "function" then
+F.Out("[DOORS道具] 本执行器不支持 GetObjects ⇒ 改用旁边的「复制手持道具」")
+return
+end
+local list = nil
+pcall(function() list = game:GetObjects("rbxassetid://" .. id) end)
+if type(list) ~= "table" or #list == 0 then
+F.Out("[DOORS道具] 拉取失败: 资产 " .. id .. " 拿不到(可能已下架或 ID 不对)")
+return
+end
+local bag = F.DoorsBag()
+if bag == nil then
+F.Out("[DOORS道具] 没有可放的背包")
+return
+end
+local n = 0
+local i
+for i = 1, #list do
+local o = list[i]
+if o ~= nil then
+if pcall(function() o.Parent = bag end) then n = n + 1 end
+end
+end
+F.Out("[DOORS道具] 资产 " .. id .. " ⇒ 已放进背包 " .. tostring(n) .. " 个")
 end
 F.GodRefill = function()
 local _, hum = GC()
@@ -16075,6 +16229,26 @@ Tabs.Surv:AddSlider("RegenRate", { Title = "回血速度", Min = 1, Max = 500, D
 Tabs.Surv:AddButton({ Title = "回满血", Callback = function()
 if not F.Once("god_refill", 0.8) then return end
 F.GodRefill()
+end })
+Tabs.Surv:AddSection("DOORS 专属")
+Tabs.Surv:AddToggle("DoorsClutch", { Title = "保命心跳", Default = false, Callback = function(v)
+T.DoorsClutch = v and true or false
+if F._cfgSyncing then return end
+pcall(F.DoorsClutchSet, v)
+end })
+Tabs.Surv:AddSlider("DoorsClutchGap", { Title = "心跳间隔", Min = 1, Max = 60, Default = 15, Rounding = 0, Callback = function(v) C.DoorsClutchGap = v end })
+Tabs.Surv:AddButton({ Title = "原地复活", Callback = function()
+if not F.Once("doors_revive", 1) then return end
+pcall(F.DoorsReviveNow)
+end })
+Tabs.Surv:AddButton({ Title = "复制手持道具", Callback = function()
+if not F.Once("doors_clone", 1) then return end
+pcall(F.DoorsCloneTool)
+end })
+Tabs.Surv:AddInput("DoorsAssetId", { Title = "道具资产 ID · 纯数字", Default = "", Placeholder = "例如 11590476113", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
+Tabs.Surv:AddButton({ Title = "按 ID 拉取道具进背包", Callback = function()
+if not F.Once("doors_pull", 1.5) then return end
+pcall(F.DoorsPullAsset, C.DoorsAssetId)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
