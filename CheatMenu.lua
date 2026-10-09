@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 09:03 sha 2ac502c2 bytes 611659'):format('2026-10-09 09:03','2ac502c2',611659))
+print(('[CheatMenu] build 2026-10-09 09:32 sha 83a44c1d bytes 613672'):format('2026-10-09 09:32','83a44c1d',613672))
 local F = {}
-F.VERSION = "v17.0.26"
+F.VERSION = "v17.0.27"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -2202,6 +2202,52 @@ end
 F._afkLoop = nil
 end)
 end
+F.AFK_LEVELS = { "关(不防踢)", "基础(Idled+心跳)", "标准(保活60秒+拦上报)", "激进(保活30秒+拦上报)" }
+F.AFKStrengthOf = function()
+local v = C.AFKStrength
+local ok = false
+for i = 1, #F.AFK_LEVELS do
+if F.AFK_LEVELS[i] == v then ok = true break end
+end
+if ok then return v end
+if T.AntiAFK ~= true then return F.AFK_LEVELS[1] end
+if T.AFKKeepAlive == false or T.AFKBlockReport == false then return F.AFK_LEVELS[2] end
+if (tonumber(C.AFKKeepGap) or 60) <= 30 then return F.AFK_LEVELS[4] end
+return F.AFK_LEVELS[3]
+end
+F.AFKStrengthInit = function()
+C.AFKStrength = F.AFKStrengthOf()
+return C.AFKStrength
+end
+F.AFKApply = function(v)
+if type(v) ~= "string" or v == "" then v = F.AFKStrengthOf() end
+local lvl = 1
+for i = 1, #F.AFK_LEVELS do
+if F.AFK_LEVELS[i] == v then lvl = i break end
+end
+C.AFKStrength = F.AFK_LEVELS[lvl]
+local basic = (lvl >= 2)
+local keep = (lvl >= 3)
+T.AntiAFK = basic
+T.AFKKeepAlive = keep
+T.AFKBlockReport = keep
+if keep then C.AFKKeepGap = (lvl >= 4) and 30 or 60 end
+if keep then
+pcall(F.AFKLoopStop)
+pcall(F.AFKLoopEnable)
+else
+pcall(F.AFKLoopStop)
+end
+if basic then
+pcall(F.AntiAFKEnable)
+else
+pcall(F.AntiAFKDisable)
+end
+if keep then pcall(function() AC.InstallNamecallHook() end) end
+F.Out("[挂机防踢] 强度 = " .. C.AFKStrength
+.. (keep and (" · 每 " .. tostring(F.AFKGap()) .. " 秒保活 + 拦 AFK 上报") or (basic and " · 只掐连接+心跳, 不保活不拦上报" or " · 已全关")))
+return C.AFKStrength
+end
 F._flingConns = {}
 function F.AntiFlingEnable()
 if T.AntiFling and #F._flingConns > 0 then return end
@@ -2449,7 +2495,7 @@ if isInst then
 local nm = ""
 pcall(function() nm = self.Name end)
 if type(nm) == "string" and nm ~= "" then
-if (T.AntiAFK or T.AFKBlockReport) and F.AFKNameHit(nm) ~= nil then
+if T.AFKBlockReport and F.AFKNameHit(nm) ~= nil then
 KG.blocked6 = (KG.blocked6 or 0) + 1
 return nil
 end
@@ -3852,6 +3898,8 @@ return found
 end
 function F.HitGuardDisable()
 if F._hitConn then F._hitConn:Disconnect() F._hitConn = nil end
+if F._hitStateConn then pcall(function() F._hitStateConn:Disconnect() end) F._hitStateConn = nil end
+F._hitArmed = nil
 if F._hitRemotes then
 for _, re in ipairs(F._hitRemotes) do
 pcall(function()
@@ -3888,21 +3936,27 @@ F.Out("[受击] ⚠ 这些通道往往同时承担角色状态同步 ⇒ 可能�
 else
 F.Out("[受击] 已开启(状态法): 不打断任何远程 —— 只在本地不让你倒地/被击飞, 不会再卡住搬运状态")
 end
-F._hitConn = RS.Heartbeat:Connect(function()
-if not T.HitGuard then F.HitGuardDisable() return end
-local _, hum, root = GC()
-if not (hum and root) then return end
+F.HitGuardArm = function(hum)
+if hum == nil then return end
+if F._hitArmed == hum then return end
+F._hitArmed = hum
 for _, k in ipairs(F.HIT_STATES) do
 pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType[k], false) end)
 end
-local st = nil
-pcall(function() st = hum:GetState() end)
-if F.OnMovingFloorC() and st ~= Enum.HumanoidStateType.Ragdoll
-and st ~= Enum.HumanoidStateType.FallingDown and st ~= Enum.HumanoidStateType.Physics then
-return
+if F._hitStateConn then pcall(function() F._hitStateConn:Disconnect() end) end
+pcall(function()
+F._hitStateConn = hum.StateChanged:Connect(function(_, new)
+if not T.HitGuard then return end
+if new == Enum.HumanoidStateType.Ragdoll or new == Enum.HumanoidStateType.FallingDown
+or new == Enum.HumanoidStateType.Physics then
+F.HitGuardRecover()
 end
-if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown
-or st == Enum.HumanoidStateType.Physics then
+end)
+end)
+end
+F.HitGuardRecover = function()
+local _, hum, root = GC()
+if not (hum and root) then return end
 pcall(function() hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics) end)
 local ch = LP.Character
 if ch then
@@ -3913,6 +3967,24 @@ elseif v:IsA("Constraint") and v.Enabled and v.Name ~= "RootJoint" then v.Enable
 end
 end)
 end
+end
+F._hitConn = RS.Heartbeat:Connect(function()
+if not T.HitGuard then F.HitGuardDisable() return end
+local now = os.clock()
+if now - (F._hitAt or 0) < 0.1 then return end
+F._hitAt = now
+local _, hum = GC()
+if not hum then F._hitArmed = nil return end
+pcall(F.HitGuardArm, hum)
+local st = nil
+pcall(function() st = hum:GetState() end)
+if F.OnMovingFloorC() and st ~= Enum.HumanoidStateType.Ragdoll
+and st ~= Enum.HumanoidStateType.FallingDown and st ~= Enum.HumanoidStateType.Physics then
+return
+end
+if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown
+or st == Enum.HumanoidStateType.Physics then
+F.HitGuardRecover()
 end
 end)
 end
@@ -4271,19 +4343,48 @@ end
 end
 function F.SteadyDisable()
 if F._steadyConn then F._steadyConn:Disconnect() F._steadyConn = nil end
+if F._steadyStateConn then pcall(function() F._steadyStateConn:Disconnect() end) F._steadyStateConn = nil end
+F._steadyStateFor = nil
 pcall(function() F.SteadyStates(true) end)
+end
+function F.SteadyArm(hum)
+if hum == nil or F._steadyStateFor == hum then return end
+F._steadyStateFor = hum
+if F._steadyStateConn then pcall(function() F._steadyStateConn:Disconnect() end) F._steadyStateConn = nil end
+pcall(function()
+F._steadyStateConn = hum.StateChanged:Connect(function(_, new)
+if not T.SteadyOn then return end
+if new == Enum.HumanoidStateType.FallingDown or new == Enum.HumanoidStateType.Ragdoll then
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+F._steadyHits = (F._steadyHits or 0) + 1
+end
+end)
+end)
 end
 function F.SteadyEnable()
 if F._steadyConn then return end
 F._steadyHits = 0
 pcall(function() F.SteadyStates(false) end)
+pcall(function() F.SteadyArm(select(2, GC())) end)
 F._steadyConn = RS.Heartbeat:Connect(function()
 if not T.SteadyOn then F.SteadyDisable() return end
 local _, hum, root = GC()
 if not (hum and root) then return end
+local st = nil
+pcall(function() st = hum:GetState() end)
+local okSt = (st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall
+or st == Enum.HumanoidStateType.Climbing or hum.PlatformStand)
+local v = root.AssemblyLinearVelocity
+if v.Y > 90 and not okSt then
+pcall(function() root.AssemblyLinearVelocity = Vector3.new(v.X, 40, v.Z) end)
+end
+local now = os.clock()
+if now - (F._steadyAt or 0) < 0.25 then return end
+F._steadyAt = now
+pcall(F.SteadyArm, hum)
 if not hum.PlatformStand then
-if (F._steadySetFor ~= hum) or (os.clock() - (F._steadySetAt or 0) > 5) then
-F._steadySetFor, F._steadySetAt = hum, os.clock()
+if (F._steadySetFor ~= hum) or (now - (F._steadySetAt or 0) > 5) then
+F._steadySetFor, F._steadySetAt = hum, now
 pcall(function() F.SteadyStates(false) end)
 end
 end
@@ -4295,17 +4396,9 @@ end
 return
 end
 F._steadyFloorLog = nil F._floorLoggedNow = nil
-local st = nil
-pcall(function() st = hum:GetState() end)
 if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll then
 pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
 F._steadyHits = (F._steadyHits or 0) + 1
-end
-local v = root.AssemblyLinearVelocity
-local okSt = (st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall
-or st == Enum.HumanoidStateType.Climbing or hum.PlatformStand)
-if v.Y > 90 and not okSt then
-pcall(function() root.AssemblyLinearVelocity = Vector3.new(v.X, 40, v.Z) end)
 end
 end)
 end
@@ -4497,9 +4590,26 @@ end
 end)
 end)
 pcall(function() F._invMeta(ch) end)
+F.InvisibleArm = function(ch2)
+if ch2 == nil or F._invArmFor == ch2 then return end
+F._invArmFor = ch2
+if F._invTConn then pcall(function() F._invTConn:Disconnect() end) F._invTConn = nil end
+pcall(function()
+local root = ch2:FindFirstChild("HumanoidRootPart")
+if not root then return end
+F._invTConn = root:GetPropertyChangedSignal("Transparency"):Connect(function()
+if not T.Invisible then return end
+pcall(function() if root.Transparency ~= 1 then root.Transparency = 1 end end)
+end)
+end)
+end
 F._invConn = RS.Heartbeat:Connect(function()
 if not T.Invisible then pcall(F.InvisibleDisable) return end
-local _, _, root = GC()
+local now = os.clock()
+if now - (F._invAt or 0) < 0.2 then return end
+F._invAt = now
+local ch, _, root = GC()
+if ch then pcall(F.InvisibleArm, ch) end
 if root and root.Transparency ~= 1 then pcall(function() root.Transparency = 1 end) end
 pcall(function()
 if F._invTrack then
@@ -4515,6 +4625,8 @@ F.Out("[隐身] 已开: " .. tostring(n) .. " 个部件 Transparency=1(会复制
 .. " —— 全部只作用于你自己的角色; 服务端若有透明检测会把你拉回, 那不是脚本的问题")
 end
 function F.InvisibleDisable()
+if F._invTConn then pcall(function() F._invTConn:Disconnect() end) F._invTConn = nil end
+F._invArmFor = nil
 if F._invConns then
 for _, c in ipairs(F._invConns) do pcall(function() c:Disconnect() end) end
 F._invConns = nil
@@ -6347,49 +6459,13 @@ task.wait(0.4)
 end
 local m = F.WorldModel(id)
 if not m then
-F.Out("[世界] ⚠ " .. id .. " 的场景没加载 ⇒ 飞不过去。可点「用录到的命令换世界」, 或先在游戏里正常去一次")
+F.Out("[世界] ⚠ " .. id .. " 的场景没加载 ⇒ 飞不过去。先在游戏里正常去一次这个世界")
 return
 end
 local spot = F.WorldSpot(m)
 if not spot then F.Out("[世界] ⚠ 模型「" .. m.Name .. "」里取不到可用坐标") return end
 F.Out("[世界] 目标模型 " .. m.Name .. " 已找到 ⇒ 开始飞")
 F.BlinkTo(spot, "去 " .. id)
-end
-F.WorldRemote = function()
-local re = nil
-pcall(function()
-local rs = game:GetService("ReplicatedStorage")
-local sn = rs:FindFirstChild("SkippingNetwork")
-if sn then
-local r = sn:FindFirstChild("Request")
-if r and r:IsA("RemoteEvent") then re = r end
-end
-if not re then
-for _, d in ipairs(rs:GetDescendants()) do
-if d:IsA("RemoteEvent") and d.Name == "Request" then re = d break end
-end
-end
-end)
-return re
-end
-F.WorldCmd = function(pick)
-local id = F.WorldById(pick)
-if not id then F.Out("[世界] 先在上面「目标世界」里选一个") return end
-local re = F.WorldRemote()
-if not re then F.Out("[世界] ❌ 找不到 SkippingNetwork.Request 远程对象") return end
-local full = "?"
-pcall(function() full = re:GetFullName() end)
-F.Out("[世界] 远程 = " .. full)
-local guesses = { "EnterWorld", "TravelWorld", "SetWorld", "JoinWorld" }
-F.Out("[世界] 盲试 " .. tostring(#guesses) .. " 个常见命令名 × 2 种载荷(服务端不认会被忽略)")
-for i = 1, #guesses do
-local c = guesses[i]
-pcall(function() re:FireServer(c, id) end)
-pcall(function() re:FireServer(c, { WorldId = id }) end)
-F.Out("[世界]   已试 " .. c)
-task.wait(0.15)
-end
-F.Out("[世界] 已发完 · 5 秒后看你在的世界/位置有没有变")
 end
 F.CM_OWNED = function(o)
 local p, n = o, 0
@@ -10703,7 +10779,7 @@ pcall(chunk)
 return true
 end
 F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
-AntiAFK = true, GuardOn = true, HitGuard = true, SteadyOn = true,
+AntiAFK = true, AFKKeepAlive = true, AFKBlockReport = true, GuardOn = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true, LockHealthSolo = true,
 NoScreenFx = true }
 function F.PanicKeyDisableAll()
@@ -15087,6 +15163,38 @@ end
 F.CMX_ScanAll = function()
 pcall(F.RemoteList)
 F.Out("[扫描] ===== 一键全扫描 开始 =====")
+pcall(function()
+F.Out("[扫描·道具] 开始: 找背包/手持工具的自定义属性 + 「丢弃类」远程")
+local n = 0
+pcall(function() n = F.InfItemScan() end)
+local ch = nil
+pcall(function() ch = LP.Character end)
+if ch ~= nil then
+local cnt = 0
+pcall(function()
+for _, d in ipairs(ch:GetChildren()) do
+if d:IsA("Tool") then
+cnt = cnt + 1
+F.Out("[扫描·道具] 手持工具: " .. tostring(d.Name))
+local keys = {}
+pcall(function()
+for k, v in pairs(d:GetAttributes()) do keys[#keys + 1] = tostring(k) .. "=" .. tostring(v) end
+end)
+F.Out("[扫描·道具]   属性: " .. (#keys > 0 and table.concat(keys, " · ") or "(无)"))
+end
+end
+end)
+F.Out("[扫描·道具] 手持工具数: " .. tostring(cnt))
+end
+F.Out("[扫描·道具] 扫到的「丢弃类」远程: " .. tostring(n) .. " 个")
+end)
+task.wait()
+pcall(function()
+local n = 0
+pcall(function() n = F.GameBypassScan() end)
+F.Out("[扫描·绕过目标] 本服「检测/上报类」远程 " .. tostring(n) .. " 个 ⇒ 由「防护档位」②/③ 自动拦")
+end)
+task.wait()
 pcall(F.ScanNearbyInteract)
 task.wait()
 pcall(F.ScanPlayers)
@@ -16167,13 +16275,48 @@ T.EspOn = v
 if F._cfgSyncing then return end
 F.EspSet(v)
 end })
-Tabs.Visual:AddToggle("EspName", { Title = "名字", Default = true, Callback = function(v) T.EspName = v end })
-Tabs.Visual:AddToggle("EspDist", { Title = "距离", Default = true, Callback = function(v) T.EspDist = v end })
-Tabs.Visual:AddToggle("EspHp", { Title = "血条", Default = true, Callback = function(v) T.EspHp = v end })
-Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-F.AllyMarkSet(v)
+F.ESP_ITEM_KEYS = { "名字", "距离", "血条", "队友标记" }
+F.EspItemsRead = function()
+local v = {}
+if T.EspName ~= false then v["名字"] = true end
+if T.EspDist ~= false then v["距离"] = true end
+if T.EspHp ~= false then v["血条"] = true end
+if T.AllyMark == true then v["队友标记"] = true end
+return v
+end
+F.EspItemsApply = function(v)
+local t = (type(v) == "table") and v or {}
+T.EspName = (t["名字"] == true)
+T.EspDist = (t["距离"] == true)
+T.EspHp = (t["血条"] == true)
+local ally = (t["队友标记"] == true)
+if F._cfgSyncing then T.AllyMark = ally return end
+pcall(F.AllyMarkSet, ally)
+end
+F.EspItemsSync = function()
+local opt = Fluent and Fluent.Options and Fluent.Options.EspItems
+if not opt then return false end
+local was = F._cfgSyncing
+F._cfgSyncing = true
+local ok = F.OptSet(opt, F.EspItemsRead())
+F._cfgSyncing = was
+return ok
+end
+F.EspItemsRestore = function()
+pcall(F.EspItemsSync)
+if T.AllyMark == true then
+pcall(F.AllyMarkSet, true)
+elseif F._allyRefresh then
+pcall(F.AllyMarkSet, false)
+end
+end
+Tabs.Visual:AddDropdown("EspItems", { Title = "显示项(可多选)", Values = F.ESP_ITEM_KEYS, Multi = true,
+Default = { "名字", "距离", "血条" }, Callback = function(v)
+F.EspItemsApply(v)
 end })
+F._cfgSyncing = true
+pcall(F.EspItemsApply, F.EspItemsRead())
+F._cfgSyncing = false
 Tabs.Visual:AddSection("屏幕")
 Tabs.Visual:AddToggle("NoScreenFx", { Title = "关屏幕特效", Default = false, Callback = function(v)
 T.NoScreenFx = v and true or false
@@ -16343,10 +16486,6 @@ Tabs.TP:AddButton({ Title = "去这个世界", Callback = function()
 local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
 task.spawn(function() pcall(F.WorldGoto, pick) end)
 end })
-Tabs.TP:AddButton({ Title = "用录到的命令换世界", Callback = function()
-local pick = Fluent.Options.WorldPick and Fluent.Options.WorldPick.Value
-task.spawn(function() pcall(F.WorldCmd, pick) end)
-end })
 Tabs.TP:AddSection("针对玩家")
 Tabs.TP:AddButton({ Title = "把他甩飞", Callback = function()
 task.spawn(function() pcall(F.FlingPlayer) end)
@@ -16378,27 +16517,9 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("挂机防踢")
-Tabs.AFK:AddToggle("AFKKickGuard", { Title = "挂机防踢", Default = true, Callback = function(v)
-T.AntiAFK = v
+Tabs.AFK:AddDropdown("AFKStrength", { Title = "防踢强度", Values = F.AFK_LEVELS, Default = F.AFK_LEVELS[3], Callback = function(v)
 if F._cfgSyncing then return end
-if v then F.Try("AntiAFKEnable", F.AntiAFKEnable) else pcall(F.AntiAFKDisable) end
-end })
-Tabs.AFK:AddToggle("AFKKeepAlive", { Title = "防踢 · 定时保活", Default = true, Callback = function(v)
-T.AFKKeepAlive = v
-if F._cfgSyncing then return end
-if v then pcall(F.AFKLoopEnable) else pcall(F.AFKLoopStop) end
-F.Out("[挂机防踢] 定时保活 = " .. (v and ("开(每 " .. tostring(F.AFKGap()) .. " 秒发一次引擎级输入)") or "关"))
-end })
-Tabs.AFK:AddSlider("AFKKeepGap", { Title = "防踢 · 保活间隔(秒)", Min = 15, Max = 300, Default = 60, Rounding = 0, Callback = function(v)
-C.AFKKeepGap = v
-if F._cfgSyncing then return end
-if T.AntiAFK == true and T.AFKKeepAlive ~= false then pcall(F.AFKLoopStop) pcall(F.AFKLoopEnable) end
-end })
-Tabs.AFK:AddToggle("AFKBlockReport", { Title = "防踢 · 拦 AFK 上报", Default = true, Callback = function(v)
-T.AFKBlockReport = v
-if F._cfgSyncing then return end
-if v then pcall(function() AC.InstallNamecallHook() end) end
-F.Out("[挂机防踢] 拦 AFK 上报 = " .. (v and "开(名字含 afk/idle/inactive/timeout/away 的远程不再发出)" or "关"))
+pcall(F.AFKApply, v)
 end })
 Tabs.AFK:AddSection("自动化")
 Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼", Default = false, Callback = function(v)
@@ -16600,39 +16721,8 @@ T.InfItem = v and true or false
 if F._cfgSyncing then return end
 if v then pcall(F.InfItemEnable) else pcall(F.InfItemDisable) end
 end })
-Tabs.AC:AddButton({ Title = "扫描道具 / 交互", Callback = function()
-F.Out("[无限道具] ===== 扫描开始 =====")
-local n = 0
-pcall(function() n = F.InfItemScan() end)
-local ch = nil
-pcall(function() ch = LP.Character end)
-if ch ~= nil then
-local cnt = 0
-pcall(function()
-for _, d in ipairs(ch:GetChildren()) do
-if d:IsA("Tool") then
-cnt = cnt + 1
-F.Out("[无限道具] 手持工具: " .. tostring(d.Name))
-local keys = {}
-pcall(function()
-for k, v in pairs(d:GetAttributes()) do keys[#keys + 1] = tostring(k) .. "=" .. tostring(v) end
-end)
-F.Out("[无限道具]   属性: " .. (#keys > 0 and table.concat(keys, " · ") or "(无)"))
-end
-end
-end)
-F.Out("[无限道具] 手持工具数: " .. tostring(cnt))
-end
-F.Out("[无限道具] 扫到的「丢弃类」远程: " .. tostring(n) .. " 个 ⇒ 把这几行发我")
-pcall(function() Fluent:Notify({ Title = "扫描道具完成", Content = "结果已写日志, 直接发给我就行", Duration = 8 }) end)
-end })
-Tabs.AC:AddButton({ Title = "扫描本服绕过目标", Callback = function()
-local n = 0
-pcall(function() n = F.GameBypassScan() end)
-F.Out("[游戏专用绕过] 扫描完成: 「检测/上报类」远程 " .. tostring(n) .. " 个 ⇒ 打开上面的「游戏专用绕过」才会拦这些")
-end })
 Tabs.AC:AddSection("扫描")
-Tabs.AC:AddButton({ Title = "一键全扫描", Callback = function()
+Tabs.AC:AddButton({ Title = "全扫描(道具 / 绕过目标 / 全量)", Callback = function()
 if not F.Once("scanall", 6) then return end
 task.spawn(function()
 pcall(F.CMX_ScanAll)
@@ -17066,6 +17156,7 @@ end
 end
 end)
 F._cfgSyncing = false
+pcall(F.EspItemsSync)
 return n
 end
 task.spawn(function()
@@ -17076,10 +17167,12 @@ end
 if C.IxRange == nil then C.IxRange = 300 end
 if C.IxGap == nil then C.IxGap = 2 end
 if C.IxScope == nil then C.IxScope = "附近范围" end
+pcall(F.AFKStrengthInit)
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
 if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
 pcall(F.ApplySavedOn)
+pcall(F.EspItemsRestore)
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
 if type(keep) ~= "table" then return end
@@ -17098,11 +17191,11 @@ end
 local n2 = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (界面同步 " .. tostring(n2) .. " 个)")
 pcall(F.ApplySavedOn)
+pcall(F.EspItemsRestore)
 end)
 end)
 end)
-F.Try("AntiAFKEnable", F.AntiAFKEnable)
-F.Out("[挂机防踢] 已自动开启(通用防挂机 · 无元表钩子)")
+F.Try("AFKApply", F.AFKApply, F.AFKStrengthInit())
 F.Try("LivePlayersEnable", F.LivePlayersEnable)
 pcall(F.CacheSync)
 F.PerfCheck = function()
