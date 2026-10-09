@@ -5137,3 +5137,12 @@ ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                 
   ⇒ 定论：凡"按名字找属性"，**先 `GetAttributes()` 拉全表、小写化后比对**，并保留原精确查找兜底；
     **返回时必须回传真实属性名**（`Durability`），因为后续 `GetAttribute` 要用它。
   ⇒ 回归 `_gen_infitem_sim.py` 已加大小写用例（含"全大写""无关数值属性不得误用""多命中按词表优先级"）。
+
+- ★★ **别要求用户手填「道具资产 ID」**：运行中的客户端**推不出**某道具的购买资产 ID
+  （游戏里能扫到的 `rbxassetid://` 几乎全是网格/贴图，`GetObjects` 拉回来是 MeshPart 不是 Tool）。
+  ⇒ 正确的"全自动"= **扫描本地已有 `Tool` 并克隆**：容器顺序 背包 → 角色 → `ReplicatedStorage` → `Workspace` → `PlayerGui`，
+  按**名字跨容器去重**、上限 80，放进背包前再按背包内同名去重（避免反复点导致刷屏）。
+  ⇒ 实现：`F.DoorsScanContainers` / `F.DoorsScanTools` / `F.DoorsAutoGrab`；
+  **`F.DoorsPullAsset` 在 ID 为空时改为调用 `F.DoorsAutoGrab`**（ID 降级为"高级可选"）。
+  ⚠ 本地扫不到时（道具只在服务端生成）必须**明确说清**，别假装成功。
+  ⇒ 回归 `_gen_doors_sim.py` T10（桩已补 `GetDescendants`）。
