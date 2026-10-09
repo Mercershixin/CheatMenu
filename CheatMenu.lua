@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 11:17 sha 011353e6 bytes 612698'):format('2026-10-09 11:17','011353e6',612698))
+print(('[CheatMenu] build 2026-10-09 11:47 sha 31a7c431 bytes 612654'):format('2026-10-09 11:47','31a7c431',612654))
 local F = {}
-F.VERSION = "v17.0.32"
+F.VERSION = "v17.0.33"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -13713,7 +13713,6 @@ end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
 if T.AutoSave == nil then T.AutoSave = false end
-if T.Aim360 == nil then T.Aim360 = true end
 end
 pcall(function()
 local sid = tostring(game.PlaceId) .. "/" .. tostring(game.JobId)
@@ -16481,7 +16480,7 @@ task.delay(2, function()
 for i = 1, F.WP_SLOTS do pcall(F.WpSlotHook, i, F._wpb and F._wpb[i]) end
 end)
 Tabs.AFK:AddSection("挂机防踢")
-Tabs.AFK:AddDropdown("AFKStrength", { Title = "防踢强度", Values = F.AFK_LEVELS, Default = F.AFK_LEVELS[3], Callback = function(v)
+Tabs.AFK:AddDropdown("AFKStrength", { Title = "防踢强度", Values = F.AFK_LEVELS, Default = F.AFK_LEVELS[1], Callback = function(v)
 if F._cfgSyncing then return end
 pcall(F.AFKApply, v)
 end })
