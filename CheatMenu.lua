@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 17:10 sha 6c0ba9df bytes 612948'):format('2026-10-09 17:10','6c0ba9df',612948))
+print(('[CheatMenu] build 2026-10-09 17:18 sha 96b7f767 bytes 613925'):format('2026-10-09 17:18','96b7f767',613925))
 local F = {}
-F.VERSION = "v17.0.34"
+F.VERSION = "v17.0.35"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -16247,13 +16247,19 @@ T.EspOn = v
 if F._cfgSyncing then return end
 F.EspSet(v)
 end })
-F.ESP_ITEM_KEYS = { "名字", "距离", "血条", "队友标记" }
+F.EnsureEspOn = function(why)
+if T.EspOn then return end
+local op = Fluent and Fluent.Options and Fluent.Options.EspOn
+if op ~= nil then pcall(F.OptSet, op, true) end
+if not T.EspOn then pcall(F.EspSet, true) end
+if T.EspOn then F.Out("[ESP] 因为「" .. tostring(why) .. "」⇒ 已自动打开总开关") end
+end
+F.ESP_ITEM_KEYS = { "名字", "距离", "血条" }
 F.EspItemsRead = function()
 local v = {}
 if T.EspName ~= false then v["名字"] = true end
 if T.EspDist ~= false then v["距离"] = true end
 if T.EspHp ~= false then v["血条"] = true end
-if T.AllyMark == true then v["队友标记"] = true end
 return v
 end
 F.EspItemsApply = function(v)
@@ -16261,9 +16267,10 @@ local t = (type(v) == "table") and v or {}
 T.EspName = (t["名字"] == true)
 T.EspDist = (t["距离"] == true)
 T.EspHp = (t["血条"] == true)
-local ally = (t["队友标记"] == true)
-if F._cfgSyncing then T.AllyMark = ally return end
-pcall(F.AllyMarkSet, ally)
+if F._cfgSyncing then return end
+if T.EspOn then return end
+if not (T.EspName or T.EspDist or T.EspHp) then return end
+pcall(F.EnsureEspOn, "勾了显示项")
 end
 F.EspItemsSync = function()
 local opt = Fluent and Fluent.Options and Fluent.Options.EspItems
@@ -16276,15 +16283,16 @@ return ok
 end
 F.EspItemsRestore = function()
 pcall(F.EspItemsSync)
-if T.AllyMark == true then
-pcall(F.AllyMarkSet, true)
-elseif F._allyRefresh then
-pcall(F.AllyMarkSet, false)
-end
+if T.AllyMark ~= true and F._allyRefresh then pcall(F.AllyMarkSet, false) end
 end
 Tabs.Visual:AddDropdown("EspItems", { Title = "显示项", Values = F.ESP_ITEM_KEYS, Multi = true,
 Default = { "名字", "距离", "血条" }, Callback = function(v)
 F.EspItemsApply(v)
+end })
+Tabs.Visual:AddToggle("AllyMark", { Title = "队友标记", Default = false, Callback = function(v)
+T.AllyMark = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AllyMarkSet, v)
 end })
 F._cfgSyncing = true
 pcall(F.EspItemsApply, F.EspItemsRead())
@@ -16323,13 +16331,27 @@ if T[F.HL_KIND_T[i]] ~= false then v[F.HL_KIND_KEYS[i]] = true end
 end
 return v
 end
+F.HLKindAny = function(t)
+for i = 1, #F.HL_KIND_KEYS do
+if t[F.HL_KIND_KEYS[i]] == true then return true end
+end
+return false
+end
+F.EnsureIxHLOn = function(why)
+if T.IxHL then return end
+local op = Fluent and Fluent.Options and Fluent.Options.IxHL
+if op ~= nil then pcall(F.OptSet, op, true) end
+if not T.IxHL then pcall(F.IxHLSet, true) end
+if T.IxHL then F.Out("[高亮透视] 因为「" .. tostring(why) .. "」⇒ 已自动打开总开关") end
+end
 F.HLKindApply = function(v)
 local t = (type(v) == "table") and v or {}
 for i = 1, #F.HL_KIND_KEYS do
 T[F.HL_KIND_T[i]] = (t[F.HL_KIND_KEYS[i]] == true)
 end
 if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
+if T.IxHL then pcall(F.IxScan) return end
+if F.HLKindAny(t) then pcall(F.EnsureIxHLOn, "勾了显示分类") end
 end
 F.HLKindSync = function()
 local opt = Fluent and Fluent.Options and Fluent.Options.HLKind
