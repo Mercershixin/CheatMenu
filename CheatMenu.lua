@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 17:18 sha 96b7f767 bytes 613925'):format('2026-10-09 17:18','96b7f767',613925))
+print(('[CheatMenu] build 2026-10-09 17:29 sha e4715553 bytes 614047'):format('2026-10-09 17:29','e4715553',614047))
 local F = {}
-F.VERSION = "v17.0.35"
+F.VERSION = "v17.0.36"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6720,7 +6720,7 @@ for i = 1, #CLKST.conns do pcall(function() CLKST.conns[i]:Disconnect() end) end
 CLKST.conns = {}
 end
 F.CLICKER_LEGACY_GUI = { "CMClickMark", "CM_ClickMark", "CMClickerMark", "ClickerMark", "CM_Click_Frame" }
-F.PurgeLegacyClicker = function()
+F.PurgeLegacyClicker = function(quiet)
 local hosts = {}
 pcall(function() if type(gethui) == "function" then hosts[#hosts + 1] = gethui() end end)
 pcall(function() hosts[#hosts + 1] = CoreGui end)
@@ -6756,12 +6756,7 @@ end
 end
 end
 end
-if n > 0 then
-F.Out("[连点器] 开机清理: 已清除旧版本残留绿框 " .. tostring(n) .. " 个")
-pcall(function() Fluent:Notify({ Title = "已清除旧连点器残留", Content = "清掉 " .. tostring(n) .. " 个旧版本绿框(CMClickMark)", Duration = 6 }) end)
-else
-F.Out("[连点器] 开机清理: 没有发现旧版本残留绿框")
-end
+if n > 0 and quiet ~= true then F.Out("[已清理] 旧版连点器残留浮窗 " .. tostring(n) .. " 个") end
 return n
 end
 F.INF_DROP_KEYS = { "dropitem", "drop", "unequip", "discard", "removeitem" }
@@ -10756,7 +10751,7 @@ task.wait(0.6)
 pcall(chunk)
 return true
 end
-F.PANIC_KEEP = { CharPersist = true, AutoSave = true, GuiProtect = true,
+F.PANIC_KEEP = { CharPersist = true, GuiProtect = true,
 AntiAFK = true, AFKKeepAlive = true, AFKBlockReport = true, HitGuard = true, SteadyOn = true,
 TrapWarn = true, SpeedGuard = true, LockHealthSolo = true,
 NoScreenFx = true }
@@ -10832,7 +10827,7 @@ end)
 if #wasOn > 0 then
 F.Out("[急停] 本次关掉的功能: " .. table.concat(wasOn, ", "))
 end
-F.Out("[急停] 已保留(防护类不关): 角色持续 · 自动存档 · 护界面 · 挂机防踢 · 受击/稳身/陷阱防护 · 速度守卫")
+F.Out("[急停] 已保留(防护类不关): 角色持续 · 护界面 · 挂机防踢 · 受击/稳身/陷阱防护 · 速度守卫")
 pcall(F.CfgSyncUI)
 if Fluent and Fluent.Notify then
 Fluent:Notify({ Title = "一键全关", Content = "已关闭所有功能并恢复原始状态", Duration = 3 })
@@ -13642,7 +13637,7 @@ F.TranslateDisable,
 F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
-F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
+F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
 F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.InfItemDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
@@ -13696,6 +13691,9 @@ end)
 local killed = 0
 pcall(function() killed = F.NukeAllGUIs(true) end)
 if killed > 0 then F.Out("[卸载] 兜底清掉 " .. tostring(killed) .. " 个残留浮窗") end
+local oldw = 0
+pcall(function() oldw = F.PurgeLegacyClicker(true) end)
+if oldw > 0 then F.Out("[卸载] 兜底清掉 " .. tostring(oldw) .. " 个旧版遗留浮窗") end
 pcall(F.Conn.ClearAll)
 F.MetaLayers = {}
 F.MetaTargets = {}
@@ -13724,7 +13722,6 @@ end)
 end
 local function RestoreFeatures()
 if T.CharPersist == nil then T.CharPersist = false end
-if T.AutoSave == nil then T.AutoSave = false end
 end
 pcall(function()
 local sid = tostring(game.PlaceId) .. "/" .. tostring(game.JobId)
@@ -16586,7 +16583,12 @@ if not F.Once("ckclear", 0.6) then return end
 pcall(F.ClickerClearPos)
 end })
 task.spawn(function() pcall(F.ClickerWatch) end)
-task.spawn(function() pcall(F.PurgeLegacyClicker) end)
+task.spawn(function()
+pcall(F.PurgeLegacyClicker)
+pcall(function() F.PurgeLegacyClicker(false) end)
+local marks = { 2, 6 }
+for i = 1, #marks do task.wait(marks[i]) pcall(F.PurgeLegacyClicker, true) end
+end)
 task.spawn(function() pcall(F.ClickerRestore) end)
 Tabs.AFK:AddSection("脑红")
 Tabs.AFK:AddButton({ Title = "收起脑红", Callback = function()
@@ -16857,14 +16859,15 @@ end
 Fluent:Notify({
 Title = "CheatMenu 已加载",
 Content = "已加载 " .. F.VERSION .. " · " .. _plat .. " · 钩子:" .. _hi .. " · 读脚本:" .. _ls
-.. " · 存档:" .. _wf .. _tip,
+.. " · 写文件:" .. _wf .. _tip,
 Duration = 14,
 })
 F.Out("[环境] " .. _plat .. " · 钩子:" .. _hi .. " · getgc:" .. _gc .. " · loadstring:" .. _ls
 .. " · writefile:" .. _wf .. " —— 标“无”的项只影响依赖它的子功能, 不会让整个脚本失效")
 end)
 RestoreFeatures()
-F.Out("[加载] 没有任何功能会被自动开启 —— 要用什么点什么")
+F.Out("[加载] 没有任何功能会被自动开启 —— 要用什么点什么"
+.. " · 开关只在本次会话有效(点「热加载」更新时会记住当前开着的功能)")
 pcall(function()
 local ex = "?"
 pcall(function() ex = tostring(select(2, pcall(identifyexecutor))) end)
@@ -17183,7 +17186,7 @@ if C.IxScope == nil then C.IxScope = "附近范围" end
 pcall(F.AFKStrengthInit)
 local n = F.CfgSyncUI()
 pcall(F.SyncMoveUI)
-if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
+if n and n > 0 then F.Out("[CheatMenu] 已把 " .. n .. " 个控件拉到与当前状态一致") end
 pcall(F.ApplySavedOn)
 pcall(F.EspItemsRestore)
 pcall(F.GymRestore)
