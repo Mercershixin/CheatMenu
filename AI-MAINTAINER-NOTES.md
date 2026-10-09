@@ -5195,3 +5195,29 @@ ls -t .workbuddy/build/_pushlog*.txt | head -1 && cat 该文件                 
    `Position` 不再联动。正解：把对象做成**代理表**（`__index`/`__newindex` 全走内部 store）。
 3. 部件要有 `Parent`（源码用 `part.Parent` 判断"还在不在场上"）；`ScreenGui` 桩要有 `IsA`。
    ⇒ 结论：**桩要按真实 Roblox 语义写**（实例有 Parent/IsA/typeof），否则会得到"源码有 bug"的错觉。
+
+## IY 命令页（v17.0.50）
+
+来源：Infinite Yield 官方 `source`（429 静态命令）。做法：按其实现路径分四类判定「真有效性」——
+① 纯客户端属性（`WalkSpeed`/`FieldOfView`/`Lighting`）无条件有效；② 本地模拟（造实例/改本地状态）只自己可见；
+③ 发远程 视游戏；④ 需执行器 API 视执行器。**只采纳 ①②**，③④ 与恶意项（spam/btools/addplugin/clientantikick）一律不抄。
+本轮落地 11 项（新页 `IY`，控件 132→147）：攻击距离 · 鼠标灵敏度 · 视角模式 · 自由视角 · 漂浮平台 ·
+自转 · 停渲染 · 关购买弹窗 · 抓工具 · 复制工具 + 急停总关 `F.IYPanicOff`（已挂进 `PanicKeyDisableAll` 的 fn 列表）。
+
+- ⛔ **IY 的 `god`/`invisible` 是取巧实现**（克隆 Humanoid 顶替 / 本地挪走自己），服务器权威游戏里不可靠 ⇒ **不要照抄**；
+  我们的 `GodTopUp`（只写 Health、用游戏 MaxHealth）更稳。
+- ★ `freecam` 我用简化安全版（`CameraType=Scriptable` + `RenderStepped` + `GetMouseDelta`），**不用 IY 的 `Input.StartCapture`**
+  —— 那会锁住输入、与我们的菜单抢鼠标。
+- ★ `grabtools`/`dupetools` 只做**本地**：装备 `workspace` 里带 `Handle` 的 `BackpackItem` / `Tool:Clone()` 进背包，服务器不一定认（日志已写明）。
+
+### 本轮踩的坑（写测试桩时）
+
+1. ★★ **局部变量声明在闭包之后 ⇒ 闭包内是 nil 全局**（本项目已记过，这次又中一次）：
+   桩里 `WS.GetChildren` 闭包引用 `GROUND`，而 `local GROUND` 写在它后面 ⇒ 闭包看到的 `GROUND` 是全局 nil，
+   `抓工具` 断言假失败。**正解：被闭包引用的桩对象要么前置声明、要么用全局**。
+2. ★ 桩里的 `Tool` 要有 `Parent`（源码还原分支写的是 `o.tool.Parent ~= nil`，桩缺 Parent ⇒ 还原被跳过 ⇒ 假失败）。
+3. ★ 向量桩要有 `__mul`（`Vector3 * number`）：`mv.Unit * speed * dt` 这种写法会命中 `__mul`，缺了就报错。
+4. ★ **新增页面必须同步 `_gen_feature_list.py` 的 `order` 列表**（它是硬编码的），否则「功能说明」漏页。
+5. ★ 新控件的 **`C` 键要与控件 Id 同名**（`_sweep_all` 的 #4 规则）；本轮 `IYMouseSensV` 的 C 键一度写成 `IYMouseSens` ⇒ 被 sweep 命中，已改。
+
+回归：`_gen_iypage_sim.py`（43 用例 · 11 功能各验"开了生效+关了还原" + 无角色边界 + 急停总关），A/B：旧源码直接断言失败。
