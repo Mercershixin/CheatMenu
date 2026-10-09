@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 23:15 sha f5e40469 bytes 622297'):format('2026-10-09 23:15','f5e40469',622297))
+print(('[CheatMenu] build 2026-10-09 23:27 sha 44cf7ccb bytes 624104'):format('2026-10-09 23:27','44cf7ccb',624104))
 local F = {}
-F.VERSION = "v17.0.45"
+F.VERSION = "v17.0.46"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6109,11 +6109,84 @@ end
 local okp = pcall(function() c.Parent = bag end)
 F.Out("[DOORS道具] 「" .. tostring(tm.Name) .. "」⇒ " .. (okp and "已复制一份放进背包" or "放进背包失败"))
 end
+F.DoorsScanContainers = function()
+local c = {}
+pcall(function() c[#c + 1] = LP:FindFirstChildOfClass("Backpack") end)
+pcall(function()
+local ch = LP.Character
+if ch then c[#c + 1] = ch end
+end)
+pcall(function() c[#c + 1] = game:GetService("ReplicatedStorage") end)
+pcall(function() c[#c + 1] = game:GetService("Workspace") end)
+pcall(function() c[#c + 1] = LP:FindFirstChildOfClass("PlayerGui") end)
+return c
+end
+F.DoorsScanTools = function()
+local seen = {}
+local list = {}
+local cs = F.DoorsScanContainers()
+local i
+for i = 1, #cs do
+local c = cs[i]
+if c ~= nil and #list < 80 then
+local kids = nil
+pcall(function() kids = c:GetDescendants() end)
+if type(kids) == "table" then
+local j
+for j = 1, #kids do
+if #list >= 80 then break end
+local o = kids[j]
+local isT = false
+pcall(function() isT = o:IsA("Tool") end)
+if isT then
+local nm = tostring(o.Name)
+if not seen[nm] then
+seen[nm] = true
+list[#list + 1] = o
+end
+end
+end
+end
+end
+end
+return list
+end
+F.DoorsAutoGrab = function()
+local bag = F.DoorsBag()
+if bag == nil then
+F.Out("[DOORS道具] 没有可放的背包")
+return
+end
+local list = F.DoorsScanTools()
+if #list == 0 then
+F.Out("[DOORS道具] 本地扫不到道具 ⇒ 这游戏的道具不放在本地, 只能填资产 ID 或走远程")
+return
+end
+local got = 0
+local names = {}
+local i
+for i = 1, #list do
+local o = list[i]
+local dup = false
+pcall(function() dup = bag:FindFirstChild(o.Name) ~= nil end)
+if not dup then
+local c = nil
+pcall(function() c = o:Clone() end)
+if c ~= nil then
+local okp = pcall(function() c.Parent = bag end)
+if okp then
+got = got + 1
+if #names < 8 then names[#names + 1] = tostring(o.Name) end
+end
+end
+end
+end
+F.Out("[DOORS道具] 扫到 " .. tostring(#list) .. " 种道具 ⇒ 放进背包 " .. tostring(got) .. " 个: " .. (#names > 0 and table.concat(names, "、") or "都已在你背包里"))
+end
 F.DoorsPullAsset = function(raw)
 local id = tostring(raw or ""):gsub("%D", "")
 if id == "" then
-F.Out("[DOORS道具] 先在「道具资产 ID」里填纯数字, 再点这个按钮")
-return
+return F.DoorsAutoGrab()
 end
 if type(game.GetObjects) ~= "function" then
 F.Out("[DOORS道具] 本执行器不支持 GetObjects ⇒ 改用旁边的「复制手持道具」")
@@ -16245,8 +16318,8 @@ Tabs.Surv:AddButton({ Title = "复制手持道具", Callback = function()
 if not F.Once("doors_clone", 1) then return end
 pcall(F.DoorsCloneTool)
 end })
-Tabs.Surv:AddInput("DoorsAssetId", { Title = "道具资产 ID · 纯数字", Default = "", Placeholder = "例如 11590476113", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
-Tabs.Surv:AddButton({ Title = "按 ID 拉取道具进背包", Callback = function()
+Tabs.Surv:AddInput("DoorsAssetId", { Title = "道具资产 ID · 可留空", Default = "", Placeholder = "留空即自动扫描本游戏道具", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
+Tabs.Surv:AddButton({ Title = "拿道具 · 留空则自动扫描本游戏", Callback = function()
 if not F.Once("doors_pull", 1.5) then return end
 pcall(F.DoorsPullAsset, C.DoorsAssetId)
 end })
