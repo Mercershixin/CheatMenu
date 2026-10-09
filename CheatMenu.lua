@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 09:39 sha 649ec8a4 bytes 613584'):format('2026-10-09 09:39','649ec8a4',613584))
+print(('[CheatMenu] build 2026-10-09 10:07 sha 34080a1a bytes 614570'):format('2026-10-09 10:07','34080a1a',614570))
 local F = {}
-F.VERSION = "v17.0.28"
+F.VERSION = "v17.0.29"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -16342,52 +16342,55 @@ if F._cfgSyncing and v then return end
 F.IxHLSet(v)
 end })
 Tabs.Visual:AddSection("高亮透视 · 分类")
-Tabs.Visual:AddToggle("IxHLix", { Title = "交互点 / 门·商店", Default = true, Callback = function(v)
-T.IxHLix = v
+F.HL_KIND_KEYS = { "交互点 / 门·商店", "物品 / 蛋", "陷阱 / 危险", "生物 / NPC", "载具 / 座位", "掉落物 / 武器" }
+F.HL_KIND_T = { "IxHLix", "IxHLitem", "IxHLtrap", "IxHLnpc", "IxHLveh", "IxHLdrop" }
+F.HLKindRead = function()
+local v = {}
+for i = 1, #F.HL_KIND_KEYS do
+if T[F.HL_KIND_T[i]] ~= false then v[F.HL_KIND_KEYS[i]] = true end
+end
+return v
+end
+F.HLKindApply = function(v)
+local t = (type(v) == "table") and v or {}
+for i = 1, #F.HL_KIND_KEYS do
+T[F.HL_KIND_T[i]] = (t[F.HL_KIND_KEYS[i]] == true)
+end
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
+end
+F.HLKindSync = function()
+local opt = Fluent and Fluent.Options and Fluent.Options.HLKind
+if not opt then return false end
+local was = F._cfgSyncing
+F._cfgSyncing = true
+local ok = F.OptSet(opt, F.HLKindRead())
+F._cfgSyncing = was
+return ok
+end
+Tabs.Visual:AddDropdown("HLKind", { Title = "显示分类", Values = F.HL_KIND_KEYS, Multi = true,
+Default = F.HL_KIND_KEYS, Callback = function(v)
+F.HLKindApply(v)
 end })
-Tabs.Visual:AddToggle("IxHLitem", { Title = "物品 / 蛋", Default = true, Callback = function(v)
-T.IxHLitem = v
-if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
-end })
-Tabs.Visual:AddToggle("IxHLtrap", { Title = "陷阱 / 危险", Default = true, Callback = function(v)
-T.IxHLtrap = v
-if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
-end })
-Tabs.Visual:AddToggle("IxHLnpc", { Title = "生物 / NPC", Default = true, Callback = function(v)
-T.IxHLnpc = v
-if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
-end })
-Tabs.Visual:AddToggle("IxHLveh", { Title = "载具 / 座位", Default = true, Callback = function(v)
-T.IxHLveh = v
-if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
-end })
-Tabs.Visual:AddToggle("IxHLdrop", { Title = "掉落物 / 武器", Default = true, Callback = function(v)
-T.IxHLdrop = v
-if F._cfgSyncing then return end
-if T.IxHL then pcall(F.IxScan) end
-end })
-Tabs.Visual:AddToggle("IxHLText", { Title = "高亮透视 · 显示名字标签", Default = false, Callback = function(v)
+F._cfgSyncing = true
+pcall(F.HLKindApply, F.HLKindRead())
+F._cfgSyncing = false
+Tabs.Visual:AddToggle("IxHLText", { Title = "显示名字标签", Default = false, Callback = function(v)
 T.IxHLText = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
-Tabs.Visual:AddSlider("IxRange", { Title = "高亮透视 · 范围", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
+Tabs.Visual:AddSlider("IxRange", { Title = "范围", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
 C.IxRange = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
-Tabs.Visual:AddDropdown("IxScope", { Title = "高亮透视 · 范围模式", Values = { "附近范围", "全图" }, Default = "附近范围", Callback = function(v)
+Tabs.Visual:AddDropdown("IxScope", { Title = "范围模式", Values = { "附近范围", "全图" }, Default = "附近范围", Callback = function(v)
 C.IxScope = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
 end })
-Tabs.Visual:AddSlider("IxGap", { Title = "高亮透视 · 重扫间隔", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
+Tabs.Visual:AddSlider("IxGap", { Title = "重扫间隔", Min = 0.5, Max = 10, Default = 2, Rounding = 1, Callback = function(v)
 C.IxGap = v
 if F._cfgSyncing then return end
 if T.IxHL then pcall(F.IxScan) end
@@ -16522,20 +16525,50 @@ if F._cfgSyncing then return end
 pcall(F.AFKApply, v)
 end })
 Tabs.AFK:AddSection("自动化")
-Tabs.AFK:AddToggle("AutoTrain", { Title = "自动锻炼", Default = false, Callback = function(v)
-T.AutoTrain = v
+F.GYM_LEVELS = { "关(都不开)", "只领锻炼奖励", "锻炼 + 领奖", "全套(加自动传送)" }
+F.GymLevelOf = function()
+if T.AutoGym == true then return F.GYM_LEVELS[4] end
+if T.AutoTrain == true and T.AutoBonus == true then return F.GYM_LEVELS[3] end
+if T.AutoBonus == true then return F.GYM_LEVELS[2] end
+return F.GYM_LEVELS[1]
+end
+F.GymApply = function(v)
+local lvl = 1
+for i = 1, #F.GYM_LEVELS do
+if F.GYM_LEVELS[i] == v then lvl = i break end
+end
+local wBonus, wTrain, wGym = (lvl >= 2), (lvl >= 3), (lvl >= 4)
+local hBonus, hTrain, hGym = (T.AutoBonus == true), (T.AutoTrain == true), (T.AutoGym == true)
+T.AutoBonus, T.AutoTrain, T.AutoGym = wBonus, wTrain, wGym
 if F._cfgSyncing then return end
-if v then F.AutoTrainEnable() else F.AutoTrainDisable() end
-end })
-Tabs.AFK:AddToggle("AutoBonus", { Title = "自动领取锻炼奖励", Default = false, Callback = function(v)
-T.AutoBonus = v
-if F._cfgSyncing then return end
-if v then F.AutoBonusEnable() else F.AutoBonusDisable() end
-end })
-Tabs.AFK:AddToggle("AutoGym", { Title = "自动传送健身房", Default = false, Callback = function(v)
-T.AutoGym = v
-if F._cfgSyncing then return end
-if v then F.AutoGymEnable() else F.AutoGymDisable() end
+if wBonus ~= hBonus then
+if wBonus then pcall(F.AutoBonusEnable) else pcall(F.AutoBonusDisable) end
+end
+if wTrain ~= hTrain then
+if wTrain then pcall(F.AutoTrainEnable) else pcall(F.AutoTrainDisable) end
+end
+if wGym ~= hGym then
+if wGym then pcall(F.AutoGymEnable) else pcall(F.AutoGymDisable) end
+end
+if lvl > 1 then F.Out("[健身房] 自动化 = " .. F.GYM_LEVELS[lvl]) end
+end
+F.GymSync = function()
+local opt = Fluent and Fluent.Options and Fluent.Options.GymAuto
+if not opt then return false end
+local was = F._cfgSyncing
+F._cfgSyncing = true
+local ok = F.OptSet(opt, F.GymLevelOf())
+F._cfgSyncing = was
+return ok
+end
+F.GymRestore = function()
+local lvl = F.GymLevelOf()
+T.AutoTrain, T.AutoBonus, T.AutoGym = nil, nil, nil
+pcall(F.GymSync)
+pcall(F.GymApply, lvl)
+end
+Tabs.AFK:AddDropdown("GymAuto", { Title = "健身房自动化", Values = F.GYM_LEVELS, Default = F.GYM_LEVELS[1], Callback = function(v)
+F.GymApply(v)
 end })
 Tabs.AFK:AddToggle("Clicker", { Title = "连点器", Default = false, Callback = function(v)
 T.Clicker = v and true or false
@@ -17047,7 +17080,7 @@ wasOpen = now
 end
 end)
 end
-F.CFG_NOSYNC = { AimOn = true }
+F.CFG_NOSYNC = { AimOn = true, HLKind = true, GymAuto = true }
 F.CFG_APPLY_SKIP = {}
 F.ApplySavedOn = function(quiet)
 if F._applyingSaved then return 0 end
@@ -17157,6 +17190,8 @@ end
 end)
 F._cfgSyncing = false
 pcall(F.EspItemsSync)
+pcall(F.HLKindSync)
+pcall(F.GymSync)
 return n
 end
 task.spawn(function()
@@ -17173,6 +17208,7 @@ pcall(F.SyncMoveUI)
 if n and n > 0 then F.Out("[CheatMenu] 已按存档同步 " .. n .. " 个控件的界面状态") end
 pcall(F.ApplySavedOn)
 pcall(F.EspItemsRestore)
+pcall(F.GymRestore)
 pcall(function()
 local keep = getgenv and getgenv().CM_RELOAD_KEEP
 if type(keep) ~= "table" then return end
@@ -17192,6 +17228,7 @@ local n2 = F.CfgSyncUI()
 F.Out("[热加载] 已恢复上次开着的 " .. tostring(c) .. " 个开关 (界面同步 " .. tostring(n2) .. " 个)")
 pcall(F.ApplySavedOn)
 pcall(F.EspItemsRestore)
+pcall(F.GymRestore)
 end)
 end)
 end)
