@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 10:22 sha 8f988b97 bytes 614423'):format('2026-10-09 10:22','8f988b97',614423))
+print(('[CheatMenu] build 2026-10-09 10:52 sha c6aeb130 bytes 613891'):format('2026-10-09 10:52','c6aeb130',613891))
 local F = {}
-F.VERSION = "v17.0.30"
+F.VERSION = "v17.0.31"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -16682,14 +16682,6 @@ T.AntiFling = false T.GuiProtect = false
 pcall(F.GuiProtectionDisable)
 pcall(F.CMX_SpoofIndexDisable)
 pcall(AC.AntiPauseDisable)
-if F._tierGuardOwn then
-F._tierGuardOwn = nil
-T.GuardAll, T.MyEgg, T.CarryGuard, T.SpeedFree = false, false, false, false
-pcall(F.MyEggSet, false)
-pcall(F.CarryGuardDisable)
-pcall(F.SpeedFreeDisable)
-F.Out("[防护档位] 已收回档位自己开的「完整防护」")
-end
 pcall(F.LockFieldsUninstall)
 pcall(F.MetaHookUninstall)
 if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
@@ -16716,12 +16708,6 @@ if lvl >= 3 then
 T.CMX_FakeReport = true
 T.ACWriteTier = "③ 元表钩全装(__namecall/__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和(按名中和检测函数)"
 pcall(F.ACWriteTierApply, T.ACWriteTier)
-if not T.GuardAll then F._tierGuardOwn = true end
-T.GuardAll = true
-T.MyEgg, T.CarryGuard, T.SpeedFree = true, true, true
-pcall(F.MyEggSet, true)
-pcall(F.CarryGuardEnable)
-pcall(F.SpeedFreeEnable)
 F.Try("LockFieldsInstall", F.LockFieldsInstall)
 end
 if T.HealthIsolate and not F.MetaActive("game.__index", "CMHealthLock") then pcall(F.HealthIsolateSet, true) end
@@ -16733,7 +16719,7 @@ Tabs.AC:AddDropdown("ACMaster", { Title = "防护档位", Values = {
 "关(什么都不开)",
 "① 轻 · 只读不改: 反甩 + 护界面 + 权限守卫 + 角色持续 + 属性读伪装(健康/速度/gcinfo 读出来都是正常值)",
 "② 中 · ①全部 + namecall 元表钩 + 反封禁4层(拦上报/断错误日志/按名中和+/哈希冻结) + 锁字段 + 防暂停 + 服务端下发预警 + 游戏专用绕过",
-"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 完整防护(稳身/受击/陷阱/防减速/护蛋/搬运) + 假上报(异常数值改回正常再发) ⇒ 最激进",
+"③ 重 · ②全部 + 元表钩全装(__index/setmetatable) + 新脚本新远程监视 + 断可疑连接 + 深度中和 + 假上报(异常数值改回正常再发) ⇒ 最激进",
 }, Default = "关(什么都不开)", Callback = function(v)
 T.ACMaster = v
 if F._cfgSyncing then return end
