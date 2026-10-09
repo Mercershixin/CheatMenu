@@ -4626,3 +4626,31 @@ Fluent 的英文文案只有三处：`Interface / Callback error`、`Press <键>
   否则"点一下"模式会被自己第一下立刻关掉。
 - 模块在 `F.WAYPOINT_MAX` 之前、UI 在 AFK 页「脑红」分节之前；随加载挂 `F.ClickerWatch`，卸载链含 `F.ClickerDisable, F.ClickerWatchStop`。
 - 测试 `_gen_clicker_sim.py`：真 luau **17 项全过**（含"把鼠标移走后，仍然只点保存的坐标"）。
+
+## 飞行 / 加速 反检测：**"读"方向也必须伪装**（2026-10-09 v17.0.24）
+
+原来只做了**写**方向（`__newindex` 锁字段：游戏想改你的 WalkSpeed/PlatformStand 会被顶回去），
+**没做读方向** ⇒ 反作弊脚本只要读一下 `hum.PlatformStand` 就知道你在飞，读 `root.AssemblyLinearVelocity` 就知道你在加速。
+
+补齐三处（全部走 `T.Spoof` 闸门，即"防护档位 ② 以上"才启用）：
+1. `__index` 层：`PlatformStand` 读出恒为 `false`（飞行时游戏以为你站着）；
+2. `__index` 层：`AssemblyLinearVelocity` 在飞行/加速时，水平分量 > 24 就伪装成 16（垂直限 50）；
+3. `__namecall` 层：`Humanoid:GetState()` 返回 `Physics` / `PlatformStanding` 时伪装成 `Running`。
+
+⚠ 只在 `T.Spoof == true` **且** `T.FlyOn or T.SpeedOn` 时生效 —— 平时零干预（读伪装会拖慢所有实例读取）。
+⚠ `GetState` 那处必须判 `not checkcaller()`，否则会把自己脚本也骗了。
+★ 通用规律：**要藏一个"隐藏状态"，必须同时检查"写"和"读"两条路** —— 只锁写 = 藏不住。
+
+## 无限道具：扫描必须**全自动**（2026-10-09 v17.0.24 教训）
+
+原设计让用户手点「扫描道具 / 交互」—— 结果是**用户从没点过**，我几轮都拿不到游戏真实结构，一直"精确"不了。
+⇒ 改为 `F.InfItemEnable` 开启时**自动**跑 `F.InfItemDeepScan`（Dump 背包+手持全部工具的
+自定义属性 / 常见数值属性 / StealOps 工具远程），结果直接进日志 + 弹窗。
+★ 通用规律：**任何依赖"用户手动触发才能给我数据"的设计，最后都会变成"永远拿不到数据"** —— 一律改成自动。
+
+## 参考脚本（PuckAFK 全系）核实结论（2026-10-09）
+
+下载并读了 `PuckAFK/Anti-AFK`（15.8KB）、`PuckAFK/Puck-Loader`（55KB Hub）、`PuckAFK/Loot-Up`（281KB）：
+- **全系没有任何反作弊绕过** —— 只有 `Idled → VirtualUser:Button2Down/Up`（我们已有且更强：多了 `CaptureController` + `ClickButton2`）；
+- 它们的做法是 **Dump 游戏结构 → 用游戏自己的远程做合法操作**（如 `E.InfiniteTowerPad:FireServer("launch")`）；
+- ⛔ 别再花时间去"从它们身上找绕过手法" —— 没有；参考价值仅在"按游戏结构操作"这个思路。
