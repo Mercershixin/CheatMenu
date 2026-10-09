@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 23:27 sha 44cf7ccb bytes 624104'):format('2026-10-09 23:27','44cf7ccb',624104))
+print(('[CheatMenu] build 2026-10-09 23:39 sha 1cda3e88 bytes 625358'):format('2026-10-09 23:39','1cda3e88',625358))
 local F = {}
-F.VERSION = "v17.0.46"
+F.VERSION = "v17.0.47"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -548,6 +548,23 @@ if type(o) ~= "table" then return false end
 if type(o.SetValue) == "function" then return (pcall(function() o:SetValue(v) end)) end
 if type(o.Set) == "function" then return (pcall(function() o:Set(v) end)) end
 return false
+end
+F.SlowLoop = function(iv, fn)
+local h = { fn = fn, alive = true, iv = iv }
+F._slowTicks = F._slowTicks or {}
+F._slowTicks[h] = true
+pcall(function()
+task.spawn(function()
+while h.alive do
+pcall(fn)
+if not h.alive then break end
+task.wait(iv)
+end
+F._slowTicks[h] = nil
+end)
+end)
+h.Disconnect = function() h.alive = false end
+return h
 end
 F.LockFieldsInstall = function()
 if F.MetaActive("__newindex", "CMLockFields") then return true end
@@ -2133,7 +2150,7 @@ end
 end)
 end)
 pcall(F.AFKLoopEnable)
-F._afkConn2 = RS.Heartbeat:Connect(function()
+F._afkConn2 = F.SlowLoop(5, function()
 if not T.AntiAFK then F.AntiAFKDisable() return end
 local now = os.clock()
 if now - (F._afkAt or 0) < 5 then return end
@@ -3432,7 +3449,7 @@ if rc then rc.Enabled = false end
 end)
 end
 apply(true)
-F._antiRagdollConn = RS.Stepped:Connect(function() apply(false) end)
+F._antiRagdollConn = F.SlowLoop(0.25, function() apply(false) end)
 end
 function F.AntiRagdollDisable()
 if F._antiRagdollConn then F._antiRagdollConn:Disconnect() F._antiRagdollConn = nil end
@@ -3494,7 +3511,7 @@ pcall(function() F._akPS = hum:GetPropertyChangedSignal("PlatformStand"):Connect
 end
 F._akAttach = attach
 attach()
-F._antiKnockConn = RS.Heartbeat:Connect(function()
+F._antiKnockConn = F.SlowLoop(1, function()
 if not T.AntiKnockdown then F.AntiKnockdownDisable() return end
 if os.clock() - (F._akAt or 0) < 1 then return end
 F._akAt = os.clock()
@@ -3923,7 +3940,7 @@ end
 end)
 end
 end
-F._hitConn = RS.Heartbeat:Connect(function()
+F._hitConn = F.SlowLoop(0.1, function()
 if not T.HitGuard then F.HitGuardDisable() return end
 local now = os.clock()
 if now - (F._hitAt or 0) < 0.1 then return end
@@ -4181,7 +4198,7 @@ end)
 end)
 end)
 end
-F._trapConn = RS.Heartbeat:Connect(function()
+F._trapConn = F.SlowLoop(1.5, function()
 if not T.TrapWarn then F.TrapGuardDisable() return end
 local now = os.clock()
 if now - (F._trapAt or 0) < 1.5 then return end
@@ -4558,7 +4575,7 @@ pcall(function() if root.Transparency ~= 1 then root.Transparency = 1 end end)
 end)
 end)
 end
-F._invConn = RS.Heartbeat:Connect(function()
+F._invConn = F.SlowLoop(0.2, function()
 if not T.Invisible then pcall(F.InvisibleDisable) return end
 local now = os.clock()
 if now - (F._invAt or 0) < 0.2 then return end
@@ -4832,7 +4849,7 @@ F.Out("[反拉回] 提示: 需要「清检测脚本/断检测连接/中和检测
 local got = false
 pcall(function() got = F.SrvOwnTake(false) end)
 F._bypassOwnAt = os.clock()
-F.bypassConn = RS.Heartbeat:Connect(function()
+F.bypassConn = F.SlowLoop(1.2, function()
 if not T.BypassDetect then F.BypassDisable() return end
 local now = os.clock()
 if now - (F._bypassOwnAt or 0) > 1.2 then
@@ -5597,6 +5614,8 @@ end
 F.HideConn, F._hideHip, F._hideCharConn = nil, nil, nil
 function F.HideDisable()
 if F.HideConn then F.HideConn:Disconnect() F.HideConn = nil end
+if F._hideSig then pcall(function() F._hideSig:Disconnect() end) F._hideSig = nil end
+F._hideSigHum = nil
 if F._hideCharConn then pcall(function() F._hideCharConn:Disconnect() end) F._hideCharConn = nil end
 pcall(function()
 local _, hum = GC()
@@ -5631,17 +5650,32 @@ F.Out("[藏地下] 检测到重生 ⇒ 已按新角色重新下沉")
 end)
 end)
 end
-F.HideConn = RS.Heartbeat:Connect(function()
+F._hideSig, F._hideSigHum = nil, nil
+F._hideArm = function()
+local _, hh = GC()
+if hh == nil then return end
+if hh == F._hideSigHum then return end
+F._hideSigHum = hh
+if F._hideSig then pcall(function() F._hideSig:Disconnect() end) F._hideSig = nil end
+pcall(function()
+F._hideSig = hh:GetPropertyChangedSignal("HipHeight"):Connect(function()
+if not T.Hide then return end
+pcall(apply)
+end)
+end)
+end
+pcall(F._hideArm)
+F.HideConn = F.SlowLoop(1, function()
 if not T.Hide then F.HideDisable() return end
-if os.clock() - (F._hideAt or 0) < 0.1 then return end
-F._hideAt = os.clock()
-apply()
+pcall(apply)
+pcall(F._hideArm)
 end)
 F.Out("[藏地下] 已开: 模型整体下沉 " .. tostring(hideDepth())
 .. " 格 —— 你的 HumanoidRootPart 还在原位, 所以移动/跳跃/交互完全正常; 别人看到的是你沉在地下的模型(不靠改透明度, 透明度检测抓不到)")
 end
 F.savedLight = nil
 F._godLoop, F._godAt = nil, 0
+F._godSig, F._godSigHum = nil, nil
 F.GodRestoreDied = function()
 if type(F._godConns) ~= "table" then return 0 end
 local n = 0
@@ -5674,7 +5708,21 @@ F._godConnHard = nil
 end
 F.GodTickLoop = function()
 if F._godLoop then return end
-F._godLoop = RS.Heartbeat:Connect(function()
+F._godSigArm = function()
+local _, hh = GC()
+if hh == nil then return end
+if hh == F._godSigHum then return end
+F._godSigHum = hh
+if F._godSig then pcall(function() F._godSig:Disconnect() end) F._godSig = nil end
+pcall(function()
+F._godSig = hh.HealthChanged:Connect(function()
+if not T.GodMode then return end
+if F.GodTopUp(hh, true) then F.HpFixNote(1) end
+end)
+end)
+end
+pcall(F._godSigArm)
+F._godLoop = F.SlowLoop(0.25, function()
 if not T.GodMode then
 pcall(F.GodModeSet, false)
 return
@@ -5685,6 +5733,7 @@ F._godAt = now
 local _, hum = GC()
 if not hum then return end
 pcall(function() F.GodSnap(hum) end)
+pcall(F._godSigArm)
 if F.GodTopUp(hum, true) then F.HpFixNote(1) end
 pcall(function()
 if type(hookfunction) == "function" and not F._godTDHook then
@@ -5855,7 +5904,7 @@ end
 end
 F.DmgFxLoop = function()
 if F._dmgLoop then return end
-F._dmgLoop = RS.Heartbeat:Connect(function()
+F._dmgLoop = F.SlowLoop(0.5, function()
 if not F.DmgFxOn() then
 if next(F._dmgFx) ~= nil then
 local n, kept = F.DmgFxRestore(true)
@@ -5904,6 +5953,8 @@ pcall(GodDisable)
 pcall(F.AntiRagdollDisable)
 pcall(F.DmgFxStop)
 if F._godLoop then pcall(function() F._godLoop:Disconnect() end) F._godLoop = nil end
+if F._godSig then pcall(function() F._godSig:Disconnect() end) F._godSig = nil end
+F._godSigHum = nil
 pcall(function()
 if F._godTDHook and F._godTDOrig then
 local okR = false
@@ -6050,7 +6101,7 @@ return
 end
 F._dcAt = 0
 F.Out("[DOORS保命] 已开 · 每 " .. tostring(math.floor(F.DoorsClutchGap())) .. " 秒敲一次 ClutchHeartbeat(借用游戏自己的保命信号, 不是硬改血量)")
-F._dcConn = RS.Heartbeat:Connect(function()
+F._dcConn = F.SlowLoop(1, function()
 if T.DoorsClutch ~= true then F.DoorsClutchOff() return end
 local now = os.clock()
 if now - (F._dcAt or 0) < F.DoorsClutchGap() then return end
@@ -7934,7 +7985,7 @@ if F._cgConn then return end
 F.EggLock()
 F._carry = F.CarryFind()
 F.Try("CarryWatchEnable", F.CarryWatchEnable)
-F._cgConn = RS.Heartbeat:Connect(function()
+F._cgConn = F.SlowLoop(0.1, function()
 if not T.CarryGuard then F.CarryGuardDisable() return end
 F.EggGuardTick()
 F.CarryGuardTick()
@@ -8047,7 +8098,7 @@ F.SpeedFreeEnable = function()
 if F._sfConn then return end
 T.SpeedFree = true
 F._sfHits, F._sfAt = 0, 0
-F._sfConn = RS.Heartbeat:Connect(function()
+F._sfConn = F.SlowLoop(0.2, function()
 if not T.SpeedFree then pcall(F.SpeedFreeDisable) return end
 local now = os.clock()
 if now - (F._sfAt or 0) < 0.2 then return end
@@ -8113,7 +8164,7 @@ if F._npConn then return end
 T.NoPull = true
 pcall(F.PosSrcProbeOn)
 F._npAt, F._npPos, F._npHits, F._npBack, F._npLog = 0, nil, 0, 0, 0
-F._npConn = RS.RenderStepped:Connect(function()
+F._npConn = F.SlowLoop(0.1, function()
 if not T.NoPull then pcall(F.NoPullDisable) return end
 local now = os.clock()
 if (T.SpeedOn or T.FlyOn or T.Hide) and now - (F._npAt or 0) > 0.1 then
@@ -8437,7 +8488,7 @@ F.GuardPlus._gpLastHp = nil
 local _, hum = F.GuardPlus.Char()
 if hum then pcall(function() F.GuardPlus._gpLastHp = hum.Health end) end
 if F.GuardPlus._gpConn then pcall(function() F.GuardPlus._gpConn:Disconnect() end) end
-F.GuardPlus._gpConn = RS.Heartbeat:Connect(function() pcall(F.GuardPlus.Tick) end)
+F.GuardPlus._gpConn = F.SlowLoop(0.05, function() pcall(F.GuardPlus.Tick) end)
 F.GuardPlus.on = true
 F.Out("[守卫增强] 已开: 全背包物品守护 —— 手持物被卸下/被打掉会自动重装"
 .. (F.GuardPlus.opts.hitReload and "(含受击瞬间)" or "")
@@ -8606,7 +8657,7 @@ F.StealOps._dsLastHp = nil
 F.StealOps._dsBase = nil
 F.StealOps.desync.hits = 0
 if F.StealOps._dsConn then pcall(function() F.StealOps._dsConn:Disconnect() end) end
-F.StealOps._dsConn = RS.Heartbeat:Connect(function() pcall(F.StealOps.DesyncTick) end)
+F.StealOps._dsConn = F.SlowLoop(0.12, function() pcall(F.StealOps.DesyncTick) end)
 F.StealOps.desyncOpts.enabled = true
 F.StealOps.desync.on = true
 F.Out("[操作集] 反命中脉冲已开(受击瞬间才抖, 非持续 desync): 幅度 " .. tostring(F.StealOps.desyncOpts.amp)
@@ -8720,7 +8771,7 @@ end
 F.StealOps.base.restored = 0
 F.StealOps._blHitMax = false
 if F.StealOps._blConn then pcall(function() F.StealOps._blConn:Disconnect() end) end
-F.StealOps._blConn = RS.Heartbeat:Connect(function() pcall(F.StealOps.BaseLockTick) end)
+F.StealOps._blConn = F.SlowLoop(0.12, function() pcall(F.StealOps.BaseLockTick) end)
 F.StealOps.base.on = true
 F.Out("[操作集] 基地锁定已开: 距记录点 " .. tostring(F.StealOps.baseOpts.radius)
 .. " 格内的物品被移走就拉回原位 · 单次上限 " .. tostring(F.StealOps.baseOpts.maxRestore) .. " 次")
@@ -8940,7 +8991,7 @@ pcall(function() F._lhSig = hum.HealthChanged:Connect(lockNow) end)
 end
 F._lhAttach = attach
 attach()
-LockHealthConn = RS.Heartbeat:Connect(function()
+LockHealthConn = F.SlowLoop(1, function()
 if not T.LockHealth then LockHealthDisable() return end
 if os.clock() - (F._thr4402 or 0) < 1 then return end
 F._thr4402 = os.clock()
@@ -8952,7 +9003,7 @@ local RegenConn = nil
 local function RegenDisable() if RegenConn then RegenConn:Disconnect() RegenConn = nil end end
 local function RegenEnable()
 if RegenConn then return end
-RegenConn = RS.Heartbeat:Connect(function()
+RegenConn = F.SlowLoop(0.2, function()
 pcall(function()
 if not T.Regen then RegenDisable() return end
 if os.clock() - (F._thr4420 or 0) < 0.2 then return end
