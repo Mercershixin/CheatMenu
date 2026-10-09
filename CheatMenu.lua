@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 08:18 sha 76578be3 bytes 602646'):format('2026-10-09 08:18','76578be3',602646))
+print(('[CheatMenu] build 2026-10-09 08:37 sha 68f34e3b bytes 604025'):format('2026-10-09 08:37','68f34e3b',604025))
 local F = {}
-F.VERSION = "v17.0.21"
+F.VERSION = "v17.0.22"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -1989,22 +1989,94 @@ if type(low) ~= "string" then return false end
 return (low:find("cheatmenu", 1, true) ~= nil) or (low:find("fluent", 1, true) ~= nil)
 end
 F._afkConn = nil
-F.ANTI_AFK_KEY = "__CMX_UNIVERSAL_ANTI_AFK"
-F._afkEnv = function()
-local ge = _G
+F._afkConn = nil
+F._afkConn2 = nil
+F._afkDisabledConns = {}
+F.AntiAFKKillIdleConns = function()
+local n = 0
 pcall(function()
-if type(getgenv) == "function" then
-local e = getgenv()
-if type(e) == "table" then ge = e end
+if type(getconnections) ~= "function" then return end
+for _, c in ipairs(getconnections(LP.Idled) or {}) do
+local fn = nil
+pcall(function() fn = c.Function end)
+if fn == nil then pcall(function() fn = c.__function end) end
+local nm, srcPath = "", ""
+if type(fn) == "function" and type(debug) == "table" and type(debug.getinfo) == "function" then
+pcall(function()
+local info = debug.getinfo(fn, "Sln")
+nm = tostring(info and info.name or ""):lower()
+srcPath = tostring(info and info.source or ""):lower()
+end)
+end
+local bag = nm .. " " .. srcPath
+if bag:find("afk") or bag:find("idle") or bag:find("timeout") or bag:find("anticheat")
+or bag:find("detect") or bag:find("anti") or bag:find("guard") or bag:find("kick")
+or bag:find("boot") then
+pcall(function() c:Disable() end)
+F._afkDisabledConns[#F._afkDisabledConns + 1] = c
+n = n + 1
+end
 end
 end)
-return ge
+F._afkKilled = (F._afkKilled or 0) + n
+return n
 end
-F.AntiAFKHit = function()
+function F.AntiAFKEnable()
+if F._afkConn then return end
+T.AntiAFK = true
+F._afkKilled = 0
+F._afkFixes = 0
+pcall(F.MetaHookEnsure)
+local killed = F.AntiAFKKillIdleConns()
+F.AntiAFKNudge = function()
+if F._afkNudge then return end
+local moved = false
+if not UIS.TouchEnabled then
+pcall(function()
+local vim = nil
+pcall(function() vim = game:GetService("VirtualInputManager") end)
+if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
+vim:SendMouseMoveEvent(1, 0, false)
+moved = true
+elseif type(mousemoverel) == "function" then
+mousemoverel(1, 0)
+moved = true
+end
+end)
+end
+F._afkNudge = task.spawn(function()
+while T.AntiAFK do
+task.wait(240)
+if not T.AntiAFK then break end
+pcall(function()
+local _, hum = GC()
+if hum then
+pcall(function() hum.Jump = true end)
+task.wait(0.15)
+pcall(function() hum.Jump = false end)
+end
+end)
+if not UIS.TouchEnabled then
+pcall(function()
+local vim = nil
+pcall(function() vim = game:GetService("VirtualInputManager") end)
+if type(vim) == "table" and type(vim.SendMouseMoveEvent) == "function" then
+vim:SendMouseMoveEvent(1, 0, false)
+elseif type(mousemoverel) == "function" then
+mousemoverel(1, 0)
+end
+end)
+end
+end
+F._afkNudge = nil
+end)
+F.Out("[防挂机] 已挂定期微动(每 240 秒轻跳一下 · 防 Idled 计时归零)")
+end
+pcall(F.AntiAFKNudge)
+F.AntiAFKIdleHit = function()
 local vu = nil
-pcall(function() vu = VirtualUser end)
-if type(vu) ~= "table" then pcall(function() vu = game:GetService("VirtualUser") end) end
-if type(vu) ~= "table" then return false end
+pcall(function() vu = game:GetService("VirtualUser") end)
+if not vu then return false end
 pcall(function() vu:CaptureController() end)
 pcall(function() vu:ClickButton2(Vector2.new(0, 0)) end)
 pcall(function()
@@ -2015,6 +2087,49 @@ task.wait(0.05)
 vu:Button2Up(Vector2.new(0, 0), cf)
 end)
 return true
+end
+F._afkConn = LP.Idled:Connect(function()
+F._afkIdleHits = (F._afkIdleHits or 0) + 1
+if not T.AntiAFK then return end
+if UIS.TouchEnabled then return end
+pcall(function()
+if F.AntiAFKIdleHit() then
+F._afkIdleFixed = (F._afkIdleFixed or 0) + 1
+F.Out("[防挂机] 游戏判你挂机 ⇒ 已按 PuckAFK 的通用做法做一次「空点」(不动你的人物)")
+end
+end)
+end)
+pcall(F.AFKLoopEnable)
+F._afkConn2 = RS.Heartbeat:Connect(function()
+if not T.AntiAFK then F.AntiAFKDisable() return end
+local now = os.clock()
+if now - (F._afkAt or 0) < 5 then return end
+F._afkAt = now
+if now - (F._afkHbAt or 0) > 15 then
+F._afkHbAt = now
+pcall(function() LP:SetAttribute("Heartbeat", math.floor(os.clock() * 1000)) end)
+end
+local hits = F._afkIdleHits or 0
+if hits ~= (F._afkIdleLogged or 0) then
+F._afkIdleLogged = hits
+F.Out("[防挂机] 游戏判你挂机过 " .. tostring(hits) .. " 次 ⇒ 已按时间监听处理(不动你的人物)")
+end
+end)
+F.Out("[防挂机] 已开(完全不动你的人物): 掐掉 " .. tostring(killed) .. " 条挂机检测连接"
+.. " + 每 15 秒写一次心跳属性 + 监听 Idled 只记录"
+.. " + 每 " .. tostring(F.AFKGap()) .. " 秒主动保活一次(新增层)")
+pcall(F.AFKLoopEnable)
+end
+function F.AntiAFKDisable()
+T.AntiAFK = false
+pcall(F.AFKLoopStop)
+F._afkInput = nil
+if F._afkDisabledConns then
+for _, c in ipairs(F._afkDisabledConns) do pcall(function() c:Enable() end) end
+F._afkDisabledConns = {}
+end
+if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
+if F._afkConn2 then pcall(function() F._afkConn2:Disconnect() end) F._afkConn2 = nil end
 end
 F.AFK_KEYS = { "afk", "idle", "inactive", "inactivity", "timedout", "timeout", "away", "kickafk", "afkkick" }
 F.AFKNameHit = function(nm)
@@ -2031,22 +2146,6 @@ if not v or v < 15 then v = 60 end
 if v > 300 then v = 300 end
 return v
 end
-F.AFKNudgeOnce = function()
-local hum = nil
-pcall(function()
-local _, h = GC()
-hum = h
-end)
-if hum == nil then return false end
-F._afkFlip = not (F._afkFlip == true)
-local mv = F._afkFlip and Vector3.new(0.15, 0, 0) or Vector3.new(-0.15, 0, 0)
-local ok = pcall(function() hum:Move(mv, false) end)
-task.spawn(function()
-task.wait(0.4)
-pcall(function() hum:Move(Vector3.new(0, 0, 0), false) end)
-end)
-return ok
-end
 F.AFKLoopStop = function()
 F._afkLoopStop = true
 F._afkLoop = nil
@@ -2061,54 +2160,14 @@ local n = 0
 while T.AntiAFK == true and T.AFKKeepAlive ~= false and F._afkLoopStop ~= true do
 task.wait(F.AFKGap())
 if T.AntiAFK ~= true or T.AFKKeepAlive == false or F._afkLoopStop == true then break end
-pcall(F.AntiAFKHit)
+pcall(F.AntiAFKIdleHit)
 n = n + 1
-F._afkKeepN = n
-if T.AFKNudge == true then pcall(F.AFKNudgeOnce) end
 if F.LogRate("afk_keep", 600) then
-F.Out("[挂机防踢] 保活中: 每 " .. tostring(F.AFKGap()) .. " 秒主动发一次引擎级输入(累计 " .. tostring(n) .. " 次) · 角色微动=" .. tostring(T.AFKNudge == true))
+F.Out("[防挂机] 保活中: 每 " .. tostring(F.AFKGap()) .. " 秒主动发一次引擎级输入(累计 " .. tostring(n) .. " 次)")
 end
 end
 F._afkLoop = nil
 end)
-end
-F.AntiAFKEnable = function()
-T.AntiAFK = true
-local ge = F._afkEnv()
-local oldState = ge[F.ANTI_AFK_KEY]
-if type(oldState) == "table" and oldState.Connection then
-pcall(function() oldState.Connection:Disconnect() end)
-end
-if not LP then return end
-local connection = LP.Idled:Connect(function()
-if T.AntiAFK ~= true then return end
-if UIS.TouchEnabled then return end
-pcall(function()
-if F.AntiAFKHit() then
-F._afkFixed = (F._afkFixed or 0) + 1
-if F.LogRate("afk_idle", 6) then
-F.Out("[挂机防踢] 客户端判你挂机 ⇒ 已空点一次把 20 分钟计时清零(累计 " .. tostring(F._afkFixed) .. " 次)")
-end
-end
-end)
-end)
-ge[F.ANTI_AFK_KEY] = { Connection = connection, Enabled = true }
-F._afkConn = connection
-F.Out("[挂机防踢] 已开: ① 客户端 Idled 空点 + ② 每 " .. tostring(F.AFKGap()) .. " 秒定时保活(挡服务端 AFK 判定) + ③ 拦名字含 afk/idle 的上报"
-.. (T.AFKNudge == true and " + ④ 角色微动" or "") .. " · 不改角色属性、不装元表钩子")
-pcall(F.AFKLoopEnable)
-end
-F.AntiAFKDisable = function()
-T.AntiAFK = false
-pcall(F.AFKLoopStop)
-local ge = F._afkEnv()
-local state = ge[F.ANTI_AFK_KEY]
-if type(state) == "table" and state.Connection then
-pcall(function() state.Connection:Disconnect() end)
-end
-pcall(function() ge[F.ANTI_AFK_KEY] = nil end)
-if F._afkConn then pcall(function() F._afkConn:Disconnect() end) F._afkConn = nil end
-F.Out("[挂机防踢] 已关")
 end
 F._flingConns = {}
 function F.AntiFlingEnable()
@@ -16116,11 +16175,6 @@ Tabs.AFK:AddSlider("AFKKeepGap", { Title = "防踢 · 保活间隔(秒)", Min = 
 C.AFKKeepGap = v
 if F._cfgSyncing then return end
 if T.AntiAFK == true and T.AFKKeepAlive ~= false then pcall(F.AFKLoopStop) pcall(F.AFKLoopEnable) end
-end })
-Tabs.AFK:AddToggle("AFKNudge", { Title = "防踢 · 角色微动", Default = false, Callback = function(v)
-T.AFKNudge = v
-if F._cfgSyncing then return end
-F.Out("[挂机防踢] 角色微动 = " .. (v and "开(每隔一会轻轻挪一下, 挡「位置长时间不变」类检测; 若被拉回就关掉)" or "关"))
 end })
 Tabs.AFK:AddToggle("AFKBlockReport", { Title = "防踢 · 拦 AFK 上报", Default = true, Callback = function(v)
 T.AFKBlockReport = v
