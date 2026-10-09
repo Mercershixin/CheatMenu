@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 21:39 sha 3bb2be6a bytes 619618'):format('2026-10-09 21:39','3bb2be6a',619618))
+print(('[CheatMenu] build 2026-10-09 21:59 sha df135f8b bytes 618187'):format('2026-10-09 21:59','df135f8b',618187))
 local F = {}
-F.VERSION = "v17.0.40"
+F.VERSION = "v17.0.41"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -9247,7 +9247,34 @@ if r == "killer" then return F.ROLE_NAME.killer, F.ROLE_COLOR.killer, r end
 if r == "sheriff" then return F.ROLE_NAME.sheriff, F.ROLE_COLOR.sheriff, r end
 return "平民", F.ROLE_COLOR.none, nil
 end
-F.NPC_KEYS = { "npc","dummy","zombie","monster","enemy","mob","boss","creature","skeleton","ghost","puppet","mannequin","sentry","soldier","bandit","golem","slime","wolf","bear","spider","crab","worm","bird","animal","walker","stalker","hunter","wraith","demon","devil","reaper","clown","mummy","vampire","werewolf","titan","brute","grunt","minion","troop","hostile","attacker","raider","ninja","knight","archer","troll","ogre","goblin" }
+F.NPC_KEYS = { "zombie","monster","mob","creature","skeleton","ghost","golem","slime","wraith","demon","devil","reaper","mummy","vampire","werewolf","titan","brute","grunt","ogre","goblin","dummy","puppet","stalker" }
+F.NPC_BLOCK2 = { "statue","portrait","poster","sign","billboard","decal","logo","painting","picture","trophy","plaque","menu","frame","panel","icon","button","marker","waypoint","spawn","portal","teleport","door","gate","wall","floor","ceiling","room","building","house","tower","castle","arena","zone","area","region","map","level","stage","lobby","shop","store","vending","switch","lever","trigger","hitbox","display","case","cage","crate","box","chest" }
+F.NameHit = function(low, kw)
+if low == nil or kw == nil then return false end
+return string.find(low, kw, 1, true) ~= nil
+end
+F.NpcBlocked = function(low)
+local i
+for i = 1, #F.NPC_BLOCK2 do
+if F.NameHit(low, F.NPC_BLOCK2[i]) then return true end
+end
+return false
+end
+F.NpcNameHit = function(low)
+local i
+for i = 1, #F.NPC_KEYS do
+if F.NameHit(low, F.NPC_KEYS[i]) then return true end
+end
+return false
+end
+F.NpcBig = function(o)
+local sz = 0
+pcall(function()
+if o:IsA("BasePart") then sz = o.Size.Magnitude else sz = o:GetExtentsSize().Magnitude end
+end)
+if sz == 0 or sz ~= sz then return false end
+return sz > 60
+end
 F.NPC_COLOR = Color3.fromRGB(170, 110, 55)
 F.IsNPC = function(o, deep)
 if o == nil then return false end
@@ -9264,6 +9291,11 @@ if not mine then
 local isPl = false
 pcall(function() isPl = Players:GetPlayerFromCharacter(o) ~= nil end)
 if not isPl then
+local low = string.lower(tostring(o.Name))
+local blocked = false
+pcall(function() blocked = F.NpcBlocked(low) end)
+if not blocked then pcall(function() blocked = F.HLBlocked(low) end) end
+if not blocked then
 local hum = nil
 pcall(function() hum = o:FindFirstChildOfClass("Humanoid") end)
 if hum ~= nil then
@@ -9271,9 +9303,12 @@ res = true
 else
 local ac = nil
 pcall(function() ac = o:FindFirstChildOfClass("AnimationController") end)
-if ac ~= nil then
-res = true
-elseif isM then
+if ac ~= nil then res = true end
+end
+if not res then
+local big = false
+pcall(function() big = F.NpcBig(o) end)
+if not big and isM then
 local kids = nil
 pcall(function() kids = o:GetChildren() end)
 if type(kids) == "table" then
@@ -9284,6 +9319,9 @@ local c = kids[i]
 local isSub = false
 pcall(function() isSub = c:IsA("Model") end)
 if isSub then
+local oks = false
+pcall(function() oks = not F.NpcBig(c) end)
+if oks then
 local sh = nil
 pcall(function() sh = c:FindFirstChildOfClass("Humanoid") or c:FindFirstChildOfClass("AnimationController") end)
 if sh ~= nil then
@@ -9293,26 +9331,10 @@ end
 end
 end
 end
-if not res and deep == true then
-local dh = false
-pcall(function() dh = o:FindFirstChildWhichIsA("Humanoid", true) ~= nil end)
-if dh then
-res = true
-else
-local da = false
-pcall(function() da = o:FindFirstChildWhichIsA("AnimationController", true) ~= nil end)
-if da then res = true end
 end
 end
-end
-end
-if not res then
-local low = string.lower(tostring(o.Name))
-local i
-for i = 1, #F.NPC_KEYS do
-if string.find(low, F.NPC_KEYS[i], 1, true) then
-res = true
-break
+if not res and not big then
+res = F.NpcNameHit(low)
 end
 end
 end
@@ -9438,28 +9460,13 @@ F.IX_COLOR = Color3.fromRGB(255, 215, 0)
 F.HL_COLORS = {
 npc = F.NPC_COLOR,
 ix = F.IX_COLOR,
-trap = Color3.fromRGB(255, 60, 60),
-item = Color3.fromRGB(80, 255, 160),
-drop = Color3.fromRGB(255, 240, 120),
-veh = Color3.fromRGB(0, 235, 255),
 }
-F.HL_KIND_CN = { ix = "交互点", item = "物品/蛋", trap = "陷阱/危险", npc = "生物/NPC", veh = "载具", drop = "掉落物" }
+F.HL_KIND_CN = { ix = "交互点", npc = "生物/NPC" }
 F.HLOut = function(k)
 if T["IxHL" .. k] == false then return nil end
 return k, F.HL_COLORS[k]
 end
 F.IX_STRUCT_N = 0
-F.KeyHit = function(low, kw)
-local i = 1
-while true do
-local s = string.find(low, kw, i, true)
-if not s then return false end
-local e = s + #kw - 1
-if e >= #low then return true end
-if string.match(string.sub(low, e + 1, e + 1), "%a") == nil then return true end
-i = s + 1
-end
-end
 F.HL_BLOCK_KEYS = { "room","wall","floor","ceiling","roof","frame","doorway","hallway","corridor","house","building","block","platform","stairway","stairs","ramp","beam","pillar","column","carpet","rug","curtain","painting","portrait","poster","banner","fence","railing","window","tile","vent","duct","terrain","decor","background","structure","facade","gatehouse","level","map","chunk","module","part_" }
 F.HLBlocked = function(low)
 local i
@@ -9491,51 +9498,18 @@ pcall(function() mp = o:FindFirstChildWhichIsA("BasePart") end)
 if mp ~= nil then return mp end
 return o
 end
-F.HL_TRAP_KEYS = { "trap","spike","hazard","lava","poison","damage","kill","bomb","mine","saw","blade","trapdoor","spiketrap","killbrick","hurtbrick","damagebrick","spikeball","lasergrid" }
-F.HL_ITEM_KEYS = { "item","pickup","coin","gem","token","loot","chest","crate","box","orb","egg","fruit","candy","key","badge","keycard","cashbag","coinbag" }
-F.HL_DROP_KEYS = { "weapon","gun","sword","cash","money","reward" }
-F.HL_USE_KEYS = { "door","gate","lever","switch","button","portal","teleport","shop","store","vending","elevator","valve","terminal","keypad","quest","interact","prompt","vendor","register","vendingmachine","shopkeeper","questgiver" }
 F.HLKind = function(o)
 if o == nil or o == LP.Character then return nil end
-local isM, isB, isT = false, false, false
+local isM, isB = false, false
 pcall(function()
 isM = o:IsA("Model")
 isB = o:IsA("BasePart")
-isT = o:IsA("Tool")
 end)
-if isM or isB or isT then
-local okn, isNpc = pcall(F.IsNPC, o, isM)
+if isM or isB then
+local okn, isNpc = pcall(F.IsNPC, o)
 if okn and isNpc then return F.HLOut("npc") end
 local oki, isIx = pcall(F.IxIsTarget, o)
 if oki and isIx then return F.HLOut("ix") end
-if isM or isB then
-local isVeh = false
-pcall(function() isVeh = o:IsA("VehicleSeat") or o:IsA("Seat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil or o:FindFirstChildOfClass("Seat") ~= nil end)
-if isVeh then return F.HLOut("veh") end
-end
-if isT then return F.HLOut("drop") end
-if isM and F.IxStruct(o) then
-F.IX_STRUCT_N = F.IX_STRUCT_N + 1
-return nil
-end
-local low = string.lower(tostring(o.Name))
-if F.HLBlocked(low) then
-F.IX_STRUCT_N = F.IX_STRUCT_N + 1
-return nil
-end
-local i
-for i = 1, #F.HL_TRAP_KEYS do
-if F.KeyHit(low, F.HL_TRAP_KEYS[i]) then return F.HLOut("trap") end
-end
-for i = 1, #F.HL_ITEM_KEYS do
-if F.KeyHit(low, F.HL_ITEM_KEYS[i]) then return F.HLOut("item") end
-end
-for i = 1, #F.HL_USE_KEYS do
-if F.KeyHit(low, F.HL_USE_KEYS[i]) then return F.HLOut("ix") end
-end
-for i = 1, #F.HL_DROP_KEYS do
-if F.KeyHit(low, F.HL_DROP_KEYS[i]) then return F.HLOut("drop") end
-end
 return nil
 end
 local okX = false
@@ -9790,7 +9764,7 @@ F.Out("[高亮透视] 已开 · 模式=" .. (F.IxScopeFull() and "全图(不限�
 F.Out("[高亮透视] 死亡/观战时会自动改用相机位置继续扫, 不会因为自己没角色就全灭")
 F.Out("[高亮透视] 刷新节奏: 每移动 " .. tostring(F.IX_MOVE) .. " 格 或 每 " .. tostring(F.IxGap())
 .. " 秒重扫一次(间隔可在下面调) · 中途新出现的物件由事件即时补标")
-F.Out("[高亮透视] 颜色: NPC棕 / 交互金 / 陷阱红 / 道具绿 / 掉落黄 / 载具青 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
+F.Out("[高亮透视] 颜色: NPC棕 / 交互金 · 走出范围·被删除·超出上限的都会立刻取消高亮(不残留)")
 F.Out("[高亮透视] 只高亮「真正可交互的物件 + 生物」: 地图建筑/房间/墙体/布景模型一律跳过(不改色调、不动伽马)")
 pcall(function()
 F._ixAdded = workspace.DescendantAdded:Connect(function(o)
@@ -16460,8 +16434,8 @@ if F._cfgSyncing and v then return end
 F.IxHLSet(v)
 end })
 Tabs.Visual:AddSection("高亮透视 · 分类")
-F.HL_KIND_KEYS = { "交互点 / 门·商店", "物品 / 蛋", "陷阱 / 危险", "生物 / NPC", "载具 / 座位", "掉落物 / 武器" }
-F.HL_KIND_T = { "IxHLix", "IxHLitem", "IxHLtrap", "IxHLnpc", "IxHLveh", "IxHLdrop" }
+F.HL_KIND_KEYS = { "交互点 / 可交互物件", "生物 / NPC" }
+F.HL_KIND_T = { "IxHLix", "IxHLnpc" }
 F.HLKindRead = function()
 local v = {}
 for i = 1, #F.HL_KIND_KEYS do
