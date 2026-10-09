@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 22:11 sha c3ca89e0 bytes 616861'):format('2026-10-09 22:11','c3ca89e0',616861))
+print(('[CheatMenu] build 2026-10-09 22:17 sha ecd2ae22 bytes 616969'):format('2026-10-09 22:17','ecd2ae22',616969))
 local F = {}
-F.VERSION = "v17.0.42"
+F.VERSION = "v17.0.43"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -7903,8 +7903,7 @@ if not r then return end
 local p = r.Position
 if now - (F._tpAt or 0) < 0.3 then F._npPos = p return end
 local last = F._npPos
-F._npPos = p
-if not last then return end
+if not last then F._npPos = p return end
 local d = (p - last).Magnitude
 local spd = 0
 if T.FlyOn then spd = tonumber(C.FlyValue) or 0 end
@@ -7912,15 +7911,18 @@ if T.SpeedOn then spd = math.max(spd, tonumber(C.SpeedValue) or 0) end
 local thr = spd / 45 + 60
 if d > thr then
 F._npHits = (F._npHits or 0) + 1
-if now - (F._npLog or 0) > 3 then
-F._npLog = now
-F.Out("[防护·反回拉] 位置被外部挪动 " .. string.format("%.0f", d) .. " 格(正常一帧最多 " .. string.format("%.0f", thr) .. ") ⇒ 已拉回原位 · 累计 " .. tostring(F._npHits) .. " 次")
-end
+local pulled = false
 if (F._npBack or 0) <= now then
 F._npBack = now + 0.05
 pcall(function() r.CFrame = CFrame.new(last) end)
-F._npPos = last
+pulled = true
 end
+if now - (F._npLog or 0) > 3 then
+F._npLog = now
+F.Out("[防护·反回拉] 位置被外部挪动 " .. string.format("%.0f", d) .. " 格(正常一帧最多 " .. string.format("%.0f", thr) .. ") ⇒ " .. (pulled and "已拉回原位" or "待拉回(节流中, 锚点保持不变)") .. " · 累计 " .. tostring(F._npHits) .. " 次")
+end
+else
+F._npPos = p
 end
 end)
 F.Out("[防护·反回拉] 已开: ① 加速/飞行期间持续把角色的网络所有权保持在你这边(只抢所有权, 不动速度) ② 被服务端拉回时自动拉回原位(判据随你的速度自适应, 不会误伤正常移动)")
