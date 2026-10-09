@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 04:00 sha 609c450d bytes 590076'):format('2026-10-09 04:00','609c450d',590076))
+print(('[CheatMenu] build 2026-10-09 08:14 sha d9c5fb4d bytes 599356'):format('2026-10-09 08:14','d9c5fb4d',599356))
 local F = {}
-F.VERSION = "v17.0.19"
+F.VERSION = "v17.0.20"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6406,6 +6406,158 @@ F.Out("[连点器] 开机清理: 没有发现旧版本残留绿框")
 end
 return n
 end
+F.INF_DROP_KEYS = { "dropitem", "drop", "unequip", "discard", "removeitem" }
+F.INF_USE_ATTR = { "uses", "use", "charges", "charge", "durability", "ammo", "count", "amount", "quantity", "left" }
+F._infDropList, F._infDrop = {}, nil
+F.InfItemScan = function()
+F._infDropList, F._infDrop = {}, nil
+local rs = nil
+pcall(function() rs = game:GetService("ReplicatedStorage") end)
+if rs ~= nil then
+pcall(function()
+for _, d in ipairs(rs:GetDescendants()) do
+local cls = nil
+pcall(function() cls = d.ClassName end)
+if cls == "RemoteEvent" or cls == "RemoteFunction" then
+local low = string.lower(tostring(d.Name))
+local hit = nil
+local k
+for k = 1, #F.INF_DROP_KEYS do
+if string.find(low, F.INF_DROP_KEYS[k], 1, true) then hit = F.INF_DROP_KEYS[k] break end
+end
+if hit ~= nil then
+F._infDropList[#F._infDropList + 1] = tostring(d.Name)
+if F._infDrop == nil then F._infDrop = d end
+end
+end
+end
+end)
+end
+local n = #F._infDropList
+if n > 0 then
+F.Out("[无限道具] 扫到「丢弃类」远程 " .. tostring(n) .. " 个 ⇒ 先用第一个做丢弃口")
+F.Out("[无限道具] 候选: " .. table.concat(F._infDropList, " / "))
+else
+F.Out("[无限道具] ⚠ 没扫到「丢弃类」远程 ⇒ 这游戏可能没有「丢弃」这条路; 该功能会拒绝开启")
+end
+local tm = F.InfItemTool()
+if tm ~= nil then
+F.Out("[无限道具] 当前手持: " .. tostring(tm.Name) .. " · 次数属性=" .. tostring(F.InfItemAttrName(tm) or "没找到"))
+else
+F.Out("[无限道具] 当前没手持工具")
+end
+pcall(function() Fluent:Notify({ Title = "无限道具扫描", Content = "找到丢弃远程 " .. tostring(n) .. " 个 · 详情看日志", Duration = 7 }) end)
+return n
+end
+F.InfItemTool = function()
+local ch = nil
+pcall(function() ch = LP.Character end)
+if ch == nil then return nil end
+local tm = nil
+pcall(function() tm = ch:FindFirstChildOfClass("Tool") end)
+return tm
+end
+F.InfItemAttrName = function(tm)
+if tm == nil then return nil end
+local best = nil
+pcall(function()
+for _, key in ipairs(F.INF_USE_ATTR) do
+local v = nil
+pcall(function() v = tm:GetAttribute(key) end)
+if type(v) == "number" then best = key break end
+end
+if best == nil then
+for _, key in ipairs(F.INF_USE_ATTR) do
+local v = nil
+pcall(function() v = tm[key] end)
+if type(v) == "number" then best = key break end
+end
+end
+end)
+return best
+end
+F.InfItemNum = function(tm)
+if tm == nil then return nil end
+local a = F.InfItemAttrName(tm)
+if a == nil then return nil end
+local v = nil
+pcall(function() v = tm:GetAttribute(a) end)
+if type(v) ~= "number" then v = nil pcall(function() v = tm[a] end) end
+if type(v) == "number" then return v end
+return nil
+end
+F.InfPickBack = function(name)
+local found = nil
+pcall(function()
+for _, d in ipairs(workspace:GetDescendants()) do
+if (d:IsA("Tool") or d:IsA("Model")) and string.find(string.lower(tostring(d.Name)), string.lower(tostring(name)), 1, true) then
+local ok, has = pcall(function() return d:FindFirstChildOfClass("ProximityPrompt") ~= nil end)
+if ok and has then found = d break end
+end
+end
+end)
+if found == nil then return false end
+local pp = nil
+pcall(function() pp = found:FindFirstChildOfClass("ProximityPrompt") end)
+if pp == nil then return false end
+pcall(function()
+pp.HoldDuration = 0
+pp.RequiresLineOfSight = false
+pp.MaxActivationDistance = 1000000
+end)
+if type(fireproximityprompt) == "function" then
+if pcall(fireproximityprompt, pp) then return true end
+end
+local done = false
+pcall(function() pp:InputHoldBegin() done = true end)
+if done then task.wait() pcall(function() pp:InputHoldEnd() end) end
+return done
+end
+F.InfItemDisable = function()
+T.InfItem = false
+F._infLoopStop = true
+F._infLastTool, F._infLastNum = nil, nil
+F.Out("[无限道具] 已关")
+end
+F.InfItemEnable = function()
+if #(F._infDropList or {}) == 0 then pcall(F.InfItemScan) end
+if F._infDrop == nil then
+F.Out("[无限道具] ⚠ 本服没扫到可用的「丢弃」远程 ⇒ 拒绝开启(不会乱发远程)。请点「扫描道具 / 交互」把日志发给我, 我按你的游戏接上")
+pcall(function() Fluent:Notify({ Title = "无限道具", Content = "没扫到「丢弃」远程 ⇒ 已拒绝开启(看日志)", Duration = 7 }) end)
+T.InfItem = false
+pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.InfItem, false) end)
+return
+end
+F._infLoopStop = false
+local warned = false
+F.Out("[无限道具] 已开 · 丢弃口=" .. tostring(F._infDrop.Name) .. " · 原理: 次数一掉就丢弃再捡回 ⇒ 次数回满")
+if F._infLoop then return end
+F._infLoop = task.spawn(function()
+while T.InfItem == true and F._infLoopStop ~= true do
+task.wait(0.4)
+local tm = F.InfItemTool()
+if tm ~= nil then
+local num = F.InfItemNum(tm)
+local key = tostring(tm.Name)
+if num == nil then
+if not warned then
+warned = true
+F.Out("[无限道具] ⚠ 这个工具没找到可读的次数属性(找过: " .. table.concat(F.INF_USE_ATTR, "/") .. ") ⇒ 无法判断何时该丢弃; 把日志发我")
+end
+elseif F._infLastTool == key and F._infLastNum ~= nil and num < F._infLastNum then
+F.Out("[无限道具] " .. key .. " 次数 " .. tostring(F._infLastNum) .. " → " .. tostring(num) .. " ⇒ 丢弃并重新捡回")
+pcall(function() F._infDrop:FireServer(tm) end)
+task.wait(0.7)
+local ok = false
+pcall(function() ok = F.InfPickBack(key) end)
+F.Out("[无限道具] 捡回 " .. (ok and "成功(次数应已回满)" or "失败 ⇒ 没找到掉落物或拿取点; 把日志发我"))
+end
+if num ~= nil then F._infLastTool, F._infLastNum = key, num end
+end
+end
+F._infLoop = nil
+end)
+end
 F.WAYPOINT_MAX = 40
 function F.WaypointList()
 if type(C.Waypoints) ~= "table" then C.Waypoints = {} end
@@ -8764,6 +8916,11 @@ item = Color3.fromRGB(80, 255, 160),
 drop = Color3.fromRGB(255, 240, 120),
 veh = Color3.fromRGB(0, 235, 255),
 }
+F.HL_KIND_CN = { ix = "交互点", item = "物品/蛋", trap = "陷阱/危险", npc = "生物/NPC", veh = "载具", drop = "掉落物" }
+F.HLOut = function(k)
+if T["IxHL" .. k] == false then return nil end
+return k, F.HL_COLORS[k]
+end
 F.IX_STRUCT_N = 0
 F.KeyHit = function(low, kw)
 local i = 1
@@ -8821,15 +8978,15 @@ isT = o:IsA("Tool")
 end)
 if isM or isB or isT then
 local okn, isNpc = pcall(F.IsNPC, o, isM)
-if okn and isNpc then return "npc", F.HL_COLORS.npc end
+if okn and isNpc then return F.HLOut("npc") end
 local oki, isIx = pcall(F.IxIsTarget, o)
-if oki and isIx then return "ix", F.HL_COLORS.ix end
+if oki and isIx then return F.HLOut("ix") end
 if isM or isB then
 local isVeh = false
 pcall(function() isVeh = o:IsA("VehicleSeat") or o:IsA("Seat") or o:FindFirstChildOfClass("VehicleSeat") ~= nil or o:FindFirstChildOfClass("Seat") ~= nil end)
-if isVeh then return "veh", F.HL_COLORS.veh end
+if isVeh then return F.HLOut("veh") end
 end
-if isT then return "drop", F.HL_COLORS.drop end
+if isT then return F.HLOut("drop") end
 if isM and F.IxStruct(o) then
 F.IX_STRUCT_N = F.IX_STRUCT_N + 1
 return nil
@@ -8841,22 +8998,22 @@ return nil
 end
 local i
 for i = 1, #F.HL_TRAP_KEYS do
-if F.KeyHit(low, F.HL_TRAP_KEYS[i]) then return "trap", F.HL_COLORS.trap end
+if F.KeyHit(low, F.HL_TRAP_KEYS[i]) then return F.HLOut("trap") end
 end
 for i = 1, #F.HL_ITEM_KEYS do
-if F.KeyHit(low, F.HL_ITEM_KEYS[i]) then return "item", F.HL_COLORS.item end
+if F.KeyHit(low, F.HL_ITEM_KEYS[i]) then return F.HLOut("item") end
 end
 for i = 1, #F.HL_USE_KEYS do
-if F.KeyHit(low, F.HL_USE_KEYS[i]) then return "ix", F.HL_COLORS.ix end
+if F.KeyHit(low, F.HL_USE_KEYS[i]) then return F.HLOut("ix") end
 end
 for i = 1, #F.HL_DROP_KEYS do
-if F.KeyHit(low, F.HL_DROP_KEYS[i]) then return "drop", F.HL_COLORS.drop end
+if F.KeyHit(low, F.HL_DROP_KEYS[i]) then return F.HLOut("drop") end
 end
 return nil
 end
 local okX = false
 pcall(function() okX = o:IsA("ProximityPrompt") or o:IsA("ClickDetector") end)
-if okX then return "ix", F.HL_COLORS.ix end
+if okX then return F.HLOut("ix") end
 return nil
 end
 F.IxAdd = function(o, col)
@@ -8871,6 +9028,7 @@ if col and rec0.h then pcall(function() rec0.h.FillColor = col rec0.h.OutlineCol
 return
 end
 if rec0.h then pcall(function() rec0.h:Destroy() end) end
+if rec0.tag then pcall(function() rec0.tag:Destroy() end) end
 F._ixObjs[o] = nil
 end
 local h = Instance.new("Highlight")
@@ -8882,7 +9040,34 @@ h.FillTransparency = 0.6
 h.OutlineTransparency = 0
 h.Parent = o
 pcall(function() h:SetAttribute("CMOwned", true) end)
-F._ixObjs[o] = { h = h }
+local lbl, bg = nil, nil
+if T.IxHLText == true then
+local host = nil
+pcall(function() host = F.IxTgtPart(o) end)
+if host ~= nil and host.Parent ~= nil then
+pcall(function()
+bg = Instance.new("BillboardGui")
+bg.Name = "CMIxTag"
+bg.AlwaysOnTop = true
+bg.Size = UDim2.fromOffset(170, 20)
+bg.StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0)
+bg.MaxDistance = F.IxRange() * 2
+lbl = Instance.new("TextLabel")
+lbl.Name = "T"
+lbl.Size = UDim2.fromScale(1, 1)
+lbl.BackgroundTransparency = 1
+lbl.TextScaled = true
+lbl.Font = Enum.Font.GothamBold
+lbl.TextColor3 = col or F.HL_COLORS.ix
+lbl.TextStrokeTransparency = 0.3
+lbl.Text = tostring(o.Name)
+bg.Parent = host
+lbl.Parent = bg
+bg:SetAttribute("CMOwned", true)
+end)
+end
+end
+F._ixObjs[o] = { h = h, tag = bg, lbl = lbl }
 end
 F.IxIsTarget = function(o)
 if o == nil then return false end
@@ -8917,6 +9102,7 @@ pcall(function() dead = (rec.h.Parent == nil) end)
 end
 if dead then
 if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+if rec.tag then pcall(function() rec.tag:Destroy() end) end
 F._ixObjs[o] = nil
 gone = gone + 1
 end
@@ -9041,6 +9227,7 @@ local gone = F.IxDropDead()
 for o, rec in pairs(F._ixObjs) do
 if keep[o] == nil then
 if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+if rec.tag then pcall(function() rec.tag:Destroy() end) end
 F._ixObjs[o] = nil
 gone = gone + 1
 end
@@ -9050,6 +9237,7 @@ end
 F.IxClear = function()
 for _, rec in pairs(F._ixObjs) do
 if rec and rec.h then pcall(function() rec.h:Destroy() end) end
+if rec.tag then pcall(function() rec.tag:Destroy() end) end
 end
 F._ixObjs = {}
 pcall(function()
@@ -13062,7 +13250,7 @@ F.NoClipDisable,
 F.SpeedRestore, F.FlySet, F.FlyDestroy, F.InstantInteractDisable, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable,
 F.SpoofDisable, F.CarryGuardDisable, F.GuardOnDisable, F.SpeedFreeDisable, F.NoPullDisable, F.DeepNeuterDisable, F.SpeedAntiTPDisable,
 F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.KillAuraDisable, F.BodyHLDisable, F.HideDisable,
-F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.HealthIsolateDisable, F.LockFieldsUninstall,
+F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.ClickerDisable, F.ClickerWatchStop, F.InfItemDisable, F.HealthIsolateDisable, F.LockFieldsUninstall,
 F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable,
 F.InfiniteJumpDisable, F.SteadyDisable, F.TrapGuardDisable, F.HitGuardDisable, F.SpeedAntiTPDisable,
 F.MenuMouseGuardStop,
@@ -15671,6 +15859,42 @@ T.IxHL = v
 if F._cfgSyncing and v then return end
 F.IxHLSet(v)
 end })
+Tabs.Visual:AddSection("高亮透视 · 分类")
+Tabs.Visual:AddToggle("IxHLix", { Title = "交互点(门/商店/按钮)", Default = true, Callback = function(v)
+T.IxHLix = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLitem", { Title = "物品 / 蛋", Default = true, Callback = function(v)
+T.IxHLitem = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLtrap", { Title = "陷阱 / 危险", Default = true, Callback = function(v)
+T.IxHLtrap = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLnpc", { Title = "生物 / NPC", Default = true, Callback = function(v)
+T.IxHLnpc = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLveh", { Title = "载具 / 座位", Default = true, Callback = function(v)
+T.IxHLveh = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLdrop", { Title = "掉落物 / 武器", Default = true, Callback = function(v)
+T.IxHLdrop = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
+Tabs.Visual:AddToggle("IxHLText", { Title = "高亮透视 · 显示名字标签", Default = false, Callback = function(v)
+T.IxHLText = v
+if F._cfgSyncing then return end
+if T.IxHL then pcall(F.IxScan) end
+end })
 Tabs.Visual:AddSlider("IxRange", { Title = "高亮透视 · 范围", Min = 50, Max = 3000, Default = 300, Rounding = 0, Callback = function(v)
 C.IxRange = v
 if F._cfgSyncing then return end
@@ -16012,6 +16236,37 @@ Tabs.AC:AddToggle("SpoofPos", { Title = "位置上报伪造", Default = false, C
 T.SpoofPos = v and true or false
 if F._cfgSyncing then return end
 pcall(F.SpoofPosSet, v)
+end })
+Tabs.AC:AddToggle("InfItem", { Title = "无限道具次数", Default = false, Callback = function(v)
+T.InfItem = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.InfItemEnable) else pcall(F.InfItemDisable) end
+end })
+Tabs.AC:AddButton({ Title = "扫描道具 / 交互", Callback = function()
+F.Out("[无限道具] ===== 扫描开始 =====")
+local n = 0
+pcall(function() n = F.InfItemScan() end)
+local ch = nil
+pcall(function() ch = LP.Character end)
+if ch ~= nil then
+local cnt = 0
+pcall(function()
+for _, d in ipairs(ch:GetChildren()) do
+if d:IsA("Tool") then
+cnt = cnt + 1
+F.Out("[无限道具] 手持工具: " .. tostring(d.Name))
+local keys = {}
+pcall(function()
+for k, v in pairs(d:GetAttributes()) do keys[#keys + 1] = tostring(k) .. "=" .. tostring(v) end
+end)
+F.Out("[无限道具]   属性: " .. (#keys > 0 and table.concat(keys, " · ") or "(无)"))
+end
+end
+end)
+F.Out("[无限道具] 手持工具数: " .. tostring(cnt))
+end
+F.Out("[无限道具] 扫到的「丢弃类」远程: " .. tostring(n) .. " 个 ⇒ 把这几行发我")
+pcall(function() Fluent:Notify({ Title = "扫描道具完成", Content = "结果已写日志, 直接发给我就行", Duration = 8 }) end)
 end })
 Tabs.AC:AddButton({ Title = "扫描本服绕过目标", Callback = function()
 local n = 0
