@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-09 11:47 sha 31a7c431 bytes 612654'):format('2026-10-09 11:47','31a7c431',612654))
+print(('[CheatMenu] build 2026-10-09 17:10 sha 6c0ba9df bytes 612948'):format('2026-10-09 17:10','6c0ba9df',612948))
 local F = {}
-F.VERSION = "v17.0.33"
+F.VERSION = "v17.0.34"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6600,6 +6600,16 @@ end
 end
 return nil
 end
+F.ClickerSyncUI = function(on)
+local opt = nil
+pcall(function() opt = Fluent and Fluent.Options and Fluent.Options.Clicker end)
+if type(opt) ~= "table" then return false end
+local was = F._cfgSyncing
+F._cfgSyncing = true
+local ok = F.OptSet(opt, on and true or false)
+F._cfgSyncing = was
+return ok
+end
 function F.ClickerEnable()
 if CLKST.loop then return end
 local x, y = F.ClickerPos()
@@ -6607,10 +6617,11 @@ if not x then
 F.Out("[连点器] 还没保存位置 ⇒ 鼠标移到目标处, 按 " .. tostring(C.ClickerPosKey) .. " 或点「保存当前鼠标位置」")
 pcall(function() Fluent:Notify({ Title = "连点器", Content = "还没保存位置: 鼠标放到目标处按 " .. tostring(C.ClickerPosKey), Duration = 6 }) end)
 T.Clicker = false
-pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.Clicker, false) end)
+F.ClickerSyncUI(false)
 return
 end
 T.Clicker = true
+F.ClickerSyncUI(true)
 local gap = F.ClickerGap()
 CLKST.firstLogged = nil
 F.Out("[连点器] 已开 · 每 " .. string.format("%.2f", gap) .. " 秒一次 (" .. x .. "," .. y .. ") · 模式 " .. tostring(C.ClickerMode))
@@ -6631,12 +6642,13 @@ end
 CLKST.loop = nil
 if T.Clicker == true then
 T.Clicker = false
-pcall(function() F.OptSet(Fluent and Fluent.Options and Fluent.Options.Clicker, false) end)
+F.ClickerSyncUI(false)
 end
 end)
 end
 function F.ClickerDisable()
 T.Clicker = false
+F.ClickerSyncUI(false)
 if CLKST.loop then pcall(function() task.cancel(CLKST.loop) end) CLKST.loop = nil end
 F.Out("[连点器] 已停")
 end
@@ -16294,7 +16306,7 @@ Tabs.Visual:AddToggle("TeamColorHL", { Title = "敌我识别", Default = false, 
 T.TeamColorHL = v
 if F._cfgSyncing then return end
 if T.BodyHL then F.BodyHLRefresh() end
-F.Out("[高亮] 敌我识别 = " .. (v and "开(队友绿 / 敌人红)" or "关(统一蓝色)"))
+F.Out("[高亮] 敌我识别 = " .. (v and (T.BodyHL and "开(队友绿 / 敌人红)" or "开 · 但要开「身体高亮透视」或「ESP」才看得见") or "关(统一蓝色)"))
 end })
 Tabs.Visual:AddToggle("IxHL", { Title = "高亮透视", Default = false, Callback = function(v)
 T.IxHL = v
