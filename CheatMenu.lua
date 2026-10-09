@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 01:37 sha 2472ff17 bytes 645681'):format('2026-10-10 01:37','2472ff17',645681))
+print(('[CheatMenu] build 2026-10-10 01:53 sha 50740fd5 bytes 650729'):format('2026-10-10 01:53','50740fd5',650729))
 local F = {}
-F.VERSION = "v17.0.51"
+F.VERSION = "v17.0.52"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -6133,33 +6133,6 @@ pcall(function() bag = LP:FindFirstChildOfClass("Backpack") end)
 if bag == nil then local ch = nil pcall(function() ch = LP.Character end) bag = ch end
 return bag
 end
-F.DoorsCloneTool = function()
-local tm = nil
-local ch = nil
-pcall(function() ch = LP.Character end)
-if ch ~= nil then pcall(function() tm = ch:FindFirstChildOfClass("Tool") end) end
-if tm == nil then
-local bag = F.DoorsBag()
-if bag ~= nil then pcall(function() tm = bag:FindFirstChildOfClass("Tool") end) end
-end
-if tm == nil then
-F.Out("[DOORS道具] 没找到任何道具 ⇒ 先拿一个道具再点")
-return
-end
-local bag = F.DoorsBag()
-if bag == nil then
-F.Out("[DOORS道具] 没有可放的背包")
-return
-end
-local c = nil
-pcall(function() c = tm:Clone() end)
-if c == nil then
-F.Out("[DOORS道具] 克隆失败 ⇒ 这个道具不允许复制")
-return
-end
-local okp = pcall(function() c.Parent = bag end)
-F.Out("[DOORS道具] 「" .. tostring(tm.Name) .. "」⇒ " .. (okp and "已复制一份放进背包" or "放进背包失败"))
-end
 F.DoorsScanContainers = function()
 local c = {}
 pcall(function() c[#c + 1] = LP:FindFirstChildOfClass("Backpack") end)
@@ -11256,7 +11229,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.NoFaceSet, F.NoLimbsSet, F.HitboxShowSet }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16324,6 +16297,7 @@ AFK     = Window:AddTab({ Title = "挂机", Icon = "home" }),
 Trans   = Window:AddTab({ Title = "翻译", Icon = "languages" }),
 System  = Window:AddTab({ Title = "系统", Icon = "settings" }),
 TP      = Window:AddTab({ Title = "传送", Icon = "map-pin" }),
+Item    = Window:AddTab({ Title = "道具", Icon = "package" }),
 IY      = Window:AddTab({ Title = "IY 命令", Icon = "terminal" }),
 }
 Tabs.World   = Tabs.Visual
@@ -16493,6 +16467,11 @@ if F._cfgSyncing then return end
 if v then pcall(F.HitboxEnable) else pcall(F.HitboxDisable) end
 end })
 Tabs.Combat:AddSlider("HitboxSize", { Title = "命中盒大小", Min = 2, Max = 50, Default = 10, Rounding = 0, Callback = function(v) C.HitboxSize = v end })
+Tabs.Combat:AddToggle("HitboxShow", { Title = "碰撞盒可视化", Default = false, Callback = function(v)
+T.HitboxShow = v
+if F._cfgSyncing then return end
+F.HitboxShowSet(v)
+end })
 Tabs.Surv:AddSection("生命 / 保命")
 Tabs.Surv:AddToggle("GodMode", { Title = "上帝模式", Default = false, Callback = function(v)
 if F._cfgSyncing then return end
@@ -16534,15 +16513,6 @@ Tabs.Surv:AddSlider("DoorsClutchGap", { Title = "心跳间隔", Min = 1, Max = 6
 Tabs.Surv:AddButton({ Title = "原地复活", Callback = function()
 if not F.Once("doors_revive", 1) then return end
 pcall(F.DoorsReviveNow)
-end })
-Tabs.Surv:AddButton({ Title = "复制手持道具", Callback = function()
-if not F.Once("doors_clone", 1) then return end
-pcall(F.DoorsCloneTool)
-end })
-Tabs.Surv:AddInput("DoorsAssetId", { Title = "道具资产 ID · 可留空", Default = "", Placeholder = "留空即自动扫描本游戏道具", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
-Tabs.Surv:AddButton({ Title = "拿道具 · 留空则自动扫描本游戏", Callback = function()
-if not F.Once("doors_pull", 1.5) then return end
-pcall(F.DoorsPullAsset, C.DoorsAssetId)
 end })
 Tabs.Move:AddSection("飞行")
 Tabs.Move:AddToggle("FlyOn", { Title = "飞行", Default = false, Callback = function(v) F.FlySet(v) end })
@@ -16698,7 +16668,7 @@ if F._cfgSyncing then return end
 pcall(F.AnchorSet, v)
 end })
 Tabs.Move:AddSection("防护")
-Tabs.Move:AddToggle("GuardAll", { Title = "防护", Default = false, Callback = function(v)
+Tabs.Move:AddToggle("GuardAll", { Title = "自我保护", Default = false, Callback = function(v)
 T.GuardAll = v
 T.SteadyOn, T.HitGuard, T.TrapWarn = v, v, v
 T.SpeedAntiTP, T.MyEgg, T.CarryGuard = v, v, v
@@ -16754,7 +16724,6 @@ if F._cfgSyncing then return end
 if v then F.InvisibleEnable() else F.InvisibleDisable() end
 end })
 Tabs.Move:AddSection("位移")
-Tabs.Setting:AddButton({ Title = "自杀 / 重置角色", Callback = function() pcall(F.SuicideNow) end })
 Tabs.Move:AddToggle("InfiniteJump", { Title = "无限跳", Default = false, Callback = function(v)
 local changed = (T.InfiniteJump ~= nil) and (T.InfiniteJump ~= v)
 T.InfiniteJump = v
@@ -16780,6 +16749,16 @@ if F._cfgSyncing then return end
 if v then pcall(F.WallClimbEnable) else pcall(F.WallClimbDisable) end
 end })
 Tabs.Move:AddSlider("WallClimbSpeed", { Title = "爬墙速度", Min = 5, Max = 300, Default = 50, Rounding = 0, Callback = function(v) C.WallClimbSpeed = v end })
+Tabs.Move:AddToggle("AutoJump", { Title = "自动跳", Default = false, Callback = function(v)
+T.AutoJump = v
+if F._cfgSyncing then return end
+F.AutoJumpSet(v)
+end })
+Tabs.Move:AddToggle("SitWalk", { Title = "坐着走", Default = false, Callback = function(v)
+T.SitWalk = v
+if F._cfgSyncing then return end
+F.SitWalkSet(v)
+end })
 end
 do
 Tabs.Visual:AddSection("ESP 透视")
@@ -16839,11 +16818,6 @@ F._cfgSyncing = true
 pcall(F.EspItemsApply, F.EspItemsRead())
 F._cfgSyncing = false
 Tabs.Visual:AddSection("屏幕")
-Tabs.Visual:AddToggle("NoScreenFx", { Title = "关屏幕特效", Default = false, Callback = function(v)
-T.NoScreenFx = v and true or false
-if F._cfgSyncing then return end
-pcall(F.ScrFxSet, v)
-end })
 Tabs.Visual:AddToggle("HideGameGui", { Title = "隐藏游戏界面", Default = false, Callback = function(v)
 T.HideGameGui = v
 if F._cfgSyncing then return end
@@ -16941,6 +16915,34 @@ T.XRay = v
 if F._cfgSyncing then return end
 F.XRaySet(v)
 end })
+Tabs.Visual:AddSection("视角 / 相机")
+Tabs.Visual:AddToggle("ViewBoost", { Title = "视角增强", Default = false, Callback = function(v)
+if F._cfgSyncing then return end
+if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
+F.Out("[视角] 视角增强 = " .. (v and "开(FOV+无限缩放)" or "关"))
+end })
+Tabs.Visual:AddDropdown("IYView", { Title = "视角模式", Values = { "关闭", "第一人称", "第三人称" }, Default = "关闭", Callback = function(v)
+F.IYViewSet(tostring(v))
+end })
+Tabs.Visual:AddToggle("IYFreecam", { Title = "自由视角", Default = false, Callback = function(v)
+T.IYFreecam = v
+if F._cfgSyncing then return end
+F.IYFreecamSet(v)
+end })
+Tabs.Visual:AddSlider("IYFcSpeed", { Title = "自由视角 · 速度", Min = 20, Max = 300, Default = 80, Rounding = 0, Callback = function(v)
+C.IYFcSpeed = v
+end })
+Tabs.Visual:AddSection("外观")
+Tabs.Visual:AddToggle("NoFace", { Title = "无脸", Default = false, Callback = function(v)
+T.NoFace = v
+if F._cfgSyncing then return end
+F.NoFaceSet(v)
+end })
+Tabs.Visual:AddToggle("NoLimbs", { Title = "隐藏身体", Default = false, Callback = function(v)
+T.NoLimbs = v
+if F._cfgSyncing then return end
+F.NoLimbsSet(v)
+end })
 Tabs.World:AddSection("画面 / 声音")
 Tabs.World:AddToggle("VisionBoost", { Title = "夜视", Default = false, Callback = function(v)
 T.FullBright = v T.NightVision = v T.NoFog = v
@@ -16948,11 +16950,6 @@ if F._cfgSyncing then return end
 if v then F.FullBrightEnable() F.NightVisionEnable() F.NoFogEnable() pcall(F.LightWatchEnable)
 else F.FullBrightDisable() F.NightVisionDisable() F.NoFogDisable() pcall(F.LightWatchDisable) end
 F.Out("[夜视] 全亮/夜视/去雾/光照守卫 = " .. (v and "开" or "关"))
-end })
-Tabs.World:AddToggle("ViewBoost", { Title = "视角增强", Default = false, Callback = function(v)
-if F._cfgSyncing then return end
-if v then FOVEnable() ZoomEnable() else FOVDisable() ZoomDisable() end
-F.Out("[视角] 视角增强 = " .. (v and "开(FOV+无限缩放)" or "关"))
 end })
 Tabs.World:AddToggle("Mute", { Title = "静音", Default = false, Callback = function(v)
 T.Mute = v
@@ -16965,6 +16962,11 @@ T.Antilag = v
 if F._cfgSyncing then return end
 if v then AntilagEnable() else AntilagDisable() end
 F.Out("[降画质] " .. (v and "已开" or "已关"))
+end })
+Tabs.World:AddToggle("NoScreenFx", { Title = "关屏幕特效", Default = false, Callback = function(v)
+T.NoScreenFx = v and true or false
+if F._cfgSyncing then return end
+pcall(F.ScrFxSet, v)
 end })
 Tabs.World:AddSection("画面 / 界面")
 Tabs.World:AddToggle("IYNoRender", { Title = "停渲染", Default = false, Callback = function(v)
@@ -17290,11 +17292,6 @@ T.SpoofPos = v and true or false
 if F._cfgSyncing then return end
 pcall(F.SpoofPosSet, v)
 end })
-Tabs.AC:AddToggle("InfItem", { Title = "无限道具次数", Default = false, Callback = function(v)
-T.InfItem = v and true or false
-if F._cfgSyncing then return end
-if v then pcall(F.InfItemEnable) else pcall(F.InfItemDisable) end
-end })
 Tabs.AC:AddSection("扫描")
 Tabs.AC:AddButton({ Title = "全扫描", Callback = function()
 if not F.Once("scanall", 6) then return end
@@ -17385,6 +17382,7 @@ if not F.Once("srv_info", 1) then return end
 pcall(F.ServerInfo)
 end })
 Tabs.Setting:AddSection("系统")
+Tabs.Setting:AddButton({ Title = "自杀 / 重置角色", Callback = function() pcall(F.SuicideNow) end })
 F.UnloadAll = UnloadAll
 Tabs.Setting:AddButton({ Title = "热加载", Callback = function()
 if not F.Once("reload", 6) then return end
@@ -17658,7 +17656,172 @@ pcall(function() F.IYSpinSet(false) end)
 pcall(function() F.IYNoRenderSet(false) end)
 pcall(function() F.IYPromptsSet(false) end)
 end
-Tabs.IY:AddSection("近战 / 视角")
+F._ajConn = nil
+F.AutoJumpSet = function(on)
+if on then
+if F._ajConn == nil then
+F._ajConn = F.DriveConnect(function()
+local _, hum = GC()
+if hum ~= nil then pcall(function() hum.Jump = true end) end
+end)
+F.Out("[自动跳] 已开 · 落地即自动起跳")
+end
+else
+if F._ajConn ~= nil then pcall(function() F._ajConn:Disconnect() end) F._ajConn = nil end
+F.Out("[自动跳] 已关")
+end
+end
+F._hbsLoop, F._hbsOn = nil, false
+F.HitboxShowSet = function(on)
+F._hbsOn = on and true or false
+if on then
+if F._hbsLoop == nil then
+F._hbsLoop = F.SlowLoop(0.4, function()
+if not F._hbsOn then return end
+local seen = {}
+local function mark(ch)
+if ch == nil then return end
+local r = nil
+pcall(function() r = ch:FindFirstChild("HumanoidRootPart") end)
+if r == nil or seen[r] ~= nil then return end
+seen[r] = true
+pcall(function()
+if r:FindFirstChild("CM_HitboxBox") == nil then
+local b = Instance.new("SelectionBox")
+b.Name = "CM_HitboxBox"
+b.Adornee = r
+b.LineThickness = 0.06
+b.Color3 = Color3.fromRGB(255, 70, 70)
+b.Transparency = 0.35
+b.Parent = r
+end
+end)
+end
+pcall(function()
+for _, pl in ipairs(Players:GetPlayers()) do
+if pl ~= LP and pl.Character ~= nil then mark(pl.Character) end
+end
+end)
+pcall(function()
+local nl = F.CombatNpcRefresh()
+if type(nl) == "table" then local i for i = 1, #nl do mark(nl[i]) end end
+end)
+end)
+F.Out("[碰撞盒可视化] 已开 · 用红框画出每个目标的命中盒")
+end
+else
+if F._hbsLoop ~= nil then pcall(function() F._hbsLoop:Disconnect() end) F._hbsLoop = nil end
+pcall(function()
+local ds = workspace:GetDescendants()
+local i
+for i = 1, #ds do
+if ds[i].Name == "CM_HitboxBox" then pcall(function() ds[i]:Destroy() end) end
+end
+end)
+F.Out("[碰撞盒可视化] 已关 · 红框已清除")
+end
+end
+F._swOrig = nil
+F.SitWalkSet = function(on)
+local ch = nil
+pcall(function() ch = LP.Character end)
+if on then
+if ch == nil then F.Out("[坐着走] 没有角色 ⇒ 稍后再试") return end
+local an = nil
+pcall(function() an = ch:FindFirstChild("Animate") end)
+if an == nil then F.Out("[坐着走] 这游戏没有标准 Animate ⇒ 无法使用") return end
+local sitId = nil
+pcall(function()
+local sit = an:FindFirstChild("sit")
+local a = sit and sit:FindFirstChildWhichIsA("Animation")
+if a ~= nil then sitId = a.AnimationId end
+end)
+if sitId == nil or sitId == "" then F.Out("[坐着走] 找不到坐姿动画 ⇒ 无法使用") return end
+if F._swOrig == nil then
+F._swOrig = {}
+pcall(function()
+for _, nm in ipairs({ "idle", "walk", "run", "jump" }) do
+local grp = an:FindFirstChild(nm)
+if grp ~= nil then
+for _, a in ipairs(grp:GetChildren()) do
+if a:IsA("Animation") then
+F._swOrig[#F._swOrig + 1] = { o = a, id = a.AnimationId }
+end
+end
+end
+end
+end)
+end
+local e
+for _, e in ipairs(F._swOrig) do pcall(function() e.o.AnimationId = sitId end) end
+F.Out("[坐着走] 已开 · 待机/走/跑/跳动画已换成坐姿")
+else
+if F._swOrig ~= nil then
+local e
+for _, e in ipairs(F._swOrig) do pcall(function() e.o.AnimationId = e.id end) end
+F._swOrig = nil
+end
+F.Out("[坐着走] 已关 · 动画已还原")
+end
+end
+F._nfFace = nil
+F.NoFaceSet = function(on)
+local ch = nil
+pcall(function() ch = LP.Character end)
+if on then
+local head = nil
+pcall(function() head = ch and ch:FindFirstChild("Head") end)
+if head == nil then F.Out("[无脸] 找不到头部 ⇒ 无法使用") return end
+local face = nil
+pcall(function() face = head:FindFirstChildWhichIsA("Decal") end)
+if face == nil then F.Out("[无脸] 这个头没有贴脸 ⇒ 无需处理") return end
+F._nfFace = face
+pcall(function() face.Transparency = 1 end)
+F.Out("[无脸] 已开（仅你本地可见）")
+else
+if F._nfFace ~= nil then pcall(function() F._nfFace.Transparency = 0 end) F._nfFace = nil end
+F.Out("[无脸] 已关")
+end
+end
+F._nlOrig, F._nlLoop = nil, nil
+F.NoLimbsSet = function(on)
+local ch = nil
+pcall(function() ch = LP.Character end)
+if on then
+if ch == nil then F.Out("[隐藏身体] 没有角色 ⇒ 稍后再试") return end
+if F._nlOrig == nil then
+F._nlOrig = {}
+pcall(function()
+for _, p in ipairs(ch:GetChildren()) do
+if p:IsA("BasePart") then
+local nm = tostring(p.Name)
+if string.find(nm, "Arm") ~= nil or string.find(nm, "Leg") ~= nil or string.find(nm, "Torso") ~= nil then
+F._nlOrig[#F._nlOrig + 1] = { o = p, m = p.LocalTransparencyModifier }
+end
+end
+end
+end)
+end
+local e
+for _, e in ipairs(F._nlOrig) do pcall(function() e.o.LocalTransparencyModifier = 1 end) end
+if F._nlLoop == nil then
+F._nlLoop = F.SlowLoop(0.3, function()
+local e2
+for _, e2 in ipairs(F._nlOrig or {}) do pcall(function() e2.o.LocalTransparencyModifier = 1 end) end
+end)
+end
+F.Out("[隐藏身体] 已开 · 手臂/腿/躯干已隐去（仅你本地可见）")
+else
+if F._nlLoop ~= nil then pcall(function() F._nlLoop:Disconnect() end) F._nlLoop = nil end
+if F._nlOrig ~= nil then
+local e
+for _, e in ipairs(F._nlOrig) do pcall(function() e.o.LocalTransparencyModifier = e.m or 0 end) end
+F._nlOrig = nil
+end
+F.Out("[隐藏身体] 已关")
+end
+end
+Tabs.IY:AddSection("近战 / 鼠标")
 Tabs.IY:AddToggle("IYReach", { Title = "攻击距离", Default = false, Callback = function(v)
 T.IYReach = v
 if F._cfgSyncing then return end
@@ -17677,18 +17840,6 @@ Tabs.IY:AddSlider("IYMouseSensV", { Title = "鼠标灵敏度 · 倍率", Min = 0
 C.IYMouseSensV = v
 if T.IYMouseSens == true and not F._cfgSyncing then F.IYMouseSensSet(true) end
 end })
-Tabs.IY:AddDropdown("IYView", { Title = "视角模式", Values = { "关闭", "第一人称", "第三人称" }, Default = "关闭", Callback = function(v)
-F.IYViewSet(tostring(v))
-end })
-Tabs.IY:AddSection("自由视角")
-Tabs.IY:AddToggle("IYFreecam", { Title = "自由视角", Default = false, Callback = function(v)
-T.IYFreecam = v
-if F._cfgSyncing then return end
-F.IYFreecamSet(v)
-end })
-Tabs.IY:AddSlider("IYFcSpeed", { Title = "自由视角 · 速度", Min = 20, Max = 300, Default = 80, Rounding = 0, Callback = function(v)
-C.IYFcSpeed = v
-end })
 Tabs.IY:AddSection("角色 / 物理")
 Tabs.IY:AddToggle("IYFloat", { Title = "漂浮平台", Default = false, Callback = function(v)
 T.IYFloat = v
@@ -17704,18 +17855,29 @@ Tabs.IY:AddSlider("IYSpinSpeed", { Title = "自转 · 转速", Min = 1, Max = 60
 C.IYSpinSpeed = v
 if T.IYSpin == true and not F._cfgSyncing then F.IYSpinSet(true) end
 end })
-Tabs.IY:AddSection("道具 / 刷东西")
-Tabs.IY:AddButton({ Title = "抓工具（把场上地面道具装进手/背包）", Callback = function()
+Tabs.Item:AddSection("抓取 / 复制")
+Tabs.Item:AddButton({ Title = "抓工具（把场上地面道具装进手/背包）", Callback = function()
 if not F.Once("iyGrab", 2) then return end
 pcall(F.IYGrabTools)
 end })
-Tabs.IY:AddButton({ Title = "复制手持工具进背包", Callback = function()
+Tabs.Item:AddButton({ Title = "复制手持工具进背包", Callback = function()
 if not F.Once("iyDupe", 2) then return end
 pcall(F.IYDupeTools, C.IYDupeN or 1)
 end })
-Tabs.IY:AddSlider("IYDupeN", { Title = "复制份数", Min = 1, Max = 10, Default = 1, Rounding = 0, Callback = function(v)
+Tabs.Item:AddSlider("IYDupeN", { Title = "复制份数", Min = 1, Max = 10, Default = 1, Rounding = 0, Callback = function(v)
 C.IYDupeN = v
 end })
+Tabs.Item:AddSection("无限 / 补给")
+Tabs.Item:AddToggle("InfItem", { Title = "无限道具次数", Default = false, Callback = function(v)
+T.InfItem = v and true or false
+if F._cfgSyncing then return end
+if v then pcall(F.InfItemEnable) else pcall(F.InfItemDisable) end
+end })
+Tabs.Item:AddButton({ Title = "拿道具 · 留空则自动扫描本游戏", Callback = function()
+if not F.Once("doors_pull", 1.5) then return end
+pcall(F.DoorsPullAsset, C.DoorsAssetId)
+end })
+Tabs.Item:AddInput("DoorsAssetId", { Title = "道具资产 ID · 可留空", Default = "", Placeholder = "留空即自动扫描本游戏道具", Numeric = true, Callback = function(v) C.DoorsAssetId = tostring(v or "") end })
 pcall(F.RecordOriginals)
 task.spawn(function() pcall(F.LogBaseName) end)
 pcall(function()
