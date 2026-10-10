@@ -5295,3 +5295,19 @@ sweep 新旧均 27（无新增）。
      `CH.FindFirstChildOfClass` 必须放在 `local TOOL/ROOT/HUM` **之后**。
 - ★ 新增功能统一遵守：默认关 · 登进急停清理链 · 执行器能力缺失（Drawing/queueonteleport/setsimulationradius/writefile）
   时**弹回开关 + 说明原因**。
+
+## 实机覆盖审计 + 出站改写 / 拒死 / 自动复活（v17.0.56）
+
+- ★★ **加自定义元方法层不要动已有的层**：`F.MetaInstall(slot, target, id, factory)` 支持同一 slot 挂**多个 id**，
+  内部按顺序串成责任链。所以"给出站开火加一层参数改写""给血量加一层拒死"都只需 `MetaInstall("__namecall", game, "CMAimWrite", …)`
+  / `MetaInstall("__newindex", game, "CMDenyDeath", …)`，**不需要改 AC 层或 CMLockFields 的代码**。
+  卸载用 `MetaUninstall(slot, id)`，急停列表里挂 `XxxSet`（无参调用 = 关）。
+- ⛔ **出站改写必须带白名单 + 黑名单**：只改"开火类"远程名（fire/shoot/attack/hit/kill…），
+  明确排除 teleport/position/move/chat/report/shop/buy 等 —— 否则会把"位置同步"远程也改掉，直接把角色瞬移走。
+  另：只改 `Vector3`/`CFrame` 类型参数（类型不变才不会被远程判参数错），每次最多 2 个，且只在目标 200 格内。
+- ★ **luau 桩的三个新坑**（本轮 6 个假 FAIL 全出自桩，不是源码）：
+  ① `box.orig` 在源码里就是**普通函数**（`box.orig(self, ...)` / `box.orig(t, k, v)`）——桩里别写成 `box.origT` 之类的另一个名字。
+  ② 桩里被扫描的**实例必须有 `Parent`**（`if o.Parent ~= nil then` 是通用守卫，缺了整段逻辑静默跳过）。
+  ③ `typeof` / `IsA` 在桩里要自己实现：给实例表加 `__t = "Instance"`，并定义 `IsA`，否则 `typeof(t) == "Instance"` 判不进去。
+- ★ 审计类报告要**明确标注口径**：本项目能做的验证只有"静态分析 + 桩回归 + 云端分发链路"，
+  跑不了真游戏 ⇒ 覆盖率只能给"基于权限模型的原理判断"，**不能写成实测数字**（用户会当事实引用）。
