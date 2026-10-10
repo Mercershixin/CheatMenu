@@ -1,6 +1,6 @@
-print(('[CheatMenu] build 2026-10-10 03:59 sha c9641cec bytes 703937'):format('2026-10-10 03:59','c9641cec',703937))
+print(('[CheatMenu] build 2026-10-10 08:50 sha be02c68b bytes 713098'):format('2026-10-10 08:50','be02c68b',713098))
 local F = {}
-F.VERSION = "v17.0.55"
+F.VERSION = "v17.0.56"
 F._flyDisabledInfJump = nil
 F._flyJumpReqConn = nil
 F._flyJumpAt = 0
@@ -11235,7 +11235,7 @@ for k, v in pairs(keep) do T[k] = v end
 for _, fn in ipairs({ GodDisable, FOVDisable, ZoomDisable, AntilagDisable, MuteDisable, LockHealthDisable, RegenDisable, F.InvisibleDisable, F.CarryGuardDisable, F.ProtectAllDisable, F.SpeedFreeDisable, F.NoPullDisable, F.KickGuardPathsDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.HudDisable, F.CrosshairDisable, F.FovCircleDisable, F.FlingStop, F.FlingLoopStop, F.ClickTPDisable, F.BulletTrackDisable, F.WallClimbDisable, F.NoRecoilDisable, F.PierceDisable, F.TrapAutoRemoveDisable, F.KillAuraDisable, F.GodModeSet, F.AntiKnockdownDisable, F.NoClipDisable, F.HideDisable, F.InfiniteJumpDisable, F.FullBrightDisable, F.NightVisionDisable, F.NoFogDisable, F.TranslateDisable }) do pcall(fn) end
 for _, fn in ipairs({ F.AimSet, F.RoleTagSet, F.IxHLSet, F.EspSet, F.XRaySet, F.AllyMarkSet, F.VehicleBoostDisable, F.BodyHLDisable, F.CharPersistDisable, F.LivePlayersDisable, F.GuiProtectionDisable, F.SpeedAntiTPDisable, F.SpeedRestore, F.FlySet, F.FlyDestroy, F.HeliSet, F.HeliDestroy, F.BypassDisable, F.AllInOneDisableAll, F.PinDisable, F.SpoofDisable, F.MetaHookUninstall, F.AntiCheatGCRestore, F.DeepNeuterDisable, F.AutoTrainDisable, F.AutoBonusDisable, F.AutoGymDisable, F.HealthIsolateDisable, F.LockFieldsUninstall }) do pcall(fn) end
-for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, F.VxFlush, F.MagnetSet, F.WatermarkSet, F.HitMarkSet, F.SignalsFlush, F.AttackSpeedSet, F.InfAmmoSet, F.BlinkSet, F.AntiRagdollSet, F.AntiStunSet, F.FallGuardSet, F.OffScreenSet, F.ItemEspSet, F.SoundEspSet, F.AutoCollectSet, F.AutoRejoinSet, F.QueueOnTPSet, F.AntiShotSet, F.SpoofEnvSet, F.HideInstSet, F.SimRadiusSet, F.PlayerHudSet, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
+for _, fn in ipairs({ AC.UninstallNamecallHook, AC.UninstallIndexMask, AC.UnblockRemotes, AC.ReenableDisabledConns, AC.UninstallAntiTP, AC.UninstallSetmetatableHook, F.VxFlush, F.MagnetSet, F.WatermarkSet, F.HitMarkSet, F.SignalsFlush, F.AttackSpeedSet, F.InfAmmoSet, F.BlinkSet, F.AntiRagdollSet, F.AntiStunSet, F.FallGuardSet, F.OffScreenSet, F.ItemEspSet, F.SoundEspSet, F.AutoCollectSet, F.AutoRejoinSet, F.QueueOnTPSet, F.AntiShotSet, F.SpoofEnvSet, F.HideInstSet, F.SimRadiusSet, F.PlayerHudSet, F.AimWriteSet, F.DenyDeathSet, F.AutoReviveSet, AC.WatchNewScriptsDisable, AC.WatchNewRemotesDisable, AC.AntiPauseDisable, AC.TrapDisable.Disable, F.InstantInteractDisable, F.CMX_DisableAll, F.LightWatchDisable, F.IYPanicOff, F.AutoJumpSet, F.SitWalkSet, F.HitboxShowSet }) do pcall(fn) end
 pcall(function()
 local _, hum = GC()
 if hum then
@@ -16803,6 +16803,7 @@ end
 F.SignalInstallAll = function()
 pcall(F.TeamSignalInstall)
 pcall(F.BagSignalInstall)
+pcall(F.LiveSignalsInstall)
 end
 F._asHook, F._asLog = nil, nil
 F.AntiShotSet = function(on)
@@ -17425,40 +17426,63 @@ end
 F.Out("[全场道具] 拉了 " .. tostring(n) .. " 个道具进背包(跳过别人的 " .. tostring(skip) .. " 个)")
 end)
 end
+F.SprayVariants = function()
+return {
+function() return { LP } end,
+function() return { LP, "All" } end,
+function() return { LP, "all" } end,
+function() return { LP.Name } end,
+function() return { LP, LP.Name } end,
+function() return { LP, 1 } end,
+function() return { LP, 999 } end,
+function() return { LP, true } end,
+function() return { "All" } end,
+function() return { LP, "All", 999 } end,
+}
+end
 F.RemoteSpray = function()
 task.spawn(function()
 local pats = { "givetool", "givegun", "giveweapon", "giveitem", "getweapon", "getgun", "gettool",
-"spawntool", "spawnweapon", "spawnitem", "additem", "addtool", "grantweapon", "buyweapon", "weaponrequest" }
-local hit, tried = 0, 0
+"spawntool", "spawnweapon", "spawnitem", "additem", "addtool", "grantweapon", "buyweapon",
+"weaponrequest", "reward", "claim", "pickup", "obtain", "unlock", "redeem", "redeemcode" }
+local hit, tried, silent = 0, 0, 0
 local rs = game:GetService("ReplicatedStorage")
 local arr = nil
 pcall(function() arr = rs:GetDescendants() end)
 if arr == nil then F.Out("[远程喷洒] 读不到 ReplicatedStorage ⇒ 放弃") return end
+local vs = F.SprayVariants()
 for i = 1, #arr do
 local o = arr[i]
 if o.Parent ~= nil then
 local okR, isR = pcall(function() return o:IsA("RemoteEvent") or o:IsA("RemoteFunction") end)
 if okR and isR then
 local ln = string.lower(tostring(o.Name))
+local matched = false
 for j = 1, #pats do
-if string.find(ln, pats[j], 1, true) then
+if string.find(ln, pats[j], 1, true) then matched = true break end
+end
+if matched then
 tried = tried + 1
+local got = false
+for k = 1, #vs do
+local args = vs[k]()
 local ok = pcall(function()
 if o:IsA("RemoteEvent") then
-o:FireServer(LP, "All")
+o:FireServer(table.unpack(args, 1, #args))
 else
-o:InvokeServer(LP, "All")
+o:InvokeServer(table.unpack(args, 1, #args))
 end
 end)
-if ok then hit = hit + 1 end
-break
+if ok then got = true break end
 end
+if got then hit = hit + 1 else silent = silent + 1 end
 end
 end
 end
 if tried >= 40 then break end
 end
-F.Out("[远程喷洒] 试了 " .. tostring(tried) .. " 个「给道具」类远程, " .. tostring(hit) .. " 个调用成功")
+F.Out("[远程喷洒] 命中 " .. tostring(tried) .. " 个「给道具」类远程 · 其中 " .. tostring(hit)
+.. " 个调用成功 · " .. tostring(silent) .. " 个参数不匹配(每个远程已试 10 种参数组合)")
 end)
 end
 F._acLoop = nil
@@ -17532,6 +17556,240 @@ end
 end)
 F.Out("[玩家] 已开始盯「" .. pl.Name .. "」(相机锁他)")
 end
+end
+F.AIMW_HIT = { "fire", "shoot", "attack", "hit", "slash", "swing", "strike", "punch", "melee",
+"click", "deal", "damage", "cast", "spell", "skill", "weapon", "gun", "arrow", "bullet", "shot", "sword", "kill" }
+F.AIMW_SKIP = { "position", "move", "walk", "teleport", "spawn", "join", "leave", "resp", "respawn",
+"chat", "report", "equip", "purchase", "shop", "buy", "trade", "settings", "setting" }
+F.AimWriteNameHit = function(nm)
+for i = 1, #F.AIMW_SKIP do
+if string.find(nm, F.AIMW_SKIP[i], 1, true) then return false end
+end
+for i = 1, #F.AIMW_HIT do
+if string.find(nm, F.AIMW_HIT[i], 1, true) then return true end
+end
+return false
+end
+F.AimWriteTargetPos = function()
+local ch = nil
+pcall(function() ch = F.CombatPick() end)
+if ch == nil then return nil end
+local part = nil
+pcall(function()
+part = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+end)
+if part == nil then return nil end
+local _, _, root = GC()
+if root ~= nil then
+local d = (part.Position - root.Position).Magnitude
+local rng = tonumber(C.CombatRange) or 200
+if d > rng then return nil end
+end
+return part.Position
+end
+F._awLayer, F._awCount = nil, 0
+F.AimWriteInstall = function()
+if F._awLayer == true then return true end
+local got = nil
+pcall(function()
+got = F.MetaInstall("__namecall", game, "CMAimWrite", function(box)
+return function(self, ...)
+if T.SilentWrite ~= true then return box.orig(self, ...) end
+local imCaller = false
+pcall(function() if type(checkcaller) == "function" then imCaller = checkcaller() end end)
+if imCaller then return box.orig(self, ...) end
+local method = ""
+pcall(function() if type(getnamecallmethod) == "function" then method = getnamecallmethod() end end)
+if method ~= "FireServer" and method ~= "InvokeServer" then return box.orig(self, ...) end
+local nm = string.lower(tostring(self ~= nil and self.Name or ""))
+if not F.AimWriteNameHit(nm) then return box.orig(self, ...) end
+local tgt = F.AimWriteTargetPos()
+if tgt == nil then return box.orig(self, ...) end
+local n = select("#", ...)
+if n < 1 then return box.orig(self, ...) end
+local args = { ... }
+local changed = 0
+for i = 2, n do
+local v = args[i]
+local ty = typeof(v)
+if ty == "Vector3" then
+args[i] = tgt
+changed = changed + 1
+elseif ty == "CFrame" then
+args[i] = CFrame.lookAt(v.Position, tgt)
+changed = changed + 1
+end
+if changed >= 2 then break end
+end
+if changed == 0 then return box.orig(self, ...) end
+F._awCount = (F._awCount or 0) + 1
+return box.orig(self, table.unpack(args, 1, n))
+end
+end)
+end)
+if got ~= nil then F._awLayer = true end
+return F._awLayer == true
+end
+F.AimWriteSet = function(on)
+T.SilentWrite = on and true or false
+if not T.SilentWrite then
+if F._awLayer == true then pcall(function() F.MetaUninstall("__namecall", "CMAimWrite") end) end
+F._awLayer = nil
+F.Out("[出站瞄准] 已关")
+return
+end
+if F.AimWriteInstall() then
+F.Out("[出站瞄准] 已开 · 开火类远程里的方向/位置参数会被改写成朝敌人(服务器看到的就是你在瞄他)")
+else
+T.SilentWrite = false
+F.Out("[出站瞄准] 装不上(执行器不支持元方法钩子) ⇒ 未开启")
+end
+end
+F.DenyDeathSet = function(on)
+T.DenyDeath = on and true or false
+if not T.DenyDeath then
+pcall(function() F.MetaUninstall("__newindex", "CMDenyDeath") end)
+F.Out("[拒死] 已关")
+return
+end
+local got = nil
+pcall(function()
+got = F.MetaInstall("__newindex", game, "CMDenyDeath", function(box)
+return function(t, k, v)
+local imCaller = false
+pcall(function() if type(checkcaller) == "function" then imCaller = checkcaller() end end)
+if imCaller then return box.orig(t, k, v) end
+if k == "Health" and T.DenyDeath == true and type(v) == "number" then
+local isH = false
+pcall(function() isH = typeof(t) == "Instance" and t:IsA("Humanoid") end)
+if isH then
+local mx = 0
+pcall(function() mx = t.MaxHealth end)
+if type(mx) == "number" and mx > 0 and v < mx then
+F._ddBlocked = (F._ddBlocked or 0) + 1
+local now = os.clock()
+if now - (F._ddLog or 0) > 6 then
+F._ddLog = now
+F.Out("[拒死] 已把 " .. tostring(F._ddBlocked) .. " 次「把血量改低」顶回满血(服务端想杀你会被顶回去)")
+end
+return box.orig(t, k, mx)
+end
+end
+end
+return box.orig(t, k, v)
+end
+end)
+end)
+if got ~= nil then
+F.Out("[拒死] 已开 · 服务端/任何脚本想把你血量改低都会被顶回满血")
+else
+T.DenyDeath = false
+F.Out("[拒死] 装不上(执行器不支持元方法钩子) ⇒ 未开启")
+end
+end
+F.RV_KEYS = { "respawn", "revive", "reload", "loadchar", "rebirth", "reset", "spawn", "resurrect" }
+F.ReviveRemotesScan = function()
+local out = {}
+local arr = nil
+pcall(function() arr = game:GetService("ReplicatedStorage"):GetDescendants() end)
+if arr == nil then return out end
+for i = 1, #arr do
+local o = arr[i]
+if o.Parent ~= nil then
+local okR, isR = pcall(function() return o:IsA("RemoteEvent") or o:IsA("RemoteFunction") end)
+if okR and isR then
+local ln = string.lower(tostring(o.Name))
+for j = 1, #F.RV_KEYS do
+if string.find(ln, F.RV_KEYS[j], 1, true) then
+out[#out + 1] = o
+break
+end
+end
+end
+end
+end
+return out
+end
+F._rvLoop, F._rvRemotes, F._rvScanAt, F._rvDead = nil, nil, 0, false
+F.AutoReviveSet = function(on)
+T.AutoRevive = on and true or false
+if F._rvLoop ~= nil then pcall(function() F._rvLoop:Disconnect() end) F._rvLoop = nil end
+if not T.AutoRevive then
+F.Out("[自动复活] 已关")
+return
+end
+F._rvDead = false
+F.Out("[自动复活] 已开 · 死了会自动走游戏自己的复活通道(多路径依次试)")
+F._rvLoop = F.SlowLoop(0.8, function()
+if T.AutoRevive ~= true then F.AutoReviveSet(false) return end
+local ch = LP.Character
+local hum = nil
+if ch ~= nil then pcall(function() hum = ch:FindFirstChildOfClass("Humanoid") end) end
+if hum == nil or (tonumber(hum.Health) or 0) > 0 then
+F._rvDead = false
+return
+end
+if F._rvDead == true then return end
+F._rvDead = true
+F.Out("[自动复活] 检测到自己已死 ⇒ 开始尝试复活")
+local now = os.clock()
+if now - F._rvScanAt > 10 or F._rvRemotes == nil then
+F._rvScanAt = now
+F._rvRemotes = F.ReviveRemotesScan()
+F.Out("[自动复活] 本游戏找到 " .. tostring(#(F._rvRemotes or {})) .. " 个疑似复活远程")
+end
+local list = F._rvRemotes or {}
+for i = 1, #list do
+pcall(function()
+if list[i]:IsA("RemoteEvent") then
+list[i]:FireServer()
+else
+list[i]:InvokeServer()
+end
+end)
+end
+pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+pcall(function() LP:LoadCharacter() end)
+end)
+end
+F._liveInst = false
+F.LiveSignalsInstall = function()
+if F._liveInst == true then return end
+F._liveInst = true
+local n = 0
+pcall(function()
+local cam = workspace.CurrentCamera
+if cam ~= nil then
+cam:GetPropertyChangedSignal("ViewportSize"):Connect(function() F._vpAt = os.clock() n = n + 1 end)
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function() F._camAt = os.clock() n = n + 1 end)
+end)
+pcall(function()
+UIS.WindowFocused:Connect(function() F._winFocus = true n = n + 1 end)
+UIS.WindowFocusReleased:Connect(function() F._winFocus = false n = n + 1 end)
+end)
+pcall(function()
+LP.CharacterAppearanceLoaded:Connect(function()
+F._appAt = os.clock()
+n = n + 1
+if T.HitMark == true then pcall(F.HitMarkWatch, LP) end
+end)
+end)
+pcall(function()
+LP.CharacterAdded:Connect(function(ch)
+local function bindTool(o)
+local ok, isT = pcall(function() return o:IsA("Tool") end)
+if ok and isT then
+pcall(function()
+o.Activated:Connect(function() F._lastShotAt = os.clock() end)
+end)
+end
+end
+ch.ChildAdded:Connect(bindTool)
+n = n + 1
+end)
+end)
+F.Out("[监听] 已挂实时事件: 视口变化 / 相机切换 / 窗口焦点 / 外观加载 / 工具开火 (" .. tostring(n) .. " 处)")
 end
 F._plHudGui, F._plHudLoop, F._plHudTxt = nil, nil, nil
 F.PlayerHudSet = function(on)
@@ -17886,6 +18144,11 @@ T.SilentAim = v and true or false
 if F._cfgSyncing then return end
 if v then pcall(F.EnsureAimOn, "静默自瞄") end
 end })
+Tabs.Combat:AddToggle("SilentWrite", { Title = "出站瞄准(改开火参数)", Default = false, Callback = function(v)
+T.SilentWrite = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AimWriteSet, v)
+end })
 Tabs.Combat:AddButton({ Title = "切换到下一个目标", Callback = function()
 if not F.Once("tgtcycle2", 0.4) then return end
 pcall(F.TargetCycle)
@@ -17963,6 +18226,16 @@ Tabs.Surv:AddToggle("FallGuard", { Title = "防摔保护", Default = false, Call
 T.FallGuard = v and true or false
 if F._cfgSyncing then return end
 pcall(F.FallGuardSet, v)
+end })
+Tabs.Surv:AddToggle("DenyDeath", { Title = "拒死(血量被改低就顶回)", Default = false, Callback = function(v)
+T.DenyDeath = v and true or false
+if F._cfgSyncing then return end
+pcall(F.DenyDeathSet, v)
+end })
+Tabs.Surv:AddToggle("AutoRevive", { Title = "自动复活(走游戏自己的通道)", Default = false, Callback = function(v)
+T.AutoRevive = v and true or false
+if F._cfgSyncing then return end
+pcall(F.AutoReviveSet, v)
 end })
 Tabs.Surv:AddSection("DOORS 专属")
 Tabs.Surv:AddToggle("DoorsClutch", { Title = "保命心跳", Default = false, Callback = function(v)
